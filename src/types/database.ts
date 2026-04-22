@@ -321,6 +321,60 @@ export type Database = {
           },
         ]
       }
+      customer_inquiries: {
+        Row: {
+          created_at: string
+          customer_name: string
+          customer_phone: string
+          handled_at: string | null
+          handled_by_user_id: string | null
+          id: string
+          is_handled: boolean
+          organization_id: string
+          source: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          customer_name: string
+          customer_phone: string
+          handled_at?: string | null
+          handled_by_user_id?: string | null
+          id?: string
+          is_handled?: boolean
+          organization_id: string
+          source?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          customer_name?: string
+          customer_phone?: string
+          handled_at?: string | null
+          handled_by_user_id?: string | null
+          id?: string
+          is_handled?: boolean
+          organization_id?: string
+          source?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_inquiries_handled_by_user_id_fkey"
+            columns: ["handled_by_user_id"]
+            isOneToOne: false
+            referencedRelation: "app_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_inquiries_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customer_product_prices: {
         Row: {
           created_at: string
@@ -1524,15 +1578,26 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      adjust_delivery_note_item: {
-        Args: {
-          p_adjusted_by: string
-          p_delivery_note_item_id: string
-          p_new_quantity_delivered: number
-          p_organization_id: string
-        }
-        Returns: undefined
-      }
+      adjust_delivery_note_item:
+        | {
+            Args: {
+              p_adjusted_by: string
+              p_delivery_note_item_id: string
+              p_new_quantity_delivered: number
+              p_organization_id: string
+            }
+            Returns: undefined
+          }
+        | {
+            Args: {
+              p_adjusted_by: string
+              p_delivery_note_item_id: string
+              p_new_quantity_delivered: number
+              p_organization_id: string
+              p_resolution_mode?: string
+            }
+            Returns: undefined
+          }
       allocate_requisition_document_numbers: {
         Args: { requested_at?: string; requested_count?: number }
         Returns: {
@@ -1541,6 +1606,7 @@ export type Database = {
           sequence_value: number
         }[]
       }
+      cleanup_stale_orders: { Args: never; Returns: number }
       create_app_session: {
         Args: { p_ip_hash?: string; p_user_agent?: string; p_user_id: string }
         Returns: {
@@ -1604,8 +1670,10 @@ export type Database = {
           ordered_quantity: number
           product_id: string
           product_name: string
+          product_sale_unit_id: string
           product_sku: string
           product_unit: string
+          product_unit_ratio: number
           short_quantity: number
           unit_price: number
         }[]
@@ -1622,6 +1690,7 @@ export type Database = {
           customer_code: string
           customer_id: string
           customer_name: string
+          is_complete: boolean
           latest_order_at: string
           order_rounds: number
           product_count: number

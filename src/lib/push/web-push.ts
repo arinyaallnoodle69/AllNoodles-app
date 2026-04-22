@@ -232,10 +232,12 @@ export async function sendNewOrderPushNotification({
 }
 
 export async function sendNewCustomerInquiryPushNotification({
+  inquiryId,
   organizationId,
   customerName,
   customerPhone,
 }: {
+  inquiryId: string;
   organizationId: string;
   customerName: string;
   customerPhone: string;
@@ -260,15 +262,13 @@ export async function sendNewCustomerInquiryPushNotification({
     return;
   }
 
-  const dialNumber = customerPhone.replace(/\s+/g, "");
-
   const payload: PushPayload = {
     title: "🆕 ลูกค้าใหม่ขอสั่งสินค้า",
-    body: `${customerName} · ${customerPhone} — แตะเพื่อโทรหาลูกค้า`,
+    body: `${customerName} · ${customerPhone} — แตะเพื่อเปิดข้อมูลลูกค้า`,
     badgeCount: 1,
     icon: "/brand/192x192.png",
     badge: "/brand/192x192.png",
-    url: `tel:${dialNumber}`,
+    url: `${getSiteUrl()}/settings/customer-data?open=inquiry-call&inquiryId=${encodeURIComponent(inquiryId)}`,
   };
 
   const invalidEndpoints: string[] = [];

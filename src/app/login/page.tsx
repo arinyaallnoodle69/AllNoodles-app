@@ -24,6 +24,7 @@ function resolveLoginError(error: string): string {
 type LoginPageProps = {
   searchParams: Promise<{
     error?: string;
+    next?: string;
     sent?: string;
   }>;
 };
@@ -54,6 +55,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
             <OtpPinForm
               disabled={!configured}
               error={params.error ? resolveLoginError(params.error) : undefined}
+              next={params.next}
             />
             {!configured ? (
               <p className="mt-6 text-center text-sm text-rose-600">

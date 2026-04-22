@@ -18,6 +18,7 @@ export type Customer = {
   id: string;
   name: string;
   customer_code: string | null;
+  linePictureUrl?: string | null;
 };
 
 export type SessionCustomer = {

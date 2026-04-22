@@ -1,11 +1,13 @@
 "use server";
 
+import { revalidateTag } from "next/cache";
 import { revalidatePath } from "next/cache";
 import { isCustomerOrderEditableAtTime, isOrderOpenAtMinutes } from "@/lib/order-window";
 import { getOrderWindowSettings } from "@/lib/order-window-server";
 import { getEffectiveSaleUnitCost, normalizeSaleUnitCostMode } from "@/lib/products/sale-unit-cost";
 import { notifyCustomerReceiptImage, notifyNewCustomerInquiry, notifyNewOrder } from "@/lib/line/notify";
 import { sendNewCustomerInquiryPushNotification, sendNewOrderPushNotification } from "@/lib/push/web-push";
+import { createCustomerInquiry } from "@/lib/customer-inquiries";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import type { Database } from "@/types/database";
 
@@ -402,6 +404,11 @@ export async function registerLineCustomer(
     return { success: false, error: "ไม่สามารถบันทึกข้อมูลได้ กรุณาลองใหม่" };
   }
 
+  revalidateTag(`settings-${organizationId}`, "max");
+  revalidatePath("/settings");
+  revalidatePath("/settings/customers");
+  revalidatePath("/settings/customer-data");
+
   return { success: true, data };
 }
 
@@ -415,8 +422,23 @@ export async function submitNewCustomerInquiry(
   if (!name?.trim() || !phone?.trim()) {
     return { success: false, error: "กรุณากรอกชื่อและเบอร์โทรศัพท์" };
   }
+  let inquiryId = "";
+
+  try {
+    const inquiry = await createCustomerInquiry({
+      organizationId,
+      customerName: name.trim(),
+      customerPhone: phone.trim(),
+    });
+    inquiryId = inquiry.id;
+  } catch (error) {
+    console.error("[submitNewCustomerInquiry:createCustomerInquiry]", error);
+    return { success: false, error: "ยังส่งข้อมูลไม่สำเร็จ กรุณาลองใหม่อีกครั้ง" };
+  }
+
   void notifyNewCustomerInquiry(name.trim(), phone.trim());
   void sendNewCustomerInquiryPushNotification({
+    inquiryId,
     organizationId,
     customerName: name.trim(),
     customerPhone: phone.trim(),

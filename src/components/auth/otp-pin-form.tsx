@@ -6,12 +6,13 @@ import { verifyPin } from "@/app/login/actions";
 type OtpPinFormProps = {
   disabled: boolean;
   error?: string;
+  next?: string;
 };
 
 const keypad = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "", "0", "delete"] as const;
 const instrumentSansClass = "font-[family-name:var(--font-instrument-sans)]";
 
-export function OtpPinForm({ disabled, error }: OtpPinFormProps) {
+export function OtpPinForm({ disabled, error, next }: OtpPinFormProps) {
   const [digits, setDigits] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const formRef = useRef<HTMLFormElement | null>(null);
@@ -75,6 +76,7 @@ export function OtpPinForm({ disabled, error }: OtpPinFormProps) {
       className="w-full"
     >
       <input type="hidden" name="token" value={token} />
+      <input type="hidden" name="next" value={next ?? ""} />
 
       <div className="flex items-center justify-center gap-3">
         {Array.from({ length: 6 }).map((_, index) => {

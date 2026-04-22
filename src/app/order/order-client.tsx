@@ -73,6 +73,49 @@ import {
   isOrderOpenAtMinutes,
 } from "@/lib/order-window";
 
+function extractCustomerLinePictureUrl(value: unknown) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return null;
+  }
+
+  const metadata = "metadata" in value ? value.metadata : null;
+  if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) {
+    return null;
+  }
+
+  const lineProfile = "lineProfile" in metadata ? metadata.lineProfile : null;
+  if (!lineProfile || typeof lineProfile !== "object" || Array.isArray(lineProfile)) {
+    return null;
+  }
+
+  const pictureUrl = "pictureUrl" in lineProfile ? lineProfile.pictureUrl : null;
+  return typeof pictureUrl === "string" && pictureUrl.trim() ? pictureUrl.trim() : null;
+}
+
+function normalizeLinkedCustomer(value: unknown): Customer | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return null;
+  }
+
+  const id = "id" in value && typeof value.id === "string" ? value.id : "";
+  const name = "name" in value && typeof value.name === "string" ? value.name : "";
+  const customerCode =
+    "customer_code" in value && typeof value.customer_code === "string"
+      ? value.customer_code
+      : null;
+
+  if (!id || !name) {
+    return null;
+  }
+
+  return {
+    customer_code: customerCode,
+    id,
+    linePictureUrl: extractCustomerLinePictureUrl(value),
+    name,
+  };
+}
+
 // ─── Order window: 00:00 – 16:59 Bangkok time ────────────────────────────────
 
 function getBangkokTimeParts() {
@@ -181,7 +224,16 @@ export default function OrderClient({
   orgPhone: string;
   previewView?: string;
 }) {
-  const { isReady, liffToken, profile, login, logout, closeWindow } = useLiff();
+  const {
+    isReady,
+    isInClient,
+    liffToken,
+    profile,
+    login,
+    logout,
+    closeWindow,
+    refreshProfile,
+  } = useLiff();
   const cartButtonRef = useRef<HTMLButtonElement | null>(null);
 
   // Order window state — updates every minute
@@ -389,6 +441,7 @@ export default function OrderClient({
       ? {
           customer_code: initialSessionCustomer.customerCode,
           id: initialSessionCustomer.id,
+          linePictureUrl: null,
           name: initialSessionCustomer.name,
         }
       : null,
@@ -477,7 +530,7 @@ export default function OrderClient({
         const result = await getCustomerByLineId(lineUserId);
 
         if (result.success && result.data) {
-          setLinkedCustomer(result.data as Customer);
+          setLinkedCustomer(normalizeLinkedCustomer(result.data));
           setCurrentView("catalog");
         } else {
           setRegFormOpen(false);
@@ -1610,7 +1663,8 @@ export default function OrderClient({
         postalCode: regPostalCode || undefined,
       });
       if (result.success) {
-        setLinkedCustomer(result.data as Customer);
+        await refreshProfile();
+        setLinkedCustomer(normalizeLinkedCustomer(result.data));
         setSessionLineUserId(lineUserId);
         setCurrentView("catalog");
       } else {
@@ -1625,6 +1679,15 @@ export default function OrderClient({
       await submitNewCustomerInquiry(organizationId, inquiryName, inquiryPhone);
       setCurrentView("inquiry_done");
     });
+  };
+
+  const handleReturnToLine = () => {
+    if (isInClient) {
+      closeWindow();
+      return;
+    }
+
+    alert("หากไม่สามารถกลับไปยัง LINE ได้ กรุณาปิดหน้าต่างนี้หรือกดปุ่มย้อนกลับ");
   };
 
   const handleCheckout = () => {
@@ -2199,7 +2262,7 @@ export default function OrderClient({
         {/* Close button */}
         <button
           type="button"
-          onClick={closeWindow}
+          onClick={handleReturnToLine}
           className="mt-4 flex w-full max-w-xs items-center justify-center gap-2 rounded-2xl bg-[#003366] px-6 py-4 text-base font-bold text-white shadow-md transition active:scale-[0.97]"
         >
           กลับไปยัง LINE
@@ -2288,10 +2351,14 @@ export default function OrderClient({
             {/* Avatar — straddles banner/white boundary (translate-y-1/2 = half overflows down) */}
             <div className="absolute bottom-0 left-1/2 z-10 -translate-x-1/2 translate-y-1/2">
               <div className="relative h-[88px] w-[88px] overflow-hidden rounded-full shadow-xl ring-4 ring-white md:h-[96px] md:w-[96px]">
-                {profile?.pictureUrl ? (
+                {profile?.pictureUrl || linkedCustomer?.linePictureUrl ? (
                   <Image
-                    src={profile.pictureUrl}
-                    alt={profile.displayName ?? "โปรไฟล์"}
+                    src={
+                      profile?.pictureUrl ??
+                      linkedCustomer?.linePictureUrl ??
+                      "/placeholders/profile-placeholder.svg"
+                    }
+                    alt={profile?.displayName ?? "โปรไฟล์"}
                     fill
                     sizes="96px"
                     className="object-cover"

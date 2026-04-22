@@ -76,10 +76,21 @@ function ensurePinConfigOrRedirect() {
   }
 }
 
+function getSafeNextPath(formData: FormData) {
+  const raw = String(formData.get("next") ?? "").trim();
+
+  if (!raw.startsWith("/") || raw.startsWith("//")) {
+    return null;
+  }
+
+  return raw;
+}
+
 export async function verifyPin(formData: FormData) {
   ensurePinConfigOrRedirect();
 
   const token = normalizeOtp(formData);
+  const nextPath = getSafeNextPath(formData);
 
   if (token.length !== 6) {
     redirect("/login?error=invalid-pin");
@@ -184,7 +195,7 @@ export async function verifyPin(formData: FormData) {
     },
   );
 
-  redirect(roleHomePage(session.role));
+  redirect(nextPath ?? roleHomePage(session.role));
 }
 
 export async function signOut() {
