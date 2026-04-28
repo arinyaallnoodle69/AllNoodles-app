@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import dynamic from "next/dynamic";
 import {
   useCallback,
   useDeferredValue,
@@ -17,11 +18,11 @@ import {
   ChevronLeft,
   ChevronRight,
   ChevronDown,
-  History,
   Loader2,
   MapPin,
   Package,
   Phone,
+  RotateCcw,
   Search,
   ShoppingCart,
   Star,
@@ -30,21 +31,12 @@ import {
   X,
 } from "lucide-react";
 import { CatalogView } from "@/app/order/customer/components/catalog-view";
+import { CatalogCategoryDrawer } from "@/app/order/customer/components/catalog-category-drawer";
 import { OrderBottomShell } from "@/app/order/customer/components/order-bottom-shell";
 import { OrderCartView } from "@/app/order/customer/components/order-cart-view";
-import {
-  EditOrderProductSheet,
-  OrderEditView,
-} from "@/app/order/customer/components/order-edit-view";
-import { OrderHistoryView } from "@/app/order/customer/components/order-history-view";
-import { OrderProfileView } from "@/app/order/customer/components/order-profile-view";
-import { OrderReceiptModals } from "@/app/order/customer/components/order-receipt-modals";
-import { ProductDetailModal } from "@/app/order/customer/components/product-detail-modal";
-import {
-  RECEIPT_EXPORT_WIDTH,
-} from "@/app/order/customer/components/order-receipt-card";
-import { OrderSuccessView } from "@/app/order/customer/components/order-success-view";
+import { RECEIPT_EXPORT_WIDTH } from "@/app/order/customer/components/order-receipt-constants";
 import { OrderStatusBanner } from "@/app/order/customer/components/order-status-banner";
+import { formatDisplayUnit } from "@/app/order/customer/unit-label";
 import type { ProductWithImage } from "@/app/order/customer/types";
 import type {
   Customer,
@@ -72,6 +64,40 @@ import {
   isCustomerOrderEditableAtTime,
   isOrderOpenAtMinutes,
 } from "@/lib/order-window";
+
+const EditOrderProductSheet = dynamic(() =>
+  import("@/app/order/customer/components/order-edit-view").then(
+    (mod) => mod.EditOrderProductSheet,
+  ),
+);
+const OrderEditView = dynamic(() =>
+  import("@/app/order/customer/components/order-edit-view").then((mod) => mod.OrderEditView),
+);
+const OrderHistoryView = dynamic(() =>
+  import("@/app/order/customer/components/order-history-view").then(
+    (mod) => mod.OrderHistoryView,
+  ),
+);
+const OrderProfileView = dynamic(() =>
+  import("@/app/order/customer/components/order-profile-view").then(
+    (mod) => mod.OrderProfileView,
+  ),
+);
+const OrderReceiptModals = dynamic(() =>
+  import("@/app/order/customer/components/order-receipt-modals").then(
+    (mod) => mod.OrderReceiptModals,
+  ),
+);
+const OrderSuccessView = dynamic(() =>
+  import("@/app/order/customer/components/order-success-view").then(
+    (mod) => mod.OrderSuccessView,
+  ),
+);
+const ProductDetailModal = dynamic(() =>
+  import("@/app/order/customer/components/product-detail-modal").then(
+    (mod) => mod.ProductDetailModal,
+  ),
+);
 
 function extractCustomerLinePictureUrl(value: unknown) {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
@@ -145,6 +171,23 @@ function getBangkokTimeParts() {
   };
 }
 
+function getBangkokDateKey(offsetDays = 0) {
+  const date = new Date(Date.now() + offsetDays * 24 * 60 * 60 * 1000);
+  const parts = new Intl.DateTimeFormat("sv-SE", {
+    day: "2-digit",
+    month: "2-digit",
+    timeZone: "Asia/Bangkok",
+    year: "numeric",
+  })
+    .formatToParts(date)
+    .reduce<Record<string, string>>((acc, part) => {
+      if (part.type !== "literal") acc[part.type] = part.value;
+      return acc;
+    }, {});
+
+  return `${parts.year}-${parts.month}-${parts.day}`;
+}
+
 function calcIsOrderOpen({
   allowOrderAfterCutoff,
   closeTime,
@@ -173,7 +216,7 @@ function getConstraintError(qty: number, min: number, step: number | null): stri
 }
 
 function getDisplayUnit(unit: string | null | undefined) {
-  return unit === "kg" ? "กก." : unit || "หน่วย";
+  return formatDisplayUnit(unit);
 }
 
 function getBangkokOrderEditMeta({
@@ -441,7 +484,7 @@ export default function OrderClient({
       ? {
           customer_code: initialSessionCustomer.customerCode,
           id: initialSessionCustomer.id,
-          linePictureUrl: null,
+          linePictureUrl: initialSessionCustomer.linePictureUrl ?? null,
           name: initialSessionCustomer.name,
         }
       : null,
@@ -498,6 +541,11 @@ export default function OrderClient({
         });
         if (!response.ok || !isActive) return;
         setSessionLineUserId(profile.userId);
+        if (profile.pictureUrl) {
+          setLinkedCustomer((current) =>
+            current ? { ...current, linePictureUrl: profile.pictureUrl } : current,
+          );
+        }
       } catch (error) {
         console.error("[order-session:sync]", error);
       }
@@ -510,7 +558,14 @@ export default function OrderClient({
 
   // Resolve auth state once on boot with session-first fallback.
   useEffect(() => {
-    if (!isReady || hasResolvedAuthRef.current) return;
+    if (!isReady) return;
+    const lineUserId = profile?.userId ?? sessionLineUserId;
+    const shouldResolveAgainFromMockLogin =
+      process.env.NEXT_PUBLIC_LIFF_MOCK === "true" &&
+      currentView === "login" &&
+      Boolean(lineUserId);
+
+    if (hasResolvedAuthRef.current && !shouldResolveAgainFromMockLogin) return;
 
     if (linkedCustomer) {
       hasResolvedAuthRef.current = true;
@@ -518,7 +573,6 @@ export default function OrderClient({
       return;
     }
 
-    const lineUserId = profile?.userId ?? sessionLineUserId;
     if (!lineUserId) {
       hasResolvedAuthRef.current = true;
       setCurrentView("login");
@@ -543,7 +597,7 @@ export default function OrderClient({
         hasResolvedAuthRef.current = true;
       }
     });
-  }, [isReady, linkedCustomer, profile?.userId, sessionLineUserId]);
+  }, [currentView, isReady, linkedCustomer, profile?.userId, sessionLineUserId]);
 
   // Geography cascade: load provinces when entering register view
   useEffect(() => {
@@ -961,6 +1015,21 @@ export default function OrderClient({
     );
   }, [orderHistory]);
 
+  const yesterdayOrder = useMemo(() => {
+    const yesterdayDateKey = getBangkokDateKey(-1);
+    return orderHistory.find((order) => order.order_date === yesterdayDateKey) ?? null;
+  }, [orderHistory]);
+
+  const yesterdayOrderKeys = useMemo(() => {
+    if (!yesterdayOrder?.order_items) return new Set<string>();
+
+    return new Set(
+      yesterdayOrder.order_items.map(
+        (item) => `${item.products?.id ?? ""}::${item.product_sale_unit_id ?? ""}`,
+      ),
+    );
+  }, [yesterdayOrder]);
+
   const totalItems = useMemo(() => Object.values(cart).reduce((sum, qty) => sum + qty, 0), [cart]);
 
   const filteredProducts = useMemo(() => {
@@ -1010,12 +1079,19 @@ export default function OrderClient({
       if (activeCategory === "all") return true;
       if (activeCategory === "favorites") return favorites[p.id];
       if (activeCategory === "recent") {
-        // Since we now show unique products, we check if any of its sale units were in the recent order
-        return Array.from(recentOrderKeys).some(key => key.startsWith(`${p.product_id}::`));
+        const repeatKeys = yesterdayOrderKeys.size > 0 ? yesterdayOrderKeys : recentOrderKeys;
+        return Array.from(repeatKeys).some((key) => key.startsWith(`${p.product_id}::`));
       }
       return true;
     });
-  }, [activeCategory, favorites, filteredProducts, recentOrderKeys, selectedProductCategory]);
+  }, [
+    activeCategory,
+    favorites,
+    filteredProducts,
+    recentOrderKeys,
+    selectedProductCategory,
+    yesterdayOrderKeys,
+  ]);
 
   const gridProductIndexById = useMemo(
     () => new Map(gridProducts.map((product, index) => [product.id, index])),
@@ -1256,6 +1332,33 @@ export default function OrderClient({
         ),
     [frequentProducts, productsByLookupKey],
   );
+
+  const repeatOrderCards = useMemo(
+    () =>
+      (yesterdayOrder?.order_items ?? [])
+        .map((item) => {
+          const product = productsByLookupKey.get(
+            `${item.products?.id ?? ""}::${item.product_sale_unit_id ?? ""}`,
+          );
+          const quantity = Number(item.quantity) || 0;
+          return product && quantity > 0 ? { product, quantity } : null;
+        })
+        .filter((item): item is { product: ProductWithImage; quantity: number } => item !== null),
+    [productsByLookupKey, yesterdayOrder],
+  );
+
+  const repeatYesterdayOrder = useCallback(() => {
+    if (!isOrderOpen || repeatOrderCards.length === 0) return;
+
+    setCart((prev) => {
+      const next = { ...prev };
+      for (const { product, quantity } of repeatOrderCards) {
+        next[product.id] = (next[product.id] || 0) + quantity;
+      }
+      return next;
+    });
+    setCurrentView("cart");
+  }, [isOrderOpen, repeatOrderCards]);
 
   const modalRecommendations = useMemo(
     () =>
@@ -1738,7 +1841,7 @@ export default function OrderClient({
             capturedAt: resData.created_at ?? new Date().toISOString(),
             receiptItems: (resData.order_items ?? []).map((item) => ({
               name: item.products?.name ?? "-",
-              saleUnitLabel: item.sale_unit_label ?? "",
+              saleUnitLabel: formatDisplayUnit(item.sale_unit_label),
               quantity: Number(item.quantity) || 0,
               unitPrice: Number(item.unit_price) || 0,
               lineTotal: Number(item.line_total) || 0,
@@ -2277,11 +2380,12 @@ export default function OrderClient({
     <div className="flex flex-col min-h-screen bg-[#F8FAFC] text-slate-900 font-sans pb-32 overflow-x-clip">
       <style>{`
         @keyframes slideInRight {
-          0% { opacity: 0.5; transform: translateX(100vw); }
+          0% { opacity: 0.72; transform: translate3d(100vw, 0, 0); }
           100% { opacity: 1; transform: translateX(0); }
         }
         .animate-slide-in-right {
-          animation: slideInRight 0.35s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+          animation: slideInRight 0.58s cubic-bezier(0.19, 1, 0.22, 1) forwards;
+          will-change: transform, opacity;
         }
         @keyframes modalSlideIn {
           from { transform: translateY(100%); }
@@ -2306,7 +2410,7 @@ export default function OrderClient({
           <div className="relative">
 
             {/* Banner — clipped container */}
-            <div className="relative h-52 overflow-hidden md:h-60">
+              <div className="relative h-44 overflow-hidden md:h-60">
 
               {/* Layer 1: blurred brand logo — same for every user */}
               <Image
@@ -2343,14 +2447,14 @@ export default function OrderClient({
               </div>
 
               {/* Layer 3: store name at bottom-center */}
-              <p className="absolute bottom-3 left-0 right-0 text-center text-[11px] font-bold uppercase tracking-[0.18em] text-white/55">
+              <p className="absolute bottom-2.5 left-0 right-0 text-center text-[11px] font-bold uppercase tracking-[0.18em] text-white/55">
                 เส้นรังนก T&amp;Y Noodle
               </p>
             </div>
 
             {/* Avatar — straddles banner/white boundary (translate-y-1/2 = half overflows down) */}
             <div className="absolute bottom-0 left-1/2 z-10 -translate-x-1/2 translate-y-1/2">
-              <div className="relative h-[88px] w-[88px] overflow-hidden rounded-full shadow-xl ring-4 ring-white md:h-[96px] md:w-[96px]">
+              <div className="relative h-[76px] w-[76px] overflow-hidden rounded-full shadow-xl ring-4 ring-white md:h-[96px] md:w-[96px]">
                 {profile?.pictureUrl || linkedCustomer?.linePictureUrl ? (
                   <Image
                     src={
@@ -2376,8 +2480,8 @@ export default function OrderClient({
           </div>
 
           {/* ── White section: names only ── */}
-          {/* pt-14 = 56px ≈ half of 88px avatar + a little breathing room */}
-          <div className="bg-white px-4 pb-5 pt-14 md:pt-16">
+          {/* pt-11 leaves room for the mobile avatar while keeping the header compact. */}
+          <div className="bg-white px-4 pb-4 pt-11 md:pb-5 md:pt-16">
             <div className="text-center">
               {!isReady && !linkedCustomer ? (
                 <p className="text-sm text-slate-400 animate-pulse">กำลังโหลดข้อมูล...</p>
@@ -2450,68 +2554,44 @@ export default function OrderClient({
         </header>
       )}
 
-      {/* ── Sticky search + category pills + tabs (catalog only) ── */}
+      {/* ── Sticky search + category drawer + tabs (catalog only) ── */}
       {currentView === "catalog" && (
-        <div className="sticky top-0 z-30 bg-white shadow-sm">
+        <div className="sticky top-0 z-[80] bg-white shadow-sm">
           {/* Search bar */}
-          <div className="px-4 pt-3 pb-2">
-            <div className="relative">
-              <span className="absolute inset-y-0 left-0 flex items-center pl-3.5">
-                <Search className="h-[18px] w-[18px] text-slate-400" />
-              </span>
-              <input
-                aria-label="Search products"
-                className="w-full rounded-2xl border border-slate-200 bg-slate-50 py-2.5 pl-10 pr-4 text-sm outline-none transition-all focus:border-[#003366] focus:bg-white focus:ring-2 focus:ring-[#003366]/10 md:text-base"
-                placeholder="ค้นหาสินค้า..."
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+          <div className="px-4 pb-1.5 pt-2">
+            <div className="flex items-center gap-2">
+              <div className="relative min-w-0 flex-1 rounded-lg border border-slate-200 bg-white shadow-sm">
+                <span className="absolute inset-y-0 left-0 flex items-center pl-3.5">
+                  <Search className="h-[17px] w-[17px] text-[#003366]/55" />
+                </span>
+                <input
+                  aria-label="Search products"
+                  className="w-full rounded-lg border border-transparent bg-transparent py-1.5 pl-10 pr-9 text-sm font-medium text-slate-800 outline-none transition-all placeholder:text-slate-400 focus:border-[#003366]/20 focus:ring-2 focus:ring-[#003366]/10 md:text-base"
+                  placeholder="ค้นหาสินค้า..."
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery("")}
+                    className="absolute inset-y-0 right-0 flex items-center pr-3.5 text-slate-400 hover:text-slate-600"
+                    aria-label="Clear search"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
+
+              <CatalogCategoryDrawer
+                categories={categoryOptions}
+                selectedCategory={selectedProductCategory}
+                onSelectCategory={setSelectedProductCategory}
               />
-              {searchQuery && (
-                <button
-                  onClick={() => setSearchQuery("")}
-                  className="absolute inset-y-0 right-0 flex items-center pr-3.5 text-slate-400 hover:text-slate-600"
-                  aria-label="Clear search"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              )}
             </div>
           </div>
 
-          {/* Category pills */}
-          {categoryOptions.length > 0 && (
-            <div
-              className="flex gap-2 overflow-x-auto px-4 pb-2"
-              style={{ scrollbarWidth: "none", msOverflowStyle: "none" } as React.CSSProperties}
-            >
-              <button
-                onClick={() => setSelectedProductCategory("all")}
-                className={`shrink-0 rounded-full px-4 py-1.5 text-[13px] font-semibold transition-all ${
-                  selectedProductCategory === "all"
-                    ? "bg-[#003366] text-white shadow-md"
-                    : "border border-slate-200 bg-white text-slate-500 active:bg-slate-50"
-                }`}
-              >
-                ทั้งหมด
-              </button>
-              {categoryOptions.map(({ id, name }) => (
-                <button
-                  key={id}
-                  onClick={() => setSelectedProductCategory(id)}
-                  className={`shrink-0 rounded-full px-4 py-1.5 text-[13px] font-semibold transition-all ${
-                    selectedProductCategory === id
-                      ? "bg-[#003366] text-white shadow-md"
-                      : "border border-slate-200 bg-white text-slate-500 active:bg-slate-50"
-                  }`}
-                >
-                  {name}
-                </button>
-              ))}
-            </div>
-          )}
-
-          {/* Tabs: สินค้า / รายการโปรด / ล่าสุด */}
+          {/* Tabs: สินค้า / รายการโปรด / สั่งซ้ำ */}
           <div className="border-t border-slate-100">
             <div className="relative flex w-full">
               <button
@@ -2538,8 +2618,8 @@ export default function OrderClient({
                   activeCategory === "recent" ? "text-[#003366] drop-shadow-sm" : "text-slate-400 hover:text-slate-600"
                 }`}
               >
-                <History className="h-4 w-4" />
-                ล่าสุด
+                <RotateCcw className="h-4 w-4" />
+                สั่งซ้ำ
               </button>
 
               {/* Sliding underline indicator */}
@@ -2571,14 +2651,18 @@ export default function OrderClient({
       }>
         {currentView === "catalog" ? (
           <CatalogView
+            activeCategory={activeCategory}
             cart={cart}
             favorites={favorites}
             frequentProductCards={frequentProductCards}
             getDisplayUnit={getDisplayUnit}
             gridProducts={gridProducts}
+            isOrderOpen={isOrderOpen}
             onAddFrequentProduct={addProductToCart}
             onOpenProduct={openProductModal}
+            onRepeatOrderAll={repeatYesterdayOrder}
             onToggleFavorite={toggleFavorite}
+            repeatOrderCards={repeatOrderCards}
           />
         ) : currentView === "success" ? (
           <OrderSuccessView
@@ -2647,30 +2731,34 @@ export default function OrderClient({
       </main>
       </div>
 
-      <EditOrderProductSheet
-        addProductSearch={addProductSearch}
-        editCart={editCart}
-        getDisplayUnit={getDisplayUnit}
-        isOpen={showAddProductSheet}
-        onClose={() => setShowAddProductSheet(false)}
-        onSetAddProductSearch={setAddProductSearch}
-        onUpdateEditQuantity={updateEditQuantity}
-        products={products}
-      />
+      {showAddProductSheet && (
+        <EditOrderProductSheet
+          addProductSearch={addProductSearch}
+          editCart={editCart}
+          getDisplayUnit={getDisplayUnit}
+          isOpen={showAddProductSheet}
+          onClose={() => setShowAddProductSheet(false)}
+          onSetAddProductSearch={setAddProductSearch}
+          onUpdateEditQuantity={updateEditQuantity}
+          products={products}
+        />
+      )}
 
-      <OrderReceiptModals
-        isSavingImage={isSavingImage}
-        linkedCustomerName={linkedCustomer?.name ?? ""}
-        onCloseReceipt={() => {
-          setReceiptOrder(null);
-          setReceiptImageUrl(null);
-        }}
-        onCloseReceiptImage={() => setReceiptImageUrl(null)}
-        onSaveReceiptAsImage={saveReceiptAsImage}
-        receiptCardRef={receiptCardRef}
-        receiptImageUrl={receiptImageUrl}
-        receiptOrder={receiptOrder}
-      />
+      {(receiptOrder || receiptImageUrl) && (
+        <OrderReceiptModals
+          isSavingImage={isSavingImage}
+          linkedCustomerName={linkedCustomer?.name ?? ""}
+          onCloseReceipt={() => {
+            setReceiptOrder(null);
+            setReceiptImageUrl(null);
+          }}
+          onCloseReceiptImage={() => setReceiptImageUrl(null)}
+          onSaveReceiptAsImage={saveReceiptAsImage}
+          receiptCardRef={receiptCardRef}
+          receiptImageUrl={receiptImageUrl}
+          receiptOrder={receiptOrder}
+        />
+      )}
 
       <OrderBottomShell
         currentView={currentView}

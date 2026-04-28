@@ -7,6 +7,8 @@ import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import type { Database, Json } from "@/types/database";
 
 const PRODUCT_IMAGES_BUCKET = "product-images";
+let productImagesBucketReady = false;
+let productImagesBucketReadyPromise: Promise<void> | null = null;
 
 type SettingsAdmin = ReturnType<typeof getSupabaseAdmin>;
 export type ProductSubmitActionState = {
@@ -125,23 +127,41 @@ async function generateProductSku(organizationId: string) {
 }
 
 async function ensureBucket() {
-  const admin = getSupabaseAdmin();
-  const storage = admin.storage;
-  const { data: buckets } = await storage.listBuckets();
-
-  if (
-    (buckets as Array<{ name: string }> | undefined)?.some(
-      (bucket) => bucket.name === PRODUCT_IMAGES_BUCKET,
-    )
-  ) {
+  if (productImagesBucketReady) {
     return;
   }
 
-  await storage.createBucket(PRODUCT_IMAGES_BUCKET, {
-    allowedMimeTypes: ["image/png", "image/jpeg", "image/webp"],
-    fileSizeLimit: "5MB",
-    public: true,
-  });
+  if (productImagesBucketReadyPromise) {
+    return productImagesBucketReadyPromise;
+  }
+
+  const admin = getSupabaseAdmin();
+  const storage = admin.storage;
+  productImagesBucketReadyPromise = (async () => {
+    const { data: buckets } = await storage.listBuckets();
+
+    if (
+      (buckets as Array<{ name: string }> | undefined)?.some(
+        (bucket) => bucket.name === PRODUCT_IMAGES_BUCKET,
+      )
+    ) {
+      productImagesBucketReady = true;
+      return;
+    }
+
+    await storage.createBucket(PRODUCT_IMAGES_BUCKET, {
+      allowedMimeTypes: ["image/png", "image/jpeg", "image/webp"],
+      fileSizeLimit: "5MB",
+      public: true,
+    });
+    productImagesBucketReady = true;
+  })();
+
+  try {
+    await productImagesBucketReadyPromise;
+  } finally {
+    productImagesBucketReadyPromise = null;
+  }
 }
 
 async function uploadProductImages(
@@ -542,6 +562,7 @@ export async function updateProduct(formData: FormData): Promise<boolean> {
   const keptExistingImageUrls = formData
     .getAll("keptExistingImageUrls")
     .filter((v): v is string => typeof v === "string" && v.length > 0);
+  const imagesChanged = safeText(formData.get("imagesChanged")) === "1";
   const newImagesFirst = safeText(formData.get("newImagesFirst")) === "1";
   const brand = safeText(formData.get("brand")) ?? "";
   const requestedCategoryIds = parseCategoryIds(formData);
@@ -689,10 +710,11 @@ export async function updateProduct(formData: FormData): Promise<boolean> {
 
   await syncProductCategoryAssignments(admin, session.organizationId, productId, categoryIds);
 
-  {
-    // Sync images: upload/insert new images first, then delete removed images last.
-    // This order avoids accidental data loss if a request is interrupted mid-flight.
-    await ensureBucket();
+  if (imagesChanged) {
+    // Sync images only when the form changed image state.
+    if (files.length > 0) {
+      await ensureBucket();
+    }
 
     const { data: allCurrentImages } = await admin
       .from("product_images")

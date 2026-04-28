@@ -31,6 +31,7 @@ import { SettingsMobileBottomNav } from "@/components/settings/settings-mobile-b
 import { OrdersMobileTabs } from "@/components/orders/orders-mobile-tabs";
 import { ReportsMobileTabs } from "@/components/reports/reports-mobile-tabs";
 import { MobileSearchProvider, useMobileSearch } from "@/components/mobile-search/mobile-search-context";
+import { ScrollToTopButton } from "@/components/ui/scroll-to-top-button";
 
 // ─── Page title map (mobile top bar) ─────────────────────────────────────────
 
@@ -144,6 +145,18 @@ function isActive(href: string, pathname: string): boolean {
   if (href === "/dashboard") return pathname === "/dashboard";
   if (href === "/orders") return pathname === "/orders" || pathname === "/orders/formal";
   return pathname.startsWith(href);
+}
+
+function shouldShowScrollTopButton(pathname: string) {
+  return (
+    pathname === "/delivery" ||
+    pathname === "/orders" ||
+    pathname.startsWith("/orders/delivery-notes") ||
+    pathname.startsWith("/orders/incoming") ||
+    pathname.startsWith("/settings/customers") ||
+    pathname.startsWith("/settings/products") ||
+    pathname.startsWith("/reports/")
+  );
 }
 
 // ─── Sidebar nav link ─────────────────────────────────────────────────────────
@@ -434,6 +447,7 @@ export function AppSidebarLayout({ children }: { children: React.ReactNode }) {
 
       {/* ── Mobile bottom nav ────────────────────────────────────────────── */}
       <SettingsMobileBottomNav />
+      <ScrollToTopButton enabled={shouldShowScrollTopButton(pathname)} />
     </MobileSearchProvider>
   );
 }

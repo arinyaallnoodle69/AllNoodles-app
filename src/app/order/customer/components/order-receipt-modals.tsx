@@ -5,6 +5,7 @@ import type { RefObject } from "react";
 import { Download, Loader2, X } from "lucide-react";
 import { OrderReceiptCard } from "@/app/order/customer/components/order-receipt-card";
 import type { CustomerOrderRow } from "@/app/order/customer/order-client-types";
+import { formatDisplayUnit } from "@/app/order/customer/unit-label";
 
 type OrderReceiptModalsProps = {
   isSavingImage: boolean;
@@ -63,7 +64,7 @@ export function OrderReceiptModals({
               storeName={linkedCustomerName}
               items={(receiptOrder.order_items ?? []).map((item) => ({
                 name: item.products?.name ?? "-",
-                saleUnitLabel: item.sale_unit_label ?? "",
+                saleUnitLabel: formatDisplayUnit(item.sale_unit_label),
                 quantity: Number(item.quantity) || 0,
                 unitPrice: Number(item.unit_price) || 0,
                 lineTotal: Number(item.line_total) || 0,

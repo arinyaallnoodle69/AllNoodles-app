@@ -23,6 +23,7 @@ export type Customer = {
 
 export type SessionCustomer = {
   id: string;
+  linePictureUrl?: string | null;
   name: string;
   customerCode: string | null;
 };

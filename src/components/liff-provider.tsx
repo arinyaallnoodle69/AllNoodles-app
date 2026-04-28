@@ -62,7 +62,8 @@ export function LiffProvider({
 
   const refreshProfile = useCallback(async () => {
     const liff = liffRef.current;
-    if (!liff || !liff.isLoggedIn()) return;
+    const useMock = process.env.NEXT_PUBLIC_LIFF_MOCK === "true";
+    if (!liff || (!useMock && !liff.isLoggedIn())) return;
 
     try {
       let userProfile = await liff.getProfile();

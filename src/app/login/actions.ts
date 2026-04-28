@@ -86,6 +86,60 @@ function getSafeNextPath(formData: FormData) {
   return raw;
 }
 
+async function createSessionWithSuccessAudit({
+  admin,
+  ipHash,
+  pinLookup,
+  userAgent,
+  userId,
+}: {
+  admin: RpcCapableAdmin;
+  ipHash: string | null;
+  pinLookup: string;
+  userAgent: string | null;
+  userId: string;
+}) {
+  const combinedResult = await admin.rpc("create_app_session_with_success_audit", {
+    p_user_id: userId,
+    p_attempted_lookup: pinLookup,
+    p_ip_hash: ipHash,
+    p_user_agent: userAgent,
+  });
+
+  if (!combinedResult.error) {
+    return combinedResult;
+  }
+
+  const missingCombinedRpc =
+    combinedResult.error.message.includes("create_app_session_with_success_audit") ||
+    combinedResult.error.message.includes("function") ||
+    combinedResult.error.message.includes("schema cache");
+
+  if (!missingCombinedRpc) {
+    return combinedResult;
+  }
+
+  const sessionResult = await admin.rpc("create_app_session", {
+    p_user_id: userId,
+    p_ip_hash: ipHash,
+    p_user_agent: userAgent,
+  });
+
+  if (sessionResult.error) {
+    return sessionResult;
+  }
+
+  const auditResult = await admin.rpc("record_pin_auth_result", {
+    p_user_id: userId,
+    p_attempted_lookup: pinLookup,
+    p_success: true,
+    p_ip_hash: ipHash,
+    p_user_agent: userAgent,
+  });
+
+  return auditResult.error ? auditResult : sessionResult;
+}
+
 export async function verifyPin(formData: FormData) {
   ensurePinConfigOrRedirect();
 
@@ -150,22 +204,13 @@ export async function verifyPin(formData: FormData) {
     redirect(isLocked ? "/login?error=pin-locked" : "/login?error=incorrect-pin");
   }
 
-  const [sessionResult] = await Promise.all([
-    admin.rpc("create_app_session", {
-      p_user_id: user.id,
-      p_ip_hash: ipHash,
-      p_user_agent: userAgent,
-    }),
-    Promise.resolve(
-      admin.rpc("record_pin_auth_result", {
-        p_user_id: user.id,
-        p_attempted_lookup: pinLookup,
-        p_success: true,
-        p_ip_hash: ipHash,
-        p_user_agent: userAgent,
-      }),
-    ).catch(() => null),
-  ]);
+  const sessionResult = await createSessionWithSuccessAudit({
+    admin,
+    ipHash,
+    pinLookup,
+    userAgent,
+    userId: user.id,
+  });
 
   const { data: sessionRows, error: sessionError } = sessionResult;
 

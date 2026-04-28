@@ -4,8 +4,6 @@ import type { ReceiptItem } from "@/app/order/customer/order-client-types";
 
 const RECEIPT_DISPLAY_MAX_WIDTH = 620;
 
-export const RECEIPT_EXPORT_WIDTH = 360;
-
 export function OrderReceiptCard({
   receiptRef,
   orderNumber,

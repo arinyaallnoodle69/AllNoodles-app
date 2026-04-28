@@ -8,12 +8,15 @@ import type {
 } from "react";
 import {
   BadgeCheck,
+  Gem,
   Info,
   Link2,
   Package,
   Share2,
   ShoppingCart,
+  Stamp,
   Star,
+  Truck,
   X,
 } from "lucide-react";
 import { ModalAddToCartFooter as CustomerModalAddToCartFooter } from "@/app/order/customer/components/modal-add-to-cart-footer";
@@ -110,6 +113,7 @@ export function ProductDetailModal({
   const brand = meta.brand ?? "";
   const category = selectedProduct.categoryNames.join(", ") || meta.category || "";
   const description = meta.description ?? "";
+  const hasMinimumOrder = selectedProduct.min_order_qty > 1;
   const hasContent = brand || category || description;
 
   return (
@@ -305,23 +309,30 @@ export function ProductDetailModal({
               )}
 
               <div className="flex flex-col gap-2 pt-1">
-                <div className="flex items-center gap-2 text-[13px] font-bold text-slate-800">
+                <div className="flex flex-wrap items-center gap-2 text-[13px] font-bold text-slate-800">
                   <Package className="h-4 w-4 text-[#003366]" strokeWidth={2.2} />
                   <span>ชื่อสินค้า</span>
+                  <span className="h-4 w-px bg-slate-300" aria-hidden="true" />
+                  <span className="text-[12px] font-semibold text-slate-500">
+                    หน่วย: {getDisplayUnit(selectedProduct.sale_unit_label)}
+                  </span>
+                  {hasMinimumOrder ? (
+                    <>
+                      <span className="h-4 w-px bg-slate-300" aria-hidden="true" />
+                      <span className="text-[12px] font-semibold text-slate-500">
+                        สั่งซื้อขั้นต่ำ: {selectedProduct.min_order_qty}{" "}
+                        {getDisplayUnit(selectedProduct.sale_unit_label)}
+                      </span>
+                    </>
+                  ) : null}
                 </div>
                 <h1 className="text-[22px] font-extrabold leading-tight text-slate-900">
                   {selectedProduct.name}
                 </h1>
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="rounded-md bg-[#eef4fa] px-3 py-1 text-[12px] font-bold text-[#003366]">
-                    หน่วย: {selectedProduct.sale_unit_label}
-                  </span>
-                  {selectedProduct.min_order_qty > 1 && (
-                    <span className="text-[12px] font-medium text-slate-400">
-                      ขั้นต่ำ {selectedProduct.min_order_qty}{" "}
-                      {getDisplayUnit(selectedProduct.sale_unit_label)}
-                    </span>
-                  )}
+                <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                  <TrustBadge icon={Truck} label="พร้อมส่ง" />
+                  <TrustBadge icon={Gem} label="คัดคุณภาพ" />
+                  <TrustBadge icon={Stamp} label="มาตรฐานร้านค้า" />
                 </div>
               </div>
             </div>
@@ -337,17 +348,17 @@ export function ProductDetailModal({
                 {(brand || category) && (
                   <div className="flex flex-wrap items-center gap-x-2.5 gap-y-2">
                     {brand && (
-                      <p className="text-[13px] text-slate-600">
-                        <span className="font-semibold text-slate-700">แบรนด์:</span>{" "}
+                      <p className="text-[13px] font-semibold text-[#003366] underline decoration-[#003366] decoration-1 underline-offset-1 [text-decoration-skip-ink:auto]">
+                        <span>แบรนด์:</span>{" "}
                         {brand}
                       </p>
                     )}
                     {brand && category ? (
-                      <span className="h-4 w-px bg-slate-300" aria-hidden="true" />
+                      <span className="h-4 w-px bg-[#003366]/55" aria-hidden="true" />
                     ) : null}
                     {category && (
-                      <p className="text-[13px] text-slate-600">
-                        <span className="font-semibold text-slate-700">หมวดหมู่:</span>{" "}
+                      <p className="text-[13px] font-semibold text-[#003366] underline decoration-[#003366] decoration-1 underline-offset-1 [text-decoration-skip-ink:auto]">
+                        <span>หมวดหมู่:</span>{" "}
                         {category}
                       </p>
                     )}
@@ -471,5 +482,22 @@ export function ProductDetailModal({
         closedLabel="ปิดรับออเดอร์"
       />
     </div>
+  );
+}
+
+function TrustBadge({
+  icon: Icon,
+  label,
+}: {
+  icon: React.ComponentType<{ className?: string; strokeWidth?: number }>;
+  label: string;
+}) {
+  return (
+    <span className="inline-flex h-8 min-w-0 items-center gap-1.5 rounded-md border border-slate-200 bg-white px-2.5 text-[11px] font-bold leading-none text-slate-700 shadow-[0_5px_14px_rgba(15,23,42,0.05)]">
+      <span className="flex h-[18px] w-[18px] items-center justify-center rounded-[5px] bg-[#003366] text-white">
+        <Icon className="h-3 w-3" strokeWidth={2.4} />
+      </span>
+      <span className="min-w-0 whitespace-nowrap">{label}</span>
+    </span>
   );
 }

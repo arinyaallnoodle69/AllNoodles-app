@@ -91,7 +91,6 @@ async function compressImageFile(file: File): Promise<File> {
   });
 }
 const INTEGER_ORDER_PRESET_QTY = 5;
-const SWIPE_THRESHOLD = 60;
 const SUCCESS_POPUP_DURATION_MS = 3000;
 const initialProductSubmitActionState: ProductSubmitActionState = {
   message: "",
@@ -731,6 +730,12 @@ function ProductFormBody({
     prioritizeNewImages,
   ]);
   const isSubmitDisabled = isPending || (isEditing && !hasUnsavedChanges);
+  const imagesChanged =
+    !isEditing ||
+    files.length > 0 ||
+    prioritizeNewImages ||
+    keptExistingUrls.length !== (editingProduct?.imageUrls.length ?? 0) ||
+    keptExistingUrls.some((url, index) => url !== editingProduct?.imageUrls[index]);
 
   function handleSubmit(formData: FormData) {
     if (isEditing && !hasUnsavedChanges) {
@@ -746,6 +751,7 @@ function ProductFormBody({
       }
     });
     files.forEach((file) => payload.append("images", file));
+    payload.set("imagesChanged", imagesChanged ? "1" : "0");
 
     startSubmitTransition(() => {
       void serverAction(initialProductSubmitActionState, payload)
@@ -1501,28 +1507,6 @@ export function ProductForm({
   const canGoPrev = hasNav && currentIndex > 0;
   const canGoNext = hasNav && currentIndex < productList.length - 1;
 
-  // Swipe detection - only fires for horizontal swipes (ignores vertical scroll)
-  const touchStartX = useRef<number | null>(null);
-  const touchStartY = useRef<number | null>(null);
-
-  function handleTouchStart(e: React.TouchEvent) {
-    touchStartX.current = e.touches[0]?.clientX ?? null;
-    touchStartY.current = e.touches[0]?.clientY ?? null;
-  }
-
-  function handleTouchEnd(e: React.TouchEvent) {
-    if (isSubmitting) return;
-    if (touchStartX.current === null || touchStartY.current === null) return;
-    const deltaX = (e.changedTouches[0]?.clientX ?? touchStartX.current) - touchStartX.current;
-    const deltaY = (e.changedTouches[0]?.clientY ?? touchStartY.current) - touchStartY.current;
-    touchStartX.current = null;
-    touchStartY.current = null;
-    // Only treat as horizontal swipe if X movement dominates Y movement
-    if (Math.abs(deltaX) < SWIPE_THRESHOLD || Math.abs(deltaX) < Math.abs(deltaY) * 1.5) return;
-    if (deltaX < 0 && canGoNext) setCurrentIndex((i) => i + 1);
-    if (deltaX > 0 && canGoPrev) setCurrentIndex((i) => i - 1);
-  }
-
   // Keyboard arrow navigation
   useEffect(() => {
     if (!hasNav || isSubmitting) return;
@@ -1548,8 +1532,6 @@ export function ProductForm({
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/45 sm:items-center sm:p-4">
       <div
         className="relative flex max-h-[96dvh] w-full max-w-3xl flex-col overflow-hidden rounded-t-[1.75rem] border border-slate-200 bg-white shadow-[0_28px_80px_rgba(15,23,42,0.22)] sm:rounded-[1.75rem]"
-        onTouchStart={handleTouchStart}
-        onTouchEnd={handleTouchEnd}
       >
         {/* Header */}
         <div className="shrink-0 border-b border-slate-100 px-4 pb-3 pt-4 sm:px-6">
@@ -1631,4 +1613,3 @@ export function ProductForm({
     </div>
   );
 }
-

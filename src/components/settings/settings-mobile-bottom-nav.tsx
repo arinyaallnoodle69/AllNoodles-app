@@ -8,12 +8,14 @@ import {
   Boxes,
   ClipboardList,
   LayoutDashboard,
+  LogOut,
   MoreHorizontal,
   Receipt,
   Settings2,
   Truck,
   X,
 } from "lucide-react";
+import { signOut } from "@/app/login/actions";
 
 const primaryNav = [
   { href: "/dashboard", icon: LayoutDashboard, label: "แดชบอร์ด" },
@@ -86,6 +88,19 @@ export function SettingsMobileBottomNav() {
               </Link>
             );
           })}
+        </div>
+
+        <div className="border-t border-slate-100 px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-3">
+          <form action={signOut}>
+            <button
+              type="submit"
+              onClick={() => setMoreOpen(false)}
+              className="flex w-full items-center justify-center gap-2 rounded-2xl bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-600 transition active:bg-rose-100"
+            >
+              <LogOut className="h-5 w-5" strokeWidth={2.2} />
+              <span>ออกจากระบบ</span>
+            </button>
+          </form>
         </div>
       </div>
 

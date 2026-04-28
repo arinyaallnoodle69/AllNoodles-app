@@ -5,6 +5,7 @@ import { useEffect, useState, useTransition } from "react";
 import { Loader2, Package } from "lucide-react";
 import { getCustomerDeliveredSummary } from "@/app/order/actions";
 import type { DeliveredProductSummary } from "@/app/order/actions";
+import { formatDisplayUnit } from "@/app/order/customer/unit-label";
 
 const PODIUM_CONFIG = {
   1: {
@@ -57,7 +58,9 @@ function PodiumCard({ item, rank }: { item: DeliveredProductSummary; rank: 1 | 2
       </p>
       <p className={`font-black text-[#003366] leading-none ${c.qtySize}`}>
         {item.totalDelivered.toLocaleString("th-TH")}
-        <span className="ml-0.5 text-[10px] font-semibold opacity-60">{item.saleUnitLabel}</span>
+        <span className="ml-0.5 text-[10px] font-semibold opacity-60">
+          {formatDisplayUnit(item.saleUnitLabel)}
+        </span>
       </p>
       <p className="text-[10px] text-slate-400">{item.orderCount} ออเดอร์</p>
     </div>
@@ -156,7 +159,7 @@ export function OrderSummaryView({ customerId }: { customerId: string }) {
                   <p className="text-sm font-black text-[#003366]">
                     {item.totalDelivered.toLocaleString("th-TH")}
                   </p>
-                  <p className="text-xs text-slate-400">{item.saleUnitLabel}</p>
+                  <p className="text-xs text-slate-400">{formatDisplayUnit(item.saleUnitLabel)}</p>
                 </div>
               </div>
             ))}

@@ -6,6 +6,7 @@ import { Loader2, Package, BarChart3, ClipboardList } from "lucide-react";
 import type { ProductWithImage } from "@/app/order/customer/types";
 import type { CustomerOrderRow } from "@/app/order/customer/order-client-types";
 import { OrderSummaryView } from "@/app/order/customer/components/order-summary-view";
+import { formatDisplayUnit } from "@/app/order/customer/unit-label";
 
 type Tab = "history" | "summary";
 
@@ -166,7 +167,9 @@ export function OrderHistoryView({
                       fallbackProduct?.product_images?.[0]?.public_url ??
                       "/placeholders/product-placeholder.svg";
                     const itemName = item.products?.name ?? fallbackProduct?.name ?? "-";
-                    const itemUnit = item.sale_unit_label ?? fallbackProduct?.sale_unit_label ?? "";
+                    const itemUnit = formatDisplayUnit(
+                      item.sale_unit_label ?? fallbackProduct?.sale_unit_label,
+                    );
 
                     return (
                       <div

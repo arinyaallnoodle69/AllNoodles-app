@@ -47,6 +47,7 @@ type SearchParams = Record<string, string | string[] | undefined>;
 type InitialOrderCustomer = {
   customerCode: string | null;
   id: string;
+  linePictureUrl: string | null;
   name: string;
 };
 
@@ -194,6 +195,20 @@ function getSearchParamValue(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value;
 }
 
+function extractLinePictureUrl(metadata: unknown) {
+  if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) {
+    return null;
+  }
+
+  const lineProfile = "lineProfile" in metadata ? metadata.lineProfile : null;
+  if (!lineProfile || typeof lineProfile !== "object" || Array.isArray(lineProfile)) {
+    return null;
+  }
+
+  const pictureUrl = "pictureUrl" in lineProfile ? lineProfile.pictureUrl : null;
+  return typeof pictureUrl === "string" && pictureUrl.trim() ? pictureUrl.trim() : null;
+}
+
 async function getInitialOrderAuth(
   organizationId: string,
 ): Promise<InitialOrderAuth> {
@@ -206,7 +221,7 @@ async function getInitialOrderAuth(
   const supabaseAdmin = getSupabaseAdmin();
   const { data } = await supabaseAdmin
     .from("customers")
-    .select("id, name, customer_code, organization_id")
+    .select("id, name, customer_code, organization_id, metadata")
     .eq("line_user_id", session.lineUserId)
     .eq("is_active", true)
     .maybeSingle();
@@ -226,6 +241,7 @@ async function getInitialOrderAuth(
     customer: {
       customerCode: data.customer_code,
       id: data.id,
+      linePictureUrl: extractLinePictureUrl(data.metadata),
       name: data.name,
     },
     lineUserId: session.lineUserId,
