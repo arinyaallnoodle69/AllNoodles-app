@@ -67,6 +67,7 @@ export type ViewState =
   | "catalog"
   | "cart"
   | "success"
+  | "pending_success"
   | "profile"
   | "history"
   | "edit_order";

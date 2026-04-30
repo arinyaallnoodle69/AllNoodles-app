@@ -6,11 +6,13 @@ import { CreateOrderModal } from "@/components/orders/create-order-modal";
 import { DesktopOrderDetail } from "@/components/orders/desktop-order-detail";
 import { IncomingOrderOpenCard } from "@/components/orders/incoming-order-open-card";
 import { IncomingOrderToggleButton } from "@/components/orders/incoming-order-toggle-button";
+import { PendingLineOrdersSection } from "@/components/orders/pending-line-orders-section";
 import { ThaiDatePicker } from "@/components/ui/thai-date-picker";
 import { MobileSearchDrawer } from "@/components/mobile-search/mobile-search-drawer";
 import { requireAppRole } from "@/lib/auth/authorization";
 import { normalizeOrderDate, getTodayInBangkok } from "@/lib/orders/date";
-import { getIncomingOrders, getOrderDetailById } from "@/lib/orders/detail";
+import { getCustomerOrderCountsByDate, getIncomingOrders, getOrderDetailById } from "@/lib/orders/detail";
+import { getPendingLineOrders } from "@/lib/orders/line-pending";
 import { getCustomersForOrder, getProductsForOrder } from "@/lib/orders/manage";
 
 export const metadata = { title: "รายการออเดอร์" };
@@ -50,11 +52,20 @@ export default async function IncomingOrdersPage({ searchParams }: IncomingOrder
   const searchTerm = params.q?.trim() ?? "";
   const expandedOrderId = params.expanded?.trim() ?? "";
 
-  const [orders, expandedDetail, customers, products] = await Promise.all([
+  const [
+    orders,
+    expandedDetail,
+    customers,
+    products,
+    pendingLineOrders,
+    customerOrderCountsToday,
+  ] = await Promise.all([
     getIncomingOrders(session.organizationId, { orderDate, searchTerm }),
     expandedOrderId ? getOrderDetailById(expandedOrderId) : Promise.resolve(null),
     getCustomersForOrder(session.organizationId),
     getProductsForOrder(session.organizationId),
+    getPendingLineOrders(session.organizationId, { orderDate, searchTerm }),
+    getCustomerOrderCountsByDate(session.organizationId, orderDate),
   ]);
 
   function buildExpandedHref(nextExpandedId: string | null) {
@@ -93,12 +104,22 @@ export default async function IncomingOrdersPage({ searchParams }: IncomingOrder
               ค้นหา
             </button>
             <div className="ml-1">
-              <CreateOrderModal customers={customers} products={products} today={getTodayInBangkok()} />
+              <CreateOrderModal
+                customerOrderCountsToday={customerOrderCountsToday}
+                customers={customers}
+                products={products}
+                today={getTodayInBangkok()}
+              />
             </div>
           </form>
 
           <div className="flex justify-end md:hidden">
-            <CreateOrderModal customers={customers} products={products} today={getTodayInBangkok()} />
+            <CreateOrderModal
+              customerOrderCountsToday={customerOrderCountsToday}
+              customers={customers}
+              products={products}
+              today={getTodayInBangkok()}
+            />
           </div>
         </section>
 
@@ -128,6 +149,11 @@ export default async function IncomingOrdersPage({ searchParams }: IncomingOrder
             </button>
           </form>
         </MobileSearchDrawer>
+
+        <PendingLineOrdersSection
+          customers={customers}
+          pendingOrders={pendingLineOrders}
+        />
 
         <section className="rounded-[1.9rem] border border-slate-200 bg-white shadow-[0_18px_55px_rgba(15,23,42,0.05)]">
           <div className="border-b border-slate-200 px-6 py-5">

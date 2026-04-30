@@ -182,6 +182,7 @@ function ProductFormBody({
         },
       ],
   );
+  const [removedSaleUnitIds, setRemovedSaleUnitIds] = useState<string[]>([]);
   const [brand, setBrand] = useState(editingProduct?.brand ?? "");
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>(
     editingProduct?.categoryIds[0] ?? "",
@@ -554,6 +555,13 @@ function ProductFormBody({
         return current;
       }
 
+      const removedSaleUnit = current.find((saleUnit) => saleUnit.key === key);
+      if (removedSaleUnit?.id) {
+        setRemovedSaleUnitIds((ids) =>
+          ids.includes(removedSaleUnit.id) ? ids : [...ids, removedSaleUnit.id],
+        );
+      }
+
       return current.filter((saleUnit) => saleUnit.key !== key);
     });
   }
@@ -777,6 +785,11 @@ function ProductFormBody({
       >
         {isEditing ? <input type="hidden" name="newImagesFirst" value={prioritizeNewImages ? "1" : "0"} /> : null}
         {isEditing ? <input type="hidden" name="productId" value={editingProduct.id} /> : null}
+        {isEditing
+          ? removedSaleUnitIds.map((id) => (
+            <input key={`removed-sale-unit-${id}`} type="hidden" name="removedSaleUnitId" value={id} />
+          ))
+          : null}
         {isEditing
           ? keptExistingUrls.map((url) => (
             <input key={`keep-image-${url}`} type="hidden" name="keptExistingImageUrls" value={url} />

@@ -404,6 +404,44 @@ export async function notifyCustomerReceiptImage(
   return linePush(lineUserId, token, imageMessage);
 }
 
+export async function notifyCustomerOrderReceiptSummary(
+  lineUserId: string,
+  payload: {
+    customerName: string;
+    items: { productName: string; quantity: number; saleUnitLabel: string }[];
+    orderNumber: string;
+  },
+): Promise<boolean> {
+  const token = process.env.LINE_CHANNEL_ACCESS_TOKEN;
+  if (!token || !isValidLinePushTarget(lineUserId)) {
+    console.warn("[line/customer-summary] Invalid LINE user id - skipping push");
+    return false;
+  }
+
+  const itemLines = payload.items
+    .map((item, index) => {
+      const quantity = item.quantity.toLocaleString("th-TH");
+      return `${index + 1}. ${item.productName} ${quantity} ${item.saleUnitLabel}`;
+    })
+    .join("\n");
+
+  const message = {
+    type: "text",
+    text: [
+      "T&Y Noodle - ใบยืนยันคำสั่งซื้อ",
+      `เลขที่ออเดอร์: ${payload.orderNumber}`,
+      `ร้านค้า: ${payload.customerName}`,
+      "",
+      "รายการสินค้า",
+      itemLines || "-",
+      "",
+      "ขอบคุณสำหรับการสั่งซื้อครับ",
+    ].join("\n"),
+  };
+
+  return linePush(lineUserId, token, message);
+}
+
 // ─── New customer inquiry notification ───────────────────────────────────────
 
 function buildNewCustomerInquiryFlex(name: string, phone: string): object {

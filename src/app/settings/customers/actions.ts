@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath, revalidateTag } from "next/cache";
+import { revalidatePath, revalidateTag, updateTag } from "next/cache";
 import { requireAppRole } from "@/lib/auth/authorization";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
@@ -47,6 +47,17 @@ function buildAddressMetadata(address: AddressPayload) {
     subdistrictCode: address.subdistrictCode,
     subdistrictName: address.subdistrictName,
   };
+}
+
+function revalidateCustomerSettings(organizationId: string) {
+  updateTag(`settings-${organizationId}`);
+  revalidatePath("/settings");
+  revalidatePath("/settings/customers");
+  revalidatePath("/settings/customers/pricing");
+  revalidatePath("/settings/customer-data");
+  revalidatePath("/delivery");
+  revalidatePath("/orders");
+  revalidateTag(`settings-${organizationId}`, "max");
 }
 
 function getNextCustomerCode(codes: string[]) {
@@ -222,10 +233,8 @@ export async function createCustomerAction(
     };
   }
 
-  revalidatePath("/settings");
-  revalidatePath("/settings/customers");
+  revalidateCustomerSettings(session.organizationId);
   revalidatePath("/settings/vehicles");
-  revalidateTag(`settings-${session.organizationId}`, "max");
 
   return {
     fieldErrors: {},
@@ -317,11 +326,7 @@ export async function updateCustomerAction(
     };
   }
 
-  revalidatePath("/settings");
-  revalidatePath("/settings/customers");
-  revalidatePath("/settings/customers/pricing");
-  revalidatePath("/delivery");
-  revalidateTag(`settings-${session.organizationId}`, "max");
+  revalidateCustomerSettings(session.organizationId);
 
   return {
     fieldErrors: {},
@@ -375,10 +380,8 @@ export async function updateCustomerDefaultVehicleAction(
     return { error: "อัปเดตรถประจำร้านไม่สำเร็จ กรุณาลองอีกครั้ง" };
   }
 
-  revalidatePath("/settings/customers");
+  revalidateCustomerSettings(session.organizationId);
   revalidatePath("/settings/vehicles");
-  revalidatePath("/delivery");
-  revalidateTag(`settings-${session.organizationId}`, "max");
 
   return {};
 }
@@ -409,9 +412,7 @@ export async function deleteCustomerAction(customerId: string): Promise<{ error?
     return { error: "ลบร้านค้าไม่สำเร็จ กรุณาลองอีกครั้ง" };
   }
 
-  revalidatePath("/settings/customers");
-  revalidatePath("/orders");
-  revalidateTag(`settings-${session.organizationId}`, "max");
+  revalidateCustomerSettings(session.organizationId);
 
   return {};
 }

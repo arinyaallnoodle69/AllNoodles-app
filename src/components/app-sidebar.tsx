@@ -155,6 +155,7 @@ function shouldShowScrollTopButton(pathname: string) {
     pathname.startsWith("/orders/incoming") ||
     pathname.startsWith("/settings/customers") ||
     pathname.startsWith("/settings/products") ||
+    pathname.startsWith("/stock") ||
     pathname.startsWith("/reports/")
   );
 }

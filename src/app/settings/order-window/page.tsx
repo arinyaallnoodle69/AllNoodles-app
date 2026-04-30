@@ -1,4 +1,3 @@
-import { Clock } from "lucide-react";
 import { OrderWindowSettingsForm } from "@/components/settings/order-window-settings-form";
 import { SettingsShell } from "@/components/settings/settings-shell";
 import { requireAppRole } from "@/lib/auth/authorization";
@@ -15,7 +14,6 @@ export default async function SettingsOrderWindowPage() {
   return (
     <SettingsShell
       title="เวลารับออเดอร์และแจ้งเตือน"
-      titleIcon={Clock}
       description="ตั้งเวลารับออเดอร์จริงของร้าน พร้อมเปิดหรือปิดแจ้งเตือนออเดอร์ใหม่บนอุปกรณ์นี้ได้จากหน้าเดียว"
       floatingSubmit={false}
     >

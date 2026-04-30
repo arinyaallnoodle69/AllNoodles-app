@@ -767,12 +767,12 @@ function PriceRowMobile({ price }: { price: SettingsPriceRow }) {
     return (
       <div className="border-b border-slate-100 bg-[#003366]/[0.03] px-4 py-4">
         {/* Product info */}
-        <div className="mb-4 flex items-center gap-3">
-          <div className="relative flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-slate-100">
+        <div className="mb-4 flex items-start gap-3">
+          <div className="relative flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden bg-white">
             {price.imageUrl ? (
-              <Image src={price.imageUrl} alt={price.productName} fill sizes="48px" className="object-contain bg-white p-0.5" />
+              <Image src={price.imageUrl} alt={price.productName} fill sizes="80px" className="object-contain" />
             ) : (
-              <Package2 className="h-6 w-6 text-slate-300" />
+              <Package2 className="h-8 w-8 text-slate-300" />
             )}
           </div>
           <div className="min-w-0 flex-1">
@@ -877,13 +877,13 @@ function PriceRowMobile({ price }: { price: SettingsPriceRow }) {
       tabIndex={0}
       onClick={openEdit}
       onKeyDown={(e) => e.key === "Enter" && openEdit()}
-      className="flex cursor-pointer items-center gap-3 border-b border-slate-100 px-4 py-4 transition active:bg-slate-50"
+      className="relative flex cursor-pointer items-start gap-4 border-b border-slate-100 px-4 py-4 transition active:bg-slate-50"
     >
-      <div className="relative flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-slate-100">
+      <div className="relative flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden bg-white">
         {price.imageUrl ? (
-          <Image src={price.imageUrl} alt={price.productName} fill sizes="48px" className="object-contain bg-white p-0.5" />
+          <Image src={price.imageUrl} alt={price.productName} fill sizes="80px" className="object-contain" />
         ) : (
-          <Package2 className="h-6 w-6 text-slate-300" />
+          <Package2 className="h-8 w-8 text-slate-300" />
         )}
       </div>
 
@@ -892,8 +892,8 @@ function PriceRowMobile({ price }: { price: SettingsPriceRow }) {
         <p className="mt-0.5 text-sm text-slate-400">{price.saleUnitLabel}</p>
       </div>
 
-      <div className="flex shrink-0 items-center gap-2">
-        <div className="text-right">
+      <div className="ml-auto flex shrink-0 self-stretch pl-2">
+        <div className="mt-auto pb-1 text-right">
           <p className="text-lg font-bold tabular-nums text-slate-900">
             {price.salePrice.toLocaleString("th-TH", { minimumFractionDigits: 2 })}
           </p>
@@ -903,7 +903,7 @@ function PriceRowMobile({ price }: { price: SettingsPriceRow }) {
           type="button"
           onClick={(e) => { e.stopPropagation(); setConfirmDelete(true); }}
           aria-label="ลบ"
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-slate-300 transition hover:bg-red-50 hover:text-red-500"
+          className="absolute right-4 top-4 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-slate-300 transition hover:bg-red-50 hover:text-red-500"
         >
           <Trash2 className="h-4 w-4" strokeWidth={2} />
         </button>

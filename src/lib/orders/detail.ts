@@ -403,3 +403,25 @@ export async function getIncomingOrders(
       );
     });
 }
+
+export async function getCustomerOrderCountsByDate(
+  organizationId: string,
+  orderDate: string,
+): Promise<Record<string, number>> {
+  const admin = getSupabaseAdmin() as unknown as OrderDetailAdminClient;
+  const { data, error } = await admin
+    .from("orders")
+    .select("customer_id, status")
+    .eq("organization_id", organizationId)
+    .eq("order_date", orderDate)
+    .order("customer_id", { ascending: true });
+
+  if (error) {
+    throw new Error(error.message ?? "Failed to load customer order counts.");
+  }
+
+  return (data ?? []).filter((order) => order.status !== "cancelled").reduce<Record<string, number>>((counts, order) => {
+    counts[order.customer_id] = (counts[order.customer_id] ?? 0) + 1;
+    return counts;
+  }, {});
+}

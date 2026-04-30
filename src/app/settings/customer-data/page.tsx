@@ -1,4 +1,3 @@
-import { MessageCircleMore } from "lucide-react";
 import { CustomerDataPanel } from "@/components/settings/customer-data-panel";
 import { CustomerInquiryModal } from "@/components/settings/customer-inquiry-modal";
 import { SettingsShell } from "@/components/settings/settings-shell";
@@ -51,7 +50,6 @@ export default async function SettingsCustomerDataPage({
     <SettingsShell
       current="customerData"
       title="ข้อมูลลูกค้า"
-      titleIcon={MessageCircleMore}
       description="ตรวจสอบข้อมูลลูกค้าที่เชื่อม LINE กับร้านค้า ดูสถานะการใช้งาน และจัดการสิทธิ์การสั่งซื้อจากหน้านี้"
       floatingSubmit={false}
     >

@@ -37,7 +37,7 @@ export function ProductList({ products, baseListHref = "/settings/products" }: P
     <Link
       href={createHref}
       scroll={false}
-      className="fixed bottom-[calc(env(safe-area-inset-bottom)+5rem)] right-4 z-50 inline-flex items-center gap-2 rounded-full bg-[#003366] px-5 py-3.5 text-sm font-semibold text-white shadow-[0_8px_32px_rgba(0,51,102,0.35)] transition hover:bg-[#002244] active:scale-95 md:bottom-6 md:right-6"
+      className="fixed bottom-[calc(env(safe-area-inset-bottom)+6.75rem)] left-4 z-50 inline-flex items-center gap-2 rounded-full bg-[#003366] px-5 py-3.5 text-sm font-semibold text-white shadow-[0_8px_32px_rgba(0,51,102,0.35)] transition hover:bg-[#002244] active:scale-95 md:bottom-8 md:left-auto md:right-8"
     >
       <Plus className="h-4 w-4" strokeWidth={2.5} />
       เพิ่มสินค้า
@@ -64,16 +64,16 @@ export function ProductList({ products, baseListHref = "/settings/products" }: P
                 return (
                   <article
                     key={product.id}
-                    className={`w-full border-x-0 border-y border-t-4 border-t-[#003366] border-y-slate-200 bg-white px-4 py-5 shadow-none first:border-t-4 last:border-b-0 ${
+                    className={`w-full bg-white px-4 py-5 shadow-none ${
                       product.isActive ? "" : "opacity-70"
                     }`}
                   >
                     <div className="flex items-start gap-4">
-                      <div className="relative flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-slate-100">
+                      <div className="relative flex h-28 w-28 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-white">
                         {product.imageUrls[0] ? (
-                          <ProductImagePreview src={product.imageUrls[0]} alt={product.name} thumbnailSizes="80px" />
+                          <ProductImagePreview src={product.imageUrls[0]} alt={product.name} thumbnailSizes="112px" />
                         ) : (
-                          <Package2 className="h-7 w-7 text-slate-400" strokeWidth={2.2} />
+                          <Package2 className="h-9 w-9 text-slate-400" strokeWidth={2.2} />
                         )}
                       </div>
 
@@ -81,7 +81,7 @@ export function ProductList({ products, baseListHref = "/settings/products" }: P
                         <p className="text-[11px] font-bold uppercase tracking-wider text-[#003366]">
                           {product.sku}
                         </p>
-                        <p className="mt-0.5 line-clamp-2 text-base font-bold text-slate-950">
+                        <p className="mt-0.5 text-base font-bold leading-snug text-slate-950">
                           {product.name}
                         </p>
                         <div className="mt-2 space-y-1">

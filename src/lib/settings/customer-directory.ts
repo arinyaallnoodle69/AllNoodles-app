@@ -14,6 +14,16 @@ type CustomerRow = Pick<
   | "name"
   | "phone"
 >;
+type LineOrderCustomerRow = Pick<
+  Database["public"]["Tables"]["line_order_customers"]["Row"],
+  | "created_at"
+  | "customer_id"
+  | "id"
+  | "line_display_name"
+  | "line_picture_url"
+  | "line_user_id"
+  | "updated_at"
+>;
 
 type LineProfileSnapshot = {
   displayName: string | null;
@@ -22,9 +32,11 @@ type LineProfileSnapshot = {
 
 export type CustomerDirectoryItem = {
   createdAt: string;
-  customerCode: string;
+  customerCode: string | null;
+  customerId: string | null;
   id: string;
   isActive: boolean;
+  isLinked: boolean;
   lineDisplayName: string | null;
   linePictureUrl: string | null;
   lineUserId: string;
@@ -73,14 +85,13 @@ export async function getCustomerDirectoryData(
   organizationId: string,
 ): Promise<CustomerDirectoryData> {
   const admin = getSupabaseAdmin();
-  const { data, error } = await admin
-    .from("customers")
-    .select("id, customer_code, name, phone, created_at, is_active, line_user_id, metadata")
+  const { data: lineLinks, error: lineLinksError } = await admin
+    .from("line_order_customers")
+    .select("id, customer_id, line_user_id, line_display_name, line_picture_url, created_at, updated_at")
     .eq("organization_id", organizationId)
-    .not("line_user_id", "is", null)
-    .order("created_at", { ascending: false });
+    .order("updated_at", { ascending: false });
 
-  if (error) {
+  if (lineLinksError) {
     return {
       activeCount: 0,
       customers: [],
@@ -89,24 +100,59 @@ export async function getCustomerDirectoryData(
     };
   }
 
-  const customers = ((data ?? []) as CustomerRow[])
-    .filter((customer) => typeof customer.line_user_id === "string" && customer.line_user_id.trim())
-    .map((customer) => {
-      const lineProfile = getLineProfileSnapshot(customer.metadata);
+  const links = ((lineLinks ?? []) as LineOrderCustomerRow[]).filter((link) =>
+    link.line_user_id.trim(),
+  );
+  const customerIds = Array.from(
+    new Set(links.map((link) => link.customer_id).filter((id): id is string => Boolean(id))),
+  );
+
+  const { data: customerRows, error: customerError } = customerIds.length
+    ? await admin
+        .from("customers")
+        .select("id, customer_code, name, phone, created_at, is_active, line_user_id, metadata")
+        .eq("organization_id", organizationId)
+        .in("id", customerIds)
+    : { data: [] as CustomerRow[], error: null };
+
+  if (customerError) {
+    return {
+      activeCount: 0,
+      customers: [],
+      disabledCount: 0,
+      totalCount: 0,
+    };
+  }
+
+  const customerById = new Map(
+    ((customerRows ?? []) as CustomerRow[]).map((customer) => [customer.id, customer]),
+  );
+  const customers = links
+    .map((link) => {
+      const customer = link.customer_id ? customerById.get(link.customer_id) : null;
+      const lineProfile = customer
+        ? getLineProfileSnapshot(customer.metadata)
+        : { displayName: null, pictureUrl: null };
 
       return {
-        createdAt: customer.created_at,
-        customerCode: customer.customer_code,
-        id: customer.id,
-        isActive: customer.is_active,
-        lineDisplayName: lineProfile.displayName,
-        linePictureUrl: lineProfile.pictureUrl,
-        lineUserId: customer.line_user_id!.trim(),
-        name: customer.name,
-        phone: customer.phone,
+        createdAt: link.updated_at ?? link.created_at,
+        customerCode: customer?.customer_code ?? null,
+        customerId: customer?.id ?? null,
+        id: customer?.id ?? link.id,
+        isActive: customer?.is_active ?? false,
+        isLinked: Boolean(customer),
+        lineDisplayName: getTrimmedString(link.line_display_name) ?? lineProfile.displayName,
+        linePictureUrl: getTrimmedString(link.line_picture_url) ?? lineProfile.pictureUrl,
+        lineUserId: link.line_user_id.trim(),
+        name: customer?.name ?? "ยังไม่ผูกร้านค้า",
+        phone: customer?.phone ?? null,
       } satisfies CustomerDirectoryItem;
     })
     .sort((left, right) => {
+      if (left.isLinked !== right.isLinked) {
+        return left.isLinked ? -1 : 1;
+      }
+
       if (left.isActive !== right.isActive) {
         return left.isActive ? -1 : 1;
       }
@@ -115,9 +161,9 @@ export async function getCustomerDirectoryData(
     });
 
   return {
-    activeCount: customers.filter((customer) => customer.isActive).length,
+    activeCount: customers.filter((customer) => customer.isLinked && customer.isActive).length,
     customers,
-    disabledCount: customers.filter((customer) => !customer.isActive).length,
+    disabledCount: customers.filter((customer) => !customer.isLinked || !customer.isActive).length,
     totalCount: customers.length,
   };
 }

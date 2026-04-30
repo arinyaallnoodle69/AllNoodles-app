@@ -86,18 +86,24 @@ export async function deleteCustomerDataAction(
   const currentMetadata = isRecord(customer.metadata) ? { ...customer.metadata } : {};
   delete currentMetadata.lineProfile;
 
-  const { error } = await admin
-    .from("customers")
-    .update({
-      is_active: false,
-      line_user_id: null,
-      metadata: currentMetadata,
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", customerId)
-    .eq("organization_id", session.organizationId);
+  const [{ error }, { error: lineLinkError }] = await Promise.all([
+    admin
+      .from("customers")
+      .update({
+        line_user_id: null,
+        metadata: currentMetadata,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", customerId)
+      .eq("organization_id", session.organizationId),
+    admin
+      .from("line_order_customers")
+      .delete()
+      .eq("customer_id", customerId)
+      .eq("organization_id", session.organizationId),
+  ]);
 
-  if (error) {
+  if (error || lineLinkError) {
     return { error: "ลบข้อมูลลูกค้าไม่สำเร็จ กรุณาลองใหม่อีกครั้ง" };
   }
 

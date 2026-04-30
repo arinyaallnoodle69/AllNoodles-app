@@ -18,23 +18,14 @@ type CustomerInquiryRow = {
   is_handled: boolean;
 };
 
-type InquiryTableClient = ReturnType<typeof getSupabaseAdmin> & {
-  // customer_inquiries is added by migration and may not be in generated types yet.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  from: (table: "customer_inquiries") => any;
-};
-
-function inquiryTable(supabase: ReturnType<typeof getSupabaseAdmin>) {
-  return (supabase as InquiryTableClient).from("customer_inquiries");
-}
-
 export async function createCustomerInquiry(input: {
   customerName: string;
   customerPhone: string;
   organizationId: string;
 }) {
   const supabase = getSupabaseAdmin();
-  const { data, error } = await inquiryTable(supabase)
+  const { data, error } = await supabase
+    .from("customer_inquiries")
     .insert({
       customer_name: input.customerName,
       customer_phone: input.customerPhone,
@@ -68,7 +59,8 @@ export async function getCustomerInquiryById(
   }
 
   const supabase = getSupabaseAdmin();
-  const { data, error } = await inquiryTable(supabase)
+  const { data, error } = await supabase
+    .from("customer_inquiries")
     .select("id, customer_name, customer_phone, is_handled, created_at")
     .eq("organization_id", organizationId)
     .eq("id", inquiryId)

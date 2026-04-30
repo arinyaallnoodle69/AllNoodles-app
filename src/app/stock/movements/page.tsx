@@ -1,4 +1,3 @@
-import { Warehouse } from "lucide-react";
 import { StockMobileReceiveButton } from "@/components/settings/stock-list";
 import { StockMovementTable } from "@/components/settings/stock-movement-table";
 import { StockReceiveForm } from "@/components/settings/stock-receive-form";
@@ -28,7 +27,6 @@ export default async function StockMovementsPage({
   return (
     <SettingsShell
       title="จัดการสต็อก"
-      titleIcon={Warehouse}
       description="ดูของคงเหลือ รับเข้าสินค้าจากโรงงาน และติดตามข้อมูลสต็อกจากหน้ากลุ่มนี้"
       floatingSubmit={false}
     >

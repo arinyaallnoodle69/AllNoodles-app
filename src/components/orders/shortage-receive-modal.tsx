@@ -14,7 +14,12 @@ type ShortageReceiveModalProps = {
 
 export function ShortageReceiveModal({ orderDate, active }: ShortageReceiveModalProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const onClose = () => setIsOpen(false);
+  const onClose = () => {
+    setIsOpen(false);
+    setStores([]);
+    setQuantities({});
+    setSuccessMsg("");
+  };
   const [isPending, startTransition] = useTransition();
   const [isLoadingData, setIsLoadingData] = useState(false);
   const [stores, setStores] = useState<OrderStoreDetail[]>([]);
@@ -23,9 +28,6 @@ export function ShortageReceiveModal({ orderDate, active }: ShortageReceiveModal
 
   useEffect(() => {
     if (isOpen) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setIsLoadingData(true);
-      setSuccessMsg("");
       getShortagesForDate(orderDate)
         .then((data) => {
           setStores(data);
@@ -42,10 +44,6 @@ export function ShortageReceiveModal({ orderDate, active }: ShortageReceiveModal
           setQuantities(initialQty);
         })
         .finally(() => setIsLoadingData(false));
-    } else {
-      setStores([]);
-      setQuantities({});
-      setSuccessMsg("");
     }
   }, [isOpen, orderDate]);
 
@@ -112,6 +110,8 @@ export function ShortageReceiveModal({ orderDate, active }: ShortageReceiveModal
         onClick={(e) => {
           e.preventDefault();
           e.stopPropagation();
+          setSuccessMsg("");
+          setIsLoadingData(true);
           setIsOpen(true);
         }}
         className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-white/25 px-3 py-1.5 text-sm font-semibold text-white shadow-[0_2px_10px_rgba(0,0,0,0.1)] backdrop-blur-md transition hover:bg-white/35 active:scale-95 border border-white/20"

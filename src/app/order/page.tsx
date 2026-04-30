@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { cache } from "react";
 import OrderClient from "./order-client";
 import { parseOrderWindowSettings } from "@/lib/order-window";
+import { getLinkedCustomerByLineUserId } from "@/lib/orders/line-pending";
 import { getSiteUrl } from "@/lib/site-url";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { getOrderCustomerSession } from "@/lib/auth/order-session";
@@ -218,13 +219,9 @@ async function getInitialOrderAuth(
     return { customer: null, lineUserId: null };
   }
 
-  const supabaseAdmin = getSupabaseAdmin();
-  const { data } = await supabaseAdmin
-    .from("customers")
-    .select("id, name, customer_code, organization_id, metadata")
-    .eq("line_user_id", session.lineUserId)
-    .eq("is_active", true)
-    .maybeSingle();
+  const data = organizationId
+    ? await getLinkedCustomerByLineUserId(organizationId, session.lineUserId)
+    : null;
 
   if (!data) {
     return {

@@ -75,6 +75,7 @@ type ProductSelectModalProps = {
 };
 
 type Props = {
+  customerOrderCountsToday?: Record<string, number>;
   customers: OrderCustomerOption[];
   products: OrderProductOption[];
   today: string;
@@ -458,11 +459,11 @@ function ProductSelectModal({
                 ? selectedProduct.name
                 : "เลือกรายการสินค้า"}
             </h3>
-            <p className="mt-0.5 text-sm text-slate-500">
-              {mobileView === "detail"
-                ? "กำหนดจำนวนและราคา แล้วกดเพิ่มสินค้า"
-                : "เลือกจากสินค้าทั้งหมด หรือกรองตามหมวดหมู่"}
-            </p>
+            {mobileView === "detail" ? (
+              <p className="mt-0.5 text-sm text-slate-500">
+                กำหนดจำนวนและราคา แล้วกดเพิ่มสินค้า
+              </p>
+            ) : null}
             {selectedCustomerLabel ? (
               <p className="mt-1 text-xs font-semibold text-[#003366]">
                 ร้านค้า: {selectedCustomerLabel}
@@ -573,20 +574,20 @@ function ProductSelectModal({
                         key={product.id}
                         type="button"
                         onClick={() => handleSelectProduct(product.id)}
-                        className={`flex w-full items-center gap-3 rounded-2xl border px-4 py-4 text-left transition active:scale-[0.99] ${
+                        className={`flex w-full items-start gap-3 rounded-2xl border px-3 py-3 text-left transition active:scale-[0.99] sm:items-center sm:px-4 sm:py-4 ${
                           isSelected
                             ? "border-[#003366] bg-[#003366]/5"
                             : "border-slate-200 bg-white hover:bg-slate-50"
                         }`}
                       >
-	                        <div className="relative h-14 w-14 shrink-0 overflow-hidden">
+	                        <div className="relative h-24 w-24 shrink-0 overflow-hidden rounded-xl bg-white sm:h-14 sm:w-14 sm:rounded-none">
 	                          {product.imageUrl ? (
 	                            <Image
 	                              src={product.imageUrl}
 	                              alt={product.name}
 	                              fill
 	                              className="object-contain"
-	                              sizes="56px"
+	                              sizes="(max-width: 640px) 96px, 56px"
 	                            />
 	                          ) : (
 	                            <div className="flex h-full w-full items-center justify-center text-slate-300">
@@ -595,7 +596,7 @@ function ProductSelectModal({
 	                          )}
                         </div>
                         <div className="min-w-0 flex-1">
-                          <div className="flex items-start justify-between gap-2">
+                          <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                             <p className="text-base font-semibold leading-snug text-slate-900">
                               {product.name}
                             </p>
@@ -872,7 +873,12 @@ function ProductSelectModal({
     </div>
   );
 }
-export function CreateOrderModal({ customers, products, today }: Props) {
+export function CreateOrderModal({
+  customerOrderCountsToday = {},
+  customers,
+  products,
+  today,
+}: Props) {
   const [open, setOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<ModalTab>("create");
   const [productModalOpen, setProductModalOpen] = useState(false);
@@ -903,6 +909,7 @@ export function CreateOrderModal({ customers, products, today }: Props) {
     () => customers.find((customer) => customer.id === customerId) ?? null,
     [customers, customerId],
   );
+  const selectedCustomerOrderCount = customerId ? customerOrderCountsToday[customerId] ?? 0 : 0;
   const orderedCustomers = useMemo(
     () => customers.toSorted(compareCustomerCode),
     [customers],
@@ -1292,7 +1299,17 @@ export function CreateOrderModal({ customers, products, today }: Props) {
                             <p className="truncate text-base font-semibold text-slate-900">
                               {selectedCustomer.name}
                             </p>
-                            <p className="text-sm text-slate-500">{selectedCustomer.code}</p>
+                            <div className="mt-1 flex flex-wrap items-center gap-2">
+                              <p className="text-sm text-slate-500">{selectedCustomer.code}</p>
+                              {selectedCustomerOrderCount > 0 ? (
+                                <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-bold text-emerald-700 ring-1 ring-emerald-200">
+                                  สั่งแล้ววันนี้
+                                  {selectedCustomerOrderCount > 1
+                                    ? ` ${selectedCustomerOrderCount}`
+                                    : ""}
+                                </span>
+                              ) : null}
+                            </div>
                           </>
                         ) : (
                           <p className="text-base text-slate-400">แตะเพื่อเลือกร้านค้า</p>
@@ -1657,6 +1674,7 @@ export function CreateOrderModal({ customers, products, today }: Props) {
                 <div className="space-y-2">
                   {filteredCustomers.map((customer) => {
                     const isSelected = customer.id === customerId;
+                    const orderCountToday = customerOrderCountsToday[customer.id] ?? 0;
                     return (
                       <button
                         key={customer.id}
@@ -1672,8 +1690,15 @@ export function CreateOrderModal({ customers, products, today }: Props) {
                           <Building2 className="h-4.5 w-4.5 text-slate-500" strokeWidth={2} />
                         </div>
                         <div className="min-w-0 flex-1">
-                          <p className="truncate text-base font-semibold text-slate-900">{customer.name}</p>
-                          <p className="text-sm text-slate-500">{customer.code}</p>
+                          <p className="text-base font-semibold leading-snug text-slate-900">{customer.name}</p>
+                          <div className="mt-1 flex flex-wrap items-center gap-2">
+                            <p className="text-sm text-slate-500">{customer.code}</p>
+                            {orderCountToday > 0 ? (
+                              <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-bold text-emerald-700 ring-1 ring-emerald-200">
+                                สั่งแล้ววันนี้{orderCountToday > 1 ? ` ${orderCountToday}` : ""}
+                              </span>
+                            ) : null}
+                          </div>
                         </div>
                         {isSelected ? (
                           <span className="rounded-full bg-[#003366] px-2 py-0.5 text-xs font-bold text-white">

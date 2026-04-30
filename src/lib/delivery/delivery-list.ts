@@ -247,8 +247,6 @@ export async function getDeliveryList(
   }
 
   // ดึงใบวางบิลที่ออกแล้วของลูกค้าทั้งหมดในช่วงวันที่ค้นหา
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const billingDb = supabase as any;
   const uniqueCustomerIds = Array.from(new Set(filteredNotes.map((n) => n.customers.id)));
   const billingByCustomer = new Map<
     string,
@@ -256,7 +254,7 @@ export async function getDeliveryList(
   >();
 
   if (uniqueCustomerIds.length > 0) {
-    const { data: billingRows } = await billingDb
+    const { data: billingRows } = await supabase
       .from("billing_records")
       .select("customer_id, billing_number, billing_date, from_date, to_date")
       .eq("organization_id", organizationId)

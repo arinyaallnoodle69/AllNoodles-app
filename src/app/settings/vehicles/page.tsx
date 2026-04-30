@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Plus, Truck } from "lucide-react";
+import { Plus } from "lucide-react";
 import { VehicleForm } from "@/components/settings/vehicle-form";
 import { VehicleListPanel } from "@/components/settings/vehicle-list-panel";
 import { SettingsShell } from "@/components/settings/settings-shell";
@@ -31,7 +31,6 @@ export default async function SettingsVehiclesPage({
     <SettingsShell
       current="vehicles"
       title="จัดการรถ"
-      titleIcon={Truck}
       description="เพิ่มรถส่งของแบบง่ายสำหรับผูกเป็นรถประจำร้าน และเตรียมต่อยอดไปงานจัดส่งในอนาคต"
       floatingSubmit={false}
     >

@@ -44,14 +44,8 @@ type PushPayload = {
   url?: string;
 };
 
-type PushTableClient = ReturnType<typeof getSupabaseAdmin> & {
-  // push_subscriptions is added by a local migration and may not be in generated types yet.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  from: (table: "push_subscriptions") => any;
-};
-
-function pushTable(supabase: ReturnType<typeof getSupabaseAdmin>) {
-  return (supabase as PushTableClient).from("push_subscriptions");
+export function getPushSubscriptionPublicKey() {
+  return hasWebPushConfig() ? getWebPushPublicKey() : "";
 }
 
 let webPushConfigured = false;
@@ -73,15 +67,11 @@ function ensureWebPushConfigured() {
   return true;
 }
 
-export function getPushSubscriptionPublicKey() {
-  return hasWebPushConfig() ? getWebPushPublicKey() : "";
-}
-
 export async function savePushSubscription(input: SavePushSubscriptionInput) {
   const now = new Date().toISOString();
   const supabase = getSupabaseAdmin();
 
-  const { error } = await pushTable(supabase).upsert(
+  const { error } = await supabase.from("push_subscriptions").upsert(
     {
       organization_id: input.organizationId,
       user_id: input.userId,
@@ -104,7 +94,8 @@ export async function savePushSubscription(input: SavePushSubscriptionInput) {
 
 export async function getUserPushSubscriptions(organizationId: string, userId: string) {
   const supabase = getSupabaseAdmin();
-  const { data, error } = await pushTable(supabase)
+  const { data, error } = await supabase
+    .from("push_subscriptions")
     .select("id, endpoint, p256dh, auth, is_active, organization_id, user_id, platform, user_agent, created_at, updated_at, last_seen_at")
     .eq("organization_id", organizationId)
     .eq("user_id", userId)
@@ -121,7 +112,8 @@ async function deactivatePushSubscriptionsByEndpoint(endpoints: string[]) {
   if (endpoints.length === 0) return;
 
   const supabase = getSupabaseAdmin();
-  const { error } = await pushTable(supabase)
+  const { error } = await supabase
+    .from("push_subscriptions")
     .update({
       is_active: false,
       updated_at: new Date().toISOString(),
@@ -139,7 +131,8 @@ export async function deactivateUserPushSubscription(
   endpoint: string,
 ) {
   const supabase = getSupabaseAdmin();
-  const { error } = await pushTable(supabase)
+  const { error } = await supabase
+    .from("push_subscriptions")
     .update({
       is_active: false,
       updated_at: new Date().toISOString(),
@@ -167,7 +160,8 @@ export async function sendNewOrderPushNotification({
   }
 
   const supabase = getSupabaseAdmin();
-  const { data, error } = await pushTable(supabase)
+  const { data, error } = await supabase
+    .from("push_subscriptions")
     .select("id, endpoint, p256dh, auth, is_active, organization_id, user_id, platform, user_agent, created_at, updated_at, last_seen_at")
     .eq("organization_id", organizationId)
     .eq("is_active", true);
@@ -247,7 +241,8 @@ export async function sendNewCustomerInquiryPushNotification({
   }
 
   const supabase = getSupabaseAdmin();
-  const { data, error } = await pushTable(supabase)
+  const { data, error } = await supabase
+    .from("push_subscriptions")
     .select("id, endpoint, p256dh, auth, is_active, organization_id, user_id, platform, user_agent, created_at, updated_at, last_seen_at")
     .eq("organization_id", organizationId)
     .eq("is_active", true);

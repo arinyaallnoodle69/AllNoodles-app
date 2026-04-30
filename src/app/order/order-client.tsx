@@ -52,6 +52,9 @@ import type {
 import {
   getCustomerByLineId,
   registerLineCustomer,
+  continueExistingLineCustomer,
+  createPendingLineOrderAction,
+  getLineCustomerOnboardingState,
   submitNewCustomerInquiry,
   getFrequentlyOrderedProducts,
   getCustomerOrders,
@@ -492,6 +495,8 @@ export default function OrderClient({
   const [sessionLineUserId, setSessionLineUserId] = useState<string | null>(
     initialSessionLineUserId,
   );
+  const [canSubmitPendingLineOrder, setCanSubmitPendingLineOrder] = useState(false);
+  const [pendingLineOrderId, setPendingLineOrderId] = useState<string | null>(null);
   const hasResolvedAuthRef = useRef(false);
 
   // Self-registration form state
@@ -569,6 +574,7 @@ export default function OrderClient({
 
     if (linkedCustomer) {
       hasResolvedAuthRef.current = true;
+      setCanSubmitPendingLineOrder(false);
       setCurrentView("catalog");
       return;
     }
@@ -585,10 +591,18 @@ export default function OrderClient({
 
         if (result.success && result.data) {
           setLinkedCustomer(normalizeLinkedCustomer(result.data));
+          setCanSubmitPendingLineOrder(false);
           setCurrentView("catalog");
         } else {
-          setRegFormOpen(false);
-          setCurrentView("register");
+          const onboarding = await getLineCustomerOnboardingState(organizationId, lineUserId);
+          if (onboarding.success && onboarding.data.canSubmitPendingOrder) {
+            setCanSubmitPendingLineOrder(true);
+            setRegFormOpen(false);
+            setCurrentView("catalog");
+          } else {
+            setRegFormOpen(false);
+            setCurrentView("register");
+          }
         }
       } catch (error) {
         console.error("[order-auth:bootstrap]", error);
@@ -597,7 +611,7 @@ export default function OrderClient({
         hasResolvedAuthRef.current = true;
       }
     });
-  }, [currentView, isReady, linkedCustomer, profile?.userId, sessionLineUserId]);
+  }, [currentView, isReady, linkedCustomer, organizationId, profile?.userId, sessionLineUserId]);
 
   // Geography cascade: load provinces when entering register view
   useEffect(() => {
@@ -1111,7 +1125,9 @@ export default function OrderClient({
     
     // If no unit selected yet, use the default one
     const unitId = selectedUnitId || selectedProductBase.product_sale_unit_id;
-    const saleUnit = selectedProductBase.product_sale_units?.find(u => u.id === unitId);
+    const saleUnit = selectedProductBase.product_sale_units?.find(
+      (u) => u.id === unitId && u.is_active,
+    );
     
     if (!saleUnit) return selectedProductBase;
 
@@ -1129,7 +1145,7 @@ export default function OrderClient({
   const relatedUnitProducts = useMemo(() => {
     if (!selectedProductBase || !selectedProductBase.product_sale_units) return [];
     
-    return selectedProductBase.product_sale_units.map(u => ({
+    return selectedProductBase.product_sale_units.filter((u) => u.is_active).map((u) => ({
       ...selectedProductBase,
       id: `${selectedProductBase.product_id}:${u.id}`,
       product_sale_unit_id: u.id,
@@ -1768,11 +1784,46 @@ export default function OrderClient({
       if (result.success) {
         await refreshProfile();
         setLinkedCustomer(normalizeLinkedCustomer(result.data));
+        setCanSubmitPendingLineOrder(false);
         setSessionLineUserId(lineUserId);
         setCurrentView("catalog");
       } else {
         setRegError(result.error);
       }
+    });
+  };
+
+  const handleContinueExistingCustomer = () => {
+    const lineUserId = profile?.userId ?? sessionLineUserId;
+    if (!lineUserId) {
+      login();
+      return;
+    }
+
+    setRegError("");
+    startTransition(async () => {
+      const result = await continueExistingLineCustomer({
+        displayName: profile?.displayName ?? undefined,
+        lineUserId,
+        organizationId,
+        pictureUrl: profile?.pictureUrl ?? undefined,
+      });
+
+      if (!result.success) {
+        setRegError(result.error);
+        return;
+      }
+
+      if (result.data) {
+        setLinkedCustomer(normalizeLinkedCustomer(result.data));
+        setCanSubmitPendingLineOrder(false);
+      } else {
+        setCanSubmitPendingLineOrder(true);
+      }
+
+      setSessionLineUserId(lineUserId);
+      setRegFormOpen(false);
+      setCurrentView("catalog");
     });
   };
 
@@ -1795,14 +1846,6 @@ export default function OrderClient({
 
   const handleCheckout = () => {
     if (checkoutInFlightRef.current || isPending) return;
-    if (!linkedCustomer) {
-      if (!profile && !sessionLineUserId) {
-        login();
-        return;
-      }
-      setCurrentView("register");
-      return;
-    }
     if (totalItems === 0) { alert("กรุณาเลือกสินค้าก่อนยืนยันสั่งซื้อ"); return; }
 
     const items = Object.entries(cart)
@@ -1822,6 +1865,43 @@ export default function OrderClient({
         (item): item is { productId: string; productSaleUnitId: string; quantity: number } =>
           item !== null,
       );
+
+    if (!linkedCustomer) {
+      if (!profile && !sessionLineUserId) {
+        login();
+        return;
+      }
+
+      if (!canSubmitPendingLineOrder) {
+        setCurrentView("register");
+        return;
+      }
+
+      checkoutInFlightRef.current = true;
+      startTransition(async () => {
+        try {
+          const result = await createPendingLineOrderAction({
+            displayName: profile?.displayName ?? undefined,
+            items,
+            lineUserId: profile?.userId ?? sessionLineUserId ?? undefined,
+            organizationId,
+            pictureUrl: profile?.pictureUrl ?? undefined,
+          });
+
+          if (result.success) {
+            setLastOrder(items);
+            setPendingLineOrderId(result.data.pendingOrderId);
+            setCart({});
+            setCurrentView("pending_success");
+          } else {
+            alert(result.error);
+          }
+        } finally {
+          checkoutInFlightRef.current = false;
+        }
+      });
+      return;
+    }
 
     checkoutInFlightRef.current = true;
     startTransition(async () => {
@@ -2031,25 +2111,30 @@ export default function OrderClient({
 
           {/* Choice buttons */}
           <div className="flex flex-col gap-3 mb-4">
-            {/* เปิดร้านค้าในระบบ */}
-            <button
-              type="button"
-              onClick={() => setRegFormOpen(true)}
-              className={`flex w-full items-center gap-4 rounded-2xl border-2 px-5 py-4 transition active:scale-[0.98] ${
-                regFormOpen
-                  ? "border-[#003366] bg-[#003366] text-white shadow-lg"
-                  : "border-slate-200 bg-white text-slate-700 shadow-sm hover:border-[#003366]/40"
-              }`}
-            >
-              <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${regFormOpen ? "bg-white/15" : "bg-slate-100"}`}>
-                <Store className={`h-5 w-5 ${regFormOpen ? "text-white" : "text-[#003366]"}`} strokeWidth={1.8} />
-              </div>
-              <div className="text-left">
-                <div className="text-base font-extrabold">เปิดร้านค้าในระบบ</div>
-                <div className={`text-xs font-normal ${regFormOpen ? "text-blue-200" : "text-slate-400"}`}>สำหรับลูกค้าที่เคยสั่งซื้อ หรือคุยรายละเอียดกับทางเราแล้ว</div>
-              </div>
-              <ChevronDown className={`ml-auto h-4 w-4 shrink-0 transition-transform duration-300 ${regFormOpen ? "rotate-180 text-white/70" : "text-slate-300"}`} strokeWidth={2.5} />
-            </button>
+              {/* ลูกค้าเก่า / เคยสั่งซื้อแล้ว */}
+              <button
+                type="button"
+                onClick={handleContinueExistingCustomer}
+                disabled={isPending}
+                className={`flex w-full items-center gap-4 rounded-2xl border-2 px-5 py-4 transition active:scale-[0.98] ${
+                  canSubmitPendingLineOrder
+                    ? "border-[#003366] bg-[#003366] text-white shadow-lg"
+                    : "border-slate-200 bg-white text-slate-700 shadow-sm hover:border-[#003366]/40"
+                }`}
+              >
+                <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${canSubmitPendingLineOrder ? "bg-white/15" : "bg-slate-100"}`}>
+                  <Store className={`h-5 w-5 ${canSubmitPendingLineOrder ? "text-white" : "text-[#003366]"}`} strokeWidth={1.8} />
+                </div>
+                <div className="text-left">
+                  <div className="text-base font-extrabold">ลูกค้าเก่า / เคยสั่งซื้อแล้ว</div>
+                  <div className={`text-xs font-normal ${canSubmitPendingLineOrder ? "text-blue-200" : "text-slate-400"}`}>สำหรับลูกค้าที่เคยติดต่อหรือสั่งซื้อกับทางเรามาก่อน</div>
+                </div>
+                {isPending ? (
+                  <Loader2 className="ml-auto h-4 w-4 shrink-0 animate-spin text-slate-300" />
+                ) : (
+                  <ChevronRight className="ml-auto h-4 w-4 shrink-0 text-slate-300" strokeWidth={2.5} />
+                )}
+              </button>
 
             {/* ลูกค้าใหม่ */}
             <button
@@ -2065,10 +2150,16 @@ export default function OrderClient({
                 <div className="text-xs font-normal text-slate-400">สำหรับลูกค้าที่ไม่เคยติดต่อหรือสั่งซื้อกับทางเรามาก่อน</div>
               </div>
               <ChevronRight className="ml-auto h-4 w-4 shrink-0 text-slate-300" strokeWidth={2.5} />
-            </button>
-          </div>
+	            </button>
+	          </div>
 
-          {/* Registration form — smooth slide down via CSS grid trick */}
+	          {regError ? (
+	            <p className="mb-4 rounded-2xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-600">
+	              {regError}
+	            </p>
+	          ) : null}
+	
+	          {/* Registration form — smooth slide down via CSS grid trick */}
           <div
             className="grid transition-[grid-template-rows] duration-400 ease-in-out"
             style={{ gridTemplateRows: regFormOpen ? "1fr" : "0fr" }}
@@ -2334,8 +2425,8 @@ export default function OrderClient({
   }
 
   // ─── 5. Inquiry submitted ───────────────────────────────────────────────────
-  if (currentView === "inquiry_done") {
-    const contactPhone = orgPhone || "081-903-4686";
+    if (currentView === "inquiry_done") {
+      const contactPhone = orgPhone || "081-903-4686";
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-[linear-gradient(160deg,#f0fdfa_0%,#fff_100%)] px-5 text-center">
         {/* Success icon */}
@@ -2371,10 +2462,36 @@ export default function OrderClient({
           กลับไปยัง LINE
         </button>
       </div>
-    );
-  }
+      );
+    }
 
-  // Catalog + Cart + Success
+    if (currentView === "pending_success") {
+      return (
+        <div className="flex min-h-screen flex-col items-center justify-center bg-[linear-gradient(160deg,#eff6ff_0%,#ffffff_100%)] px-5 text-center">
+          <div className="mb-6 flex h-24 w-24 items-center justify-center rounded-[2rem] bg-[#003366] shadow-[0_12px_32px_rgba(0,51,102,0.28)]">
+            <BadgeCheck className="h-12 w-12 text-white" strokeWidth={1.8} />
+          </div>
+          <h1 className="mb-2 text-2xl font-extrabold text-slate-900">รับรายการสั่งซื้อแล้ว</h1>
+          <p className="max-w-sm text-base leading-7 text-slate-600">
+            ทางร้านได้รับการรายการออเดอร์ของคุณแล้ว จะรีบดำเนินการให้เร็วที่สุด ขอบคุณครับ
+          </p>
+          {pendingLineOrderId ? (
+            <p className="mt-4 rounded-full bg-slate-100 px-4 py-2 text-xs font-semibold text-slate-500">
+              รหัสรายการ: {pendingLineOrderId.slice(0, 8)}
+            </p>
+          ) : null}
+          <button
+            type="button"
+            onClick={() => setCurrentView("catalog")}
+            className="mt-8 flex w-full max-w-xs items-center justify-center gap-2 rounded-2xl bg-[#003366] px-6 py-4 text-base font-bold text-white shadow-md transition active:scale-[0.97]"
+          >
+            กลับไปหน้ารายการสินค้า
+          </button>
+        </div>
+      );
+    }
+  
+    // Catalog + Cart + Success
 
   return (
     <div className="flex flex-col min-h-screen bg-[#F8FAFC] text-slate-900 font-sans pb-32 overflow-x-clip">
@@ -2487,11 +2604,11 @@ export default function OrderClient({
                 <p className="text-sm text-slate-400 animate-pulse">กำลังโหลดข้อมูล...</p>
               ) : (
                 <>
-                  {linkedCustomer && (
-                    <p className="text-[1.15rem] font-extrabold leading-snug tracking-tight text-slate-900 md:text-xl">
-                      {linkedCustomer.name}
-                    </p>
-                  )}
+                    {linkedCustomer && (
+                      <p className="text-[1.15rem] font-extrabold leading-snug tracking-tight text-slate-900 md:text-xl">
+                        {linkedCustomer.name}
+                      </p>
+                    )}
                   {profile?.displayName && (
                     <p className="mt-1 text-sm text-slate-400">{profile.displayName}</p>
                   )}
@@ -2824,3 +2941,4 @@ export default function OrderClient({
     </div>
   );
 }
+

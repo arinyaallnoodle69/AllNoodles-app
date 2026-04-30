@@ -54,7 +54,16 @@ function CustomerAvatar({ customer }: { customer: CustomerDirectoryItem }) {
   );
 }
 
-function StatusPill({ isActive }: { isActive: boolean }) {
+function StatusPill({ isActive, isLinked }: { isActive: boolean; isLinked: boolean }) {
+  if (!isLinked) {
+    return (
+      <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700 ring-1 ring-amber-200">
+        <span className="h-2 w-2 rounded-full bg-amber-500" />
+        รอผูกร้านค้า
+      </span>
+    );
+  }
+
   return (
     <span
       className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ${
@@ -69,6 +78,10 @@ function StatusPill({ isActive }: { isActive: boolean }) {
       {isActive ? "ใช้งาน" : "ปิดใช้งาน"}
     </span>
   );
+}
+
+function getCustomerLabel(customer: CustomerDirectoryItem) {
+  return customer.customerCode ? `${customer.customerCode}-${customer.name}` : "ยังไม่ผูกร้านค้า";
 }
 
 export function CustomerDataPanel({ data }: CustomerDataPanelProps) {
@@ -114,13 +127,13 @@ export function CustomerDataPanel({ data }: CustomerDataPanelProps) {
             <>
               <div className="divide-y divide-slate-100 md:hidden">
                 {data.customers.map((customer) => (
-                  <div key={customer.id} className="px-4 py-5">
+                  <div key={`${customer.id}-${customer.lineUserId}`} className="px-4 py-5">
                     <div className="flex items-start gap-4">
                       <CustomerAvatar customer={customer} />
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-2">
                           <p className="text-base font-bold text-slate-950">{getLineName(customer)}</p>
-                          <StatusPill isActive={customer.isActive} />
+                          <StatusPill isActive={customer.isActive} isLinked={customer.isLinked} />
                         </div>
                         <div className="mt-1">
                           <LineUserIdCopy value={customer.lineUserId} />
@@ -128,7 +141,7 @@ export function CustomerDataPanel({ data }: CustomerDataPanelProps) {
                         <div className="mt-3 grid gap-2 text-sm text-slate-600">
                           <div className="flex items-center gap-2">
                             <Store className="h-4 w-4 text-slate-400" strokeWidth={2.1} />
-                            <span>{`${customer.customerCode}-${customer.name}`}</span>
+                            <span>{getCustomerLabel(customer)}</span>
                           </div>
                           <div className="flex items-center gap-2">
                             <Phone className="h-4 w-4 text-slate-400" strokeWidth={2.1} />
@@ -140,12 +153,14 @@ export function CustomerDataPanel({ data }: CustomerDataPanelProps) {
                           </div>
                         </div>
                         <div className="mt-4">
-                          <CustomerDataActions
-                            customerCode={customer.customerCode}
-                            customerId={customer.id}
-                            customerName={customer.name}
-                            isActive={customer.isActive}
-                          />
+                          {customer.customerId ? (
+                            <CustomerDataActions
+                              customerCode={customer.customerCode ?? "-"}
+                              customerId={customer.customerId}
+                              customerName={customer.name}
+                              isActive={customer.isActive}
+                            />
+                          ) : null}
                         </div>
                       </div>
                     </div>
@@ -182,7 +197,7 @@ export function CustomerDataPanel({ data }: CustomerDataPanelProps) {
                   </thead>
                   <tbody className="divide-y divide-slate-100">
                     {data.customers.map((customer) => (
-                      <tr key={customer.id} className="align-middle transition hover:bg-slate-50/60">
+                      <tr key={`${customer.id}-${customer.lineUserId}`} className="align-middle transition hover:bg-slate-50/60">
                         <td className="px-5 py-4 md:px-6">
                           <CustomerAvatar customer={customer} />
                         </td>
@@ -200,7 +215,7 @@ export function CustomerDataPanel({ data }: CustomerDataPanelProps) {
                         <td className="px-5 py-4">
                           <div className="flex items-center gap-2">
                             <Store className="h-4 w-4 text-[#003366]" strokeWidth={2.1} />
-                            <span className="font-semibold text-slate-950">{`${customer.customerCode}-${customer.name}`}</span>
+                            <span className="font-semibold text-slate-950">{getCustomerLabel(customer)}</span>
                           </div>
                         </td>
                         <td className="px-5 py-4 text-sm text-slate-600">
@@ -210,15 +225,17 @@ export function CustomerDataPanel({ data }: CustomerDataPanelProps) {
                           {formatThaiDate(customer.createdAt)}
                         </td>
                         <td className="px-5 py-4">
-                          <StatusPill isActive={customer.isActive} />
+                          <StatusPill isActive={customer.isActive} isLinked={customer.isLinked} />
                         </td>
                         <td className="px-5 py-4">
-                          <CustomerDataActions
-                            customerCode={customer.customerCode}
-                            customerId={customer.id}
-                            customerName={customer.name}
-                            isActive={customer.isActive}
-                          />
+                          {customer.customerId ? (
+                            <CustomerDataActions
+                              customerCode={customer.customerCode ?? "-"}
+                              customerId={customer.customerId}
+                              customerName={customer.name}
+                              isActive={customer.isActive}
+                            />
+                          ) : null}
                         </td>
                       </tr>
                     ))}

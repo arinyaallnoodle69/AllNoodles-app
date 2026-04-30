@@ -11,17 +11,18 @@ type OrderActionsAdmin = ReturnType<typeof getSupabaseAdmin> & {
 
 type SaleUnitsSelectTable = {
   select: (columns: string) => {
-    eq: (column: string, value: string) => {
-      eq: (column: string, value: string) => {
-        order: (
-          column: string,
-          options: { ascending: boolean },
-        ) => Promise<{
-          data: Array<{ id: string; is_default: boolean; unit_label: string }> | null;
-          error: { message?: string } | null;
-        }>;
-      };
-    };
+    eq: (column: string, value: string | boolean) => SaleUnitsSelectTable["select"] extends (
+      columns: string,
+    ) => infer R
+      ? R
+      : never;
+    order: (
+      column: string,
+      options: { ascending: boolean },
+    ) => Promise<{
+      data: Array<{ id: string; is_default: boolean; unit_label: string }> | null;
+      error: { message?: string } | null;
+    }>;
   };
 };
 
@@ -70,6 +71,7 @@ async function resolveProductSaleUnitId(
     .select("id, is_default, unit_label")
     .eq("organization_id", organizationId)
     .eq("product_id", productId)
+    .eq("is_active", true)
     .order("sort_order", { ascending: true });
 
   if (error || !saleUnits || saleUnits.length === 0) {
@@ -261,6 +263,7 @@ export async function getStoreItemCostSnapshots(items: CostSnapshotInput[]) {
       .from("product_sale_units")
       .select("id, product_id, is_default, sort_order, base_unit_quantity, cost_mode, fixed_cost_price, unit_label")
       .eq("organization_id", session.organizationId)
+      .eq("is_active", true)
       .in("product_id", productIds)
       .order("sort_order", { ascending: true }),
   ]);

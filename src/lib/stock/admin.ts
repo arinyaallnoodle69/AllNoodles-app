@@ -16,9 +16,12 @@ type SelectQueryResult = Promise<{ data: unknown; error: { message?: string } | 
 
 type SelectTable = {
   select: (columns: string) => {
-    eq: (column: string, value: string) => {
-      order: (column: string, options: { ascending: boolean }) => SelectQueryResult;
-    };
+    eq: (column: string, value: string | boolean) => SelectTable["select"] extends (
+      columns: string,
+    ) => infer R
+      ? R
+      : never;
+    order: (column: string, options: { ascending: boolean }) => SelectQueryResult;
   };
 };
 
@@ -87,6 +90,7 @@ type StockSaleUnitRow = {
   cost_mode: string | null;
   fixed_cost_price: number | string | null;
   id: string;
+  is_active: boolean;
   is_default: boolean;
   product_id: string;
   sort_order: number | string;
@@ -129,8 +133,9 @@ export const getStockDashboardData = cache(
         .eq("organization_id", organizationId)
         .order("sort_order", { ascending: true }),
       saleUnitsTable
-        .select("id, product_id, unit_label, base_unit_quantity, is_default, sort_order, cost_mode, fixed_cost_price")
+        .select("id, product_id, unit_label, base_unit_quantity, is_active, is_default, sort_order, cost_mode, fixed_cost_price")
         .eq("organization_id", organizationId)
+        .eq("is_active", true)
         .order("sort_order", { ascending: true }),
       movementsTable
         .select(

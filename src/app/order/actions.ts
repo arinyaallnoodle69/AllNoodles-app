@@ -5,9 +5,18 @@ import { revalidatePath } from "next/cache";
 import { isCustomerOrderEditableAtTime, isOrderOpenAtMinutes } from "@/lib/order-window";
 import { getOrderWindowSettings } from "@/lib/order-window-server";
 import { getEffectiveSaleUnitCost, normalizeSaleUnitCostMode } from "@/lib/products/sale-unit-cost";
-import { notifyCustomerReceiptImage, notifyNewCustomerInquiry, notifyNewOrder } from "@/lib/line/notify";
+import { notifyNewCustomerInquiry, notifyNewOrder } from "@/lib/line/notify";
+import { uploadAndNotifyCustomerReceiptImage } from "@/lib/line/customer-receipt-image";
 import { sendNewCustomerInquiryPushNotification, sendNewOrderPushNotification } from "@/lib/push/web-push";
 import { createCustomerInquiry } from "@/lib/customer-inquiries";
+import { getOrderCustomerSession } from "@/lib/auth/order-session";
+import {
+  createPendingLineOrder,
+  ensureLineOrderCustomer,
+  getLinkedCustomerByLineUserId,
+  hasExistingLineOrderCustomerChoice,
+  type PendingOrderCreateItem,
+} from "@/lib/orders/line-pending";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import type { Database } from "@/types/database";
 
@@ -37,7 +46,6 @@ type OrderMutationItemInput = {
   quantity: number;
 };
 
-const RECEIPT_IMAGE_BUCKET = "product-images";
 const LINE_USER_ID_PATTERN = /^U[0-9a-f]{32}$/i;
 
 function normalizeLineUserId(value: string | null | undefined) {
@@ -60,13 +68,10 @@ function parseImageDataUrl(input: string) {
   const [, contentType, base64] = match;
   const buffer = Buffer.from(base64, "base64");
   if (!buffer.length) return null;
-  return { contentType, buffer };
-}
-
-function guessExtension(contentType: string) {
-  if (contentType === "image/png") return "png";
-  if (contentType === "image/webp") return "webp";
-  return "jpg";
+  return {
+    buffer,
+    contentType: contentType as "image/png" | "image/jpeg" | "image/webp",
+  };
 }
 
 function buildClientOrderItems(
@@ -169,7 +174,8 @@ async function buildOrderItemData(
       supabase
         .from("product_sale_units")
         .select("id, product_id, unit_label, base_unit_quantity, cost_mode, fixed_cost_price, min_order_qty, step_order_qty")
-        .in("id", productSaleUnitIds),
+        .in("id", productSaleUnitIds)
+        .eq("is_active", true),
       supabase
         .from("customer_product_prices")
         .select("product_id, product_sale_unit_id, sale_price")
@@ -278,19 +284,18 @@ export async function getCustomerByLineId(
     return { success: false, error: "LINE user ID is required." };
   }
 
-  const supabase = getSupabaseAdmin();
-    const { data, error } = await supabase.from("customers")
-    .select("*")
-    .eq("line_user_id", lineUserId)
-    .eq("is_active", true)
-    .maybeSingle();
+  const session = await getOrderCustomerSession();
+  if (!session?.organizationId) {
+    return { success: true, data: null };
+  }
 
-  if (error) {
+  try {
+    const data = await getLinkedCustomerByLineUserId(session.organizationId, lineUserId);
+    return { success: true, data: data as CustomerWithLineId | null };
+  } catch (error) {
     console.error("[getCustomerByLineId]", error);
     return { success: false, error: "ไม่สามารถโหลดข้อมูลได้ กรุณาลองใหม่" };
   }
-
-  return { success: true, data };
 }
 
 export type RegisterCustomerInput = {
@@ -330,6 +335,19 @@ function buildLineProfileMetadata(input: {
       syncedAt: new Date().toISOString(),
     },
   };
+}
+
+async function resolveOrderLineUserId(mockLineUserId?: string | null) {
+  const session = await getOrderCustomerSession();
+  if (session?.lineUserId) {
+    return session.lineUserId;
+  }
+
+  if (process.env.NEXT_PUBLIC_LIFF_MOCK === "true") {
+    return mockLineUserId?.trim() ?? "";
+  }
+
+  return "";
 }
 
 /** Self-register: create a new customer record and link the LINE user ID (once). */
@@ -404,12 +422,142 @@ export async function registerLineCustomer(
     return { success: false, error: "ไม่สามารถบันทึกข้อมูลได้ กรุณาลองใหม่" };
   }
 
+  await supabase.from("line_order_customers").upsert(
+    {
+      customer_id: data.id,
+      line_display_name: input.lineDisplayName?.trim() || null,
+      line_picture_url: input.linePictureUrl?.trim() || null,
+      line_user_id: lineUserId,
+      onboarding_choice: "new",
+      organization_id: organizationId,
+    },
+    { onConflict: "organization_id,line_user_id" },
+  );
+
   revalidateTag(`settings-${organizationId}`, "max");
   revalidatePath("/settings");
   revalidatePath("/settings/customers");
   revalidatePath("/settings/customer-data");
 
   return { success: true, data };
+}
+
+export async function continueExistingLineCustomer(input: {
+  displayName?: string;
+  lineUserId?: string;
+  organizationId: string;
+  pictureUrl?: string;
+}): Promise<ActionResult<CustomerWithLineId | null>> {
+  const lineUserId = await resolveOrderLineUserId(input.lineUserId);
+  if (!lineUserId || !input.organizationId?.trim()) {
+    return { success: false, error: "กรุณาเข้าสู่ระบบ LINE อีกครั้ง" };
+  }
+
+  try {
+    const result = await ensureLineOrderCustomer({
+      displayName: input.displayName,
+      lineUserId,
+      organizationId: input.organizationId,
+      pictureUrl: input.pictureUrl,
+    });
+
+    return {
+      success: true,
+      data: result.customer as CustomerWithLineId | null,
+    };
+  } catch (error) {
+    console.error("[continueExistingLineCustomer]", error);
+    const message = error instanceof Error ? error.message : "";
+    if (
+      message.includes("line_order_customers") ||
+      message.includes("schema cache") ||
+      message.includes("relation")
+    ) {
+      return {
+        success: false,
+        error: "ฐานข้อมูลยังไม่ได้อัปเดตตารางรอผูกร้านค้า กรุณา apply migration ก่อนทดสอบ",
+      };
+    }
+    return { success: false, error: "ยังไม่สามารถเริ่มสั่งซื้อได้ กรุณาลองใหม่" };
+  }
+}
+
+export async function getLineCustomerOnboardingState(
+  organizationId: string,
+  mockLineUserId?: string,
+): Promise<ActionResult<{ canSubmitPendingOrder: boolean }>> {
+  const lineUserId = await resolveOrderLineUserId(mockLineUserId);
+  if (!lineUserId || !organizationId?.trim()) {
+    return { success: true, data: { canSubmitPendingOrder: false } };
+  }
+
+  try {
+    const hasChoice = await hasExistingLineOrderCustomerChoice(
+      organizationId,
+      lineUserId,
+    );
+    return { success: true, data: { canSubmitPendingOrder: hasChoice } };
+  } catch (error) {
+    console.error("[getLineCustomerOnboardingState]", error);
+    return { success: true, data: { canSubmitPendingOrder: false } };
+  }
+}
+
+export async function createPendingLineOrderAction(input: {
+  displayName?: string;
+  items: PendingOrderCreateItem[];
+  lineUserId?: string;
+  organizationId: string;
+  pictureUrl?: string;
+}): Promise<ActionResult<{ pendingOrderId: string }>> {
+  const lineUserId = await resolveOrderLineUserId(input.lineUserId);
+  if (!lineUserId || !input.organizationId?.trim()) {
+    return { success: false, error: "กรุณาเข้าสู่ระบบ LINE อีกครั้ง" };
+  }
+
+  if (!Array.isArray(input.items) || input.items.length === 0) {
+    return { success: false, error: "กรุณาเลือกสินค้าก่อนยืนยันสั่งซื้อ" };
+  }
+
+  const items = input.items
+    .map((item) => ({
+      productId: item.productId?.trim() ?? "",
+      productSaleUnitId: item.productSaleUnitId?.trim() ?? "",
+      quantity: Number(item.quantity),
+    }))
+    .filter(
+      (item) =>
+        item.productId &&
+        item.productSaleUnitId &&
+        Number.isFinite(item.quantity) &&
+        item.quantity > 0,
+    );
+
+  if (items.length === 0) {
+    return { success: false, error: "รายการสินค้าไม่ถูกต้อง" };
+  }
+
+  try {
+    const result = await createPendingLineOrder({
+      displayName: input.displayName,
+      items,
+      lineUserId,
+      organizationId: input.organizationId,
+      pictureUrl: input.pictureUrl,
+    });
+
+    if (result.linkedCustomer) {
+      return { success: false, error: "บัญชีนี้ผูกร้านค้าแล้ว กรุณาลองสั่งซื้ออีกครั้ง" };
+    }
+
+    return {
+      success: true,
+      data: { pendingOrderId: result.pendingOrderId ?? "" },
+    };
+  } catch (error) {
+    console.error("[createPendingLineOrderAction]", error);
+    return { success: false, error: "ส่งรายการไม่สำเร็จ กรุณาลองใหม่" };
+  }
 }
 
 /** Submit a new-customer inquiry (not yet an existing customer).
@@ -856,47 +1004,20 @@ export async function sendCustomerReceiptImage(
       .eq("organization_id", organizationId);
   }
 
-  const extension = guessExtension(parsedImage.contentType);
-  const storagePath = `${organizationId}/line-receipts/${orderNumber}-${Date.now()}.${extension}`;
-
-  const { data: buckets } = await supabase.storage.listBuckets();
-  const hasBucket = (buckets ?? []).some((bucket) => bucket.name === RECEIPT_IMAGE_BUCKET);
-  if (!hasBucket) {
-    await supabase.storage.createBucket(RECEIPT_IMAGE_BUCKET, {
-      public: true,
-      fileSizeLimit: "10MB",
-      allowedMimeTypes: ["image/png", "image/jpeg", "image/webp"],
-    });
-  }
-
-  const { error: uploadError } = await supabase.storage
-    .from(RECEIPT_IMAGE_BUCKET)
-    .upload(storagePath, parsedImage.buffer, {
-      upsert: true,
-      contentType: parsedImage.contentType,
-      cacheControl: "31536000",
-    });
-
-  if (uploadError) {
-    console.error("[sendCustomerReceiptImage:upload]", uploadError);
-    return { success: false, error: "อัปโหลดรูปใบยืนยันไม่สำเร็จ" };
-  }
-
-  const {
-    data: { publicUrl: imageUrl },
-  } = supabase.storage.from(RECEIPT_IMAGE_BUCKET).getPublicUrl(storagePath);
-
-  const pushed = await notifyCustomerReceiptImage(lineUserId, {
+  const receiptResult = await uploadAndNotifyCustomerReceiptImage({
+    contentType: parsedImage.contentType,
     customerName: customer.name ?? customerId,
+    imageBuffer: parsedImage.buffer,
+    lineUserId,
     orderNumber,
-    imageUrl,
+    organizationId,
   });
 
-  if (!pushed) {
-    return { success: false, error: "Failed to send receipt image to LINE." };
+  if ("error" in receiptResult) {
+    return { success: false, error: receiptResult.error };
   }
 
-  return { success: true, data: { imageUrl } };
+  return { success: true, data: { imageUrl: receiptResult.imageUrl } };
 }
 
 export async function updateCustomerOrder(

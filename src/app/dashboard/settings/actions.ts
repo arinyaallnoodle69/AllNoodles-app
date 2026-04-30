@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidateTag, updateTag } from "next/cache";
+import { revalidatePath, revalidateTag, updateTag } from "next/cache";
 import { requireAppRole } from "@/lib/auth/authorization";
 import { normalizeSaleUnitCostMode } from "@/lib/products/sale-unit-cost";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
@@ -343,6 +343,7 @@ function revalidateSettingsSurfaces(organizationId: string) {
   // Read-your-own-write: expire immediately so reopening modal sees fresh data
   updateTag(`settings-${organizationId}`);
   updateTag(`orders-${organizationId}`);
+  revalidatePath("/order");
   // Keep SWR revalidation for any stale readers still holding old cache entries
   revalidateTag(`settings-${organizationId}`, "max");
   revalidateTag(`orders-${organizationId}`, "max");
@@ -558,6 +559,12 @@ export async function updateProduct(formData: FormData): Promise<boolean> {
   const stockQuantity = safeInteger(formData.get("stockQuantity"));
   const baseUnit = safeText(formData.get("baseUnit"));
   const saleUnits = parseSaleUnits(formData, baseUnit);
+  const removedSaleUnitIds = new Set(
+    formData
+      .getAll("removedSaleUnitId")
+      .map((value) => String(value ?? "").trim())
+      .filter(Boolean),
+  );
   const files = formData
     .getAll("images")
     .filter((value): value is File => value instanceof File && value.size > 0);
@@ -611,11 +618,15 @@ export async function updateProduct(formData: FormData): Promise<boolean> {
   if (description) metadata.description = description;
 
   const storage = admin.storage;
-  const submittedIds = new Set(saleUnits.map((saleUnit) => saleUnit.id).filter(Boolean));
+  const submittedIds = new Set(
+    saleUnits
+      .map((saleUnit) => saleUnit.id)
+      .filter((id) => id && !removedSaleUnitIds.has(id)),
+  );
 
   // Run product update + all sale unit mutations in parallel
   const toDeactivateIds = (existingSaleUnits ?? [])
-    .filter((u) => !submittedIds.has(u.id))
+    .filter((u) => removedSaleUnitIds.has(u.id) || !submittedIds.has(u.id))
     .map((u) => u.id);
 
   await Promise.all([
@@ -705,8 +716,7 @@ export async function updateProduct(formData: FormData): Promise<boolean> {
     }
 
     if (historyRows.length > 0) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await (admin as any).from("product_cost_history").insert(historyRows);
+      await admin.from("product_cost_history").insert(historyRows);
     }
   }
 
@@ -1026,8 +1036,7 @@ export async function fetchProductCostHistory(productId: string): Promise<Produc
   const session = await requireAppRole("admin");
   const admin = getSupabaseAdmin();
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data } = await (admin as any)
+  const { data } = await admin
     .from("product_cost_history")
     .select("id, unit_label, sale_unit_id, cost_before, cost_after, changed_by_name, changed_at")
     .eq("organization_id", session.organizationId)

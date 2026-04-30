@@ -1,4 +1,3 @@
-import { Files } from "lucide-react";
 import { OrderDailyTable } from "@/components/orders/order-daily-table";
 import { StoreDetailModal } from "@/components/orders/store-detail-modal";
 import { SettingsShell } from "@/components/settings/settings-shell";
@@ -56,7 +55,6 @@ export default async function OrdersPage({ searchParams }: OrdersPageProps) {
     <>
       <SettingsShell
         title="ออเดอร์"
-      titleIcon={Files}
         description="สรุปออเดอร์รายร้านต่อวัน ดูรอบออเดอร์ รายการสินค้า และสต็อกได้ในหน้าเดียว"
         floatingSubmit={false}
       >

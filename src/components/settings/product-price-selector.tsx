@@ -155,21 +155,21 @@ export function ProductPriceSelectorModal({
                     }`}
                   >
                     <div
-                      className="flex cursor-pointer items-center gap-4 p-4 active:bg-slate-50"
+                      className="flex cursor-pointer items-start gap-4 p-4 active:bg-slate-50 md:items-center"
                       onClick={() => toggleSelection(unit.id)}
                     >
-                      <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-slate-50">
+                      <div className="relative h-24 w-24 shrink-0 overflow-hidden bg-white md:h-14 md:w-14">
                         {unit.imageUrl ? (
                           <Image 
                             src={unit.imageUrl} 
                             alt={unit.productName} 
                             fill 
-                            sizes="56px"
-                            className="object-contain bg-white p-1" 
+                            sizes="(max-width: 768px) 96px, 56px"
+                            className="object-contain" 
                           />
                         ) : (
                           <div className="flex h-full w-full items-center justify-center">
-                            <Package2 className="h-6 w-6 text-slate-300" />
+                            <Package2 className="h-8 w-8 text-slate-300 md:h-6 md:w-6" />
                           </div>
                         )}
                       </div>
@@ -178,7 +178,7 @@ export function ProductPriceSelectorModal({
                         <p className="mb-0.5 font-mono text-[10px] font-extrabold tracking-wider text-[#003366]/60">
                           {unit.sku}
                         </p>
-                        <p className="line-clamp-2 text-sm font-bold leading-tight text-slate-900">
+                        <p className="text-sm font-bold leading-tight text-slate-900">
                           {unit.productName}
                         </p>
                         <p className="mt-1 text-[11px] font-medium text-slate-400">

@@ -37,7 +37,6 @@ export default async function SettingsProductsPage({
     <SettingsShell
       current="products"
       title="จัดการสินค้า"
-      titleIcon={Package2}
       description="เพิ่มสินค้าใหม่ อัปเดตรหัสสินค้า รูปสินค้า ต้นทุน และจัดกลุ่มหมวดหมู่เพื่อให้ค้นหาใช้งานง่ายขึ้น"
       floatingSubmit={false}
     >

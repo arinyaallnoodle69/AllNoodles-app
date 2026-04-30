@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { requireAppRole } from "@/lib/auth/authorization";
+import { linkLineCustomerAndConvertPendingOrders } from "@/lib/orders/line-pending";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { getTodayInBangkok } from "@/lib/orders/date";
 
@@ -392,6 +393,7 @@ export async function upsertCustomerPriceFromOrderModalAction(input: {
       .select("id, product_id, unit_label, base_unit_quantity, is_default")
       .eq("organization_id", session.organizationId)
       .eq("product_id", productId)
+      .eq("is_active", true)
       .eq("is_default", true)
       .single();
 
@@ -407,6 +409,7 @@ export async function upsertCustomerPriceFromOrderModalAction(input: {
     .select("id, product_id, unit_label, base_unit_quantity, is_default")
     .eq("organization_id", session.organizationId)
     .eq("id", productSaleUnitId)
+    .eq("is_active", true)
     .single();
 
   if (saleUnitError || !saleUnit) {
@@ -610,4 +613,30 @@ export async function createManualOrderAction(formData: FormData): Promise<Actio
   revalidatePath("/orders/incoming");
   revalidatePath("/orders");
   return { success: true, orderNumber: String(orderNumber) };
+}
+
+export async function linkPendingLineOrderAction(formData: FormData): Promise<ActionResult> {
+  const session = await requireAppRole("admin");
+  const pendingOrderId = String(formData.get("pendingOrderId") ?? "").trim();
+  const customerId = String(formData.get("customerId") ?? "").trim();
+
+  if (!pendingOrderId || !customerId) {
+    return { error: "กรุณาเลือกร้านค้าที่ต้องการผูก" };
+  }
+
+  const result = await linkLineCustomerAndConvertPendingOrders({
+    customerId,
+    organizationId: session.organizationId,
+    pendingOrderId,
+    userId: session.userId,
+  });
+
+  if ("error" in result) {
+    return { error: result.error ?? "ผูกร้านค้าไม่สำเร็จ" };
+  }
+
+  return {
+    success: true,
+    orderNumber: result.orderNumbers.join(", "),
+  };
 }

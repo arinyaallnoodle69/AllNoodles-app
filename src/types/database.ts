@@ -931,6 +931,211 @@ export type Database = {
           },
         ]
       }
+      line_order_customers: {
+        Row: {
+          created_at: string
+          customer_id: string | null
+          id: string
+          line_display_name: string | null
+          line_picture_url: string | null
+          line_user_id: string
+          metadata: Json
+          onboarding_choice: string
+          organization_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          customer_id?: string | null
+          id?: string
+          line_display_name?: string | null
+          line_picture_url?: string | null
+          line_user_id: string
+          metadata?: Json
+          onboarding_choice?: string
+          organization_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          customer_id?: string | null
+          id?: string
+          line_display_name?: string | null
+          line_picture_url?: string | null
+          line_user_id?: string
+          metadata?: Json
+          onboarding_choice?: string
+          organization_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "line_order_customers_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "line_order_customers_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      line_pending_order_items: {
+        Row: {
+          created_at: string
+          id: string
+          metadata: Json
+          organization_id: string
+          pending_order_id: string
+          product_id: string
+          product_sale_unit_id: string
+          quantity: number
+          quantity_in_base_unit: number
+          sale_unit_label: string
+          sale_unit_ratio: number
+          sort_order: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          metadata?: Json
+          organization_id: string
+          pending_order_id: string
+          product_id: string
+          product_sale_unit_id: string
+          quantity: number
+          quantity_in_base_unit: number
+          sale_unit_label: string
+          sale_unit_ratio?: number
+          sort_order?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          metadata?: Json
+          organization_id?: string
+          pending_order_id?: string
+          product_id?: string
+          product_sale_unit_id?: string
+          quantity?: number
+          quantity_in_base_unit?: number
+          sale_unit_label?: string
+          sale_unit_ratio?: number
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "line_pending_order_items_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "line_pending_order_items_pending_order_id_fkey"
+            columns: ["pending_order_id"]
+            isOneToOne: false
+            referencedRelation: "line_pending_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "line_pending_order_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "line_pending_order_items_product_sale_unit_id_fkey"
+            columns: ["product_sale_unit_id"]
+            isOneToOne: false
+            referencedRelation: "product_sale_units"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      line_pending_orders: {
+        Row: {
+          converted_customer_id: string | null
+          converted_order_id: string | null
+          created_at: string
+          id: string
+          line_display_name: string | null
+          line_order_customer_id: string
+          line_picture_url: string | null
+          line_user_id: string
+          metadata: Json
+          order_date: string
+          organization_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          converted_customer_id?: string | null
+          converted_order_id?: string | null
+          created_at?: string
+          id?: string
+          line_display_name?: string | null
+          line_order_customer_id: string
+          line_picture_url?: string | null
+          line_user_id: string
+          metadata?: Json
+          order_date?: string
+          organization_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          converted_customer_id?: string | null
+          converted_order_id?: string | null
+          created_at?: string
+          id?: string
+          line_display_name?: string | null
+          line_order_customer_id?: string
+          line_picture_url?: string | null
+          line_user_id?: string
+          metadata?: Json
+          order_date?: string
+          organization_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "line_pending_orders_converted_customer_id_fkey"
+            columns: ["converted_customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "line_pending_orders_converted_order_id_fkey"
+            columns: ["converted_order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "line_pending_orders_line_order_customer_id_fkey"
+            columns: ["line_order_customer_id"]
+            isOneToOne: false
+            referencedRelation: "line_order_customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "line_pending_orders_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       order_items: {
         Row: {
           cost_price: number
@@ -1609,6 +1814,21 @@ export type Database = {
       cleanup_stale_orders: { Args: never; Returns: number }
       create_app_session: {
         Args: { p_ip_hash?: string; p_user_agent?: string; p_user_id: string }
+        Returns: {
+          display_name: string
+          expires_at: string
+          organization_id: string
+          role: Database["public"]["Enums"]["app_role"]
+          session_id: string
+        }[]
+      }
+      create_app_session_with_success_audit: {
+        Args: {
+          p_attempted_lookup: string
+          p_ip_hash?: string
+          p_user_agent?: string
+          p_user_id: string
+        }
         Returns: {
           display_name: string
           expires_at: string

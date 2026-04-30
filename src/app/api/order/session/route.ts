@@ -8,6 +8,7 @@ import {
 } from "@/lib/auth/order-session";
 import type { Database } from "@/types/database";
 import { verifyLineIdToken } from "@/lib/line/id-token";
+import { getLinkedCustomerByLineUserId } from "@/lib/orders/line-pending";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
 const SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 30; // 30 days
@@ -95,16 +96,42 @@ async function syncCustomerLineProfile(
     .eq("organization_id", customer.organization_id);
 }
 
-async function findActiveCustomerByLineUserId(lineUserId: string) {
+async function findActiveCustomerByLineUserIdForOrganization(
+  organizationId: string | null,
+  lineUserId: string,
+) {
+  if (organizationId) {
+    return (await getLinkedCustomerByLineUserId(
+      organizationId,
+      lineUserId,
+    )) as SessionCustomer | null;
+  }
+
   const supabase = getSupabaseAdmin();
-  const { data } = await supabase
+  const { data: lineCustomer } = await supabase
+    .from("line_order_customers")
+    .select("customer_id, organization_id")
+    .eq("line_user_id", lineUserId)
+    .not("customer_id", "is", null)
+    .order("updated_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (lineCustomer?.customer_id && lineCustomer.organization_id) {
+    return (await getLinkedCustomerByLineUserId(
+      lineCustomer.organization_id,
+      lineUserId,
+    )) as SessionCustomer | null;
+  }
+
+  const { data: legacyCustomer } = await supabase
     .from("customers")
     .select("id, name, customer_code, organization_id, metadata")
     .eq("line_user_id", lineUserId)
     .eq("is_active", true)
     .maybeSingle();
 
-  return (data ?? null) as SessionCustomer | null;
+  return (legacyCustomer ?? null) as SessionCustomer | null;
 }
 
 export async function GET(request: NextRequest) {
@@ -119,7 +146,10 @@ export async function GET(request: NextRequest) {
     return response;
   }
 
-  const customer = await findActiveCustomerByLineUserId(session.lineUserId);
+  const customer = await findActiveCustomerByLineUserIdForOrganization(
+    session.organizationId,
+    session.lineUserId,
+  );
   const payload = createOrderCustomerSessionPayload({
     customerId: customer?.id ?? null,
     displayName: session.displayName,
@@ -169,7 +199,13 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Invalid LINE token." }, { status: 401 });
   }
 
-  const customer = await findActiveCustomerByLineUserId(lineUserId);
+  const existingSession = readOrderCustomerSessionValue(
+    request.cookies.get(ORDER_CUSTOMER_SESSION_COOKIE)?.value,
+  );
+  const customer = await findActiveCustomerByLineUserIdForOrganization(
+    existingSession?.organizationId ?? null,
+    lineUserId,
+  );
   const payload = createOrderCustomerSessionPayload({
     customerId: customer?.id ?? null,
     displayName: verified.displayName ?? body?.displayName?.trim() ?? null,

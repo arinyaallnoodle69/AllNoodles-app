@@ -79,7 +79,7 @@ export function SettingsCustomersPageClient({
 	        <CustomerSearchBox value={searchTerm} onSearch={setSearchTerm} />
 	      </MobileSearchDrawer>
 	
-	      <div className="pointer-events-none fixed inset-x-0 bottom-24 z-30 flex justify-end px-4 md:bottom-6 md:px-6">
+	      <div className="pointer-events-none fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+6.75rem)] z-30 flex justify-start px-4 md:bottom-8 md:justify-end md:px-8">
         <Link
           href="/settings/customers?create=1"
           className="pointer-events-auto inline-flex items-center gap-2 rounded-full bg-[#003366] px-5 py-3 text-sm font-semibold text-white shadow-[0_18px_40px_rgba(0,51,102,0.32)] transition hover:bg-[#002244]"

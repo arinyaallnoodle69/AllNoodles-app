@@ -1,4 +1,3 @@
-import { Warehouse } from "lucide-react";
 import { StockReceiveForm } from "@/components/settings/stock-receive-form";
 import { StockList, StockMobileReceiveButton } from "@/components/settings/stock-list";
 import { StockSummaryCards } from "@/components/settings/stock-summary-cards";
@@ -26,7 +25,6 @@ export default async function StockPage({ searchParams }: StockPageProps) {
   return (
     <SettingsShell
       title="จัดการสต็อก"
-      titleIcon={Warehouse}
       description="ดูของคงเหลือ รับเข้าสินค้าจากโรงงาน และติดตามข้อมูลสต็อกจากหน้ากลุ่มนี้"
       floatingSubmit={false}
     >
@@ -41,7 +39,7 @@ export default async function StockPage({ searchParams }: StockPageProps) {
       <StockTabs current="stock" />
 
       <div className="mt-8">
-        <div className="-mx-4 md:mx-0">
+        <div className="-mx-3 md:mx-0">
           <StockList products={data.products} baseHref="/stock" />
         </div>
       </div>

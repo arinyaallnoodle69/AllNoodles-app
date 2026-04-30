@@ -46,7 +46,7 @@ export function StockList({ products, baseHref = "/settings/stock" }: StockListP
         {products.length > 0 ? (
           <>
             {/* Mobile cards */}
-            <div className="grid gap-3 px-0 py-0 lg:hidden">
+            <div className="grid gap-3 px-1 py-0 lg:hidden">
               {products.map((product) => {
                 const availableQuantity = product.onHandQuantity - product.reservedQuantity;
 
@@ -58,22 +58,22 @@ export function StockList({ products, baseHref = "/settings/stock" }: StockListP
                     }`}
                   >
                     <div className="flex items-start gap-3">
-                      <div className="relative flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-slate-100">
+                      <div className="relative -ml-2 flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white">
                         {product.imageUrl ? (
                           <Image
                             src={product.imageUrl}
                             alt={product.name}
                             fill
-                            sizes="80px"
-                            className="object-contain bg-white p-1"
+                            sizes="96px"
+                            className="object-contain"
                           />
                         ) : (
-                          <Package2 className="h-7 w-7 text-slate-400" strokeWidth={2.2} />
+                          <Package2 className="h-8 w-8 text-slate-400" strokeWidth={2.2} />
                         )}
                       </div>
 
                       <div className="min-w-0 flex-1">
-                        <p className="truncate text-base font-semibold leading-6 text-slate-950">
+                        <p className="text-base font-semibold leading-6 text-slate-950">
                           {product.name}
                         </p>
                         <p className="mt-0.5 text-sm font-medium text-slate-500">{product.sku}</p>
@@ -329,7 +329,7 @@ export function StockMobileReceiveButton({ baseHref = "/settings/stock" }: { bas
   return (
     <Link
       href={`${baseHref}?receive=1`}
-      className="fixed bottom-[calc(env(safe-area-inset-bottom)+5.5rem)] right-4 z-[60] inline-flex items-center gap-2 rounded-full bg-[#003366] px-4 py-3 text-sm font-semibold text-white shadow-[0_18px_45px_rgba(0,51,102,0.35)] transition hover:bg-[#002244] sm:hidden"
+      className="fixed bottom-[calc(env(safe-area-inset-bottom)+6.75rem)] left-4 z-[60] inline-flex items-center gap-2 rounded-full bg-[#003366] px-4 py-3 text-sm font-semibold text-white shadow-[0_18px_45px_rgba(0,51,102,0.35)] transition hover:bg-[#002244] sm:hidden"
       aria-label="รับสินค้าเข้า"
     >
       <Plus className="h-4 w-4" strokeWidth={2.2} />
