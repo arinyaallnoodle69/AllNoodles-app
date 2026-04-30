@@ -1,4 +1,7 @@
-import { ListTree, Store } from "lucide-react";
+"use client";
+
+import Link from "next/link";
+import { ListTree, PencilLine, Store } from "lucide-react";
 import type { SettingsCustomer, SettingsVehicle } from "@/lib/settings/admin";
 import {
   SettingsEmptyState,
@@ -10,19 +13,35 @@ import { CustomerVehicleSelect } from "@/components/settings/customer-vehicle-se
 
 type CustomerListPanelProps = {
   customers: SettingsCustomer[];
+  searchTerm?: string;
   vehicles: SettingsVehicle[];
 };
 
-export function CustomerListPanel({ customers, vehicles }: CustomerListPanelProps) {
+export function CustomerListPanel({
+  customers,
+  searchTerm = "",
+  vehicles,
+}: CustomerListPanelProps) {
+  const q = searchTerm.toLocaleLowerCase("th").trim();
+  const filtered = q
+    ? customers.filter((customer) => {
+        return (
+          customer.name.toLocaleLowerCase("th").includes(q) ||
+          customer.code.toLocaleLowerCase("th").includes(q) ||
+          customer.address.toLocaleLowerCase("th").includes(q)
+        );
+      })
+    : customers;
+
   return (
     <SettingsPanel>
       <div className="border-b border-slate-100 px-5 py-4 md:px-6 md:py-5">
         <div className="flex items-center gap-2">
           <ListTree className="h-5 w-5 text-[#003366]" strokeWidth={2.2} />
           <h2 className="text-xl font-bold text-slate-950">รายการร้านค้า</h2>
-          {customers.length > 0 ? (
+          {filtered.length > 0 ? (
             <span className="ml-1 rounded-full bg-slate-100 px-2.5 py-0.5 text-sm font-semibold tabular-nums text-slate-500">
-              {customers.length}
+              {filtered.length}
             </span>
           ) : null}
         </div>
@@ -32,53 +51,69 @@ export function CustomerListPanel({ customers, vehicles }: CustomerListPanelProp
       </div>
 
       <SettingsPanelBody className="p-0">
-        {customers.length === 0 ? (
+        {filtered.length === 0 ? (
           <div className="p-6">
             <SettingsEmptyState className="py-14">
-              ยังไม่มีร้านค้าในระบบ กดปุ่ม &quot;เพิ่มร้านค้า&quot; เพื่อสร้างรายการแรก
+              {q
+                ? "ไม่พบร้านค้าที่ตรงกับการค้นหา"
+                : 'ยังไม่มีร้านค้าในระบบ กดปุ่ม "เพิ่มร้านค้า" เพื่อสร้างรายการแรก'}
             </SettingsEmptyState>
           </div>
         ) : (
           <>
             <div className="divide-y divide-slate-100 sm:hidden">
-              {customers.map((customer) => (
-                <div key={customer.id} className="flex items-start gap-4 px-4 py-5">
-                  <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-[#003366]/8">
-                    <Store className="h-6 w-6 text-[#003366]" strokeWidth={2.2} />
-                  </div>
-
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-                      <p className="text-lg font-bold leading-snug text-slate-950">{customer.name}</p>
-                      <p className="font-mono text-sm text-slate-400">{customer.code}</p>
+              {filtered.map((customer) => (
+                <div key={customer.id} className="px-4 py-5">
+                  <div className="flex items-start gap-3">
+                    <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-[#003366]/8">
+                      <Store className="h-6 w-6 text-[#003366]" strokeWidth={2.2} />
                     </div>
 
-                    {customer.address ? (
-                      <p className="mt-1.5 text-sm leading-6 text-slate-500">{customer.address}</p>
-                    ) : null}
-
-                    <div className="mt-2.5 flex flex-wrap items-center gap-2">
-                      <span className="inline-flex items-center rounded-full bg-sky-50 px-3 py-1 text-sm font-medium text-sky-700">
-                        ผูกราคา {customer.pricingCount} รายการ
-                      </span>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+                        <p className="text-lg font-bold leading-snug text-slate-950">
+                          {customer.name}
+                        </p>
+                        <p className="font-mono text-sm text-slate-400">{customer.code}</p>
+                      </div>
                     </div>
 
-                    <CustomerVehicleSelect
-                      className="mt-3"
-                      customerId={customer.id}
-                      currentVehicleId={customer.defaultVehicleId}
-                      currentVehicleName={customer.defaultVehicleName}
-                      vehicles={vehicles}
-                    />
+                    <div className="flex shrink-0 flex-col gap-2 pt-1">
+                      <Link
+                        href={`/settings/customers?edit=${customer.id}`}
+                        scroll={false}
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-[#003366] transition hover:bg-slate-50 active:scale-95"
+                        aria-label={`แก้ไข ${customer.name}`}
+                      >
+                        <PencilLine className="h-3.5 w-3.5" strokeWidth={2.2} />
+                      </Link>
+                      <CustomerDeleteButton
+                        customerId={customer.id}
+                        customerName={customer.name}
+                        customerCode={customer.code}
+                      />
+                    </div>
                   </div>
 
-                  <div className="shrink-0 pt-1">
-                    <CustomerDeleteButton
-                      customerId={customer.id}
-                      customerName={customer.name}
-                      customerCode={customer.code}
-                    />
+                  {customer.address ? (
+                    <p className="mt-3 w-full break-words text-sm leading-6 text-slate-600">
+                      {customer.address}
+                    </p>
+                  ) : null}
+
+                  <div className="mt-3 flex flex-wrap items-center gap-2">
+                    <span className="inline-flex items-center rounded-full bg-sky-50 px-3 py-1 text-sm font-medium text-sky-700">
+                      ผูกราคา {customer.pricingCount} รายการ
+                    </span>
                   </div>
+
+                  <CustomerVehicleSelect
+                    className="mt-3 w-full"
+                    customerId={customer.id}
+                    currentVehicleId={customer.defaultVehicleId}
+                    currentVehicleName={customer.defaultVehicleName}
+                    vehicles={vehicles}
+                  />
                 </div>
               ))}
             </div>
@@ -106,7 +141,7 @@ export function CustomerListPanel({ customers, vehicles }: CustomerListPanelProp
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {customers.map((customer) => (
+                  {filtered.map((customer) => (
                     <tr key={customer.id} className="align-middle transition hover:bg-slate-50/70">
                       <td className="px-5 py-4 md:px-6">
                         <div className="flex items-center gap-3">
@@ -116,9 +151,11 @@ export function CustomerListPanel({ customers, vehicles }: CustomerListPanelProp
                           <p className="text-base font-semibold text-slate-950">{customer.name}</p>
                         </div>
                       </td>
-                      <td className="px-5 py-4 font-mono text-sm text-slate-600">{customer.code}</td>
+                      <td className="px-5 py-4 font-mono text-sm text-slate-600">
+                        {customer.code}
+                      </td>
                       <td className="max-w-xs px-5 py-4 text-sm leading-6 text-slate-500 xl:max-w-sm">
-                        {customer.address || <span className="text-slate-300">—</span>}
+                        {customer.address || <span className="text-slate-300">-</span>}
                       </td>
                       <td className="px-5 py-4">
                         <span className="inline-flex rounded-full bg-sky-50 px-3 py-1 text-sm font-medium text-sky-700">
@@ -134,11 +171,21 @@ export function CustomerListPanel({ customers, vehicles }: CustomerListPanelProp
                         />
                       </td>
                       <td className="px-4 py-4 text-right">
-                        <CustomerDeleteButton
-                          customerId={customer.id}
-                          customerName={customer.name}
-                          customerCode={customer.code}
-                        />
+                        <div className="inline-flex items-center justify-end gap-2">
+                          <Link
+                            href={`/settings/customers?edit=${customer.id}`}
+                            scroll={false}
+                            className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-[#003366] transition hover:bg-slate-50 active:scale-95"
+                            aria-label={`แก้ไข ${customer.name}`}
+                          >
+                            <PencilLine className="h-3.5 w-3.5" strokeWidth={2.2} />
+                          </Link>
+                          <CustomerDeleteButton
+                            customerId={customer.id}
+                            customerName={customer.name}
+                            customerCode={customer.code}
+                          />
+                        </div>
                       </td>
                     </tr>
                   ))}

@@ -21,6 +21,7 @@ type AddressDraft = {
 
 type CustomerAddressFieldsProps = {
   addressError?: string;
+  initialAddress?: Partial<AddressDraft>;
   showFieldErrors: boolean;
 };
 
@@ -55,9 +56,13 @@ async function getOptions(path: string, signal: AbortSignal) {
 
 export function CustomerAddressFields({
   addressError,
+  initialAddress,
   showFieldErrors,
 }: CustomerAddressFieldsProps) {
-  const [draft, setDraft] = useState(INITIAL_ADDRESS_DRAFT);
+  const [draft, setDraft] = useState<AddressDraft>({
+    ...INITIAL_ADDRESS_DRAFT,
+    ...initialAddress,
+  });
   const [provinceOptions, setProvinceOptions] = useState<GeographyOption[]>([]);
   const [districtOptions, setDistrictOptions] = useState<GeographyOption[]>([]);
   const [subdistrictOptions, setSubdistrictOptions] = useState<GeographyOption[]>([]);

@@ -82,6 +82,33 @@ type Props = {
 
 type ModalTab = "create" | "history";
 
+const codeCollator = new Intl.Collator("th", {
+  numeric: true,
+  sensitivity: "base",
+});
+
+function getCodeSequence(code: string) {
+  const match = code.trim().match(/(\d+)/);
+  return match ? Number.parseInt(match[1], 10) : Number.POSITIVE_INFINITY;
+}
+
+function compareCustomerCode(left: OrderCustomerOption, right: OrderCustomerOption) {
+  const leftSequence = getCodeSequence(left.code);
+  const rightSequence = getCodeSequence(right.code);
+
+  if (leftSequence !== rightSequence) {
+    return leftSequence - rightSequence;
+  }
+
+  const codeComparison = codeCollator.compare(left.code.trim(), right.code.trim());
+
+  if (codeComparison !== 0) {
+    return codeComparison;
+  }
+
+  return left.name.localeCompare(right.name, "th");
+}
+
 function ActionPopup({
   message,
   onClose,
@@ -249,9 +276,8 @@ function ProductSelectModal({
     popupTimerRef.current = setTimeout(() => setPopupMessage(null), 2600);
   }
 
-  // Products are pre-sorted by category sort_order at the data layer.
-  // Iterate in order to collect categories by first appearance → preserves sort_order without
-  // needing to pass categories separately.
+  // Products are pre-sorted by SKU at the data layer.
+  // Iterate in order to collect categories by first appearance without extra client sorting.
   const categoryOptions = useMemo(() => {
     const seen = new Map<string, string>(); // id → name, insertion order = category sort_order
     for (const product of products) {
@@ -553,20 +579,20 @@ function ProductSelectModal({
                             : "border-slate-200 bg-white hover:bg-slate-50"
                         }`}
                       >
-                        <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-2xl bg-slate-100">
-                          {product.imageUrl ? (
-                            <Image
-                              src={product.imageUrl}
-                              alt={product.name}
-                              fill
-                              className="object-cover"
-                              sizes="48px"
-                            />
-                          ) : (
-                            <div className="flex h-full w-full items-center justify-center">
-                              <Package2 className="h-6 w-6 text-slate-400" strokeWidth={1.9} />
-                            </div>
-                          )}
+	                        <div className="relative h-14 w-14 shrink-0 overflow-hidden">
+	                          {product.imageUrl ? (
+	                            <Image
+	                              src={product.imageUrl}
+	                              alt={product.name}
+	                              fill
+	                              className="object-contain"
+	                              sizes="56px"
+	                            />
+	                          ) : (
+	                            <div className="flex h-full w-full items-center justify-center text-slate-300">
+	                              <Package2 className="h-6 w-6 text-slate-400" strokeWidth={1.9} />
+	                            </div>
+	                          )}
                         </div>
                         <div className="min-w-0 flex-1">
                           <div className="flex items-start justify-between gap-2">
@@ -623,16 +649,16 @@ function ProductSelectModal({
                 <div className="flex-1 space-y-5 overflow-y-auto px-4 py-5">
                   <div className="rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-sm">
                     <div className="flex items-start gap-4">
-                      <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-2xl bg-slate-100">
-                        {selectedProduct.imageUrl ? (
-                          <Image
-                            src={selectedProduct.imageUrl}
-                            alt={selectedProduct.name}
-                            fill
-                            className="object-cover"
-                            sizes="80px"
-                            priority
-                          />
+	                      <div className="relative h-20 w-20 shrink-0 overflow-hidden">
+	                        {selectedProduct.imageUrl ? (
+	                          <Image
+	                            src={selectedProduct.imageUrl}
+	                            alt={selectedProduct.name}
+	                            fill
+	                            className="object-contain"
+	                            sizes="80px"
+	                            priority
+	                          />
                         ) : (
                           <div className="flex h-full w-full items-center justify-center">
                             <Package2 className="h-8 w-8 text-slate-400" strokeWidth={1.8} />
@@ -877,6 +903,10 @@ export function CreateOrderModal({ customers, products, today }: Props) {
     () => customers.find((customer) => customer.id === customerId) ?? null,
     [customers, customerId],
   );
+  const orderedCustomers = useMemo(
+    () => customers.toSorted(compareCustomerCode),
+    [customers],
+  );
 
   useEffect(() => {
     return () => {
@@ -887,11 +917,11 @@ export function CreateOrderModal({ customers, products, today }: Props) {
   }, []);
 
   const filteredCustomers = customerPickerQuery
-    ? customers.filter((c) => {
+    ? orderedCustomers.filter((c) => {
         const n = normalizeSearch(customerPickerQuery);
         return normalizeSearch(c.name).includes(n) || normalizeSearch(c.code).includes(n);
       })
-    : customers;
+    : orderedCustomers;
 
   async function loadYesterdaySnapshot(nextCustomerId: string, nextOrderDate: string) {
     if (!nextCustomerId) {

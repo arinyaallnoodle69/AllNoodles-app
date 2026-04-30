@@ -2,8 +2,8 @@
 
 import { startTransition, useActionState, useEffect, useEffectEvent, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { CirclePlus, Save, X } from "lucide-react";
-import { createCustomerAction } from "@/app/settings/customers/actions";
+import { CirclePlus, PencilLine, Save, X } from "lucide-react";
+import { createCustomerAction, updateCustomerAction } from "@/app/settings/customers/actions";
 import type { CreateCustomerActionState } from "@/app/settings/customers/actions";
 import { CustomerAddressFields } from "@/components/settings/customer-address-fields";
 import {
@@ -13,10 +13,11 @@ import {
   settingsFieldLabelClass,
   settingsInputClass,
 } from "@/components/settings/settings-ui";
-import type { SettingsVehicle } from "@/lib/settings/admin";
+import type { SettingsCustomer, SettingsVehicle } from "@/lib/settings/admin";
 
 type CustomerFormProps = {
   defaultCode?: string;
+  initialCustomer?: SettingsCustomer;
   returnHref: string;
   vehicles: SettingsVehicle[];
 };
@@ -33,12 +34,17 @@ function getInputClass(hasError: boolean) {
 
 export function CustomerForm({
   defaultCode = "",
+  initialCustomer,
   returnHref,
   vehicles,
 }: CustomerFormProps) {
   const router = useRouter();
+  const isEditMode = Boolean(initialCustomer);
+  const action = initialCustomer
+    ? updateCustomerAction.bind(null, initialCustomer.id)
+    : createCustomerAction;
   const [actionState, formAction, isPending] = useActionState(
-    createCustomerAction,
+    action,
     initialCreateCustomerState,
   );
   const [hasSubmitted, setHasSubmitted] = useState(false);
@@ -88,11 +94,17 @@ export function CustomerForm({
         <div className="flex items-start justify-between gap-4 border-b border-slate-100 px-6 py-5">
           <div>
             <p className="text-xs font-medium uppercase tracking-[0.18em] text-slate-400">
-              เพิ่มร้านค้า
+              {isEditMode ? "แก้ไขร้านค้า" : "เพิ่มร้านค้า"}
             </p>
             <div className="mt-1 flex items-center gap-2 text-slate-950">
-              <CirclePlus className="h-6 w-6 text-[#003366]" strokeWidth={2.2} />
-              <h3 className="text-2xl font-semibold tracking-[-0.02em]">รายการร้านค้าใหม่</h3>
+              {isEditMode ? (
+                <PencilLine className="h-6 w-6 text-[#003366]" strokeWidth={2.2} />
+              ) : (
+                <CirclePlus className="h-6 w-6 text-[#003366]" strokeWidth={2.2} />
+              )}
+              <h3 className="text-2xl font-semibold tracking-[-0.02em]">
+                {isEditMode ? initialCustomer?.name : "รายการร้านค้าใหม่"}
+              </h3>
             </div>
           </div>
 
@@ -144,7 +156,7 @@ export function CustomerForm({
                       name="customerCode"
                       required
                       readOnly
-                      defaultValue={defaultCode}
+                      defaultValue={initialCustomer?.code ?? defaultCode}
                       className={getInputClass(showFieldErrors && Boolean(fieldErrors?.customerCode))}
                       placeholder="TYS001"
                     />
@@ -161,6 +173,7 @@ export function CustomerForm({
                       id="customer-name"
                       name="name"
                       required
+                      defaultValue={initialCustomer?.name ?? ""}
                       className={getInputClass(showFieldErrors && Boolean(fieldErrors?.name))}
                       placeholder="กรอกชื่อร้านค้า"
                     />
@@ -173,7 +186,7 @@ export function CustomerForm({
                     <select
                       id="default-vehicle-id"
                       name="defaultVehicleId"
-                      defaultValue=""
+                      defaultValue={initialCustomer?.defaultVehicleId ?? ""}
                       className={getInputClass(showFieldErrors && Boolean(fieldErrors?.defaultVehicleId))}
                     >
                       <option value="">ยังไม่ได้กำหนดรถประจำร้าน</option>
@@ -192,6 +205,7 @@ export function CustomerForm({
               <CustomerAddressFields
                 showFieldErrors={showFieldErrors}
                 addressError={fieldErrors?.address}
+                initialAddress={initialCustomer?.addressDraft}
               />
             </div>
           </div>

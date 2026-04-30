@@ -1,7 +1,6 @@
 ﻿import "server-only";
 
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
-import { sortProductsByCategory } from "@/lib/products/sort-by-category";
 
 // Row types
 
@@ -49,6 +48,50 @@ type ManageAdmin = ReturnType<typeof getSupabaseAdmin> & {
   from(table: "product_sale_units"): { select: (cols: string) => SelectChain<SaleUnitRow> };
 };
 
+const codeCollator = new Intl.Collator("th", {
+  numeric: true,
+  sensitivity: "base",
+});
+
+function getCodeSequence(code: string) {
+  const match = code.trim().match(/(\d+)/);
+  return match ? Number.parseInt(match[1], 10) : Number.POSITIVE_INFINITY;
+}
+
+function compareCustomerCode(left: OrderCustomerOption, right: OrderCustomerOption) {
+  const leftSequence = getCodeSequence(left.code);
+  const rightSequence = getCodeSequence(right.code);
+
+  if (leftSequence !== rightSequence) {
+    return leftSequence - rightSequence;
+  }
+
+  const codeComparison = codeCollator.compare(left.code.trim(), right.code.trim());
+
+  if (codeComparison !== 0) {
+    return codeComparison;
+  }
+
+  return left.name.localeCompare(right.name, "th");
+}
+
+function compareProductSku(left: OrderProductOption, right: OrderProductOption) {
+  const leftSequence = getCodeSequence(left.sku);
+  const rightSequence = getCodeSequence(right.sku);
+
+  if (leftSequence !== rightSequence) {
+    return leftSequence - rightSequence;
+  }
+
+  const skuComparison = codeCollator.compare(left.sku.trim(), right.sku.trim());
+
+  if (skuComparison !== 0) {
+    return skuComparison;
+  }
+
+  return left.name.localeCompare(right.name, "th");
+}
+
 // Exported types
 
 export type OrderCustomerOption = { code: string; id: string; name: string };
@@ -84,9 +127,11 @@ export async function getCustomersForOrder(orgId: string): Promise<OrderCustomer
     .select("id, customer_code, name")
     .eq("organization_id", orgId)
     .eq("is_active", true)
-    .order("name", { ascending: true });
+    .order("customer_code", { ascending: true });
 
-  return (data ?? []).map((c) => ({ code: c.customer_code, id: c.id, name: c.name }));
+  return (data ?? [])
+    .map((c) => ({ code: c.customer_code, id: c.id, name: c.name }))
+    .toSorted(compareCustomerCode);
 }
 
 export async function getProductsForOrder(orgId: string): Promise<OrderProductOption[]> {
@@ -159,12 +204,6 @@ export async function getProductsForOrder(orgId: string): Promise<OrderProductOp
       category.name,
     ]),
   );
-  const categorySortOrderById = new Map<string, number>(
-    (((categoriesRes.data ?? []) as ProductCategoryRow[]) ?? []).map((category) => [
-      category.id,
-      Number(category.sort_order),
-    ]),
-  );
   const categoryIdsByProductId = new Map<string, string[]>();
   const categoryNamesByProductId = new Map<string, string[]>();
 
@@ -196,8 +235,5 @@ export async function getProductsForOrder(orgId: string): Promise<OrderProductOp
     unit: p.unit,
   }));
 
-  return sortProductsByCategory(
-    mapped,
-    Array.from(categorySortOrderById.entries()).map(([id, sortOrder]) => ({ id, sortOrder })),
-  );
+  return mapped.toSorted(compareProductSku);
 }

@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { requireAppRole } from "@/lib/auth/authorization";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
@@ -31,6 +31,22 @@ function getTrimmedText(value: unknown) {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function buildAddressMetadata(address: AddressPayload) {
+  return {
+    districtCode: address.districtCode,
+    districtName: address.districtName,
+    line1: address.addressLine,
+    postalCode: address.postalCode,
+    provinceCode: address.provinceCode,
+    provinceName: address.provinceName,
+    street: {
+      details: address.addressDetails,
+    },
+    subdistrictCode: address.subdistrictCode,
+    subdistrictName: address.subdistrictName,
+  };
 }
 
 function getNextCustomerCode(codes: string[]) {
@@ -177,23 +193,15 @@ export async function createCustomerAction(
     address: address.addressSummary,
     customer_code: customerCode,
     default_vehicle_id: defaultVehicleId,
+    district: address.districtName || null,
     metadata: {
-      address: {
-        districtCode: address.districtCode,
-        districtName: address.districtName,
-        line1: address.addressLine,
-        postalCode: address.postalCode,
-        provinceCode: address.provinceCode,
-        provinceName: address.provinceName,
-        street: {
-          details: address.addressDetails,
-        },
-        subdistrictCode: address.subdistrictCode,
-        subdistrictName: address.subdistrictName,
-      },
+      address: buildAddressMetadata(address),
     },
     name,
     organization_id: session.organizationId,
+    postal_code: address.postalCode || null,
+    province: address.provinceName || null,
+    subdistrict: address.subdistrictName || null,
   });
 
   if (error) {
@@ -217,10 +225,107 @@ export async function createCustomerAction(
   revalidatePath("/settings");
   revalidatePath("/settings/customers");
   revalidatePath("/settings/vehicles");
+  revalidateTag(`settings-${session.organizationId}`, "max");
 
   return {
     fieldErrors: {},
     message: `บันทึกร้านค้า ${name} เรียบร้อยแล้ว`,
+    status: "success",
+  };
+}
+
+export async function updateCustomerAction(
+  customerId: string,
+  _prevState: CreateCustomerActionState,
+  formData: FormData,
+): Promise<CreateCustomerActionState> {
+  const session = await requireAppRole("admin");
+  const validation = validateCustomerForm(formData);
+
+  if (!validation.success || !validation.address) {
+    return {
+      fieldErrors: validation.fieldErrors,
+      message: "ยังบันทึกการแก้ไขร้านค้าไม่ได้ กรุณาตรวจสอบข้อมูลที่กรอก",
+      status: "error",
+    };
+  }
+
+  const admin = getSupabaseAdmin();
+  const { address, defaultVehicleId, name } = validation;
+
+  const { data: customer, error: customerLookupError } = await admin
+    .from("customers")
+    .select("id, metadata")
+    .eq("id", customerId)
+    .eq("organization_id", session.organizationId)
+    .eq("is_active", true)
+    .maybeSingle();
+
+  if (customerLookupError || !customer) {
+    return {
+      fieldErrors: {},
+      message: "ไม่พบร้านค้าที่ต้องการแก้ไข",
+      status: "error",
+    };
+  }
+
+  if (defaultVehicleId) {
+    const { data: vehicle, error: vehicleError } = await admin
+      .from("vehicles")
+      .select("id")
+      .eq("organization_id", session.organizationId)
+      .eq("id", defaultVehicleId)
+      .eq("is_active", true)
+      .maybeSingle();
+
+    if (vehicleError || !vehicle) {
+      return {
+        fieldErrors: {
+          defaultVehicleId: "เลือกรถประจำร้านใหม่อีกครั้ง",
+        },
+        message: "ยังบันทึกการแก้ไขร้านค้าไม่ได้ เพราะไม่พบรถที่เลือกไว้",
+        status: "error",
+      };
+    }
+  }
+
+  const currentMetadata = isRecord(customer.metadata) ? customer.metadata : {};
+  const { error } = await admin
+    .from("customers")
+    .update({
+      address: address.addressSummary,
+      default_vehicle_id: defaultVehicleId,
+      district: address.districtName || null,
+      metadata: {
+        ...currentMetadata,
+        address: buildAddressMetadata(address),
+      },
+      name,
+      postal_code: address.postalCode || null,
+      province: address.provinceName || null,
+      subdistrict: address.subdistrictName || null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", customerId)
+    .eq("organization_id", session.organizationId);
+
+  if (error) {
+    return {
+      fieldErrors: {},
+      message: "ระบบบันทึกการแก้ไขร้านค้าไม่สำเร็จ กรุณาลองอีกครั้ง",
+      status: "error",
+    };
+  }
+
+  revalidatePath("/settings");
+  revalidatePath("/settings/customers");
+  revalidatePath("/settings/customers/pricing");
+  revalidatePath("/delivery");
+  revalidateTag(`settings-${session.organizationId}`, "max");
+
+  return {
+    fieldErrors: {},
+    message: `บันทึกการแก้ไข ${name} เรียบร้อยแล้ว`,
     status: "success",
   };
 }
@@ -273,6 +378,7 @@ export async function updateCustomerDefaultVehicleAction(
   revalidatePath("/settings/customers");
   revalidatePath("/settings/vehicles");
   revalidatePath("/delivery");
+  revalidateTag(`settings-${session.organizationId}`, "max");
 
   return {};
 }
@@ -305,6 +411,7 @@ export async function deleteCustomerAction(customerId: string): Promise<{ error?
 
   revalidatePath("/settings/customers");
   revalidatePath("/orders");
+  revalidateTag(`settings-${session.organizationId}`, "max");
 
   return {};
 }

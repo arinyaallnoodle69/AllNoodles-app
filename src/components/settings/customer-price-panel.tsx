@@ -23,6 +23,7 @@ import {
 import { confirmBelowCostSave, isBelowCostPrice } from "@/components/pricing/price-guard";
 import type { SettingsPriceRow, SettingsSaleUnitOption } from "@/lib/settings/admin";
 import { normalizeSearch } from "@/lib/utils/search";
+import { ProductPriceSelectorModal } from "./product-price-selector";
 
 export type CustomerPriceGroup = {
   customerId: string;
@@ -32,13 +33,18 @@ export type CustomerPriceGroup = {
 };
 
 type CustomerPricePanelProps = {
+  externalSearch?: string;
   groups: CustomerPriceGroup[];
   saleUnits: SettingsSaleUnitOption[];
 };
 
 // ── Main panel ────────────────────────────────────────────────────
 
-export function CustomerPricePanel({ groups, saleUnits }: CustomerPricePanelProps) {
+export function CustomerPricePanel({
+  externalSearch = "",
+  groups,
+  saleUnits,
+}: CustomerPricePanelProps) {
   const [search, setSearch] = useState("");
 
   // Desktop: accordion state
@@ -51,7 +57,7 @@ export function CustomerPricePanel({ groups, saleUnits }: CustomerPricePanelProp
   const [sheetCustomerId, setSheetCustomerId] = useState<string | null>(null);
   const [sheetAddMode, setSheetAddMode] = useState(false);
 
-  const q = normalizeSearch(search);
+  const q = normalizeSearch(externalSearch || search);
 
   const filtered = q
     ? groups.filter(
@@ -270,17 +276,7 @@ function CustomerGroup({
       {/* Desktop accordion content */}
       {isExpanded && (
         <div className="hidden border-t border-slate-100 sm:block">
-          {isAddingPrice && (
-            <div className="border-b border-slate-100 bg-blue-50/40 px-5 py-4">
-              <InlineAddPriceForm
-                customerId={group.customerId}
-                availableSaleUnits={availableSaleUnits}
-                onCancel={onCancelAdd}
-              />
-            </div>
-          )}
-
-          {group.prices.length === 0 && !isAddingPrice && (
+          {group.prices.length === 0 && (
             <div className="py-8 text-center text-sm text-slate-400">
               ยังไม่มีสินค้าที่ผูกราคา —{" "}
               <button
@@ -320,6 +316,15 @@ function CustomerGroup({
             </table>
           )}
         </div>
+      )}
+
+      {isAddingPrice && (
+        <ProductPriceSelectorModal
+          customerId={group.customerId}
+          customerName={group.customerName}
+          availableSaleUnits={availableSaleUnits}
+          onClose={onCancelAdd}
+        />
       )}
     </div>
   );
@@ -476,17 +481,7 @@ function MobileSheet({ groups, initialCustomerId, saleUnits, startAdding, onClos
           onTouchEnd={onTouchEnd}
         >
           <div key={slideKey} className="h-full overflow-y-auto" style={slideStyle}>
-            {isAddingPrice && (
-              <div className="border-b border-slate-100 bg-blue-50/40 px-5 py-4">
-                <InlineAddPriceForm
-                  customerId={group.customerId}
-                  availableSaleUnits={availableSaleUnits}
-                  onCancel={() => setIsAddingPrice(false)}
-                />
-              </div>
-            )}
-
-            {group.prices.length === 0 && !isAddingPrice ? (
+            {group.prices.length === 0 ? (
               <div className="py-10 text-center text-sm text-slate-400">
                 ยังไม่มีสินค้าที่ผูกราคา
               </div>
@@ -504,20 +499,27 @@ function MobileSheet({ groups, initialCustomerId, saleUnits, startAdding, onClos
         </div>
 
         {/* ── Sticky bottom: add button ───────────────────────── */}
-        {!isAddingPrice && (
-          <div className="shrink-0 border-t border-slate-100 bg-white p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
-            <button
-              type="button"
-              onClick={() => setIsAddingPrice(true)}
-              disabled={availableSaleUnits.length === 0}
-              className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[#003366] py-3.5 text-sm font-semibold text-white shadow-[0_8px_24px_rgba(0,51,102,0.25)] transition hover:bg-[#002244] disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              <Plus className="h-4 w-4" strokeWidth={2.5} />
-              {availableSaleUnits.length === 0
-                ? "ผูกครบทุกสินค้าแล้ว"
-                : "เพิ่มสินค้าให้ร้านนี้"}
-            </button>
-          </div>
+        <div className="shrink-0 border-t border-slate-100 bg-white p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+          <button
+            type="button"
+            onClick={() => setIsAddingPrice(true)}
+            disabled={availableSaleUnits.length === 0}
+            className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[#003366] py-3.5 text-sm font-semibold text-white shadow-[0_8px_24px_rgba(0,51,102,0.25)] transition hover:bg-[#002244] disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <Plus className="h-4 w-4" strokeWidth={2.5} />
+            {availableSaleUnits.length === 0
+              ? "ผูกครบทุกสินค้าแล้ว"
+              : "เพิ่มสินค้าให้ร้านนี้"}
+          </button>
+        </div>
+
+        {isAddingPrice && (
+          <ProductPriceSelectorModal
+            customerId={group.customerId}
+            customerName={group.customerName}
+            availableSaleUnits={availableSaleUnits}
+            onClose={() => setIsAddingPrice(false)}
+          />
         )}
       </div>
     </>
@@ -907,136 +909,5 @@ function PriceRowMobile({ price }: { price: SettingsPriceRow }) {
         </button>
       </div>
     </div>
-  );
-}
-
-// ── InlineAddPriceForm ────────────────────────────────────────────
-
-type InlineAddPriceFormProps = {
-  customerId: string;
-  availableSaleUnits: SettingsSaleUnitOption[];
-  onCancel: () => void;
-};
-
-function InlineAddPriceForm({
-  customerId,
-  availableSaleUnits,
-  onCancel,
-}: InlineAddPriceFormProps) {
-  const [selectedUnitId, setSelectedUnitId] = useState("");
-  const [priceValue, setPriceValue] = useState("");
-  const [isPending, startTransition] = useTransition();
-
-  const selectedUnit = availableSaleUnits.find((u) => u.id === selectedUnitId);
-  const price = parseFloat(priceValue) || 0;
-  const isBelowCost =
-    selectedUnit !== undefined && price > 0 && price < selectedUnit.effectiveCostPrice;
-
-  function handleAction(formData: FormData) {
-    if (
-      isBelowCost &&
-      selectedUnit &&
-      !confirmBelowCostSave({
-        productName: selectedUnit.productName,
-        saleUnitLabel: selectedUnit.label,
-        salePrice: price,
-        effectiveCostPrice: selectedUnit.effectiveCostPrice,
-      })
-    ) {
-      return;
-    }
-
-    startTransition(async () => {
-      await upsertStoreProductPrice(formData);
-      setSelectedUnitId("");
-      setPriceValue("");
-    });
-  }
-
-  if (availableSaleUnits.length === 0) {
-    return (
-      <p className="text-sm text-slate-500">
-        ผูกราคาครบทุกสินค้าแล้ว —{" "}
-        <button type="button" onClick={onCancel} className="font-medium text-[#003366] hover:underline">
-          ปิด
-        </button>
-      </p>
-    );
-  }
-
-  return (
-    <form action={handleAction}>
-      <input type="hidden" name="customerId" value={customerId} />
-      <p className="mb-2.5 text-xs font-semibold uppercase tracking-[0.1em] text-slate-500">
-        เพิ่มสินค้าและราคา
-      </p>
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-start">
-        <div className="flex-1">
-          <select
-            name="productSaleUnitId"
-            required
-            value={selectedUnitId}
-            onChange={(e) => setSelectedUnitId(e.target.value)}
-            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none transition focus:border-transparent focus:ring-2 focus:ring-[#003366]"
-          >
-            <option value="" disabled>
-              เลือกสินค้าและหน่วยขาย...
-            </option>
-            {availableSaleUnits.map((u) => (
-              <option key={u.id} value={u.id}>
-                {u.sku} — {u.productName} ({u.label})
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="relative w-full sm:w-36">
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-medium text-slate-400">
-            ฿
-          </span>
-          <input
-            name="salePrice"
-            type="number"
-            min="0"
-            step="0.01"
-            required
-            value={priceValue}
-            onChange={(e) => setPriceValue(e.target.value)}
-            placeholder="0.00"
-            className={`w-full rounded-lg border py-2.5 pl-7 pr-3 text-sm outline-none transition focus:border-transparent focus:ring-2 focus:ring-[#003366] ${
-              isBelowCost ? "border-amber-300 bg-amber-50" : "border-slate-200 bg-white"
-            }`}
-          />
-        </div>
-
-        <div className="flex gap-2">
-          <button
-            type="submit"
-            disabled={isPending}
-            className="flex-1 rounded-lg bg-[#003366] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#002244] disabled:opacity-60 sm:flex-none"
-          >
-            {isPending ? "กำลังบันทึก..." : "บันทึก"}
-          </button>
-          <button
-            type="button"
-            onClick={onCancel}
-            disabled={isPending}
-            className="flex-1 rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-600 transition hover:bg-slate-50 disabled:opacity-60 sm:flex-none"
-          >
-            ยกเลิก
-          </button>
-        </div>
-      </div>
-
-      {isBelowCost && selectedUnit && (
-        <div className="mt-2 flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-700">
-          <AlertTriangle className="h-3.5 w-3.5 shrink-0" strokeWidth={2.2} />
-          ราคาต่ำกว่าต้นทุน — ต้นทุน/{selectedUnit.label}: ฿
-          {selectedUnit.effectiveCostPrice.toLocaleString("th-TH", {
-            minimumFractionDigits: 2,
-          })}
-        </div>
-      )}
-    </form>
   );
 }

@@ -66,7 +66,7 @@ export default async function IncomingOrdersPage({ searchParams }: IncomingOrder
   }
 
   return (
-    <SettingsShell title="คำสั่งซื้อ" titleIcon={ClipboardList} description="" floatingSubmit={false}>
+    <SettingsShell title="คำสั่งซื้อ" description="" floatingSubmit={false}>
       <div className="space-y-6">
         <section className="rounded-[1.8rem] border border-slate-200 bg-white px-5 py-5 shadow-[0_18px_55px_rgba(15,23,42,0.05)]">
           <form className="hidden md:flex md:flex-row md:items-center md:gap-3">

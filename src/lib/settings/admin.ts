@@ -60,12 +60,24 @@ export type SettingsProductCategory = {
 
 export type SettingsCustomer = {
   address: string;
+  addressDraft: SettingsCustomerAddress;
   code: string;
   defaultVehicleId: string | null;
   defaultVehicleName: string | null;
   id: string;
   name: string;
   pricingCount: number;
+};
+
+export type SettingsCustomerAddress = {
+  addressDetails: string;
+  districtCode: string;
+  districtName: string;
+  postalCode: string;
+  provinceCode: string;
+  provinceName: string;
+  subdistrictCode: string;
+  subdistrictName: string;
 };
 
 export type SettingsVehicle = {
@@ -93,6 +105,7 @@ export type SettingsPriceRow = {
 export type SettingsSaleUnitOption = {
   effectiveCostPrice: number;
   id: string;
+  imageUrl: string | null;
   label: string;
   productId: string;
   productName: string;
@@ -139,6 +152,7 @@ type ProductSaleUnitRow = {
   cost_mode: string | null;
   fixed_cost_price: number | string | null;
   id: string;
+  is_active: boolean;
   is_default: boolean;
   min_order_qty: number | string | null;
   product_id: string;
@@ -151,8 +165,13 @@ type CustomerRow = {
   address: string;
   customer_code: string;
   default_vehicle_id: string | null;
+  district: string | null;
   id: string;
+  metadata: Record<string, unknown> | null;
   name: string;
+  postal_code: string | null;
+  province: string | null;
+  subdistrict: string | null;
 };
 
 type VehicleRow = {
@@ -217,6 +236,50 @@ function getNextCustomerCode(codes: string[]) {
   return `TYS${String(maxSequence + 1).padStart(3, "0")}`;
 }
 
+const skuCollator = new Intl.Collator("th", {
+  numeric: true,
+  sensitivity: "base",
+});
+
+function compareProductSku<T extends { name: string; sku: string }>(left: T, right: T) {
+  const skuComparison = skuCollator.compare(left.sku, right.sku);
+
+  if (skuComparison !== 0) {
+    return skuComparison;
+  }
+
+  return left.name.localeCompare(right.name, "th");
+}
+
+function getRecord(value: unknown): Record<string, unknown> | null {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : null;
+}
+
+function getText(value: unknown) {
+  return typeof value === "string" ? value : "";
+}
+
+function getCustomerAddressDraft(customer: CustomerRow): SettingsCustomerAddress {
+  const metadata = getRecord(customer.metadata);
+  const address = getRecord(metadata?.address);
+  const street = getRecord(address?.street);
+  const addressDetails =
+    getText(street?.details) || getText(address?.line1) || customer.address || "";
+
+  return {
+    addressDetails,
+    districtCode: getText(address?.districtCode),
+    districtName: getText(address?.districtName) || customer.district || "",
+    postalCode: getText(address?.postalCode) || customer.postal_code || "",
+    provinceCode: getText(address?.provinceCode),
+    provinceName: getText(address?.provinceName) || customer.province || "",
+    subdistrictCode: getText(address?.subdistrictCode),
+    subdistrictName: getText(address?.subdistrictName) || customer.subdistrict || "",
+  };
+}
+
 async function fetchSettingsData(organizationId: string): Promise<SettingsData> {
   const admin = getSupabaseAdmin();
   const productsTable = admin.from("products") as unknown as SelectTable;
@@ -249,13 +312,15 @@ async function fetchSettingsData(organizationId: string): Promise<SettingsData> 
         .order("sort_order", { ascending: true }),
       saleUnitsTable
         .select(
-          "id, product_id, unit_label, base_unit_quantity, is_default, sort_order, cost_mode, fixed_cost_price, min_order_qty, step_order_qty",
+          "id, product_id, unit_label, base_unit_quantity, is_active, is_default, sort_order, cost_mode, fixed_cost_price, min_order_qty, step_order_qty",
         )
         .eq("organization_id", organizationId)
         .order("sort_order", { ascending: true }),
       admin
         .from("customers")
-        .select("id, customer_code, name, address, default_vehicle_id")
+        .select(
+          "id, customer_code, name, address, province, district, subdistrict, postal_code, metadata, default_vehicle_id",
+        )
         .eq("organization_id", organizationId)
         .eq("is_active", true)
         .order("customer_code", { ascending: true }),
@@ -309,7 +374,16 @@ async function fetchSettingsData(organizationId: string): Promise<SettingsData> 
   const images = (imagesResult.data ?? []) as ProductImageRow[];
   const saleUnits = (saleUnitsResult.data ?? []) as ProductSaleUnitRow[];
   const customers = (customersResult.data ?? []) as CustomerRow[];
-  const prices = (pricesResult.data ?? []) as PriceRow[];
+  const activeProductIds = new Set(
+    products.filter((product) => product.is_active).map((product) => product.id),
+  );
+  const activeSaleUnits = saleUnits.filter(
+    (saleUnit) => saleUnit.is_active && activeProductIds.has(saleUnit.product_id),
+  );
+  const activeSaleUnitIds = new Set(activeSaleUnits.map((saleUnit) => saleUnit.id));
+  const prices = ((pricesResult.data ?? []) as PriceRow[]).filter((price) =>
+    activeSaleUnitIds.has(price.product_sale_unit_id),
+  );
   const categories =
     categoryErrors.length > 0
       ? []
@@ -348,7 +422,7 @@ async function fetchSettingsData(organizationId: string): Promise<SettingsData> 
     }[]
   >();
 
-  for (const saleUnit of saleUnits) {
+  for (const saleUnit of activeSaleUnits) {
     const current = saleUnitMap.get(saleUnit.product_id) ?? [];
     const product = products.find((item) => item.id === saleUnit.product_id);
     const baseCostPrice = Number(product?.cost_price ?? 0);
@@ -422,6 +496,7 @@ async function fetchSettingsData(organizationId: string): Promise<SettingsData> 
   return {
     customers: customers.map((customer) => ({
       address: customer.address,
+      addressDraft: getCustomerAddressDraft(customer),
       code: customer.customer_code,
       defaultVehicleId: customer.default_vehicle_id,
       defaultVehicleName: customer.default_vehicle_id
@@ -469,56 +544,58 @@ async function fetchSettingsData(organizationId: string): Promise<SettingsData> 
       })),
     products: sortProductsByCategory(
       products.map((product) => {
-      const meta = (product.metadata ?? {}) as Record<string, string>;
-      const categoryNames = categoryNamesByProductId.get(product.id) ?? [];
-      return {
-        brand: meta.brand ?? "",
-        category: categoryNames.join(", ") || meta.category || "",
-        categoryIds: categoryIdsByProductId.get(product.id) ?? [],
-        categoryNames,
-        costPrice: Number(product.cost_price),
-        description: meta.description ?? "",
-        id: product.id,
-        imageUrls: imageMap.get(product.id) ?? [],
-        isActive: product.is_active,
-        name: product.name,
-        pricingCount: productPricingCount.get(product.id) ?? 0,
-        saleUnits:
-          saleUnitMap.get(product.id)?.toSorted((left, right) => {
-            if (left.sortOrder !== right.sortOrder) {
-              return left.sortOrder - right.sortOrder;
-            }
+        const meta = (product.metadata ?? {}) as Record<string, string>;
+        const categoryNames = categoryNamesByProductId.get(product.id) ?? [];
+        return {
+          brand: meta.brand ?? "",
+          category: categoryNames.join(", ") || meta.category || "",
+          categoryIds: categoryIdsByProductId.get(product.id) ?? [],
+          categoryNames,
+          costPrice: Number(product.cost_price),
+          description: meta.description ?? "",
+          id: product.id,
+          imageUrls: imageMap.get(product.id) ?? [],
+          isActive: product.is_active,
+          name: product.name,
+          pricingCount: productPricingCount.get(product.id) ?? 0,
+          saleUnits:
+            saleUnitMap.get(product.id)?.toSorted((left, right) => {
+              if (left.sortOrder !== right.sortOrder) {
+                return left.sortOrder - right.sortOrder;
+              }
 
-            if (left.isDefault !== right.isDefault) {
-              return left.isDefault ? -1 : 1;
-            }
+              if (left.isDefault !== right.isDefault) {
+                return left.isDefault ? -1 : 1;
+              }
 
-            return left.label.localeCompare(right.label, "th");
-          }).map((u) => ({
-            baseUnitQuantity: u.baseUnitQuantity,
-            costMode: u.costMode,
-            effectiveCostPrice: u.effectiveCostPrice,
-            fixedCostPrice: u.fixedCostPrice,
-            id: u.id,
-            isDefault: u.isDefault,
-            label: u.label,
-            minOrderQty: u.minOrderQty,
-            sortOrder: u.sortOrder,
-            stepOrderQty: u.stepOrderQty,
-          })) ?? [],
-        sku: product.sku,
-        stockQuantity: Number(product.stock_quantity),
-        baseUnit: product.unit,
-      };
+              return left.label.localeCompare(right.label, "th");
+            }).map((u) => ({
+              baseUnitQuantity: u.baseUnitQuantity,
+              costMode: u.costMode,
+              effectiveCostPrice: u.effectiveCostPrice,
+              fixedCostPrice: u.fixedCostPrice,
+              id: u.id,
+              imageUrl: imageMap.get(product.id)?.[0] ?? null,
+              isDefault: u.isDefault,
+              label: u.label,
+              minOrderQty: u.minOrderQty,
+              sortOrder: u.sortOrder,
+              stepOrderQty: u.stepOrderQty,
+            })) ?? [],
+          sku: product.sku,
+          stockQuantity: Number(product.stock_quantity),
+          baseUnit: product.unit,
+        };
       }),
       categories.map((c) => ({ id: c.id, sortOrder: Number(c.sort_order) })),
     ),
-    saleUnits: saleUnits.map((saleUnit) => ({
+    saleUnits: activeSaleUnits.map((saleUnit) => ({
       effectiveCostPrice:
         saleUnitMap
           .get(saleUnit.product_id)
           ?.find((u) => u.id === saleUnit.id)?.effectiveCostPrice ?? 0,
       id: saleUnit.id,
+      imageUrl: productMap.get(saleUnit.product_id)?.imageUrl ?? null,
       label: saleUnit.unit_label,
       productId: saleUnit.product_id,
       productName: productMap.get(saleUnit.product_id)?.name ?? "สินค้าไม่ทราบชื่อ",
@@ -542,7 +619,7 @@ async function fetchSettingsData(organizationId: string): Promise<SettingsData> 
 export function getSettingsData(organizationId: string): Promise<SettingsData> {
   return unstable_cache(
     () => fetchSettingsData(organizationId),
-    ["settings", organizationId],
+    ["settings-v2", organizationId],
     { tags: [`settings-${organizationId}`] },
   )();
 }
@@ -567,7 +644,7 @@ async function fetchSettingsProductsData(organizationId: string): Promise<Settin
         .order("sort_order", { ascending: true }),
       saleUnitsTable
         .select(
-          "id, product_id, unit_label, base_unit_quantity, is_default, sort_order, cost_mode, fixed_cost_price, min_order_qty, step_order_qty",
+          "id, product_id, unit_label, base_unit_quantity, is_active, is_default, sort_order, cost_mode, fixed_cost_price, min_order_qty, step_order_qty",
         )
         .eq("organization_id", organizationId)
         .order("sort_order", { ascending: true }),
@@ -599,6 +676,7 @@ async function fetchSettingsProductsData(organizationId: string): Promise<Settin
   const products = (productsResult.data ?? []) as ProductRow[];
   const images = (imagesResult.data ?? []) as ProductImageRow[];
   const saleUnits = (saleUnitsResult.data ?? []) as ProductSaleUnitRow[];
+  const activeSaleUnits = saleUnits.filter((saleUnit) => saleUnit.is_active);
   const categories =
     categoryErrors.length > 0
       ? []
@@ -635,7 +713,7 @@ async function fetchSettingsProductsData(organizationId: string): Promise<Settin
     }[]
   >();
 
-  for (const saleUnit of saleUnits) {
+  for (const saleUnit of activeSaleUnits) {
     const current = saleUnitMap.get(saleUnit.product_id) ?? [];
     const baseCostPrice = productCostMap.get(saleUnit.product_id) ?? 0;
     const baseUnitQuantity = Number(saleUnit.base_unit_quantity);
@@ -705,8 +783,8 @@ async function fetchSettingsProductsData(organizationId: string): Promise<Settin
         productIds: productIdsByCategoryId.get(category.id) ?? [],
         sortOrder: Number(category.sort_order),
       })),
-    products: sortProductsByCategory(
-      products.map((product) => {
+    products: products
+      .map((product) => {
         const meta = (product.metadata ?? {}) as Record<string, string>;
         const categoryNames = categoryNamesByProductId.get(product.id) ?? [];
         return {
@@ -739,6 +817,7 @@ async function fetchSettingsProductsData(organizationId: string): Promise<Settin
               effectiveCostPrice: u.effectiveCostPrice,
               fixedCostPrice: u.fixedCostPrice,
               id: u.id,
+              imageUrl: imageMap.get(product.id)?.[0] ?? null,
               isDefault: u.isDefault,
               label: u.label,
               minOrderQty: u.minOrderQty,
@@ -748,9 +827,8 @@ async function fetchSettingsProductsData(organizationId: string): Promise<Settin
           sku: product.sku,
           stockQuantity: Number(product.stock_quantity),
         };
-      }),
-      categories.map((c) => ({ id: c.id, sortOrder: Number(c.sort_order) })),
-    ),
+      })
+      .toSorted(compareProductSku),
     setupHint:
       categoryErrors.length > 0 && categoryErrors.every((error) => isMissingTableError(error?.message))
         ? "ระบบหมวดหมู่สินค้ายังไม่พร้อมใช้งาน"
@@ -763,7 +841,7 @@ export function getSettingsProductsData(
 ): Promise<SettingsProductsData> {
   return unstable_cache(
     () => fetchSettingsProductsData(organizationId),
-    ["settings-products", organizationId],
+    ["settings-products-v2", organizationId],
     { tags: [`settings-${organizationId}`] },
   )();
 }

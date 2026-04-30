@@ -506,6 +506,8 @@ export async function upsertStoreProductPrice(formData: FormData) {
     .from("product_sale_units")
     .select("product_id")
     .eq("id", productSaleUnitId)
+    .eq("organization_id", session.organizationId)
+    .eq("is_active", true)
     .single();
 
   if (saleUnitResult.error || !saleUnitResult.data) {

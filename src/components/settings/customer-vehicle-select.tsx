@@ -11,6 +11,7 @@ type CustomerVehicleSelectProps = {
   currentVehicleId: string | null;
   currentVehicleName: string | null;
   vehicles: SettingsVehicle[];
+  compact?: boolean;
 };
 
 export function CustomerVehicleSelect({
@@ -19,6 +20,7 @@ export function CustomerVehicleSelect({
   currentVehicleId,
   currentVehicleName,
   vehicles,
+  compact = false,
 }: CustomerVehicleSelectProps) {
   const [selectedVehicleId, setSelectedVehicleId] = useState(currentVehicleId ?? "");
   const [isPending, startTransition] = useTransition();
@@ -60,15 +62,15 @@ export function CustomerVehicleSelect({
   return (
     <div className={className}>
       <div className="relative">
-        <Truck className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#003366]" strokeWidth={2.1} />
+        <Truck className={`pointer-events-none absolute ${compact ? 'left-2 h-3 w-3' : 'left-3 h-4 w-4'} top-1/2 -translate-y-1/2 text-[#003366]`} strokeWidth={2.1} />
         <select
           value={selectedVehicleId}
           disabled={isPending}
           onChange={(event) => handleChange(event.target.value)}
-          className="w-full rounded-xl border border-slate-200 bg-white py-2 pl-9 pr-8 text-sm font-medium text-slate-700 outline-none transition focus:border-[#003366]/30 focus:ring-2 focus:ring-[#003366]/20 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
+          className={`w-full rounded-xl border border-slate-200 bg-white ${compact ? 'py-1.5 pl-7 pr-6 text-[11px]' : 'py-2 pl-9 pr-8 text-sm'} font-medium text-slate-700 outline-none transition focus:border-[#003366]/30 focus:ring-2 focus:ring-[#003366]/20 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400`}
           aria-label="เลือกรถประจำร้าน"
         >
-          <option value="">ยังไม่กำหนดรถประจำร้าน</option>
+          <option value="">{compact ? 'ไม่มีรถ' : 'ยังไม่กำหนดรถประจำร้าน'}</option>
           {options.map((vehicle) => (
             <option key={vehicle.id} value={vehicle.id}>
               {vehicle.name}

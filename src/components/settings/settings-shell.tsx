@@ -1,6 +1,9 @@
+"use client";
+
+import { useState } from "react";
 import Link from "next/link";
 import type { LucideIcon } from "lucide-react";
-import { ArrowUpRight, Save } from "lucide-react";
+import { ArrowUpRight, Save, Search, X } from "lucide-react";
 import { AppSidebarLayout } from "@/components/app-sidebar";
 
 type SettingsSection = "customerData" | "customers" | "products" | "vehicles";
@@ -12,6 +15,10 @@ type SettingsShellProps = {
   floatingSubmit?: boolean;
   titleIcon?: LucideIcon;
   title: string;
+  showSearch?: boolean;
+  searchPlaceholder?: string;
+  initialSearchTerm?: string;
+  onSearch?: (term: string) => void;
 };
 
 function getSubmitFormId(current: SettingsSection) {
@@ -81,10 +88,30 @@ export function SettingsShell({
   floatingSubmit = true,
   titleIcon: TitleIcon,
   title,
+  showSearch = false,
+  searchPlaceholder = "ค้นหา...",
+  initialSearchTerm = "",
+  onSearch,
 }: SettingsShellProps) {
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState(initialSearchTerm);
   const switchLink = current ? getSwitchLink(current) : null;
   const submitFormId = current ? getSubmitFormId(current) : null;
   const submitLabel = current ? getSubmitLabel(current) : null;
+
+  const handleSearchToggle = () => {
+    setIsSearchOpen(!isSearchOpen);
+    if (isSearchOpen) {
+      setSearchTerm("");
+      if (onSearch) onSearch("");
+    }
+  };
+
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setSearchTerm(value);
+    if (onSearch) onSearch(value);
+  };
 
   const inner = (
     <div className="min-h-screen bg-[#f6f7f8] font-[family:var(--font-sarabun)] text-slate-900">
@@ -112,16 +139,50 @@ export function SettingsShell({
               </div>
             </div>
 
-            {switchLink ? (
-              <Link
-                href={switchLink.href}
-                className="inline-flex items-center gap-2 self-start rounded-full border border-white/20 bg-white/10 px-4 py-2 text-sm font-medium text-white/80 backdrop-blur-sm transition hover:bg-white/20 hover:text-white md:self-auto"
-              >
-                {switchLink.label}
-                <ArrowUpRight className="h-4 w-4" strokeWidth={2.2} />
-              </Link>
-            ) : null}
+            <div className="flex items-center gap-3 self-start md:self-auto">
+              {showSearch && (
+                <button
+                  onClick={handleSearchToggle}
+                  className={`flex h-10 w-10 items-center justify-center rounded-full backdrop-blur-sm ring-1 ring-white/20 transition ${
+                    isSearchOpen ? "bg-rose-500/20 text-white" : "bg-white/10 text-white/80 hover:bg-white/20 hover:text-white"
+                  }`}
+                >
+                  {isSearchOpen ? <X className="h-5 w-5" strokeWidth={2.5} /> : <Search className="h-5 w-5" strokeWidth={2.2} />}
+                </button>
+              )}
+
+              {switchLink ? (
+                <Link
+                  href={switchLink.href}
+                  className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-2 text-sm font-medium text-white/80 backdrop-blur-sm transition hover:bg-white/20 hover:text-white"
+                >
+                  <span className="hidden sm:inline">{switchLink.label}</span>
+                  <ArrowUpRight className="h-4 w-4" strokeWidth={2.2} />
+                </Link>
+              ) : null}
+            </div>
           </div>
+
+          {/* Search Bar Slide Down */}
+          {showSearch && (
+            <div
+              className={`overflow-hidden transition-all duration-300 ease-in-out ${
+                isSearchOpen ? "mt-6 max-h-20 opacity-100" : "max-h-0 opacity-0"
+              }`}
+            >
+              <div className="relative">
+                <Search className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-white/40" />
+                <input
+                  type="text"
+                  placeholder={searchPlaceholder}
+                  value={searchTerm}
+                  onChange={handleSearchChange}
+                  className="w-full rounded-2xl border border-white/10 bg-white/10 py-4 pl-12 pr-4 text-base text-white placeholder:text-white/30 outline-none backdrop-blur-md focus:bg-white/15"
+                  autoFocus={isSearchOpen}
+                />
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
