@@ -2,9 +2,9 @@ import { ImageResponse } from "next/og";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
-import { notifyCustomerReceiptImage } from "@/lib/line/notify";
+import { notifyCustomerReceiptImageDetailed } from "@/lib/line/notify";
 
-const RECEIPT_IMAGE_BUCKET = "product-images";
+const RECEIPT_IMAGE_BUCKET = "customer-receipts";
 const RECEIPT_EXPORT_WIDTH = 360;
 
 type ReceiptImageItem = {
@@ -42,6 +42,18 @@ function guessExtension(contentType: UploadReceiptImageInput["contentType"]) {
   if (contentType === "image/png") return "png";
   if (contentType === "image/webp") return "webp";
   return "jpg";
+}
+
+async function verifyPublicImageUrl(imageUrl: string) {
+  try {
+    const response = await fetch(imageUrl, {
+      headers: { Range: "bytes=0-0" },
+    });
+    return response.ok;
+  } catch (error) {
+    console.error("[customer-receipt-image:verify-url]", error);
+    return false;
+  }
 }
 
 function formatDate(value: string) {
@@ -264,11 +276,15 @@ export async function uploadAndNotifyCustomerReceiptImage(
   const { data: buckets } = await supabase.storage.listBuckets();
   const hasBucket = (buckets ?? []).some((bucket) => bucket.name === RECEIPT_IMAGE_BUCKET);
   if (!hasBucket) {
-    await supabase.storage.createBucket(RECEIPT_IMAGE_BUCKET, {
+    const { error: bucketError } = await supabase.storage.createBucket(RECEIPT_IMAGE_BUCKET, {
       allowedMimeTypes: ["image/png", "image/jpeg", "image/webp"],
       fileSizeLimit: "10MB",
       public: true,
     });
+    if (bucketError) {
+      console.error("[customer-receipt-image:bucket]", bucketError);
+      return { error: "สร้างพื้นที่เก็บรูปใบยืนยันไม่สำเร็จ" };
+    }
   }
 
   const { error: uploadError } = await supabase.storage
@@ -288,14 +304,20 @@ export async function uploadAndNotifyCustomerReceiptImage(
     data: { publicUrl: imageUrl },
   } = supabase.storage.from(RECEIPT_IMAGE_BUCKET).getPublicUrl(storagePath);
 
-  const pushed = await notifyCustomerReceiptImage(input.lineUserId, {
+  const isPublicImageReady = await verifyPublicImageUrl(imageUrl);
+  if (!isPublicImageReady) {
+    return { error: `รูปใบยืนยันยังไม่เป็น public URL ที่ LINE ดึงได้: ${imageUrl}` };
+  }
+
+  const pushed = await notifyCustomerReceiptImageDetailed(input.lineUserId, {
     customerName: input.customerName,
     imageUrl,
     orderNumber: input.orderNumber,
   });
 
-  if (!pushed) {
-    return { error: "ส่งรูปใบยืนยันไป LINE ไม่สำเร็จ" };
+  if (!pushed.ok) {
+    const detail = "body" in pushed ? pushed.body : String(pushed.error);
+    return { error: `ส่งรูปใบยืนยันไป LINE ไม่สำเร็จ (${pushed.status ?? "network"}): ${detail}` };
   }
 
   return { imageUrl };

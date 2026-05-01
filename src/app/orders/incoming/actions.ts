@@ -8,7 +8,9 @@ import { getTodayInBangkok } from "@/lib/orders/date";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-export type ActionResult = { error: string } | { success: true; orderNumber?: string };
+export type ActionResult =
+  | { error: string }
+  | { receiptWarning?: string; success: true; orderNumber?: string };
 
 type SingleResult<T> = Promise<{ data: T | null; error: { message?: string } | null }>;
 type ManyResult<T> = Promise<{ data: T[] | null; error: { message?: string } | null }>;
@@ -636,6 +638,9 @@ export async function linkPendingLineOrderAction(formData: FormData): Promise<Ac
   }
 
   return {
+    receiptWarning: result.receiptErrors.length > 0
+      ? `สร้างออเดอร์แล้ว แต่ส่งใบยืนยันไป LINE ไม่สำเร็จ: ${result.receiptErrors.join(" | ")}`
+      : undefined,
     success: true,
     orderNumber: result.orderNumbers.join(", "),
   };

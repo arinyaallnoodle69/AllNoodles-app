@@ -2,12 +2,22 @@ import "server-only";
 
 const LINE_API = "https://api.line.me/v2/bot/message/push";
 
+export type LinePushResult =
+  | { ok: true }
+  | { body: string; ok: false; status: number }
+  | { error: unknown; ok: false; status: null };
+
 function isValidLinePushTarget(value: string | null | undefined): value is string {
   const normalized = value?.trim();
   return Boolean(normalized && /^[UCR][0-9a-f]{32}$/i.test(normalized));
 }
 
 async function linePush(to: string, token: string, message: object | object[]): Promise<boolean> {
+  const result = await linePushDetailed(to, token, message);
+  return result.ok;
+}
+
+async function linePushDetailed(to: string, token: string, message: object | object[]): Promise<LinePushResult> {
   try {
     const messages = Array.isArray(message) ? message : [message];
     const res = await fetch(LINE_API, {
@@ -18,12 +28,12 @@ async function linePush(to: string, token: string, message: object | object[]): 
     if (!res.ok) {
       const text = await res.text();
       console.warn("[line/push] Failed:", res.status, text);
-      return false;
+      return { body: text, ok: false, status: res.status };
     }
-    return true;
+    return { ok: true };
   } catch (err) {
     console.warn("[line/push] Error:", err);
-    return false;
+    return { error: err, ok: false, status: null };
   }
 }
 
@@ -402,6 +412,29 @@ export async function notifyCustomerReceiptImage(
   };
 
   return linePush(lineUserId, token, imageMessage);
+}
+
+export async function notifyCustomerReceiptImageDetailed(
+  lineUserId: string,
+  payload: CustomerReceiptImagePayload,
+): Promise<LinePushResult> {
+  const token = process.env.LINE_CHANNEL_ACCESS_TOKEN;
+  if (!token || !isValidLinePushTarget(lineUserId)) {
+    console.warn("[line/customer-image] Invalid LINE user id - skipping push");
+    return {
+      body: !token ? "LINE_CHANNEL_ACCESS_TOKEN is not configured." : "Invalid LINE user id.",
+      ok: false,
+      status: 0,
+    };
+  }
+
+  const imageMessage = {
+    type: "image",
+    originalContentUrl: payload.imageUrl,
+    previewImageUrl: payload.imageUrl,
+  };
+
+  return linePushDetailed(lineUserId, token, imageMessage);
 }
 
 export async function notifyCustomerOrderReceiptSummary(

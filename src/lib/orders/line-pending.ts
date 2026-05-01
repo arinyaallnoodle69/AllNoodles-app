@@ -639,6 +639,7 @@ async function convertSinglePendingOrder(input: {
     })
     .eq("id", input.order.id);
 
+  let receiptError: string | null = null;
   try {
     const receiptResult = await generateUploadAndNotifyCustomerReceiptImage({
       customerName: input.customer.name,
@@ -654,6 +655,7 @@ async function convertSinglePendingOrder(input: {
       totalAmount,
     });
     if ("error" in receiptResult) {
+      receiptError = receiptResult.error;
       console.error("[line-pending:receipt-image]", {
         error: receiptResult.error,
         lineUserId: input.lineUserId,
@@ -661,6 +663,7 @@ async function convertSinglePendingOrder(input: {
       });
     }
   } catch (error) {
+    receiptError = error instanceof Error ? error.message : String(error);
     console.error("[line-pending:receipt-image]", {
       error,
       lineUserId: input.lineUserId,
@@ -668,7 +671,10 @@ async function convertSinglePendingOrder(input: {
     });
   }
 
-  return newOrder.order_number;
+  return {
+    orderNumber: newOrder.order_number,
+    receiptError,
+  };
 }
 
 export async function linkLineCustomerAndConvertPendingOrders(input: {
@@ -763,8 +769,9 @@ export async function linkLineCustomerAndConvertPendingOrders(input: {
     .order("created_at", { ascending: true });
 
   const orderNumbers: string[] = [];
+  const receiptErrors: string[] = [];
   for (const order of allPendingOrders ?? []) {
-    const orderNumber = await convertSinglePendingOrder({
+    const convertedOrder = await convertSinglePendingOrder({
       admin,
       customer,
       lineUserId: pendingOrder.line_user_id,
@@ -772,8 +779,11 @@ export async function linkLineCustomerAndConvertPendingOrders(input: {
       organizationId: input.organizationId,
       userId: input.userId,
     });
-    if (orderNumber) {
-      orderNumbers.push(orderNumber);
+    if (convertedOrder) {
+      orderNumbers.push(convertedOrder.orderNumber);
+      if (convertedOrder.receiptError) {
+        receiptErrors.push(`${convertedOrder.orderNumber}: ${convertedOrder.receiptError}`);
+      }
     }
   }
 
@@ -785,6 +795,7 @@ export async function linkLineCustomerAndConvertPendingOrders(input: {
   return {
     customerName: customer.name,
     orderNumbers,
+    receiptErrors,
     success: true as const,
   };
 }

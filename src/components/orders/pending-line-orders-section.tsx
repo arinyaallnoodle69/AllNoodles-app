@@ -90,13 +90,14 @@ export function PendingLineOrdersSection({
       }
 
       setSuccessMessage(
-        result.orderNumber
-          ? `ผูกสำเร็จและสร้างออเดอร์ ${result.orderNumber}`
-          : "ผูกสำเร็จและสร้างออเดอร์แล้ว",
+        result.receiptWarning ??
+          (result.orderNumber
+            ? `ผูกสำเร็จและสร้างออเดอร์ ${result.orderNumber}`
+            : "ผูกสำเร็จและสร้างออเดอร์แล้ว"),
       );
       window.setTimeout(() => {
         window.location.reload();
-      }, 900);
+      }, result.receiptWarning ? 4500 : 900);
     });
   }
 
