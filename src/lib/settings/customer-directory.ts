@@ -38,6 +38,7 @@ export type CustomerDirectoryItem = {
   isActive: boolean;
   isLinked: boolean;
   lineDisplayName: string | null;
+  lineLinkId: string;
   linePictureUrl: string | null;
   lineUserId: string;
   name: string;
@@ -142,6 +143,7 @@ export async function getCustomerDirectoryData(
         isActive: customer?.is_active ?? false,
         isLinked: Boolean(customer),
         lineDisplayName: getTrimmedString(link.line_display_name) ?? lineProfile.displayName,
+        lineLinkId: link.id,
         linePictureUrl: getTrimmedString(link.line_picture_url) ?? lineProfile.pictureUrl,
         lineUserId: link.line_user_id.trim(),
         name: customer?.name ?? "ยังไม่ผูกร้านค้า",

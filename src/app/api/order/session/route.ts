@@ -40,6 +40,7 @@ function clearOrderSessionCookie(response: NextResponse) {
 type SessionCustomer = {
   customer_code: string | null;
   id: string;
+  line_user_id: string | null;
   metadata: Database["public"]["Tables"]["customers"]["Row"]["metadata"];
   name: string;
   organization_id: string;
@@ -60,7 +61,7 @@ async function syncCustomerLineProfile(
   const displayName = getOptionalTrimmedText(input.displayName);
   const pictureUrl = getOptionalTrimmedText(input.pictureUrl);
 
-  if (!displayName && !pictureUrl) {
+  if ((!displayName && !pictureUrl) || !customer.line_user_id) {
     return;
   }
 
@@ -96,6 +97,28 @@ async function syncCustomerLineProfile(
     .eq("organization_id", customer.organization_id);
 }
 
+async function syncLineOrderCustomerProfile(
+  customer: SessionCustomer,
+  input: { displayName?: string | null; pictureUrl?: string | null },
+) {
+  const displayName = getOptionalTrimmedText(input.displayName);
+  const pictureUrl = getOptionalTrimmedText(input.pictureUrl);
+
+  if ((!displayName && !pictureUrl) || !customer.line_user_id) {
+    return;
+  }
+
+  const updatePayload: Record<string, string> = {};
+  if (displayName) updatePayload.line_display_name = displayName;
+  if (pictureUrl) updatePayload.line_picture_url = pictureUrl;
+
+  await getSupabaseAdmin()
+    .from("line_order_customers")
+    .update(updatePayload)
+    .eq("organization_id", customer.organization_id)
+    .eq("line_user_id", customer.line_user_id);
+}
+
 async function findActiveCustomerByLineUserIdForOrganization(
   organizationId: string | null,
   lineUserId: string,
@@ -126,7 +149,7 @@ async function findActiveCustomerByLineUserIdForOrganization(
 
   const { data: legacyCustomer } = await supabase
     .from("customers")
-    .select("id, name, customer_code, organization_id, metadata")
+    .select("id, name, customer_code, organization_id, line_user_id, metadata")
     .eq("line_user_id", lineUserId)
     .eq("is_active", true)
     .maybeSingle();
@@ -226,10 +249,14 @@ export async function POST(request: NextRequest) {
   });
 
   if (customer) {
-    await syncCustomerLineProfile(customer, {
+    const lineProfileInput = {
       displayName: verified.displayName ?? body?.displayName ?? null,
       pictureUrl: body?.pictureUrl ?? null,
-    });
+    };
+    await Promise.all([
+      syncCustomerLineProfile(customer, lineProfileInput),
+      syncLineOrderCustomerProfile(customer, lineProfileInput),
+    ]);
   }
 
   setOrderSessionCookie(response, payload);

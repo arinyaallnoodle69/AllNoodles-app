@@ -164,12 +164,22 @@ function mergeLineProfileMetadata(
 ) {
   const current = isRecord(metadata) ? { ...metadata } : {};
   const currentLineProfile = isRecord(current.lineProfile) ? current.lineProfile : {};
+  const nextLineProfile = { ...currentLineProfile };
+  if (profile.displayName) {
+    nextLineProfile.displayName = profile.displayName;
+  }
+  if (profile.pictureUrl) {
+    nextLineProfile.pictureUrl = profile.pictureUrl;
+  }
+
+  if (!profile.displayName && !profile.pictureUrl && Object.keys(currentLineProfile).length === 0) {
+    return current;
+  }
+
   return {
     ...current,
     lineProfile: {
-      ...currentLineProfile,
-      displayName: profile.displayName,
-      pictureUrl: profile.pictureUrl,
+      ...nextLineProfile,
       syncedAt: new Date().toISOString(),
     },
   };
@@ -231,14 +241,20 @@ export async function ensureLineOrderCustomer(input: {
     input.organizationId,
     input.lineUserId,
   );
+  const { data: existingLineCustomer } = await admin
+    .from<LineOrderCustomerRow>("line_order_customers")
+    .select("id, organization_id, line_user_id, line_display_name, line_picture_url, customer_id")
+    .eq("organization_id", input.organizationId)
+    .eq("line_user_id", input.lineUserId)
+    .maybeSingle();
 
   const { data, error } = await admin
     .from<LineOrderCustomerRow>("line_order_customers")
     .upsert(
       {
         customer_id: linkedCustomer?.id ?? null,
-        line_display_name: displayName,
-        line_picture_url: pictureUrl,
+        line_display_name: displayName ?? optionalText(existingLineCustomer?.line_display_name),
+        line_picture_url: pictureUrl ?? optionalText(existingLineCustomer?.line_picture_url),
         line_user_id: input.lineUserId,
         onboarding_choice: "existing",
         organization_id: input.organizationId,
@@ -623,21 +639,34 @@ async function convertSinglePendingOrder(input: {
     })
     .eq("id", input.order.id);
 
-  void generateUploadAndNotifyCustomerReceiptImage({
-    customerName: input.customer.name,
-    items: orderItems.map((item) => ({
-      name: productById.get(item.product_id)?.name ?? "-",
-      quantity: Number(item.quantity) || 0,
-      saleUnitLabel: item.sale_unit_label,
-    })),
-    lineUserId: input.lineUserId,
-    orderDate: newOrder.created_at ?? input.order.created_at,
-    orderNumber: newOrder.order_number,
-    organizationId: input.organizationId,
-    totalAmount,
-  }).catch((error) => {
-    console.error("[line-pending:receipt-image]", error);
-  });
+  try {
+    const receiptResult = await generateUploadAndNotifyCustomerReceiptImage({
+      customerName: input.customer.name,
+      items: orderItems.map((item) => ({
+        name: productById.get(item.product_id)?.name ?? "-",
+        quantity: Number(item.quantity) || 0,
+        saleUnitLabel: item.sale_unit_label,
+      })),
+      lineUserId: input.lineUserId,
+      orderDate: newOrder.created_at ?? input.order.created_at,
+      orderNumber: newOrder.order_number,
+      organizationId: input.organizationId,
+      totalAmount,
+    });
+    if ("error" in receiptResult) {
+      console.error("[line-pending:receipt-image]", {
+        error: receiptResult.error,
+        lineUserId: input.lineUserId,
+        orderNumber: newOrder.order_number,
+      });
+    }
+  } catch (error) {
+    console.error("[line-pending:receipt-image]", {
+      error,
+      lineUserId: input.lineUserId,
+      orderNumber: newOrder.order_number,
+    });
+  }
 
   return newOrder.order_number;
 }

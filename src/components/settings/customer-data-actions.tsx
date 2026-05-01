@@ -9,9 +9,10 @@ import {
 
 type CustomerDataActionsProps = {
   customerCode: string;
-  customerId: string;
+  customerId: string | null;
   customerName: string;
   isActive: boolean;
+  lineLinkId: string;
 };
 
 export function CustomerDataActions({
@@ -19,12 +20,14 @@ export function CustomerDataActions({
   customerId,
   customerName,
   isActive,
+  lineLinkId,
 }: CustomerDataActionsProps) {
   const [isPending, startTransition] = useTransition();
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   function handleToggle() {
+    if (!customerId) return;
     setErrorMessage(null);
     startTransition(async () => {
       const result = await toggleCustomerAvailabilityAction(customerId, !isActive);
@@ -37,7 +40,7 @@ export function CustomerDataActions({
   function handleDelete() {
     setErrorMessage(null);
     startTransition(async () => {
-      const result = await deleteCustomerDataAction(customerId);
+      const result = await deleteCustomerDataAction({ customerId, lineLinkId });
       if (result.error) {
         setErrorMessage(result.error);
         return;
@@ -50,25 +53,27 @@ export function CustomerDataActions({
   return (
     <>
       <div className="flex flex-wrap items-center justify-end gap-2">
-        <button
-          type="button"
-          onClick={handleToggle}
-          disabled={isPending}
-          className={`inline-flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-60 ${
-            isActive
-              ? "border border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100"
-              : "border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
-          }`}
-        >
-          {isPending ? (
-            <Loader2 className="h-3.5 w-3.5 animate-spin" strokeWidth={2.2} />
-          ) : isActive ? (
-            <Power className="h-3.5 w-3.5" strokeWidth={2.2} />
-          ) : (
-            <RotateCcw className="h-3.5 w-3.5" strokeWidth={2.2} />
-          )}
-          {isActive ? "ปิดใช้งาน" : "เปิดใช้งาน"}
-        </button>
+        {customerId ? (
+          <button
+            type="button"
+            onClick={handleToggle}
+            disabled={isPending}
+            className={`inline-flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-60 ${
+              isActive
+                ? "border border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100"
+                : "border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+            }`}
+          >
+            {isPending ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" strokeWidth={2.2} />
+            ) : isActive ? (
+              <Power className="h-3.5 w-3.5" strokeWidth={2.2} />
+            ) : (
+              <RotateCcw className="h-3.5 w-3.5" strokeWidth={2.2} />
+            )}
+            {isActive ? "ปิดใช้งาน" : "เปิดใช้งาน"}
+          </button>
+        ) : null}
 
         <button
           type="button"
@@ -111,8 +116,7 @@ export function CustomerDataActions({
 
             <div className="px-5 py-5">
               <p className="text-sm leading-6 text-slate-600">
-                เมื่อลบแล้ว ระบบจะปิดใช้งานร้านค้านี้และยกเลิกการเชื่อมต่อ LINE ทันที
-                ลูกค้าจะไม่สามารถสั่งซื้อผ่านบัญชีเดิมได้อีก
+                เมื่อลบแล้ว ระบบจะยกเลิกการเชื่อมต่อ LINE ของลูกค้ารายนี้ทันที หากลูกค้ากลับเข้ามาอีกครั้งจะต้องเริ่มขั้นตอนเลือกประเภทลูกค้าใหม่
               </p>
 
               {errorMessage ? (

@@ -153,14 +153,13 @@ export function CustomerDataPanel({ data }: CustomerDataPanelProps) {
                           </div>
                         </div>
                         <div className="mt-4">
-                          {customer.customerId ? (
-                            <CustomerDataActions
-                              customerCode={customer.customerCode ?? "-"}
-                              customerId={customer.customerId}
-                              customerName={customer.name}
-                              isActive={customer.isActive}
-                            />
-                          ) : null}
+                          <CustomerDataActions
+                            customerCode={customer.customerCode ?? "-"}
+                            customerId={customer.customerId}
+                            customerName={customer.customerId ? customer.name : getLineName(customer)}
+                            isActive={customer.isActive}
+                            lineLinkId={customer.lineLinkId}
+                          />
                         </div>
                       </div>
                     </div>
@@ -228,14 +227,13 @@ export function CustomerDataPanel({ data }: CustomerDataPanelProps) {
                           <StatusPill isActive={customer.isActive} isLinked={customer.isLinked} />
                         </td>
                         <td className="px-5 py-4">
-                          {customer.customerId ? (
-                            <CustomerDataActions
-                              customerCode={customer.customerCode ?? "-"}
-                              customerId={customer.customerId}
-                              customerName={customer.name}
-                              isActive={customer.isActive}
-                            />
-                          ) : null}
+                          <CustomerDataActions
+                            customerCode={customer.customerCode ?? "-"}
+                            customerId={customer.customerId}
+                            customerName={customer.customerId ? customer.name : getLineName(customer)}
+                            isActive={customer.isActive}
+                            lineLinkId={customer.lineLinkId}
+                          />
                         </td>
                       </tr>
                     ))}

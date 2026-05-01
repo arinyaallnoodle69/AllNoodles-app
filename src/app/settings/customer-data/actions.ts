@@ -1,14 +1,19 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import type { Database } from "@/types/database";
 import { requireAppRole } from "@/lib/auth/authorization";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import type { Database } from "@/types/database";
 
 type CustomerLookupRow = Pick<
   Database["public"]["Tables"]["customers"]["Row"],
   "id" | "is_active" | "line_user_id" | "metadata" | "name"
 >;
+
+type DeleteCustomerDataInput = {
+  customerId?: string | null;
+  lineLinkId?: string | null;
+};
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
@@ -44,7 +49,12 @@ export async function toggleCustomerAvailabilityAction(
 ): Promise<{ error?: string; success?: string }> {
   const session = await requireAppRole("admin");
   const admin = getSupabaseAdmin();
-  const customer = await getCustomerForOrganization(customerId, session.organizationId);
+  const linkedCustomerId = customerId;
+  if (!linkedCustomerId) {
+    return { error: "ไม่พบลูกค้าที่ต้องการลบ" };
+  }
+
+  const customer = await getCustomerForOrganization(linkedCustomerId, session.organizationId);
 
   if (!customer) {
     return { error: "ไม่พบลูกค้าที่ต้องการอัปเดต" };
@@ -73,11 +83,52 @@ export async function toggleCustomerAvailabilityAction(
 }
 
 export async function deleteCustomerDataAction(
-  customerId: string,
+  input: DeleteCustomerDataInput,
 ): Promise<{ error?: string; success?: string }> {
   const session = await requireAppRole("admin");
   const admin = getSupabaseAdmin();
-  const customer = await getCustomerForOrganization(customerId, session.organizationId);
+  const customerId = input.customerId?.trim() || null;
+  const lineLinkId = input.lineLinkId?.trim() || null;
+
+  if (!customerId && !lineLinkId) {
+    return { error: "ไม่พบข้อมูลลูกค้าที่ต้องการลบ" };
+  }
+
+  if (!customerId && lineLinkId) {
+    const { data: lineLink, error: lookupError } = await admin
+      .from("line_order_customers")
+      .select("id, line_display_name")
+      .eq("id", lineLinkId)
+      .eq("organization_id", session.organizationId)
+      .maybeSingle();
+
+    if (lookupError || !lineLink) {
+      return { error: "ไม่พบข้อมูล LINE ที่ต้องการลบ" };
+    }
+
+    const { error: deleteError } = await admin
+      .from("line_order_customers")
+      .delete()
+      .eq("id", lineLinkId)
+      .eq("organization_id", session.organizationId);
+
+    if (deleteError) {
+      return { error: "ลบข้อมูลลูกค้าไม่สำเร็จ กรุณาลองใหม่อีกครั้ง" };
+    }
+
+    revalidateCustomerPages();
+
+    return {
+      success: `ลบข้อมูล LINE ${lineLink.line_display_name ?? ""} เรียบร้อยแล้ว`,
+    };
+  }
+
+  const linkedCustomerId = customerId;
+  if (!linkedCustomerId) {
+    return { error: "ไม่พบลูกค้าที่ต้องการลบ" };
+  }
+
+  const customer = await getCustomerForOrganization(linkedCustomerId, session.organizationId);
 
   if (!customer) {
     return { error: "ไม่พบลูกค้าที่ต้องการลบ" };
@@ -94,12 +145,12 @@ export async function deleteCustomerDataAction(
         metadata: currentMetadata,
         updated_at: new Date().toISOString(),
       })
-      .eq("id", customerId)
+      .eq("id", linkedCustomerId)
       .eq("organization_id", session.organizationId),
     admin
       .from("line_order_customers")
       .delete()
-      .eq("customer_id", customerId)
+      .eq("customer_id", linkedCustomerId)
       .eq("organization_id", session.organizationId),
   ]);
 

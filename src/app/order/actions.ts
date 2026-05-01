@@ -448,14 +448,15 @@ export async function continueExistingLineCustomer(input: {
   organizationId: string;
   pictureUrl?: string;
 }): Promise<ActionResult<CustomerWithLineId | null>> {
-  const lineUserId = await resolveOrderLineUserId(input.lineUserId);
+  const orderSession = await getOrderCustomerSession();
+  const lineUserId = orderSession?.lineUserId ?? (await resolveOrderLineUserId(input.lineUserId));
   if (!lineUserId || !input.organizationId?.trim()) {
     return { success: false, error: "กรุณาเข้าสู่ระบบ LINE อีกครั้ง" };
   }
 
   try {
     const result = await ensureLineOrderCustomer({
-      displayName: input.displayName,
+      displayName: getOptionalTrimmedText(input.displayName) ?? getOptionalTrimmedText(orderSession?.displayName),
       lineUserId,
       organizationId: input.organizationId,
       pictureUrl: input.pictureUrl,
@@ -510,7 +511,8 @@ export async function createPendingLineOrderAction(input: {
   organizationId: string;
   pictureUrl?: string;
 }): Promise<ActionResult<{ pendingOrderId: string }>> {
-  const lineUserId = await resolveOrderLineUserId(input.lineUserId);
+  const orderSession = await getOrderCustomerSession();
+  const lineUserId = orderSession?.lineUserId ?? (await resolveOrderLineUserId(input.lineUserId));
   if (!lineUserId || !input.organizationId?.trim()) {
     return { success: false, error: "กรุณาเข้าสู่ระบบ LINE อีกครั้ง" };
   }
@@ -539,7 +541,7 @@ export async function createPendingLineOrderAction(input: {
 
   try {
     const result = await createPendingLineOrder({
-      displayName: input.displayName,
+      displayName: getOptionalTrimmedText(input.displayName) ?? getOptionalTrimmedText(orderSession?.displayName),
       items,
       lineUserId,
       organizationId: input.organizationId,
