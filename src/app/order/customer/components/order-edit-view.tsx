@@ -53,6 +53,33 @@ export function OrderEditView({
         </p>
       </div>
 
+      {/* Action Buttons at Top */}
+      <div className="grid grid-cols-2 gap-3">
+        <button
+          onClick={onBackToHistory}
+          className="flex items-center justify-center gap-2 rounded-2xl border border-[#003366]/15 bg-[#eef4fa] px-4 py-3 text-sm font-bold text-[#003366] transition-all active:scale-[0.98]"
+        >
+          <X className="h-4 w-4" />
+          ยกเลิก
+        </button>
+        <button
+          onClick={onSaveEditedOrder}
+          disabled={isPending}
+          className="flex items-center justify-center gap-2 rounded-2xl bg-[#003366] px-4 py-3 text-sm font-bold text-white shadow-[0_8px_16px_rgba(0,51,102,0.15)] transition-all active:scale-[0.98] disabled:opacity-60"
+        >
+          {isPending ? "กำลังบันทึก..." : "บันทึกการแก้ไข"}
+        </button>
+        <button
+          onClick={onOpenAddProductSheet}
+          className="col-span-2 flex items-center justify-center gap-2 rounded-2xl border border-[#003366]/20 bg-white px-4 py-3 text-sm font-bold text-[#003366] shadow-[0_4px_12px_rgba(0,51,102,0.06)] transition-all active:scale-[0.98]"
+        >
+          <Plus className="h-4 w-4" />
+          เพิ่มสินค้าใหม่เข้าในออเดอร์นี้
+        </button>
+      </div>
+
+      <div className="border-t border-slate-100 pt-2" />
+
       {Object.entries(editCart).length === 0 ? (
         <div className="rounded-[2rem] border border-slate-200 bg-white p-6 text-center text-slate-500 shadow-[0_10px_30px_-5px_rgba(0,0,0,0.04)]">
           ไม่มีรายการสินค้าในคำสั่งซื้อนี้
@@ -120,29 +147,6 @@ export function OrderEditView({
           );
         })
       )}
-
-      <div className="grid grid-cols-1 gap-3 pb-6">
-        <button
-          onClick={onOpenAddProductSheet}
-          className="flex w-full items-center justify-center gap-2 rounded-2xl border border-[#003366]/20 bg-white px-6 py-4 text-base font-bold text-[#003366] shadow-[0_4px_12px_rgba(0,51,102,0.06)] transition-all active:scale-[0.98]"
-        >
-          <Plus className="h-5 w-5" />
-          เพิ่มสินค้า
-        </button>
-        <button
-          onClick={onSaveEditedOrder}
-          disabled={isPending}
-          className="w-full rounded-2xl bg-[#003366] px-6 py-4 text-base font-bold text-white shadow-[0_12px_24px_rgba(0,51,102,0.2)] transition-all active:scale-[0.98] disabled:opacity-60"
-        >
-          {isPending ? "กำลังบันทึก..." : "บันทึกการแก้ไข"}
-        </button>
-        <button
-          onClick={onBackToHistory}
-          className="w-full rounded-2xl border border-[#003366]/15 bg-[#eef4fa] px-6 py-4 text-base font-semibold text-[#003366] transition-all active:scale-[0.98]"
-        >
-          กลับไปประวัติการสั่งซื้อ
-        </button>
-      </div>
     </section>
   );
 }

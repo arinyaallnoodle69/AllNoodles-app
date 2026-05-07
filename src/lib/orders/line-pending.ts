@@ -472,12 +472,13 @@ async function reserveProductStock(input: {
 
   if (!product) return;
 
-  const stockQty = Number(product.stock_quantity);
+  const stockBefore = Number(product.stock_quantity);
+  const stockAfter = stockBefore - input.quantityInBaseUnit;
   await Promise.all([
     input.admin
       .from<ProductRow>("products")
       .update({
-        reserved_quantity: Number(product.reserved_quantity) + input.quantityInBaseUnit,
+        stock_quantity: stockAfter,
       })
       .eq("id", input.productId),
     input.admin.from<Record<string, unknown>>("inventory_movements").insert({
@@ -486,13 +487,13 @@ async function reserveProductStock(input: {
         order_id: input.orderId,
         source: "line_pending_order",
       },
-      movement_type: "reserve",
+      movement_type: "issue",
       notes: `ออเดอร์ LINE: ${input.orderNumber}`,
       organization_id: input.organizationId,
       product_id: input.productId,
-      quantity_delta: input.quantityInBaseUnit,
-      stock_after: stockQty,
-      stock_before: stockQty,
+      quantity_delta: -input.quantityInBaseUnit,
+      stock_after: stockAfter,
+      stock_before: stockBefore,
     }),
   ]);
 }

@@ -128,7 +128,7 @@ export async function getPendingOrders(
     .select("id, order_number, order_date, total_amount, fulfillment_status, customer_id, customers!inner(name, customer_code)")
     .eq("organization_id", organizationId)
     .eq("status", "confirmed")
-    .in("fulfillment_status", ["pending", "partial"])
+    .or("fulfillment_status.in.(pending,partial),fulfillment_status.is.null")
     .lt("order_date", today)
     .order("order_date", { ascending: false })
     .order("created_at", { ascending: false });
@@ -257,7 +257,7 @@ export async function getStoreOrdersForDelivery(
     .eq("customer_id", customerId)
     .eq("order_date", orderDate)
     .in("status", ["submitted", "confirmed"])
-    .in("fulfillment_status", ["pending", "partial"])
+    .or("fulfillment_status.in.(pending,partial),fulfillment_status.is.null")
     .order("created_at", { ascending: true });
 
   if (error || !orders || (orders as { id: string }[]).length === 0) return [];
@@ -307,16 +307,7 @@ export async function getOrderItemsForDelivery(
 
   if (itemsError || !itemRows) return null;
 
-  // 3. Already-confirmed delivery notes for this order
-  const { data: dnRows } = await supabase
-    .from("delivery_notes")
-    .select("id")
-    .eq("order_id", orderId)
-    .eq("status", "confirmed");
-
-  const dnIds = ((dnRows ?? []) as { id: string }[]).map((r) => r.id);
-
-  // 4. First product image per product
+  // 3. First product image per product
   const productIds = [...new Set((itemRows as RawOrderItemRow[]).map((r) => r.product_id))];
   const imageMap = new Map<string, string>();
   if (productIds.length > 0) {
@@ -330,13 +321,15 @@ export async function getOrderItemsForDelivery(
     }
   }
 
-  // 5. Delivered quantities per order_item
+  // 4. Delivered quantities per order_item
   const deliveredMap = new Map<string, number>();
-  if (dnIds.length > 0) {
+  const orderItemIds = (itemRows as RawOrderItemRow[]).map((row) => row.id);
+  if (orderItemIds.length > 0) {
     const { data: deliveredRows } = await supabase
       .from("delivery_note_items")
       .select("order_item_id, quantity_in_base_unit")
-      .in("delivery_note_id", dnIds);
+      .eq("organization_id", organizationId)
+      .in("order_item_id", orderItemIds);
 
     for (const row of (deliveredRows ?? []) as RawDeliveredRow[]) {
       const prev = deliveredMap.get(row.order_item_id) ?? 0;

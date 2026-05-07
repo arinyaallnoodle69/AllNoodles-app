@@ -186,7 +186,7 @@ export function SettingsShell({
         </div>
       </div>
 
-      <main className="mx-auto w-full max-w-[88rem] px-4 py-8 pb-28 md:px-8 md:pb-32">
+      <main className="mx-auto min-w-0 w-full max-w-[88rem] px-4 py-8 pb-28 md:px-8 md:pb-32">
         {children}
       </main>
 

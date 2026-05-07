@@ -1030,8 +1030,11 @@ export default function OrderClient({
   }, [orderHistory]);
 
   const yesterdayOrder = useMemo(() => {
-    const yesterdayDateKey = getBangkokDateKey(-1);
-    return orderHistory.find((order) => order.order_date === yesterdayDateKey) ?? null;
+    const todayKey = getBangkokDateKey(0);
+    return orderHistory.find((order) => {
+      const orderDate = order.order_date;
+      return typeof orderDate === "string" && orderDate < todayKey;
+    }) ?? null;
   }, [orderHistory]);
 
   const yesterdayOrderKeys = useMemo(() => {

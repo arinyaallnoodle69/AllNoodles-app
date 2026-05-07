@@ -2,15 +2,17 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ChevronDown, ClipboardList } from "lucide-react";
+import { ChevronDown, ClipboardList, Pencil, XCircle } from "lucide-react";
 import type { OrderRoundSummary } from "@/lib/orders/admin";
 
 function formatThaiDateTime(isoString: string) {
-  return new Intl.DateTimeFormat("th-TH", {
+  const date = new Date(isoString);
+  const time = new Intl.DateTimeFormat("th-TH", {
     hour: "2-digit",
     minute: "2-digit",
     timeZone: "Asia/Bangkok",
-  }).format(new Date(isoString));
+  }).format(date);
+  return time;
 }
 
 function formatThaiCurrency(value: number) {
@@ -26,51 +28,92 @@ export function OrderRoundsCollapsible({ date, rounds }: Props) {
   const [open, setOpen] = useState(false);
 
   return (
-    <div className="overflow-hidden rounded-xl border border-slate-200 print:border-slate-300">
+    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm print:border-slate-300">
       {/* Toggle header */}
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center gap-2 bg-slate-50 px-4 py-2.5 transition hover:bg-slate-100 active:bg-slate-100 print:pointer-events-none"
+        className="flex w-full items-center gap-3 bg-slate-50 px-5 py-3.5 transition hover:bg-slate-100 active:bg-slate-100 print:pointer-events-none"
       >
-        <ClipboardList className="h-3.5 w-3.5 shrink-0 text-slate-400" strokeWidth={2.4} />
-        <span className="text-xs font-semibold uppercase tracking-[0.1em] text-slate-400">
-          รอบออเดอร์
-        </span>
-        <span className="ml-auto inline-flex items-center rounded-full bg-slate-200 px-2 py-0.5 text-xs font-bold text-slate-600">
-          {rounds.length} รอบ
-        </span>
+        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#003366]/5 text-[#003366]">
+          <ClipboardList className="h-4 w-4" strokeWidth={2.4} />
+        </div>
+        <div className="flex flex-col items-start leading-tight">
+          <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+            รอบออเดอร์
+          </span>
+          <span className="text-sm font-bold text-slate-700">
+            ทั้งหมด {rounds.length} รอบของวันนี้
+          </span>
+        </div>
         <ChevronDown
-          className={`h-4 w-4 shrink-0 text-slate-400 transition-transform duration-200 print:hidden ${open ? "rotate-180" : ""}`}
+          className={`ml-auto h-5 w-5 text-slate-300 transition-transform duration-300 print:hidden ${open ? "rotate-180" : ""}`}
           strokeWidth={2.4}
         />
       </button>
 
       {/* Collapsible rows */}
       <div
-        className={`overflow-hidden transition-all duration-200 ${open ? "max-h-[500px] opacity-100" : "max-h-0 opacity-0"}`}
+        className={`overflow-hidden transition-all duration-300 ${open ? "max-h-[800px] opacity-100" : "max-h-0 opacity-0"}`}
       >
-        <div className="max-h-52 divide-y divide-slate-50 overflow-y-auto border-t border-slate-100 print:max-h-none">
-          {rounds.map((round, idx) => (
-            <Link
-              key={round.id}
-              href={`/orders/incoming?date=${date}&expanded=${round.id}`}
-              className="flex items-center gap-3 px-4 py-2.5 transition hover:bg-slate-50/80 print:pointer-events-none"
-            >
-              <span className="w-5 shrink-0 text-center text-xs font-bold text-slate-300">
-                {idx + 1}
-              </span>
-              <span className="font-mono text-xs font-semibold text-[#003366]">
-                {round.orderNumber}
-              </span>
-              <span className="text-xs text-slate-400">
-                {formatThaiDateTime(round.createdAt)}
-              </span>
-              <span className="ml-auto shrink-0 text-sm font-bold text-slate-800">
-                {formatThaiCurrency(round.totalAmount)} บาท
-              </span>
-            </Link>
-          ))}
+        <div className="divide-y divide-slate-100 border-t border-slate-100">
+          {rounds.map((round, idx) => {
+            const isCancelled = round.status === "cancelled";
+            const canEdit = round.status === "submitted";
+
+            return (
+              <div
+                key={round.id}
+                className={`flex items-center gap-4 px-5 py-4 transition ${isCancelled ? "bg-slate-50 opacity-60" : "hover:bg-slate-50/50"}`}
+              >
+                <span className="w-5 shrink-0 text-center text-xs font-black text-slate-300">
+                  {idx + 1}
+                </span>
+                
+                <Link
+                  href={`/orders/incoming?date=${date}&expanded=${round.id}`}
+                  className="min-w-0 flex-1 group"
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono text-sm font-black text-[#003366] group-hover:underline">
+                      {round.orderNumber}
+                    </span>
+                    {isCancelled && (
+                      <span className="rounded-full bg-rose-100 px-2 py-0.5 text-[9px] font-black text-rose-600 uppercase tracking-tighter">
+                        ยกเลิก
+                      </span>
+                    )}
+                  </div>
+                  <p className="mt-0.5 text-[11px] font-bold text-slate-400">
+                    เวลา {formatThaiDateTime(round.createdAt)} · ยอด {formatThaiCurrency(round.totalAmount)} ฿
+                  </p>
+                </Link>
+
+                {!isCancelled && (
+                  <div className="flex shrink-0 items-center gap-2 print:hidden">
+                    <Link
+                      href={`/orders/incoming?date=${date}&expanded=${round.id}`}
+                      className={`flex h-10 w-10 items-center justify-center rounded-xl transition active:scale-90 ${
+                        canEdit ? "bg-[#003366]/5 text-[#003366] hover:bg-[#003366]/10" : "bg-slate-100 text-slate-400 cursor-not-allowed"
+                      }`}
+                      title="แก้ไข/จัดการ"
+                    >
+                      <Pencil className="h-4 w-4" strokeWidth={2.5} />
+                    </Link>
+                    {canEdit && (
+                      <Link
+                        href={`/orders/incoming?date=${date}&expanded=${round.id}&cancel=1`}
+                        className="flex h-10 w-10 items-center justify-center rounded-xl bg-rose-50 text-rose-600 transition hover:bg-rose-100 active:scale-90"
+                        title="ยกเลิกออเดอร์"
+                      >
+                        <XCircle className="h-4 w-4" strokeWidth={2.5} />
+                      </Link>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>

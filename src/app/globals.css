@@ -1,5 +1,13 @@
 @import "tailwindcss";
 
+@font-face {
+  font-family: "SukhumvitSet-SemiBold";
+  src: url("/fonts/SukhumvitSet-SemiBold.ttf") format("truetype");
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+}
+
 :root {
   --background: #f7fbff;
   --foreground: #111111;
@@ -30,8 +38,8 @@
   --color-accent-600: var(--accent-600);
   --color-accent-700: var(--accent-700);
   --color-stone-650: var(--stone-650);
-  --font-sans: var(--font-sarabun);
-  --font-mono: var(--font-ibm-plex-mono);
+  --font-sans: var(--font-sukhumvit);
+  --font-mono: var(--font-sukhumvit);
   --text-xs: 0.82rem;
   --text-sm: 0.95rem;
   --text-base: 1.08rem;
@@ -39,20 +47,14 @@
   --text-xl: 1.48rem;
   --text-2xl: 1.75rem;
   --text-3xl: 2.05rem;
-  --font-apple-ui:
-    "SF Pro Display",
-    "SF Pro Text",
-    -apple-system,
-    BlinkMacSystemFont,
-    "Segoe UI",
-    sans-serif;
-}
+  --font-apple-ui: "SukhumvitSet-SemiBold", var(--font-sukhumvit), "Sukhumvit Set", "Noto Sans Thai", sans-serif;
+  }
 
-* {
+  * {
   box-sizing: border-box;
-}
+  }
 
-html {
+  html {
   font-size: clamp(16px, 0.22vw + 15.5px, 17px);
   scroll-behavior: smooth;
   /* Prevent iOS rubber-band bounce from pulling sticky headers off-screen */
@@ -61,16 +63,16 @@ html {
   overscroll-behavior-x: none;
   /* Ensure gap below fixed bottom nav (during browser chrome animation) shows white */
   background-color: white;
-}
+  }
 
-body {
+  body {
   overflow-x: hidden;
   overscroll-behavior-y: none;
   overscroll-behavior-x: none;
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-sarabun), "Sarabun", "Noto Sans Thai", sans-serif;
-  font-weight: 500;
+  font-family: "SukhumvitSet-SemiBold", var(--font-sukhumvit), "Sukhumvit Set", "Noto Sans Thai", sans-serif;
+  font-weight: 600;
   font-size: 1rem;
   line-height: 1.35;
   background-image:
@@ -79,44 +81,46 @@ body {
   font-feature-settings: "tnum" 1, "lnum" 1;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-}
+  }
 
-:focus-visible {
+  button,
+  input,
+  select,
+  textarea {
+  font-family: "SukhumvitSet-SemiBold", var(--font-sukhumvit), "Sukhumvit Set", "Noto Sans Thai", sans-serif;
+  }
+
+  :focus-visible {
   outline: 2px solid #003366;
   outline-offset: 2px;
-}
+  }
 
-a,
-button {
+  a,
+  button {
   transition:
     transform 180ms ease,
     background-color 180ms ease,
     border-color 180ms ease,
     color 180ms ease,
     opacity 180ms ease;
-}
+  }
 
-a:hover,
-button:hover {
+  a:hover,
+  button:hover {
   transform: translateY(-1px);
-}
+  }
 
-::selection {
+  ::selection {
   background: rgba(0, 0, 255, 0.18);
-}
+  }
 
-.font-apple-ui {
-  font-family:
-    "SF Pro Display",
-    "SF Pro Text",
-    -apple-system,
-    BlinkMacSystemFont,
-    "Segoe UI",
-    sans-serif;
+  .font-apple-ui {
+  font-family: "SukhumvitSet-SemiBold", var(--font-sukhumvit), "Sukhumvit Set", "Noto Sans Thai", sans-serif;
   font-feature-settings: "tnum" 1, "lnum" 1;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-}
+  }
+
 
 :where(
   .text-slate-300,

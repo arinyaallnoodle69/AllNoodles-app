@@ -31,12 +31,14 @@ type OrderDetailAdminClient = ReturnType<typeof getSupabaseAdmin> & {
     (table: "order_items"): FlexibleTable<OrderItemRow>;
     (table: "products"): FlexibleTable<ProductRow>;
     (table: "product_images"): FlexibleTable<ProductImageRow>;
+    (table: "vehicles"): FlexibleTable<VehicleRow>;
   };
 };
 
 type OrderRow = {
   created_at: string;
   customer_id: string;
+  fulfillment_status: string | null;
   id: string;
   metadata: Json;
   notes: string | null;
@@ -50,6 +52,12 @@ type OrderRow = {
 type CustomerRow = {
   address: string;
   customer_code: string;
+  default_vehicle_id: string | null;
+  id: string;
+  name: string;
+};
+
+type VehicleRow = {
   id: string;
   name: string;
 };
@@ -125,10 +133,14 @@ export type IncomingOrderListItem = {
   customerId: string;
   customerName: string;
   id: string;
+  orderDate: string;
   orderNumber: string;
   productCount: number;
+  fulfillmentStatus: string | null;
   status: "draft" | "submitted" | "confirmed" | "cancelled";
   totalAmount: number;
+  vehicleId: string | null;
+  vehicleName: string | null;
 };
 
 function normalizeNumber(value: number | string | null | undefined) {
@@ -324,17 +336,16 @@ export async function getIncomingOrders(
 
   const ordersResult = await admin
     .from("orders")
-    .select("id, customer_id, order_number, status, total_amount, metadata, created_at")
+    .select("id, customer_id, order_number, order_date, status, fulfillment_status, total_amount, metadata, created_at")
     .eq("organization_id", organizationId)
+    .eq("order_date", orderDate)
     .order("created_at", { ascending: false });
 
   if (ordersResult.error) {
     throw new Error(ordersResult.error.message ?? "Failed to load incoming orders.");
   }
 
-  const orders = (ordersResult.data ?? []).filter((order) =>
-    order.created_at.startsWith(orderDate),
-  );
+  const orders = ordersResult.data ?? [];
 
   const customerIds = Array.from(new Set(orders.map((order) => order.customer_id)));
 
@@ -342,7 +353,7 @@ export async function getIncomingOrders(
     customerIds.length > 0
       ? await admin
           .from("customers")
-          .select("id, customer_code, name, address")
+          .select("id, customer_code, name, address, default_vehicle_id")
           .in("id", customerIds)
           .order("name", { ascending: true })
       : { data: [], error: null };
@@ -353,6 +364,29 @@ export async function getIncomingOrders(
 
   const customerMap = new Map(
     (customersResult.data ?? []).map((customer) => [customer.id, customer]),
+  );
+  const vehicleIds = Array.from(
+    new Set(
+      (customersResult.data ?? [])
+        .map((customer) => customer.default_vehicle_id)
+        .filter((id): id is string => Boolean(id)),
+    ),
+  );
+  const vehiclesResult =
+    vehicleIds.length > 0
+      ? await admin
+          .from("vehicles")
+          .select("id, name")
+          .in("id", vehicleIds)
+          .order("name", { ascending: true })
+      : { data: [], error: null };
+
+  if (vehiclesResult.error) {
+    throw new Error(vehiclesResult.error.message ?? "Failed to load vehicles.");
+  }
+
+  const vehicleNameMap = new Map(
+    (vehiclesResult.data ?? []).map((vehicle) => [vehicle.id, vehicle.name]),
   );
 
   const orderIds = orders.map((order) => order.id);
@@ -384,10 +418,16 @@ export async function getIncomingOrders(
         customerId: order.customer_id,
         customerName: customer?.name ?? "ร้านค้าไม่ทราบชื่อ",
         id: order.id,
+        orderDate: order.order_date,
         orderNumber: order.order_number,
         productCount: orderProductSets.get(order.id)?.size ?? 0,
+        fulfillmentStatus: order.fulfillment_status,
         status: order.status,
         totalAmount: normalizeNumber(order.total_amount),
+        vehicleId: customer?.default_vehicle_id ?? null,
+        vehicleName: customer?.default_vehicle_id
+          ? (vehicleNameMap.get(customer.default_vehicle_id) ?? null)
+          : null,
       } satisfies IncomingOrderListItem;
     })
     .filter((order) => {

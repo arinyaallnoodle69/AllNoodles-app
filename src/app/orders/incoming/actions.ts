@@ -5,15 +5,13 @@ import { requireAppRole } from "@/lib/auth/authorization";
 import { linkLineCustomerAndConvertPendingOrders } from "@/lib/orders/line-pending";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { getTodayInBangkok } from "@/lib/orders/date";
+import { getEffectiveSaleUnitCost } from "@/lib/products/sale-unit-cost";
+import type { ActionResult, CustomerLastOrderSnapshot, CustomerLastOrderItem } from "./types";
 
-// ─── Types ────────────────────────────────────────────────────────────────────
-
-export type ActionResult =
-  | { error: string }
-  | { receiptWarning?: string; success: true; orderNumber?: string };
+// ─── Internal Types ──────────────────────────────────────────────────────────
 
 type SingleResult<T> = Promise<{ data: T | null; error: { message?: string } | null }>;
-type ManyResult<T> = Promise<{ data: T[] | null; error: { message?: string } | null }>;
+type ManyResult<T> = Promise<{ data: T[] | null; error: { message?: string } | null }> & SelectChain<T>;
 
 type OrderRow = {
   customer_id: string;
@@ -38,12 +36,18 @@ type OrderItemRow = {
   unit_price: number | string;
 };
 
-type ProductStockRow = { reserved_quantity: number | string; stock_quantity: number | string };
+type ProductStockRow = {
+  cost_price?: number | string | null;
+  reserved_quantity: number | string;
+  stock_quantity: number | string;
+};
 type PriceRow = { product_id: string; product_sale_unit_id: string | null; sale_price: number | string };
 type OrderIdRow = { id: string };
 type NewOrderRow = { id: string };
 type ProductSaleUnitRow = {
   base_unit_quantity: number | string;
+  cost_mode?: string | null;
+  fixed_cost_price?: number | string | null;
   id: string;
   is_default: boolean;
   product_id: string;
@@ -52,6 +56,10 @@ type ProductSaleUnitRow = {
 type SelectChain<T> = {
   eq: (col: string, val: string | number | boolean) => SelectChain<T>;
   in: (col: string, vals: string[]) => ManyResult<T>;
+  limit: (count: number) => SelectChain<T>;
+  lt: (col: string, val: string | number) => SelectChain<T>;
+  maybeSingle: () => SingleResult<T>;
+  order: (col: string, opts: { ascending: boolean }) => ManyResult<T>;
   single: () => SingleResult<T>;
 };
 
@@ -100,21 +108,6 @@ type SimpleSelectChain = {
 };
 type MinimalAdmin = { from(table: string): { select: (cols: string) => SimpleSelectChain } };
 
-export type CustomerYesterdayItem = {
-  productId: string;
-  quantity: number;
-  saleUnitBaseQty: number;
-  saleUnitId: string | null;
-  saleUnitLabel: string;
-  unitPrice: number;
-};
-
-export type CustomerYesterdaySnapshot = {
-  items: CustomerYesterdayItem[];
-  orderCount: number;
-  sourceDate: string;
-};
-
 function getPreviousDate(isoDate: string) {
   const safeDate = /^\d{4}-\d{2}-\d{2}$/.test(isoDate) ? isoDate : getTodayInBangkok();
   const [year, month, day] = safeDate.split("-").map((value) => Number(value));
@@ -123,9 +116,9 @@ function getPreviousDate(isoDate: string) {
   return date.toISOString().slice(0, 10);
 }
 
-// ─── Helper: release reserved stock ──────────────────────────────────────────
+// ─── Helper: restore stock on cancellation ───────────────────────────────────
 
-async function releaseItemStock(
+async function restoreItemStock(
   admin: ActionsAdmin,
   orgId: string,
   userId: string,
@@ -137,27 +130,28 @@ async function releaseItemStock(
 
   const { data: product } = await admin
     .from("products")
-    .select("stock_quantity, reserved_quantity")
+    .select("stock_quantity")
     .eq("id", productId)
     .single();
 
   if (!product) return;
 
-  const stockQty = Number(product.stock_quantity);
-  const newReserved = Math.max(0, Number(product.reserved_quantity) - qtyBase);
+  const stockBefore = Number(product.stock_quantity);
+  const stockAfter = stockBefore - qtyBase;
 
   await Promise.all([
-    admin.from("products").update({ reserved_quantity: newReserved }).eq("id", productId),
+    admin.from("products").update({ stock_quantity: stockAfter }).eq("id", productId),
+
     admin.from("inventory_movements").insert({
       created_by: userId,
       metadata: { source: "order_management" },
-      movement_type: "release",
+      movement_type: "adjustment",
       notes: note,
       organization_id: orgId,
       product_id: productId,
       quantity_delta: qtyBase,
-      stock_after: stockQty,
-      stock_before: stockQty,
+      stock_after: stockAfter,
+      stock_before: stockBefore,
     }),
   ]);
 }
@@ -189,7 +183,7 @@ export async function cancelOrderAction(formData: FormData): Promise<ActionResul
 
   await Promise.all(
     (items ?? []).map((item) =>
-      releaseItemStock(
+      restoreItemStock(
         admin,
         session.organizationId,
         session.userId,
@@ -257,26 +251,30 @@ export async function updateOrderItemQtyAction(formData: FormData): Promise<Acti
   if (qtyDelta !== 0) {
     const { data: product } = await admin
       .from("products")
-      .select("reserved_quantity, stock_quantity")
+      .select("stock_quantity")
       .eq("id", item.product_id)
       .single();
 
     if (product) {
-      const stockQty = Number(product.stock_quantity);
-      const newReserved = Math.max(0, Number(product.reserved_quantity) + qtyDelta);
+      const stockBefore = Number(product.stock_quantity);
+      // qtyDelta > 0 means more items ordered -> deduct stock
+      // qtyDelta < 0 means fewer items ordered -> restore stock
+      const stockAfter = Math.max(0, stockBefore - qtyDelta);
+      
       await Promise.all([
-        admin.from("products").update({ reserved_quantity: newReserved }).eq("id", item.product_id),
+        admin.from("products").update({ stock_quantity: stockAfter }).eq("id", item.product_id),
         admin.from("inventory_movements").insert({
           created_by: session.userId,
           metadata: { order_id: item.order_id, order_item_id: itemId, source: "order_management" },
-          movement_type: qtyDelta > 0 ? "reserve" : "release",
+          movement_type: qtyDelta > 0 ? "issue" : "adjustment",
           notes: `แก้ไขจำนวน ออเดอร์ ${order.order_number}`,
           organization_id: session.organizationId,
           product_id: item.product_id,
-          quantity_delta: Math.abs(qtyDelta),
-          stock_after: stockQty,
-          stock_before: stockQty,
+          quantity_delta: -qtyDelta,
+          stock_after: stockAfter,
+          stock_before: stockBefore,
         }),
+
       ]);
     }
   }
@@ -316,7 +314,7 @@ export async function removeOrderItemAction(formData: FormData): Promise<ActionR
   const lineTotal = Number(item.line_total);
 
   await admin.from("order_items").delete().eq("id", itemId);
-  await releaseItemStock(
+  await restoreItemStock(
     admin,
     session.organizationId,
     session.userId,
@@ -347,7 +345,185 @@ export async function removeOrderItemAction(formData: FormData): Promise<ActionR
   return { success: true };
 }
 
-// ─── Fetch customer prices (called from client create-order modal) ─────────────
+// ─── Update customer vehicle from incoming order list ─────────────────────────
+
+export async function updateCustomerVehicleFromIncomingOrderAction(
+  formData: FormData,
+): Promise<ActionResult> {
+  const session = await requireAppRole("admin");
+  const admin = getSupabaseAdmin();
+  const customerId = String(formData.get("customerId") ?? "").trim();
+  const vehicleId = String(formData.get("vehicleId") ?? "").trim();
+
+  if (!customerId || !vehicleId) {
+    return { error: "กรุณาเลือกรถส่งของ" };
+  }
+
+  const { data: vehicle, error: vehicleError } = await admin
+    .from("vehicles")
+    .select("id")
+    .eq("organization_id", session.organizationId)
+    .eq("id", vehicleId)
+    .eq("is_active", true)
+    .maybeSingle();
+
+  if (vehicleError || !vehicle) {
+    return { error: "ไม่พบรถส่งของที่เลือก" };
+  }
+
+  const { error } = await admin
+    .from("customers")
+    .update({
+      default_vehicle_id: vehicleId,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", customerId)
+    .eq("organization_id", session.organizationId)
+    .eq("is_active", true);
+
+  if (error) {
+    return { error: error.message ?? "บันทึกรถส่งของไม่สำเร็จ" };
+  }
+
+  revalidatePath("/orders/incoming");
+  revalidatePath("/orders");
+  revalidatePath("/delivery");
+  revalidatePath("/settings/customers");
+  return { success: true };
+}
+
+// ─── Add item to existing order ───────────────────────────────────────────────
+
+export async function addOrderItemAction(formData: FormData): Promise<ActionResult> {
+  const session = await requireAppRole("admin");
+  const admin = getSupabaseAdmin() as unknown as ActionsAdmin;
+
+  const orderId = String(formData.get("orderId") ?? "").trim();
+  const productId = String(formData.get("productId") ?? "").trim();
+  const productSaleUnitId = String(formData.get("productSaleUnitId") ?? "").trim();
+  const quantity = Number(formData.get("quantity") ?? 0);
+  const unitPrice = Number(formData.get("unitPrice") ?? 0);
+
+  if (!orderId || !productId) return { error: "ข้อมูลสินค้าไม่ครบถ้วน" };
+  if (!Number.isFinite(quantity) || quantity <= 0) return { error: "จำนวนสินค้าต้องมากกว่า 0" };
+  if (!Number.isFinite(unitPrice) || unitPrice <= 0) return { error: "ราคาสินค้าต้องมากกว่า 0" };
+
+  const { data: order } = await admin
+    .from("orders")
+    .select("id, customer_id, status, organization_id, total_amount, order_number")
+    .eq("id", orderId)
+    .single();
+
+  if (!order || order.organization_id !== session.organizationId) return { error: "ไม่พบออเดอร์" };
+  if (order.status !== "submitted") return { error: "แก้ไขได้เฉพาะออเดอร์สถานะรับแล้ว" };
+
+  const { data: saleUnit } = productSaleUnitId
+    ? await admin
+        .from("product_sale_units")
+        .select("id, product_id, unit_label, base_unit_quantity, is_default, cost_mode, fixed_cost_price")
+        .eq("organization_id", session.organizationId)
+        .eq("id", productSaleUnitId)
+        .eq("is_active", true)
+        .single()
+    : await admin
+        .from("product_sale_units")
+        .select("id, product_id, unit_label, base_unit_quantity, is_default, cost_mode, fixed_cost_price")
+        .eq("organization_id", session.organizationId)
+        .eq("product_id", productId)
+        .eq("is_active", true)
+        .eq("is_default", true)
+        .single();
+
+  if (!saleUnit || saleUnit.product_id !== productId) {
+    return { error: "ไม่พบหน่วยขายของสินค้านี้" };
+  }
+
+  const { data: product } = await admin
+    .from("products")
+    .select("stock_quantity, reserved_quantity, cost_price")
+    .eq("organization_id", session.organizationId)
+    .eq("id", productId)
+    .single();
+
+  if (!product) return { error: "ไม่พบสินค้า" };
+
+  const saleUnitRatio = Number(saleUnit.base_unit_quantity) || 1;
+  const effectiveCost = getEffectiveSaleUnitCost({
+    baseCostPrice: Number(product.cost_price ?? 0),
+    baseUnitQuantity: saleUnitRatio,
+    costMode: saleUnit.cost_mode ?? null,
+    fixedCostPrice:
+      saleUnit.fixed_cost_price === null || saleUnit.fixed_cost_price === undefined
+        ? null
+        : Number(saleUnit.fixed_cost_price),
+  });
+
+  if (effectiveCost > 0 && unitPrice < effectiveCost) {
+    return { error: `ราคาต่ำกว่าต้นทุน ฿${effectiveCost.toLocaleString("th-TH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` };
+  }
+
+  const quantityInBaseUnit = quantity * saleUnitRatio;
+  const lineTotal = quantity * unitPrice;
+
+  const { error: priceError } = await admin.from("customer_product_prices").upsert(
+    {
+      customer_id: order.customer_id,
+      organization_id: session.organizationId,
+      product_id: productId,
+      product_sale_unit_id: saleUnit.id,
+      sale_price: unitPrice,
+    },
+    {
+      onConflict: "organization_id,customer_id,product_sale_unit_id",
+    },
+  );
+
+  if (priceError) {
+    return { error: priceError.message ?? "บันทึกราคาสินค้าไม่สำเร็จ" };
+  }
+
+  await admin.from("order_items").insert({
+    cost_price: Number(product.cost_price ?? 0),
+    line_total: lineTotal,
+    order_id: orderId,
+    organization_id: session.organizationId,
+    product_id: productId,
+    product_sale_unit_id: saleUnit.id,
+    quantity,
+    quantity_in_base_unit: quantityInBaseUnit,
+    sale_unit_label: saleUnit.unit_label,
+    sale_unit_ratio: saleUnitRatio,
+    unit_price: unitPrice,
+  });
+const stockBefore = Number(product.stock_quantity);
+const stockAfter = stockBefore - quantityInBaseUnit;
+
+await Promise.all([
+  admin.from("products").update({ stock_quantity: stockAfter }).eq("id", productId),
+
+    admin.from("inventory_movements").insert({
+      created_by: session.userId,
+      metadata: { order_id: orderId, source: "order_management" },
+      movement_type: "issue",
+      notes: `เพิ่มสินค้าในออเดอร์ ${order.order_number}`,
+      organization_id: session.organizationId,
+      product_id: productId,
+      quantity_delta: -quantityInBaseUnit,
+      stock_after: stockAfter,
+      stock_before: stockBefore,
+    }),
+  ]);
+
+  const nextTotal = Number(order.total_amount) + lineTotal;
+  await admin
+    .from("orders")
+    .update({ subtotal_amount: nextTotal, total_amount: nextTotal })
+    .eq("id", orderId);
+
+  revalidatePath("/orders/incoming");
+  revalidatePath("/orders");
+  return { success: true };
+}
 
 export async function fetchCustomerPricesAction(
   customerId: string,
@@ -440,10 +616,11 @@ export async function upsertCustomerPriceFromOrderModalAction(input: {
   return { success: true };
 }
 
-export async function fetchCustomerYesterdayItemsAction(
+// ─── Customer Order History (Updated: 2024-05-04 16:30) ──────────────────────
+export async function fetchCustomerLastOrderItemsAction(
   customerId: string,
   orderDate: string,
-): Promise<CustomerYesterdaySnapshot> {
+): Promise<CustomerLastOrderSnapshot> {
   const session = await requireAppRole("admin");
   const admin = getSupabaseAdmin() as unknown as ActionsAdmin;
 
@@ -451,7 +628,19 @@ export async function fetchCustomerYesterdayItemsAction(
     return { items: [], orderCount: 0, sourceDate: getPreviousDate(orderDate) };
   }
 
-  const sourceDate = getPreviousDate(orderDate);
+  // Find the most recent order date before orderDate
+  const { data: lastOrder } = await admin
+    .from("orders")
+    .select("order_date")
+    .eq("organization_id", session.organizationId)
+    .eq("customer_id", customerId)
+    .lt("order_date", orderDate)
+    .in("status", ["submitted", "confirmed"])
+    .order("order_date", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  const sourceDate = lastOrder?.order_date ?? getPreviousDate(orderDate);
 
   const { data: orders } = await admin
     .from("orders")
@@ -471,7 +660,8 @@ export async function fetchCustomerYesterdayItemsAction(
     .select("product_id, product_sale_unit_id, quantity, sale_unit_label, sale_unit_ratio, unit_price")
     .in("order_id", orderIds);
 
-  const grouped = new Map<string, CustomerYesterdayItem>();
+  const grouped = new Map<string, CustomerLastOrderItem>();
+
   for (const row of orderItems ?? []) {
     const saleUnitId = row.product_sale_unit_id;
     const key = `${row.product_id}__${saleUnitId ?? "__default__"}`;
@@ -533,6 +723,8 @@ export async function createManualOrderAction(formData: FormData): Promise<Actio
   if (!customerId) return { error: "กรุณาเลือกลูกค้า" };
   if (items.length === 0) return { error: "กรุณาเพิ่มสินค้าอย่างน้อย 1 รายการ" };
 
+  console.log(`[createManualOrderAction] Received Date: ${orderDate}, Customer: ${customerId}`);
+
   const { data: orderNumber } = await admin.rpc("next_order_number", {
     p_order_date: orderDate,
     p_organization_id: session.organizationId,
@@ -542,7 +734,7 @@ export async function createManualOrderAction(formData: FormData): Promise<Actio
 
   const totalAmount = items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
 
-  const { data: newOrder } = await admin
+  const { data: newOrder, error: insertError } = await admin
     .from("orders")
     .insert({
       customer_id: customerId,
@@ -560,9 +752,15 @@ export async function createManualOrderAction(formData: FormData): Promise<Actio
     .select("id")
     .single();
 
+  if (insertError) {
+    console.error("[createManualOrderAction] Insert Error:", insertError);
+    return { error: "ไม่สามารถสร้างออเดอร์ได้" };
+  }
+  
   if (!newOrder) return { error: "ไม่สามารถสร้างออเดอร์ได้" };
 
   const orderId = newOrder.id;
+  console.log(`[createManualOrderAction] Order Created: ${orderId} for Date: ${orderDate}`);
 
   for (const item of items) {
     const qtyBase = item.quantity * item.saleUnitBaseQty;
@@ -585,27 +783,28 @@ export async function createManualOrderAction(formData: FormData): Promise<Actio
     if (qtyBase > 0) {
       const { data: product } = await admin
         .from("products")
-        .select("reserved_quantity, stock_quantity")
+        .select("stock_quantity")
         .eq("id", item.productId)
         .single();
 
       if (product) {
-        const stockQty = Number(product.stock_quantity);
+        const stockBefore = Number(product.stock_quantity);
+        const stockAfter = stockBefore - qtyBase;
         await Promise.all([
           admin
             .from("products")
-            .update({ reserved_quantity: Number(product.reserved_quantity) + qtyBase })
+            .update({ stock_quantity: stockAfter })
             .eq("id", item.productId),
           admin.from("inventory_movements").insert({
             created_by: session.userId,
             metadata: { channel, order_id: orderId, source: "manual_order" },
-            movement_type: "reserve",
+            movement_type: "issue",
             notes: `ออเดอร์ manual: ${String(orderNumber)}`,
             organization_id: session.organizationId,
             product_id: item.productId,
-            quantity_delta: qtyBase,
-            stock_after: stockQty,
-            stock_before: stockQty,
+            quantity_delta: -qtyBase,
+            stock_after: stockAfter,
+            stock_before: stockBefore,
           }),
         ]);
       }
@@ -644,4 +843,64 @@ export async function linkPendingLineOrderAction(formData: FormData): Promise<Ac
     success: true,
     orderNumber: result.orderNumbers.join(", "),
   };
+}
+
+export async function updateIncomingOrderDateAction(formData: FormData): Promise<ActionResult> {
+  const session = await requireAppRole("admin");
+  const admin = getSupabaseAdmin() as unknown as ActionsAdmin;
+  const orderId = String(formData.get("orderId") ?? "").trim();
+  const nextOrderDate = String(formData.get("orderDate") ?? "").trim();
+
+  if (!orderId) {
+    return { error: "ไม่พบเลขออเดอร์ที่ต้องการแก้ไข" };
+  }
+
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(nextOrderDate)) {
+    return { error: "รูปแบบวันที่ออเดอร์ไม่ถูกต้อง" };
+  }
+
+  const { data: order } = await admin
+    .from("orders")
+    .select("id, status, order_number, order_date, organization_id")
+    .eq("id", orderId)
+    .single();
+
+  if (!order || order.organization_id !== session.organizationId) {
+    return { error: "ไม่พบออเดอร์นี้" };
+  }
+
+  if (order.status === "cancelled") {
+    return { error: "ออเดอร์ที่ยกเลิกแล้วไม่สามารถแก้ไขวันที่ได้" };
+  }
+
+  if (order.order_date === nextOrderDate) {
+    return { success: true, orderDate: nextOrderDate, orderNumber: order.order_number };
+  }
+
+  const { data: nextOrderNumber, error: nextOrderNumberError } = await admin.rpc("next_order_number", {
+    p_order_date: nextOrderDate,
+    p_organization_id: session.organizationId,
+  });
+
+  if (nextOrderNumberError || !nextOrderNumber) {
+    return { error: nextOrderNumberError?.message ?? "สร้างเลขออเดอร์ใหม่ไม่สำเร็จ" };
+  }
+
+  const { error: updateError } = await admin
+    .from("orders")
+    .update({
+      order_date: nextOrderDate,
+      order_number: String(nextOrderNumber),
+    })
+    .eq("id", orderId);
+
+  if (updateError) {
+    return { error: updateError.message ?? "บันทึกวันที่ออเดอร์ไม่สำเร็จ" };
+  }
+
+  revalidatePath("/orders/incoming");
+  revalidatePath("/orders");
+  revalidatePath("/delivery");
+
+  return { success: true, orderDate: nextOrderDate, orderNumber: String(nextOrderNumber) };
 }

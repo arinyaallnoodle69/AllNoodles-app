@@ -23,59 +23,48 @@ export function StockSummaryCards({ data }: StockSummaryCardsProps) {
   const outOfStockCount = data.products.filter((product) => product.onHandQuantity <= 0).length;
 
   return (
-    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+    <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
       <article className="rounded-[1.75rem] border border-slate-200 bg-white p-5 shadow-[0_18px_55px_rgba(15,23,42,0.05)]">
-        <div className="flex items-center gap-3">
-          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#003366]/10 text-[#003366]">
-            <Boxes className="h-5 w-5" strokeWidth={2.2} />
+        <div className="flex items-center gap-4">
+          <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#003366]/10 text-[#003366]">
+            <Boxes className="h-6 w-6" strokeWidth={2.4} />
           </span>
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-medium text-slate-500">สินค้าทั้งหมด</p>
-            <p className="mt-1 truncate text-2xl font-semibold tracking-[-0.02em] text-slate-950 md:text-[2rem]">
+            <p className="text-xs font-black uppercase tracking-widest text-slate-400">สินค้าทั้งหมด</p>
+            <p className="mt-1 truncate text-3xl font-black tracking-tight text-slate-950 tabular-nums">
               {productCount.toLocaleString("th-TH")}
             </p>
           </div>
         </div>
       </article>
 
-      <article className="rounded-[1.75rem] border border-slate-200 bg-white p-5 shadow-[0_18px_55px_rgba(15,23,42,0.05)]">
-        <div className="flex items-center gap-3">
-          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700">
-            <PackageCheck className="h-5 w-5" strokeWidth={2.2} />
+      <article className="rounded-[1.75rem] border border-[#003366]/15 bg-[#003366] p-5 shadow-[0_20px_50px_rgba(0,51,102,0.15)] text-white">
+        <div className="flex items-center gap-4">
+          <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white/10 text-white">
+            <PackageCheck className="h-6 w-6" strokeWidth={2.4} />
           </span>
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-medium text-slate-500">มูลค่าสต็อก</p>
-            <p className="mt-1 truncate text-2xl font-semibold tracking-[-0.02em] text-slate-950 md:text-[2rem]">
-              {formatMoney(data.totalOnHandValue)}
+            <p className="text-xs font-black uppercase tracking-widest text-white/50">มูลค่าสต็อกรวม</p>
+            <p className="mt-1 truncate text-3xl font-black tracking-tight tabular-nums">
+              ฿{formatMoney(data.totalOnHandValue)}
             </p>
-            <p className="text-xs font-medium text-slate-400">บาท</p>
           </div>
         </div>
       </article>
 
       <article className="rounded-[1.75rem] border border-slate-200 bg-white p-5 shadow-[0_18px_55px_rgba(15,23,42,0.05)]">
-        <div className="flex items-center gap-3">
-          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-amber-100 text-amber-700">
-            <CircleAlert className="h-5 w-5" strokeWidth={2.2} />
+        <div className="flex items-center gap-4">
+          <span className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl ${
+            (data.lowStockCount + outOfStockCount) > 0 ? "bg-rose-100 text-rose-600" : "bg-emerald-100 text-emerald-600"
+          }`}>
+            <CircleAlert className="h-6 w-6" strokeWidth={2.4} />
           </span>
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-medium text-slate-500">ใกล้หมด / หมด</p>
-            <p className="mt-1 truncate text-2xl font-semibold tracking-[-0.02em] text-slate-950 md:text-[2rem]">
+            <p className="text-xs font-black uppercase tracking-widest text-slate-400">ใกล้หมด / หมด</p>
+            <p className={`mt-1 truncate text-3xl font-black tracking-tight tabular-nums ${
+               (data.lowStockCount + outOfStockCount) > 0 ? "text-rose-600" : "text-slate-950"
+            }`}>
               {(data.lowStockCount + outOfStockCount).toLocaleString("th-TH")}
-            </p>
-          </div>
-        </div>
-      </article>
-
-      <article className="rounded-[1.75rem] border border-slate-200 bg-white p-5 shadow-[0_18px_55px_rgba(15,23,42,0.05)]">
-        <div className="flex items-center gap-3">
-          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-sky-100 text-sky-700">
-            <Archive className="h-5 w-5" strokeWidth={2.2} />
-          </span>
-          <div className="min-w-0 flex-1">
-            <p className="text-sm font-medium text-slate-500">จองแล้ว</p>
-            <p className="mt-1 truncate text-2xl font-semibold tracking-[-0.02em] text-slate-950 md:text-[2rem]">
-              {formatQuantity(data.reservedTotal)}
             </p>
           </div>
         </div>

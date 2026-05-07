@@ -2,6 +2,7 @@ import { requireAppRole } from "@/lib/auth/authorization";
 import {
   getAllDeliveryNotesPrintDataForDate,
   getMergedDeliveryPrintData,
+  type DeliveryNotePrintData,
 } from "@/lib/delivery/print";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { DeliveryNoteLayout } from "@/components/print/delivery-note-layout";
@@ -9,13 +10,17 @@ import { AutoPrint, PrintButton } from "./print-button";
 
 export const metadata = { title: "ปริ้นใบส่งของ" };
 
-type Props = { searchParams: Promise<{ date?: string; customer?: string; autoprint?: string }> };
+type Props = { searchParams: Promise<{ date?: string; customer?: string; customers?: string; autoprint?: string }> };
 
 export default async function DeliveryBatchPrintPage({ searchParams }: Props) {
   const session = await requireAppRole("admin");
   const params = await searchParams;
   const date = params.date ?? new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Bangkok" });
   const customerId = params.customer ?? null;
+  const customerIds = (params.customers ?? "")
+    .split(",")
+    .map((id) => id.trim())
+    .filter(Boolean);
   const autoprint = params.autoprint === "1";
 
   const dateLabel = new Intl.DateTimeFormat("th-TH", {
@@ -24,7 +29,34 @@ export default async function DeliveryBatchPrintPage({ searchParams }: Props) {
 
   let dns;
 
-  if (customerId) {
+  if (customerIds.length > 0) {
+    const supabase = getSupabaseAdmin();
+    const { data: rows } = await supabase
+      .from("delivery_notes")
+      .select("id, customer_id")
+      .eq("organization_id", session.organizationId)
+      .eq("delivery_date", date)
+      .in("customer_id", customerIds)
+      .eq("status", "confirmed")
+      .order("created_at", { ascending: true });
+
+    const idsByCustomer = new Map<string, string[]>();
+    for (const row of (rows ?? []) as Array<{ id: string; customer_id?: string }>) {
+      const customer = row.customer_id;
+      if (!customer) continue;
+      const ids = idsByCustomer.get(customer) ?? [];
+      ids.push(row.id);
+      idsByCustomer.set(customer, ids);
+    }
+
+    const mergedRows = await Promise.all(
+      customerIds.map((id) => {
+        const ids = idsByCustomer.get(id) ?? [];
+        return ids.length > 0 ? getMergedDeliveryPrintData(session.organizationId, ids) : null;
+      }),
+    );
+    dns = mergedRows.filter((item): item is DeliveryNotePrintData => item !== null);
+  } else if (customerId) {
     const supabase = getSupabaseAdmin();
     const { data: rows } = await supabase
       .from("delivery_notes")

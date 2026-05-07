@@ -74,38 +74,38 @@ export function PrintDocHeader({
   return (
     <div style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1.5mm", paddingBottom: "3mm", borderBottom: "1.5px solid black" }}>
       <div>
-        <p style={{ fontWeight: 800, fontSize: "12pt", color: "#1e3a5f", lineHeight: 1.2 }}>{orgName}</p>
+        <p style={{ fontWeight: 800, fontSize: "13pt", color: "#1e3a5f", lineHeight: 1.2 }}>{orgName}</p>
         {orgAddress && (
-          <p style={{ fontSize: "7.5pt", color: "#64748b", marginTop: "1px" }}>{orgAddress}</p>
+          <p style={{ fontSize: "8.2pt", color: "#64748b", marginTop: "1px" }}>{orgAddress}</p>
         )}
         {orgPhone && (
-          <p style={{ fontSize: "7.5pt", color: "#64748b", marginTop: "1px" }}>โทร {orgPhone}</p>
+          <p style={{ fontSize: "8.2pt", color: "#64748b", marginTop: "1px" }}>โทร {orgPhone}</p>
         )}
       </div>
 
       <div style={{ position: "absolute", left: "50%", transform: "translateX(-50%)", textAlign: "center", pointerEvents: "none" }}>
-        <p style={{ fontSize: "15pt", fontWeight: 900, color: "#1e3a5f", letterSpacing: "0.05em" }}>{title}</p>
+        <p style={{ fontSize: "16pt", fontWeight: 900, color: "#1e3a5f", letterSpacing: "0.05em" }}>{title}</p>
       </div>
 
       <div style={{ textAlign: "right", minWidth: "95px" }}>
         {docNumber && (
-          <p style={{ fontSize: "8pt", color: "#1e3a5f" }}>
+          <p style={{ fontSize: "8.8pt", color: "#1e3a5f" }}>
             <span style={{ color: "#64748b" }}>เลขที่ </span>
             <span style={{ fontWeight: 800, fontFamily: "monospace" }}>{docNumber}</span>
           </p>
         )}
-        <p style={{ fontSize: "8pt", color: "#1e3a5f", marginTop: docNumber ? "2px" : undefined }}>
+        <p style={{ fontSize: "8.8pt", color: "#1e3a5f", marginTop: docNumber ? "2px" : undefined }}>
           <span style={{ color: "#64748b" }}>วันที่ </span>
           <span style={{ fontWeight: 700 }}>{formatDate(docDate)}</span>
         </p>
         {extraMeta?.map((m) => (
-          <p key={m.label} style={{ fontSize: "7.5pt", color: "#1e3a5f", marginTop: "2px" }}>
+          <p key={m.label} style={{ fontSize: "8.2pt", color: "#1e3a5f", marginTop: "2px" }}>
             <span style={{ color: "#64748b" }}>{m.label} </span>
             <span style={{ fontWeight: 700 }}>{m.value}</span>
           </p>
         ))}
         {pageLabel && (
-          <p style={{ fontSize: "7pt", color: "#94a3b8", marginTop: "2px" }}>{pageLabel}</p>
+          <p style={{ fontSize: "7.8pt", color: "#94a3b8", marginTop: "2px" }}>{pageLabel}</p>
         )}
       </div>
     </div>
@@ -121,13 +121,13 @@ export function PrintCustomerRow({
   return (
     <div style={{ marginBottom: "1.5mm", padding: "0" }}>
       <div style={{ display: "flex", gap: "8px", alignItems: "baseline" }}>
-        <span style={{ fontSize: "7.5pt", color: "#64748b", flexShrink: 0 }}>ลูกค้า</span>
-        <span style={{ fontFamily: "monospace", fontSize: "8pt", color: "#003366", fontWeight: 700 }}>{customer.code}</span>
-        <span style={{ fontWeight: 700, fontSize: "9.5pt", color: "#0f172a" }}>{customer.name}</span>
+        <span style={{ fontSize: "11.8pt", color: "#64748b", flexShrink: 0 }}>ลูกค้า</span>
+        <span style={{ fontFamily: "monospace", fontSize: "11.8pt", color: "#003366", fontWeight: 700 }}>{customer.code}</span>
+        <span style={{ fontWeight: 700, fontSize: "11.8pt", color: "#0f172a" }}>{customer.name}</span>
       </div>
       <div style={{ display: "flex", gap: "8px", alignItems: "baseline", marginTop: "1px" }}>
-        <span style={{ fontSize: "7.5pt", color: "#64748b", flexShrink: 0 }}>ที่อยู่</span>
-        <span style={{ fontSize: "8pt", color: "#334155" }}>{customer.address}</span>
+        <span style={{ fontSize: "8.2pt", color: "#64748b", flexShrink: 0 }}>ที่อยู่</span>
+        <span style={{ fontSize: "8.8pt", color: "#334155" }}>{customer.address}</span>
       </div>
     </div>
   );
@@ -137,10 +137,10 @@ export function PrintCustomerRow({
 export function PrintTotalRow({ totalAmount }: { totalAmount: number }) {
   return (
     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", borderTop: "1.5px solid black", borderBottom: "1.5px solid black", paddingTop: "2mm", paddingBottom: "2mm", marginBottom: "2mm" }}>
-      <p style={{ fontSize: "8.5pt", color: "black" }}>{bahtText(totalAmount)}</p>
+      <p style={{ fontSize: "9.2pt", color: "black" }}>{bahtText(totalAmount)}</p>
       <div style={{ display: "flex", alignItems: "baseline", gap: "6mm" }}>
-        <p style={{ fontSize: "8.5pt", fontWeight: 700, color: "black" }}>รวมทั้งสิ้น</p>
-        <p style={{ fontSize: "10pt", fontWeight: 800, color: "black", fontFamily: "monospace" }}>{fmt(totalAmount)}</p>
+        <p style={{ fontSize: "9.2pt", fontWeight: 700, color: "black" }}>รวมทั้งสิ้น</p>
+        <p style={{ fontSize: "10.8pt", fontWeight: 800, color: "black", fontFamily: "monospace" }}>{fmt(totalAmount)}</p>
       </div>
     </div>
   );
@@ -160,7 +160,7 @@ export function PrintSignatureBlock({
     <div style={{ display: "flex", gap: "6mm", alignItems: "flex-start" }}>
       <div style={{ flex: 1 }}>
         {notes && (
-          <div style={{ padding: "1.5mm 2.5mm", border: "1px dashed #cbd5e1", borderRadius: "3px", fontSize: "7.5pt", color: "#475569" }}>
+          <div style={{ padding: "1.5mm 2.5mm", border: "1px dashed #cbd5e1", borderRadius: "3px", fontSize: "8.2pt", color: "#475569" }}>
             <span style={{ fontWeight: 700 }}>หมายเหตุ: </span>{notes}
           </div>
         )}
@@ -168,12 +168,12 @@ export function PrintSignatureBlock({
       <div style={{ width: "1px", background: "#e2e8f0", alignSelf: "stretch" }} />
       <div style={{ flex: 1, display: "flex", gap: "4mm" }}>
         <div style={{ flex: 1, textAlign: "center" }}>
-          <p style={{ fontSize: "8pt", fontWeight: 700, color: "#1e3a5f", marginBottom: "6mm" }}>{leftLabel}</p>
+          <p style={{ fontSize: "8.8pt", fontWeight: 700, color: "#1e3a5f", marginBottom: "6mm" }}>{leftLabel}</p>
           <div style={{ borderTop: "1px solid #334155" }} />
         </div>
         <div style={{ width: "1px", background: "#e2e8f0" }} />
         <div style={{ flex: 1, textAlign: "center" }}>
-          <p style={{ fontSize: "8pt", fontWeight: 700, color: "#1e3a5f", marginBottom: "6mm" }}>{rightLabel}</p>
+          <p style={{ fontSize: "8.8pt", fontWeight: 700, color: "#1e3a5f", marginBottom: "6mm" }}>{rightLabel}</p>
           <div style={{ borderTop: "1px solid #334155" }} />
         </div>
       </div>

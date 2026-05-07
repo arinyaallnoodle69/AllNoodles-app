@@ -1,10 +1,12 @@
 import { OrderDailyTable } from "@/components/orders/order-daily-table";
+import { OrderStoreStatusSummary } from "@/components/orders/order-store-status-summary";
 import { StoreDetailModal } from "@/components/orders/store-detail-modal";
 import { SettingsShell } from "@/components/settings/settings-shell";
 import { requireAppRole } from "@/lib/auth/authorization";
 import { getOrderDailyData } from "@/lib/orders/admin";
 import { getDeliveryList } from "@/lib/delivery/delivery-list";
 import { normalizeOrderDate } from "@/lib/orders/date";
+import { getOrderStoreStatusSummary } from "@/lib/orders/store-status";
 import type { DeliveredTodayRow } from "@/components/orders/delivered-today-section";
 
 export const metadata = {
@@ -29,13 +31,14 @@ export default async function OrdersPage({ searchParams }: OrdersPageProps) {
   // Mobile modal shows one store at a time
   const mobileExpandedId = expandedIds[0] ?? "";
 
-  const [data, deliveredTodayData] = await Promise.all([
+  const [data, deliveredTodayData, storeStatusSummary] = await Promise.all([
     getOrderDailyData(session.organizationId, {
       expandedIds,
       orderDate,
       searchTerm: q || null,
     }),
     getDeliveryList(session.organizationId, orderDate, orderDate, q || ""),
+    getOrderStoreStatusSummary(session.organizationId, orderDate),
   ]);
 
   const deliveredToday: DeliveredTodayRow[] = deliveredTodayData.map((row) => ({
@@ -58,6 +61,10 @@ export default async function OrdersPage({ searchParams }: OrdersPageProps) {
         description="สรุปออเดอร์รายร้านต่อวัน ดูรอบออเดอร์ รายการสินค้า และสต็อกได้ในหน้าเดียว"
         floatingSubmit={false}
       >
+        <div className="mb-5">
+          <OrderStoreStatusSummary orderDate={orderDate} summary={storeStatusSummary} />
+        </div>
+
         <OrderDailyTable
           data={data}
           date={orderDate}

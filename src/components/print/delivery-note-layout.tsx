@@ -14,7 +14,7 @@ import {
   PrintSignatureBlock,
 } from "@/components/print/print-shared";
 
-const ITEMS_PER_NOTE_PAGE = 12;
+const ITEMS_PER_NOTE_PAGE = 10;
 
 type DeliveryNotePage = {
   key: string;
@@ -69,24 +69,24 @@ function DeliveryNotePageView({
 
       <PrintCustomerRow customer={dn.customer} />
 
-      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "8.5pt", marginBottom: "1mm" }}>
+      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "11.8pt", marginBottom: "1mm" }}>
         <thead>
           <tr>
-            <th style={{ padding: "1mm 2mm", textAlign: "center", width: "6mm", color: "black", borderTop: "1.5px solid black", borderBottom: "1.5px solid black" }}>ลำดับ</th>
-            <th style={{ padding: "1mm 2mm", textAlign: "center", width: "20mm", color: "black", borderTop: "1.5px solid black", borderBottom: "1.5px solid black" }}>รหัสสินค้า</th>
-            <th style={{ padding: "1mm 1mm", textAlign: "left", color: "black", borderTop: "1.5px solid black", borderBottom: "1.5px solid black" }}>รายการสินค้า</th>
-            <th style={{ padding: "1mm 2mm", textAlign: "center", width: "12mm", color: "black", borderTop: "1.5px solid black", borderBottom: "1.5px solid black" }}>จำนวน</th>
-            <th style={{ padding: "1mm 2mm", textAlign: "center", width: "10mm", color: "black", borderTop: "1.5px solid black", borderBottom: "1.5px solid black" }}>หน่วย</th>
-            <th style={{ padding: "1mm 2mm", textAlign: "right", width: "20mm", color: "black", borderTop: "1.5px solid black", borderBottom: "1.5px solid black" }}>ราคา/หน่วย</th>
-            <th style={{ padding: "1mm 3mm", textAlign: "right", width: "26mm", color: "black", borderTop: "1.5px solid black", borderBottom: "1.5px solid black" }}>จำนวนเงิน</th>
+            <th style={{ padding: "1mm 2mm", textAlign: "center", width: "6mm", color: "black", borderTop: "1.5px solid black", borderBottom: "1.5px solid black", whiteSpace: "nowrap" }}>ลำดับ</th>
+            <th style={{ padding: "1mm 2mm", textAlign: "center", width: "20mm", color: "black", borderTop: "1.5px solid black", borderBottom: "1.5px solid black", whiteSpace: "nowrap" }}>รหัสสินค้า</th>
+            <th style={{ padding: "1mm 1mm", textAlign: "left", color: "black", borderTop: "1.5px solid black", borderBottom: "1.5px solid black", whiteSpace: "nowrap" }}>รายการสินค้า</th>
+            <th style={{ padding: "1mm 2mm", textAlign: "center", width: "12mm", color: "black", borderTop: "1.5px solid black", borderBottom: "1.5px solid black", whiteSpace: "nowrap" }}>จำนวน</th>
+            <th style={{ padding: "1mm 2mm", textAlign: "center", width: "10mm", color: "black", borderTop: "1.5px solid black", borderBottom: "1.5px solid black", whiteSpace: "nowrap" }}>หน่วย</th>
+            <th style={{ padding: "1mm 2mm", textAlign: "right", width: "22mm", color: "black", borderTop: "1.5px solid black", borderBottom: "1.5px solid black", whiteSpace: "nowrap" }}>ราคา/หน่วย</th>
+            <th style={{ padding: "1mm 3mm", textAlign: "right", width: "28mm", color: "black", borderTop: "1.5px solid black", borderBottom: "1.5px solid black", whiteSpace: "nowrap" }}>จำนวนเงิน</th>
           </tr>
         </thead>
         <tbody>
           {items.map((item) => (
             <tr key={item.id}>
-              <td style={{ padding: "0.8mm 2mm", textAlign: "center", color: "black" }}>{item.lineNumber}</td>
-              <td style={{ padding: "0.8mm 2mm", textAlign: "center", fontFamily: "monospace", color: "black", fontSize: "8pt" }}>{item.productSku}</td>
-              <td style={{ padding: "0.8mm 1mm", fontWeight: 600, color: "black" }}>{item.productName}</td>
+              <td style={{ padding: "0.8mm 2mm", textAlign: "center", color: "black", fontSize: "11.8pt" }}>{item.lineNumber}</td>
+              <td style={{ padding: "0.8mm 2mm", textAlign: "center", fontFamily: "monospace", color: "black", fontSize: "11.8pt" }}>{item.productSku}</td>
+              <td style={{ padding: "0.8mm 1mm", fontWeight: 600, color: "black", fontSize: "11.8pt" }}>{item.productName}</td>
               <td style={{ padding: "0.8mm 2mm", textAlign: "center", fontWeight: 700, color: "black" }}>{fmtQty(item.quantityDelivered)}</td>
               <td style={{ padding: "0.8mm 2mm", textAlign: "center", color: "black" }}>{item.saleUnitLabel}</td>
               <td style={{ padding: "0.8mm 2mm", textAlign: "right", color: "black" }}>{fmt(item.unitPrice)}</td>
@@ -113,19 +113,19 @@ function DeliveryNotePageView({
         <div style={{ borderTop: "1.5px solid black", paddingTop: "2.5mm" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", gap: "6mm" }}>
             <div style={{ flex: 1 }}>
-              <p style={{ fontSize: "8pt", fontWeight: 700, color: "#1e3a5f" }}>มีรายการต่อหน้าถัดไป</p>
-              <p style={{ marginTop: "1mm", fontSize: "7pt", color: "#64748b" }}>
+              <p style={{ fontSize: "8.8pt", fontWeight: 700, color: "#1e3a5f" }}>มีรายการต่อหน้าถัดไป</p>
+              <p style={{ marginTop: "1mm", fontSize: "7.8pt", color: "#64748b" }}>
                 หน้านี้เป็นหน้ารายการต่อเนื่อง ยังไม่มีสรุปยอดรวม
               </p>
             </div>
             <div style={{ width: "48%", display: "flex", gap: "4mm" }}>
               <div style={{ flex: 1, textAlign: "center" }}>
-                <p style={{ fontSize: "8pt", fontWeight: 700, color: "#1e3a5f", marginBottom: "6mm" }}>ผู้รับสินค้า</p>
+                <p style={{ fontSize: "8.8pt", fontWeight: 700, color: "#1e3a5f", marginBottom: "6mm" }}>ผู้รับสินค้า</p>
                 <div style={{ borderTop: "1px solid #334155" }} />
               </div>
               <div style={{ width: "1px", background: "#e2e8f0" }} />
               <div style={{ flex: 1, textAlign: "center" }}>
-                <p style={{ fontSize: "8pt", fontWeight: 700, color: "#1e3a5f", marginBottom: "6mm" }}>ผู้จัดสินค้า</p>
+                <p style={{ fontSize: "8.8pt", fontWeight: 700, color: "#1e3a5f", marginBottom: "6mm" }}>ผู้จัดสินค้า</p>
                 <div style={{ borderTop: "1px solid #334155" }} />
               </div>
             </div>

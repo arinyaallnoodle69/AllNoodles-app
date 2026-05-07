@@ -1,30 +1,18 @@
 import type { Metadata, Viewport } from "next";
-import { IBM_Plex_Mono, Instrument_Sans, Sarabun } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 import { PwaProvider } from "@/components/pwa-provider";
 import { getSiteUrl } from "@/lib/site-url";
 
-const sarabun = Sarabun({
+const sukhumvit = localFont({
+  src: "../../public/fonts/SukhumvitSet-SemiBold.ttf",
   display: "swap",
-  subsets: ["latin", "thai"],
-  variable: "--font-sarabun",
-  weight: ["400", "500", "600", "700", "800"],
-  style: ["normal", "italic"],
+  variable: "--font-sukhumvit",
+  weight: "600",
 });
 
-const ibmPlexMono = IBM_Plex_Mono({
-  display: "swap",
-  variable: "--font-ibm-plex-mono",
-  subsets: ["latin"],
-  weight: ["400", "500"],
-});
-
-const instrumentSans = Instrument_Sans({
-  display: "swap",
-  variable: "--font-instrument-sans",
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-});
+const siteDescription =
+  "ระบบจัดการธุรกิจจำหน่ายเส้นก๋วยเตี๋ยวและวัตถุดิบแบบดิจิทัล รองรับออเดอร์ ส่งของ เก็บเงิน และรายงาน";
 
 export const metadata: Metadata = {
   metadataBase: new URL(getSiteUrl()),
@@ -32,8 +20,7 @@ export const metadata: Metadata = {
     default: "T&YNoodle",
     template: "%s | T&YNoodle",
   },
-  description:
-    "ระบบจัดการธุรกิจจำหน่ายเส้นก๋วยเตี๋ยวและวัตถุดิบแบบดิจิทัล รองรับออเดอร์ ส่งของ เก็บเงิน และรายงาน",
+  description: siteDescription,
   applicationName: "T&YNoodle",
   appleWebApp: {
     capable: true,
@@ -58,8 +45,7 @@ export const metadata: Metadata = {
     locale: "th_TH",
     siteName: "T&YNoodle",
     title: "T&YNoodle",
-    description:
-      "ระบบจัดการธุรกิจจำหน่ายเส้นก๋วยเตี๋ยวและวัตถุดิบแบบดิจิทัล รองรับออเดอร์ ส่งของ เก็บเงิน และรายงาน",
+    description: siteDescription,
     images: [
       {
         url: "/brand/1200x630.png",
@@ -72,8 +58,7 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "T&YNoodle",
-    description:
-      "ระบบจัดการธุรกิจจำหน่ายเส้นก๋วยเตี๋ยวและวัตถุดิบแบบดิจิทัล รองรับออเดอร์ ส่งของ เก็บเงิน และรายงาน",
+    description: siteDescription,
     images: ["/brand/1200x630.png"],
   },
 };
@@ -97,11 +82,11 @@ export default function RootLayout({
   return (
     <html lang="th">
       <head>
-        {/* Preconnect to LINE profile CDN — speeds up user avatar loading */}
+        {/* Preconnect to LINE profile CDN for faster user avatar loading */}
         <link rel="preconnect" href="https://profile.line-scdn.net" crossOrigin="anonymous" />
       </head>
       <body
-        className={`${sarabun.variable} ${ibmPlexMono.variable} ${instrumentSans.variable} bg-background text-foreground antialiased`}
+        className={`${sukhumvit.variable} ${sukhumvit.className} bg-background text-foreground antialiased`}
       >
         <PwaProvider />
         <main>{children}</main>

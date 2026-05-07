@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Image from "next/image";
 import { useState } from "react";
@@ -67,16 +67,26 @@ export function CatalogView({
             <section className="mb-5">
               <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_14px_34px_rgba(15,23,42,0.08)]">
                 <div className="border-b border-slate-100 px-4 pb-4 pt-4">
+                  <button
+                    type="button"
+                    onClick={onRepeatOrderAll}
+                    disabled={!isOrderOpen}
+                    className="mb-4 flex w-full items-center justify-center gap-2 rounded-xl bg-[#003366] px-4 py-3.5 text-base font-extrabold text-white shadow-[0_10px_24px_rgba(0,51,102,0.22)] transition hover:bg-[#00264d] active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-slate-300 disabled:shadow-none"
+                  >
+                    <ShoppingCart className="h-4 w-4" strokeWidth={2.4} />
+                    {isOrderOpen ? "สั่งซ้ำทั้งหมดจากออเดอร์ล่าสุด" : "ปิดรับออเดอร์"}
+                  </button>
+
                   <div className="flex items-start gap-3">
                     <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#003366]/10 text-[#003366]">
                       <RotateCcw className="h-5 w-5" strokeWidth={2.4} />
                     </span>
                     <div className="min-w-0 flex-1">
                       <h2 className="text-base font-extrabold leading-tight text-slate-950">
-                        สั่งซ้ำจากเมื่อวาน
+                        รายละเอียดรายการล่าสุด
                       </h2>
                       <p className="mt-1 text-xs font-medium leading-relaxed text-slate-500">
-                        เติมสินค้าทั้งหมดจากออเดอร์เมื่อวานเข้าตะกร้า แล้วปรับจำนวนต่อได้
+                        แสดงสินค้าที่สั่งในครั้งที่ผ่านมา คุณสามารถกด &quot;สั่งซ้ำทั้งหมด&quot; เพื่อเริ่มออเดอร์ใหม่ได้ทันที
                       </p>
                     </div>
                   </div>
@@ -87,16 +97,6 @@ export function CatalogView({
                       {visibleRepeatOrderCards.length.toLocaleString("th-TH")} รายการ
                     </span>
                   </div>
-
-                  <button
-                    type="button"
-                    onClick={onRepeatOrderAll}
-                    disabled={!isOrderOpen}
-                    className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-[#003366] px-4 py-3 text-sm font-extrabold text-white shadow-[0_10px_24px_rgba(0,51,102,0.22)] transition hover:bg-[#00264d] active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-slate-300 disabled:shadow-none"
-                  >
-                    <ShoppingCart className="h-4 w-4" strokeWidth={2.4} />
-                    {isOrderOpen ? "สั่งซ้ำทั้งหมด" : "ปิดรับออเดอร์"}
-                  </button>
 
                   <p className="mt-2 text-center text-[11px] font-medium text-slate-400">
                     กดแล้วไปหน้าตะกร้าเพื่อปรับจำนวนได้

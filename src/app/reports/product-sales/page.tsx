@@ -442,7 +442,7 @@ export default async function ProductSalesReportPage({ searchParams }: PageProps
           {/* Table / card section */}
           {/* Mobile search drawer */}
           <MobileSearchDrawer title="ค้นหารายงานยอดขาย">
-            <form method="GET" action="/reports/product-sales" className="flex flex-col gap-4">
+            <form method="GET" action="/reports/product-sales" className="flex flex-col gap-4 pb-32">
               <div>
                 <label className="mb-1.5 block text-xs font-bold uppercase tracking-widest text-slate-400">สินค้า</label>
                 <ProductFilter products={products} selectedIds={selectedProductIds} />

@@ -344,6 +344,9 @@ function revalidateSettingsSurfaces(organizationId: string) {
   updateTag(`settings-${organizationId}`);
   updateTag(`orders-${organizationId}`);
   revalidatePath("/order");
+  revalidatePath("/orders/incoming");
+  revalidatePath("/orders");
+  revalidatePath("/settings/products", "page");
   // Keep SWR revalidation for any stale readers still holding old cache entries
   revalidateTag(`settings-${organizationId}`, "max");
   revalidateTag(`orders-${organizationId}`, "max");

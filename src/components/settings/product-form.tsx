@@ -52,7 +52,7 @@ const ACCEPTED_IMAGE_TYPES = new Set(["image/png", "image/jpeg", "image/webp"]);
 
 // Compress an image file client-side before upload.
 // Resizes to max 1200px on the longest side and re-encodes as JPEG 0.85.
-// Skips small files (â‰¤300 KB) and falls back to the original on any error.
+// Skips small files (<=300 KB) and falls back to the original on any error.
 async function compressImageFile(file: File): Promise<File> {
   if (file.size <= 300 * 1024) return file;
   return new Promise<File>((resolve) => {
@@ -115,9 +115,7 @@ function deriveOrderPreset(min: number, step: number | null): OrderPreset {
   return "custom";
 }
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Inner form body - remounts via `key` when navigating between products
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 type ProductFormBodyProps = {
   categories: SettingsProductCategory[];
   editingProduct: SettingsProduct | null;
@@ -796,7 +794,7 @@ function ProductFormBody({
           ))
           : null}
 
-        {/* â”€â”€ Tab strip â”€â”€ */}
+        {/* Tab strip */}
         <div className="grid shrink-0 grid-cols-2 border-b border-slate-100">
           <button
             type="button"
@@ -1491,9 +1489,7 @@ function ProductFormBody({
   );
 }
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Exported shell - manages navigation, swipe, and modal backdrop
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export function ProductForm({
   categories,
   editingProduct = null,

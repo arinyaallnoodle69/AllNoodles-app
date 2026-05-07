@@ -3,18 +3,23 @@
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import {
-  CheckCircle2,
+  CalendarDays,
+  Camera,
+  Check,
+  ChevronLeft,
+  ChevronRight,
   CirclePlus,
+  Loader2,
   Minus,
   Package2,
   Plus,
   Save,
   Search,
-  Truck,
   X,
+  FileText,
+  AlertTriangle,
 } from "lucide-react";
 import {
-  startTransition,
   useActionState,
   useDeferredValue,
   useEffect,
@@ -22,12 +27,13 @@ import {
   useMemo,
   useRef,
   useState,
+  startTransition,
 } from "react";
 import { receiveStockAction } from "@/app/settings/stock/actions";
 import type { ReceiveStockActionState } from "@/app/settings/stock/actions";
-import { SettingsPanel, SettingsPanelBody, SettingsPanelHeader, settingsFieldLabelClass, settingsInputClass } from "@/components/settings/settings-ui";
-import { StockProductSelect } from "@/components/settings/stock-product-select";
 import type { StockProductOption } from "@/lib/stock/admin";
+import { ThaiDatePicker } from "@/components/ui/thai-date-picker";
+import { getTodayInBangkok } from "@/lib/utils/date-client";
 
 type StockReceiveFormProps = {
   products: StockProductOption[];
@@ -35,26 +41,13 @@ type StockReceiveFormProps = {
   defaultProductId?: string;
 };
 
-type MobileStep = "product" | "quantity" | "review";
+type ReceiveStep = "date" | "select" | "photo" | "review";
 
 const initialReceiveStockState: ReceiveStockActionState = {
   fieldErrors: {},
   message: "",
   status: "idle",
 };
-
-const MAX_MOBILE_PRODUCTS = 50;
-
-function toLocalDatetimeValue(date = new Date()) {
-  const pad = (value: number) => String(value).padStart(2, "0");
-  return [
-    date.getFullYear(), "-",
-    pad(date.getMonth() + 1), "-",
-    pad(date.getDate()), "T",
-    pad(date.getHours()), ":",
-    pad(date.getMinutes()),
-  ].join("");
-}
 
 function formatMoney(value: number) {
   return value.toLocaleString("th-TH", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -64,56 +57,74 @@ function formatQty(value: number, unit: string) {
   return `${value.toLocaleString("th-TH", { maximumFractionDigits: 3 })} ${unit}`;
 }
 
-function parseQty(value: string) {
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : 0;
-}
-
-function ProductThumb({ product, sizeClass = "h-16 w-16" }: { product: StockProductOption; sizeClass?: string }) {
-  return (
-    <div className={`relative flex shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-white ${sizeClass}`}>
-      {product.imageUrl ? (
-        <Image
-          src={product.imageUrl}
-          alt={product.name}
-          fill
-          sizes="96px"
-          className="object-contain p-1.5"
-        />
-      ) : (
-        <Package2 className="h-7 w-7 text-slate-400" strokeWidth={2.2} />
-      )}
-    </div>
-  );
-}
-
 export function StockReceiveForm({ products, returnHref, defaultProductId = "" }: StockReceiveFormProps) {
   const router = useRouter();
   const [actionState, formAction, isPending] = useActionState(receiveStockAction, initialReceiveStockState);
-  const [hasSubmitted, setHasSubmitted] = useState(false);
-  const [selectedProductId, setSelectedProductId] = useState(defaultProductId);
-  const [unitQtys, setUnitQtys] = useState<Record<string, string>>({});
-  const [mobileStep, setMobileStep] = useState<MobileStep>(defaultProductId ? "quantity" : "product");
-  const [mobileQuery, setMobileQuery] = useState("");
+  
+  const [currentStep, setCurrentStep] = useState<ReceiveStep>("date");
+  const [receivedDate, setReceivedDate] = useState(() => getTodayInBangkok());
+  
+  // Multi-product selection state
+  // key: productId, value: record of unitId -> quantity
+  const [selections, setSelections] = useState<Record<string, Record<string, string>>>(() => {
+    if (defaultProductId) {
+      return { [defaultProductId]: {} };
+    }
+    return {};
+  });
+
+  const [receiptImage, setReceiptImage] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [notes, setNotes] = useState("");
-  const hasSubmittedRef = useRef(false);
-  const [receivedAtDefault] = useState(() => toLocalDatetimeValue());
-  const deferredMobileQuery = useDeferredValue(mobileQuery);
+  const [searchQuery, setSearchQuery] = useState("");
+  const deferredQuery = useDeferredValue(searchQuery);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  const selectedProduct = useMemo(
-    () => products.find((product) => product.id === selectedProductId) ?? null,
-    [products, selectedProductId],
-  );
+  const filteredProducts = useMemo(() => {
+    const q = deferredQuery.trim().toLowerCase();
+    if (!q) return products.slice(0, 40);
+    return products.filter(p => 
+      p.name.toLowerCase().includes(q) || p.sku.toLowerCase().includes(q)
+    ).slice(0, 40);
+  }, [deferredQuery, products]);
 
-  const filteredMobileProducts = useMemo(() => {
-    const normalizedQuery = deferredMobileQuery.trim().toLocaleLowerCase("th");
+  const selectedProductList = useMemo(() => {
+    return products.filter(p => selections[p.id]);
+  }, [products, selections]);
 
-    if (!normalizedQuery) return products.slice(0, MAX_MOBILE_PRODUCTS);
+  const calculateProductTotals = (productId: string) => {
+    const product = products.find(p => p.id === productId);
+    if (!product) return { totalBaseQty: 0, totalCost: 0 };
+    
+    let totalBaseQty = 0;
+    let totalCost = 0;
+    const qtys = selections[productId] || {};
+    
+    for (const unit of product.saleUnits) {
+      const val = qtys[unit.id];
+      const qty = val ? Number(val) : 0;
+      if (qty <= 0 || !Number.isFinite(qty)) continue;
+      totalBaseQty += qty * unit.baseUnitQuantity;
+      totalCost += qty * unit.effectiveCostPrice;
+    }
+    return { totalBaseQty, totalCost };
+  };
 
-    return products
-      .filter((product) => `${product.sku} ${product.name}`.toLocaleLowerCase("th").includes(normalizedQuery))
-      .slice(0, MAX_MOBILE_PRODUCTS);
-  }, [deferredMobileQuery, products]);
+  const grandTotals = useMemo(() => {
+    let totalBaseQty = 0;
+    let totalCost = 0;
+    let itemCount = 0;
+
+    for (const productId in selections) {
+      const { totalBaseQty: pQty, totalCost: pCost } = calculateProductTotals(productId);
+      if (pQty > 0) {
+        totalBaseQty += pQty;
+        totalCost += pCost;
+        itemCount++;
+      }
+    }
+    return { totalBaseQty, totalCost, itemCount };
+  }, [selections, products]);
 
   const handleSuccess = useEffectEvent(() => {
     startTransition(() => {
@@ -126,596 +137,375 @@ export function StockReceiveForm({ products, returnHref, defaultProductId = "" }
     if (actionState.status === "success") handleSuccess();
   }, [actionState.status]);
 
-  function closeModal() {
-    router.replace(returnHref);
-  }
-
-  function handleProductChange(productId: string) {
-    setSelectedProductId(productId);
-    setUnitQtys({});
-    setMobileStep(productId ? "quantity" : "product");
-  }
-
-  function handleQtyChange(unitId: string, value: string) {
-    setUnitQtys((prev) => ({ ...prev, [unitId]: value }));
-  }
-
-  function adjustQty(unitId: string, delta: number) {
-    setUnitQtys((prev) => {
-      const current = parseQty(prev[unitId] ?? "");
-      const nextValue = Math.max(0, current + delta);
-      return { ...prev, [unitId]: nextValue > 0 ? String(nextValue) : "" };
+  const toggleProduct = (productId: string) => {
+    setSelections(prev => {
+      const next = { ...prev };
+      if (next[productId]) {
+        delete next[productId];
+      } else {
+        next[productId] = {};
+      }
+      return next;
     });
-  }
+  };
 
-  const baseUnitLabel = selectedProduct?.saleUnits.find((unit) => unit.isDefault)?.label ?? selectedProduct?.unit ?? "";
+  const updateQty = (productId: string, unitId: string, value: string) => {
+    setSelections(prev => ({
+      ...prev,
+      [productId]: {
+        ...(prev[productId] || {}),
+        [unitId]: value
+      }
+    }));
+  };
 
-  const totals = useMemo(() => {
-    if (!selectedProduct || selectedProduct.saleUnits.length === 0) {
-      return { avgCostPerBase: 0, totalBaseQty: 0, totalCost: 0 };
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setReceiptImage(file);
+      const reader = new FileReader();
+      reader.onloadend = () => setImagePreview(reader.result as string);
+      reader.readAsDataURL(file);
     }
-
-    let totalBaseQty = 0;
-    let totalCost = 0;
-
-    for (const unit of selectedProduct.saleUnits) {
-      const qty = parseQty(unitQtys[unit.id] ?? "");
-      if (qty <= 0) continue;
-      totalBaseQty += qty * unit.baseUnitQuantity;
-      totalCost += qty * unit.effectiveCostPrice;
-    }
-
-    return {
-      avgCostPerBase: totalBaseQty > 0 ? totalCost / totalBaseQty : 0,
-      totalBaseQty,
-      totalCost,
-    };
-  }, [selectedProduct, unitQtys]);
-
-  const availableQuantity = selectedProduct
-    ? selectedProduct.onHandQuantity - selectedProduct.reservedQuantity
-    : null;
-  const stockAfterReceive = selectedProduct ? selectedProduct.onHandQuantity + totals.totalBaseQty : 0;
-  const showFeedback = hasSubmitted && actionState.status !== "idle";
-  const showFieldErrors = hasSubmitted && actionState.status === "error";
-  const canSubmit = !isPending && !!selectedProductId && totals.totalBaseQty > 0;
+  };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/45 p-0 md:items-center md:p-4">
-      <div className="flex max-h-[96dvh] w-full max-w-4xl flex-col overflow-hidden rounded-t-[1.6rem] border border-slate-200 bg-white shadow-[0_28px_80px_rgba(15,23,42,0.22)] md:rounded-[1.75rem]">
-        <div className="flex items-start justify-between gap-4 border-b border-slate-100 px-5 py-4 md:px-6 md:py-5">
-          <div className="min-w-0">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
-              รับสินค้าเข้า
-            </p>
-            <div className="mt-1 flex items-center gap-2 text-slate-950">
-              <CirclePlus className="h-5 w-5 text-[#003366] md:h-6 md:w-6" strokeWidth={2.2} />
-              <h3 className="text-xl font-semibold tracking-[-0.02em] md:text-2xl">
-                บันทึกรับสินค้า
-              </h3>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-0 md:p-4 backdrop-blur-[2px] animate-in fade-in duration-300">
+      <div className="flex h-full w-full max-w-4xl flex-col overflow-hidden bg-[#F8FAFC] shadow-[0_40px_120px_rgba(0,0,0,0.3)] md:h-[min(900px,94dvh)] md:rounded-[2.8rem] border border-white/40">
+        
+        {/* Modern Glass Header */}
+        <div className="shrink-0 bg-white/80 backdrop-blur-md px-6 py-6 border-b border-slate-200/60 sticky top-0 z-10">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="h-12 w-12 rounded-2xl bg-[#003366] flex items-center justify-center text-white shadow-lg shadow-[#003366]/20">
+                <CirclePlus className="h-7 w-7" strokeWidth={2.5} />
+              </div>
+              <div>
+                <h3 className="text-2xl font-black tracking-tight text-slate-950">รับสินค้าเข้า</h3>
+                <p className="text-[11px] font-black text-[#003366]/40 uppercase tracking-[0.2em]">{currentStep === 'review' ? 'ยืนยันรายการ' : 'ขั้นตอนที่ ' + (['date', 'select', 'photo', 'review'].indexOf(currentStep) + 1)}</p>
+              </div>
             </div>
-            <p className="mt-1 hidden text-sm leading-6 text-slate-500 md:block">
-              เลือกสินค้า กรอกจำนวนที่รับเข้า แล้วระบบจะคำนวณยอดรวมให้อัตโนมัติ
-            </p>
+            <button onClick={() => router.replace(returnHref)} className="h-11 w-11 flex items-center justify-center rounded-xl hover:bg-slate-100 text-slate-400 transition-all">
+              <X className="h-6 w-6" strokeWidth={3} />
+            </button>
           </div>
-
-          <button
-            type="button"
-            onClick={closeModal}
-            className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 transition hover:bg-slate-50"
-            aria-label="ปิด"
-          >
-            <X className="h-5 w-5" strokeWidth={2.2} />
-          </button>
         </div>
 
-        <form
-          id="receive-stock"
-          action={formAction}
-          onSubmit={() => {
-            if (!hasSubmittedRef.current) {
-              hasSubmittedRef.current = true;
-              setHasSubmitted(true);
-            }
-          }}
-          className="flex min-h-0 flex-1 flex-col"
-        >
-          <input type="hidden" name="productId" value={selectedProductId} />
-          <input type="hidden" name="totalQuantity" value={totals.totalBaseQty} />
-          <input type="hidden" name="baseUnit" value={selectedProduct?.unit ?? ""} />
-          <input type="hidden" name="avgUnitCost" value={totals.avgCostPerBase} />
-          <input type="hidden" name="receivedAt" value={receivedAtDefault} />
-          <input type="hidden" name="supplierName" value="โรงงานหลัก" />
-          <input type="hidden" name="notes" value={notes} />
-
-          {showFeedback ? (
-            <div className="shrink-0 px-5 pt-4 md:px-6 md:pt-6">
-              <div
-                className={`rounded-2xl border px-4 py-3 text-sm ${
-                  actionState.status === "success"
-                    ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                    : "border-red-200 bg-red-50 text-red-700"
-                }`}
-              >
-                {actionState.message}
+        <div className="flex-1 overflow-y-auto px-0 py-8 md:px-6">
+          {/* Step 1: Date */}
+          {currentStep === "date" && (
+            <div className="max-w-xl mx-auto space-y-10 py-10 px-6 animate-in fade-in zoom-in-95 duration-400">
+              <div className="text-center space-y-3">
+                <div className="inline-flex h-20 w-20 items-center justify-center rounded-[2rem] bg-white shadow-xl text-[#003366] mb-4">
+                  <CalendarDays className="h-10 w-10" strokeWidth={2.5} />
+                </div>
+                <h4 className="text-3xl font-black text-slate-900 tracking-tight">เลือกวันที่รับของ</h4>
+                <p className="text-lg font-bold text-slate-400">คุณได้รับสินค้าชุดนี้เข้าคลังเมื่อวันที่เท่าไหร่?</p>
               </div>
-            </div>
-          ) : null}
-
-          <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 md:px-6 md:py-6">
-            <div className="md:hidden">
-              <div className="mb-4 grid grid-cols-3 rounded-2xl bg-slate-100 p-1 text-center text-xs font-bold text-slate-500">
-                {[
-                  ["product", "สินค้า"],
-                  ["quantity", "จำนวน"],
-                  ["review", "ตรวจสอบ"],
-                ].map(([step, label]) => (
-                  <button
-                    key={step}
-                    type="button"
-                    onClick={() => {
-                      if (step === "product") setMobileStep("product");
-                      if (step === "quantity" && selectedProduct) setMobileStep("quantity");
-                      if (step === "review" && canSubmit) setMobileStep("review");
-                    }}
-                    className={`rounded-xl px-2 py-2 transition ${
-                      mobileStep === step ? "bg-white text-[#003366] shadow-sm" : "text-slate-500"
-                    }`}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-
-              {mobileStep === "product" ? (
-                <div className="space-y-3">
-                  <div className="relative">
-                    <Search className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" strokeWidth={2.2} />
-                    <input
-                      value={mobileQuery}
-                      onChange={(event) => setMobileQuery(event.target.value)}
-                      className="h-13 w-full rounded-2xl border border-slate-200 bg-white pl-12 pr-4 text-base font-medium text-slate-950 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-[#003366] focus:ring-4 focus:ring-[#003366]/10"
-                      placeholder="ค้นหาสินค้า"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    {filteredMobileProducts.length > 0 ? (
-                      filteredMobileProducts.map((product) => {
-                        const productAvailableQuantity = product.onHandQuantity - product.reservedQuantity;
-                        const isSelected = product.id === selectedProductId;
-
-                        return (
-                          <button
-                            key={product.id}
-                            type="button"
-                            onClick={() => handleProductChange(product.id)}
-                            className={`flex w-full items-center gap-3 rounded-2xl border px-3 py-3 text-left transition ${
-                              isSelected
-                                ? "border-[#003366] bg-blue-50"
-                                : "border-slate-200 bg-white hover:border-slate-300"
-                            }`}
-                          >
-                            <ProductThumb product={product} sizeClass="h-20 w-20" />
-                            <span className="min-w-0 flex-1">
-                              <span className="block text-base font-bold leading-6 text-slate-950">
-                                {product.name}
-                              </span>
-                              <span className="mt-1 block text-sm font-semibold text-[#003366]">{product.sku}</span>
-                              <span className="mt-1 block text-sm text-slate-500">
-                                พร้อมขาย {formatQty(productAvailableQuantity, product.unit)}
-                              </span>
-                            </span>
-                            {isSelected ? <CheckCircle2 className="h-6 w-6 shrink-0 text-[#003366]" strokeWidth={2.2} /> : null}
-                          </button>
-                        );
-                      })
-                    ) : (
-                      <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-8 text-center text-sm text-slate-500">
-                        ไม่พบสินค้าที่ค้นหา
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ) : null}
-
-              {mobileStep === "quantity" && selectedProduct ? (
-                <div className="space-y-4">
-                  <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white p-3">
-                    <ProductThumb product={selectedProduct} sizeClass="h-20 w-20" />
-                    <div className="min-w-0 flex-1">
-                      <p className="text-base font-bold leading-6 text-slate-950">{selectedProduct.name}</p>
-                      <p className="mt-1 text-sm font-semibold text-[#003366]">{selectedProduct.sku}</p>
-                      <p className="mt-1 text-sm text-slate-500">
-                        คงเหลือ {formatQty(selectedProduct.onHandQuantity, selectedProduct.unit)}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="space-y-3">
-                    {selectedProduct.saleUnits.map((unit) => {
-                      const qty = parseQty(unitQtys[unit.id] ?? "");
-                      const baseQty = qty * unit.baseUnitQuantity;
-
-                      return (
-                        <div key={unit.id} className="rounded-2xl border border-slate-200 bg-white p-4">
-                          <div className="flex items-start justify-between gap-3">
-                            <div>
-                              <div className="flex flex-wrap items-center gap-2">
-                                <p className="text-lg font-bold text-slate-950">{unit.label}</p>
-                                {unit.isDefault ? (
-                                  <span className="rounded-full bg-[#003366] px-2.5 py-1 text-xs font-bold text-white">
-                                    หลัก
-                                  </span>
-                                ) : null}
-                              </div>
-                              <p className="mt-1 text-sm text-slate-500">
-                                {formatMoney(unit.effectiveCostPrice)} บาท / {unit.label}
-                              </p>
-                            </div>
-                            <p className="text-right text-sm font-semibold text-slate-500">
-                              = {baseQty > 0 ? formatQty(baseQty, selectedProduct.unit) : `0 ${selectedProduct.unit}`}
-                            </p>
-                          </div>
-
-                          <div className="mt-4 grid grid-cols-[3.25rem_1fr_3.25rem] items-center gap-3">
-                            <button
-                              type="button"
-                              onClick={() => adjustQty(unit.id, -1)}
-                              className="inline-flex h-13 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-700"
-                              aria-label={`ลดจำนวน ${unit.label}`}
-                            >
-                              <Minus className="h-5 w-5" strokeWidth={2.3} />
-                            </button>
-                            <input
-                              id={`mobile-unit-qty-${unit.id}`}
-                              type="number"
-                              min="0"
-                              step="0.001"
-                              inputMode="decimal"
-                              value={unitQtys[unit.id] ?? ""}
-                              onChange={(event) => handleQtyChange(unit.id, event.target.value)}
-                              className="h-13 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 text-center text-xl font-bold tabular-nums text-slate-950 outline-none transition focus:border-[#003366] focus:bg-white focus:ring-4 focus:ring-[#003366]/10"
-                              placeholder="0"
-                            />
-                            <button
-                              type="button"
-                              onClick={() => adjustQty(unit.id, 1)}
-                              className="inline-flex h-13 items-center justify-center rounded-2xl bg-[#003366] text-white shadow-[0_10px_24px_rgba(0,51,102,0.18)]"
-                              aria-label={`เพิ่มจำนวน ${unit.label}`}
-                            >
-                              <Plus className="h-5 w-5" strokeWidth={2.3} />
-                            </button>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-
-                  {showFieldErrors && actionState.fieldErrors.totalQuantity ? (
-                    <p className="text-sm text-red-600">{actionState.fieldErrors.totalQuantity}</p>
-                  ) : null}
-
-                  <div>
-                    <label className={settingsFieldLabelClass} htmlFor="mobile-receive-notes">
-                      หมายเหตุ
-                    </label>
-                    <textarea
-                      id="mobile-receive-notes"
-                      rows={2}
-                      value={notes}
-                      onChange={(event) => setNotes(event.target.value)}
-                      className={`${settingsInputClass} min-h-20 resize-none`}
-                      placeholder="ถ้ามีหมายเหตุเพิ่มเติม"
-                    />
-                  </div>
-                </div>
-              ) : null}
-
-              {mobileStep === "review" && selectedProduct ? (
-                <div className="space-y-4">
-                  <div className="rounded-[1.25rem] border border-[#003366]/15 bg-blue-50 p-4">
-                    <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#003366]">
-                      สรุปรับเข้า
-                    </p>
-                    <div className="mt-3 flex items-center gap-3">
-                      <ProductThumb product={selectedProduct} sizeClass="h-18 w-18" />
-                      <div className="min-w-0 flex-1">
-                        <p className="text-base font-bold leading-6 text-slate-950">{selectedProduct.name}</p>
-                        <p className="mt-1 text-sm font-semibold text-[#003366]">{selectedProduct.sku}</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="rounded-2xl bg-slate-50 p-4">
-                      <p className="text-xs font-bold text-slate-500">รับเข้า</p>
-                      <p className="mt-1 text-xl font-bold text-slate-950">{formatQty(totals.totalBaseQty, baseUnitLabel)}</p>
-                    </div>
-                    <div className="rounded-2xl bg-slate-50 p-4">
-                      <p className="text-xs font-bold text-slate-500">หลังบันทึก</p>
-                      <p className="mt-1 text-xl font-bold text-[#003366]">{formatQty(stockAfterReceive, selectedProduct.unit)}</p>
-                    </div>
-                    <div className="rounded-2xl bg-slate-50 p-4">
-                      <p className="text-xs font-bold text-slate-500">ต้นทุนรวม</p>
-                      <p className="mt-1 text-xl font-bold text-slate-950">{formatMoney(totals.totalCost)}</p>
-                    </div>
-                    <div className="rounded-2xl bg-slate-50 p-4">
-                      <p className="text-xs font-bold text-slate-500">เฉลี่ย / {baseUnitLabel}</p>
-                      <p className="mt-1 text-xl font-bold text-slate-950">{formatMoney(totals.avgCostPerBase)}</p>
-                    </div>
-                  </div>
-
-                  {notes.trim() ? (
-                    <div className="rounded-2xl border border-slate-200 bg-white p-4">
-                      <p className="text-xs font-bold text-slate-500">หมายเหตุ</p>
-                      <p className="mt-1 text-sm leading-6 text-slate-700">{notes}</p>
-                    </div>
-                  ) : null}
-                </div>
-              ) : null}
-            </div>
-
-            <div className="hidden space-y-6 md:block">
-              <SettingsPanel>
-                <SettingsPanelHeader
-                  icon="inventory"
-                  title="เลือกรายการสินค้า"
-                  description="ค้นหาจากรหัสหรือชื่อสินค้าเพื่อรับเข้าสต็อค"
+              <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100">
+                <ThaiDatePicker
+                  id="receive-date"
+                  name="receivedDate"
+                  defaultValue={receivedDate}
+                  onChange={setReceivedDate}
+                  placeholder="แตะเลือกวันที่"
                 />
-                <SettingsPanelBody className="space-y-5">
-                  <div>
-                    <label className={settingsFieldLabelClass} htmlFor="receive-product">
-                      สินค้า
-                    </label>
-                    <StockProductSelect
-                      id="receive-product"
-                      products={products}
-                      value={selectedProductId}
-                      onChange={handleProductChange}
-                    />
-                    {showFieldErrors && actionState.fieldErrors.productId ? (
-                      <p className="mt-2 text-sm text-red-600">{actionState.fieldErrors.productId}</p>
-                    ) : null}
-                  </div>
+              </div>
+            </div>
+          )}
 
-                  {selectedProduct ? (
-                    <div className="grid grid-cols-3 gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                      <div>
-                        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">คงเหลือ</p>
-                        <p className="mt-1 text-lg font-semibold text-slate-950">
-                          {formatQty(selectedProduct.onHandQuantity, selectedProduct.unit)}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">จองแล้ว</p>
-                        <p className="mt-1 text-lg font-semibold text-slate-950">
-                          {formatQty(selectedProduct.reservedQuantity, selectedProduct.unit)}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">พร้อมขาย</p>
-                        <p className="mt-1 text-lg font-semibold text-[#003366]">
-                          {availableQuantity !== null ? formatQty(availableQuantity, selectedProduct.unit) : "-"}
-                        </p>
-                      </div>
-                    </div>
-                  ) : null}
-                </SettingsPanelBody>
-              </SettingsPanel>
-
-              {selectedProduct ? (
-                <SettingsPanel>
-                  <SettingsPanelHeader
-                    icon="inventory"
-                    title="จำนวนรับเข้าตามหน่วย"
-                    description="กรอกจำนวนเฉพาะหน่วยที่รับมา ระบบจะรวมเป็นหน่วยหลักให้อัตโนมัติ"
+          {/* Step 2: Select & Qty */}
+          {currentStep === "select" && (
+            <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-400">
+              <div className="flex gap-4 sticky top-0 z-20 bg-[#F8FAFC]/90 backdrop-blur-sm pb-4 px-4 md:px-0">
+                <div className="relative flex-1">
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+                  <input
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="ค้นหาสินค้าที่ต้องการรับเข้า..."
+                    className="w-full h-14 rounded-2xl bg-white border-2 border-slate-100 pl-12 pr-4 text-lg font-bold text-slate-900 shadow-sm focus:border-[#003366]/30 outline-none transition-all"
                   />
-                  <SettingsPanelBody className="space-y-3">
-                    {selectedProduct.saleUnits.map((unit) => {
-                      const qty = parseQty(unitQtys[unit.id] ?? "");
-                      const baseQty = qty * unit.baseUnitQuantity;
-                      const hasQty = qty > 0;
+                </div>
+                {grandTotals.itemCount > 0 && (
+                  <div className="hidden sm:flex h-14 items-center px-6 rounded-2xl bg-[#003366] text-white font-black shadow-lg">
+                    เลือกแล้ว {grandTotals.itemCount} รายการ
+                  </div>
+                )}
+              </div>
 
-                      return (
-                        <div key={unit.id} className="rounded-2xl border border-slate-200 bg-slate-50/70 px-5 py-4">
-                          <div className="grid grid-cols-[1fr_auto] items-center gap-4">
-                            <div className="grid gap-4 sm:grid-cols-2">
-                              <div>
-                                <div className="mb-1.5 flex items-center gap-2">
-                                  <label className={settingsFieldLabelClass} htmlFor={`unit-qty-${unit.id}`}>
-                                    จำนวน ({unit.label})
-                                  </label>
-                                  {unit.isDefault ? (
-                                    <span className="rounded-full bg-[#003366] px-2 py-0.5 text-[10px] font-bold leading-none text-white">
-                                      หลัก
-                                    </span>
-                                  ) : null}
-                                </div>
-                                <input
-                                  id={`unit-qty-${unit.id}`}
-                                  type="number"
-                                  min="0"
-                                  step="0.001"
-                                  value={unitQtys[unit.id] ?? ""}
-                                  onChange={(event) => handleQtyChange(unit.id, event.target.value)}
-                                  className={settingsInputClass}
-                                  placeholder="0"
-                                />
-                              </div>
-
-                              <div>
-                                <p className={`${settingsFieldLabelClass} mb-1.5`}>
-                                  ต้นทุน / {unit.label}
-                                </p>
-                                <div className="flex h-11 items-center rounded-xl border border-slate-200 bg-white px-4 text-base font-bold text-slate-950">
-                                  {formatMoney(unit.effectiveCostPrice)} บาท
-                                </div>
-                                {!unit.isDefault ? (
-                                  <p className="mt-1 text-xs text-slate-400">
-                                    1 {unit.label} = {unit.baseUnitQuantity} {selectedProduct.unit}
-                                  </p>
-                                ) : null}
-                              </div>
+              <div className="grid gap-0.5 sm:gap-4">
+                {filteredProducts.map((p) => {
+                  const isSelected = !!selections[p.id];
+                  return (
+                    <div
+                      key={p.id}
+                      className={`group relative flex flex-col border-y transition-all duration-300 sm:rounded-[2rem] sm:border-2 ${
+                        isSelected 
+                          ? "border-[#003366]/50 bg-white shadow-lg z-10" 
+                          : "border-slate-100 bg-white hover:bg-slate-50"
+                      } -mx-0 sm:mx-0`}
+                    >
+                      <button
+                        onClick={() => toggleProduct(p.id)}
+                        className="flex items-center gap-4 p-5 text-left w-full sm:p-6"
+                      >
+                        <div className={`h-5 w-5 shrink-0 flex items-center justify-center rounded-md border-2 transition-all ${
+                          isSelected ? "bg-[#003366] border-[#003366] text-white" : "border-slate-200 text-transparent"
+                        }`}>
+                          <Check className="h-3 w-3" strokeWidth={6} />
+                        </div>
+                        <div className="relative h-20 w-20 sm:h-24 sm:w-24 shrink-0 overflow-hidden rounded-2xl">
+                          {p.imageUrl ? (
+                            <Image src={p.imageUrl} alt={p.name} fill className="object-contain" />
+                          ) : (
+                            <div className="flex h-full w-full items-center justify-center bg-slate-50/50">
+                              <Package2 className="h-8 w-8 text-slate-200" />
                             </div>
-
-                            <div className="min-w-[5rem] text-right">
-                              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
-                                = {selectedProduct.unit}
-                              </p>
-                              <p className={`mt-0.5 text-lg font-bold tabular-nums ${hasQty ? "text-slate-950" : "text-slate-300"}`}>
-                                {hasQty ? baseQty.toLocaleString("th-TH", { maximumFractionDigits: 3 }) : "-"}
-                              </p>
-                            </div>
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[10px] font-black text-[#003366]/30 uppercase tracking-[0.2em] leading-none mb-1.5">{p.sku}</p>
+                          <p className="text-lg font-black text-slate-950 leading-tight line-clamp-2">{p.name}</p>
+                          <div className="mt-2 flex items-center gap-2">
+                            <span className="text-xs font-bold text-slate-400">สต็อก: {p.onHandQuantity} {p.unit}</span>
+                            {isSelected && (
+                              <span className="h-1.5 w-1.5 rounded-full bg-[#003366] animate-pulse" />
+                            )}
                           </div>
+                        </div>
+                      </button>
+
+                      {isSelected && (
+                        <div className="px-5 pb-8 pt-2 space-y-5 animate-in fade-in slide-in-from-top-2 duration-300 sm:px-8">
+                          <div className="h-px bg-slate-100" />
+                          <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+                            {p.saleUnits.map(unit => (
+                              <div key={unit.id} className="bg-slate-50/80 rounded-3xl p-5 border border-slate-100 transition-all hover:bg-slate-50">
+                                <div className="flex justify-between items-center mb-3">
+                                  <label className="text-[14px] font-black text-slate-600 uppercase tracking-wider">{unit.label}</label>
+                                  <span className="text-[11px] font-black text-[#003366]/40 bg-white px-2 py-0.5 rounded-lg border border-slate-100">฿{unit.effectiveCostPrice}</span>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                  <button 
+                                    onClick={() => updateQty(p.id, unit.id, String(Math.max(0, Number(selections[p.id]?.[unit.id] ?? 0) - 1)))}
+                                    className="h-12 w-12 shrink-0 flex items-center justify-center rounded-2xl bg-white text-slate-400 shadow-sm border border-slate-200 active:scale-90 transition-all"
+                                  >
+                                    <Minus className="h-6 w-6" strokeWidth={3} />
+                                  </button>
+                                  <input
+                                    type="number"
+                                    inputMode="decimal"
+                                    value={selections[p.id]?.[unit.id] ?? ""}
+                                    onChange={(e) => updateQty(p.id, unit.id, e.target.value)}
+                                    className="w-full h-12 bg-transparent text-center text-2xl font-black text-slate-950 outline-none"
+                                    placeholder="0"
+                                  />
+                                  <button 
+                                    onClick={() => updateQty(p.id, unit.id, String(Number(selections[p.id]?.[unit.id] ?? 0) + 1))}
+                                    className="h-12 w-12 shrink-0 flex items-center justify-center rounded-2xl bg-[#003366] text-white shadow-lg shadow-[#003366]/10 active:scale-90 transition-all"
+                                  >
+                                    <Plus className="h-6 w-6" strokeWidth={3} />
+                                  </button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Step 3: Photo */}
+          {currentStep === "photo" && (
+            <div className="max-w-xl mx-auto space-y-10 py-10 px-6 animate-in fade-in zoom-in-95 duration-400">
+              <div className="text-center space-y-3">
+                <div className="inline-flex h-20 w-20 items-center justify-center rounded-[2rem] bg-white shadow-xl text-[#003366] mb-4">
+                  <Camera className="h-10 w-10" strokeWidth={2.5} />
+                </div>
+                <h4 className="text-3xl font-black text-slate-900 tracking-tight">ถ่ายรูปบิลหรือใบรับของ</h4>
+                <p className="text-lg font-bold text-slate-400">อัปโหลดภาพเพื่อใช้เป็นหลักฐานอ้างอิง</p>
+              </div>
+
+              <div className="relative">
+                <input type="file" accept="image/*" className="hidden" ref={fileInputRef} onChange={handleImageChange} />
+                {!imagePreview ? (
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="flex w-full flex-col items-center justify-center gap-6 rounded-[3.5rem] border-4 border-dashed border-slate-200 bg-white py-24 text-slate-400 transition-all hover:border-[#003366]/20 hover:bg-white/50 group"
+                  >
+                    <div className="h-24 w-24 flex items-center justify-center rounded-full bg-slate-50 text-[#003366] shadow-inner transition-transform group-hover:scale-110">
+                      <Camera className="h-12 w-12" strokeWidth={2} />
+                    </div>
+                    <div className="text-center">
+                      <p className="text-2xl font-black text-slate-700">แตะเพื่อถ่ายรูปบิล</p>
+                      <p className="text-base font-bold text-slate-400 mt-2">หรือเลือกรูปภาพจากเครื่อง</p>
+                    </div>
+                  </button>
+                ) : (
+                  <div className="relative aspect-[3/4] w-full max-w-sm mx-auto overflow-hidden rounded-[3rem] border-[12px] border-white shadow-[0_40px_80px_rgba(0,0,0,0.2)]">
+                    <Image src={imagePreview} alt="Preview" fill className="object-cover" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                    <button
+                      onClick={() => { setReceiptImage(null); setImagePreview(null); }}
+                      className="absolute right-6 top-6 h-14 w-14 flex items-center justify-center rounded-full bg-rose-600 text-white shadow-2xl active:scale-90 transition-all"
+                    >
+                      <X className="h-8 w-8" strokeWidth={3} />
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Step 4: Summary Review */}
+          {currentStep === "review" && (
+            <div className="space-y-6 animate-in fade-in zoom-in-95 duration-500">
+              {/* Official Summary Card */}
+              <div className="bg-white rounded-[2rem] border-2 border-slate-200 p-6 sm:p-8 shadow-sm">
+                <div className="flex items-center justify-between border-b-2 border-slate-100 pb-4 mb-6">
+                  <div>
+                    <h4 className="text-xl font-black text-slate-900">สรุปการรับเข้าสินค้า</h4>
+                    <p className="text-sm font-bold text-slate-500">ตรวจสอบความถูกต้องก่อนบันทึก</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">วันที่รับของ</p>
+                    <p className="text-lg font-black text-[#003366]">{receivedDate}</p>
+                  </div>
+                </div>
+
+                {/* Primary Stats - Clear & Big */}
+                <div className="grid grid-cols-2 gap-4 mb-6">
+                  <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 text-center">
+                    <p className="text-xs font-bold text-slate-500 mb-1">จำนวนรวมทั้งหมด</p>
+                    <p className="text-2xl font-black text-slate-900 tabular-nums">
+                      {grandTotals.totalBaseQty.toLocaleString()}
+                    </p>
+                  </div>
+                  <div className="bg-[#003366]/5 p-4 rounded-2xl border border-[#003366]/10 text-center">
+                    <p className="text-xs font-bold text-[#003366]/60 mb-1">มูลค่ารวม (บาท)</p>
+                    <p className="text-2xl font-black text-[#003366] tabular-nums">
+                      ฿{formatMoney(grandTotals.totalCost)}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Item List Table Style */}
+                <div className="space-y-2">
+                  <p className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1 mb-2">รายการสินค้า ({grandTotals.itemCount})</p>
+                  <div className="divide-y divide-slate-100 border-t border-slate-100">
+                    {selectedProductList.map(p => {
+                      const { totalBaseQty } = calculateProductTotals(p.id);
+                      if (totalBaseQty <= 0) return null;
+                      return (
+                        <div key={p.id} className="py-3 flex items-center justify-between gap-4">
+                          <div className="min-w-0 flex-1">
+                            <p className="text-base font-black text-slate-950 truncate leading-tight">{p.name}</p>
+                            <p className="text-xs font-bold text-slate-400">{p.sku}</p>
+                          </div>
+                          <p className="text-base font-black text-slate-900 tabular-nums shrink-0">
+                            {formatQty(totalBaseQty, p.unit)}
+                          </p>
                         </div>
                       );
                     })}
-
-                    {totals.totalBaseQty > 0 ? (
-                      <div className="rounded-2xl border border-[#003366]/25 bg-blue-50 px-5 py-4">
-                        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#003366]">
-                          ยอดรวมที่จะรับเข้า
-                        </p>
-                        <div className="mt-2 flex flex-wrap items-end justify-between gap-4">
-                          <div>
-                            <p className="text-2xl font-bold text-slate-950">
-                              {formatQty(totals.totalBaseQty, baseUnitLabel)}
-                            </p>
-                            <p className="mt-0.5 text-sm text-slate-500">
-                              ต้นทุนเฉลี่ย {formatMoney(totals.avgCostPerBase)} บาท / {baseUnitLabel}
-                            </p>
-                          </div>
-                          <div className="text-right">
-                            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
-                              ต้นทุนรวม
-                            </p>
-                            <p className="text-xl font-bold text-slate-950">
-                              {formatMoney(totals.totalCost)} บาท
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4 text-sm text-slate-400">
-                        กรอกจำนวนอย่างน้อยหนึ่งหน่วยเพื่อดูยอดรวม
-                      </div>
-                    )}
-
-                    {showFieldErrors && actionState.fieldErrors.totalQuantity ? (
-                      <p className="text-sm text-red-600">{actionState.fieldErrors.totalQuantity}</p>
-                    ) : null}
-
-                    <div>
-                      <label className={settingsFieldLabelClass} htmlFor="receive-notes">
-                        หมายเหตุ
-                      </label>
-                      <textarea
-                        id="receive-notes"
-                        rows={3}
-                        value={notes}
-                        onChange={(event) => setNotes(event.target.value)}
-                        className={`${settingsInputClass} min-h-28 resize-y`}
-                        placeholder="เช่น รับเข้าเพิ่มสำหรับรอบส่งวันพรุ่งนี้"
-                      />
-                    </div>
-                  </SettingsPanelBody>
-                </SettingsPanel>
-              ) : null}
-
-              <div className="rounded-2xl border border-sky-200 bg-sky-50/80 px-4 py-4 text-sm leading-6 text-sky-800">
-                <div className="flex items-start gap-3">
-                  <Truck className="mt-0.5 h-5 w-5 shrink-0" strokeWidth={2.2} />
-                  <p>
-                    เมื่อบันทึกรับเข้า ระบบจะเพิ่มจำนวนคงเหลือ อัปเดตต้นทุนเฉลี่ย และเก็บประวัติการเคลื่อนไหวสต็อคให้อัตโนมัติ
-                  </p>
+                  </div>
                 </div>
               </div>
+
+              {/* Receipt Image - Professional Placement */}
+              {imagePreview && (
+                <div className="bg-white rounded-[2rem] border-2 border-slate-200 p-4 shadow-sm flex items-center gap-4">
+                  <div className="relative h-20 w-20 rounded-xl overflow-hidden border border-slate-100 shrink-0">
+                    <Image src={imagePreview} alt="Receipt" fill className="object-cover" />
+                  </div>
+                  <div className="flex-1">
+                    <h5 className="text-sm font-black text-slate-900">มีรูปถ่ายบิลแนบไว้</h5>
+                    <p className="text-xs font-bold text-emerald-600">รูปภาพถูกบันทึกเป็นหลักฐานแล้ว</p>
+                  </div>
+                  <button 
+                    onClick={() => setCurrentStep("photo")}
+                    className="h-10 px-4 rounded-xl bg-slate-50 text-xs font-black text-slate-600 border border-slate-200 active:scale-95 transition-all"
+                  >
+                    ดู/แก้ไข
+                  </button>
+                </div>
+              )}
             </div>
-          </div>
+          )}
+        </div>
 
-          <div className="shrink-0 border-t border-slate-100 bg-white px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] md:px-6 md:py-4">
-            <div className="flex items-center justify-between gap-3 md:hidden">
-              {mobileStep === "product" ? (
-                <>
-                  <button
-                    type="button"
-                    onClick={closeModal}
-                    className="h-12 rounded-xl border border-slate-200 px-4 text-sm font-bold text-slate-600"
-                  >
-                    ยกเลิก
-                  </button>
-                  <button
-                    type="button"
-                    disabled={!selectedProduct}
-                    onClick={() => setMobileStep("quantity")}
-                    className="h-12 flex-1 rounded-xl bg-[#003366] px-5 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    ถัดไป
-                  </button>
-                </>
-              ) : null}
-
-              {mobileStep === "quantity" ? (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => setMobileStep("product")}
-                    className="h-12 rounded-xl border border-slate-200 px-4 text-sm font-bold text-slate-600"
-                  >
-                    ย้อนกลับ
-                  </button>
-                  <button
-                    type="button"
-                    disabled={totals.totalBaseQty <= 0}
-                    onClick={() => setMobileStep("review")}
-                    className="h-12 flex-1 rounded-xl bg-[#003366] px-5 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    ตรวจสอบ
-                  </button>
-                </>
-              ) : null}
-
-              {mobileStep === "review" ? (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => setMobileStep("quantity")}
-                    className="h-12 rounded-xl border border-slate-200 px-4 text-sm font-bold text-slate-600"
-                  >
-                    แก้ไข
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={!canSubmit}
-                    className="inline-flex h-12 flex-1 items-center justify-center gap-2 rounded-xl bg-[#003366] px-5 text-sm font-bold text-white shadow-[0_12px_30px_rgba(0,51,102,0.22)] disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    <Save className="h-4 w-4" strokeWidth={2.2} />
-                    บันทึก
-                  </button>
-                </>
-              ) : null}
-            </div>
-
-            <div className="hidden items-center justify-end gap-3 md:flex">
+        {/* Action Bar - Optimized for Mobile & Fit */}
+        <div className="shrink-0 bg-white border-t border-slate-200/60 p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))]">
+          <div className="flex gap-3">
+            {currentStep !== "date" && (
               <button
                 type="button"
-                onClick={closeModal}
-                className="rounded-xl border border-slate-200 px-4 py-3 text-sm font-medium text-slate-600 transition hover:bg-slate-50"
+                onClick={() => {
+                  const steps: ReceiveStep[] = ["date", "select", "photo", "review"];
+                  setCurrentStep(steps[steps.indexOf(currentStep) - 1]);
+                }}
+                className="h-12 w-16 flex items-center justify-center rounded-xl bg-slate-100 text-slate-500 transition-all active:scale-95"
               >
-                ยกเลิก
+                <ChevronLeft className="h-6 w-6" strokeWidth={3} />
               </button>
+            )}
+            
+            {currentStep !== "review" ? (
               <button
-                type="submit"
-                disabled={!canSubmit}
-                className="inline-flex items-center gap-2 rounded-xl bg-[#003366] px-5 py-3 text-sm font-medium text-white shadow-[0_12px_30px_rgba(0,51,102,0.22)] transition hover:bg-[#002244] disabled:cursor-not-allowed disabled:opacity-60"
+                type="button"
+                disabled={currentStep === 'select' && grandTotals.itemCount === 0}
+                onClick={() => {
+                  const steps: ReceiveStep[] = ["date", "select", "photo", "review"];
+                  setCurrentStep(steps[steps.indexOf(currentStep) + 1]);
+                }}
+                className="flex-1 h-12 flex items-center justify-center gap-2 rounded-xl bg-[#003366] text-base font-black text-white shadow-lg shadow-[#003366]/20 transition-all active:scale-[0.98] disabled:opacity-40"
               >
-                <Save className="h-4 w-4" strokeWidth={2.2} />
-                บันทึกรับเข้า
+                ถัดไป
+                <ChevronRight className="h-5 w-5" strokeWidth={3} />
               </button>
-            </div>
+            ) : (
+              <form action={formAction} className="flex-1 flex">
+                {/* Bundle all items into a single JSON string for the action */}
+                <input 
+                  type="hidden" 
+                  name="itemsJson" 
+                  value={JSON.stringify(selectedProductList.map(p => {
+                    const { totalBaseQty, totalCost } = calculateProductTotals(p.id);
+                    return {
+                      productId: p.id,
+                      quantityReceived: totalBaseQty,
+                      unit: p.unit,
+                      unitCost: totalBaseQty > 0 ? totalCost / totalBaseQty : 0
+                    };
+                  }).filter(item => item.quantityReceived > 0))} 
+                />
+                
+                <input type="hidden" name="receivedAt" value={receivedDate} />
+                <input type="hidden" name="notes" value="" />
+                {receiptImage && <input type="file" name="receiptImage" className="hidden" ref={(el) => { if (el) { const data = new DataTransfer(); data.items.add(receiptImage); el.files = data.files; } }} />}
+                
+                <button
+                  type="submit"
+                  disabled={isPending || grandTotals.itemCount === 0}
+                  className="flex-1 h-12 flex items-center justify-center gap-2 rounded-xl bg-[#003366] text-base font-black text-white shadow-xl shadow-[#003366]/20 transition-all active:scale-[0.98] disabled:opacity-50"
+                >
+                  {isPending ? (
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                  ) : (
+                    <Save className="h-5 w-5" strokeWidth={2.5} />
+                  )}
+                  {isPending ? "กำลังบันทึก..." : "ยืนยันและบันทึกข้อมูล"}
+                </button>
+              </form>
+            )}
           </div>
-        </form>
+        </div>
       </div>
     </div>
   );

@@ -1,4 +1,4 @@
-﻿import "server-only";
+import "server-only";
 
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
@@ -31,6 +31,7 @@ type SaleUnitRow = {
   step_order_qty: number | string | null;
   unit_label: string;
 };
+type VehicleRow = { id: string; name: string };
 
 // Typed admin client
 
@@ -46,6 +47,7 @@ type ManageAdmin = ReturnType<typeof getSupabaseAdmin> & {
   from(table: "customers"): { select: (cols: string) => SelectChain<CustomerRow> };
   from(table: "products"): { select: (cols: string) => SelectChain<ProductRow> };
   from(table: "product_sale_units"): { select: (cols: string) => SelectChain<SaleUnitRow> };
+  from(table: "vehicles"): { select: (cols: string) => SelectChain<VehicleRow> };
 };
 
 const codeCollator = new Intl.Collator("th", {
@@ -96,6 +98,8 @@ function compareProductSku(left: OrderProductOption, right: OrderProductOption) 
 
 export type OrderCustomerOption = { code: string; id: string; name: string };
 
+export type OrderVehicleOption = { id: string; name: string };
+
 export type OrderProductOption = {
   baseCostPrice: number;
   categoryIds: string[];
@@ -134,40 +138,62 @@ export async function getCustomersForOrder(orgId: string): Promise<OrderCustomer
     .toSorted(compareCustomerCode);
 }
 
+export async function getVehiclesForOrder(orgId: string): Promise<OrderVehicleOption[]> {
+  const admin = getSupabaseAdmin() as unknown as ManageAdmin;
+  const { data } = await admin
+    .from("vehicles")
+    .select("id, name")
+    .eq("organization_id", orgId)
+    .eq("is_active", true)
+    .order("sort_order", { ascending: true });
+
+  return (data ?? []).map((vehicle) => ({
+    id: vehicle.id,
+    name: vehicle.name,
+  }));
+}
+
 export async function getProductsForOrder(orgId: string): Promise<OrderProductOption[]> {
   const admin = getSupabaseAdmin();
 
   const [productsRes, saleUnitsRes, productImagesRes, categoriesRes, categoryItemsRes] =
     await Promise.all([
-    admin
-      .from("products")
-      .select("id, name, sku, unit, stock_quantity, cost_price")
-      .eq("organization_id", orgId)
-      .eq("is_active", true)
-      .order("name", { ascending: true }),
-    admin
-      .from("product_sale_units")
-      .select("id, product_id, unit_label, base_unit_quantity, is_default, min_order_qty, step_order_qty, cost_mode, fixed_cost_price")
-      .eq("organization_id", orgId)
-      .eq("is_active", true)
-      .order("sort_order", { ascending: true }),
-    admin
-      .from("product_images")
-      .select("product_id, public_url, sort_order")
-      .eq("organization_id", orgId)
-      .order("sort_order", { ascending: true }),
-    admin
-      .from("product_categories")
-      .select("id, name, sort_order")
-      .eq("organization_id", orgId)
-      .eq("is_active", true)
-      .order("sort_order", { ascending: true }),
-    admin
-      .from("product_category_items")
-      .select("product_category_id, product_id")
-      .eq("organization_id", orgId)
-      .order("created_at", { ascending: true }),
-  ]);
+      admin
+        .from("products")
+        .select("id, name, sku, unit, stock_quantity, cost_price")
+        .eq("organization_id", orgId)
+        .eq("is_active", true)
+        .order("name", { ascending: true }),
+      admin
+        .from("product_sale_units")
+        .select(
+          "id, product_id, unit_label, base_unit_quantity, is_active, is_default, sort_order, cost_mode, fixed_cost_price, min_order_qty, step_order_qty",
+        )
+        .eq("organization_id", orgId)
+        .eq("is_active", true)
+        .order("sort_order", { ascending: true }),
+      admin
+        .from("product_images")
+        .select("product_id, public_url, sort_order")
+        .eq("organization_id", orgId)
+        .order("sort_order", { ascending: true }),
+      admin
+        .from("product_categories")
+        .select("id, name, sort_order")
+        .eq("organization_id", orgId)
+        .eq("is_active", true)
+        .order("sort_order", { ascending: true }),
+      admin
+        .from("product_category_items")
+        .select("product_category_id, product_id")
+        .eq("organization_id", orgId)
+        .order("created_at", { ascending: true }),
+    ]);
+
+  if (productsRes.error) {
+    console.error("[getProductsForOrder] Database Error:", productsRes.error);
+    return [];
+  }
 
   const byProduct = new Map<string, OrderProductOption["saleUnits"]>();
   for (const u of saleUnitsRes.data ?? []) {
@@ -222,18 +248,23 @@ export async function getProductsForOrder(orgId: string): Promise<OrderProductOp
     categoryNamesByProductId.set(item.product_id, currentNames);
   }
 
-  const mapped = (productsRes.data ?? []).map((p) => ({
-    baseCostPrice: Number(p.cost_price ?? 0),
-    categoryIds: categoryIdsByProductId.get(p.id) ?? [],
-    categoryNames: categoryNamesByProductId.get(p.id) ?? [],
-    id: p.id,
-    imageUrl: firstImageByProductId.get(p.id) ?? null,
-    name: p.name,
-    saleUnits: byProduct.get(p.id) ?? [],
-    sku: p.sku,
-    stockQuantity: Number(p.stock_quantity),
-    unit: p.unit,
-  }));
+  const mapped = (productsRes.data ?? []).map((p) => {
+    const baseCostPrice = Number(p.cost_price ?? 0);
+    return {
+      baseCostPrice,
+      categoryIds: categoryIdsByProductId.get(p.id) ?? [],
+      categoryNames: categoryNamesByProductId.get(p.id) ?? [],
+      id: p.id,
+      imageUrl: firstImageByProductId.get(p.id) ?? null,
+      name: p.name,
+      saleUnits: byProduct.get(p.id) ?? [],
+      sku: p.sku,
+      stockQuantity: Number(p.stock_quantity),
+      unit: p.unit,
+    };
+  });
+
+  console.log(`[getProductsForOrder] Success! Mapped ${mapped.length} products. Sample baseCostPrice:`, mapped[0]?.baseCostPrice);
 
   return mapped.toSorted(compareProductSku);
 }

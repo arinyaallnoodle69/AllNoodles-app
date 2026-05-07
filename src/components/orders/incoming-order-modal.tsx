@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition } from "react";
+import dynamic from "next/dynamic";
+import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import {
@@ -17,11 +18,25 @@ import {
   XCircle,
 } from "lucide-react";
 import type { OrderDetailData, IncomingOrderListItem } from "@/lib/orders/detail";
+import type { OrderProductOption } from "@/lib/orders/manage";
+import type { AddedOrderItemDraft } from "@/components/orders/order-add-product-picker";
 import {
+  addOrderItemAction,
   cancelOrderAction,
   removeOrderItemAction,
   updateOrderItemQtyAction,
 } from "@/app/orders/incoming/actions";
+
+const OrderAddProductPicker = dynamic(
+  () => import("@/components/orders/order-add-product-picker").then((mod) => mod.OrderAddProductPicker),
+  {
+    loading: () => (
+      <div className="rounded-[1.35rem] border border-slate-200 bg-white px-4 py-6 text-center text-sm font-semibold text-slate-700 shadow-sm">
+        กำลังโหลดตัวเลือกสินค้า...
+      </div>
+    ),
+  },
+);
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -76,16 +91,27 @@ function ItemsViewList({ detail }: { detail: OrderDetailData }) {
 
 // ─── Edit items panel ─────────────────────────────────────────────────────────
 
-function EditItemsPanel({ detail, onDone }: { detail: OrderDetailData; onDone: () => void }) {
+function EditItemsPanel({
+  detail,
+  onDone,
+  products,
+}: {
+  detail: OrderDetailData;
+  onDone: () => void;
+  products: OrderProductOption[];
+}) {
   const [pending, startTransition] = useTransition();
   const [quantities, setQuantities] = useState<Record<string, number>>(
     Object.fromEntries(detail.items.map((i) => [i.id, i.quantity])),
   );
   const [removed, setRemoved] = useState<Set<string>>(new Set());
+  const [addedItems, setAddedItems] = useState<AddedOrderItemDraft[]>([]);
+  const [error, setError] = useState<string | null>(null);
 
   const activeItems = detail.items.filter((i) => !removed.has(i.id));
 
   function handleQty(itemId: string, delta: number) {
+    setError(null);
     setQuantities((prev) => ({ ...prev, [itemId]: Math.max(1, (prev[itemId] ?? 1) + delta) }));
   }
 
@@ -94,7 +120,11 @@ function EditItemsPanel({ detail, onDone }: { detail: OrderDetailData; onDone: (
       for (const itemId of removed) {
         const fd = new FormData();
         fd.set("itemId", itemId);
-        await removeOrderItemAction(fd);
+        const result = await removeOrderItemAction(fd);
+        if ("error" in result) {
+          setError(result.error);
+          return;
+        }
       }
       for (const item of detail.items.filter((i) => !removed.has(i.id))) {
         const newQty = quantities[item.id] ?? item.quantity;
@@ -102,7 +132,24 @@ function EditItemsPanel({ detail, onDone }: { detail: OrderDetailData; onDone: (
           const fd = new FormData();
           fd.set("itemId", item.id);
           fd.set("quantity", String(newQty));
-          await updateOrderItemQtyAction(fd);
+          const result = await updateOrderItemQtyAction(fd);
+          if ("error" in result) {
+            setError(result.error);
+            return;
+          }
+        }
+      }
+      for (const item of addedItems) {
+        const fd = new FormData();
+        fd.set("orderId", detail.id);
+        fd.set("productId", item.productId);
+        fd.set("productSaleUnitId", item.productSaleUnitId ?? "");
+        fd.set("quantity", String(item.quantity));
+        fd.set("unitPrice", String(item.unitPrice));
+        const result = await addOrderItemAction(fd);
+        if ("error" in result) {
+          setError(`${item.productName}: ${result.error}`);
+          return;
         }
       }
       onDone();
@@ -111,10 +158,65 @@ function EditItemsPanel({ detail, onDone }: { detail: OrderDetailData; onDone: (
 
   return (
     <div className="flex flex-col gap-3">
+      <OrderAddProductPicker
+        addedItems={addedItems}
+        customerId={detail.customer.id}
+        onAddMany={(items) => {
+          setError(null);
+          setAddedItems((current) => [...current, ...items]);
+        }}
+        products={products}
+      />
+
+      {error ? (
+        <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700">
+          {error}
+        </div>
+      ) : null}
+
+      {addedItems.length > 0 ? (
+        <div className="space-y-2 rounded-[1.35rem] border border-emerald-100 bg-emerald-50/60 p-3">
+          <p className="text-xs font-bold uppercase tracking-[0.12em] text-emerald-700">
+            รายการใหม่
+          </p>
+          {addedItems.map((item) => (
+            <div key={item.key} className="flex items-center gap-3 rounded-2xl bg-white px-3 py-2 shadow-sm">
+              <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-xl bg-slate-50">
+                {item.imageUrl ? (
+                  <Image src={item.imageUrl} alt={item.productName} fill sizes="40px" className="object-contain" />
+                ) : (
+                  <div className="flex h-full items-center justify-center">
+                    <Package2 className="h-5 w-5 text-slate-300" strokeWidth={1.8} />
+                  </div>
+                )}
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="whitespace-normal break-words text-sm font-semibold leading-snug text-slate-900">
+                  {item.productName}
+                </p>
+                <p className="mt-0.5 text-xs font-medium text-slate-500">
+                  {item.quantity.toLocaleString("th-TH")} {item.unitLabel} · {formatTHB(item.unitPrice)} ฿
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() =>
+                  setAddedItems((current) => current.filter((draft) => draft.key !== item.key))
+                }
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-rose-500 transition hover:bg-rose-50 active:scale-95"
+                aria-label="ลบรายการใหม่"
+              >
+                <Trash2 className="h-4 w-4" strokeWidth={2} />
+              </button>
+            </div>
+          ))}
+        </div>
+      ) : null}
+
       {activeItems.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-slate-200 py-10 text-center">
           <p className="text-sm text-slate-400">ไม่มีรายการสินค้า</p>
-          <p className="mt-1 text-xs text-slate-400">บันทึกเพื่อยกเลิกออเดอร์อัตโนมัติ</p>
+          <p className="mt-1 text-xs text-slate-400">เพิ่มสินค้าใหม่ หรือบันทึกเพื่อยกเลิกออเดอร์อัตโนมัติ</p>
         </div>
       ) : (
         activeItems.map((item) => (
@@ -135,7 +237,10 @@ function EditItemsPanel({ detail, onDone }: { detail: OrderDetailData; onDone: (
               </p>
               <button
                 type="button"
-                onClick={() => setRemoved((p) => new Set([...p, item.id]))}
+                onClick={() => {
+                  setError(null);
+                  setRemoved((p) => new Set([...p, item.id]));
+                }}
                 className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-rose-400 transition hover:bg-rose-50 hover:text-rose-600 active:scale-95"
                 aria-label="ลบ"
               >
@@ -203,6 +308,7 @@ type Props = {
   date: string;
   detail: OrderDetailData | null;
   expandedId: string;
+  products: OrderProductOption[];
   searchTerm: string;
 };
 
@@ -211,9 +317,9 @@ export function IncomingOrderModal({
   date,
   detail,
   expandedId,
+  products,
   searchTerm,
 }: Props) {
-  const SWIPE_THRESHOLD_RATIO = 0.14;
   const router = useRouter();
   const [editMode, setEditMode] = useState(false);
   const [confirmCancel, setConfirmCancel] = useState(false);
@@ -221,33 +327,15 @@ export function IncomingOrderModal({
 
   const [slideDir, setSlideDir] = useState<"left" | "right" | null>(null);
   const [animTargetId, setAnimTargetId] = useState<string | null>(null);
-  const [isSwipeClosing, setIsSwipeClosing] = useState(false);
-
-  const touchStartX = useRef(0);
-  const touchStartY = useRef(0);
-  const dragXRef = useRef(0);
-  const dragActiveRef = useRef(false);
-  const dragTargetLockedRef = useRef(false);
-  const dragDirectionRef = useRef<1 | -1>(1);
 
   // Clear slide animation state after animation completes
   useEffect(() => {
     const t = setTimeout(() => {
-      setIsSwipeClosing(false);
       setSlideDir(null);
       setAnimTargetId(null);
     }, 220);
     return () => clearTimeout(t);
   }, [expandedId]);
-
-  function shouldIgnoreDragStart(target: EventTarget | null) {
-    if (!(target instanceof HTMLElement)) {
-      return false;
-    }
-
-    const horizontalScroll = target.closest("[data-horizontal-scroll='true']") as HTMLElement | null;
-    return Boolean(horizontalScroll && horizontalScroll.scrollWidth > horizontalScroll.clientWidth);
-  }
 
   const currentIndex = allOrders.findIndex((o) => o.id === expandedId);
   const wrappedPrevOrder =
@@ -300,81 +388,6 @@ export function IncomingOrderModal({
     startTransition(() => {
       router.replace(href, { scroll: false });
     });
-  }
-
-  function onTouchStart(e: React.TouchEvent) {
-    if (isSwipeClosing) {
-      return;
-    }
-    if (shouldIgnoreDragStart(e.target)) {
-      dragTargetLockedRef.current = true;
-      return;
-    }
-    dragTargetLockedRef.current = false;
-    dragActiveRef.current = false;
-    touchStartX.current = e.touches[0].clientX;
-    touchStartY.current = e.touches[0].clientY;
-  }
-
-  function onTouchMove(e: React.TouchEvent) {
-    if (isSwipeClosing || dragTargetLockedRef.current) {
-      return;
-    }
-
-    const dx = e.touches[0].clientX - touchStartX.current;
-    const dy = e.touches[0].clientY - touchStartY.current;
-
-    if (!dragActiveRef.current) {
-      if (dx > 8 && Math.abs(dx) > Math.abs(dy) * 1.15) {
-        dragActiveRef.current = true;
-      } else if (dx < -8 && Math.abs(dx) > Math.abs(dy) * 1.15) {
-        dragActiveRef.current = true;
-      } else {
-        return;
-      }
-    }
-
-    dragDirectionRef.current = dx >= 0 ? 1 : -1;
-    dragXRef.current = dx;
-  }
-
-  function onTouchEnd(e: React.TouchEvent) {
-    if (dragTargetLockedRef.current) {
-      dragTargetLockedRef.current = false;
-      return;
-    }
-
-    const endDx = (e.changedTouches[0]?.clientX ?? touchStartX.current) - touchStartX.current;
-    if (!dragActiveRef.current && Math.abs(endDx) > 10) {
-      dragActiveRef.current = true;
-    }
-
-    if (!dragActiveRef.current || isSwipeClosing) {
-      return;
-    }
-
-    dragActiveRef.current = false;
-    if (Math.abs(endDx) > Math.abs(dragXRef.current)) {
-      dragXRef.current = endDx;
-      dragDirectionRef.current = endDx >= 0 ? 1 : -1;
-    }
-
-    const width = window.innerWidth || 1;
-    const shouldNavigate = Math.abs(dragXRef.current) >= width * SWIPE_THRESHOLD_RATIO;
-
-    if (shouldNavigate) {
-      const goingNext = dragDirectionRef.current < 0;
-      const targetOrderId = goingNext
-        ? wrappedNextOrder?.id ?? null
-        : wrappedPrevOrder?.id ?? null;
-      const targetHref = buildNavHref(targetOrderId);
-
-      if (targetHref && targetOrderId) {
-        setIsSwipeClosing(true);
-        navigate(targetHref, goingNext ? "left" : "right", targetOrderId);
-        return;
-      }
-    }
   }
 
   function handleCancelOrder() {
@@ -505,29 +518,32 @@ export function IncomingOrderModal({
         {/* Full-screen overlay — mobile only */}
         <div
           className="relative z-10 flex h-full flex-col bg-slate-50"
-          style={{ touchAction: "pan-y" }}
-          onTouchStart={onTouchStart}
-          onTouchMove={onTouchMove}
-          onTouchEnd={onTouchEnd}
         >
 
         {/* ── Top bar ────────────────────────────────────────────────── */}
         <div className="shrink-0 bg-[#003366] shadow-md">
-          {/* Row 1: order # + status pill + close */}
-          <div className="flex items-center gap-3 px-4 pb-2 pt-[max(1rem,env(safe-area-inset-top))]">
+          {/* Row 1: customer + close */}
+          <div className="flex items-start gap-3 px-4 pb-3 pt-[max(1rem,env(safe-area-inset-top))]">
             <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-1.5">
-                <ClipboardList className="h-4 w-4 shrink-0 text-white/70" strokeWidth={2} />
-                <p className="font-mono text-lg font-bold leading-tight text-white">
-                  {detail.orderNumber}
-                </p>
-                <span className="font-mono text-xs font-bold text-white/45">
-                  {currentIndex + 1}/{allOrders.length}
-                </span>
+              <div className="flex items-start gap-2">
+                <Store className="mt-0.5 h-4.5 w-4.5 shrink-0 text-white/75" strokeWidth={2.1} />
+                <div className="min-w-0">
+                  <p className="whitespace-normal break-words text-xl font-bold leading-snug text-white">
+                    {detail.customer.name}
+                  </p>
+                  <div className="mt-1 flex flex-wrap items-center gap-2">
+                    <span className="font-mono text-xs font-bold text-white/70">{detail.customer.code}</span>
+                    <span className="h-3 w-px bg-white/20" aria-hidden="true" />
+                    <span className="inline-flex items-center gap-1 font-mono text-xs font-bold text-white">
+                      <ClipboardList className="h-3.5 w-3.5 text-white/70" strokeWidth={2} />
+                      {detail.orderNumber}
+                    </span>
+                    <span className="font-mono text-xs font-bold text-white/45">
+                      {currentIndex + 1}/{allOrders.length}
+                    </span>
+                  </div>
+                </div>
               </div>
-              <span className={`mt-1 inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${statusCls}`}>
-                {statusLabel}
-              </span>
             </div>
 
             {/* Close button */}
@@ -541,7 +557,7 @@ export function IncomingOrderModal({
             </button>
           </div>
 
-          {/* Row 2: prev ← customer name → next */}
+          {/* Row 2: prev ← meta → next */}
           <div className="flex items-center gap-2 border-t border-white/10 px-4 py-2.5">
             <button
               onClick={() => navigate(buildNavHref(prevOrder?.id ?? null), "right", prevOrder?.id ?? null)}
@@ -552,11 +568,13 @@ export function IncomingOrderModal({
               <ChevronLeft className="h-4 w-4" strokeWidth={2.5} />
             </button>
 
-            <div className="flex min-w-0 flex-1 items-center justify-center gap-1.5">
-              <Store className="h-3.5 w-3.5 shrink-0 text-white/60" strokeWidth={2} />
-              <p className="truncate text-sm font-medium text-white/90">
-                {detail.customer.name}
-              </p>
+            <div className="flex min-w-0 flex-1 items-center justify-center gap-2">
+              <span className={`inline-flex shrink-0 items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${statusCls}`}>
+                {statusLabel}
+              </span>
+              <span className="truncate text-xs font-semibold text-white/70">
+                {detail.channelLabel}
+              </span>
             </div>
 
             <button
@@ -587,7 +605,14 @@ export function IncomingOrderModal({
             </div>
 
             {editMode ? (
-              <EditItemsPanel detail={detail} onDone={() => setEditMode(false)} />
+              <EditItemsPanel
+                detail={detail}
+                onDone={() => {
+                  setEditMode(false);
+                  router.refresh();
+                }}
+                products={products}
+              />
             ) : (
               <ItemsViewList detail={detail} />
             )}

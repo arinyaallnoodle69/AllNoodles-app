@@ -2,24 +2,29 @@
 
 import { useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { AlertTriangle, ChevronRight, Loader2 } from "lucide-react";
+import { ChevronRight, Loader2 } from "lucide-react";
 
 type OrderDailyMobileCardProps = {
   href: string;
   isExpanded: boolean;
+  orderDate: string;
   customerName: string;
   customerCode: string;
   orderRounds: number;
-  shortageProductCount: number;
   totalAmountText: string;
 };
 
+function formatDateShort(isoDate: string) {
+  const [year, month, day] = isoDate.split("-");
+  return `${day}/${month}/${Number.parseInt(year, 10) + 543}`;
+}
+
 export function OrderDailyMobileCard({
   href,
+  orderDate,
   customerName,
   customerCode,
   orderRounds,
-  shortageProductCount,
   totalAmountText,
 }: OrderDailyMobileCardProps) {
   const router = useRouter();
@@ -38,39 +43,34 @@ export function OrderDailyMobileCard({
       onClick={openDetail}
       disabled={isPending}
       aria-busy={isPending}
-      className="group relative block w-full bg-white p-4 transition active:bg-slate-50 disabled:opacity-90"
+      className="group relative block w-full bg-white p-4 text-left transition active:bg-slate-50 disabled:opacity-90"
     >
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0 flex-1 space-y-1.5">
           <div className="flex items-center gap-2">
-            <span className="shrink-0 font-mono text-[10px] font-bold uppercase tracking-wider text-[#003366] bg-[#003366]/10 px-1.5 py-0.5 rounded">
+            <span className="shrink-0 rounded bg-slate-100 px-1.5 py-0.5 font-mono text-[10px] font-bold text-slate-500">
+              {formatDateShort(orderDate)}
+            </span>
+            <span className="shrink-0 rounded bg-[#003366]/10 px-1.5 py-0.5 font-mono text-[10px] font-bold uppercase tracking-wider text-[#003366]">
               {customerCode}
             </span>
-            <h3 className="truncate text-base font-bold text-slate-900 group-active:text-[#003366] transition-colors">
-              {customerName}
-            </h3>
           </div>
-          
+
+          <h3 className="text-base font-bold text-slate-900 transition-colors group-active:text-[#003366]">
+            {customerName}
+          </h3>
+
           <div className="flex flex-wrap items-center gap-2">
             <span className="inline-flex items-center gap-1 text-xs font-medium text-slate-500">
               {orderRounds} รอบออเดอร์
             </span>
-            {shortageProductCount > 0 && (
-              <>
-                <span className="text-slate-300">•</span>
-                <span className="inline-flex items-center gap-1 text-xs font-bold text-red-600">
-                  <AlertTriangle className="h-3 w-3" strokeWidth={2.5} />
-                  สินค้าขาด {shortageProductCount} รายการ
-                </span>
-              </>
-            )}
           </div>
         </div>
 
         <div className="shrink-0 text-right">
           <p className="text-lg font-black tracking-tight text-slate-950">
             {totalAmountText}
-            <span className="ml-0.5 text-xs font-bold text-slate-400">฿</span>
+            <span className="ml-0.5 text-xs font-bold text-slate-400">บาท</span>
           </p>
           <div className="mt-2 flex justify-end">
             {isPending ? (
@@ -79,8 +79,8 @@ export function OrderDailyMobileCard({
                 กำลังโหลด...
               </div>
             ) : (
-              <div className="inline-flex items-center gap-1 rounded-full bg-slate-50 px-3 py-1 text-[11px] font-bold text-slate-500 group-hover:bg-[#003366]/10 group-hover:text-[#003366] transition-all">
-                กดเพื่อดูรายละเอียด
+              <div className="inline-flex items-center gap-1 rounded-full bg-slate-50 px-3 py-1 text-[11px] font-bold text-slate-500 transition-all group-hover:bg-[#003366]/10 group-hover:text-[#003366]">
+                ดูรายละเอียด
                 <ChevronRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" strokeWidth={2.5} />
               </div>
             )}

@@ -242,7 +242,7 @@ export function ThaiDatePicker({
   }
 
   return (
-    <div ref={rootRef} className="relative min-w-0">
+    <div ref={rootRef} className="relative w-full min-w-0">
       <input type="hidden" id={id} name={name} value={currentValue} />
 
       <button
@@ -284,9 +284,9 @@ export function ThaiDatePicker({
           id={`${id}-dialog`}
           role="dialog"
           aria-modal="true"
-          className={`absolute left-0 z-[90] w-[15.75rem] max-w-[min(15.75rem,calc(100vw-1rem))] overflow-hidden rounded-[0.8rem] border border-slate-200 bg-white shadow-[0_12px_24px_rgba(15,23,42,0.1)] ${
+          className={`absolute z-[90] w-[15.75rem] max-w-[calc(100vw-2rem)] overflow-hidden rounded-[0.8rem] border border-slate-200 bg-white shadow-[0_12px_24px_rgba(15,23,42,0.1)] sm:left-0 sm:right-auto ${
             panelPlacement === "top" ? "bottom-[calc(100%+0.25rem)]" : "top-[calc(100%+0.25rem)]"
-          }`}
+          } left-1/2 -translate-x-1/2 sm:translate-x-0`}
         >
           <div className="border-b border-slate-200 bg-[#003366] px-2 py-1.5 text-white">
             <div className="grid grid-cols-[24px_1fr_24px] items-center gap-1">

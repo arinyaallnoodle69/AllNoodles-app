@@ -418,7 +418,7 @@ export default async function DeliveryNotesReportPage({ searchParams }: PageProp
 
           {/* Mobile search drawer */}
           <MobileSearchDrawer title="ค้นหารายงานใบจัดส่ง">
-            <form method="GET" action="/reports/delivery-notes" className="flex flex-col gap-4">
+            <form method="GET" action="/reports/delivery-notes" className="flex flex-col gap-4 pb-32">
               <div>
                 <label className="mb-1.5 block text-xs font-bold uppercase tracking-widest text-slate-400">ค้นหาเลขใบจัดส่ง</label>
                 <div className="relative">

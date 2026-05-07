@@ -3,11 +3,11 @@ import Image from "next/image";
 import Link from "next/link";
 import {
   AlertTriangle,
+  CalendarDays,
   ChevronDown,
   ChevronRight,
   ClipboardList,
   Package2,
-  PackagePlus,
   PackageSearch,
   Store,
   WalletCards,
@@ -20,7 +20,6 @@ import { DateNav } from "@/components/ui/date-nav";
 import { OrderSearchForm } from "./order-search-form";
 import { MobileSearchDrawer } from "@/components/mobile-search/mobile-search-drawer";
 import { OrderRoundsCollapsible } from "./order-rounds-collapsible";
-import { ShortageReceiveModal } from "./shortage-receive-modal";
 import { OrderDailyMobileCard } from "./order-daily-mobile-card";
 import {
   DeliveredTodaySection as DeliveredTodayExpandableSection,
@@ -51,6 +50,10 @@ function formatThaiDate(isoDate: string) {
   }).format(new Date(isoDate));
 }
 
+function formatThaiDateShort(isoDate: string) {
+  const [year, month, day] = isoDate.split("-");
+  return `${day}/${month}/${Number.parseInt(year, 10) + 543}`;
+}
 
 function buildMobileHref(date: string, q: string, customerId: string) {
   const p = new URLSearchParams();
@@ -151,21 +154,6 @@ function StoreDetailPanel({ date, detail }: { date: string; detail: OrderStoreDe
               </span>
               <span>·</span>
               <span>
-                ขาด{" "}
-                {item.shortQuantity > 0 ? (
-                  <span className="inline-flex items-center gap-0.5 font-semibold text-red-700">
-                    <AlertTriangle className="h-3 w-3" strokeWidth={2.4} />
-                    {item.shortBaseQuantity.toLocaleString("th-TH")}
-                    <span className="ml-0.5 text-[10px] font-bold text-red-500">
-                      {item.productBaseUnit}
-                    </span>
-                  </span>
-                ) : (
-                  <span className="text-slate-300">—</span>
-                )}
-              </span>
-              <span>·</span>
-              <span>
                 {item.unitPrice > 0 ? (
                   `${formatThaiCurrency(item.unitPrice)} บาท/หน่วย`
                 ) : (
@@ -195,7 +183,7 @@ function StoreDetailPanel({ date, detail }: { date: string; detail: OrderStoreDe
         <table className="min-w-full border-collapse text-left text-sm">
           <thead>
             <tr style={{ backgroundColor: "#003366" }}>
-              {(["รหัสสินค้า", "รายการสินค้า", "ออเดอร์", "หน่วย", "สต็อก", "ขาด", "ราคา/หน่วย", "จำนวนเงินรวม"] as const).map(
+              {(["รหัสสินค้า", "รายการสินค้า", "ออเดอร์", "หน่วย", "สต็อก", "ราคา/หน่วย", "จำนวนเงินรวม"] as const).map(
                 (col, i, arr) => (
                   <th
                     key={col}
@@ -254,30 +242,6 @@ function StoreDetailPanel({ date, detail }: { date: string; detail: OrderStoreDe
                   {item.currentStockQuantity.toLocaleString("th-TH")}
                 </td>
 
-                {/* ขาด */}
-                <td className="border-r border-slate-300 px-4 py-3 text-center print:hidden">
-                  {item.shortQuantity > 0 ? (
-                    <div className="flex flex-col items-center gap-1.5">
-                      <span className="inline-flex items-center gap-1 font-semibold text-red-700">
-                        <AlertTriangle className="h-3.5 w-3.5" strokeWidth={2.4} />
-                        {item.shortBaseQuantity.toLocaleString("th-TH")}
-                        <span className="ml-0.5 text-[10px] font-bold text-red-500">
-                          {item.productBaseUnit}
-                        </span>
-                      </span>
-                      <Link
-                        href={`/stock?receive=1&product=${item.productId}`}
-                        className="inline-flex items-center gap-1 rounded-md border border-[#003366]/25 bg-[#003366]/5 px-2 py-1 text-[11px] font-semibold text-[#003366] transition hover:bg-[#003366]/10"
-                      >
-                        <PackagePlus className="h-3 w-3" strokeWidth={2.2} />
-                        รับเข้า
-                      </Link>
-                    </div>
-                  ) : (
-                    <span className="text-slate-300">—</span>
-                  )}
-                </td>
-
                 {/* ราคา/หน่วย */}
                 <td className="border-r border-slate-300 px-4 py-3 text-center tabular-nums text-slate-600">
                   {item.unitPrice > 0 ? (
@@ -300,7 +264,7 @@ function StoreDetailPanel({ date, detail }: { date: string; detail: OrderStoreDe
           <tfoot>
             <tr style={{ backgroundColor: "#f8fafc" }}>
               <td
-                colSpan={7}
+                colSpan={6}
                 className="border-r border-t border-slate-300 px-4 py-3 text-right text-sm font-semibold text-slate-600"
               >
                 ยอดเงินรวมทุกรายการ
@@ -363,7 +327,7 @@ export function OrderDailyTable({ data, date, expanded, q, deliveredToday }: Pro
       </MobileSearchDrawer>
 
       {/* Stat cards */}
-      <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <section className="grid grid-cols-2 gap-3 lg:grid-cols-3">
         <article className="rounded-[1.5rem] border border-slate-200 bg-white p-3 shadow-[0_12px_40px_rgba(15,23,42,0.05)] md:p-5">
           <div className="flex items-center gap-2">
             <Store className="h-4 w-4 shrink-0 text-[#003366]" strokeWidth={2.2} />
@@ -400,33 +364,6 @@ export function OrderDailyTable({ data, date, expanded, q, deliveredToday }: Pro
           </p>
           <p className="text-xs font-medium text-slate-400">บาท</p>
         </article>
-
-        <article
-          className={[
-            "rounded-[1.5rem] border p-3 shadow-[0_12px_40px_rgba(15,23,42,0.05)] md:p-5",
-            stats.shortageStoreCount > 0
-              ? "border-red-700 bg-red-700"
-              : "border-slate-200 bg-white",
-          ].join(" ")}
-        >
-          <div className="flex items-center gap-2">
-            <Package2
-              className={`h-4 w-4 shrink-0 ${stats.shortageStoreCount > 0 ? "text-white" : "text-[#003366]"}`}
-              strokeWidth={2.2}
-            />
-            <span
-              className={`truncate text-xs font-semibold uppercase tracking-[0.1em] ${stats.shortageStoreCount > 0 ? "text-white/80" : "text-slate-500"}`}
-            >
-              สต็อกไม่พอ
-            </span>
-          </div>
-          <p
-            className={`mt-2 text-2xl font-bold tracking-[-0.03em] md:mt-3 md:text-3xl ${stats.shortageStoreCount > 0 ? "text-white" : "text-slate-950"}`}
-          >
-            {stats.shortageStoreCount.toLocaleString("th-TH")}
-          </p>
-          <ShortageReceiveModal orderDate={date} active={stats.shortageStoreCount > 0} />
-        </article>
       </section>
 
       {/* Delivered today (prevents "disappearing rows" confusion) */}
@@ -459,10 +396,10 @@ export function OrderDailyTable({ data, date, expanded, q, deliveredToday }: Pro
                   <OrderDailyMobileCard
                     href={mobileHref}
                     isExpanded={isExpanded}
+                    orderDate={date}
                     customerName={store.customerName}
                     customerCode={store.customerCode}
                     orderRounds={store.orderRounds}
-                    shortageProductCount={store.shortageProductCount}
                     totalAmountText={formatThaiCurrency(store.totalAmount)}
                   />
                   
@@ -491,16 +428,22 @@ export function OrderDailyTable({ data, date, expanded, q, deliveredToday }: Pro
                 <tr className="border-b border-slate-200 bg-slate-50">
                   <th className="w-8 px-4 py-3" />
                   <th className="px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">
-                    ร้านค้า
+                    <span className="inline-flex items-center gap-1.5">
+                      <CalendarDays className="h-3.5 w-3.5 shrink-0" strokeWidth={2.2} />
+                      วันที่
+                    </span>
+                  </th>
+                  <th className="px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">
+                    <span className="inline-flex items-center gap-1.5">
+                      <Store className="h-3.5 w-3.5 shrink-0" strokeWidth={2.2} />
+                      ร้านค้า
+                    </span>
                   </th>
                   <th className="hidden px-4 py-3 text-right text-xs font-semibold uppercase tracking-[0.08em] text-slate-500 sm:table-cell">
                     รอบออเดอร์
                   </th>
                   <th className="hidden px-4 py-3 text-right text-xs font-semibold uppercase tracking-[0.08em] text-slate-500 md:table-cell">
                     รายการสินค้า
-                  </th>
-                  <th className="hidden px-4 py-3 text-right text-xs font-semibold uppercase tracking-[0.08em] text-slate-500 md:table-cell">
-                    สินค้าขาด
                   </th>
                   <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">
                     ยอดรวม
@@ -538,6 +481,11 @@ export function OrderDailyTable({ data, date, expanded, q, deliveredToday }: Pro
                           </Link>
                         </td>
                         <td className="px-4 py-4">
+                          <span className="font-mono text-xs font-semibold text-slate-500">
+                            {formatThaiDateShort(date)}
+                          </span>
+                        </td>
+                        <td className="px-4 py-4">
                           <Link href={toggleHref} scroll={false} className="group block print:pointer-events-none">
                             <p className="font-semibold text-slate-900 transition group-hover:text-[#003366]">
                               {store.customerName}
@@ -552,16 +500,6 @@ export function OrderDailyTable({ data, date, expanded, q, deliveredToday }: Pro
                         </td>
                         <td className="hidden px-4 py-4 text-right text-slate-600 md:table-cell">
                           {store.productCount.toLocaleString("th-TH")} รายการ
-                        </td>
-                        <td className="hidden px-4 py-4 text-right md:table-cell">
-                          {store.shortageProductCount > 0 ? (
-                            <span className="inline-flex items-center gap-1 rounded-full bg-red-700 px-2.5 py-0.5 text-xs font-semibold text-white">
-                              <AlertTriangle className="h-3 w-3" strokeWidth={2.4} />
-                              {store.shortageProductCount} รายการ
-                            </span>
-                          ) : (
-                            <span className="text-slate-300">—</span>
-                          )}
                         </td>
                         <td className="px-4 py-4 text-right font-bold text-slate-950">
                           {formatThaiCurrency(store.totalAmount)} บาท

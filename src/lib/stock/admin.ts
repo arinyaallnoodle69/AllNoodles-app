@@ -53,6 +53,7 @@ export type StockMovementRow = {
   productId: string;
   productName: string;
   quantityDelta: number;
+  receiptUrl: string | null;
   referenceNumber: string | null;
   sku: string;
   stockAfter: number;
@@ -100,6 +101,7 @@ type StockSaleUnitRow = {
 type MovementRow = {
   created_at: string;
   id: string;
+  inventory_receipts: { receipt_url: string | null } | null;
   movement_type: string;
   notes: string | null;
   product_id: string;
@@ -139,7 +141,7 @@ export const getStockDashboardData = cache(
         .order("sort_order", { ascending: true }),
       movementsTable
         .select(
-          "id, product_id, movement_type, quantity_delta, stock_before, stock_after, reference_number, notes, created_at",
+          "id, product_id, movement_type, quantity_delta, stock_before, stock_after, reference_number, notes, created_at, inventory_receipts(receipt_url)",
         )
         .eq("organization_id", organizationId)
         .order("created_at", { ascending: false }),
@@ -232,6 +234,7 @@ export const getStockDashboardData = cache(
         productId: movement.product_id,
         productName: productMap.get(movement.product_id)?.name ?? "สินค้าไม่ทราบชื่อ",
         quantityDelta: Number(movement.quantity_delta),
+        receiptUrl: movement.inventory_receipts?.receipt_url ?? null,
         referenceNumber: movement.reference_number,
         sku: productMap.get(movement.product_id)?.sku ?? "-",
         stockAfter: Number(movement.stock_after),

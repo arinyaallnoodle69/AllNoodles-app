@@ -891,6 +891,7 @@ export type Database = {
           notes: string | null
           organization_id: string
           receipt_number: string
+          receipt_url: string | null
           received_at: string
           supplier_name: string
         }
@@ -901,6 +902,7 @@ export type Database = {
           notes?: string | null
           organization_id: string
           receipt_number: string
+          receipt_url?: string | null
           received_at?: string
           supplier_name?: string
         }
@@ -911,6 +913,7 @@ export type Database = {
           notes?: string | null
           organization_id?: string
           receipt_number?: string
+          receipt_url?: string | null
           received_at?: string
           supplier_name?: string
         }
@@ -1850,18 +1853,32 @@ export type Database = {
         }
         Returns: string
       }
-      create_inventory_receipt: {
-        Args: {
-          p_created_by: string
-          p_items: Json
-          p_notes: string
-          p_organization_id: string
-          p_receipt_number: string
-          p_received_at: string
-          p_supplier_name: string
-        }
-        Returns: string
-      }
+      create_inventory_receipt:
+        | {
+            Args: {
+              p_created_by: string
+              p_items: Json
+              p_notes: string
+              p_organization_id: string
+              p_receipt_number: string
+              p_received_at: string
+              p_supplier_name: string
+            }
+            Returns: string
+          }
+        | {
+            Args: {
+              p_created_by: string
+              p_items: Json
+              p_notes: string
+              p_organization_id: string
+              p_receipt_number: string
+              p_receipt_url?: string
+              p_received_at: string
+              p_supplier_name: string
+            }
+            Returns: string
+          }
       create_store_delivery_note: {
         Args: {
           p_created_by: string
