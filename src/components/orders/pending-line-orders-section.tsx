@@ -202,17 +202,18 @@ export function PendingLineOrdersSection({
       </section>
 
       {activeOrder ? (
-        <div className="fixed inset-0 z-[70] flex items-end bg-slate-950/45 backdrop-blur-sm md:items-center md:justify-center">
+        <div className="fixed inset-0 z-[300] flex items-end bg-slate-950/45 backdrop-blur-sm md:items-center md:justify-center">
           <div className="flex max-h-[92dvh] w-full flex-col overflow-hidden rounded-t-[1.75rem] bg-white shadow-[0_-24px_70px_rgba(15,23,42,0.28)] md:max-w-3xl md:rounded-[1.75rem]">
-            <div className="flex shrink-0 items-start justify-between gap-4 border-b border-slate-100 px-5 py-5">
+            {/* Navy Header */}
+            <div className="flex shrink-0 items-start justify-between gap-4 bg-[#003366] px-5 py-5 pt-[max(1.25rem,env(safe-area-inset-top))] md:pt-5 text-white">
               <div className="min-w-0">
                 <div className="flex items-center gap-3">
-                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-slate-100 text-[#003366]">
+                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white/10 text-white">
                     <Store className="h-5 w-5" strokeWidth={2.2} />
                   </span>
                   <div>
-                    <h3 className="text-xl font-bold text-slate-950">ผูกร้านค้ากับลูกค้า LINE</h3>
-                    <p className="text-sm text-slate-500">
+                    <h3 className="text-xl font-bold text-white">ผูกร้านค้ากับลูกค้า LINE</h3>
+                    <p className="text-sm text-white/70">
                       เมื่อผูกแล้ว pending order ทั้งหมดของ LINE นี้จะถูกสร้างเป็นออเดอร์อัตโนมัติ
                     </p>
                   </div>
@@ -221,9 +222,9 @@ export function PendingLineOrdersSection({
               <button
                 type="button"
                 onClick={closeModal}
-                className="rounded-full p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+                className="rounded-full p-2 text-white/70 transition hover:bg-white/10 hover:text-white"
               >
-                <X className="h-6 w-6" />
+                <X className="h-6 w-6" strokeWidth={3} />
               </button>
             </div>
 

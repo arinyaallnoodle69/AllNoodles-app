@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requireAppRole } from "@/lib/auth/authorization";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getStockReceiptDetail, type StockReceiptDetail } from "@/lib/stock/admin";
 
 import { createActionClient } from "@/lib/supabase/action";
 
@@ -22,13 +23,6 @@ export type ReceiveStockActionState = {
   status: "error" | "idle" | "success";
 };
 
-type SupabaseReceiptAdmin = ReturnType<typeof getSupabaseAdmin> & {
-  rpc: (
-    fn: string,
-    args: Record<string, unknown>,
-  ) => Promise<{ data: unknown; error: { message?: string } | null }>;
-};
-
 function getText(formData: FormData, key: string) {
   return String(formData.get(key) ?? "").trim();
 }
@@ -36,6 +30,11 @@ function getText(formData: FormData, key: string) {
 function getNumber(formData: FormData, key: string) {
   const value = Number(String(formData.get(key) ?? "").replace(/,/g, "").trim());
   return Number.isFinite(value) ? value : Number.NaN;
+}
+
+export async function getStockReceiptDetailAction(receiptId: string): Promise<StockReceiptDetail | null> {
+  const session = await requireAppRole("admin");
+  return getStockReceiptDetail(session.organizationId, receiptId);
 }
 
 export async function receiveStockAction(
@@ -74,7 +73,9 @@ export async function receiveStockAction(
   const receiptNumberInput = getText(formData, "receiptNumber");
   // Generate unique receipt number if not provided — avoids clash when submitting within the same second
   const receiptNumber = receiptNumberInput || `RCV-${Date.now()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
-  const supplierName = getText(formData, "supplierName") || "โรงงานหลัก";
+  
+  const supplierId = getText(formData, "supplierId") || null;
+  const supplierName = getText(formData, "supplierName") || "ผู้ขาย";
   const receivedAt = getText(formData, "receivedAt");
   const notes = getText(formData, "notes");
   const imageFile = formData.get("receiptImage") as File | null;
@@ -88,7 +89,8 @@ export async function receiveStockAction(
   }
 
   let receiptUrl: string | null = null;
-  const admin = getSupabaseAdmin() as SupabaseReceiptAdmin;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const admin = getSupabaseAdmin() as any;
 
   // Handle Image Upload if present
   if (imageFile && imageFile.size > 0) {
@@ -107,7 +109,6 @@ export async function receiveStockAction(
 
       if (uploadError) {
         console.error("[receiveStockAction:upload]", uploadError);
-        // We continue even if upload fails, or should we stop? Let's stop for data integrity if user intended to upload
         return {
           fieldErrors: {},
           message: `อัปโหลดรูปบิลไม่สำเร็จ: ${uploadError.message}`,
@@ -139,6 +140,7 @@ export async function receiveStockAction(
     p_received_at: receivedAt ? new Date(receivedAt).toISOString() : new Date().toISOString(),
     p_supplier_name: supplierName,
     p_receipt_url: receiptUrl,
+    p_supplier_id: supplierId,
   });
 
   if (error) {
@@ -150,6 +152,7 @@ export async function receiveStockAction(
   }
 
   revalidatePath("/stock");
+  revalidatePath("/stock/history");
   revalidatePath("/settings/stock");
   revalidatePath("/settings/products");
 
@@ -169,7 +172,8 @@ export type BulkReceiveItem = {
 
 export async function bulkReceiveStockAction(items: BulkReceiveItem[], notes: string = "รับเข้าจากการตั้งเตือนสต็อกไม่พอ") {
   const session = await requireAppRole("admin");
-  const admin = getSupabaseAdmin() as SupabaseReceiptAdmin;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const admin = getSupabaseAdmin() as any;
   
   const receiptNumber = `RCV-${Date.now()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
   
@@ -187,6 +191,7 @@ export async function bulkReceiveStockAction(items: BulkReceiveItem[], notes: st
     p_receipt_number: receiptNumber,
     p_received_at: new Date().toISOString(),
     p_supplier_name: "ดึงข้อมูลสต็อกฉุกเฉิน",
+    p_supplier_id: null,
   });
 
   if (error) {
@@ -194,6 +199,7 @@ export async function bulkReceiveStockAction(items: BulkReceiveItem[], notes: st
   }
 
   revalidatePath("/stock");
+  revalidatePath("/stock/history");
   revalidatePath("/settings/stock");
   revalidatePath("/settings/products");
   revalidatePath("/orders");

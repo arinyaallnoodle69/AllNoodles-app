@@ -1,5 +1,6 @@
 "use client";
 
+import React, { memo, useDeferredValue, useMemo } from "react";
 import Image from "next/image";
 import { Minus, Plus, Search, X } from "lucide-react";
 import type { ProductWithImage } from "@/app/order/customer/types";
@@ -28,7 +29,7 @@ type EditOrderProductSheetProps = {
   products: ProductWithImage[];
 };
 
-export function OrderEditView({
+export const OrderEditView = memo(function OrderEditView({
   editCart,
   editingOrder,
   getDisplayUnit,
@@ -149,9 +150,9 @@ export function OrderEditView({
       )}
     </section>
   );
-}
+});
 
-export function EditOrderProductSheet({
+export const EditOrderProductSheet = memo(function EditOrderProductSheet({
   addProductSearch,
   editCart,
   getDisplayUnit,
@@ -161,6 +162,16 @@ export function EditOrderProductSheet({
   onUpdateEditQuantity,
   products,
 }: EditOrderProductSheetProps) {
+  const deferredSearch = useDeferredValue(addProductSearch);
+
+  const filteredProducts = useMemo(() => {
+    const term = deferredSearch.trim().toLowerCase();
+    if (term === "") return products;
+    return products.filter((product) =>
+      product.name.toLowerCase().includes(term)
+    );
+  }, [products, deferredSearch]);
+
   if (!isOpen) {
     return null;
   }
@@ -201,12 +212,7 @@ export function EditOrderProductSheet({
         </div>
 
         <div className="flex-1 overflow-y-auto px-4 pb-8">
-          {products
-            .filter((product) =>
-              addProductSearch.trim() === "" ||
-              product.name.toLowerCase().includes(addProductSearch.toLowerCase()),
-            )
-            .map((product) => {
+          {filteredProducts.map((product) => {
               const imageUrl =
                 product.product_images?.[0]?.public_url ??
                 "/placeholders/product-placeholder.svg";
@@ -284,4 +290,4 @@ export function EditOrderProductSheet({
       </div>
     </div>
   );
-}
+});

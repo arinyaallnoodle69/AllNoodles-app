@@ -25,7 +25,7 @@ export function MobileSearchDrawer({ children, title = "ค้นหา" }: Mobi
       <div
         aria-hidden="true"
         onClick={close}
-        className={`fixed inset-x-0 bottom-0 top-[68px] z-[35] bg-black/40 backdrop-blur-sm transition-opacity duration-300 md:hidden ${
+        className={`fixed inset-x-0 bottom-0 top-0 z-[45] bg-black/40 backdrop-blur-sm transition-opacity duration-300 lg:hidden ${
           isOpen ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0"
         }`}
       />
@@ -34,11 +34,14 @@ export function MobileSearchDrawer({ children, title = "ค้นหา" }: Mobi
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className={`fixed inset-x-0 top-[68px] z-[38] max-h-[75vh] overflow-y-auto rounded-b-3xl bg-white shadow-[0_24px_64px_rgba(15,23,42,0.18)] transition-transform duration-300 ease-out md:hidden ${
+        className={`fixed inset-x-0 top-0 z-50 max-h-[85vh] overflow-visible rounded-b-3xl bg-white shadow-[0_24px_64px_rgba(15,23,42,0.18)] transition-transform duration-300 ease-out lg:hidden ${
           isOpen ? "translate-y-0" : "-translate-y-full"
         }`}
       >
-        <div className="sticky top-0 flex items-center justify-between border-b border-slate-100 bg-white px-5 py-4">
+        {/* Spacer for TopBar */}
+        <div className="h-[68px] shrink-0" />
+
+        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-100 bg-white px-5 py-4">
           <span className="text-base font-semibold text-slate-800">{title}</span>
           <button
             type="button"
@@ -50,7 +53,7 @@ export function MobileSearchDrawer({ children, title = "ค้นหา" }: Mobi
           </button>
         </div>
 
-        <div className="p-5 pb-[max(1.5rem,env(safe-area-inset-bottom))]">{children}</div>
+        <div className="overflow-y-auto max-h-[calc(75vh-60px)] p-5 pb-[max(1.5rem,env(safe-area-inset-bottom))]">{children}</div>
       </div>
     </>
   );

@@ -1,8 +1,10 @@
+import { Suspense } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { BadgeDollarSign, Building2, ChevronLeft, ChevronRight, FileSearch, Filter, Landmark, Package, PackageOpen, ReceiptText, ScrollText } from "lucide-react";
 import { AppSidebarLayout } from "@/components/app-sidebar";
 import { ThaiDatePicker } from "@/components/ui/thai-date-picker";
+import { PageLoader } from "@/components/page-loader";
 import { requireAppSession } from "@/lib/auth/authorization";
 import { getTodayInBangkok } from "@/lib/orders/date";
 import { getCustomersForDeliveryNoteReport, getDeliveryNotesReport, type DeliveryNoteReportRow } from "@/lib/reports/delivery-notes";
@@ -356,7 +358,15 @@ type PageProps = {
   }>;
 };
 
-export default async function DeliveryNotesReportPage({ searchParams }: PageProps) {
+export default async function Page({ searchParams }: PageProps) {
+  return (
+    <Suspense fallback={<PageLoader />}>
+      <DeliveryNotesReportContent searchParams={searchParams} />
+    </Suspense>
+  );
+}
+
+async function DeliveryNotesReportContent({ searchParams }: PageProps) {
   const session = await requireAppSession();
   const params = await searchParams;
 

@@ -13,6 +13,7 @@ type SettingsShellProps = {
   current?: SettingsSection;
   description: string;
   floatingSubmit?: boolean;
+  headerContent?: React.ReactNode;
   titleIcon?: LucideIcon;
   title: string;
   showSearch?: boolean;
@@ -86,6 +87,7 @@ export function SettingsShell({
   current,
   description,
   floatingSubmit = true,
+  headerContent,
   titleIcon: TitleIcon,
   title,
   showSearch = false,
@@ -115,31 +117,31 @@ export function SettingsShell({
 
   const inner = (
     <div className="min-h-screen bg-[#f6f7f8] font-[family:var(--font-sarabun)] text-slate-900">
-      <div className="bg-gradient-to-br from-[#0c1929] via-[#0d2444] to-[#003366] text-white">
-        <div className="mx-auto w-full max-w-[88rem] px-4 py-10 md:px-8">
-          <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
-            <div className="flex min-w-0 items-center gap-4">
+      <div className="relative z-20 hidden bg-gradient-to-br from-[#0c1929] via-[#0d2444] to-[#003366] text-white lg:block">
+        <div className="mx-auto w-full max-w-[88rem] px-4 py-1.5 lg:px-8 lg:py-10">
+          <div className="flex flex-col gap-0.5 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex min-w-0 items-center gap-2 lg:gap-4">
               {TitleIcon ? (
-                <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white/10 backdrop-blur-sm ring-1 ring-white/20">
-                  <TitleIcon className="h-6 w-6 text-white" strokeWidth={2} />
+                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-white/10 backdrop-blur-sm ring-1 ring-white/20 lg:h-14 lg:w-14 lg:rounded-2xl">
+                  <TitleIcon className="h-3.5 w-3.5 text-white lg:h-6 lg:w-6" strokeWidth={2} />
                 </span>
               ) : null}
               <div className="min-w-0 flex-1 overflow-hidden">
-                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-white/45">
+                <p className="text-[8px] font-semibold uppercase tracking-[0.15em] text-white/45 lg:text-xs">
                   {current ? "เมนูตั้งค่า" : "ระบบจัดการ"}
                 </p>
-                <h1 className="mt-1 text-2xl font-bold tracking-tight text-white md:text-3xl">
+                <h1 className="mt-0 text-base font-bold tracking-tight text-white lg:mt-1 lg:text-3xl">
                   {title}
                 </h1>
                 {description ? (
-                  <p className="mt-1.5 break-words text-sm leading-relaxed text-white/55">
+                  <p className="mt-0 break-words text-[10px] leading-tight text-white/55 lg:mt-1.5 lg:text-sm">
                     {description}
                   </p>
                 ) : null}
               </div>
             </div>
 
-            <div className="flex items-center gap-3 self-start md:self-auto">
+            <div className="flex items-center gap-2 self-start lg:self-auto lg:gap-3">
               {showSearch && (
                 <button
                   onClick={handleSearchToggle}
@@ -183,19 +185,21 @@ export function SettingsShell({
               </div>
             </div>
           )}
+
+          {headerContent ? <div className="mt-6">{headerContent}</div> : null}
         </div>
       </div>
 
-      <main className="mx-auto min-w-0 w-full max-w-[88rem] px-4 py-8 pb-28 md:px-8 md:pb-32">
+      <main className="mx-auto min-w-0 w-full max-w-[88rem] px-4 py-4 pb-28 lg:px-3 lg:py-8 lg:pb-32">
         {children}
       </main>
 
       {floatingSubmit && submitFormId && submitLabel ? (
-        <div className="pointer-events-none fixed inset-x-0 bottom-20 z-30 flex justify-end p-4 md:bottom-0 md:p-6">
+        <div className="pointer-events-none fixed inset-x-0 bottom-20 z-30 flex justify-end p-4 lg:bottom-0 lg:p-6">
           <button
             type="submit"
             form={submitFormId}
-            className="pointer-events-auto inline-flex items-center gap-2 rounded-full bg-[#003366] px-5 py-3 text-sm font-medium text-white shadow-[0_18px_40px_rgba(0,51,102,0.32)] transition hover:bg-[#002244] md:px-6"
+            className="pointer-events-auto inline-flex items-center gap-2 rounded-full bg-[#003366] px-5 py-3 text-sm font-medium text-white shadow-[0_18px_40px_rgba(0,51,102,0.32)] transition hover:bg-[#002244] lg:px-6"
           >
             <Save className="h-4 w-4" strokeWidth={2.2} />
             {submitLabel}

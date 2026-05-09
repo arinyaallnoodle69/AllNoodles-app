@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
 
 const THAI_MONTHS_FULL = [
@@ -62,18 +63,6 @@ function buildYearOptions(baseYear: number, minDate: Date | null, maxDate: Date 
   return Array.from({ length: endYear - startYear + 1 }, (_, index) => startYear + index);
 }
 
-function getScrollBoundaryRect(node: HTMLElement | null): DOMRect | null {
-  if (!node) return null;
-  let current: HTMLElement | null = node.parentElement;
-  while (current) {
-    const { overflowY } = window.getComputedStyle(current);
-    if (overflowY === "auto" || overflowY === "scroll" || overflowY === "hidden") {
-      return current.getBoundingClientRect();
-    }
-    current = current.parentElement;
-  }
-  return null;
-}
 
 type ThaiDatePickerProps = {
   id: string;
@@ -102,12 +91,14 @@ export function ThaiDatePicker({
 }: ThaiDatePickerProps) {
   const [internalValue, setInternalValue] = useState(value ?? defaultValue);
   const [isOpen, setIsOpen] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [panelPlacement, setPanelPlacement] = useState<"top" | "bottom">("bottom");
   const [viewMonth, setViewMonth] = useState(() =>
     clampMonth((value ?? defaultValue) ? parseIsoDate(value ?? defaultValue) : new Date()),
   );
   const rootRef = useRef<HTMLDivElement | null>(null);
   const panelRef = useRef<HTMLDivElement | null>(null);
+  const [panelStyle, setPanelStyle] = useState<React.CSSProperties>({});
   const currentValue = value ?? internalValue;
 
   const minDate = useMemo(() => (min ? parseIsoDate(min) : null), [min]);
@@ -159,26 +150,48 @@ export function ThaiDatePicker({
   useEffect(() => {
     if (!isOpen) return;
 
-    const frameId = window.requestAnimationFrame(() => {
+    const updatePosition = () => {
       const rootRect = rootRef.current?.getBoundingClientRect();
       if (!rootRect) return;
 
-      const panelHeight = panelRef.current?.offsetHeight ?? 300;
-      const scrollBoundary = getScrollBoundaryRect(rootRef.current);
-      const viewportBoundary = scrollBoundary ?? new DOMRect(0, 0, window.innerWidth, window.innerHeight);
-
+      const panelHeight = 350; // Estimated height
+      const panelWidth = 252; // w-[15.75rem]
       const gap = 4;
-      const spaceAbove = rootRect.top - viewportBoundary.top - gap;
-      const spaceBelow = viewportBoundary.bottom - rootRect.bottom - gap;
+      
+      const spaceBelow = window.innerHeight - rootRect.bottom;
+      const spaceAbove = rootRect.top;
 
+      let placement: "top" | "bottom" = "bottom";
       if (spaceBelow < panelHeight && spaceAbove > spaceBelow) {
-        setPanelPlacement("top");
-      } else {
-        setPanelPlacement("bottom");
+        placement = "top";
       }
-    });
 
-    return () => window.cancelAnimationFrame(frameId);
+      setPanelPlacement(placement);
+
+      const top = placement === "top" 
+        ? rootRect.top - panelHeight - gap 
+        : rootRect.bottom + gap;
+      
+      // Center relative to trigger, but keep within viewport
+      let left = rootRect.left + rootRect.width / 2 - panelWidth / 2;
+      left = Math.max(12, Math.min(window.innerWidth - panelWidth - 12, left));
+
+      setPanelStyle({
+        position: "fixed",
+        top: `${top}px`,
+        left: `${left}px`,
+        zIndex: 9999,
+      });
+    };
+
+    updatePosition();
+    window.addEventListener("scroll", updatePosition, true);
+    window.addEventListener("resize", updatePosition);
+
+    return () => {
+      window.removeEventListener("scroll", updatePosition, true);
+      window.removeEventListener("resize", updatePosition);
+    };
   }, [isOpen, viewMonth]);
 
   const days = useMemo(() => {
@@ -278,126 +291,128 @@ export function ThaiDatePicker({
         />
       </button>
 
-      {isOpen ? (
-        <div
-          ref={panelRef}
-          id={`${id}-dialog`}
-          role="dialog"
-          aria-modal="true"
-          className={`absolute z-[90] w-[15.75rem] max-w-[calc(100vw-2rem)] overflow-hidden rounded-[0.8rem] border border-slate-200 bg-white shadow-[0_12px_24px_rgba(15,23,42,0.1)] sm:left-0 sm:right-auto ${
-            panelPlacement === "top" ? "bottom-[calc(100%+0.25rem)]" : "top-[calc(100%+0.25rem)]"
-          } left-1/2 -translate-x-1/2 sm:translate-x-0`}
-        >
-          <div className="border-b border-slate-200 bg-[#003366] px-2 py-1.5 text-white">
-            <div className="grid grid-cols-[24px_1fr_24px] items-center gap-1">
-              <button
-                type="button"
-                onClick={() => setViewMonth((current) => addMonths(current, -1))}
-                disabled={prevMonthDisabled}
-                className="inline-flex h-6 w-6 items-center justify-center rounded-md border border-white/20 bg-white/10 text-white transition hover:bg-white/15 disabled:cursor-not-allowed disabled:opacity-40"
-                aria-label="เดือนก่อนหน้า"
-              >
-                <ChevronLeft className="h-3 w-3" strokeWidth={2.3} />
-              </button>
-
-              <p className="text-center text-xs font-semibold">
-                {currentValue ? formatThaiDate(currentValue) : placeholder}
-              </p>
-
-              <button
-                type="button"
-                onClick={() => setViewMonth((current) => addMonths(current, 1))}
-                disabled={nextMonthDisabled}
-                className="inline-flex h-6 w-6 items-center justify-center rounded-md border border-white/20 bg-white/10 text-white transition hover:bg-white/15 disabled:cursor-not-allowed disabled:opacity-40"
-                aria-label="เดือนถัดไป"
-              >
-                <ChevronRight className="h-3 w-3" strokeWidth={2.3} />
-              </button>
-            </div>
-          </div>
-
-          <div className="space-y-1 px-1.5 py-1.5">
-            <div className="grid grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)] items-center gap-1 rounded-lg border border-slate-200 bg-slate-50 px-1 py-1">
-              <select
-                value={viewMonth.getMonth()}
-                onChange={(event) => updateViewMonth(viewMonth.getFullYear(), Number(event.target.value))}
-                className="h-6 rounded-md border border-slate-200 bg-white px-1.5 text-[11px] font-semibold text-slate-800 outline-none transition focus:border-[#003366] focus:ring-2 focus:ring-[#003366]/10"
-                aria-label="เลือกเดือน"
-              >
-                {THAI_MONTHS_FULL.map((month, index) => (
-                  <option key={month} value={index}>
-                    {month}
-                  </option>
-                ))}
-              </select>
-
-              <select
-                value={viewMonth.getFullYear()}
-                onChange={(event) => updateViewMonth(Number(event.target.value), viewMonth.getMonth())}
-                className="h-6 rounded-md border border-slate-200 bg-white px-1.5 text-[11px] font-semibold text-slate-800 outline-none transition focus:border-[#003366] focus:ring-2 focus:ring-[#003366]/10"
-                aria-label="เลือกปี"
-              >
-                {yearOptions.map((year) => (
-                  <option key={year} value={year}>
-                    {year + 543}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="grid grid-cols-7 gap-0.5 text-center">
-              {THAI_WEEKDAYS.map((label) => (
-                <div key={label} className="py-0.5 text-[10px] font-semibold text-slate-500">
-                  {label}
-                </div>
-              ))}
-              {days.map(({ date, iso, isCurrentMonth, isDisabled }) => {
-                const isSelected = selectedDate ? isSameDay(date, selectedDate) : false;
-                const isToday = iso === todayIso;
-
-                return (
+      {isOpen && typeof document !== "undefined"
+        ? createPortal(
+            <div
+              ref={panelRef}
+              id={`${id}-dialog`}
+              role="dialog"
+              aria-modal="true"
+              style={panelStyle}
+              className="w-[15.75rem] max-w-[calc(100vw-2rem)] overflow-hidden rounded-[0.8rem] border border-slate-200 bg-white shadow-[0_12px_48px_rgba(15,23,42,0.25)] animate-in fade-in zoom-in-95 duration-200"
+            >
+              <div className="border-b border-slate-200 bg-[#003366] px-2 py-1.5 text-white">
+                <div className="grid grid-cols-[24px_1fr_24px] items-center gap-1">
                   <button
-                    key={iso}
                     type="button"
-                    onClick={() => selectDate(iso)}
-                    disabled={isDisabled}
-                    className={[
-                      "flex h-6 items-center justify-center rounded-md text-[11px] font-semibold transition",
-                      isSelected
-                        ? "bg-[#003366] text-white shadow-[0_12px_24px_rgba(0,51,102,0.24)]"
-                        : isToday
-                          ? "border border-[#003366]/30 bg-[#003366]/5 text-[#003366]"
-                          : isCurrentMonth
-                            ? "text-slate-700 hover:bg-slate-100"
-                            : "text-slate-300 hover:bg-slate-50",
-                      isDisabled ? "cursor-not-allowed opacity-30" : "",
-                    ].join(" ")}
+                    onClick={() => setViewMonth((current) => addMonths(current, -1))}
+                    disabled={prevMonthDisabled}
+                    className="inline-flex h-6 w-6 items-center justify-center rounded-md border border-white/20 bg-white/10 text-white transition hover:bg-white/15 disabled:cursor-not-allowed disabled:opacity-40"
+                    aria-label="เดือนก่อนหน้า"
                   >
-                    {date.getDate()}
+                    <ChevronLeft className="h-3 w-3" strokeWidth={2.3} />
                   </button>
-                );
-              })}
-            </div>
 
-            <div className="flex gap-1">
-              <button
-                type="button"
-                onClick={jumpToToday}
-                className="flex-1 rounded-md border border-slate-200 bg-white px-2 py-1 text-[11px] font-semibold text-slate-700 transition hover:bg-slate-50"
-              >
-                วันนี้
-              </button>
-              <button
-                type="button"
-                onClick={closePicker}
-                className="flex-1 rounded-md bg-[#003366] px-2 py-1 text-[11px] font-semibold text-white transition hover:bg-[#0a2747]"
-              >
-                ปิด
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : null}
+                  <p className="text-center text-xs font-semibold">
+                    {currentValue ? formatThaiDate(currentValue) : placeholder}
+                  </p>
+
+                  <button
+                    type="button"
+                    onClick={() => setViewMonth((current) => addMonths(current, 1))}
+                    disabled={nextMonthDisabled}
+                    className="inline-flex h-6 w-6 items-center justify-center rounded-md border border-white/20 bg-white/10 text-white transition hover:bg-white/15 disabled:cursor-not-allowed disabled:opacity-40"
+                    aria-label="เดือนถัดไป"
+                  >
+                    <ChevronRight className="h-3 w-3" strokeWidth={2.3} />
+                  </button>
+                </div>
+              </div>
+
+              <div className="space-y-1 px-1.5 py-1.5">
+                <div className="grid grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)] items-center gap-1 rounded-lg border border-slate-200 bg-slate-50 px-1 py-1">
+                  <select
+                    value={viewMonth.getMonth()}
+                    onChange={(event) => updateViewMonth(viewMonth.getFullYear(), Number(event.target.value))}
+                    className="h-6 rounded-md border border-slate-200 bg-white px-1.5 text-[11px] font-semibold text-slate-800 outline-none transition focus:border-[#003366] focus:ring-2 focus:ring-[#003366]/10"
+                    aria-label="เลือกเดือน"
+                  >
+                    {THAI_MONTHS_FULL.map((month, index) => (
+                      <option key={month} value={index}>
+                        {month}
+                      </option>
+                    ))}
+                  </select>
+
+                  <select
+                    value={viewMonth.getFullYear()}
+                    onChange={(event) => updateViewMonth(Number(event.target.value), viewMonth.getMonth())}
+                    className="h-6 rounded-md border border-slate-200 bg-white px-1.5 text-[11px] font-semibold text-slate-800 outline-none transition focus:border-[#003366] focus:ring-2 focus:ring-[#003366]/10"
+                    aria-label="เลือกปี"
+                  >
+                    {yearOptions.map((year) => (
+                      <option key={year} value={year}>
+                        {year + 543}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="grid grid-cols-7 gap-0.5 text-center">
+                  {THAI_WEEKDAYS.map((label) => (
+                    <div key={label} className="py-0.5 text-[10px] font-semibold text-slate-500">
+                      {label}
+                    </div>
+                  ))}
+                  {days.map(({ date, iso, isCurrentMonth, isDisabled }) => {
+                    const isSelected = selectedDate ? isSameDay(date, selectedDate) : false;
+                    const isToday = iso === todayIso;
+
+                    return (
+                      <button
+                        key={iso}
+                        type="button"
+                        onClick={() => selectDate(iso)}
+                        disabled={isDisabled}
+                        className={[
+                          "flex h-6 items-center justify-center rounded-md text-[11px] font-semibold transition",
+                          isSelected
+                            ? "bg-[#003366] text-white shadow-[0_12px_24px_rgba(0,51,102,0.24)]"
+                            : isToday
+                              ? "border border-[#003366]/30 bg-[#003366]/5 text-[#003366]"
+                              : isCurrentMonth
+                                ? "text-slate-700 hover:bg-slate-100"
+                                : "text-slate-300 hover:bg-slate-50",
+                          isDisabled ? "cursor-not-allowed opacity-30" : "",
+                        ].join(" ")}
+                      >
+                        {date.getDate()}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <div className="flex gap-1">
+                  <button
+                    type="button"
+                    onClick={jumpToToday}
+                    className="flex-1 rounded-md border border-slate-200 bg-white px-2 py-1 text-[11px] font-semibold text-slate-700 transition hover:bg-slate-50"
+                  >
+                    วันนี้
+                  </button>
+                  <button
+                    type="button"
+                    onClick={closePicker}
+                    className="flex-1 rounded-md bg-[#003366] px-2 py-1 text-[11px] font-semibold text-white transition hover:bg-[#0a2747]"
+                  >
+                    ปิด
+                  </button>
+                </div>
+              </div>
+            </div>,
+            document.body,
+          )
+        : null}
     </div>
   );
 }

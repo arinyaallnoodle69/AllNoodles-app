@@ -216,7 +216,7 @@ export function StoreDetailModal({
         .animate-fade { animation: fadeIn 200ms ease both; }
       `}</style>
 
-      <div className="fixed inset-0 z-50 flex flex-col md:hidden">
+      <div className="fixed inset-0 z-[100] flex flex-col md:hidden">
         <div
           className="animate-fade absolute inset-0 bg-slate-900/40 backdrop-blur-[2px]"
           onClick={close}

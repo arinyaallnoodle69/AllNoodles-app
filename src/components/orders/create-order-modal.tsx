@@ -1,7 +1,9 @@
-﻿"use client";
+"use client";
 
 import React, { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
+import { createPortal } from "react-dom";
 import {
   AlertCircle,
   AlertTriangle,
@@ -18,9 +20,11 @@ import {
   Search,
   ShoppingCart,
   Trash2,
+  Truck,
   Unlock,
   X,
 } from "lucide-react";
+import { useCreateOrder } from "./create-order-context";
 import { getEffectiveSaleUnitCost } from "@/lib/products/sale-unit-cost";
 import type { OrderCustomerOption, OrderProductOption } from "@/lib/orders/manage";
 import { normalizeSearch } from "@/lib/utils/search";
@@ -90,13 +94,22 @@ type ProductSelectModalProps = {
 };
 
 type Props = {
+  autoOpen?: boolean;
   customerOrderCountsToday?: Record<string, number>;
-  customers: OrderCustomerOption[];
-  products: OrderProductOption[];
-  today: string;
+  customers?: OrderCustomerOption[];
+  products?: OrderProductOption[];
+  today?: string;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 };
 
 type ModalTab = "create" | "history";
+
+function CreateOrderPortal({ children }: { children: React.ReactNode }) {
+  if (typeof document === "undefined") return null;
+
+  return createPortal(children, document.body);
+}
 
 const codeCollator = new Intl.Collator("th", {
   numeric: true,
@@ -454,6 +467,7 @@ function ProductSelectModal({
   selectedCustomerLabel,
 }: ProductSelectModalProps) {
   const [query, setQuery] = useState("");
+  const deferredQuery = React.useDeferredValue(query);
   const [selectedCategoryId, setSelectedCategoryId] = useState("__all__");
   const [categoryPickerOpen, setCategoryPickerOpen] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -484,7 +498,7 @@ function ProductSelectModal({
   const activeCategoryName = categoryOptions.find(c => c.id === selectedCategoryId)?.name ?? "ทุกหมวดหมู่";
 
   const filteredProducts = useMemo(() => {
-    const normalized = normalizeSearch(query);
+    const normalized = normalizeSearch(deferredQuery);
     const result = products.filter((product) => {
       const matchesCategory = selectedCategoryId === "__all__" || product.categoryIds.includes(selectedCategoryId);
       if (!matchesCategory) return false;
@@ -495,9 +509,8 @@ function ProductSelectModal({
         product.categoryNames.some(n => normalizeSearch(n).includes(normalized))
       );
     });
-    console.log(`[ProductSelectModal] Filtered products: ${result.length} (Total: ${products.length})`);
     return result;
-  }, [products, query, selectedCategoryId]);
+  }, [products, deferredQuery, selectedCategoryId]);
 
   const handleSelectProduct = useCallback((productId: string, selected: boolean) => {
     setSelectedIds((prev) => {
@@ -627,14 +640,14 @@ function ProductSelectModal({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-end justify-center bg-slate-950/60 sm:p-0">
+    <div className="fixed inset-0 z-[220] flex items-end justify-center bg-slate-950/60 p-0 sm:items-center sm:p-4">
       <div className="absolute inset-0" onClick={onClose} />
-      <div className="relative flex h-[100dvh] w-full max-w-4xl flex-col overflow-hidden bg-white shadow-2xl">
+      <div className="relative flex h-full w-full max-h-full flex-col overflow-hidden bg-white shadow-2xl sm:h-[90dvh] sm:max-h-[90dvh] sm:max-w-4xl sm:rounded-[2.5rem]">
         <ActionPopup message={popupMessage} onClose={() => setPopupMessage(null)} />
         
         {/* Cost Warning Blocking Popup */}
         {costWarningInfo && (
-          <div className="absolute inset-0 z-[80] flex items-center justify-center bg-slate-950/70 p-4 backdrop-blur-sm">
+          <div className="absolute inset-0 z-[230] flex items-center justify-center bg-slate-950/70 p-4 backdrop-blur-sm">
             <div className="w-full max-w-sm rounded-[2.5rem] bg-white p-8 shadow-2xl animate-in zoom-in-95 duration-200">
               <div className="flex flex-col items-center text-center">
                 <div className="mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-rose-50 text-rose-500 shadow-inner">
@@ -669,19 +682,19 @@ function ProductSelectModal({
         )}
 
         {/* Header */}
-        <div className="flex shrink-0 items-center justify-between gap-4 border-b border-slate-100 bg-white px-5 py-4 sm:px-8">
+        <div className="flex shrink-0 items-center justify-between gap-4 border-b border-slate-100 bg-white px-4 py-2.5 sm:px-8 sm:py-4">
           <div className="min-w-0 flex-1">
-            <h3 className="text-xl font-black tracking-tight text-slate-900">เลือกสินค้าเพิ่ม</h3>
+            <h3 className="text-lg font-black tracking-tight text-slate-900 sm:text-xl">เลือกสินค้าเพิ่ม</h3>
             {selectedCustomerLabel && (
-              <p className="mt-0.5 text-xs font-bold text-[#003366] truncate">ร้าน: {selectedCustomerLabel}</p>
+              <p className="mt-0.5 text-[10px] font-bold text-[#003366] truncate sm:text-xs">ร้าน: {selectedCustomerLabel}</p>
             )}
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-slate-100 text-slate-500 transition active:scale-95"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-500 transition active:scale-95 sm:h-11 sm:w-11 sm:rounded-2xl"
           >
-            <X className="h-6 w-6" strokeWidth={3} />
+            <X className="h-5 w-5 sm:h-6 sm:w-6" strokeWidth={3} />
           </button>
         </div>
 
@@ -777,7 +790,7 @@ function ProductSelectModal({
 
         {/* Sliding Category Picker */}
         {categoryPickerOpen && (
-          <div className="absolute inset-0 z-[90] flex flex-col bg-slate-950/40 backdrop-blur-sm">
+          <div className="absolute inset-0 z-[230] flex flex-col bg-slate-950/40 backdrop-blur-sm">
             <div className="absolute inset-0" onClick={() => setCategoryPickerOpen(false)} />
             <div className="mt-auto relative flex max-h-[85%] flex-col overflow-hidden rounded-t-[3rem] bg-white shadow-2xl animate-in slide-in-from-bottom duration-300">
               <div className="flex items-center justify-between border-b border-slate-100 px-8 py-6">
@@ -825,20 +838,34 @@ function ProductSelectModal({
 
 // ─── Manual Order Creation ───────────────────────────────────────────────────
 export function CreateOrderModal({
+  autoOpen,
   customerOrderCountsToday = {},
-  customers,
-  products,
-  today,
+  customers = [],
+  products = [],
+  today = new Date().toISOString().split("T")[0],
+  open: propOpen,
+  onOpenChange,
 }: Props) {
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = propOpen !== undefined ? propOpen : internalOpen;
+  const setOpen = onOpenChange ?? setInternalOpen;
+  const router = useRouter();
+  const [isClosing, setIsClosing] = useState(false);
   const [activeTab, setActiveTab] = useState<ModalTab>("create");
   const [productModalOpen, setProductModalOpen] = useState(false);
   const [pending, startTransition] = useTransition();
-  const [success, setSuccess] = useState<string | null>(null);
+  const [success, setSuccess] = useState<{ orderNumber: string; deliveryNumber?: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [historyNotice, setHistoryNotice] = useState<string | null>(null);
   const [customerId, setCustomerId] = useState("");
   const [orderDate, setOrderDate] = useState(today);
+
+  // Keep orderDate in sync with today prop if it changes (e.g. after pre-fetch)
+  useEffect(() => {
+    if (today && orderDate !== today) {
+      setOrderDate(today);
+    }
+  }, [today, orderDate]);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [customerPickerOpen, setCustomerPickerOpen] = useState(false);
   const [customerPickerQuery, setCustomerPickerQuery] = useState("");
@@ -852,6 +879,7 @@ export function CreateOrderModal({
   const [editQty, setEditQty] = useState(1);
   const historyRequestId = useRef(0);
   const submitPopupTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const productsById = useMemo(
     () => new Map(products.map((product) => [product.id, product])),
     [products],
@@ -871,8 +899,18 @@ export function CreateOrderModal({
       if (submitPopupTimerRef.current) {
         clearTimeout(submitPopupTimerRef.current);
       }
+      if (closeTimerRef.current) {
+        clearTimeout(closeTimerRef.current);
+      }
     };
   }, []);
+
+  useEffect(() => {
+    if (autoOpen) {
+      setIsClosing(false);
+      setOpen(true);
+    }
+  }, [autoOpen, setOpen]);
 
   const filteredCustomers = customerPickerQuery
     ? orderedCustomers.filter((c) => {
@@ -938,7 +976,7 @@ export function CreateOrderModal({
           priceMap[row.saleUnitId ?? row.productId] ?? priceMap[row.productId] ?? row.unitPrice;
 
         const existingIndex = nextCart.findIndex(
-          (item) => item.productId === row.productId && item.saleUnitId === row.saleUnitId,
+          (item) => item.productId === row.productId && (item.saleUnitId || null) === (row.saleUnitId || null),
         );
 
         if (existingIndex >= 0) {
@@ -983,9 +1021,12 @@ export function CreateOrderModal({
     setPricesLoading(true);
     setHistoryError(null);
     try {
+      // Ensure we have a valid date for loading snapshot
+      const fetchDate = orderDate || today;
+
       const [prices] = await Promise.all([
         fetchCustomerPricesAction(id),
-        loadLastOrderSnapshot(id, orderDate),
+        loadLastOrderSnapshot(id, fetchDate),
       ]);
       setPriceMap(prices);
       setCart((prev) =>
@@ -1022,7 +1063,7 @@ export function CreateOrderModal({
       const nextCart = [...prev];
       for (const sel of selections) {
         const existingIndex = nextCart.findIndex(
-          (item) => item.productId === sel.product.id && item.saleUnitId === sel.unitId,
+          (item) => item.productId === sel.product.id && (item.saleUnitId || null) === (sel.unitId || null),
         );
         if (existingIndex >= 0) {
           nextCart[existingIndex] = {
@@ -1126,8 +1167,19 @@ export function CreateOrderModal({
   }
 
   function handleClose() {
-    setOpen(false);
-    resetForm();
+    if (!open || isClosing) return;
+    setIsClosing(true);
+    setCustomerPickerOpen(false);
+    setProductModalOpen(false);
+    setEditingCartIndex(null);
+    if (closeTimerRef.current) {
+      clearTimeout(closeTimerRef.current);
+    }
+    closeTimerRef.current = setTimeout(() => {
+      setOpen(false);
+      setIsClosing(false);
+      resetForm();
+    }, 380);
   }
 
   function handleSubmit() {
@@ -1170,8 +1222,11 @@ export function CreateOrderModal({
         setError(result.error);
         return;
       }
-      setSuccess(result.orderNumber ?? "สำเร็จ");
-      setTimeout(handleClose, 1800);
+      setSuccess({
+        orderNumber: result.orderNumber ?? "",
+        deliveryNumber: result.deliveryNumber
+      });
+      setTimeout(handleClose, 3500);
     });
   }
 
@@ -1188,46 +1243,90 @@ export function CreateOrderModal({
       {/* Trigger */}
       <button
         type="button"
-        onClick={() => setOpen(true)}
-        className="action-touch-safe inline-flex items-center gap-2 rounded-2xl bg-[#003366] px-4 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-[#002244] active:scale-[0.98]"
+        onClick={() => {
+          if (closeTimerRef.current) {
+            clearTimeout(closeTimerRef.current);
+          }
+          setIsClosing(false);
+          setOpen(true);
+        }}
+        className="action-touch-safe inline-flex items-center justify-center gap-2 rounded-full bg-[#003366] px-5 py-3 text-sm font-bold text-white shadow-[0_12px_40px_rgba(0,51,102,0.35)] transition-all hover:scale-105 hover:bg-[#002244] active:scale-95 md:h-16 md:px-8 md:text-base"
       >
-        <Plus className="h-4 w-4" strokeWidth={2.5} />
+        <Plus className="h-5 w-5 md:h-6 md:w-6" strokeWidth={3} />
         สร้างออเดอร์
       </button>
 
+      <CreateOrderPortal>
       {/* Main modal */}
-      {open && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/50 sm:items-center sm:p-4">
+      {(open || isClosing) && (
+        <div
+          className={`fixed inset-0 z-[200] flex items-center justify-center bg-slate-950/60 p-0 sm:p-4 ${
+            isClosing ? "animate-fade-out" : "animate-fade-in"
+          }`}
+        >
           <div className="absolute inset-0" onClick={handleClose} />
 
-          <div className="relative flex h-[100dvh] w-full max-h-[100dvh] flex-col overflow-hidden bg-white shadow-2xl sm:h-[96dvh] sm:max-h-[96dvh] sm:max-w-6xl sm:rounded-[2rem]">
+          <div
+            className={`relative flex h-full w-full max-h-full flex-col overflow-hidden rounded-none bg-white shadow-2xl sm:h-[94dvh] sm:max-h-[94dvh] sm:max-w-6xl sm:rounded-[2rem] lg:h-[86dvh] lg:max-h-[86dvh] ${
+              isClosing ? "animate-slide-up-premium" : "animate-slide-down-premium"
+            }`}
+          >
             <ActionPopup message={submitPopupMessage} onClose={() => setSubmitPopupMessage(null)} />
 
             {/* Header */}
-            <div className="sticky top-0 z-40 flex shrink-0 items-center justify-between gap-3 border-b border-slate-200 bg-white/95 px-5 py-4 backdrop-blur supports-[backdrop-filter]:bg-white/90">
-              <div className="flex min-w-0 items-center gap-3">
-                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#003366]/10">
-                  <ShoppingCart className="h-5 w-5 text-[#003366]" strokeWidth={2.2} />
+            <div className="sticky top-0 z-40 flex shrink-0 items-center justify-between gap-3 border-b border-[#003366]/30 bg-[#003366] px-4 py-2.5 pt-[max(0.625rem,env(safe-area-inset-top))] text-white shadow-sm sm:px-5 sm:py-4 sm:pt-4">
+              <div className="flex min-w-0 items-center gap-2.5 sm:gap-3">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/10 sm:h-11 sm:w-11 sm:rounded-2xl">
+                  <ShoppingCart className="h-4.5 w-4.5 text-white sm:h-5 sm:w-5" strokeWidth={2.2} />
                 </div>
                 <div className="min-w-0">
-                  <h2 className="text-lg font-bold text-slate-950">สร้างออเดอร์ใหม่</h2>
-                  <p className="text-xs text-slate-500">ช่องทาง: สร้าง (โดยแอดมิน)</p>
+                  <h2 className="text-base font-bold text-white sm:text-lg">สร้างออเดอร์ใหม่</h2>
+                  <p className="text-[10px] text-white/60 sm:text-xs">ช่องทาง: สร้าง (โดยแอดมิน)</p>
                 </div>
               </div>
               <button
                 type="button"
                 onClick={handleClose}
-                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-slate-200 text-slate-500 transition hover:bg-slate-50 active:scale-95"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/10 text-white/70 transition hover:bg-white/20 hover:text-white active:scale-95 sm:h-11 sm:w-11 sm:rounded-2xl"
                 aria-label="ปิด"
               >
-                <X className="h-5 w-5" strokeWidth={2.2} />
+                <X className="h-4.5 w-4.5 sm:h-5 sm:w-5" strokeWidth={2.2} />
               </button>
             </div>
 
             {/* Success banner */}
             {success && (
-              <div className="shrink-0 bg-emerald-50 px-5 py-3.5 text-base font-semibold text-emerald-700">
-                สร้างออเดอร์ {success} สำเร็จแล้ว ✓
+              <div className="shrink-0 bg-emerald-50 px-5 py-4 text-emerald-800 shadow-[inset_0_-1px_0_rgba(16,185,129,0.1)]">
+                <div className="flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-white shadow-sm">
+                      <Check className="h-6 w-6" strokeWidth={3} />
+                    </div>
+                    <div>
+                      <p className="text-base font-bold leading-tight">บันทึกออเดอร์สำเร็จ!</p>
+                      <p className="mt-1 text-sm font-semibold opacity-90">
+                        ออเดอร์: <span className="font-mono text-emerald-700">{success.orderNumber}</span>
+                        {success.deliveryNumber && (
+                          <>
+                            {" · "}
+                            ใบส่งของ: <span className="font-mono text-[#003366] font-bold">{success.deliveryNumber}</span>
+                          </>
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setOpen(false);
+                      router.push("/dashboard?date=" + orderDate + "&print=" + success.deliveryNumber);
+                    }}
+                    className="inline-flex items-center gap-2 rounded-xl bg-[#003366] px-4 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-[#002244]"
+                  >
+                    <Truck className="h-3.5 w-3.5" strokeWidth={2.4} />
+                    ไปที่หน้าพิมพ์
+                  </button>
+                </div>
               </div>
             )}
 
@@ -1611,21 +1710,21 @@ export function CreateOrderModal({
       )}
 
       {open && customerPickerOpen ? (
-        <div className="fixed inset-0 z-[60] flex items-end justify-center bg-slate-950/50 sm:items-center sm:p-4">
+        <div className="fixed inset-0 z-[220] flex items-end justify-center bg-slate-950/50 sm:items-center sm:p-4">
           <div className="absolute inset-0" onClick={() => setCustomerPickerOpen(false)} />
-          <div className="relative flex h-[86dvh] w-full max-h-[86dvh] flex-col overflow-hidden rounded-t-[2rem] bg-white shadow-2xl sm:h-[80dvh] sm:max-w-md sm:rounded-[2rem]">
-            <div className="sticky top-0 z-20 flex items-center justify-between gap-3 border-b border-slate-200 bg-white px-4 py-4">
+          <div className="relative flex h-full w-full max-h-full flex-col overflow-hidden rounded-none bg-white shadow-2xl sm:h-[80dvh] sm:max-w-md sm:rounded-[2rem]">
+            <div className="sticky top-0 z-20 flex items-center justify-between gap-3 border-b border-slate-200 bg-white px-4 py-2.5 sm:py-4">
               <div className="min-w-0">
-                <h3 className="truncate text-lg font-bold text-slate-950">เลือกร้านค้า</h3>
-                <p className="text-xs text-slate-500">ค้นหาด้วยชื่อร้าน หรือรหัสร้าน</p>
+                <h3 className="truncate text-base font-bold text-slate-950 sm:text-lg">เลือกร้านค้า</h3>
+                <p className="text-[10px] text-slate-500 sm:text-xs">ค้นหาด้วยชื่อร้าน หรือรหัสร้าน</p>
               </div>
               <button
                 type="button"
                 onClick={() => setCustomerPickerOpen(false)}
-                className="action-touch-safe flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 text-slate-500 transition hover:bg-slate-50"
+                className="action-touch-safe flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-200 text-slate-500 transition hover:bg-slate-50 sm:h-10 sm:w-10"
                 aria-label="ปิดหน้าต่างเลือกร้านค้า"
               >
-                <X className="h-5 w-5" strokeWidth={2.2} />
+                <X className="h-4.5 w-4.5 sm:h-5 sm:w-5" strokeWidth={2.2} />
               </button>
             </div>
 
@@ -1704,7 +1803,7 @@ export function CreateOrderModal({
       ) : null}
 
       {open && editingCartItem && editingCartIndex !== null ? (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/55 p-4">
+        <div className="fixed inset-0 z-[220] flex items-center justify-center bg-slate-950/55 p-4">
           <button
             type="button"
             className="absolute inset-0"
@@ -1808,6 +1907,44 @@ export function CreateOrderModal({
           selectedCustomer ? `${selectedCustomer.code} ${selectedCustomer.name}` : null
         }
       />
+      </CreateOrderPortal>
     </>
+  );
+}
+
+export function GlobalCreateOrderModal() {
+  const { isOpen, close, data, isLoading } = useCreateOrder();
+
+  if (!isOpen) return null;
+
+  if (!data) {
+    return (
+      <div className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-950/60 p-4">
+        <button
+          type="button"
+          className="absolute inset-0"
+          aria-label="ปิดหน้าต่างสร้างออเดอร์"
+          onClick={close}
+        />
+        <div className="relative w-full max-w-sm rounded-3xl bg-white p-6 text-center shadow-2xl">
+          <div className="mx-auto mb-4 h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-[#003366]" />
+          <p className="text-base font-bold text-slate-950">กำลังเตรียมข้อมูลสร้างออเดอร์</p>
+          <p className="mt-1 text-sm font-medium text-slate-600">
+            {isLoading ? "กรุณารอสักครู่" : "กำลังโหลดข้อมูลร้านค้าและสินค้า"}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <CreateOrderModal
+      open={isOpen}
+      onOpenChange={(open) => !open && close()}
+      customers={data.customers}
+      products={data.products}
+      today={data.today}
+      customerOrderCountsToday={{}}
+    />
   );
 }

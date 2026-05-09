@@ -40,13 +40,13 @@ export async function getAllDeliveryNotesPrintDataForDate(
 ): Promise<DeliveryNotePrintData[]> {
   const supabase = getSupabaseAdmin();
 
-  // Fetch all confirmed DN ids for the date, ordered by customer then created_at
+  // Fetch all DN ids for the date, ordered by customer then created_at
   const { data: dns } = await supabase
     .from("delivery_notes")
     .select("id, customer_id")
     .eq("organization_id", organizationId)
     .eq("delivery_date", date)
-    .eq("status", "confirmed")
+    .in("status", ["confirmed", "submitted"])
     .order("customer_id", { ascending: true })
     .order("created_at", { ascending: true });
 

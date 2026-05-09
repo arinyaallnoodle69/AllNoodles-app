@@ -2,8 +2,6 @@ import { StockMobileReceiveButton } from "@/components/settings/stock-list";
 import { StockMovementTable } from "@/components/settings/stock-movement-table";
 import { StockReceiveForm } from "@/components/settings/stock-receive-form";
 import { StockSummaryCards } from "@/components/settings/stock-summary-cards";
-import { StockTabs } from "@/components/settings/stock-tabs";
-import { SettingsShell } from "@/components/settings/settings-shell";
 import { requireAppRole } from "@/lib/auth/authorization";
 import { getStockDashboardData } from "@/lib/stock/admin";
 
@@ -21,15 +19,11 @@ export default async function StockMovementsPage({
   searchParams,
 }: StockMovementsPageProps) {
   const session = await requireAppRole("admin");
-  const data = await getStockDashboardData(session.organizationId);
+  const data = await getStockDashboardData(session.organizationId, 50);
   const params = await searchParams;
 
   return (
-    <SettingsShell
-      title="จัดการสต็อก"
-      description="ดูของคงเหลือ รับเข้าสินค้าจากโรงงาน และติดตามข้อมูลสต็อกจากหน้ากลุ่มนี้"
-      floatingSubmit={false}
-    >
+    <>
       {data.setupHint ? (
         <div className="mb-8 rounded-xl border border-amber-200 bg-amber-50 px-4 py-4 text-sm text-amber-800">
           {data.setupHint} กรุณารัน migration `202603161100_inventory_stock_receipts_and_movements.sql`
@@ -38,18 +32,21 @@ export default async function StockMovementsPage({
       ) : null}
 
       <StockSummaryCards data={data} />
-      <StockTabs current="movements" />
 
       <div className="mt-8">
-        <StockMovementTable movementRows={data.movementRows} />
+        <StockMovementTable initialMovementRows={data.movementRows} />
       </div>
 
       <StockMobileReceiveButton baseHref="/stock/movements" />
       <div className="h-20 sm:hidden" />
 
       {params.receive === "1" ? (
-        <StockReceiveForm products={data.products} returnHref="/stock/movements" />
+        <StockReceiveForm 
+          products={data.products} 
+          suppliers={data.suppliers}
+          returnHref="/stock/movements" 
+        />
       ) : null}
-    </SettingsShell>
+    </>
   );
 }

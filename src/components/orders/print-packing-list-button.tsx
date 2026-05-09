@@ -29,9 +29,9 @@ export function PrintPackingListButton({ date }: { date: string }) {
       type="button"
       onClick={handlePrint}
       disabled={loading}
-      className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 disabled:opacity-50 print:hidden"
+      className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border border-[#003366]/20 bg-white px-3 py-1.5 text-[13px] font-bold text-[#003366] shadow-sm transition hover:bg-[#003366]/5 hover:shadow-md active:scale-[0.98] disabled:opacity-50 print:hidden md:gap-2 md:px-6 md:py-2.5 md:text-sm"
     >
-      <LayoutList className="h-4 w-4" strokeWidth={2.2} />
+      <LayoutList className="h-3.5 w-3.5 md:h-4.5 md:w-4.5" strokeWidth={2.5} />
       {loading ? "กำลังโหลด..." : "พิมพ์ใบจัดของ"}
     </button>
   );

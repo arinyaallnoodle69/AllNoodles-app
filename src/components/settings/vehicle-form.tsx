@@ -80,7 +80,7 @@ export function VehicleForm({ initialVehicle, returnHref }: VehicleFormProps) {
   const showFieldErrors = hasSubmitted && state.status === "error";
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-3 sm:p-4">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/45 p-3 sm:p-4">
       <div className="flex max-h-[96dvh] w-full max-w-3xl flex-col overflow-hidden rounded-[1.75rem] border border-slate-200 bg-white shadow-[0_28px_80px_rgba(15,23,42,0.22)]">
         <div className="flex items-start justify-between gap-4 border-b border-slate-100 px-6 py-5">
           <div>

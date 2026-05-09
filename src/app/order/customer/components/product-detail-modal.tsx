@@ -126,7 +126,7 @@ export function ProductDetailModal({
         willChange: "transform",
       }}
     >
-      <div className="sticky top-0 z-20 flex items-center justify-between border-b border-[#00264d] bg-[#003366] px-4 py-3 text-white shadow-[0_10px_30px_rgba(0,51,102,0.22)]">
+      <div className="sticky top-0 z-20 flex items-center justify-between border-b border-[#00264d] bg-[#003366] px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] text-white shadow-[0_10px_30px_rgba(0,51,102,0.22)]">
         <button
           onClick={onCloseModal}
           className="flex h-10 w-10 items-center justify-center rounded-full text-white/90 transition-all active:scale-90 hover:bg-white/10"

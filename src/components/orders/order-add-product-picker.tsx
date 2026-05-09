@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useDeferredValue, useEffect, useMemo, useState, useTransition } from "react";
 import Image from "next/image";
 import {
   AlertTriangle,
@@ -120,6 +120,7 @@ export function OrderAddProductPicker({
 }: Props) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
+  const deferredQuery = useDeferredValue(query);
   const [priceMap, setPriceMap] = useState<Record<string, number>>({});
   const [selections, setSelections] = useState<Record<string, SelectionDraft>>({});
   const [error, setError] = useState<string | null>(null);
@@ -140,7 +141,7 @@ export function OrderAddProductPicker({
   );
 
   const filteredProducts = useMemo(() => {
-    const normalized = normalizeSearch(query);
+    const normalized = normalizeSearch(deferredQuery);
     const source = normalized
       ? products.filter((product) => {
           return (
@@ -152,7 +153,7 @@ export function OrderAddProductPicker({
       : products;
 
     return source.slice(0, 50);
-  }, [products, query]);
+  }, [products, deferredQuery]);
 
   const selectedCount = Object.keys(selections).length;
 
@@ -167,11 +168,12 @@ export function OrderAddProductPicker({
 
       const defaultUnit = getDefaultUnit(product);
       if (!defaultUnit) return current;
+      const defaultPrice = getUnitPrice(product.id, defaultUnit.id, priceMap);
 
       return {
         ...current,
         [product.id]: {
-          price: String(getUnitPrice(product.id, defaultUnit.id, priceMap)),
+          price: defaultPrice === 0 ? "" : String(defaultPrice),
           quantity: defaultUnit.minOrderQty,
           unitId: defaultUnit.id,
         },
@@ -191,10 +193,13 @@ export function OrderAddProductPicker({
   function changeUnit(product: OrderProductOption, unitId: string | null) {
     const unit = getUnits(product).find((item) => item.id === unitId) ?? getDefaultUnit(product);
     if (!unit) return;
-    updateSelection(product.id, () => ({
-      price: String(getUnitPrice(product.id, unit.id, priceMap)),
-      quantity: unit.minOrderQty,
+    const unitPrice = getUnitPrice(product.id, unit.id, priceMap);
+
+    updateSelection(product.id, (curr) => ({
+      ...curr,
       unitId: unit.id,
+      price: unitPrice === 0 ? "" : String(unitPrice),
+      quantity: Math.max(curr.quantity, unit.minOrderQty),
     }));
   }
 
@@ -453,60 +458,79 @@ export function OrderAddProductPicker({
                             </div>
                           ) : null}
 
-                          <div className="grid min-w-0 gap-4 sm:grid-cols-2">
-                            <div className="min-w-0 rounded-2xl bg-white p-3 border border-slate-100 shadow-sm">
-                              <p className="text-[12px] font-black text-slate-400 uppercase tracking-widest">จำนวน ({selectedUnit.label})</p>
-                              <div className="mt-2.5 flex items-center gap-2">
-                                <button
-                                  type="button"
-                                  onClick={() => stepQuantity(product, -1)}
-                                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border-2 border-slate-100 bg-slate-50 text-slate-700 active:scale-90"
-                                >
-                                  <Minus className="h-5 w-5" strokeWidth={3} />
-                                </button>
-                                <div className="min-w-0 flex-1 text-center">
-                                  <p className="text-2xl font-black tabular-nums text-slate-950 leading-none">
-                                    {draft.quantity.toLocaleString("th-TH")}
-                                  </p>
+                          <div className="grid min-w-0 gap-3">
+                            <div className="min-w-0 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
+                              <div className="flex items-center justify-between gap-3">
+                                <p className="text-[12px] font-black text-slate-500 uppercase tracking-widest">จำนวน ({selectedUnit.label})</p>
+                                <div className="flex min-w-0 items-center gap-2 rounded-2xl bg-slate-50 px-2 py-1.5 ring-1 ring-slate-200">
+                                  <button
+                                    type="button"
+                                    onClick={() => stepQuantity(product, -1)}
+                                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white text-slate-900 shadow-sm ring-1 ring-slate-200 transition active:scale-95"
+                                  >
+                                    <Minus className="h-4.5 w-4.5" strokeWidth={3} />
+                                  </button>
+                                  <input
+                                    type="number"
+                                    min={selectedUnit.minOrderQty}
+                                    step={getEffectiveStep(selectedUnit.stepOrderQty)}
+                                    value={draft.quantity}
+                                    onChange={(e) => {
+                                      const val = Number(e.target.value);
+                                      updateSelection(product.id, (curr) => ({
+                                        ...curr,
+                                        quantity: isNaN(val) ? selectedUnit.minOrderQty : val,
+                                      }));
+                                    }}
+                                    onBlur={() => {
+                                      updateSelection(product.id, (curr) => ({
+                                        ...curr,
+                                        quantity: normalizeQuantity(curr.quantity, selectedUnit.minOrderQty, selectedUnit.stepOrderQty),
+                                      }));
+                                    }}
+                                    className="h-9 w-20 min-w-0 bg-transparent text-center text-2xl font-black tabular-nums text-slate-950 outline-none"
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() => stepQuantity(product, 1)}
+                                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white text-slate-900 shadow-sm ring-1 ring-slate-200 transition active:scale-95"
+                                  >
+                                    <Plus className="h-4.5 w-4.5" strokeWidth={3} />
+                                  </button>
                                 </div>
-                                <button
-                                  type="button"
-                                  onClick={() => stepQuantity(product, 1)}
-                                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border-2 border-slate-100 bg-slate-50 text-slate-700 active:scale-90"
-                                >
-                                  <Plus className="h-5 w-5" strokeWidth={3} />
-                                </button>
                               </div>
                             </div>
 
-                            <div className={`min-w-0 rounded-2xl p-3 border-2 transition-all ${
-                              isBelowCost ? "bg-rose-50 border-[#FF0000]" : "bg-white border-slate-100 shadow-sm"
+                            <div className={`min-w-0 rounded-2xl border p-3 shadow-sm transition-all ${
+                              isBelowCost ? "border-[#FF0000] bg-rose-50" : "border-slate-200 bg-white"
                             }`}>
-                              <div className="flex items-center justify-between">
-                                <p className={`text-[12px] font-black uppercase tracking-widest ${isBelowCost ? "text-[#FF0000]" : "text-slate-400"}`}>ราคา</p>
-                                {cost > 0 && (
-                                  <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-full border ${isBelowCost ? "bg-white text-[#FF0000] border-[#FF0000] animate-pulse" : "text-slate-400 border-slate-200"}`}>
-                                    ทุน ฿{formatTHB(cost)}
-                                  </span>
-                                )}
-                              </div>
-                              <div className="mt-2 flex items-center gap-2">
-                                <input
-                                  type="number"
-                                  min="0"
-                                  step="0.01"
-                                  value={draft.price}
-                                  onChange={(event) =>
-                                    updateSelection(product.id, (current) => ({
-                                      ...current,
-                                      price: event.target.value,
-                                    }))
-                                  }
-                                  className={`min-w-0 flex-1 bg-transparent text-right text-2xl font-black tabular-nums outline-none ${
-                                    isBelowCost ? "text-[#FF0000]" : "text-slate-950"
-                                  }`}
-                                />
-                                <span className={`shrink-0 text-xs font-black ${isBelowCost ? "text-[#FF0000]" : "text-slate-400"}`}>บาท</span>
+                              <div className="flex min-w-0 items-center justify-between gap-3">
+                                <div className="min-w-0">
+                                  <p className={`text-[12px] font-black uppercase tracking-widest ${isBelowCost ? "text-[#FF0000]" : "text-slate-500"}`}>ราคา</p>
+                                  {cost > 0 && (
+                                    <p className={`mt-1 text-[11px] font-bold ${isBelowCost ? "text-[#FF0000]" : "text-slate-400"}`}>ทุน ฿{formatTHB(cost)}</p>
+                                  )}
+                                </div>
+                                <div className="flex min-w-0 items-center gap-2 rounded-2xl bg-slate-50 px-3 py-2 ring-1 ring-slate-200">
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    step="0.01"
+                                    value={draft.price}
+                                    onFocus={(e) => e.target.select()}
+                                    placeholder="0.00"
+                                    onChange={(event) =>
+                                      updateSelection(product.id, (current) => ({
+                                        ...current,
+                                        price: event.target.value,
+                                      }))
+                                    }
+                                    className={`h-9 w-24 min-w-0 bg-transparent text-right text-2xl font-black tabular-nums outline-none placeholder:text-slate-300 ${
+                                      isBelowCost ? "text-[#FF0000]" : "text-slate-950"
+                                    }`}
+                                  />
+                                  <span className={`shrink-0 text-xs font-black ${isBelowCost ? "text-[#FF0000]" : "text-slate-500"}`}>บาท</span>
+                                </div>
                               </div>
                             </div>
                           </div>

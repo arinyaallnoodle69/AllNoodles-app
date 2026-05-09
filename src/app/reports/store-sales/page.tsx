@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import type { LucideIcon } from "lucide-react";
@@ -13,6 +14,7 @@ import {
   Package,
 } from "lucide-react";
 import { AppSidebarLayout } from "@/components/app-sidebar";
+import { PageLoader } from "@/components/page-loader";
 import { requireAppSession } from "@/lib/auth/authorization";
 import { getTodayInBangkok } from "@/lib/orders/date";
 import { getStoreSalesRanking, type StoreSalesRow } from "@/lib/reports/store-sales";
@@ -353,7 +355,15 @@ type PageProps = {
   }>;
 };
 
-export default async function StoreSalesReportPage({ searchParams }: PageProps) {
+export default async function Page({ searchParams }: PageProps) {
+  return (
+    <Suspense fallback={<PageLoader />}>
+      <StoreSalesReportContent searchParams={searchParams} />
+    </Suspense>
+  );
+}
+
+async function StoreSalesReportContent({ searchParams }: PageProps) {
   const session = await requireAppSession();
   const params = await searchParams;
 

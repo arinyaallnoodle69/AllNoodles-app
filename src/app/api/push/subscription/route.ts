@@ -8,8 +8,6 @@ import {
 } from "@/lib/push/web-push";
 import { hasWebPushConfig } from "@/lib/supabase/env";
 
-export const runtime = "nodejs";
-
 type SubscriptionRequestBody = {
   endpoint?: string;
   p256dh?: string;

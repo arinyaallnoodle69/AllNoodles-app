@@ -37,13 +37,12 @@ export default async function DeliveryBatchPrintPage({ searchParams }: Props) {
       .eq("organization_id", session.organizationId)
       .eq("delivery_date", date)
       .in("customer_id", customerIds)
-      .eq("status", "confirmed")
+      .in("status", ["confirmed", "submitted"])
       .order("created_at", { ascending: true });
 
     const idsByCustomer = new Map<string, string[]>();
-    for (const row of (rows ?? []) as Array<{ id: string; customer_id?: string }>) {
+    for (const row of (rows ?? []) as Array<{ id: string; customer_id: string }>) {
       const customer = row.customer_id;
-      if (!customer) continue;
       const ids = idsByCustomer.get(customer) ?? [];
       ids.push(row.id);
       idsByCustomer.set(customer, ids);
@@ -64,7 +63,7 @@ export default async function DeliveryBatchPrintPage({ searchParams }: Props) {
       .eq("organization_id", session.organizationId)
       .eq("delivery_date", date)
       .eq("customer_id", customerId)
-      .eq("status", "confirmed")
+      .in("status", ["confirmed", "submitted"])
       .order("created_at", { ascending: true });
 
     const ids = (rows ?? []).map((r: { id: string }) => r.id);

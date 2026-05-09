@@ -1,4 +1,5 @@
 import "server-only";
+import { cache } from "react";
 
 import type { Json } from "@/types/database";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
@@ -196,7 +197,7 @@ function getChannelLabel(metadata: Json) {
   return channelValue.toUpperCase();
 }
 
-export async function getOrderDetailById(orderId: string): Promise<OrderDetailData | null> {
+export const getOrderDetailById = cache(async (orderId: string): Promise<OrderDetailData | null> => {
   const admin = getSupabaseAdmin() as unknown as OrderDetailAdminClient;
 
   const orderResult = await admin
@@ -319,9 +320,9 @@ export async function getOrderDetailById(orderId: string): Promise<OrderDetailDa
     totalAmount: normalizeNumber(order.total_amount),
     totalQuantity: items.reduce((total, item) => total + item.quantity, 0),
   };
-}
+});
 
-export async function getIncomingOrders(
+export const getIncomingOrders = cache(async (
   organizationId: string,
   {
     orderDate,
@@ -330,7 +331,7 @@ export async function getIncomingOrders(
     orderDate: string;
     searchTerm?: string | null;
   },
-): Promise<IncomingOrderListItem[]> {
+): Promise<IncomingOrderListItem[]> => {
   const admin = getSupabaseAdmin() as unknown as OrderDetailAdminClient;
   const normalizedSearch = normalizeSearch(searchTerm ?? "");
 
@@ -442,12 +443,12 @@ export async function getIncomingOrders(
         normalizeSearch(order.channelLabel).includes(normalizedSearch)
       );
     });
-}
+});
 
-export async function getCustomerOrderCountsByDate(
+export const getCustomerOrderCountsByDate = cache(async (
   organizationId: string,
   orderDate: string,
-): Promise<Record<string, number>> {
+): Promise<Record<string, number>> => {
   const admin = getSupabaseAdmin() as unknown as OrderDetailAdminClient;
   const { data, error } = await admin
     .from("orders")
@@ -464,4 +465,4 @@ export async function getCustomerOrderCountsByDate(
     counts[order.customer_id] = (counts[order.customer_id] ?? 0) + 1;
     return counts;
   }, {});
-}
+});

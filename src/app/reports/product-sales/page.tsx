@@ -1,9 +1,11 @@
+import { Suspense } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import type { LucideIcon } from "lucide-react";
 import { Package, Filter, ChevronLeft, ChevronRight, Wallet, Boxes, Landmark, BadgeDollarSign } from "lucide-react";
 import { ThaiDatePicker } from "@/components/ui/thai-date-picker";
 import { AppSidebarLayout } from "@/components/app-sidebar";
+import { PageLoader } from "@/components/page-loader";
 import { requireAppSession } from "@/lib/auth/authorization";
 import { getTodayInBangkok } from "@/lib/orders/date";
 import {
@@ -352,7 +354,15 @@ type PageProps = {
   }>;
 };
 
-export default async function ProductSalesReportPage({ searchParams }: PageProps) {
+export default async function Page({ searchParams }: PageProps) {
+  return (
+    <Suspense fallback={<PageLoader />}>
+      <ProductSalesReportContent searchParams={searchParams} />
+    </Suspense>
+  );
+}
+
+async function ProductSalesReportContent({ searchParams }: PageProps) {
   const session = await requireAppSession();
   const params = await searchParams;
 

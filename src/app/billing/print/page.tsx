@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { requireAppRole } from "@/lib/auth/authorization";
 import { getBillingStatementData, getBatchBillingData, type BillingStatementData } from "@/lib/billing/billing-statement";
@@ -23,7 +24,7 @@ function isValidDate(s: string | undefined): s is string {
   return typeof s === "string" && /^\d{4}-\d{2}-\d{2}$/.test(s);
 }
 
-export default async function BillingPrintPage({ searchParams }: Props) {
+async function BillingPrintPageContent({ searchParams }: Props) {
   const session = await requireAppRole("admin");
   const params = await searchParams;
 
@@ -99,5 +100,13 @@ export default async function BillingPrintPage({ searchParams }: Props) {
         toDate={toDate}
       />
     </>
+  );
+}
+
+export default function BillingPrintPage(props: Props) {
+  return (
+    <Suspense fallback={null}>
+      <BillingPrintPageContent {...props} />
+    </Suspense>
   );
 }

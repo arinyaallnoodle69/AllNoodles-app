@@ -1,4 +1,4 @@
-import { Fragment } from "react";
+import { Fragment, Suspense } from "react";
 import { Building2, CalendarDays, FileText, Lock, Printer, Receipt, Search } from "lucide-react";
 import { AppSidebarLayout } from "@/components/app-sidebar";
 import { requireAppRole } from "@/lib/auth/authorization";
@@ -312,7 +312,7 @@ function EmptyHistory() {
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
-export default async function BillingPage() {
+async function BillingPageContent() {
   const session = await requireAppRole("admin");
 
   const [customers, history] = await Promise.all([
@@ -400,5 +400,13 @@ export default async function BillingPage() {
         </div>
       </div>
     </AppSidebarLayout>
+  );
+}
+
+export default function BillingPage() {
+  return (
+    <Suspense fallback={null}>
+      <BillingPageContent />
+    </Suspense>
   );
 }

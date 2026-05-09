@@ -112,9 +112,19 @@ export type SettingsSaleUnitOption = {
   sku: string;
 };
 
+export type SettingsSupplier = {
+  address: string;
+  addressDraft: SettingsCustomerAddress; // Reuse customer address structure
+  code: string;
+  id: string;
+  name: string;
+};
+
 export type SettingsData = {
   customers: SettingsCustomer[];
+  suppliers: SettingsSupplier[];
   nextCustomerCode: string;
+  nextSupplierCode: string;
   nextProductSku: string;
   prices: SettingsPriceRow[];
   productCategories: SettingsProductCategory[];
@@ -280,6 +290,52 @@ function getCustomerAddressDraft(customer: CustomerRow): SettingsCustomerAddress
   };
 }
 
+type SupplierRow = {
+  address: string;
+  supplier_code: string;
+  district: string | null;
+  id: string;
+  metadata: Record<string, unknown> | null;
+  name: string;
+  postal_code: string | null;
+  province: string | null;
+  subdistrict: string | null;
+};
+
+function getNextSupplierCode(codes: string[]) {
+  const maxSequence = codes.reduce((max, code) => {
+    const match = /^TYV(\d+)$/i.exec(code.trim());
+
+    if (!match) {
+      return max;
+    }
+
+    const sequence = Number.parseInt(match[1], 10);
+    return Number.isFinite(sequence) ? Math.max(max, sequence) : max;
+  }, 0);
+
+  return `TYV${String(maxSequence + 1).padStart(3, "0")}`;
+}
+
+function getSupplierAddressDraft(supplier: SupplierRow): SettingsCustomerAddress {
+  const metadata = getRecord(supplier.metadata);
+  const address = getRecord(metadata?.address);
+  const street = getRecord(address?.street);
+  const addressDetails =
+    getText(street?.details) || getText(address?.line1) || supplier.address || "";
+
+  return {
+    addressDetails,
+    districtCode: getText(address?.districtCode),
+    districtName: getText(address?.districtName) || supplier.district || "",
+    postalCode: getText(address?.postalCode) || supplier.postal_code || "",
+    provinceCode: getText(address?.provinceCode),
+    provinceName: getText(address?.provinceName) || supplier.province || "",
+    subdistrictCode: getText(address?.subdistrictCode),
+    subdistrictName: getText(address?.subdistrictName) || supplier.subdistrict || "",
+  };
+}
+
 async function fetchSettingsData(organizationId: string): Promise<SettingsData> {
   const admin = getSupabaseAdmin();
   const productsTable = admin.from("products") as unknown as SelectTable;
@@ -296,6 +352,7 @@ async function fetchSettingsData(organizationId: string): Promise<SettingsData> 
     imagesResult,
     saleUnitsResult,
     customersResult,
+    suppliersResult,
     pricesResult,
     categoriesResult,
     categoryItemsResult,
@@ -324,6 +381,15 @@ async function fetchSettingsData(organizationId: string): Promise<SettingsData> 
         .eq("organization_id", organizationId)
         .eq("is_active", true)
         .order("customer_code", { ascending: true }),
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (admin as any)
+        .from("suppliers")
+        .select(
+          "id, supplier_code, name, address, province, district, subdistrict, postal_code, metadata",
+        )
+        .eq("organization_id", organizationId)
+        .eq("is_active", true)
+        .order("supplier_code", { ascending: true }),
       pricesTable
         .select("customer_id, product_id, product_sale_unit_id, sale_price")
         .eq("organization_id", organizationId)
@@ -347,6 +413,7 @@ async function fetchSettingsData(organizationId: string): Promise<SettingsData> 
     imagesResult.error,
     saleUnitsResult.error,
     customersResult.error,
+    suppliersResult.error,
     pricesResult.error,
     vehiclesResult.error,
   ].filter(Boolean);
@@ -357,7 +424,9 @@ async function fetchSettingsData(organizationId: string): Promise<SettingsData> 
 
     return {
       customers: [],
+      suppliers: [],
       nextCustomerCode: getNextCustomerCode([]),
+      nextSupplierCode: getNextSupplierCode([]),
       nextProductSku: getNextProductSku([]),
       prices: [],
       productCategories: [],
@@ -374,6 +443,7 @@ async function fetchSettingsData(organizationId: string): Promise<SettingsData> 
   const images = (imagesResult.data ?? []) as ProductImageRow[];
   const saleUnits = (saleUnitsResult.data ?? []) as ProductSaleUnitRow[];
   const customers = (customersResult.data ?? []) as CustomerRow[];
+  const suppliers = (suppliersResult.data ?? []) as SupplierRow[];
   const activeProductIds = new Set(
     products.filter((product) => product.is_active).map((product) => product.id),
   );
@@ -506,7 +576,15 @@ async function fetchSettingsData(organizationId: string): Promise<SettingsData> 
       name: customer.name,
       pricingCount: customerPricingCount.get(customer.id) ?? 0,
     })),
+    suppliers: suppliers.map((supplier) => ({
+      address: supplier.address,
+      addressDraft: getSupplierAddressDraft(supplier),
+      code: supplier.supplier_code,
+      id: supplier.id,
+      name: supplier.name,
+    })),
     nextCustomerCode: getNextCustomerCode(customers.map((customer) => customer.customer_code)),
+    nextSupplierCode: getNextSupplierCode(suppliers.map((supplier) => supplier.supplier_code)),
     prices: prices.map((price) => ({
       customerId: price.customer_id,
       effectiveCostPrice:

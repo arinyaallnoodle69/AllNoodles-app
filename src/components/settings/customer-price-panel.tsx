@@ -415,7 +415,7 @@ function MobileSheet({ groups, initialCustomerId, saleUnits, startAdding, onClos
         role="dialog"
         aria-modal="true"
         aria-label={group.customerName}
-        className="fixed inset-0 z-50 flex flex-col bg-slate-50"
+        className="fixed inset-0 z-[100] flex flex-col bg-slate-50"
       >
         {/* ── Header ─────────────────────────────────────────── */}
         <div className="shrink-0 bg-[#003366] shadow-md">

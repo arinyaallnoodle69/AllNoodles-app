@@ -1,5 +1,7 @@
+import { Suspense } from "react";
 import { BarChart2, TrendingUp, TrendingDown, CalendarDays, ShoppingCart, Wallet } from "lucide-react";
 import { AppSidebarLayout } from "@/components/app-sidebar";
+import { PageLoader } from "@/components/page-loader";
 import { requireAppSession } from "@/lib/auth/authorization";
 import { getTodayInBangkok } from "@/lib/orders/date";
 import { getSalesOverviewData, getAvailableYears } from "@/lib/reports/sales-overview";
@@ -92,7 +94,15 @@ function YearSelector({ years, selected }: { years: number[]; selected: number }
 
 type PageProps = { searchParams: Promise<{ year?: string }> };
 
-export default async function SalesOverviewPage({ searchParams }: PageProps) {
+export default async function Page({ searchParams }: PageProps) {
+  return (
+    <Suspense fallback={<PageLoader />}>
+      <SalesOverviewContent searchParams={searchParams} />
+    </Suspense>
+  );
+}
+
+async function SalesOverviewContent({ searchParams }: PageProps) {
   const session = await requireAppSession();
   const params = await searchParams;
 

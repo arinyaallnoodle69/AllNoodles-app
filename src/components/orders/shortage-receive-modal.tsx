@@ -121,7 +121,7 @@ export function ShortageReceiveModal({ orderDate, active }: ShortageReceiveModal
       </button>
 
       {isOpen && (
-        <div className="fixed inset-0 z-50 flex flex-col pt-[env(safe-area-inset-top)]">
+        <div className="fixed inset-0 z-[100] flex flex-col pt-[env(safe-area-inset-top)]">
           <div 
             className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity" 
             onClick={onClose}

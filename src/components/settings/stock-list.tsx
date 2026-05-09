@@ -62,17 +62,17 @@ export function StockList({ products, baseHref = "/settings/stock" }: StockListP
                     }`}
                   >
                     <div className="flex items-start gap-3">
-                      <div className="relative -ml-2 flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white">
+                      <div className="relative -ml-4 flex h-32 w-32 shrink-0 items-center justify-center overflow-hidden">
                         {product.imageUrl ? (
                           <Image
                             src={product.imageUrl}
                             alt={product.name}
                             fill
-                            sizes="96px"
+                            sizes="128px"
                             className="object-contain"
                           />
                         ) : (
-                          <Package2 className="h-8 w-8 text-slate-400" strokeWidth={2.2} />
+                          <Package2 className="h-12 w-12 text-slate-300" strokeWidth={1.5} />
                         )}
                       </div>
 
@@ -134,7 +134,7 @@ export function StockList({ products, baseHref = "/settings/stock" }: StockListP
                         <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">
                           สต็อกคงเหลือปัจจุบัน
                         </p>
-                        <p className="mt-1 text-lg font-black text-[#003366]">
+                        <p className={`mt-1 text-lg font-black ${product.onHandQuantity < 0 ? 'text-rose-700' : 'text-[#003366]'}`}>
                           {formatQuantity(product.onHandQuantity)} {product.unit}
                         </p>
                       </div>
@@ -209,19 +209,19 @@ export function StockList({ products, baseHref = "/settings/stock" }: StockListP
                                 className="border-b border-r border-slate-300 px-5 py-4 align-middle"
                               >
                                 <div className="flex items-center gap-3">
-                                  <div className="relative flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-slate-200 bg-slate-50">
+                                  <div className="relative flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden">
                                     {product.imageUrl ? (
                                       <Image
                                         src={product.imageUrl}
                                         alt={product.name}
                                         fill
-                                        sizes="48px"
-                                        className="object-contain bg-white p-1"
+                                        sizes="80px"
+                                        className="object-contain"
                                       />
                                     ) : (
                                       <Package2
-                                        className="h-5 w-5 text-slate-400"
-                                        strokeWidth={2.2}
+                                        className="h-8 w-8 text-slate-300"
+                                        strokeWidth={1.5}
                                       />
                                     )}
                                   </div>
@@ -271,7 +271,7 @@ export function StockList({ products, baseHref = "/settings/stock" }: StockListP
                                 rowSpan={rowSpan}
                                 className="whitespace-nowrap border-b border-r border-slate-300 px-5 py-4 text-center align-middle"
                               >
-                                <span className="text-base font-bold text-slate-950">
+                                <span className={`text-base font-bold ${product.onHandQuantity < 0 ? 'text-rose-700' : 'text-slate-950'}`}>
                                   {formatQuantity(product.onHandQuantity)}
                                 </span>
                               </td>
@@ -314,7 +314,7 @@ export function StockList({ products, baseHref = "/settings/stock" }: StockListP
                           <span className="text-base font-bold text-slate-950">—</span>
                         </td>
                         <td className="whitespace-nowrap border-b border-r border-slate-300 px-5 py-4 text-center align-middle">
-                          <span className="text-base font-bold text-[#003366]">
+                          <span className={`text-base font-bold ${product.onHandQuantity < 0 ? 'text-rose-700' : 'text-[#003366]'}`}>
                             {formatQuantity(product.onHandQuantity)}
                           </span>
                         </td>

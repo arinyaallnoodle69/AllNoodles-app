@@ -1425,7 +1425,7 @@ function ProductFormBody({
       ) : null}
 
       {isCameraOpen ? (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/75 p-3 sm:p-4">
+        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-slate-950/75 p-3 sm:p-4">
           <div className="flex max-h-[96dvh] w-full max-w-2xl flex-col overflow-hidden rounded-[1.5rem] bg-slate-950 text-white shadow-[0_28px_80px_rgba(15,23,42,0.4)]">
             <div className="flex items-center justify-between gap-3 border-b border-white/10 px-5 py-4">
               <div>
@@ -1538,7 +1538,7 @@ export function ProductForm({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/45 sm:items-center sm:p-4">
+    <div className="fixed inset-0 z-[100] flex items-end justify-center bg-slate-950/45 sm:items-center sm:p-4">
       <div
         className="relative flex max-h-[96dvh] w-full max-w-3xl flex-col overflow-hidden rounded-t-[1.75rem] border border-slate-200 bg-white shadow-[0_28px_80px_rgba(15,23,42,0.22)] sm:rounded-[1.75rem]"
       >

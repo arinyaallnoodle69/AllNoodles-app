@@ -12,6 +12,7 @@ type Props = {
   currentVehicleName: string | null;
   vehicles: OrderVehicleOption[];
   variant?: "table" | "card";
+  orderDate?: string;
 };
 
 export function IncomingOrderVehicleSelect({
@@ -20,6 +21,7 @@ export function IncomingOrderVehicleSelect({
   currentVehicleName,
   vehicles,
   variant = "table",
+  orderDate,
 }: Props) {
   const router = useRouter();
   const selectId = useId();
@@ -28,9 +30,29 @@ export function IncomingOrderVehicleSelect({
   const [pending, startTransition] = useTransition();
 
   if (currentVehicleId) {
+    const rawName = currentVehicleName ?? "รถส่งของ";
+    const match = rawName.match(/^(.*?)\s*\((.*)\)\s*$/);
+    const vehicleMainName = match ? match[1].trim() : rawName;
+    const vehicleDetail = match ? match[2] : "";
+
+    if (variant === "card") {
+      return (
+        <span className="block min-w-0">
+          <span className="block truncate pt-0.5 text-base font-bold leading-6 text-slate-950">
+            {vehicleMainName}
+          </span>
+          {vehicleDetail ? (
+            <span className="mt-0.5 block truncate text-xs font-semibold leading-tight text-slate-500">
+              {vehicleDetail}
+            </span>
+          ) : null}
+        </span>
+      );
+    }
+
     return (
-      <span className="text-sm font-semibold text-slate-600">
-        <span className="truncate">{currentVehicleName ?? "รถส่งของ"}</span>
+      <span className="block min-w-0 max-w-full whitespace-nowrap text-base font-bold text-slate-950">
+        {currentVehicleName ?? "รถส่งของ"}
       </span>
     );
   }
@@ -55,6 +77,7 @@ export function IncomingOrderVehicleSelect({
       const fd = new FormData();
       fd.set("customerId", customerId);
       fd.set("vehicleId", nextVehicleId);
+      if (orderDate) fd.set("orderDate", orderDate);
       const result = await updateCustomerVehicleFromIncomingOrderAction(fd);
       if ("error" in result) {
         setError(result.error);

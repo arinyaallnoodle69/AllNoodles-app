@@ -12,7 +12,6 @@ import {
   ChevronLeft,
   ChevronRight,
   FileCheck,
-  Files,
   LayoutDashboard,
   LogOut,
   Package2,
@@ -24,6 +23,7 @@ import {
   TrendingUp,
   Truck,
   X,
+  Factory,
 } from "lucide-react";
 import { signOut } from "@/app/login/actions";
 import { LineAppIcon } from "@/components/icons/line-app-icon";
@@ -31,6 +31,8 @@ import { SettingsMobileBottomNav } from "@/components/settings/settings-mobile-b
 import { OrdersMobileTabs } from "@/components/orders/orders-mobile-tabs";
 import { ReportsMobileTabs } from "@/components/reports/reports-mobile-tabs";
 import { MobileSearchProvider, useMobileSearch } from "@/components/mobile-search/mobile-search-context";
+import { CreateOrderProvider } from "@/components/orders/create-order-context";
+import { GlobalCreateOrderModal } from "@/components/orders/create-order-modal";
 import { ScrollToTopButton } from "@/components/ui/scroll-to-top-button";
 
 // ─── Page title map (mobile top bar) ─────────────────────────────────────────
@@ -39,7 +41,6 @@ const PAGE_TITLES: [string, string][] = [
   ["/orders/incoming", "รายการออเดอร์"],
   ["/orders/delivery-notes", "ใบจัดส่ง"],
   ["/orders/packing-list", "ใบจัดสินค้า"],
-  ["/orders", "สรุปออเดอร์"],
   ["/delivery/print", "พิมพ์ใบจัดส่ง"],
   ["/delivery", "ใบจัดส่ง"],
   ["/billing/print", "พิมพ์ใบวางบิล"],
@@ -74,8 +75,8 @@ function MobileTopBar() {
   const title = getPageTitle(pathname);
 
   return (
-    <header className="fixed inset-x-0 top-0 z-40 border-b border-slate-200 bg-white/95 backdrop-blur md:hidden">
-      <div className="flex h-[68px] items-center gap-3 px-4">
+    <header className="fixed inset-x-0 top-0 z-[60] h-[68px] border-b border-slate-200 bg-white text-slate-950 lg:hidden">
+      <div className="flex h-full items-center gap-3 px-4">
         {/* Logo */}
         <Link href="/dashboard" className="block shrink-0">
           <Image
@@ -89,7 +90,7 @@ function MobileTopBar() {
         </Link>
 
         {/* Page title */}
-        <span className="min-w-0 flex-1 truncate text-center text-[15px] font-semibold text-slate-800">
+        <span className="min-w-0 flex-1 truncate text-center text-[15px] font-bold text-slate-950">
           {title}
         </span>
 
@@ -99,11 +100,11 @@ function MobileTopBar() {
             type="button"
             onClick={isOpen ? close : open}
             aria-label={isOpen ? "ปิดค้นหา" : "ค้นหา"}
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-slate-600 transition hover:bg-slate-100 active:scale-95"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-600 transition hover:bg-slate-200 active:scale-95"
           >
             {isOpen
-              ? <X className="h-5 w-5" strokeWidth={2} />
-              : <Search className="h-5 w-5" strokeWidth={2} />
+              ? <X className="h-5 w-5" strokeWidth={2.5} />
+              : <Search className="h-5 w-5" strokeWidth={2.5} />
             }
           </button>
         ) : (
@@ -121,7 +122,6 @@ const mainNavItems = [
   { href: "/dashboard", icon: LayoutDashboard, label: "แดชบอร์ด" },
   { href: "/stock", icon: Boxes, label: "สต็อก" },
   { href: "/orders/incoming", icon: ReceiptText, label: "รายการออเดอร์" },
-  { href: "/orders", icon: Files, label: "สรุปออเดอร์" },
   { href: "/delivery", icon: Truck, label: "ใบจัดส่ง" },
   { href: "/billing", icon: Receipt, label: "ใบวางบิล" },
 ] as const;
@@ -136,6 +136,7 @@ const reportsNavItems = [
 const settingsNavItems = [
   { href: "/settings/products", icon: Package2, label: "จัดการสินค้า" },
   { href: "/settings/customers", icon: Store, label: "จัดการร้านค้า" },
+  { href: "/settings/suppliers", icon: Factory, label: "จัดการผู้ขาย" },
   { href: "/settings/customer-data", icon: LineAppIcon, label: "ข้อมูลลูกค้า" },
   { href: "/settings/vehicles", icon: Truck, label: "จัดการรถ" },
   { href: "/settings/order-window", icon: Clock, label: "เวลารับออเดอร์" },
@@ -143,14 +144,12 @@ const settingsNavItems = [
 
 function isActive(href: string, pathname: string): boolean {
   if (href === "/dashboard") return pathname === "/dashboard";
-  if (href === "/orders") return pathname === "/orders" || pathname === "/orders/formal";
   return pathname.startsWith(href);
 }
 
 function shouldShowScrollTopButton(pathname: string) {
   return (
     pathname === "/delivery" ||
-    pathname === "/orders" ||
     pathname.startsWith("/orders/delivery-notes") ||
     pathname.startsWith("/orders/incoming") ||
     pathname.startsWith("/settings/customers") ||
@@ -195,54 +194,62 @@ function SidebarLink({
 // ─── Layout ───────────────────────────────────────────────────────────────────
 
 export function AppSidebarLayout({ children }: { children: React.ReactNode }) {
+  const [mounted, setMounted] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
-  const [reportsOpen, setReportsOpen] = useState(false);
-  const [settingsOpen, setSettingsOpen] = useState(false);
+  
   const pathname = usePathname();
 
-  // Restore collapse state from localStorage on mount
+  const isReportsPage = pathname.startsWith("/reports");
+  const isSettingsPage = pathname.startsWith("/settings");
+
+  // Track if user has manually toggled these sections. 
+  const [reportsUserToggled, setReportsUserToggled] = useState(false);
+  const [settingsUserToggled, setSettingsUserToggled] = useState(false);
+
+  const [reportsOpenInternal, setReportsOpenInternal] = useState(isReportsPage);
+  const [settingsOpenInternal, setSettingsOpenInternal] = useState(isSettingsPage);
+
+  // Derived states
+  const reportsOpen = reportsOpenInternal || (isReportsPage && !reportsUserToggled);
+  const settingsOpen = settingsOpenInternal || (isSettingsPage && !settingsUserToggled);
+
+  // Handle client-side initialization after mount to prevent hydration mismatch
   useEffect(() => {
-    const stored = localStorage.getItem("sidebar-collapsed");
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (stored === "true") setCollapsed(true);
+    setMounted(true);
+    const stored = localStorage.getItem("sidebar-collapsed");
+    if (stored === "true") {
+      setCollapsed(true);
+    }
   }, []);
-
-  // Auto-expand reports section when navigating to a reports page
-  useEffect(() => {
-    if (pathname.startsWith("/reports")) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setReportsOpen(true);
-    }
-  }, [pathname]);
-
-  // Auto-expand settings section when navigating to a settings page
-  useEffect(() => {
-    if (pathname.startsWith("/settings")) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setSettingsOpen(true);
-    }
-  }, [pathname]);
 
   function toggleCollapsed() {
     setCollapsed((prev) => {
       const next = !prev;
-      localStorage.setItem("sidebar-collapsed", String(next));
+      if (typeof window !== "undefined") {
+        localStorage.setItem("sidebar-collapsed", String(next));
+      }
       return next;
     });
   }
 
+  // Pre-hydration, we render a consistent base state (expanded)
+  // After hydration, 'mounted' becomes true and we apply the user's preference
+  const isSidebarCollapsed = mounted ? collapsed : false;
+
   const anyReportsActive = reportsNavItems.some((item) => pathname.startsWith(item.href));
   const anySettingsActive = settingsNavItems.some((item) => pathname.startsWith(item.href));
-  const ordersTabsActive = pathname === "/orders" || pathname.startsWith("/orders/incoming");
   const reportsTabsActive = pathname.startsWith("/reports");
 
   return (
-    <MobileSearchProvider>
+    <CreateOrderProvider>
+      <GlobalCreateOrderModal />
+      <MobileSearchProvider>
       {/* ── Desktop sidebar (fixed) ───────────────────────────────────────── */}
       <aside
-        className={`hidden md:fixed md:inset-y-0 md:left-0 md:z-50 md:flex md:flex-col md:border-r md:border-slate-200 md:bg-white md:shadow-[2px_0_20px_rgba(15,23,42,0.06)] ${
+        className={`hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-50 lg:flex lg:flex-col lg:border-r lg:border-slate-200 lg:bg-white lg:shadow-[2px_0_20px_rgba(15,23,42,0.06)] ${
           collapsed ? "w-16" : "w-60"
-        } transition-[width] duration-200 ease-in-out`}
+        } transition-[width] duration-200 ease-in-out [will-change:width] motion-reduce:transition-none`}
       >
         {/* Logo + toggle */}
         <div
@@ -284,7 +291,7 @@ export function AppSidebarLayout({ children }: { children: React.ReactNode }) {
           {/* Main nav items */}
           <div className="space-y-0.5 px-2">
             {mainNavItems.map((item) => (
-              <SidebarLink key={item.href} item={item} collapsed={collapsed} pathname={pathname} />
+              <SidebarLink key={item.href} item={item} collapsed={isSidebarCollapsed} pathname={pathname} />
             ))}
           </div>
 
@@ -309,7 +316,10 @@ export function AppSidebarLayout({ children }: { children: React.ReactNode }) {
               <>
                 <button
                   type="button"
-                  onClick={() => setReportsOpen((v) => !v)}
+                  onClick={() => {
+                    setReportsOpenInternal(!reportsOpen);
+                    setReportsUserToggled(true);
+                  }}
                   className={`flex w-full items-center justify-between rounded-xl px-2.5 py-2.5 text-sm font-medium transition-colors ${
                     anyReportsActive
                       ? "text-[#003366]"
@@ -337,7 +347,7 @@ export function AppSidebarLayout({ children }: { children: React.ReactNode }) {
                       <SidebarLink
                         key={item.href}
                         item={item}
-                        collapsed={collapsed}
+                        collapsed={isSidebarCollapsed}
                         pathname={pathname}
                         indent
                       />
@@ -353,7 +363,6 @@ export function AppSidebarLayout({ children }: { children: React.ReactNode }) {
 
           {/* Settings collapsible section */}
           <div className="px-2">
-            {/* Section header — shows as a regular icon link when collapsed */}
             {collapsed ? (
               <Link
                 href="/settings/products"
@@ -368,10 +377,12 @@ export function AppSidebarLayout({ children }: { children: React.ReactNode }) {
               </Link>
             ) : (
               <>
-                {/* Collapsible header */}
                 <button
                   type="button"
-                  onClick={() => setSettingsOpen((v) => !v)}
+                  onClick={() => {
+                    setSettingsOpenInternal(!settingsOpen);
+                    setSettingsUserToggled(true);
+                  }}
                   className={`flex w-full items-center justify-between rounded-xl px-2.5 py-2.5 text-sm font-medium transition-colors ${
                     anySettingsActive
                       ? "text-[#003366]"
@@ -390,7 +401,6 @@ export function AppSidebarLayout({ children }: { children: React.ReactNode }) {
                   />
                 </button>
 
-                {/* Sub-items (animated) */}
                 <div
                   className={`overflow-hidden transition-all duration-200 ${
                     settingsOpen ? "max-h-64 opacity-100" : "max-h-0 opacity-0"
@@ -401,7 +411,7 @@ export function AppSidebarLayout({ children }: { children: React.ReactNode }) {
                       <SidebarLink
                         key={item.href}
                         item={item}
-                        collapsed={collapsed}
+                        collapsed={isSidebarCollapsed}
                         pathname={pathname}
                         indent
                       />
@@ -439,16 +449,16 @@ export function AppSidebarLayout({ children }: { children: React.ReactNode }) {
 
       {/* ── Main content ─────────────────────────────────────────────────── */}
       <div
-        className={`${collapsed ? "md:pl-16" : "md:pl-60"} ${
-          ordersTabsActive || reportsTabsActive ? "pt-[116px] md:pt-0" : "pt-[68px] md:pt-0"
-        } pb-[calc(4.5rem+env(safe-area-inset-bottom))] md:pb-0 transition-[padding-left] duration-200 ease-in-out`}
+        className={`${collapsed ? "lg:pl-16" : "lg:pl-60"} ${
+          reportsTabsActive ? "pt-[116px] lg:pt-0" : "pt-[68px] lg:pt-0"
+        } pb-[calc(4.5rem+env(safe-area-inset-bottom))] lg:pb-0 transition-[padding-left] duration-200 ease-in-out [will-change:padding-left] motion-reduce:transition-none`}
       >
         {children}
       </div>
 
-      {/* ── Mobile bottom nav ────────────────────────────────────────────── */}
       <SettingsMobileBottomNav />
       <ScrollToTopButton enabled={shouldShowScrollTopButton(pathname)} />
-    </MobileSearchProvider>
+      </MobileSearchProvider>
+    </CreateOrderProvider>
   );
 }

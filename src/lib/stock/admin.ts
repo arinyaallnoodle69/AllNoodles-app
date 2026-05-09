@@ -8,22 +8,6 @@ import {
   type SaleUnitCostMode,
 } from "@/lib/products/sale-unit-cost";
 
-type StockAdmin = ReturnType<typeof getSupabaseAdmin> & {
-  from: (table: string) => unknown;
-};
-
-type SelectQueryResult = Promise<{ data: unknown; error: { message?: string } | null }>;
-
-type SelectTable = {
-  select: (columns: string) => {
-    eq: (column: string, value: string | boolean) => SelectTable["select"] extends (
-      columns: string,
-    ) => infer R
-      ? R
-      : never;
-    order: (column: string, options: { ascending: boolean }) => SelectQueryResult;
-  };
-};
 
 export type StockProductOption = {
   costPrice: number;
@@ -45,6 +29,12 @@ export type StockProductOption = {
   unit: string;
 };
 
+export type StockSupplierOption = {
+  id: string;
+  name: string;
+  code: string;
+};
+
 export type StockMovementRow = {
   createdAt: string;
   id: string;
@@ -64,6 +54,7 @@ export type StockDashboardData = {
   lowStockCount: number;
   movementRows: StockMovementRow[];
   products: StockProductOption[];
+  suppliers: StockSupplierOption[];
   reservedTotal: number;
   setupHint: string | null;
   totalOnHandValue: number;
@@ -98,6 +89,12 @@ type StockSaleUnitRow = {
   unit_label: string;
 };
 
+type SupplierRow = {
+  id: string;
+  name: string;
+  supplier_code: string;
+};
+
 type MovementRow = {
   created_at: string;
   id: string;
@@ -115,36 +112,194 @@ function isMissingTableError(message: string | undefined) {
   return Boolean(message?.includes('relation "public.'));
 }
 
-export const getStockDashboardData = cache(
-  async (organizationId: string): Promise<StockDashboardData> => {
-    const admin = getSupabaseAdmin() as StockAdmin;
-    const productsTable = admin.from("products") as unknown as SelectTable;
-    const imagesTable = admin.from("product_images") as unknown as SelectTable;
-    const saleUnitsTable = admin.from("product_sale_units") as unknown as SelectTable;
-    const movementsTable = admin.from("inventory_movements") as unknown as SelectTable;
+export type StockHistoryRow = {
+  createdAt: string;
+  id: string;
+  itemCount: number;
+  notes: string | null;
+  receiptNumber: string;
+  receiptUrl: string | null;
+  receivedAt: string;
+  supplierId: string | null;
+  supplierName: string;
+  totalAmount: number;
+};
 
-    const [productsResult, imagesResult, saleUnitsResult, movementsResult] = await Promise.all([
-      productsTable
+export const getStockHistoryData = cache(
+  async (organizationId: string, limit = 50, offset = 0): Promise<StockHistoryRow[]> => {
+    const admin = getSupabaseAdmin();
+
+    const { data, error } = await admin
+      .from("inventory_receipts")
+      .select(`
+        id, receipt_number, supplier_name, supplier_id, received_at, created_at, notes, receipt_url,
+        inventory_receipt_items(quantity_received, unit_cost),
+        suppliers(name)
+      `)
+      .eq("organization_id", organizationId)
+      .order("received_at", { ascending: false })
+      .order("created_at", { ascending: false })
+      .range(offset, offset + limit - 1);
+
+    if (error || !data) return [];
+
+    return (data as unknown as {
+      id: string;
+      receipt_number: string;
+      supplier_name: string;
+      supplier_id: string | null;
+      received_at: string;
+      created_at: string;
+      notes: string | null;
+      receipt_url: string | null;
+      inventory_receipt_items: { quantity_received: number; unit_cost: number }[];
+      suppliers: { name: string } | null;
+    }[]).map((r) => {
+      const items = r.inventory_receipt_items || [];
+      const totalAmount = items.reduce(
+        (sum: number, it: { quantity_received: number; unit_cost: number }) => sum + Number(it.quantity_received) * Number(it.unit_cost),
+        0,
+      );
+
+      return {
+        createdAt: r.created_at,
+        id: r.id,
+        itemCount: items.length,
+        notes: r.notes,
+        receiptNumber: r.receipt_number,
+        receiptUrl: r.receipt_url,
+        receivedAt: r.received_at,
+        supplierId: r.supplier_id,
+        supplierName: r.suppliers?.name || r.supplier_name || "ไม่ระบุผู้ขาย",
+        totalAmount,
+      };
+    });
+  },
+);
+
+export type StockReceiptDetail = StockHistoryRow & {
+  items: {
+    productId: string;
+    productName: string;
+    sku: string;
+    quantityReceived: number;
+    unit: string;
+    unitCost: number;
+    lineTotal: number;
+  }[];
+  createdBy: string | null;
+  createdByName: string | null;
+  supplierAddress: string | null;
+};
+
+export const getStockReceiptDetail = cache(
+  async (organizationId: string, receiptId: string): Promise<StockReceiptDetail | null> => {
+    const admin = getSupabaseAdmin();
+
+    const { data, error } = await admin
+      .from("inventory_receipts")
+      .select(`
+        id, receipt_number, supplier_name, supplier_id, received_at, created_at, notes, receipt_url,
+        inventory_receipt_items(
+          product_id, quantity_received, unit, unit_cost,
+          products(name, sku)
+        ),
+        suppliers(name, address, province, district, subdistrict, postal_code),
+        profiles:created_by(display_name)
+      `)
+      .eq("organization_id", organizationId)
+      .eq("id", receiptId)
+      .maybeSingle();
+
+    if (error || !data) return null;
+
+    interface ReceiptItemRow {
+      product_id: string;
+      unit: string;
+      unit_cost: number;
+      quantity_received: number;
+      products: { name: string; sku: string } | null;
+    }
+
+    interface ReceiptRow {
+      id: string;
+      created_at: string;
+      received_at: string;
+      receipt_number: string;
+      notes: string | null;
+      receipt_url: string | null;
+      supplier_id: string | null;
+      supplier_name: string | null;
+      suppliers: { name: string; address: string | null } | null;
+      inventory_receipt_items: ReceiptItemRow[];
+      created_by: string | null;
+      profiles: { display_name: string | null } | null;
+    }
+
+    const r = data as unknown as ReceiptRow;
+    const items = (r.inventory_receipt_items || []).map((it) => ({
+      productId: it.product_id,
+      productName: it.products?.name || "สินค้าไม่ทราบชื่อ",
+      sku: it.products?.sku || "-",
+      quantityReceived: Number(it.quantity_received),
+      unit: it.unit,
+      unitCost: Number(it.unit_cost),
+      lineTotal: Number(it.quantity_received) * Number(it.unit_cost),
+    }));
+
+    const totalAmount = items.reduce((sum, it) => sum + it.lineTotal, 0);
+
+    return {
+      createdAt: r.created_at,
+      id: r.id,
+      itemCount: items.length,
+      notes: r.notes,
+      receiptNumber: r.receipt_number,
+      receiptUrl: r.receipt_url,
+      receivedAt: r.received_at,
+      supplierId: r.supplier_id,
+      supplierName: r.suppliers?.name || r.supplier_name || "ไม่ระบุผู้ขาย",
+      supplierAddress: r.suppliers?.address || null,
+      totalAmount,
+      items,
+      createdBy: r.created_by,
+      createdByName: r.profiles?.display_name || null,
+    };
+  },
+);
+
+export const getStockDashboardData = cache(
+  async (organizationId: string, movementLimit = 20, movementOffset = 0): Promise<StockDashboardData> => {
+    const admin = getSupabaseAdmin();
+
+    const [productsResult, imagesResult, saleUnitsResult, movementsResult, suppliersResult] = await Promise.all([
+      admin.from("products")
         .select(
           "id, sku, name, cost_price, stock_quantity, reserved_quantity, unit, is_active",
         )
         .eq("organization_id", organizationId)
         .order("created_at", { ascending: false }),
-      imagesTable
+      admin.from("product_images")
         .select("product_id, public_url, sort_order")
         .eq("organization_id", organizationId)
         .order("sort_order", { ascending: true }),
-      saleUnitsTable
+      admin.from("product_sale_units")
         .select("id, product_id, unit_label, base_unit_quantity, is_active, is_default, sort_order, cost_mode, fixed_cost_price")
         .eq("organization_id", organizationId)
         .eq("is_active", true)
         .order("sort_order", { ascending: true }),
-      movementsTable
+      admin.from("inventory_movements")
         .select(
           "id, product_id, movement_type, quantity_delta, stock_before, stock_after, reference_number, notes, created_at, inventory_receipts(receipt_url)",
         )
         .eq("organization_id", organizationId)
-        .order("created_at", { ascending: false }),
+        .order("created_at", { ascending: false })
+        .range(movementOffset, movementOffset + movementLimit - 1),
+      admin.from("suppliers")
+        .select("id, name, supplier_code")
+        .eq("organization_id", organizationId)
+        .eq("is_active", true)
+        .order("name", { ascending: true }),
     ]);
 
     const errors = [
@@ -161,6 +316,7 @@ export const getStockDashboardData = cache(
         lowStockCount: 0,
         movementRows: [],
         products: [],
+        suppliers: [],
         reservedTotal: 0,
         setupHint: isMissingTableError(firstError?.message)
           ? "ยังไม่ได้รัน migration สำหรับหน้าสต็อก"
@@ -172,7 +328,8 @@ export const getStockDashboardData = cache(
     const products = (productsResult.data ?? []) as ProductRow[];
     const images = (imagesResult.data ?? []) as ProductImageRow[];
     const saleUnits = (saleUnitsResult.data ?? []) as StockSaleUnitRow[];
-    const movements = ((movementsResult.data ?? []) as MovementRow[]).slice(0, 20);
+    const movements = (movementsResult.data ?? []) as MovementRow[];
+    const suppliers = (suppliersResult.data ?? []) as SupplierRow[];
 
     const imageMap = new Map<string, string>();
     for (const image of images) {
@@ -241,6 +398,11 @@ export const getStockDashboardData = cache(
         stockBefore: Number(movement.stock_before),
       })),
       products: normalizedProducts,
+      suppliers: suppliers.map(s => ({
+        id: s.id,
+        name: s.name,
+        code: s.supplier_code
+      })),
       reservedTotal: normalizedProducts.reduce(
         (total, product) => total + product.reservedQuantity,
         0,
@@ -252,4 +414,44 @@ export const getStockDashboardData = cache(
       ),
     };
   },
+);
+
+export const getStockMovementsData = cache(
+  async (organizationId: string, limit = 50, offset = 0): Promise<StockMovementRow[]> => {
+    const admin = getSupabaseAdmin();
+
+    const [movementsResult, productsResult] = await Promise.all([
+      admin.from("inventory_movements")
+        .select(
+          "id, product_id, movement_type, quantity_delta, stock_before, stock_after, reference_number, notes, created_at, inventory_receipts(receipt_url)",
+        )
+        .eq("organization_id", organizationId)
+        .order("created_at", { ascending: false })
+        .range(offset, offset + limit - 1),
+      admin.from("products")
+        .select("id, name, sku")
+        .eq("organization_id", organizationId),
+    ]);
+
+    if (movementsResult.error || !movementsResult.data) return [];
+
+    const movements = (movementsResult.data as unknown as MovementRow[]);
+    const products = (productsResult.data as unknown as { id: string; name: string; sku: string }[]);
+    const productMap = new Map(products.map(p => [p.id, p]));
+
+    return movements.map((movement) => ({
+      createdAt: movement.created_at,
+      id: movement.id,
+      movementType: movement.movement_type,
+      notes: movement.notes,
+      productId: movement.product_id,
+      productName: productMap.get(movement.product_id)?.name ?? "สินค้าไม่ทราบชื่อ",
+      quantityDelta: Number(movement.quantity_delta),
+      receiptUrl: movement.inventory_receipts?.receipt_url ?? null,
+      referenceNumber: movement.reference_number,
+      sku: productMap.get(movement.product_id)?.sku ?? "-",
+      stockAfter: Number(movement.stock_after),
+      stockBefore: Number(movement.stock_before),
+    }));
+  }
 );

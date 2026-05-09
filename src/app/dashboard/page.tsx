@@ -15,9 +15,11 @@ import {
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { AppSidebarLayout } from "@/components/app-sidebar";
+import { OrderStoreStatusSummary } from "@/components/orders/order-store-status-summary";
 import { requireAppSession, roleHomePage } from "@/lib/auth/authorization";
 import { getDashboardOverview, type RecentOrder, type WeeklyBar } from "@/lib/dashboard/overview";
 import { getTodayInBangkok } from "@/lib/orders/date";
+import { getOrderStoreStatusSummary } from "@/lib/orders/store-status";
 
 export const metadata = { title: "ภาพรวม" };
 
@@ -449,9 +451,10 @@ export default async function DashboardPage() {
   if (session.role === "warehouse") redirect(roleHomePage("warehouse"));
 
   const today = getTodayInBangkok();
-  const { kpi, recentOrders, topCustomers, topProducts, weeklyTrend } = await getDashboardOverview(
-    session.organizationId,
-  );
+  const [{ kpi, recentOrders, topCustomers, topProducts, weeklyTrend }, storeStatusSummary] = await Promise.all([
+    getDashboardOverview(session.organizationId),
+    getOrderStoreStatusSummary(session.organizationId, today),
+  ]);
 
   const weeklyTotal = weeklyTrend.reduce((sum, item) => sum + item.amount, 0);
   const weeklyCount = weeklyTrend.reduce((sum, item) => sum + item.count, 0);
@@ -505,6 +508,7 @@ export default async function DashboardPage() {
           </header>
 
           <main className="mt-6 space-y-8 sm:mt-8 sm:space-y-10">
+            <OrderStoreStatusSummary orderDate={today} summary={storeStatusSummary} />
             <section className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
               <KpiCard
                 title="ออเดอร์วันนี้"

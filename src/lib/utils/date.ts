@@ -3,7 +3,7 @@
  * e.g. "2026-03-22" → "22/03/2569"
  */
 export function fmtDateTH(iso: string): string {
-  const [y, m, d] = iso.split("-");
+  const [y, m, d] = iso.split("T")[0].split("-");
   return `${d}/${m}/${parseInt(y, 10) + 543}`;
 }
 

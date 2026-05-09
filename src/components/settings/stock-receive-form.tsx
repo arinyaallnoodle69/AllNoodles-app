@@ -16,11 +16,11 @@ import {
   Save,
   Search,
   X,
-  FileText,
-  AlertTriangle,
+  Factory,
 } from "lucide-react";
 import {
   useActionState,
+  useCallback,
   useDeferredValue,
   useEffect,
   useEffectEvent,
@@ -31,12 +31,13 @@ import {
 } from "react";
 import { receiveStockAction } from "@/app/settings/stock/actions";
 import type { ReceiveStockActionState } from "@/app/settings/stock/actions";
-import type { StockProductOption } from "@/lib/stock/admin";
+import type { StockProductOption, StockSupplierOption } from "@/lib/stock/admin";
 import { ThaiDatePicker } from "@/components/ui/thai-date-picker";
 import { getTodayInBangkok } from "@/lib/utils/date-client";
 
 type StockReceiveFormProps = {
   products: StockProductOption[];
+  suppliers: StockSupplierOption[];
   returnHref: string;
   defaultProductId?: string;
 };
@@ -57,12 +58,13 @@ function formatQty(value: number, unit: string) {
   return `${value.toLocaleString("th-TH", { maximumFractionDigits: 3 })} ${unit}`;
 }
 
-export function StockReceiveForm({ products, returnHref, defaultProductId = "" }: StockReceiveFormProps) {
+export function StockReceiveForm({ products, suppliers, returnHref, defaultProductId = "" }: StockReceiveFormProps) {
   const router = useRouter();
   const [actionState, formAction, isPending] = useActionState(receiveStockAction, initialReceiveStockState);
   
   const [currentStep, setCurrentStep] = useState<ReceiveStep>("date");
   const [receivedDate, setReceivedDate] = useState(() => getTodayInBangkok());
+  const [selectedSupplierId, setSelectedSupplierId] = useState("");
   
   // Multi-product selection state
   // key: productId, value: record of unitId -> quantity
@@ -75,7 +77,6 @@ export function StockReceiveForm({ products, returnHref, defaultProductId = "" }
 
   const [receiptImage, setReceiptImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [notes, setNotes] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const deferredQuery = useDeferredValue(searchQuery);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -92,7 +93,11 @@ export function StockReceiveForm({ products, returnHref, defaultProductId = "" }
     return products.filter(p => selections[p.id]);
   }, [products, selections]);
 
-  const calculateProductTotals = (productId: string) => {
+  const selectedSupplier = useMemo(() => {
+    return suppliers.find(s => s.id === selectedSupplierId);
+  }, [suppliers, selectedSupplierId]);
+
+  const calculateProductTotals = useCallback((productId: string) => {
     const product = products.find(p => p.id === productId);
     if (!product) return { totalBaseQty: 0, totalCost: 0 };
     
@@ -108,7 +113,7 @@ export function StockReceiveForm({ products, returnHref, defaultProductId = "" }
       totalCost += qty * unit.effectiveCostPrice;
     }
     return { totalBaseQty, totalCost };
-  };
+  }, [products, selections]);
 
   const grandTotals = useMemo(() => {
     let totalBaseQty = 0;
@@ -124,7 +129,7 @@ export function StockReceiveForm({ products, returnHref, defaultProductId = "" }
       }
     }
     return { totalBaseQty, totalCost, itemCount };
-  }, [selections, products]);
+  }, [selections, calculateProductTotals]);
 
   const handleSuccess = useEffectEvent(() => {
     startTransition(() => {
@@ -170,8 +175,8 @@ export function StockReceiveForm({ products, returnHref, defaultProductId = "" }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-0 md:p-4 backdrop-blur-[2px] animate-in fade-in duration-300">
-      <div className="flex h-full w-full max-w-4xl flex-col overflow-hidden bg-[#F8FAFC] shadow-[0_40px_120px_rgba(0,0,0,0.3)] md:h-[min(900px,94dvh)] md:rounded-[2.8rem] border border-white/40">
+    <div className="fixed inset-0 z-[100] flex items-start justify-center bg-slate-950/40 p-0 md:p-4 backdrop-blur-[2px] animate-in fade-in duration-500 ease-out">
+      <div className="flex h-full w-full max-w-4xl flex-col overflow-hidden bg-[#F8FAFC] shadow-[0_40px_120px_rgba(0,0,0,0.3)] md:h-[min(900px,94dvh)] md:rounded-[2.8rem] border border-white/40 animate-in slide-in-from-top-12 duration-700 [animation-timing-function:cubic-bezier(0.16,1,0.3,1)]">
         
         {/* Modern Glass Header */}
         <div className="shrink-0 bg-white/80 backdrop-blur-md px-6 py-6 border-b border-slate-200/60 sticky top-0 z-10">
@@ -192,24 +197,51 @@ export function StockReceiveForm({ products, returnHref, defaultProductId = "" }
         </div>
 
         <div className="flex-1 overflow-y-auto px-0 py-8 md:px-6">
-          {/* Step 1: Date */}
+          {/* Step 1: Date & Supplier */}
           {currentStep === "date" && (
-            <div className="max-w-xl mx-auto space-y-10 py-10 px-6 animate-in fade-in zoom-in-95 duration-400">
+            <div className="max-w-xl mx-auto space-y-8 py-6 px-6 animate-in fade-in zoom-in-95 duration-400">
               <div className="text-center space-y-3">
                 <div className="inline-flex h-20 w-20 items-center justify-center rounded-[2rem] bg-white shadow-xl text-[#003366] mb-4">
                   <CalendarDays className="h-10 w-10" strokeWidth={2.5} />
                 </div>
-                <h4 className="text-3xl font-black text-slate-900 tracking-tight">เลือกวันที่รับของ</h4>
-                <p className="text-lg font-bold text-slate-400">คุณได้รับสินค้าชุดนี้เข้าคลังเมื่อวันที่เท่าไหร่?</p>
+                <h4 className="text-3xl font-black text-slate-900 tracking-tight">ข้อมูลการรับของ</h4>
+                <p className="text-lg font-bold text-slate-400">ระบุวันที่และผู้ขายที่ส่งสินค้าชุดนี้</p>
               </div>
-              <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100">
-                <ThaiDatePicker
-                  id="receive-date"
-                  name="receivedDate"
-                  defaultValue={receivedDate}
-                  onChange={setReceivedDate}
-                  placeholder="แตะเลือกวันที่"
-                />
+
+              <div className="space-y-6">
+                <div className="bg-white p-6 rounded-[2.5rem] shadow-sm border border-slate-100 space-y-4">
+                  <label className="block text-sm font-black text-slate-400 uppercase tracking-widest ml-2">วันที่รับเข้า</label>
+                  <ThaiDatePicker
+                    id="receive-date"
+                    name="receivedDate"
+                    defaultValue={receivedDate}
+                    onChange={setReceivedDate}
+                    placeholder="แตะเลือกวันที่"
+                  />
+                </div>
+
+                <div className="bg-white p-6 rounded-[2.5rem] shadow-sm border border-slate-100 space-y-4">
+                  <label className="block text-sm font-black text-slate-400 uppercase tracking-widest ml-2">ผู้ขาย (Vendor)</label>
+                  <div className="relative group">
+                    <Factory className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400 transition-colors group-focus-within:text-[#003366]" />
+                    <select
+                      value={selectedSupplierId}
+                      onChange={(e) => setSelectedSupplierId(e.target.value)}
+                      className="w-full h-14 rounded-2xl bg-slate-50 border-none pl-12 pr-4 text-lg font-bold text-slate-950 focus:ring-2 focus:ring-[#003366]/20 outline-none transition-all appearance-none"
+                    >
+                      <option value="" disabled>เลือกผู้ขาย...</option>
+                      {suppliers.map(s => (
+                        <option key={s.id} value={s.id}>{s.name} ({s.code})</option>
+                      ))}
+                    </select>
+                    <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none">
+                      <ChevronRight className="h-5 w-5 text-slate-400 rotate-90" strokeWidth={3} />
+                    </div>
+                  </div>
+                  {suppliers.length === 0 && (
+                    <p className="text-xs font-bold text-rose-500 ml-2 mt-2">ยังไม่มีข้อมูลผู้ขาย กรุณาเพิ่มที่หน้าตั้งค่าก่อน</p>
+                  )}
+                </div>
               </div>
             </div>
           )}
@@ -379,6 +411,17 @@ export function StockReceiveForm({ products, returnHref, defaultProductId = "" }
                   </div>
                 </div>
 
+                {/* Vendor Info */}
+                <div className="mb-6 flex items-center gap-4 bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                  <div className="h-12 w-12 rounded-xl bg-white flex items-center justify-center text-[#003366] shadow-sm border border-slate-100">
+                    <Factory className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">ผู้ขาย (Vendor)</p>
+                    <p className="text-lg font-black text-slate-950">{selectedSupplier?.name ?? "-"}</p>
+                  </div>
+                </div>
+
                 {/* Primary Stats - Clear & Big */}
                 <div className="grid grid-cols-2 gap-4 mb-6">
                   <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 text-center">
@@ -459,7 +502,7 @@ export function StockReceiveForm({ products, returnHref, defaultProductId = "" }
             {currentStep !== "review" ? (
               <button
                 type="button"
-                disabled={currentStep === 'select' && grandTotals.itemCount === 0}
+                disabled={(currentStep === 'date' && (!receivedDate || !selectedSupplierId)) || (currentStep === 'select' && grandTotals.itemCount === 0)}
                 onClick={() => {
                   const steps: ReceiveStep[] = ["date", "select", "photo", "review"];
                   setCurrentStep(steps[steps.indexOf(currentStep) + 1]);
@@ -487,6 +530,7 @@ export function StockReceiveForm({ products, returnHref, defaultProductId = "" }
                 />
                 
                 <input type="hidden" name="receivedAt" value={receivedDate} />
+                <input type="hidden" name="supplierId" value={selectedSupplierId} />
                 <input type="hidden" name="notes" value="" />
                 {receiptImage && <input type="file" name="receiptImage" className="hidden" ref={(el) => { if (el) { const data = new DataTransfer(); data.items.add(receiptImage); el.files = data.files; } }} />}
                 

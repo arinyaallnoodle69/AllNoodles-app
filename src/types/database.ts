@@ -893,6 +893,7 @@ export type Database = {
           receipt_number: string
           receipt_url: string | null
           received_at: string
+          supplier_id: string | null
           supplier_name: string
         }
         Insert: {
@@ -904,6 +905,7 @@ export type Database = {
           receipt_number: string
           receipt_url?: string | null
           received_at?: string
+          supplier_id?: string | null
           supplier_name?: string
         }
         Update: {
@@ -915,6 +917,7 @@ export type Database = {
           receipt_number?: string
           receipt_url?: string | null
           received_at?: string
+          supplier_id?: string | null
           supplier_name?: string
         }
         Relationships: [
@@ -930,6 +933,13 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_receipts_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
             referencedColumns: ["id"]
           },
         ]
@@ -1727,6 +1737,85 @@ export type Database = {
           },
         ]
       }
+      supplier_code_counters: {
+        Row: {
+          last_number: number
+          organization_id: string
+        }
+        Insert: {
+          last_number?: number
+          organization_id: string
+        }
+        Update: {
+          last_number?: number
+          organization_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplier_code_counters_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      suppliers: {
+        Row: {
+          address: string | null
+          created_at: string
+          district: string | null
+          id: string
+          is_active: boolean
+          metadata: Json
+          name: string
+          organization_id: string
+          postal_code: string | null
+          province: string | null
+          subdistrict: string | null
+          supplier_code: string | null
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          created_at?: string
+          district?: string | null
+          id?: string
+          is_active?: boolean
+          metadata?: Json
+          name: string
+          organization_id: string
+          postal_code?: string | null
+          province?: string | null
+          subdistrict?: string | null
+          supplier_code?: string | null
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          created_at?: string
+          district?: string | null
+          id?: string
+          is_active?: boolean
+          metadata?: Json
+          name?: string
+          organization_id?: string
+          postal_code?: string | null
+          province?: string | null
+          subdistrict?: string | null
+          supplier_code?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "suppliers_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       vehicles: {
         Row: {
           created_at: string
@@ -1879,6 +1968,20 @@ export type Database = {
             }
             Returns: string
           }
+        | {
+            Args: {
+              p_created_by: string
+              p_items: Json
+              p_notes: string
+              p_organization_id: string
+              p_receipt_number: string
+              p_receipt_url?: string
+              p_received_at: string
+              p_supplier_id?: string
+              p_supplier_name: string
+            }
+            Returns: string
+          }
       create_store_delivery_note: {
         Args: {
           p_created_by: string
@@ -1891,6 +1994,19 @@ export type Database = {
           p_vehicle_id: string
         }
         Returns: string
+      }
+      generate_receipt_number: {
+        Args: { p_date?: string; p_organization_id: string }
+        Returns: string
+      }
+      get_delivery_review_data: {
+        Args: {
+          p_include_order_items?: boolean
+          p_order_date: string
+          p_organization_id: string
+          p_stores: Json
+        }
+        Returns: Json
       }
       get_order_daily_store_items: {
         Args: {
@@ -1950,6 +2066,10 @@ export type Database = {
       }
       next_order_number: {
         Args: { p_order_date: string; p_organization_id: string }
+        Returns: string
+      }
+      next_supplier_code: {
+        Args: { p_organization_id: string }
         Returns: string
       }
       record_pin_auth_result: {

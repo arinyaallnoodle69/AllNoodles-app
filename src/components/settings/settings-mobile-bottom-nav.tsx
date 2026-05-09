@@ -10,17 +10,17 @@ import {
   LayoutDashboard,
   LogOut,
   MoreHorizontal,
+  Plus,
   Receipt,
   Settings2,
-  Truck,
   X,
 } from "lucide-react";
 import { signOut } from "@/app/login/actions";
+import { useCreateOrder } from "@/components/orders/create-order-context";
 
 const primaryNav = [
   { href: "/dashboard", icon: LayoutDashboard, label: "แดชบอร์ด" },
-  { href: "/orders/incoming", icon: ClipboardList, label: "ออเดอร์", activePrefix: "/orders" },
-  { href: "/delivery", icon: Truck, label: "ใบจัดส่ง" },
+  { href: "/orders/incoming", icon: ClipboardList, label: "ออเดอร์" },
   { href: "/reports/product-sales", icon: BarChart2, label: "รายงาน", activePrefix: "/reports" },
 ] as const;
 
@@ -39,20 +39,22 @@ function isActive(href: string, pathname: string, activePrefix?: string) {
 export function SettingsMobileBottomNav() {
   const pathname = usePathname();
   const [moreOpen, setMoreOpen] = useState(false);
+  const { open: openCreateOrder, isOpen: isCreateModalOpen } = useCreateOrder();
 
   const moreActive = moreItems.some((item) => pathname.startsWith(item.href));
+  const createOrderActive = pathname.startsWith("/orders/incoming");
 
   return (
     <>
       {moreOpen ? (
         <div
-          className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm md:hidden"
+          className="fixed inset-0 z-[100] bg-black/40 backdrop-blur-sm lg:hidden"
           onClick={() => setMoreOpen(false)}
         />
       ) : null}
 
       <div
-        className={`fixed inset-x-0 bottom-0 z-50 rounded-t-3xl bg-white shadow-2xl transition-transform duration-300 ease-out md:hidden ${
+        className={`fixed inset-x-0 bottom-0 z-[100] rounded-t-3xl bg-white shadow-2xl transition-transform duration-300 ease-out lg:hidden ${
           moreOpen ? "translate-y-0" : "translate-y-full"
         }`}
       >
@@ -104,40 +106,96 @@ export function SettingsMobileBottomNav() {
         </div>
       </div>
 
-      <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white px-2 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2 shadow-[0_-12px_32px_rgba(15,23,42,0.08)] will-change-transform md:hidden">
-        <div className="mx-auto grid max-w-md grid-cols-5">
-          {primaryNav.map(({ href, icon: Icon, label, ...rest }) => {
-            const activePrefix =
-              "activePrefix" in rest ? (rest as { activePrefix: string }).activePrefix : undefined;
-            const active = isActive(href, pathname, activePrefix);
+      <nav className="fixed inset-x-0 bottom-0 z-40 lg:hidden">
+        <div className="relative w-full">
+          {/* Curved Background with Notch */}
+          <div className="absolute inset-x-0 bottom-0 -z-10 h-[calc(100%+20px)]">
+            <svg
+              viewBox="0 0 400 80"
+              preserveAspectRatio="none"
+              className="h-full w-full fill-white drop-shadow-[0_-12px_28px_rgba(15,23,42,0.1)]"
+            >
+              <path
+                d="M0 20 H130 C160 20, 160 68, 200 68 C240 68, 240 20, 270 20 H400 V80 H0 Z"
+              />
+            </svg>
+          </div>
 
-            return (
-              <Link
-                key={href}
-                href={href}
+          <div className="relative px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-3">
+
+            <div className="grid grid-cols-5 items-end">
+              {primaryNav.slice(0, 2).map(({ href, icon: Icon, label, ...rest }) => {
+                const activePrefix =
+                  "activePrefix" in rest ? (rest as { activePrefix: string }).activePrefix : undefined;
+                const active = isActive(href, pathname, activePrefix);
+
+                return (
+                  <Link
+                    key={href}
+                    href={href}
+                    className={`flex flex-col items-center justify-center gap-1 rounded-2xl px-1 py-2 text-[10px] font-medium transition ${
+                      active
+                        ? "text-[#003366]"
+                        : "text-slate-500 hover:text-slate-900"
+                    }`}
+                  >
+                    <Icon className={`h-5 w-5 transition-colors ${active ? "text-[#003366]" : "text-slate-500"}`} strokeWidth={active ? 2.8 : 2.2} />
+                    <span className={`whitespace-nowrap transition-all ${active ? "font-bold scale-105" : ""}`}>{label}</span>
+                  </Link>
+                );
+              })}
+
+              <div aria-hidden="true" />
+
+              {primaryNav.slice(2).map(({ href, icon: Icon, label, ...rest }) => {
+                const activePrefix =
+                  "activePrefix" in rest ? (rest as { activePrefix: string }).activePrefix : undefined;
+                const active = isActive(href, pathname, activePrefix);
+
+                return (
+                  <Link
+                    key={href}
+                    href={href}
+                    className={`flex flex-col items-center justify-center gap-1 rounded-2xl px-1 py-2 text-[10px] font-medium transition ${
+                      active
+                        ? "text-[#003366]"
+                        : "text-slate-500 hover:text-slate-900"
+                    }`}
+                  >
+                    <Icon className={`h-5 w-5 transition-colors ${active ? "text-[#003366]" : "text-slate-500"}`} strokeWidth={active ? 2.8 : 2.2} />
+                    <span className={`whitespace-nowrap transition-all ${active ? "font-bold scale-105" : ""}`}>{label}</span>
+                  </Link>
+                );
+              })}
+
+               <button
+                type="button"
+                onClick={() => setMoreOpen(true)}
                 className={`flex flex-col items-center justify-center gap-1 rounded-2xl px-1 py-2 text-[10px] font-medium transition ${
-                  active
-                    ? "bg-[#003366]/10 text-[#003366]"
-                    : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
+                  moreActive
+                    ? "text-[#003366]"
+                    : "text-slate-500 hover:text-slate-900"
                 }`}
               >
-                <Icon className="h-5 w-5" strokeWidth={2.2} />
-                <span className="whitespace-nowrap">{label}</span>
-              </Link>
-            );
-          })}
+                <MoreHorizontal className={`h-5 w-5 transition-colors ${moreActive ? "text-[#003366]" : "text-slate-500"}`} strokeWidth={2.4} />
+                <span className={`whitespace-nowrap ${moreActive ? "font-bold" : ""}`}>เพิ่มเติม</span>
+              </button>
+            </div>
+          </div>
 
-          <button
+           <button
             type="button"
-            onClick={() => setMoreOpen(true)}
-            className={`flex flex-col items-center justify-center gap-1 rounded-2xl px-1 py-2 text-[10px] font-medium transition ${
-              moreActive
-                ? "bg-[#003366]/10 text-[#003366]"
-                : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
+            onClick={() => openCreateOrder()}
+            className={`absolute -top-5 left-1/2 z-50 flex h-16 w-16 -translate-x-1/2 items-center justify-center rounded-full shadow-[0_12px_32px_rgba(0,51,102,0.35)] transition-all duration-300 active:scale-90 ${
+              isCreateModalOpen
+                ? "bg-rose-600 text-white rotate-45"
+                : createOrderActive
+                ? "bg-[#003366] text-white"
+                : "bg-gradient-to-br from-[#0B5BC6] to-[#003366] text-white hover:brightness-110"
             }`}
+            aria-label="สร้างออเดอร์"
           >
-            <MoreHorizontal className="h-5 w-5" strokeWidth={2.2} />
-            <span className="whitespace-nowrap">เพิ่มเติม</span>
+            <Plus className="h-9 w-9" strokeWidth={3} />
           </button>
         </div>
       </nav>

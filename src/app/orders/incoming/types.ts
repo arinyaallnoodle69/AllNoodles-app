@@ -1,6 +1,6 @@
 export type ActionResult =
   | { error: string }
-  | { receiptWarning?: string; success: true; orderDate?: string; orderNumber?: string };
+  | { receiptWarning?: string; success: true; orderDate?: string; orderNumber?: string; deliveryNumber?: string };
 
 export type CustomerLastOrderItem = {
   productId: string;

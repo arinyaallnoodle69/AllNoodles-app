@@ -1,4 +1,4 @@
-import { Archive, Boxes, CircleAlert, PackageCheck } from "lucide-react";
+import { Boxes, CircleAlert, PackageCheck } from "lucide-react";
 import type { StockDashboardData } from "@/lib/stock/admin";
 
 type StockSummaryCardsProps = {
@@ -9,12 +9,6 @@ function formatMoney(value: number) {
   return value.toLocaleString("th-TH", {
     maximumFractionDigits: 2,
     minimumFractionDigits: 2,
-  });
-}
-
-function formatQuantity(value: number) {
-  return value.toLocaleString("th-TH", {
-    maximumFractionDigits: 3,
   });
 }
 

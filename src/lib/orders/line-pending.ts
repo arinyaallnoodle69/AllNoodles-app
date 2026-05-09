@@ -57,6 +57,7 @@ type LineOrderCustomerRow = {
 
 type CustomerRow = {
   customer_code: string | null;
+  default_vehicle_id: string | null;
   id: string;
   line_user_id: string | null;
   metadata: unknown;
@@ -118,6 +119,16 @@ type NewOrderRow = {
   id: string;
   order_date: string;
   order_number: string;
+};
+
+type InsertedOrderItemRow = {
+  id: string;
+  product_id: string;
+  product_sale_unit_id: string | null;
+  quantity: number | string;
+  sale_unit_label: string;
+  sale_unit_ratio: number | string;
+  unit_price: number | string;
 };
 
 export type PendingLineOrderItem = {
@@ -453,51 +464,6 @@ export async function getPendingLineOrders(
     });
 }
 
-async function reserveProductStock(input: {
-  admin: GenericAdmin;
-  orderId: string;
-  orderNumber: string;
-  organizationId: string;
-  productId: string;
-  quantityInBaseUnit: number;
-  userId: string;
-}) {
-  if (input.quantityInBaseUnit <= 0) return;
-
-  const { data: product } = await input.admin
-    .from<ProductRow>("products")
-    .select("id, name, sku, unit, cost_price, reserved_quantity, stock_quantity")
-    .eq("id", input.productId)
-    .single();
-
-  if (!product) return;
-
-  const stockBefore = Number(product.stock_quantity);
-  const stockAfter = stockBefore - input.quantityInBaseUnit;
-  await Promise.all([
-    input.admin
-      .from<ProductRow>("products")
-      .update({
-        stock_quantity: stockAfter,
-      })
-      .eq("id", input.productId),
-    input.admin.from<Record<string, unknown>>("inventory_movements").insert({
-      created_by: input.userId,
-      metadata: {
-        order_id: input.orderId,
-        source: "line_pending_order",
-      },
-      movement_type: "issue",
-      notes: `ออเดอร์ LINE: ${input.orderNumber}`,
-      organization_id: input.organizationId,
-      product_id: input.productId,
-      quantity_delta: -input.quantityInBaseUnit,
-      stock_after: stockAfter,
-      stock_before: stockBefore,
-    }),
-  ]);
-}
-
 async function convertSinglePendingOrder(input: {
   admin: GenericAdmin;
   customer: CustomerRow;
@@ -610,26 +576,43 @@ async function convertSinglePendingOrder(input: {
     throw new Error(orderError?.message ?? "ไม่สามารถสร้างออเดอร์ได้");
   }
 
-  await input.admin.from<Record<string, unknown>>("order_items").insert(
-    orderItems.map((item) => ({
-      ...item,
-      order_id: newOrder.id,
-    })),
-  );
+  const insertOrderItemsQuery = input.admin
+    .from("order_items")
+    .insert(
+      orderItems.map((item) => ({
+        ...item,
+        order_id: newOrder.id,
+      })),
+    )
+    .select("id, product_id, product_sale_unit_id, quantity, sale_unit_label, sale_unit_ratio, unit_price") as unknown as Promise<{
+      data: InsertedOrderItemRow[] | null;
+    }>;
+  const { data: insertedItems } = await insertOrderItemsQuery;
 
-  await Promise.all(
-    orderItems.map((item) =>
-      reserveProductStock({
-        admin: input.admin,
-        orderId: newOrder.id,
-        orderNumber: newOrder.order_number,
-        organizationId: input.organizationId,
-        productId: item.product_id,
-        quantityInBaseUnit: Number(item.quantity_in_base_unit),
-        userId: input.userId,
-      }),
-    ),
-  );
+  // Automatically create and confirm delivery note via RPC
+  // This RPC handles stock deduction and inventory movements internally.
+  if (insertedItems && insertedItems.length > 0) {
+    const payloadItems = insertedItems.map((oi) => ({
+      orderItemId: oi.id,
+      productId: oi.product_id,
+      productSaleUnitId: oi.product_sale_unit_id,
+      quantityDelivered: Number(oi.quantity),
+      saleUnitLabel: oi.sale_unit_label,
+      saleUnitRatio: Number(oi.sale_unit_ratio),
+      unitPrice: Number(oi.unit_price),
+    }));
+
+    await input.admin.rpc("create_store_delivery_note", {
+      p_organization_id: input.organizationId,
+      p_order_ids: [newOrder.id],
+      p_customer_id: input.customer.id,
+      p_vehicle_id: input.customer.default_vehicle_id || null,
+      p_delivery_date: newOrder.order_date,
+      p_notes: "",
+      p_created_by: input.userId,
+      p_items: payloadItems,
+    });
+  }
 
   await input.admin
     .from<PendingOrderRow>("line_pending_orders")
@@ -700,14 +683,14 @@ export async function linkLineCustomerAndConvertPendingOrders(input: {
   const [{ data: customer }, { data: existingLinkedCustomer }] = await Promise.all([
     admin
       .from<CustomerRow>("customers")
-      .select("id, name, customer_code, organization_id, line_user_id, metadata")
+      .select("id, name, customer_code, organization_id, line_user_id, metadata, default_vehicle_id")
       .eq("organization_id", input.organizationId)
       .eq("id", input.customerId)
       .eq("is_active", true)
       .maybeSingle(),
     admin
       .from<CustomerRow>("customers")
-      .select("id, name, customer_code, organization_id, line_user_id, metadata")
+      .select("id, name, customer_code, organization_id, line_user_id, metadata, default_vehicle_id")
       .eq("organization_id", input.organizationId)
       .eq("line_user_id", pendingOrder.line_user_id)
       .eq("is_active", true)

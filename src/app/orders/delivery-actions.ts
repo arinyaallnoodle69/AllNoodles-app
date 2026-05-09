@@ -1,4 +1,4 @@
-﻿"use server";
+"use server";
 
 import { revalidateTag } from "next/cache";
 import { requireAppRole } from "@/lib/auth/authorization";
@@ -226,7 +226,7 @@ function normalizeReviewGroups(value: unknown): BatchDeliveryReviewGroup[] | nul
     );
 }
 
-// â”€â”€â”€ Get form data â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// Get form data
 
 export async function getDeliveryFormDataAction(
   orderId: string,
@@ -270,7 +270,7 @@ export async function getBatchStoreDeliveryDataAction(
   return Object.fromEntries(rows);
 }
 
-// â”€â”€â”€ Create delivery note â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// Create delivery note
 
 export async function getBatchOrderDeliveryDataAction(
   stores: { customerId: string; orderIds: string[] }[],

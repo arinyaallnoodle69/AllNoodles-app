@@ -1,4 +1,5 @@
 import "server-only";
+import { cache } from "react";
 
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
@@ -124,7 +125,7 @@ export type OrderProductOption = {
 
 // Queries
 
-export async function getCustomersForOrder(orgId: string): Promise<OrderCustomerOption[]> {
+export const getCustomersForOrder = cache(async (orgId: string): Promise<OrderCustomerOption[]> => {
   const admin = getSupabaseAdmin() as unknown as ManageAdmin;
   const { data } = await admin
     .from("customers")
@@ -136,9 +137,9 @@ export async function getCustomersForOrder(orgId: string): Promise<OrderCustomer
   return (data ?? [])
     .map((c) => ({ code: c.customer_code, id: c.id, name: c.name }))
     .toSorted(compareCustomerCode);
-}
+});
 
-export async function getVehiclesForOrder(orgId: string): Promise<OrderVehicleOption[]> {
+export const getVehiclesForOrder = cache(async (orgId: string): Promise<OrderVehicleOption[]> => {
   const admin = getSupabaseAdmin() as unknown as ManageAdmin;
   const { data } = await admin
     .from("vehicles")
@@ -151,9 +152,9 @@ export async function getVehiclesForOrder(orgId: string): Promise<OrderVehicleOp
     id: vehicle.id,
     name: vehicle.name,
   }));
-}
+});
 
-export async function getProductsForOrder(orgId: string): Promise<OrderProductOption[]> {
+export const getProductsForOrder = cache(async (orgId: string): Promise<OrderProductOption[]> => {
   const admin = getSupabaseAdmin();
 
   const [productsRes, saleUnitsRes, productImagesRes, categoriesRes, categoryItemsRes] =
@@ -267,4 +268,4 @@ export async function getProductsForOrder(orgId: string): Promise<OrderProductOp
   console.log(`[getProductsForOrder] Success! Mapped ${mapped.length} products. Sample baseCostPrice:`, mapped[0]?.baseCostPrice);
 
   return mapped.toSorted(compareProductSku);
-}
+});

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, Clock3, MessageCircleMore, Package2, Store, Truck } from "lucide-react";
+import { ArrowRight, Clock3, MessageCircleMore, Package2, Store, Truck, Factory } from "lucide-react";
 import { SettingsShell } from "@/components/settings/settings-shell";
 import { requireAppRole } from "@/lib/auth/authorization";
 
@@ -15,6 +15,12 @@ const options = [
     href: "/settings/customers",
     icon: Store,
     label: "จัดการร้านค้า",
+  },
+  {
+    description: "เพิ่มรายชื่อผู้ขายหรือโรงงานที่คุณสั่งซื้อสินค้า เพื่อใช้บันทึกรับเข้าสต็อก",
+    href: "/settings/suppliers",
+    icon: Factory,
+    label: "จัดการผู้ขาย",
   },
   {
     description: "ดูชื่อ LINE รูปโปรไฟล์ สถานะการใช้งาน และจัดการสิทธิ์ลูกค้าที่เข้ามาผ่าน LINE",

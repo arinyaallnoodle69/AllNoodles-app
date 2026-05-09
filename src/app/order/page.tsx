@@ -1,15 +1,12 @@
 import type { Metadata } from "next";
-import { cache } from "react";
+import { cache, Suspense } from "react";
 import OrderClient from "./order-client";
+import { PageLoader } from "@/components/page-loader";
 import { parseOrderWindowSettings } from "@/lib/order-window";
 import { getLinkedCustomerByLineUserId } from "@/lib/orders/line-pending";
 import { getSiteUrl } from "@/lib/site-url";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { getOrderCustomerSession } from "@/lib/auth/order-session";
-
-// Cache product catalog for 60 seconds — product data changes infrequently
-// Dramatically reduces TTFB and LCP for repeat requests
-export const revalidate = 60;
 
 import type { Database } from "@/types/database";
 
@@ -315,7 +312,17 @@ export async function generateMetadata({
   };
 }
 
-export default async function OrderPage({
+export default async function OrderPage(props: {
+  searchParams?: Promise<SearchParams>;
+}) {
+  return (
+    <Suspense fallback={<PageLoader />}>
+      <OrderContent searchParams={props.searchParams} />
+    </Suspense>
+  );
+}
+
+async function OrderContent({
   searchParams,
 }: {
   searchParams?: Promise<SearchParams>;

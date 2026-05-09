@@ -41,7 +41,7 @@ function InfoBlock({
 }) {
   return (
     <div className="min-w-0">
-      <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">{label}</p>
+      <p className="text-[11px] font-black uppercase tracking-[0.12em] text-slate-950">{label}</p>
       <div className="mt-1.5 flex items-center justify-between gap-2">
         <div className="flex min-w-0 items-center gap-2 text-[15px] font-semibold text-slate-950">
           <span className="shrink-0 text-slate-400">{icon}</span>
@@ -84,10 +84,10 @@ export function IncomingOrderOpenCard({
   }
 
   return (
-    <article className="border-b border-slate-400 bg-white px-4 py-4 shadow-[0_10px_26px_rgba(15,23,42,0.1)] last:border-b-0">
+    <article className="border-b border-slate-400 bg-white px-5 py-4 shadow-[0_10px_26px_rgba(15,23,42,0.1)] last:border-b-0">
       <div className="flex items-start gap-3">
           <div className="min-w-0 flex-1">
-            <p className="truncate text-[1.18rem] font-bold leading-tight text-slate-950">
+            <p className="line-clamp-2 text-[1.18rem] font-bold leading-tight text-slate-950">
               <span translate="no">{customerCode}</span> - {customerName}
             </p>
             <div className="mt-1.5 flex items-center gap-2">
@@ -124,7 +124,7 @@ export function IncomingOrderOpenCard({
             value={createdAtText}
           />
           <div className="min-w-0 border-l border-slate-300 pl-4">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">ช่องทาง</p>
+            <p className="text-[11px] font-black uppercase tracking-[0.12em] text-slate-950">ช่องทาง</p>
             <div className="mt-1.5 flex items-center justify-between gap-2">
               <span className="inline-flex min-h-8 items-center py-1 text-sm font-semibold text-slate-950">
                 {channelLabel}
@@ -141,23 +141,42 @@ export function IncomingOrderOpenCard({
             value={`${productCount.toLocaleString("th-TH")} รายการ`}
           />
           <div className="min-w-0 border-l border-slate-300 pl-4">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">ยอดรวม</p>
+            <p className="text-[11px] font-black uppercase tracking-[0.12em] text-slate-950">ยอดรวม</p>
             <p className="mt-1.5 text-[1.05rem] font-bold leading-none text-slate-950">{totalAmountText}</p>
           </div>
         </div>
 
-      <div className="mt-4 border-t border-slate-200 pt-4">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">การจัดส่ง</p>
-          <div className="mt-2 flex items-start gap-2">
-            <Truck className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" strokeWidth={2.2} />
-            <div className="min-w-0 flex-1">
-              <IncomingOrderVehicleSelect
-                customerId={customerId}
-                currentVehicleId={vehicleId}
-                currentVehicleName={vehicleName}
-                vehicles={vehicles}
-                variant="card"
-              />
+      <div className="mt-4 border-t border-slate-200 pt-4 grid grid-cols-2 gap-4">
+          <div className="min-w-0">
+            <p className="text-[11px] font-black uppercase tracking-[0.12em] text-slate-950">การจัดส่ง</p>
+            <div className="mt-2 flex items-center gap-2">
+              <Truck className="h-4 w-4 shrink-0 text-slate-400" strokeWidth={2.2} />
+              <div className="min-w-0 flex-1">
+                <IncomingOrderVehicleSelect
+                  customerId={customerId}
+                  currentVehicleId={vehicleId}
+                  currentVehicleName={vehicleName}
+                  vehicles={vehicles}
+                  variant="card"
+                  orderDate={orderDate}
+                />              </div>
+            </div>
+          </div>
+
+          <div className="min-w-0 border-l border-slate-300 pl-4">
+            <p className="text-[11px] font-black uppercase tracking-[0.12em] text-slate-950">เลขจัดส่ง</p>
+            <div className="mt-2 min-w-0">
+              {hasDelivery && deliveryNumbers ? (
+                <div className="flex flex-col gap-0.5">
+                  {deliveryNumbers.map((num) => (
+                    <span key={num} className="truncate font-mono text-[13px] font-bold text-emerald-700 leading-none py-0.5">
+                      {num}
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                <span className="text-[13px] font-medium text-slate-400">-</span>
+              )}
             </div>
           </div>
         </div>

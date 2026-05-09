@@ -33,29 +33,26 @@ export type PackingListData = {
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const SHEET_W = "297mm";
-const SHEET_H = "210mm";
+const SHEET_W = "356mm"; // F14 (Legal) Landscape Width
+const SHEET_H = "216mm"; // F14 (Legal) Landscape Height
 
 // ─── Pagination helpers ───────────────────────────────────────────────────────
 
-/** ≤20→1หน้า, 21-60→2หน้า (even split), 61+→ceil(n/20) */
+/** Strictly 30 stores per page row for F14 Landscape */
 function calcStorePageCount(n: number): number {
-  if (n <= 20) return 1;
-  if (n <= 60) return 2;
-  return Math.ceil(n / 20);
+  return Math.ceil(n / 30);
 }
 
-/** ≤35→1หน้า, 36-70→2หน้า (25+25 for 50), 71+→ceil(n/35) */
+/** Strictly 30 products per page column for F14 Landscape */
 function calcProductPageCount(n: number): number {
-  if (n <= 35) return 1;
-  if (n <= 70) return 2;
-  return Math.ceil(n / 35);
+  return Math.ceil(n / 30);
 }
 
-/** Column width auto-fits: clamp between 7mm and 22mm */
-function calcColWidth(storeCount: number): string {
-  const raw = Math.floor(201 / storeCount);
-  return `${Math.min(22, Math.max(7, raw))}mm`;
+/** Column width for products: subtract ~55mm for # and Store Name, divide remainder by 30 */
+function calcColWidth(count: number): string {
+  // F14 is 356mm. Subtracting ~55mm leaves ~301mm
+  const raw = Math.floor(301 / count); 
+  return `${Math.min(28, Math.max(8, raw))}mm`;
 }
 
 function chunk<T>(arr: T[], size: number): T[][] {
@@ -64,7 +61,6 @@ function chunk<T>(arr: T[], size: number): T[][] {
   return out;
 }
 
-// Vehicle accent colours — cycles through a small palette
 const VEHICLE_COLORS = ["#1e3a5f", "#065f46", "#7c2d12", "#4c1d95", "#1e3a5f"];
 const UNASSIGNED_COLOR = "#64748b";
 
@@ -81,13 +77,11 @@ type PageDef = {
   vehicleName: string | null;
   accentColor: string;
   pageStores: PackingListStore[];
-  pageStoreIndices: number[]; // into data.stores
+  pageStoreIndices: number[]; // relative to full data.stores
   pageProducts: PackingListProduct[];
-  pageProductIndices: number[]; // into data.products
-  productChunkStartIdx: number; // 0-based within active products of this vehicle
+  pageProductIndices: number[]; // relative to full data.products
   vehicleStoreCount: number;
-  vehicleActiveProductCount: number;
-  totalProductCount: number;
+  vehicleActiveProductIndices: number[];
   vehicleTotal: number;
   globalPage: number;
   totalPages: number;
@@ -97,77 +91,74 @@ type PageDef = {
   productTotalChunks: number;
   dateLabel: string;
   orgName: string;
+  // Numbers relative to the current vehicle
+  storeVehicleNums: number[]; 
+  productVehicleNums: number[];
 };
 
 function buildPages(data: PackingListData): PageDef[] {
-  const colTotals = data.stores.map((_, si) =>
-    data.products.reduce((sum, _, pi) => sum + data.qty[pi][si], 0)
-  );
-
   // Group stores by vehicle
   type Group = { vehicleId: string | null; vehicleName: string | null; storeIndices: number[] };
   const groupMap = new Map<string, Group>();
 
-  // Preserve vehicle sort order: registered vehicles first, then unassigned
   for (const v of data.vehicles) {
     groupMap.set(v.id, { vehicleId: v.id, vehicleName: v.name, storeIndices: [] });
   }
-  // Unassigned bucket
   groupMap.set("__unassigned__", { vehicleId: null, vehicleName: null, storeIndices: [] });
 
   data.stores.forEach((store, si) => {
     const key = store.vehicleId ?? "__unassigned__";
     if (!groupMap.has(key)) {
-      // vehicle not in vehicles list (shouldn't happen) — add it
       groupMap.set(key, { vehicleId: store.vehicleId, vehicleName: store.vehicleName, storeIndices: [] });
     }
     groupMap.get(key)!.storeIndices.push(si);
   });
 
-  // Remove empty groups
   const groups = Array.from(groupMap.values()).filter((g) => g.storeIndices.length > 0);
-
   const defs: Omit<PageDef, "globalPage" | "totalPages">[] = [];
 
   for (const group of groups) {
     const { vehicleId, vehicleName, storeIndices } = group;
     const accentColor = vehicleColor(vehicleId, data.vehicles);
-    const vehicleTotal = storeIndices.reduce((s, si) => s + colTotals[si], 0);
 
-    // Active products: have qty > 0 in at least one store of this vehicle
+    // Filter products that have any quantity for this vehicle's stores
     const activeProdIndices = data.products
       .map((_, pi) => pi)
       .filter((pi) => storeIndices.some((si) => data.qty[pi][si] > 0));
-    const activeProducts = activeProdIndices.map((pi) => data.products[pi]);
+    
+    // Create vehicle-specific numbering (starts from 1 for each vehicle)
+    const storeNumMap = new Map<string, number>();
+    storeIndices.forEach((si, i) => storeNumMap.set(data.stores[si].id, i + 1));
 
-    // Store chunks
+    const productNumMap = new Map<string, number>();
+    activeProdIndices.forEach((pi, i) => productNumMap.set(data.products[pi].key, i + 1));
+
+    const vehicleTotal = storeIndices.reduce((sum, si) => 
+      sum + activeProdIndices.reduce((ps, pi) => ps + data.qty[pi][si], 0), 0
+    );
+
     const storeTotalChunks = calcStorePageCount(storeIndices.length);
     const storeChunkSize = Math.ceil(storeIndices.length / storeTotalChunks);
     const storeChunks = chunk(storeIndices, storeChunkSize);
 
-    // Product chunks
-    const productTotalChunks = calcProductPageCount(activeProducts.length);
-    const prodChunkSize = Math.ceil(activeProducts.length / productTotalChunks);
-    const productChunks = chunk(activeProducts, prodChunkSize).map((ps, i) => ({
-      products: ps,
-      indices: activeProdIndices.slice(i * prodChunkSize, (i + 1) * prodChunkSize),
-    }));
+    const productTotalChunks = calcProductPageCount(activeProdIndices.length);
+    const prodChunkSize = Math.ceil(activeProdIndices.length / productTotalChunks);
+    const productChunks = chunk(activeProdIndices, prodChunkSize);
 
     for (let sc = 0; sc < storeChunks.length; sc++) {
       for (let pc = 0; pc < productChunks.length; pc++) {
-        const pageStoreIndices = storeChunks[sc];
+        const sIndices = storeChunks[sc];
+        const pIndices = productChunks[pc];
         defs.push({
           vehicleId,
           vehicleName,
           accentColor,
-          pageStores: pageStoreIndices.map((si) => data.stores[si]),
-          pageStoreIndices,
-          pageProducts: productChunks[pc].products,
-          pageProductIndices: productChunks[pc].indices,
-          productChunkStartIdx: pc * prodChunkSize,
+          pageStores: sIndices.map((si) => data.stores[si]),
+          pageStoreIndices: sIndices,
+          pageProducts: pIndices.map(pi => data.products[pi]),
+          pageProductIndices: pIndices,
           vehicleStoreCount: storeIndices.length,
-          vehicleActiveProductCount: activeProducts.length,
-          totalProductCount: data.products.length,
+          vehicleActiveProductIndices: activeProdIndices,
           vehicleTotal,
           storeChunk: sc + 1,
           storeTotalChunks,
@@ -175,6 +166,8 @@ function buildPages(data: PackingListData): PageDef[] {
           productTotalChunks,
           dateLabel: data.dateLabel,
           orgName: data.organizationName,
+          storeVehicleNums: sIndices.map(si => storeNumMap.get(data.stores[si].id) ?? 0),
+          productVehicleNums: pIndices.map(pi => productNumMap.get(data.products[pi].key) ?? 0),
         });
       }
     }
@@ -190,53 +183,30 @@ function PageHeader({ p }: { p: PageDef }) {
   const { accentColor } = p;
   const isUnassigned = p.vehicleId === null;
 
-  const chunkParts: string[] = [];
-  if (p.storeTotalChunks > 1)   chunkParts.push(`ร้าน ${p.storeChunk}/${p.storeTotalChunks}`);
-  if (p.productTotalChunks > 1) chunkParts.push(`สินค้า ${p.productChunk}/${p.productTotalChunks}`);
-
   return (
-    <div style={{ borderBottom: `3px solid ${accentColor}`, paddingBottom: "1.5mm" }}>
+    <div style={{ borderBottom: `2.5px solid ${accentColor}`, padding: "0 2mm 0.3mm" }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "3mm" }}>
           <div style={{
             background: accentColor, color: "#fff",
-            fontWeight: 900, fontSize: "11pt",
-            padding: "1mm 4mm", borderRadius: "4px",
+            fontWeight: 900, fontSize: "12pt",
+            padding: "0.4mm 5mm", borderRadius: "0 0 6px 6px",
           }}>
             {isUnassigned ? "ยังไม่ได้กำหนดรถ" : `🚛 ${p.vehicleName}`}
           </div>
-          <span style={{ fontSize: "8pt", color: "#64748b" }}>{p.orgName}</span>
-          {chunkParts.length > 0 && (
-            <span style={{
-              fontSize: "7pt", fontWeight: 700,
-              padding: "0.5mm 2.5mm", borderRadius: "3px",
-              background: "#f1f5f9", color: accentColor,
-              border: `1px solid ${accentColor}`,
-            }}>
-              {chunkParts.join(" · ")}
-            </span>
-          )}
-          {p.vehicleActiveProductCount < p.totalProductCount && (
-            <span style={{
-              fontSize: "6.5pt", color: "#64748b",
-              background: "#fef9c3", padding: "0.4mm 2mm",
-              borderRadius: "3px", border: "1px solid #fde047",
-            }}>
-              เฉพาะที่มีออเดอร์ · {p.vehicleActiveProductCount}/{p.totalProductCount} รายการ
-            </span>
-          )}
+          <span style={{ fontSize: "8.5pt", color: "#64748b", fontWeight: 700 }}>{p.orgName}</span>
         </div>
         <div style={{ display: "flex", gap: "6mm", alignItems: "baseline" }}>
-          <span style={{ fontSize: "8pt", color: "#475569" }}>
+          <span style={{ fontSize: "9pt", color: "#1e293b" }}>
             วันที่ <strong style={{ color: accentColor }}>{p.dateLabel}</strong>
           </span>
-          <span style={{ fontSize: "8pt", color: "#475569" }}>
+          <span style={{ fontSize: "9pt", color: "#1e293b" }}>
             {p.vehicleStoreCount} ร้าน
             {" · "}<strong style={{ color: accentColor }}>{p.vehicleTotal.toLocaleString("th-TH")}</strong> หน่วย
           </span>
           <span style={{
-            fontSize: "7pt", fontWeight: 700, color: "#fff",
-            background: "#475569", padding: "0.8mm 3mm", borderRadius: "3px",
+            fontSize: "8.5pt", fontWeight: 800, color: "#fff",
+            background: "#1e293b", padding: "0.5mm 3mm", borderRadius: "3px",
           }}>
             หน้า {p.globalPage}/{p.totalPages}
           </span>
@@ -250,20 +220,17 @@ function PageHeader({ p }: { p: PageDef }) {
 
 function PackingListPage({ p, data }: { p: PageDef; data: PackingListData }) {
   const { accentColor } = p;
-  const colW = calcColWidth(p.pageStores.length);
+  const colW = calcColWidth(p.pageProducts.length);
 
-  const pageRowTotals = p.pageProductIndices.map((pi) =>
+  const pageColTotals = p.pageProductIndices.map((pi) =>
     p.pageStoreIndices.reduce((sum, si) => sum + data.qty[pi][si], 0)
-  );
-  const pageColTotals = p.pageStoreIndices.map((si) =>
-    p.pageProductIndices.reduce((sum, pi) => sum + data.qty[pi][si], 0)
   );
   const pageGrandTotal = pageColTotals.reduce((a, b) => a + b, 0);
 
   return (
     <div className="packing-sheet">
       <div style={{
-        padding: "3mm 5mm 3mm",
+        padding: "0",
         display: "flex", flexDirection: "column",
         height: "100%", boxSizing: "border-box",
       }}>
@@ -271,138 +238,112 @@ function PackingListPage({ p, data }: { p: PageDef; data: PackingListData }) {
 
         <table className="packing-matrix" style={{
           width: "100%", borderCollapse: "collapse",
-          fontSize: "7pt", fontFamily: "'Sarabun', sans-serif", flex: 1,
+          fontSize: "11pt", fontFamily: "'Sarabun', sans-serif", flex: 1,
+          tableLayout: "fixed",
         }}>
           <thead>
-            <tr>
-              <th style={{ width: "5mm" }} />
-              <th style={{
-                width: "68mm", textAlign: "left", padding: "0 2mm",
-                fontSize: "6.5pt", color: "#64748b",
-                verticalAlign: "bottom", paddingBottom: "1mm",
-              }}>
-                รายการสินค้า
-              </th>
-              {p.pageStores.map((store) => (
-                <th key={store.id} style={{
-                  width: colW, height: "26mm",
-                  verticalAlign: "bottom", padding: "0", textAlign: "center",
+            {/* Row 1: Product Names (Vertical) */}
+            <tr style={{ background: "#f1f5f9" }}>
+              <th style={{ width: "8mm", height: "32mm", padding: "0" }} />
+              <th style={{ width: "45mm", height: "32mm", padding: "0" }} />
+              {p.pageProducts.map((product) => (
+                <th key={product.key} style={{
+                  width: colW, height: "32mm",
+                  textAlign: "center", padding: "0", verticalAlign: "bottom",
                 }}>
                   <div style={{
                     writingMode: "vertical-rl",
                     transform: "rotate(180deg)",
-                    display: "inline-block",
-                    fontSize: "6.5pt", fontWeight: 700, color: accentColor,
+                    fontSize: "7.5pt", fontWeight: 700, color: accentColor,
                     whiteSpace: "nowrap",
-                    paddingBottom: "1mm", paddingLeft: "0.5mm",
-                    maxHeight: "24mm", overflow: "hidden",
+                    paddingBottom: "1mm", paddingLeft: "0.2mm",
+                    maxHeight: "30mm", overflow: "hidden",
+                    margin: "0 auto", textAlign: "left"
                   }}>
-                    {store.name}
+                    {product.name}
                   </div>
                 </th>
               ))}
-              <th style={{
-                width: "13mm", verticalAlign: "bottom",
-                padding: "0 1.5mm 1.5mm", textAlign: "right",
-                fontSize: "6.5pt", color: "#64748b",
-              }}>
-                รวม
-              </th>
             </tr>
 
+            {/* Row 2: Header Labels */}
             <tr style={{ background: accentColor }}>
-              <th style={{ padding: "0.7mm 1mm", textAlign: "center", color: "rgba(255,255,255,0.6)", fontSize: "6pt" }}>#</th>
-              <th style={{ padding: "0.7mm 2mm", textAlign: "left", color: "rgba(255,255,255,0.85)", fontSize: "6.5pt" }}>ชื่อสินค้า</th>
-              {p.pageStores.map((store, idx) => (
-                <th key={store.id} style={{
-                  padding: "0.7mm 0.5mm", textAlign: "center",
-                  color: "#fff", fontSize: "6pt", fontWeight: 600,
+              <th style={{ padding: "0.3mm", textAlign: "center", color: "rgba(255,255,255,0.7)", fontSize: "8pt" }}>#</th>
+              <th style={{ padding: "0.3mm 2.5mm", textAlign: "left", color: "#fff", fontSize: "11pt", fontWeight: 900 }}>ชื่อร้านค้า</th>
+              {p.pageProducts.map((_, idx) => (
+                <th key={idx} style={{
+                  padding: "0.3mm 0.1mm", textAlign: "center",
+                  color: "#fff", fontSize: "11pt", fontWeight: 900,
                 }}>
-                  {idx + 1 + (p.storeChunk - 1) * Math.ceil(p.vehicleStoreCount / p.storeTotalChunks)}
+                  {p.productVehicleNums[idx]}
                 </th>
               ))}
-              <th style={{ padding: "0.7mm 1.5mm", textAlign: "right", color: "#fbbf24", fontSize: "6.5pt", fontWeight: 700 }}>
-                รวม
-              </th>
             </tr>
           </thead>
 
           <tbody>
-            {p.pageProducts.map((product, rowIdx) => {
-              const pi = p.pageProductIndices[rowIdx];
-              const cells = p.pageStoreIndices.map((si) => data.qty[pi][si]);
-              const rowTotal = pageRowTotals[rowIdx];
+            {p.pageStores.map((store, rowIdx) => {
+              const si = p.pageStoreIndices[rowIdx];
+              const cells = p.pageProductIndices.map((pi) => data.qty[pi][si]);
               const isEven = rowIdx % 2 === 1;
-              const displayNum = p.productChunkStartIdx + rowIdx + 1;
+              const displayNum = p.storeVehicleNums[rowIdx];
 
               return (
-                <tr key={product.key} style={{ background: isEven ? "#f1f5f9" : "#ffffff" }}>
-                  <td style={{ padding: "0.15mm 1mm", textAlign: "center", color: "#94a3b8", fontSize: "6pt" }}>
+                <tr key={store.id} style={{ background: isEven ? "#f1f5f9" : "#ffffff" }}>
+                  <td style={{ padding: "0.15mm 0.5mm", textAlign: "center", color: "#64748b", fontSize: "10pt", fontWeight: 700 }}>
                     {displayNum}
                   </td>
-                  <td style={{ padding: "0.15mm 2mm", fontWeight: 600, color: "#0f172a", fontSize: "7pt" }}>
-                    {product.name}
-                    <span style={{ color: "#94a3b8", fontWeight: 400, marginLeft: "1.5mm", fontSize: "5.5pt" }}>
-                      {product.unit}
-                    </span>
+                  <td style={{ padding: "0.15mm 2.5mm", fontWeight: 800, color: "#000", fontSize: "12pt", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {store.name}
                   </td>
-                  {cells.map((qty, idx) => (
-                    <td key={p.pageStores[idx].id} style={{
-                      padding: "0.15mm 0.5mm", textAlign: "center",
-                      fontWeight: qty > 0 ? 700 : 400,
-                      color: qty > 0 ? "#0f172a" : "#d1d5db",
-                      fontSize: qty > 0 ? "9pt" : "7pt",
+                  {cells.map((val, idx) => (
+                    <td key={idx} style={{
+                      padding: "0.15mm 0.5mm !important", textAlign: "center",
+                      fontWeight: 900,
+                      color: val > 0 ? "#000" : "rgba(0,0,0,0.08)",
+                      fontSize: val > 0 ? "16.5pt" : "10pt",
+                      lineHeight: "1",
                     }}>
-                      {qty > 0 ? qty : "·"}
+                      {val > 0 ? val : "·"}
                     </td>
                   ))}
-                  <td style={{
-                    padding: "0.15mm 1.5mm", textAlign: "right",
-                    fontWeight: 800, fontSize: "9pt",
-                    color: rowTotal > 0 ? accentColor : "#cbd5e1",
-                    background: isEven ? "#e2e8f0" : "#f1f5f9",
-                  }}>
-                    {rowTotal > 0 ? rowTotal : "—"}
-                  </td>
                 </tr>
               );
             })}
 
+            {/* Footer Summary Row */}
             <tr style={{ background: accentColor }}>
-              <td style={{ padding: "0.8mm 1mm" }} />
-              <td style={{ padding: "0.8mm 2mm", fontWeight: 800, color: "#fff", fontSize: "7pt" }}>
-                รวมทั้งหมด
+              <td style={{ padding: "0.3mm" }} />
+              <td style={{ padding: "0.3mm 2.5mm", fontWeight: 900, color: "#fff", fontSize: "12pt" }}>
+                รวมจำนวนสินค้า
               </td>
               {pageColTotals.map((total, idx) => (
-                <td key={p.pageStores[idx].id} style={{
-                  padding: "0.8mm 0.5mm", textAlign: "center",
-                  fontWeight: 800, fontSize: "9pt",
-                  color: total > 0 ? "#fff" : "rgba(255,255,255,0.35)",
+                <td key={idx} style={{
+                  padding: "0.3mm", textAlign: "center",
+                  fontWeight: 950, fontSize: "12.5pt",
+                  color: total > 0 ? "#fff" : "rgba(255,255,255,0.4)",
                 }}>
                   {total > 0 ? total : "—"}
                 </td>
               ))}
-              <td style={{
-                padding: "0.8mm 1.5mm", textAlign: "right",
-                fontWeight: 900, fontSize: "9pt", color: "#fbbf24",
-              }}>
-                {pageGrandTotal.toLocaleString("th-TH")}
-              </td>
             </tr>
           </tbody>
         </table>
 
         <div style={{
           display: "flex", justifyContent: "space-between", alignItems: "center",
-          marginTop: "1mm", paddingTop: "1mm", borderTop: "1px dashed #cbd5e1",
+          marginTop: "0", padding: "0.2mm 10mm 0.5mm", borderTop: "1.5px dashed #1e293b",
         }}>
-          <span style={{ fontSize: "6pt", color: "#94a3b8" }}>
-            ร้านค้าหน้านี้: {p.pageStores[0]?.name} — {p.pageStores[p.pageStores.length - 1]?.name}
-            {" "}({p.pageStores.length} ร้าน)
-            {p.productTotalChunks > 1 && ` · สินค้า #${p.productChunkStartIdx + 1}–${p.productChunkStartIdx + p.pageProducts.length}`}
-          </span>
-          <span style={{ fontSize: "6pt", color: "#94a3b8" }}>
-            ผู้จัด ______________________ วันที่จัด {p.dateLabel}
+          <div style={{ display: "flex", gap: "8mm", alignItems: "center" }}>
+            <span style={{ fontSize: "9pt", color: "#1e293b", fontWeight: 700 }}>
+              ร้านค้าหน้านี้: {p.pageStores[0]?.name} — {p.pageStores[p.pageStores.length - 1]?.name}
+            </span>
+            <span style={{ fontSize: "10pt", color: "#000", fontWeight: 800 }}>
+              รวมยอดจัดทั้งหน้านี้: {pageGrandTotal.toLocaleString("th-TH")} หน่วย
+            </span>
+          </div>
+          <span style={{ fontSize: "8.5pt", color: "#1e293b", fontWeight: 700 }}>
+            ผู้จัด ______________________ วันที่ {p.dateLabel}
           </span>
         </div>
       </div>
@@ -420,23 +361,40 @@ export function PackingListLayout({ data }: { data: PackingListData }) {
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700;800;900&display=swap');
 
-        @page { size: 297mm 210mm; margin: 0; }
+        @page { size: 356mm 216mm; margin: 0; }
 
         @media print {
-          html, body { width: 297mm; height: 210mm; }
-          body { margin: 0; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+          html, body { width: 356mm; height: 216mm; margin: 0 !important; padding: 0 !important; }
+          body { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
           .no-print { display: none !important; }
-          .packing-sheet { page-break-after: always; box-shadow: none !important; }
+          .packing-sheet { 
+            page-break-after: always; 
+            box-shadow: none !important; 
+            margin: 0 !important; 
+            border: none !important; 
+            height: 216mm !important; 
+            width: 356mm !important; 
+            overflow: hidden !important;
+            position: relative !important;
+            top: 0 !important;
+          }
           .packing-sheet:last-child { page-break-after: avoid; }
+          thead { display: table-row-group; }
+          tr { break-inside: avoid; }
         }
 
         @media screen {
           body {
             background: #e5e7eb !important;
-            display: flex; flex-direction: column;
-            align-items: center; padding: 32px 16px; gap: 24px;
+            display: flex !important; 
+            flex-direction: column !important;
+            align-items: center !important; 
+            padding: 40px 16px !important; 
+            gap: 40px !important;
+            min-height: 100vh !important;
+            overflow-y: auto !important;
           }
-          .packing-sheet { box-shadow: 0 4px 32px rgba(0,0,0,0.15); }
+          .packing-sheet { box-shadow: 0 10px 40px rgba(0,0,0,0.2); }
         }
 
         .packing-sheet {
@@ -446,7 +404,9 @@ export function PackingListLayout({ data }: { data: PackingListData }) {
           font-family: 'Sarabun', sans-serif;
         }
 
-        .packing-matrix td, .packing-matrix th { border: 1px solid #1e293b; }
+        .packing-matrix { table-layout: fixed; width: 100%; border-collapse: collapse; }
+        .packing-matrix td, .packing-matrix th { border: 1.5px solid #1e293b; padding: 0.1mm 0.5mm !important; }
+
         .packing-matrix thead tr:first-child td,
         .packing-matrix thead tr:first-child th { border: none; }
       `}</style>
