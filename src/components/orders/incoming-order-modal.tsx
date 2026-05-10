@@ -422,6 +422,7 @@ export function IncomingOrderModal({ allOrders, detail, expandedId, products }: 
   const [actionPending, startActionTransition] = useTransition();
 
   const [slideAnim, setSlideAnim] = useState<"slide-left" | "slide-right" | null>(null);
+  const [isClosing, setIsClosing] = useState(false);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- Reset modal state when navigating between order records.
@@ -452,9 +453,13 @@ export function IncomingOrderModal({ allOrders, detail, expandedId, products }: 
   }
 
   function close() {
-    const p = new URLSearchParams(searchParams.toString());
-    p.delete("expanded"); p.delete("edit");
-    startActionTransition(() => { router.replace(`/orders/incoming?${p.toString()}`, { scroll: false }); });
+    if (isClosing) return;
+    setIsClosing(true);
+    setTimeout(() => {
+      const p = new URLSearchParams(searchParams.toString());
+      p.delete("expanded"); p.delete("edit");
+      startActionTransition(() => { router.replace(`/orders/incoming?${p.toString()}`, { scroll: false }); });
+    }, 350);
   }
 
   if (!detail) return null;
@@ -463,25 +468,34 @@ export function IncomingOrderModal({ allOrders, detail, expandedId, products }: 
     <div className={`fixed inset-0 z-[250] flex flex-col items-center justify-end lg:justify-center overflow-hidden`}>
       <style>{`
         @keyframes drawerUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+        @keyframes drawerDown { from { transform: translateY(0); } to { transform: translateY(100%); } }
         @keyframes modalPop { from { transform: scale(0.95) translateY(15px); opacity: 0; } to { transform: scale(1) translateY(0); opacity: 1; } }
+        @keyframes modalPush { from { transform: scale(1) translateY(0); opacity: 1; } to { transform: scale(0.95) translateY(15px); opacity: 0; } }
         @keyframes slideInL { from { transform: translateX(20px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
         @keyframes slideInR { from { transform: translateX(-20px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
 
         .m-anim { animation: drawerUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-        @media (min-width: 1024px) { .m-anim { animation: modalPop 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards; } }
+        .m-anim-out { animation: drawerDown 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        
+        @media (min-width: 1024px) { 
+          .m-anim { animation: modalPop 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+          .m-anim-out { animation: modalPush 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        }
 
         .c-slide-l { animation: slideInL 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
         .c-slide-r { animation: slideInR 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
+        .backdrop-out { animation: fadeOut 0.35s ease forwards; }
 
         .custom-scrollbar::-webkit-scrollbar { width: 3px; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
       `}</style>
 
       {/* Backdrop */}
-      <div className="absolute inset-0 bg-slate-950/45 backdrop-blur-[2px]" onClick={close} />
+      <div className={`absolute inset-0 bg-slate-950/45 backdrop-blur-[2px] ${isClosing ? "backdrop-out" : ""}`} onClick={close} />
 
       {/* Main Container */}
-      <div className="m-anim relative z-10 flex flex-col bg-white w-full h-full lg:h-[90vh] lg:max-w-4xl lg:rounded-[2.5rem] overflow-hidden shadow-2xl">
+      <div className={`${isClosing ? "m-anim-out" : "m-anim"} relative z-10 flex flex-col bg-white w-full h-full lg:h-[90vh] lg:max-w-4xl lg:rounded-[2.5rem] overflow-hidden shadow-2xl`}>
         {/* Modern Navy Header */}
         <div className="shrink-0 bg-[#003366] px-6 py-4 pt-[max(1rem,env(safe-area-inset-top))] lg:pt-6 relative">
           <div className="flex items-center justify-between gap-4 relative z-10">

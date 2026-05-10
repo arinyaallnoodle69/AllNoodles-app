@@ -4,8 +4,8 @@ import { IncomingOrderModal } from "@/components/orders/incoming-order-modal";
 import { CreateOrderModal } from "@/components/orders/create-order-modal";
 import { IncomingOrdersDesktopTable } from "@/components/orders/incoming-orders-desktop-table";
 import { IncomingOrderOpenCard } from "@/components/orders/incoming-order-open-card";
+import { IncomingOrderDateFilter } from "@/components/orders/incoming-order-date-filter";
 import { PendingLineOrdersSection } from "@/components/orders/pending-line-orders-section";
-import { ThaiDatePicker } from "@/components/ui/thai-date-picker";
 import { MobileSearchDrawer } from "@/components/mobile-search/mobile-search-drawer";
 import { requireAppRole } from "@/lib/auth/authorization";
 import { normalizeOrderDate, getTodayInBangkok } from "@/lib/orders/date";
@@ -132,11 +132,10 @@ const [
 
             <div className="ml-2 flex items-center gap-2 border-l border-white/20 pl-4">
               <div className="w-44">
-                <ThaiDatePicker
+                <IncomingOrderDateFilter
                   id="incoming-date"
                   name="date"
                   defaultValue={orderDate}
-                  placeholder="เลือกวันที่"
                 />
               </div>
             </div>
@@ -165,11 +164,10 @@ const [
           <form action="/orders/incoming" method="get" className="flex flex-col gap-4 pb-32">
             <div className="space-y-1">
               <label className="ml-1 text-xs font-bold text-slate-900">เลือกวันที่</label>
-              <ThaiDatePicker
+              <IncomingOrderDateFilter
                 id="m-incoming-date"
                 name="date"
                 defaultValue={orderDate}
-                placeholder="เลือกวันที่"
               />
             </div>
             <div className="space-y-1">

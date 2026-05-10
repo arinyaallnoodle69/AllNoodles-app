@@ -51,6 +51,7 @@ export function StoreDetailModal({
   const router = useRouter();
 
   const [roundsOpen, setRoundsOpen] = useState(false);
+  const [isClosing, setIsClosing] = useState(false);
   const [isSwipeClosing, setIsSwipeClosing] = useState(false);
 
   const touchStartX = useRef(0);
@@ -110,13 +111,17 @@ export function StoreDetailModal({
   }
 
   function close() {
-    const params = new URLSearchParams();
-    params.set("date", date);
-    if (q) params.set("q", q);
+    if (isClosing) return;
+    setIsClosing(true);
+    setTimeout(() => {
+      const params = new URLSearchParams();
+      params.set("date", date);
+      if (q) params.set("q", q);
 
-    startTransition(() => {
-      router.replace(`/orders?${params.toString()}`, { scroll: false });
-    });
+      startTransition(() => {
+        router.replace(`/orders?${params.toString()}`, { scroll: false });
+      });
+    }, 250);
   }
 
   function onTouchStart(event: React.TouchEvent) {
@@ -208,22 +213,32 @@ export function StoreDetailModal({
           from { transform: translateY(100%); }
           to { transform: translateY(0); }
         }
+        @keyframes sheetSlideOut {
+          from { transform: translateY(0); }
+          to { transform: translateY(100%); }
+        }
         @keyframes fadeIn {
           from { opacity: 0; }
           to { opacity: 1; }
         }
+        @keyframes fadeOut {
+          from { opacity: 1; }
+          to { opacity: 0; }
+        }
         .animate-sheet { animation: sheetSlideIn 300ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+        .animate-sheet-out { animation: sheetSlideOut 250ms cubic-bezier(0.22, 1, 0.36, 1) both; }
         .animate-fade { animation: fadeIn 200ms ease both; }
+        .animate-fade-out { animation: fadeOut 200ms ease both; }
       `}</style>
 
       <div className="fixed inset-0 z-[100] flex flex-col md:hidden">
         <div
-          className="animate-fade absolute inset-0 bg-slate-900/40 backdrop-blur-[2px]"
+          className={`absolute inset-0 bg-slate-900/40 backdrop-blur-[2px] ${isClosing ? "animate-fade-out" : "animate-fade"}`}
           onClick={close}
         />
 
         <div
-          className="animate-sheet relative mt-auto flex max-h-[94vh] min-h-[50vh] w-full flex-col overflow-hidden rounded-t-[2.5rem] bg-white shadow-2xl"
+          className={`relative mt-auto flex max-h-[94vh] min-h-[50vh] w-full flex-col overflow-hidden rounded-t-[2.5rem] bg-white shadow-2xl ${isClosing ? "animate-sheet-out" : "animate-sheet"}`}
           style={{ touchAction: "pan-y" }}
           onTouchStart={onTouchStart}
           onTouchMove={onTouchMove}

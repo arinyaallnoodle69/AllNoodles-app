@@ -217,31 +217,37 @@ async function PackingListPage({ searchParams }: Props) {
     <>
       <div className="no-print" style={{
         display: "flex", gap: "12px", alignItems: "center",
-        background: "white", padding: "10px 16px", borderRadius: "12px",
-        boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
-        position: "absolute", top: "16px", left: "50%", transform: "translateX(-50%)",
-        zIndex: 50, fontFamily: "Sarabun, sans-serif",
+        background: "white", padding: "12px 16px", borderRadius: "16px",
+        boxShadow: "0 10px 30px rgba(0,0,0,0.15)",
+        position: "fixed", top: "12px", left: "50%", transform: "translateX(-50%)",
+        zIndex: 100, fontFamily: "Sarabun, sans-serif",
+        width: "max-content", maxWidth: "calc(100vw - 24px)",
+        border: "1px solid rgba(0,0,0,0.05)",
       }}>
-        <span style={{ fontSize: "13px", fontWeight: 700, color: "#1e3a5f" }}>
+        <span style={{ fontSize: "14px", fontWeight: 800, color: "#003366" }}>
           ใบจัดของ
         </span>
-        <span style={{ fontSize: "12px", color: "#64748b" }}>
-          {dateLabel} · {stores.length} ร้าน · {products.length} รายการ
+        <span className="hidden sm:inline" style={{ fontSize: "12px", color: "#64748b", fontWeight: 500 }}>
+          {dateLabel} · {stores.length} ร้าน
         </span>
         <PackingListPrintButton unassignedStores={unassignedStores} />
-        <a href="/orders/incoming" style={{ fontSize: "13px", color: "#475569", textDecoration: "none" }}>
+        <a href="/orders/incoming" style={{ 
+          fontSize: "13px", fontWeight: 700, color: "#ef4444", 
+          textDecoration: "none", marginLeft: "4px",
+          padding: "6px 12px", borderRadius: "8px", background: "#fef2f2"
+        }}>
           กลับ
         </a>
       </div>
 
       {stores.length === 0 ? (
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "8px", paddingTop: "80px", fontFamily: "Sarabun, sans-serif" }}>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "8px", paddingTop: "120px", fontFamily: "Sarabun, sans-serif" }}>
           <p style={{ fontSize: "18px", fontWeight: 600, color: "#64748b" }}>ไม่มีออเดอร์ในวันที่เลือก</p>
           <p style={{ fontSize: "14px", color: "#94a3b8" }}>{dateLabel}</p>
           <a href="/orders/incoming" style={{ marginTop: "8px", color: "#1e3a5f", fontSize: "14px" }}>กลับหน้าออเดอร์</a>
         </div>
       ) : (
-        <div style={{ marginTop: "0" }}>
+        <div style={{ paddingTop: "60px" }}>
           <PackingListLayout data={data} />
         </div>
       )}

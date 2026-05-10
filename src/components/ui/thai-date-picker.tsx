@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
+import { CalendarDays, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 
 const THAI_MONTHS_FULL = [
   "มกราคม",
@@ -75,6 +75,7 @@ type ThaiDatePickerProps = {
   onChange?: (nextValue: string) => void;
   compact?: boolean;
   matchFieldHeight?: boolean;
+  loading?: boolean;
 };
 
 export function ThaiDatePicker({
@@ -88,6 +89,7 @@ export function ThaiDatePicker({
   onChange,
   compact = false,
   matchFieldHeight = false,
+  loading = false,
 }: ThaiDatePickerProps) {
   const [internalValue, setInternalValue] = useState(value ?? defaultValue);
   const [isOpen, setIsOpen] = useState(false);
@@ -133,8 +135,13 @@ export function ThaiDatePicker({
     }
 
     function handlePointerDown(event: MouseEvent) {
+      const target = event.target as Node;
       if (!rootRef.current) return;
-      if (!rootRef.current.contains(event.target as Node)) {
+      
+      const isInsideRoot = rootRef.current.contains(target);
+      const isInsidePanel = panelRef.current?.contains(target);
+      
+      if (!isInsideRoot && !isInsidePanel) {
         setIsOpen(false);
       }
     }
@@ -283,12 +290,21 @@ export function ThaiDatePicker({
         >
           {currentValue ? formatThaiDate(currentValue) : placeholder}
         </span>
-        <CalendarDays
-          className={`shrink-0 text-slate-400 ${
-            compact ? (matchFieldHeight ? "h-4 w-4" : "h-3.5 w-3.5") : "h-[15px] w-[15px] sm:h-5 sm:w-5"
-          }`}
-          strokeWidth={2}
-        />
+        {loading ? (
+          <Loader2
+            className={`shrink-0 animate-spin text-[#003366] ${
+              compact ? (matchFieldHeight ? "h-4 w-4" : "h-3.5 w-3.5") : "h-[15px] w-[15px] sm:h-5 sm:w-5"
+            }`}
+            strokeWidth={2.5}
+          />
+        ) : (
+          <CalendarDays
+            className={`shrink-0 text-slate-400 ${
+              compact ? (matchFieldHeight ? "h-4 w-4" : "h-3.5 w-3.5") : "h-[15px] w-[15px] sm:h-5 sm:w-5"
+            }`}
+            strokeWidth={2}
+          />
+        )}
       </button>
 
       {isOpen && typeof document !== "undefined"
