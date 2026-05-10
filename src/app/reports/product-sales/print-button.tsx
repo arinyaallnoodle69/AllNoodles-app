@@ -52,6 +52,25 @@ export function PrintButton({ targetId = "report-print-area", fileName = "report
       for (let i = 0; i < elementsToCapture.length; i++) {
         const element = elementsToCapture[i] as HTMLElement;
         
+        // Save original styles to restore later
+        const originalWidth = element.style.width;
+        const originalMaxWidth = element.style.maxWidth;
+        const originalMinWidth = element.style.minWidth;
+        const originalPosition = element.style.position;
+        const originalLeft = element.style.left;
+        const originalOverflow = element.style.overflow;
+
+        // Force a desktop-like width for the capture
+        // This ensures mobile captures look exactly like desktop
+        element.style.setProperty("width", "1240px", "important");
+        element.style.setProperty("min-width", "1240px", "important");
+        element.style.setProperty("max-width", "none", "important");
+        
+        // Use absolute positioning to prevent layout shifts in the viewport
+        element.style.setProperty("position", "absolute", "important");
+        element.style.setProperty("left", "-5000px", "important");
+        element.style.setProperty("overflow", "visible", "important");
+
         // Temporarily ensure the element and its children are visible
         const printOnlyElements = element.querySelectorAll('[class*="printHeader"], [class*="printFooter"]');
         printOnlyElements.forEach((el) => {
@@ -64,10 +83,18 @@ export function PrintButton({ targetId = "report-print-area", fileName = "report
 
         element.classList.add("capturing");
         
+        // Wait a tiny bit for the layout to recalculate
+        await new Promise(r => setTimeout(r, 100));
+
         const dataUrl = await htmlToImage.toPng(element, {
           quality: 1,
           backgroundColor: "#ffffff",
-          pixelRatio: 2,
+          pixelRatio: 2, // High quality
+          width: 1240,
+          style: {
+            transform: "scale(1)",
+            transformOrigin: "top left",
+          },
           filter: (node) => {
             if (node instanceof HTMLElement) {
               if (node.tagName === "BUTTON") return false;
@@ -80,6 +107,13 @@ export function PrintButton({ targetId = "report-print-area", fileName = "report
         element.classList.remove("capturing");
 
         // Restore styles for this element
+        element.style.width = originalWidth;
+        element.style.maxWidth = originalMaxWidth;
+        element.style.minWidth = originalMinWidth;
+        element.style.position = originalPosition;
+        element.style.left = originalLeft;
+        element.style.overflow = originalOverflow;
+
         printOnlyElements.forEach((el) => {
           (el as HTMLElement).style.display = originalStyles.get(el) || "";
         });

@@ -1,4 +1,6 @@
-.printArea {}
+.printArea {
+  background: #ffffff;
+}
 
 .printHeader {
   display: none;
@@ -115,211 +117,92 @@
 }
 
 .printDaySection {}
-
 .printDesktopSection {}
-
 .printDayBar {}
-
 .printStickyHead {}
-
 .printTable {}
-
 .noteMetaWrap {}
-
 .noteMetaItem {}
-
 .noteMetaValue {}
-
 .noteProductCell {}
-
 .noteProductName {}
 
-@page {
-  size: A4 portrait;
-  margin: 8mm;
-}
+/* ─── Shared Print/Capture Logic ─── */
 
 @media print {
-  html,
-  body {
-    background: #ffffff !important;
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
-  }
-
   body * {
     visibility: hidden;
   }
-
-  .printArea,
-  .printArea * {
+  .printArea, .printArea * {
     visibility: visible;
   }
-
   .printArea {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    min-height: 100%;
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    min-height: 100% !important;
     overflow: visible !important;
-    background: #ffffff;
+    background: #ffffff !important;
     padding: 0 !important;
     margin: 0 !important;
-    box-shadow: none !important;
-  }
-
-  .printHeader {
-    display: block;
-    margin-bottom: 10px;
-  }
-
-  .printLogo {
-    width: 56px !important;
-    height: 56px !important;
-    display: block !important;
-    object-fit: contain !important;
-  }
-
-  .printDaySection {
-    margin: 0 0 10px 0 !important;
-    border: 1px solid rgba(0, 51, 102, 0.12) !important;
-    border-radius: 0 !important;
-    box-shadow: none !important;
-    break-inside: avoid;
-    page-break-inside: avoid;
-  }
-
-  .printDesktopSection {
-    display: block !important;
-  }
-
-  .printDayBar,
-  .printStickyHead {
-    position: static !important;
-    top: auto !important;
-    z-index: auto !important;
-    backdrop-filter: none !important;
-  }
-
-  .printDayBar {
-    padding: 6px 10px !important;
-  }
-
-  .printDayBar p {
-    font-size: 10px !important;
-    letter-spacing: 0.08em !important;
-    white-space: nowrap !important;
-  }
-
-  .printTable {
-    min-width: 0 !important;
-    width: 100% !important;
-    table-layout: fixed !important;
-  }
-
-  .printTable col:nth-child(1) {
-    width: 12% !important;
-  }
-
-  .printTable col:nth-child(2) {
-    width: 30% !important;
-  }
-
-  .printTable col:nth-child(3) {
-    width: 8% !important;
-  }
-
-  .printTable col:nth-child(4) {
-    width: 7% !important;
-  }
-
-  .printTable col:nth-child(5),
-  .printTable col:nth-child(6),
-  .printTable col:nth-child(7) {
-    width: 12% !important;
-  }
-
-  .printTable col:nth-child(8) {
-    width: 7% !important;
-  }
-
-  .printTable thead th,
-  .printTable tbody td {
-    white-space: nowrap !important;
-    overflow: hidden !important;
-    text-overflow: clip !important;
-  }
-
-  .printTable thead th {
-    padding: 6px 5px !important;
-    font-size: 9px !important;
-    line-height: 1.2 !important;
-  }
-
-  .printTable tbody td {
-    padding: 5px 5px !important;
-    font-size: 9px !important;
-    line-height: 1.25 !important;
-    vertical-align: middle !important;
-  }
-
-  .printTable img {
-    width: 24px !important;
-    height: 24px !important;
-    border-radius: 6px !important;
-  }
-
-  .printTable svg {
-    width: 12px !important;
-    height: 12px !important;
-  }
-
-  .noteMetaWrap {
-    display: flex !important;
-    flex-wrap: nowrap !important;
-    align-items: center !important;
-    gap: 14px !important;
-  }
-
-  .noteMetaItem,
-  .noteMetaValue {
-    white-space: nowrap !important;
-  }
-
-  .noteMetaItem {
-    font-size: 9px !important;
-  }
-
-  .noteMetaValue {
-    overflow: hidden !important;
-    text-overflow: clip !important;
-    font-size: 10px !important;
-  }
-
-  .noteProductCell {
-    display: flex !important;
-    align-items: center !important;
-    gap: 6px !important;
-    min-width: 0 !important;
-    flex-wrap: nowrap !important;
-  }
-
-  .noteProductName {
-    white-space: nowrap !important;
-    overflow: hidden !important;
-    text-overflow: clip !important;
-    font-size: 9px !important;
-    min-width: 0 !important;
-  }
-
-  .printFooter {
-    display: block;
-    margin-top: 10px;
-    padding-top: 8px;
-    border-top: 1px solid rgba(0, 51, 102, 0.12);
-    font-size: 10px;
-    color: #64748b;
-    text-align: right;
   }
 }
+
+@media print {
+  .printHeader { display: block !important; margin-bottom: 10px; }
+  .printLogo { width: 56px !important; height: 56px !important; display: block !important; object-fit: contain !important; }
+  .printDaySection { margin: 0 0 10px 0 !important; border: 1px solid rgba(0, 51, 102, 0.12) !important; border-radius: 0 !important; box-shadow: none !important; }
+  .printDesktopSection { display: block !important; }
+  .printDayBar, .printStickyHead { position: static !important; top: auto !important; z-index: auto !important; backdrop-filter: none !important; }
+  .printDayBar { padding: 6px 10px !important; }
+  .printDayBar p { font-size: 10px !important; letter-spacing: 0.08em !important; white-space: nowrap !important; }
+  .printTable { min-width: 0 !important; width: 100% !important; table-layout: fixed !important; border-collapse: collapse !important; }
+  .printTable col:nth-child(1) { width: 12% !important; }
+  .printTable col:nth-child(2) { width: 30% !important; }
+  .printTable col:nth-child(3) { width: 8% !important; }
+  .printTable col:nth-child(4) { width: 7% !important; }
+  .printTable col:nth-child(5) { width: 12% !important; }
+  .printTable col:nth-child(6) { width: 12% !important; }
+  .printTable col:nth-child(7) { width: 12% !important; }
+  .printTable col:nth-child(8) { width: 7% !important; }
+  .printTable thead th, .printTable tbody td { white-space: nowrap !important; overflow: hidden !important; text-overflow: clip !important; }
+  .printTable thead th { padding: 6px 5px !important; font-size: 9px !important; line-height: 1.2 !important; background: #f8fafc !important; color: #475569 !important; border-bottom: 1px solid rgba(0, 51, 102, 0.12) !important; }
+  .printTable tbody td { padding: 5px 5px !important; font-size: 9px !important; line-height: 1.25 !important; vertical-align: middle !important; background: #ffffff !important; border-bottom: 1px solid rgba(0, 51, 102, 0.12) !important; }
+  .printTable img { width: 24px !important; height: 24px !important; border-radius: 6px !important; }
+  .noteMetaWrap { display: flex !important; flex-wrap: nowrap !important; align-items: center !important; gap: 14px !important; }
+  .noteMetaItem, .noteMetaValue { white-space: nowrap !important; }
+  .noteMetaItem { font-size: 9px !important; }
+  .noteMetaValue { overflow: hidden !important; text-overflow: clip !important; font-size: 10px !important; }
+  .noteProductCell { display: flex !important; align-items: center !important; gap: 6px !important; min-width: 0 !important; flex-wrap: nowrap !important; }
+  .noteProductName { white-space: nowrap !important; overflow: hidden !important; text-overflow: clip !important; font-size: 9px !important; min-width: 0 !important; }
+  .printFooter { display: block !important; margin-top: 10px; padding-top: 8px; border-top: 1px solid rgba(0, 51, 102, 0.12); font-size: 10px; color: #64748b; text-align: right; }
+}
+
+:global(.capturing) .printHeader { display: block !important; margin-bottom: 10px; }
+:global(.capturing) .printLogo { width: 56px !important; height: 56px !important; display: block !important; object-fit: contain !important; }
+:global(.capturing) .printDaySection { margin: 0 0 10px 0 !important; border: 1px solid rgba(0, 51, 102, 0.12) !important; border-radius: 0 !important; box-shadow: none !important; }
+:global(.capturing) .printDesktopSection { display: block !important; }
+:global(.capturing) .printDayBar, :global(.capturing) .printStickyHead { position: static !important; top: auto !important; z-index: auto !important; backdrop-filter: none !important; }
+:global(.capturing) .printDayBar { padding: 6px 10px !important; }
+:global(.capturing) .printDayBar p { font-size: 10px !important; letter-spacing: 0.08em !important; white-space: nowrap !important; }
+:global(.capturing) .printTable { min-width: 0 !important; width: 100% !important; table-layout: fixed !important; border-collapse: collapse !important; }
+:global(.capturing) .printTable col:nth-child(1) { width: 12% !important; }
+:global(.capturing) .printTable col:nth-child(2) { width: 30% !important; }
+:global(.capturing) .printTable col:nth-child(3) { width: 8% !important; }
+:global(.capturing) .printTable col:nth-child(4) { width: 7% !important; }
+:global(.capturing) .printTable col:nth-child(5) { width: 12% !important; }
+:global(.capturing) .printTable col:nth-child(6) { width: 12% !important; }
+:global(.capturing) .printTable col:nth-child(7) { width: 12% !important; }
+:global(.capturing) .printTable col:nth-child(8) { width: 7% !important; }
+:global(.capturing) .printTable thead th, :global(.capturing) .printTable tbody td { white-space: nowrap !important; overflow: hidden !important; text-overflow: clip !important; }
+:global(.capturing) .printTable thead th { padding: 6px 5px !important; font-size: 9px !important; line-height: 1.2 !important; background: #f8fafc !important; color: #475569 !important; border-bottom: 1px solid rgba(0, 51, 102, 0.12) !important; }
+:global(.capturing) .printTable tbody td { padding: 5px 5px !important; font-size: 9px !important; line-height: 1.25 !important; vertical-align: middle !important; background: #ffffff !important; border-bottom: 1px solid rgba(0, 51, 102, 0.12) !important; }
+:global(.capturing) .printTable img { width: 24px !important; height: 24px !important; border-radius: 6px !important; }
+:global(.capturing) .noteMetaWrap { display: flex !important; flex-wrap: nowrap !important; align-items: center !important; gap: 14px !important; }
+:global(.capturing) .noteMetaItem, :global(.capturing) .noteMetaValue { white-space: nowrap !important; }
+:global(.capturing) .noteMetaItem { font-size: 9px !important; }
+:global(.capturing) .noteMetaValue { overflow: hidden !important; text-overflow: clip !important; font-size: 10px !important; }
+:global(.capturing) .noteProductCell { display: flex !important; align-items: center !important; gap: 6px !important; min-width: 0 !important; flex-wrap: nowrap !important; }
+:global(.capturing) .noteProductName { white-space: nowrap !important; overflow: hidden !important; text-overflow: clip !important; font-size: 9px !important; min-width: 0 !important; }
+:global(.capturing) .printFooter { display: block !important; margin-top: 10px; padding-top: 8px; border-top: 1px solid rgba(0, 51, 102, 0.12); font-size: 10px; color: #64748b; text-align: right; }
