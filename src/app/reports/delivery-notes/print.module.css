@@ -1,208 +1,128 @@
+/* ─── Shared Print/Capture Design (HIGH DENSITY A4) ─── */
+
+@page {
+  size: A4 portrait;
+  margin: 5mm;
+}
+
 .printArea {
-  background: #ffffff;
+  display: flex !important;
+  flex-direction: column !important;
+  width: 210mm !important;
+  height: 297mm !important; /* STRICT A4 HEIGHT */
+  background: #ffffff !important;
+  padding: 8mm !important;
+  margin: 0 !important;
+  box-sizing: border-box !important;
+  overflow: hidden !important;
+  font-family: "SukhumvitSet-SemiBold", var(--font-sukhumvit), sans-serif !important;
+  color: #111111 !important;
 }
 
-.printHeader {
-  display: none;
+.printPage {
+  position: relative !important;
+  width: 210mm !important;
+  height: 297mm !important;
+  overflow: hidden !important;
+  background: white !important;
+  flex-shrink: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
 }
 
+.printHeader { 
+  display: block !important; 
+  margin-bottom: 1.5mm !important; 
+  border-bottom: 1pt solid #003366 !important; 
+  padding: 1mm 0 1.5mm 0 !important; 
+  background: #ffffff !important; 
+  flex-shrink: 0 !important; 
+}
 .printHeaderTop {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 20px;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 4mm !important;
 }
-
 .printBrand {
-  display: flex;
-  align-items: center;
-  gap: 14px;
+  display: flex !important;
+  align-items: center !important;
+  gap: 3mm !important;
 }
-
 .printLogo {
-  width: 56px;
-  height: 56px;
-  object-fit: contain;
-  display: block;
+  width: 10mm !important;
+  height: 10mm !important;
+}
+.printCompanyName { font-size: 13pt !important; font-weight: 900 !important; line-height: 1 !important; color: #003366 !important; margin: 0 !important; }
+.printSubtitle { font-size: 8pt !important; font-weight: 600 !important; color: #475569 !important; margin-top: 0.5mm !important; }
+.printMeta { font-size: 7.5pt !important; font-weight: 500 !important; color: #64748b !important; text-align: right !important; line-height: 1.2 !important; }
+.printReportTitle { font-size: 14pt !important; font-weight: 900 !important; color: #003366 !important; margin: 1mm 0 0 0 !important; }
+
+.printFilters { margin-top: 1.2mm !important; padding-top: 0.8mm !important; }
+.printFilterItem { display: inline-flex !important; align-items: center !important; gap: 1mm !important; }
+.printFilterLabel { font-size: 8pt !important; font-weight: 700 !important; color: #64748b !important; }
+.printFilterValue { font-size: 8pt !important; font-weight: 600 !important; color: #111111 !important; }
+
+
+.printDaySection { margin: 3mm 0 !important; border: 1pt solid rgba(0, 51, 102, 0.15) !important; border-radius: 1.2mm !important; overflow: hidden !important; flex-shrink: 0 !important; }
+.printDayBar { background: #003366 !important; padding: 1mm 2.5mm !important; }
+.printDayBar p { color: white !important; font-weight: 800 !important; font-size: 9.5pt !important; margin: 0 !important; }
+
+.printTable { 
+  width: 100% !important; 
+  table-layout: fixed !important; 
+  border-collapse: collapse !important; 
+  flex-shrink: 0 !important;
+}
+.printTable thead th { padding: 1.5mm 1mm !important; font-size: 8pt !important; font-weight: 900 !important; background: #f8fafc !important; border-bottom: 1.2pt solid #003366 !important; color: #003366 !important; text-transform: uppercase !important; }
+.printTable tbody td { padding: 1.6mm 1mm !important; font-size: 9pt !important; border-bottom: 0.5pt solid #e2e8f0 !important; color: #111111 !important; }
+
+.noteMetaValue { font-weight: 800 !important; color: #003366 !important; }
+.noteProductName { font-size: 9pt !important; font-weight: 700 !important; color: #111111 !important; line-height: 1.1 !important; }
+
+.printFooter { 
+  display: block !important; 
+  margin-top: auto !important; 
+  padding-top: 3mm !important; 
+  border-top: 0.8pt solid #e2e8f0 !important; 
+  font-size: 8pt !important; 
+  font-weight: 600 !important; 
+  color: #94a3b8 !important; 
+  text-align: right !important; 
+  flex-shrink: 0 !important;
 }
 
-.printCompanyName {
-  margin: 0;
-  font-size: 20px;
-  font-weight: 800;
-  line-height: 1.1;
-  color: #003366;
-}
-
-.printSubtitle {
-  margin: 6px 0 0;
-  font-size: 11px;
-  line-height: 1.4;
-  color: #475569;
-}
-
-.printMeta {
-  flex-shrink: 0;
-  text-align: right;
-  font-size: 11px;
-  line-height: 1.6;
-  color: #334155;
-}
-
-.printMeta p,
-.printReportTitle,
-.printFilterLabel,
-.printFilterValue,
-.printFooter {
-  margin: 0;
-}
-
-.printReportTitleBlock {
-  margin-top: 16px;
-}
-
-.printReportTitle {
-  font-size: 22px;
-  font-weight: 800;
-  line-height: 1.2;
-  color: #003366;
-}
-
-.printFilters {
-  display: flex;
-  align-items: center;
-  flex-wrap: nowrap;
-  gap: 0;
-  margin-top: 14px;
-  overflow: hidden;
-}
-
-.printFilterItem {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  min-width: 0;
-  white-space: nowrap;
-}
-
-.printFilterItem + .printFilterItem {
-  margin-left: 12px;
-  padding-left: 12px;
-  border-left: 1px solid rgba(0, 51, 102, 0.18);
-}
-
-.printFilterLabel {
-  font-size: 11px;
-  font-weight: 700;
-  color: #64748b;
-  white-space: nowrap;
-}
-
-.printFilterValue {
-  font-size: 11px;
-  font-weight: 600;
-  line-height: 1.2;
-  color: #0f172a;
-  white-space: nowrap;
-}
-
-.printDivider {
-  height: 1px;
-  margin: 14px 0 10px;
-  background: rgba(0, 51, 102, 0.16);
-}
-
-.printFooter {
-  display: none;
-}
-
-.printDaySection {}
-.printDesktopSection {}
-.printDayBar {}
-.printStickyHead {}
-.printTable {}
-.noteMetaWrap {}
-.noteMetaItem {}
-.noteMetaValue {}
-.noteProductCell {}
-.noteProductName {}
-
-/* ─── Shared Print/Capture Logic ─── */
-
+/* ─── Media Print Specifics ─── */
 @media print {
-  body * {
-    visibility: hidden;
+  :global(header), :global(aside), :global(nav), :global(footer), 
+  :global(button), :global(form), :global(.no-print) {
+    display: none !important;
   }
-  .printArea, .printArea * {
-    visibility: visible;
-  }
-  .printArea {
-    position: absolute !important;
-    top: 0 !important;
-    left: 0 !important;
-    width: 100% !important;
-    min-height: 100% !important;
-    overflow: visible !important;
-    background: #ffffff !important;
-    padding: 0 !important;
+
+  :global(body), :global(html) {
     margin: 0 !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+  }
+
+  :global(#report-print-area) {
+    display: block !important;
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    z-index: 9999 !important;
+  }
+
+  .printPage {
+    page-break-after: always !important;
+    break-after: page !important;
   }
 }
 
-@media print {
-  .printHeader { display: block !important; margin-bottom: 10px; }
-  .printLogo { width: 56px !important; height: 56px !important; display: block !important; object-fit: contain !important; }
-  .printDaySection { margin: 0 0 10px 0 !important; border: 1px solid rgba(0, 51, 102, 0.12) !important; border-radius: 0 !important; box-shadow: none !important; }
-  .printDesktopSection { display: block !important; }
-  .printDayBar, .printStickyHead { position: static !important; top: auto !important; z-index: auto !important; backdrop-filter: none !important; }
-  .printDayBar { padding: 6px 10px !important; }
-  .printDayBar p { font-size: 10px !important; letter-spacing: 0.08em !important; white-space: nowrap !important; }
-  .printTable { min-width: 0 !important; width: 100% !important; table-layout: fixed !important; border-collapse: collapse !important; }
-  .printTable col:nth-child(1) { width: 12% !important; }
-  .printTable col:nth-child(2) { width: 30% !important; }
-  .printTable col:nth-child(3) { width: 8% !important; }
-  .printTable col:nth-child(4) { width: 7% !important; }
-  .printTable col:nth-child(5) { width: 12% !important; }
-  .printTable col:nth-child(6) { width: 12% !important; }
-  .printTable col:nth-child(7) { width: 12% !important; }
-  .printTable col:nth-child(8) { width: 7% !important; }
-  .printTable thead th, .printTable tbody td { white-space: normal !important; word-break: break-all !important; overflow: hidden !important; text-overflow: clip !important; }
-  .printTable thead th { padding: 6px 5px !important; font-size: 9px !important; line-height: 1.2 !important; background: #f8fafc !important; color: #475569 !important; border-bottom: 1px solid rgba(0, 51, 102, 0.12) !important; }
-  .printTable tbody td { padding: 5px 5px !important; font-size: 9px !important; line-height: 1.25 !important; vertical-align: middle !important; background: #ffffff !important; border-bottom: 1px solid rgba(0, 51, 102, 0.12) !important; }
-  .printTable img { width: 24px !important; height: 24px !important; border-radius: 6px !important; }
-  .noteMetaWrap { display: flex !important; flex-wrap: nowrap !important; align-items: center !important; gap: 14px !important; }
-  .noteMetaItem, .noteMetaValue { white-space: nowrap !important; }
-  .noteMetaItem { font-size: 9px !important; }
-  .noteMetaValue { overflow: hidden !important; text-overflow: clip !important; font-size: 10px !important; }
-  .noteProductCell { display: flex !important; align-items: center !important; gap: 6px !important; min-width: 0 !important; flex-wrap: nowrap !important; }
-  .noteProductName { white-space: normal !important; word-break: break-all !important; overflow: hidden !important; text-overflow: clip !important; font-size: 9px !important; min-width: 0 !important; }
-  .printFooter { display: block !important; margin-top: 10px; padding-top: 8px; border-top: 1px solid rgba(0, 51, 102, 0.12); font-size: 10px; color: #64748b; text-align: right; }
+/* ─── Capturing Specifics ─── */
+:global(.capturing) .printArea {
+  visibility: visible !important;
+  opacity: 1 !important;
+  display: flex !important;
 }
-
-:global(.capturing) .printHeader { display: block !important; margin-bottom: 10px; }
-:global(.capturing) .printLogo { width: 56px !important; height: 56px !important; display: block !important; object-fit: contain !important; }
-:global(.capturing) .printDaySection { margin: 0 0 10px 0 !important; border: 1px solid rgba(0, 51, 102, 0.12) !important; border-radius: 0 !important; box-shadow: none !important; }
-:global(.capturing) .printDesktopSection { display: block !important; }
-:global(.capturing) .printDayBar, :global(.capturing) .printStickyHead { position: static !important; top: auto !important; z-index: auto !important; backdrop-filter: none !important; }
-:global(.capturing) .printDayBar { padding: 6px 10px !important; }
-:global(.capturing) .printDayBar p { font-size: 10px !important; letter-spacing: 0.08em !important; white-space: nowrap !important; }
-:global(.capturing) .printTable { min-width: 0 !important; width: 100% !important; table-layout: fixed !important; border-collapse: collapse !important; }
-:global(.capturing) .printTable col:nth-child(1) { width: 12% !important; }
-:global(.capturing) .printTable col:nth-child(2) { width: 30% !important; }
-:global(.capturing) .printTable col:nth-child(3) { width: 8% !important; }
-:global(.capturing) .printTable col:nth-child(4) { width: 7% !important; }
-:global(.capturing) .printTable col:nth-child(5) { width: 12% !important; }
-:global(.capturing) .printTable col:nth-child(6) { width: 12% !important; }
-:global(.capturing) .printTable col:nth-child(7) { width: 12% !important; }
-:global(.capturing) .printTable col:nth-child(8) { width: 7% !important; }
-:global(.capturing) .printTable thead th, :global(.capturing) .printTable tbody td { white-space: normal !important; word-break: break-all !important; overflow: hidden !important; text-overflow: clip !important; }
-:global(.capturing) .printTable thead th { padding: 6px 5px !important; font-size: 9px !important; line-height: 1.2 !important; background: #f8fafc !important; color: #475569 !important; border-bottom: 1px solid rgba(0, 51, 102, 0.12) !important; }
-:global(.capturing) .printTable tbody td { padding: 5px 5px !important; font-size: 9px !important; line-height: 1.25 !important; vertical-align: middle !important; background: #ffffff !important; border-bottom: 1px solid rgba(0, 51, 102, 0.12) !important; }
-:global(.capturing) .printTable img { width: 24px !important; height: 24px !important; border-radius: 6px !important; }
-:global(.capturing) .noteMetaWrap { display: flex !important; flex-wrap: nowrap !important; align-items: center !important; gap: 14px !important; }
-:global(.capturing) .noteMetaItem, :global(.capturing) .noteMetaValue { white-space: nowrap !important; }
-:global(.capturing) .noteMetaItem { font-size: 9px !important; }
-:global(.capturing) .noteMetaValue { overflow: hidden !important; text-overflow: clip !important; font-size: 10px !important; }
-:global(.capturing) .noteProductCell { display: flex !important; align-items: center !important; gap: 6px !important; min-width: 0 !important; flex-wrap: nowrap !important; }
-:global(.capturing) .noteProductName { white-space: normal !important; word-break: break-all !important; overflow: hidden !important; text-overflow: clip !important; font-size: 9px !important; min-width: 0 !important; }
-:global(.capturing) .printFooter { display: block !important; margin-top: 10px; padding-top: 8px; border-top: 1px solid rgba(0, 51, 102, 0.12); font-size: 10px; color: #64748b; text-align: right; }

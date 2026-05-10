@@ -71,14 +71,6 @@ function formatPrintedAt(date: Date) {
   return { datePart, timePart };
 }
 
-function summarizeSelection(items: { id: string; name: string }[], selectedIds: string[], fallback: string) {
-  if (selectedIds.length === 0) return fallback;
-
-  const selectedNames = items.filter((item) => selectedIds.includes(item.id)).map((item) => item.name);
-  if (selectedNames.length <= 3) return selectedNames.join(", ");
-  return `${selectedNames.length} รายการ`;
-}
-
 function groupRowsByDate(rows: DeliveryNoteReportRow[]) {
   const groups = new Map<string, DeliveryNoteReportRow[]>();
   for (const row of rows) {
@@ -418,8 +410,6 @@ async function DeliveryNotesReportContent({ searchParams }: PageProps) {
   }).toString();
   const paginationBase = `/reports/delivery-notes?${filterQs}`;
   const printedAt = formatPrintedAt(new Date());
-  const selectedStoreLabel = summarizeSelection(customers, selectedStoreIds, "ทุกร้านค้า");
-  const keywordLabel = keyword || "ทั้งหมด";
   const groupedRows = groupRowsByDate(rows);
   const groupedAllRows = groupRowsByDate(allRows);
 
@@ -674,14 +664,15 @@ async function DeliveryNotesReportContent({ searchParams }: PageProps) {
                   })}
                 </div>
 
-                {/* Print only area (Full table) */}
-                <div id="report-print-area" className="hidden print:block">
+                {/* Print only area (Full table - invisible on screen) */}
+                <div id="report-print-area" className="fixed -left-[9999px] top-0 opacity-0 pointer-events-none print:static print:opacity-100 print:pointer-events-auto print:block">
                   {(() => {
-                    const PAGE_SIZE_GROUPS = 5;
+                    const PAGE_SIZE_GROUPS = 8;
                     const pages = [];
                     for (let i = 0; i < groupedAllRows.length; i += PAGE_SIZE_GROUPS) {
                       pages.push(groupedAllRows.slice(i, i + PAGE_SIZE_GROUPS));
                     }
+
                     if (pages.length === 0) return null;
 
                     return pages.map((pageGroups, pageIdx) => (
@@ -710,15 +701,8 @@ async function DeliveryNotesReportContent({ searchParams }: PageProps) {
                               <span className={styles.printFilterLabel}>ช่วงวันที่:</span>
                               <span className={styles.printFilterValue}>{isoToDisplay(fromDate)} - {isoToDisplay(toDate)}</span>
                             </div>
-                            <div className={styles.printFilterItem}>
-                              <span className={styles.printFilterLabel}>ร้านค้า:</span>
-                              <span className={styles.printFilterValue}>{selectedStoreLabel}</span>
-                            </div>
-                            <div className={styles.printFilterItem}>
-                              <span className={styles.printFilterLabel}>ค้นหา:</span>
-                              <span className={styles.printFilterValue}>{keywordLabel}</span>
-                            </div>
                           </div>
+
                           <div className={styles.printDivider} />
                         </div>
 

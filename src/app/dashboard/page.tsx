@@ -7,27 +7,48 @@ import { getDashboardOverview } from "@/lib/dashboard/overview";
 import { getTodayInBangkok } from "@/lib/orders/date";
 import { getOrderStoreStatusSummary } from "@/lib/orders/store-status";
 import { DashboardClient } from "@/components/dashboard/dashboard-client";
+import { getIncomingOrders, getOrderDetailById } from "@/lib/orders/detail";
+import { getProductsForOrder } from "@/lib/orders/manage";
+
 import type { DashboardOverview } from "@/lib/dashboard/overview";
 import type { OrderStoreStatusSummary } from "@/lib/orders/store-status";
+import type { OrderDetailData, IncomingOrderListItem } from "@/lib/orders/detail";
+import type { OrderProductOption } from "@/lib/orders/manage";
 
 export const metadata = { title: "ภาพรวม" };
 
-export default async function DashboardPage() {
+type DashboardPageProps = {
+  searchParams: Promise<{ date?: string; expanded?: string; q?: string }>;
+};
+
+export default async function DashboardPage({ searchParams }: DashboardPageProps) {
   const session = await requireAppSession();
   if (session.role === "warehouse") redirect(roleHomePage("warehouse"));
 
+  const params = await searchParams;
   const today = getTodayInBangkok();
+  const orderDate = params.date || today;
+  const expandedOrderId = params.expanded?.trim() ?? "";
   
   let overview: DashboardOverview | null = null;
   let storeStatusSummary: OrderStoreStatusSummary | null = null;
+  let expandedDetail: OrderDetailData | null = null;
+  let orders: IncomingOrderListItem[] = [];
+  let products: OrderProductOption[] = [];
 
   try {
     const results = await Promise.all([
       getDashboardOverview(session.organizationId),
-      getOrderStoreStatusSummary(session.organizationId, today),
+      getOrderStoreStatusSummary(session.organizationId, orderDate),
+      expandedOrderId ? getOrderDetailById(expandedOrderId) : Promise.resolve(null),
+      expandedOrderId ? getIncomingOrders(session.organizationId, { orderDate }) : Promise.resolve([]),
+      expandedOrderId ? getProductsForOrder(session.organizationId) : Promise.resolve([]),
     ]);
     overview = results[0];
     storeStatusSummary = results[1];
+    expandedDetail = results[2];
+    orders = results[3];
+    products = results[4];
   } catch (error) {
     console.error("Dashboard data fetch error:", error);
     // Fallback empty states to prevent crash
@@ -65,6 +86,11 @@ export default async function DashboardPage() {
         stockSuppliers={overview.stockSuppliers}
         displayName={session.displayName}
         today={today}
+        orderDate={orderDate}
+        expandedDetail={expandedDetail}
+        expandedOrderId={expandedOrderId}
+        allOrders={orders}
+        products={products}
       />
     </AppSidebarLayout>
   );

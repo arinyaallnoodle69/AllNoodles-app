@@ -1,6 +1,7 @@
 import Image from "next/image";
 import { Suspense } from "react";
 import { OtpPinForm } from "@/components/auth/otp-pin-form";
+import { verifyPin } from "./actions";
 import {
   hasPinPepper,
   hasSessionSecret,
@@ -40,10 +41,12 @@ function LoginShell({
   configured,
   error,
   next,
+  action,
 }: {
   configured: boolean;
   error?: string;
   next?: string;
+  action?: (formData: FormData) => void;
 }) {
   return (
     <main className="flex min-h-screen items-center justify-center bg-[radial-gradient(circle_at_top,rgba(0,0,255,0.08),transparent_32%),linear-gradient(180deg,#f7f9ff_0%,#ffffff_100%)] px-4 py-6 sm:px-6 sm:py-10">
@@ -60,9 +63,10 @@ function LoginShell({
             />
           </div>
           <OtpPinForm
-            disabled={!configured}
+            disabled={!configured || !action}
             error={error}
             next={next}
+            action={action}
           />
           {!configured ? (
             <p className="mt-6 text-center text-sm text-rose-600">
@@ -88,6 +92,7 @@ async function LoginPageContent({
       configured={configured}
       error={params.error ? resolveLoginError(params.error) : undefined}
       next={params.next}
+      action={verifyPin}
     />
   );
 }

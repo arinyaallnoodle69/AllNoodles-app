@@ -26,10 +26,9 @@ function formatCurrency(value: number) {
   return value.toLocaleString("th-TH", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-function formatDateTime(value: string) {
-  const date = new Date(value);
-  const datePart = new Intl.DateTimeFormat("sv-SE", { timeZone: "Asia/Bangkok" }).format(date);
-  const [y, m, d] = datePart.split("-");
+function formatDisplayDate(value: string) {
+  const [y, m, d] = value.split("-");
+  if (!y || !m || !d) return value;
   return `${d}/${m}/${parseInt(y, 10) + 543}`;
 }
 
@@ -226,7 +225,7 @@ const [
                       customerName={order.customerName}
                       customerCode={order.customerCode}
                       channelLabel={order.channelLabel}
-                      createdAtText={formatDateTime(order.createdAt)}
+                      displayDate={formatDisplayDate(order.orderDate)}
                       totalAmountText={`${formatCurrency(order.totalAmount)} บาท`}
                       vehicleId={order.vehicleId}
                       vehicleName={order.vehicleName}

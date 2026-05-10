@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useTransition } from "react";
 import Image from "next/image";
 import {
   TrendingUp,
@@ -12,6 +12,7 @@ import {
   ShoppingBag,
   Store,
   X,
+  Loader2,
 } from "lucide-react";
 import {
   BarChart,
@@ -25,10 +26,14 @@ import {
 } from "recharts";
 import { useCreateOrder } from "@/components/orders/create-order-context";
 import { StockReceiveForm } from "@/components/settings/stock-receive-form";
+import { IncomingOrderModal } from "@/components/orders/incoming-order-modal";
 import type { DashboardOverview } from "@/lib/dashboard/overview";
 import type { OrderStoreStatusSummary } from "@/lib/orders/store-status";
 import type { StockProductOption, StockSupplierOption } from "@/lib/stock/admin";
+import type { OrderDetailData, IncomingOrderListItem } from "@/lib/orders/detail";
+import type { OrderProductOption } from "@/lib/orders/manage";
 import { LineAppIcon } from "@/components/icons/line-app-icon";
+import { useRouter, useSearchParams } from "next/navigation";
 
 type Props = {
   overview: DashboardOverview;
@@ -37,6 +42,11 @@ type Props = {
   stockSuppliers: StockSupplierOption[];
   displayName: string;
   today: string;
+  orderDate: string;
+  expandedDetail: OrderDetailData | null;
+  expandedOrderId: string;
+  allOrders: IncomingOrderListItem[];
+  products: OrderProductOption[];
 };
 
 export function DashboardClient({
@@ -45,11 +55,19 @@ export function DashboardClient({
   stockProducts,
   stockSuppliers,
   displayName,
-  today
+  today,
+  orderDate,
+  expandedDetail,
+  expandedOrderId,
+  allOrders,
+  products
 }: Props) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const [isNavigating, startTransition] = useTransition();
   const { open: openCreateOrder } = useCreateOrder();
   const [isStockModalOpen, setIsStockModalOpen] = useState(false);
-  const [viewingStores, setViewingStores] = useState<{ title: string; stores: Array<{ id: string; name: string; code?: string }> } | null>(null);
+  const [viewingStores, setViewingStores] = useState<{ title: string; stores: Array<{ id: string; name: string; code?: string; latestOrderId?: string | null }> } | null>(null);
 
   const orderedStoreIds = useMemo(() => new Set(storeStatusSummary.orderedStores.map(s => s.id)), [storeStatusSummary.orderedStores]);
 
@@ -358,32 +376,51 @@ export function DashboardClient({
                   <p className="text-xl font-black text-slate-300">ไม่มีข้อมูลร้านค้าในขณะนี้</p>
                 </div>
               ) : (
-                viewingStores.stores.map((store) => {
-                  const isOrdered = orderedStoreIds.has(store.id);
-                  return (
-                    <button
-                      key={store.id}
-                      onClick={() => openCreateOrder(store.id)}
-                      className="flex w-full items-center gap-5 bg-white px-6 py-6 border-b border-slate-100 hover:bg-slate-50 transition-colors group text-left"
-                    >
-                      <div className="h-14 w-14 shrink-0 rounded-2xl bg-slate-50 flex items-center justify-center text-[#001E5D] shadow-sm group-hover:bg-[#001E5D] group-hover:text-white transition-all">
-                        <Store className="h-7 w-7" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-black text-slate-800 text-lg leading-tight truncate">{store.name}</p>
-                        <div className="flex items-center gap-2 mt-1.5">
-                          <p className="text-xs font-bold text-slate-400 uppercase tracking-tighter">รหัส: {store.code || store.id.slice(0, 8)}</p>
-                          {isOrdered ? (
-                            <span className="bg-emerald-50 text-emerald-600 text-[10px] font-black px-2 py-0.5 rounded-md border border-emerald-100 uppercase tracking-tight">สั่งแล้ววันนี้</span>
-                          ) : (
-                            <span className="bg-rose-50 text-rose-600 text-[10px] font-black px-2 py-0.5 rounded-md border border-rose-100 uppercase tracking-tight">ยังไม่สั่ง</span>
-                          )}
+                <div className="relative">
+                  {isNavigating && (
+                    <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/60 backdrop-blur-[1px]">
+                      <Loader2 className="h-10 w-10 animate-spin text-[#001E5D]" strokeWidth={3} />
+                    </div>
+                  )}
+                  {viewingStores.stores.map((store) => {
+                    const isOrdered = orderedStoreIds.has(store.id);
+                    return (
+                      <button
+                        key={store.id}
+                        onClick={() => {
+                          if (isOrdered && store.latestOrderId) {
+                            startTransition(() => {
+                              const p = new URLSearchParams(searchParams.toString());
+                              p.set("expanded", store.latestOrderId!);
+                              router.push("/dashboard?" + p.toString(), { scroll: false });
+                              setViewingStores(null);
+                            });
+                          } else {
+                            openCreateOrder(store.id);
+                          }
+                        }}
+                        className="flex w-full items-center gap-5 bg-white px-6 py-6 border-b border-slate-100 hover:bg-slate-50 transition-colors group text-left disabled:opacity-50"
+                        disabled={isNavigating}
+                      >
+                        <div className="h-14 w-14 shrink-0 rounded-2xl bg-slate-50 flex items-center justify-center text-[#001E5D] shadow-sm group-hover:bg-[#001E5D] group-hover:text-white transition-all">
+                          <Store className="h-7 w-7" />
                         </div>
-                      </div>
-                      <ChevronRight className="h-6 w-6 text-slate-200 group-hover:text-[#001E5D] group-hover:translate-x-1 transition-all" strokeWidth={3} />
-                    </button>
-                  );
-                })
+                        <div className="flex-1 min-w-0">
+                          <p className="font-black text-slate-800 text-lg leading-tight truncate">{store.name}</p>
+                          <div className="flex items-center gap-2 mt-1.5">
+                            <p className="text-xs font-bold text-slate-400 uppercase tracking-tighter">รหัส: {store.code || store.id.slice(0, 8)}</p>
+                            {isOrdered ? (
+                              <span className="bg-emerald-50 text-emerald-600 text-[10px] font-black px-2 py-0.5 rounded-md border border-emerald-100 uppercase tracking-tight">สั่งแล้ววันนี้</span>
+                            ) : (
+                              <span className="bg-rose-50 text-rose-600 text-[10px] font-black px-2 py-0.5 rounded-md border border-rose-100 uppercase tracking-tight">ยังไม่สั่ง</span>
+                            )}
+                          </div>
+                        </div>
+                        <ChevronRight className="h-6 w-6 text-slate-200 group-hover:text-[#001E5D] group-hover:translate-x-1 transition-all" strokeWidth={3} />
+                      </button>
+                    );
+                  })}
+                </div>
               )}
             </div>
           </div>
@@ -399,6 +436,17 @@ export function DashboardClient({
             onClose={() => setIsStockModalOpen(false)}
           />
         </div>
+      )}
+
+      {expandedOrderId && (
+        <IncomingOrderModal
+          allOrders={allOrders}
+          date={orderDate}
+          detail={expandedDetail}
+          expandedId={expandedOrderId}
+          products={products}
+          searchTerm=""
+        />
       )}
     </div>
   );

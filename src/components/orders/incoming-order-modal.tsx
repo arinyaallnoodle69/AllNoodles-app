@@ -2,7 +2,7 @@
 
 import React, { memo, useEffect, useState, useTransition } from "react";
 import dynamic from "next/dynamic";
-import { useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import {
   AlertTriangle,
@@ -413,6 +413,7 @@ type Props = {
 
 export function IncomingOrderModal({ allOrders, detail, expandedId, products }: Props) {
   const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
   const startInEditMode = searchParams.get("edit") === "1";
 
@@ -439,7 +440,7 @@ export function IncomingOrderModal({ allOrders, detail, expandedId, products }: 
     if (!orderId) return null;
     const p = new URLSearchParams(searchParams.toString());
     p.set("expanded", orderId);
-    return `/orders/incoming?${p.toString()}`;
+    return `${pathname}?${p.toString()}`;
   }
 
   function handleNav(direction: "prev" | "next") {
@@ -458,7 +459,7 @@ export function IncomingOrderModal({ allOrders, detail, expandedId, products }: 
     setTimeout(() => {
       const p = new URLSearchParams(searchParams.toString());
       p.delete("expanded"); p.delete("edit");
-      startActionTransition(() => { router.replace(`/orders/incoming?${p.toString()}`, { scroll: false }); });
+      startActionTransition(() => { router.replace(`${pathname}?${p.toString()}`, { scroll: false }); });
     }, 350);
   }
 
@@ -467,16 +468,12 @@ export function IncomingOrderModal({ allOrders, detail, expandedId, products }: 
   return (
     <div className={`fixed inset-0 z-[250] flex flex-col items-center justify-end lg:justify-center overflow-hidden`}>
       <style>{`
-        @keyframes drawerUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
-        @keyframes drawerDown { from { transform: translateY(0); } to { transform: translateY(100%); } }
-        @keyframes modalPop { from { transform: scale(0.95) translateY(15px); opacity: 0; } to { transform: scale(1) translateY(0); opacity: 1; } }
-        @keyframes modalPush { from { transform: scale(1) translateY(0); opacity: 1; } to { transform: scale(0.95) translateY(15px); opacity: 0; } }
         @keyframes slideInL { from { transform: translateX(20px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
         @keyframes slideInR { from { transform: translateX(-20px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
         @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
 
-        .m-anim { animation: drawerUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-        .m-anim-out { animation: drawerDown 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        .m-anim { animation: slide-down-premium 0.6s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
+        .m-anim-out { animation: slide-up-premium 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
         
         @media (min-width: 1024px) { 
           .m-anim { animation: modalPop 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
@@ -492,7 +489,7 @@ export function IncomingOrderModal({ allOrders, detail, expandedId, products }: 
       `}</style>
 
       {/* Backdrop */}
-      <div className={`absolute inset-0 bg-slate-950/45 backdrop-blur-[2px] ${isClosing ? "backdrop-out" : ""}`} onClick={close} />
+      <div className={`absolute inset-0 bg-slate-950/45 backdrop-blur-[2px] ${isClosing ? "backdrop-out" : "animate-fade-in"}`} onClick={close} />
 
       {/* Main Container */}
       <div className={`${isClosing ? "m-anim-out" : "m-anim"} relative z-10 flex flex-col bg-white w-full h-full lg:h-[90vh] lg:max-w-4xl lg:rounded-[2.5rem] overflow-hidden shadow-2xl`}>

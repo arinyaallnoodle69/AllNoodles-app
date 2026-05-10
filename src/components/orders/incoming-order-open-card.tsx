@@ -16,7 +16,7 @@ type IncomingOrderOpenCardProps = {
   customerName: string;
   customerCode: string;
   channelLabel: string;
-  createdAtText: string;
+  displayDate: string;
   totalAmountText: string;
   vehicleId: string | null;
   vehicleName: string | null;
@@ -61,7 +61,7 @@ export function IncomingOrderOpenCard({
   customerName,
   customerCode,
   channelLabel,
-  createdAtText,
+  displayDate,
   totalAmountText,
   vehicleId,
   vehicleName,
@@ -119,9 +119,9 @@ export function IncomingOrderOpenCard({
 
       <div className="mt-4 grid grid-cols-2 gap-x-4 gap-y-4">
           <InfoBlock
-            label="วันที่"
+            label="วันที่ออเดอร์"
             icon={<CalendarDays className="h-4 w-4" strokeWidth={2.2} />}
-            value={createdAtText}
+            value={displayDate}
           />
           <div className="min-w-0 border-l border-slate-300 pl-4">
             <p className="text-[11px] font-black uppercase tracking-[0.12em] text-slate-950">ช่องทาง</p>

@@ -6,6 +6,7 @@ export type OrderStoreStatusItem = {
   code: string;
   id: string;
   latestOrderAt: string | null;
+  latestOrderId: string | null;
   name: string;
   orderCount: number;
 };
@@ -23,6 +24,7 @@ type CustomerRow = {
 };
 
 type OrderRow = {
+  id: string;
   created_at: string | null;
   customer_id: string;
 };
@@ -68,7 +70,7 @@ export async function getOrderStoreStatusSummary(
       .order("customer_code", { ascending: true }),
     admin
       .from("orders")
-      .select("customer_id, created_at")
+      .select("id, customer_id, created_at")
       .eq("organization_id", organizationId)
       .eq("order_date", orderDate)
       .neq("status", "cancelled"),
@@ -82,20 +84,22 @@ export async function getOrderStoreStatusSummary(
     throw new Error(ordersResult.error.message ?? "Failed to load store order status.");
   }
 
-  const orderStatsByCustomerId = new Map<string, { latestOrderAt: string | null; orderCount: number }>();
+  const orderStatsByCustomerId = new Map<string, { latestOrderAt: string | null; latestOrderId: string | null; orderCount: number }>();
 
   for (const order of (ordersResult.data ?? []) as OrderRow[]) {
     const current = orderStatsByCustomerId.get(order.customer_id) ?? {
       latestOrderAt: null,
+      latestOrderId: null,
       orderCount: 0,
     };
-    const nextLatest =
-      !current.latestOrderAt || (order.created_at && order.created_at > current.latestOrderAt)
-        ? order.created_at
-        : current.latestOrderAt;
+    
+    const isNewer = !current.latestOrderAt || (order.created_at && order.created_at > current.latestOrderAt);
+    const nextLatest = isNewer ? order.created_at : current.latestOrderAt;
+    const nextOrderId = isNewer ? order.id : current.latestOrderId;
 
     orderStatsByCustomerId.set(order.customer_id, {
       latestOrderAt: nextLatest,
+      latestOrderId: nextOrderId,
       orderCount: current.orderCount + 1,
     });
   }
@@ -108,6 +112,7 @@ export async function getOrderStoreStatusSummary(
         code: customer.customer_code ?? "-",
         id: customer.id,
         latestOrderAt: stats?.latestOrderAt ?? null,
+        latestOrderId: stats?.latestOrderId ?? null,
         name: customer.name ?? "-",
         orderCount: stats?.orderCount ?? 0,
       };

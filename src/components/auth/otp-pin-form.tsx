@@ -1,18 +1,18 @@
 "use client";
 
 import { useEffect, useEffectEvent, useMemo, useRef, useState } from "react";
-import { verifyPin } from "@/app/login/actions";
 
 type OtpPinFormProps = {
   disabled: boolean;
   error?: string;
   next?: string;
+  action?: (formData: FormData) => void;
 };
 
 const keypad = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "", "0", "delete"] as const;
 const instrumentSansClass = "font-[family-name:var(--font-instrument-sans)]";
 
-export function OtpPinForm({ disabled, error, next }: OtpPinFormProps) {
+export function OtpPinForm({ disabled, error, next, action }: OtpPinFormProps) {
   const [digits, setDigits] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const formRef = useRef<HTMLFormElement | null>(null);
@@ -71,7 +71,7 @@ export function OtpPinForm({ disabled, error, next }: OtpPinFormProps) {
   return (
     <form
       ref={formRef}
-      action={verifyPin}
+      action={action}
       onSubmit={() => setIsSubmitting(true)}
       className="w-full"
     >
