@@ -102,6 +102,7 @@ type Props = {
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
   hideTrigger?: boolean;
+  initialCustomerId?: string;
 };
 
 type ModalTab = "create" | "history";
@@ -641,14 +642,14 @@ function ProductSelectModal({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-[220] flex items-end justify-center bg-slate-950/60 p-0 sm:items-center sm:p-4">
+    <div className="fixed inset-0 z-[420] flex items-end justify-center bg-slate-950/60 p-0 sm:items-center sm:p-4">
       <div className="absolute inset-0" onClick={onClose} />
       <div className="relative flex h-full w-full max-h-full flex-col overflow-hidden bg-white shadow-2xl sm:h-[90dvh] sm:max-h-[90dvh] sm:max-w-4xl sm:rounded-[2.5rem]">
         <ActionPopup message={popupMessage} onClose={() => setPopupMessage(null)} />
         
         {/* Cost Warning Blocking Popup */}
         {costWarningInfo && (
-          <div className="absolute inset-0 z-[230] flex items-center justify-center bg-slate-950/70 p-4 backdrop-blur-sm">
+          <div className="absolute inset-0 z-[430] flex items-center justify-center bg-slate-950/70 p-4 backdrop-blur-sm">
             <div className="w-full max-w-sm rounded-[2.5rem] bg-white p-8 shadow-2xl animate-in zoom-in-95 duration-200">
               <div className="flex flex-col items-center text-center">
                 <div className="mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-rose-50 text-rose-500 shadow-inner">
@@ -791,7 +792,7 @@ function ProductSelectModal({
 
         {/* Sliding Category Picker */}
         {categoryPickerOpen && (
-          <div className="absolute inset-0 z-[230] flex flex-col bg-slate-950/40 backdrop-blur-sm">
+          <div className="absolute inset-0 z-[430] flex flex-col bg-slate-950/40 backdrop-blur-sm">
             <div className="absolute inset-0" onClick={() => setCategoryPickerOpen(false)} />
             <div className="mt-auto relative flex max-h-[85%] flex-col overflow-hidden rounded-t-[3rem] bg-white shadow-2xl animate-in slide-in-from-bottom duration-300">
               <div className="flex items-center justify-between border-b border-slate-100 px-8 py-6">
@@ -847,6 +848,7 @@ export function CreateOrderModal({
   open: propOpen,
   onOpenChange,
   hideTrigger,
+  initialCustomerId,
 }: Props) {
   const [internalOpen, setInternalOpen] = useState(false);
   const open = propOpen !== undefined ? propOpen : internalOpen;
@@ -890,6 +892,14 @@ export function CreateOrderModal({
     () => customers.toSorted(compareCustomerCode),
     [customers],
   );
+
+  // Pre-select customer if initialCustomerId is provided
+  useEffect(() => {
+    if (open && initialCustomerId && !customerId) {
+      void handleCustomerSelect(initialCustomerId);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, initialCustomerId]);
 
   useEffect(() => {
     return () => {
@@ -1260,7 +1270,7 @@ export function CreateOrderModal({
       {/* Main modal */}
       {(open || isClosing) && (
         <div
-          className={`fixed inset-0 z-[200] flex items-center justify-center bg-slate-950/60 p-0 sm:p-4 ${
+          className={`fixed inset-0 z-[400] flex items-center justify-center bg-slate-950/60 p-0 sm:p-4 ${
             isClosing ? "animate-fade-out" : "animate-fade-in"
           }`}
         >
@@ -1710,7 +1720,7 @@ export function CreateOrderModal({
       )}
 
       {open && customerPickerOpen ? (
-        <div className="fixed inset-0 z-[220] flex items-end justify-center bg-slate-950/50 sm:items-center sm:p-4">
+        <div className="fixed inset-0 z-[420] flex items-end justify-center bg-slate-950/50 sm:items-center sm:p-4">
           <div className="absolute inset-0" onClick={() => setCustomerPickerOpen(false)} />
           <div className="relative flex h-full w-full max-h-full flex-col overflow-hidden rounded-none bg-white shadow-2xl sm:h-[80dvh] sm:max-w-md sm:rounded-[2rem]">
             <div className="sticky top-0 z-20 flex items-center justify-between gap-3 border-b border-slate-200 bg-white px-4 py-2.5 sm:py-4">
@@ -1803,7 +1813,7 @@ export function CreateOrderModal({
       ) : null}
 
       {open && editingCartItem && editingCartIndex !== null ? (
-        <div className="fixed inset-0 z-[220] flex items-center justify-center bg-slate-950/55 p-4">
+        <div className="fixed inset-0 z-[420] flex items-center justify-center bg-slate-950/55 p-4">
           <button
             type="button"
             className="absolute inset-0"
@@ -1812,7 +1822,7 @@ export function CreateOrderModal({
           />
           <div className="relative w-full max-w-sm rounded-3xl border border-slate-200 bg-white p-4 shadow-2xl">
             <div className="mb-3">
-              <p className="text-sm font-bold text-slate-900">แก้ไขจำนวนสินค้า</p>
+              <p className="text-sm font-bold text-slate-950">แก้ไขจำนวนสินค้า</p>
               <p className="mt-1 line-clamp-2 text-sm text-slate-500">{editingCartItem.productName}</p>
               <p className="text-xs text-slate-400">{editingCartItem.saleUnitLabel}</p>
             </div>
@@ -1913,13 +1923,13 @@ export function CreateOrderModal({
 }
 
 export function GlobalCreateOrderModal() {
-  const { isOpen, close, data, isLoading } = useCreateOrder();
+  const { isOpen, close, data, isLoading, initialCustomerId } = useCreateOrder();
 
   if (!isOpen) return null;
 
   if (!data) {
     return (
-      <div className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-950/60 p-4">
+      <div className="fixed inset-0 z-[400] flex items-center justify-center bg-slate-950/60 p-4">
         <button
           type="button"
           className="absolute inset-0"
@@ -1946,6 +1956,7 @@ export function GlobalCreateOrderModal() {
       today={data.today}
       customerOrderCountsToday={{}}
       hideTrigger={true}
+      initialCustomerId={initialCustomerId}
     />
   );
 }

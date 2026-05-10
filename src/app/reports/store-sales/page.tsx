@@ -377,7 +377,7 @@ async function StoreSalesReportContent({ searchParams }: PageProps) {
   const selectedStoreIds = params.stores ? params.stores.split(",").filter(Boolean) : [];
   const page = Math.max(1, parseInt(params.page ?? "1", 10) || 1);
 
-  const [{ rows, summary, total }, customers] = await Promise.all([
+  const [{ rows, allRows, summary, total }, customers] = await Promise.all([
     getStoreSalesRanking({
       organizationId: session.organizationId,
       fromDate,
@@ -495,7 +495,7 @@ async function StoreSalesReportContent({ searchParams }: PageProps) {
                   {selectedStoreIds.length > 0 && ` · ${selectedStoreLabel}`}
                 </p>
               </div>
-              <PrintButton />
+              <PrintButton targetId="report-print-area" fileName="รายงานยอดขายตามร้านค้า" />
             </div>
 
             {rows.length === 0 ? (
@@ -505,54 +505,18 @@ async function StoreSalesReportContent({ searchParams }: PageProps) {
               </div>
             ) : (
               <>
-                {/* Desktop table — same as product-sales: overflow-x-auto lg:block */}
-                <div className={`${styles.printArea} hidden overflow-x-auto lg:block print:block print:overflow-visible`}>
-                  {/* Print-only header */}
-                  <div className={styles.printHeader}>
-                    <div className={styles.printHeaderTop}>
-                      <div className={styles.printBrand}>
-                        <Image src="/ty-noodles-logo-cropped.png" alt="T&Y Noodle" width={64} height={64} priority className={styles.printLogo} />
-                        <div>
-                          <p className={styles.printCompanyName}>T&amp;Y Noodle</p>
-                          <p className={styles.printSubtitle}>รายงานยอดขาย กำไร และอันดับร้านค้า</p>
-                        </div>
-                      </div>
-                      <div className={styles.printMeta}>
-                        <p>วันที่พิมพ์: {printedAt.datePart}</p>
-                        <p>เวลาพิมพ์: {printedAt.timePart} น.</p>
-                      </div>
-                    </div>
-                    <div className={styles.printFilters}>
-                      <div className={styles.printFilterItem}>
-                        <span className={styles.printFilterLabel}>ช่วงวันที่:</span>
-                        <span className={styles.printFilterValue}>{isoToDisplay(fromDate)} - {isoToDisplay(toDate)}</span>
-                      </div>
-                      <div className={styles.printFilterItem}>
-                        <span className={styles.printFilterLabel}>ร้านค้า:</span>
-                        <span className={styles.printFilterValue}>{selectedStoreLabel}</span>
-                      </div>
-                      <div className={styles.printFilterItem}>
-                        <span className={styles.printFilterLabel}>ยอดขายรวม:</span>
-                        <span className={styles.printFilterValue}>{fmtMoney(summary.totalRevenue)}</span>
-                      </div>
-                    </div>
-                    <div className={styles.printReportTitleBlock}>
-                      <h1 className={styles.printReportTitle}>รายงานยอดขายตามร้านค้า</h1>
-                    </div>
-                    <div className={styles.printDivider} />
-                  </div>
-
-                  <table className="w-full table-fixed border-collapse text-left print:table-fixed">
+                {/* Desktop table (Screen only, hidden on print) */}
+                <div className="hidden overflow-x-auto lg:block print:hidden">
+                  <table className="w-full table-fixed border-collapse text-left">
                     <colgroup>
-                      <col style={{ width: "5%" }} />
-                      <col style={{ width: "9%" }} />
-                      <col style={{ width: "20%" }} />
                       <col style={{ width: "7%" }} />
-                      <col style={{ width: "14%" }} />
-                      <col style={{ width: "12%" }} />
-                      <col style={{ width: "12%" }} />
-                      <col style={{ width: "11%" }} />
                       <col style={{ width: "10%" }} />
+                      <col style={{ width: "26%" }} />
+                      <col style={{ width: "8%" }} />
+                      <col style={{ width: "13%" }} />
+                      <col style={{ width: "12%" }} />
+                      <col style={{ width: "12%" }} />
+                      <col style={{ width: "12%" }} />
                     </colgroup>
                     <thead>
                       <tr className="bg-slate-50/80">
@@ -565,7 +529,6 @@ async function StoreSalesReportContent({ searchParams }: PageProps) {
                           { label: "ต้นทุน", align: "center" },
                           { label: "กำไรสุทธิ", align: "center" },
                           { label: "กำไร %", align: "center" },
-                          { label: "", align: "center" },
                         ].map(({ label, align, highlight }, idx) => (
                           <th
                             key={idx}
@@ -610,15 +573,138 @@ async function StoreSalesReportContent({ searchParams }: PageProps) {
                         <td className={`px-5 py-3 text-center tabular-nums whitespace-nowrap ${profitPositive ? "text-emerald-600" : "text-red-500"}`}>
                           <span className="text-sm font-bold">{summary.totalRevenue > 0 ? fmtPercent(marginPercent) : "—"}</span>
                         </td>
-                        <td aria-hidden="true" />
                       </tr>
                     </tbody>
                   </table>
-                  <div className={styles.printFooter}>พิมพ์จากระบบ T&amp;Y Noodle</div>
                 </div>
 
-                {/* Mobile cards — same design as product-sales */}
-                <div className="divide-y divide-[#003366]/20 px-2 sm:px-4 lg:hidden">
+                {/* Print only area (Full table) */}
+                <div id="report-print-area" className="hidden print:block">
+                  {(() => {
+                    const PRINT_PAGE_SIZE = 25;
+                    const pages = [];
+                    for (let i = 0; i < allRows.length; i += PRINT_PAGE_SIZE) {
+                      pages.push(allRows.slice(i, i + PRINT_PAGE_SIZE));
+                    }
+                    if (pages.length === 0) return null;
+
+                    return pages.map((pageRows, pageIdx) => (
+                      <div key={pageIdx} data-print-page="true" className={`${styles.printArea} ${styles.printPage} print:break-after-page`}>
+                        <div className={styles.printHeader}>
+                          <div className={styles.printHeaderTop}>
+                            <div className={styles.printBrand}>
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img src="/ty-noodles-logo-cropped.png" alt="T&Y Noodle" width="64" height="64" className={styles.printLogo} />
+                              <div>
+                                <p className={styles.printCompanyName}>T&amp;Y Noodle</p>
+                                <p className={styles.printSubtitle}>รายงานยอดขาย กำไร และอันดับร้านค้า</p>
+                              </div>
+                            </div>
+                            <div className={styles.printMeta}>
+                              <p>วันที่พิมพ์: {printedAt.datePart}</p>
+                              <p>เวลาพิมพ์: {printedAt.timePart} น.</p>
+                              <p>หน้า: {pageIdx + 1} / {pages.length}</p>
+                            </div>
+                          </div>
+                          <div className={styles.printFilters}>
+                            <div className={styles.printFilterItem}>
+                              <span className={styles.printFilterLabel}>ช่วงวันที่:</span>
+                              <span className={styles.printFilterValue}>{isoToDisplay(fromDate)} - {isoToDisplay(toDate)}</span>
+                            </div>
+                            <div className={styles.printFilterItem}>
+                              <span className={styles.printFilterLabel}>ร้านค้า:</span>
+                              <span className={styles.printFilterValue}>{selectedStoreLabel}</span>
+                            </div>
+                            <div className={styles.printFilterItem}>
+                              <span className={styles.printFilterLabel}>ยอดขายรวม:</span>
+                              <span className={styles.printFilterValue}>{fmtMoney(summary.totalRevenue)}</span>
+                            </div>
+                          </div>
+                          <div className={styles.printReportTitleBlock}>
+                            <h1 className={styles.printReportTitle}>รายงานยอดขายตามร้านค้า</h1>
+                          </div>
+                          <div className={styles.printDivider} />
+                        </div>
+
+                        <table className="w-full table-fixed border-collapse text-left print:table-fixed">
+                          <colgroup>
+                            <col style={{ width: "7%" }} />
+                            <col style={{ width: "11%" }} />
+                            <col style={{ width: "26%" }} />
+                            <col style={{ width: "8%" }} />
+                            <col style={{ width: "12%" }} />
+                            <col style={{ width: "12%" }} />
+                            <col style={{ width: "12%" }} />
+                            <col style={{ width: "12%" }} />
+                          </colgroup>
+                          <thead>
+                            <tr className="bg-slate-50/80">
+                              {[
+                                { label: "ลำดับ", align: "center" },
+                                { label: "รหัสร้าน", align: "center" },
+                                { label: "ชื่อร้านค้า", align: "left" },
+                                { label: "ออเดอร์", align: "center" },
+                                { label: "ยอดขาย", align: "center", highlight: true },
+                                { label: "ต้นทุน", align: "center" },
+                                { label: "กำไรสุทธิ", align: "center" },
+                                { label: "กำไร %", align: "center" },
+                              ].map(({ label, align, highlight }, idx) => (
+                                <th
+                                  key={idx}
+                                  className={`whitespace-nowrap px-3 py-2 text-[10px] font-black uppercase tracking-widest text-slate-500 ${align === "center" ? "text-center" : ""} ${highlight ? styles.printRevenueCell : ""}`}
+                                  style={highlight ? { background: "rgba(0,6,102,0.03)" } : undefined}
+                                >
+                                  {label}
+                                </th>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-[#003366]/24">
+                            {pageRows.map((row, i) => (
+                              <StoreRow
+                                key={row.customerId}
+                                row={row}
+                                rank={pageIdx * PRINT_PAGE_SIZE + i + 1}
+                                fromDate={fromDate}
+                                toDate={toDate}
+                              />
+                            ))}
+                            {/* Only show summary row on the last page */}
+                            {pageIdx === pages.length - 1 && (
+                              <tr className="bg-slate-50/90">
+                                <td />
+                                <td />
+                                <td className="px-4 py-3 text-right text-[11px] font-bold tracking-[0.02em] text-slate-600 whitespace-nowrap">
+                                  ยอดรวมทั้งหมด
+                                </td>
+                                <td />
+                                <td
+                                  className={`px-4 py-3 text-center tabular-nums whitespace-nowrap ${styles.printRevenueCell}`}
+                                  style={{ background: "rgba(0,6,102,0.05)" }}
+                                >
+                                  <span className="text-[11px] font-bold text-[#003366]">{fmtMoney(summary.totalRevenue)}</span>
+                                </td>
+                                <td className="px-4 py-3 text-center text-[11px] font-bold text-slate-700 tabular-nums whitespace-nowrap">
+                                  {fmtMoney(summary.totalCost)}
+                                </td>
+                                <td className={`px-4 py-3 text-center tabular-nums whitespace-nowrap ${profitPositive ? "text-emerald-600" : "text-red-500"}`}>
+                                  <span className="text-[11px] font-bold">{fmtMoney(netProfitTotal)}</span>
+                                </td>
+                                <td className={`px-5 py-3 text-center tabular-nums whitespace-nowrap ${profitPositive ? "text-emerald-600" : "text-red-500"}`}>
+                                  <span className="text-[11px] font-bold">{summary.totalRevenue > 0 ? fmtPercent(marginPercent) : "—"}</span>
+                                </td>
+                              </tr>
+                            )}
+                          </tbody>
+                        </table>
+                        <div className={styles.printFooter}>พิมพ์จากระบบรายงานอัตโนมัติ (T&amp;Y Noodle) - หน้า {pageIdx + 1} / {pages.length}</div>
+                      </div>
+                    ));
+                  })()}
+                </div>
+
+                {/* Mobile cards (Screen only, hidden on print) */}
+                <div className="divide-y divide-[#003366]/20 px-2 sm:px-4 lg:hidden print:hidden">
                   {rows.map((row, i) => (
                     <StoreCard
                       key={row.customerId}

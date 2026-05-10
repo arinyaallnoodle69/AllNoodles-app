@@ -12,24 +12,30 @@ type CreateOrderData = {
 
 type CreateOrderCtx = {
   isOpen: boolean;
-  open: () => void;
+  open: (customerId?: string) => void;
   close: () => void;
   data: CreateOrderData | null;
   isLoading: boolean;
+  initialCustomerId?: string;
 };
 
 const Ctx = createContext<CreateOrderCtx | null>(null);
 
 export function CreateOrderProvider({ children }: { children: React.ReactNode }) {
   const [isOpen, setIsOpen] = useState(false);
+  const [initialCustomerId, setInitialCustomerId] = useState<string | undefined>();
   const [data, setData] = useState<CreateOrderData | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  const open = useCallback(() => {
+  const open = useCallback((customerId?: string) => {
+    setInitialCustomerId(customerId);
     setIsOpen(true);
   }, []);
 
-  const close = useCallback(() => setIsOpen(false), []);
+  const close = useCallback(() => {
+    setIsOpen(false);
+    setInitialCustomerId(undefined);
+  }, []);
 
   // Pre-fetch data on mount for instant access
   useEffect(() => {
@@ -46,7 +52,16 @@ export function CreateOrderProvider({ children }: { children: React.ReactNode })
   }, [data, isPending]);
 
   return (
-    <Ctx.Provider value={{ isOpen, open, close, data, isLoading: isPending }}>
+    <Ctx.Provider
+      value={{
+        isOpen,
+        open,
+        close,
+        data,
+        isLoading: isPending,
+        initialCustomerId,
+      }}
+    >
       {children}
     </Ctx.Provider>
   );

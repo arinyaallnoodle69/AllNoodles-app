@@ -166,7 +166,7 @@
   .printTable col:nth-child(6) { width: 12% !important; }
   .printTable col:nth-child(7) { width: 12% !important; }
   .printTable col:nth-child(8) { width: 7% !important; }
-  .printTable thead th, .printTable tbody td { white-space: nowrap !important; overflow: hidden !important; text-overflow: clip !important; }
+  .printTable thead th, .printTable tbody td { white-space: normal !important; word-break: break-all !important; overflow: hidden !important; text-overflow: clip !important; }
   .printTable thead th { padding: 6px 5px !important; font-size: 9px !important; line-height: 1.2 !important; background: #f8fafc !important; color: #475569 !important; border-bottom: 1px solid rgba(0, 51, 102, 0.12) !important; }
   .printTable tbody td { padding: 5px 5px !important; font-size: 9px !important; line-height: 1.25 !important; vertical-align: middle !important; background: #ffffff !important; border-bottom: 1px solid rgba(0, 51, 102, 0.12) !important; }
   .printTable img { width: 24px !important; height: 24px !important; border-radius: 6px !important; }
@@ -175,7 +175,7 @@
   .noteMetaItem { font-size: 9px !important; }
   .noteMetaValue { overflow: hidden !important; text-overflow: clip !important; font-size: 10px !important; }
   .noteProductCell { display: flex !important; align-items: center !important; gap: 6px !important; min-width: 0 !important; flex-wrap: nowrap !important; }
-  .noteProductName { white-space: nowrap !important; overflow: hidden !important; text-overflow: clip !important; font-size: 9px !important; min-width: 0 !important; }
+  .noteProductName { white-space: normal !important; word-break: break-all !important; overflow: hidden !important; text-overflow: clip !important; font-size: 9px !important; min-width: 0 !important; }
   .printFooter { display: block !important; margin-top: 10px; padding-top: 8px; border-top: 1px solid rgba(0, 51, 102, 0.12); font-size: 10px; color: #64748b; text-align: right; }
 }
 
@@ -195,7 +195,7 @@
 :global(.capturing) .printTable col:nth-child(6) { width: 12% !important; }
 :global(.capturing) .printTable col:nth-child(7) { width: 12% !important; }
 :global(.capturing) .printTable col:nth-child(8) { width: 7% !important; }
-:global(.capturing) .printTable thead th, :global(.capturing) .printTable tbody td { white-space: nowrap !important; overflow: hidden !important; text-overflow: clip !important; }
+:global(.capturing) .printTable thead th, :global(.capturing) .printTable tbody td { white-space: normal !important; word-break: break-all !important; overflow: hidden !important; text-overflow: clip !important; }
 :global(.capturing) .printTable thead th { padding: 6px 5px !important; font-size: 9px !important; line-height: 1.2 !important; background: #f8fafc !important; color: #475569 !important; border-bottom: 1px solid rgba(0, 51, 102, 0.12) !important; }
 :global(.capturing) .printTable tbody td { padding: 5px 5px !important; font-size: 9px !important; line-height: 1.25 !important; vertical-align: middle !important; background: #ffffff !important; border-bottom: 1px solid rgba(0, 51, 102, 0.12) !important; }
 :global(.capturing) .printTable img { width: 24px !important; height: 24px !important; border-radius: 6px !important; }
@@ -204,5 +204,5 @@
 :global(.capturing) .noteMetaItem { font-size: 9px !important; }
 :global(.capturing) .noteMetaValue { overflow: hidden !important; text-overflow: clip !important; font-size: 10px !important; }
 :global(.capturing) .noteProductCell { display: flex !important; align-items: center !important; gap: 6px !important; min-width: 0 !important; flex-wrap: nowrap !important; }
-:global(.capturing) .noteProductName { white-space: nowrap !important; overflow: hidden !important; text-overflow: clip !important; font-size: 9px !important; min-width: 0 !important; }
+:global(.capturing) .noteProductName { white-space: normal !important; word-break: break-all !important; overflow: hidden !important; text-overflow: clip !important; font-size: 9px !important; min-width: 0 !important; }
 :global(.capturing) .printFooter { display: block !important; margin-top: 10px; padding-top: 8px; border-top: 1px solid rgba(0, 51, 102, 0.12); font-size: 10px; color: #64748b; text-align: right; }

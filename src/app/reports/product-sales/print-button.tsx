@@ -39,61 +39,70 @@ export function PrintButton({ targetId = "report-print-area", fileName = "report
     setIsCapturing(true);
 
     try {
-      // Find all page wrappers using data attribute for reliability with CSS Modules
+      // Find all page wrappers using data attribute for reliability
       const pageElements = targetElement.querySelectorAll('[data-print-page="true"]');
       const elementsToCapture = pageElements.length > 0 ? Array.from(pageElements) : [targetElement];
 
-      const originalTargetDisplay = targetElement.style.display;
-      targetElement.style.setProperty("display", "block", "important");
+      // Configuration for Desktop-like capture
+      const CAPTURE_WIDTH = 1200; // Standard desktop-ish width
+      
+      // Create a temporary off-screen container for the clone
+      const captureContainer = document.createElement("div");
+      captureContainer.style.position = "fixed";
+      captureContainer.style.left = "-9999px";
+      captureContainer.style.top = "0";
+      captureContainer.style.width = `${CAPTURE_WIDTH}px`;
+      captureContainer.style.backgroundColor = "#ffffff";
+      captureContainer.style.zIndex = "-100";
+      document.body.appendChild(captureContainer);
 
-      const originalStyles = new Map<Element, string>();
-
-      // Capture each page
       for (let i = 0; i < elementsToCapture.length; i++) {
-        const element = elementsToCapture[i] as HTMLElement;
+        const sourceElement = elementsToCapture[i] as HTMLElement;
         
-        // Save original styles to restore later
-        const originalWidth = element.style.width;
-        const originalMaxWidth = element.style.maxWidth;
-        const originalMinWidth = element.style.minWidth;
-        const originalPosition = element.style.position;
-        const originalLeft = element.style.left;
-        const originalOverflow = element.style.overflow;
-
-        // Force a desktop-like width for the capture
-        // This ensures mobile captures look exactly like desktop
-        element.style.setProperty("width", "1240px", "important");
-        element.style.setProperty("min-width", "1240px", "important");
-        element.style.setProperty("max-width", "none", "important");
+        // Clone the element to manipulate it safely
+        const clone = sourceElement.cloneNode(true) as HTMLElement;
         
-        // Use absolute positioning to prevent layout shifts in the viewport
-        element.style.setProperty("position", "absolute", "important");
-        element.style.setProperty("left", "-5000px", "important");
-        element.style.setProperty("overflow", "visible", "important");
+        // Force critical styles on the clone to ensure desktop layout and font rendering
+        clone.style.width = `${CAPTURE_WIDTH}px`;
+        clone.style.minWidth = `${CAPTURE_WIDTH}px`;
+        clone.style.maxWidth = `${CAPTURE_WIDTH}px`;
+        clone.style.position = "relative";
+        clone.style.left = "0";
+        clone.style.backgroundColor = "#ffffff";
+        clone.style.color = "#000000";
+        clone.style.transform = "none";
+        clone.style.display = "block";
+        clone.style.padding = "20px"; // Add some padding for safety
+        
+        // Force font for Thai characters
+        clone.style.fontFamily = "'Sarabun', 'Noto Sans Thai', sans-serif";
+        
+        // Append clone to the off-screen container
+        captureContainer.innerHTML = ""; // Clear previous
+        captureContainer.appendChild(clone);
 
-        // Temporarily ensure the element and its children are visible
-        const printOnlyElements = element.querySelectorAll('[class*="printHeader"], [class*="printFooter"]');
+        // Ensure all capturing elements are visible in the clone
+        const printOnlyElements = clone.querySelectorAll('[class*="printHeader"], [class*="printFooter"]');
         printOnlyElements.forEach((el) => {
-          const htmlEl = el as HTMLElement;
-          originalStyles.set(el, htmlEl.style.display);
-          htmlEl.style.setProperty("display", "block", "important");
-          htmlEl.style.setProperty("visibility", "visible", "important");
-          htmlEl.style.setProperty("opacity", "1", "important");
+          (el as HTMLElement).style.setProperty("display", "block", "important");
+          (el as HTMLElement).style.setProperty("visibility", "visible", "important");
+          (el as HTMLElement).style.setProperty("opacity", "1", "important");
         });
 
-        element.classList.add("capturing");
-        
-        // Wait a tiny bit for the layout to recalculate
-        await new Promise(r => setTimeout(r, 100));
+        // Add capturing class to clone
+        clone.classList.add("capturing");
 
-        const dataUrl = await htmlToImage.toPng(element, {
-          quality: 1,
+        // Wait for fonts and styles to settle
+        await new Promise(r => setTimeout(r, 500));
+
+        // Use toJpeg for better mobile compatibility (less likely to result in blank images)
+        const dataUrl = await htmlToImage.toJpeg(clone, {
+          quality: 0.95,
           backgroundColor: "#ffffff",
-          pixelRatio: 2, // High quality
-          width: 1240,
+          pixelRatio: 2, // High resolution
+          width: CAPTURE_WIDTH,
           style: {
-            transform: "scale(1)",
-            transformOrigin: "top left",
+            fontFamily: "'Sarabun', 'Noto Sans Thai', sans-serif",
           },
           filter: (node) => {
             if (node instanceof HTMLElement) {
@@ -104,31 +113,23 @@ export function PrintButton({ targetId = "report-print-area", fileName = "report
           }
         });
 
-        element.classList.remove("capturing");
-
-        // Restore styles for this element
-        element.style.width = originalWidth;
-        element.style.maxWidth = originalMaxWidth;
-        element.style.minWidth = originalMinWidth;
-        element.style.position = originalPosition;
-        element.style.left = originalLeft;
-        element.style.overflow = originalOverflow;
-
-        printOnlyElements.forEach((el) => {
-          (el as HTMLElement).style.display = originalStyles.get(el) || "";
-        });
-
         // Trigger download
+        const timestamp = new Date().getTime();
+        const finalFileName = `${fileName}_${i + 1}_${timestamp}.jpg`;
+        
         const link = document.createElement("a");
         link.href = dataUrl;
-        link.download = `${fileName}_page_${i + 1}_${new Date().getTime()}.png`;
+        link.download = finalFileName;
+        document.body.appendChild(link);
         link.click();
+        document.body.removeChild(link);
         
         // Small delay between downloads
-        if (elementsToCapture.length > 1) await new Promise(r => setTimeout(r, 600));
+        if (elementsToCapture.length > 1) await new Promise(r => setTimeout(r, 800));
       }
 
-      targetElement.style.display = originalTargetDisplay;
+      // Cleanup
+      document.body.removeChild(captureContainer);
     } catch (error) {
       console.error("Capture error:", error);
       alert("เกิดข้อผิดพลาดในการบันทึกรูปภาพ กรุณาลองใหม่อีกครั้ง");

@@ -1,8 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import Image from "next/image";
-import Link from "next/link";
 import {
   TrendingUp,
   Bell,
@@ -51,6 +50,8 @@ export function DashboardClient({
   const { open: openCreateOrder } = useCreateOrder();
   const [isStockModalOpen, setIsStockModalOpen] = useState(false);
   const [viewingStores, setViewingStores] = useState<{ title: string; stores: Array<{ id: string; name: string; code?: string }> } | null>(null);
+
+  const orderedStoreIds = useMemo(() => new Set(storeStatusSummary.orderedStores.map(s => s.id)), [storeStatusSummary.orderedStores]);
 
   const { kpi, weeklyTrend, topCustomers, topProducts } = overview;
 
@@ -151,7 +152,7 @@ export function DashboardClient({
           {/* Quick Actions (4 units on XL) */}
           <div className="xl:col-span-4 grid grid-cols-2 xl:grid-cols-1 gap-4">
             <button
-              onClick={openCreateOrder}
+              onClick={() => openCreateOrder()}
               className="bg-[#002581] text-white rounded-[2rem] py-6 flex flex-row items-center justify-center space-x-3 shadow-xl shadow-blue-900/10 active:scale-95 transition-transform px-4"
             >
               <Phone className="h-6 w-6 rotate-90 shrink-0" fill="white" strokeWidth={0} />
@@ -331,7 +332,7 @@ export function DashboardClient({
       {/* ── Modals ── */}
       {viewingStores && (
         <div className="fixed inset-0 z-[300] flex items-end justify-center bg-slate-950/60 p-0 backdrop-blur-[6px] sm:items-center sm:p-4">
-          <div className="w-full max-w-md animate-in slide-in-from-bottom duration-300 rounded-t-[3rem] bg-white pb-12 pt-4 sm:rounded-[3rem] shadow-2xl">
+          <div className="w-full max-w-xl animate-in slide-in-from-bottom duration-300 rounded-t-[3rem] bg-white pb-12 pt-4 sm:rounded-[3rem] shadow-2xl overflow-hidden">
             <div className="mb-6 flex justify-center">
               <div className="h-1.5 w-16 rounded-full bg-slate-200" />
             </div>
@@ -348,32 +349,41 @@ export function DashboardClient({
               </button>
             </div>
 
-            <div className="max-h-[55vh] overflow-y-auto px-5 space-y-3 no-scrollbar pb-6">
+            <div className="max-h-[60vh] overflow-y-auto space-y-px no-scrollbar pb-10">
               {viewingStores.stores.length === 0 ? (
-                <div className="py-20 text-center flex flex-col items-center">
-                  <div className="bg-slate-50 p-6 rounded-full mb-4">
-                    <Store className="h-12 w-12 text-slate-200" />
+                <div className="py-24 text-center flex flex-col items-center">
+                  <div className="bg-slate-50 p-7 rounded-full mb-5">
+                    <Store className="h-14 w-14 text-slate-200" />
                   </div>
-                  <p className="text-lg font-black text-slate-300">ไม่มีข้อมูลร้านค้าในขณะนี้</p>
+                  <p className="text-xl font-black text-slate-300">ไม่มีข้อมูลร้านค้าในขณะนี้</p>
                 </div>
               ) : (
-                viewingStores.stores.map((store) => (
-                  <div key={store.id} className="flex items-center gap-5 bg-slate-50 p-5 rounded-[2.25rem] border border-slate-100 hover:bg-white hover:shadow-lg transition-all group">
-                    <div className="h-14 w-14 rounded-2xl bg-white flex items-center justify-center text-[#001E5D] shadow-sm group-hover:bg-[#001E5D] group-hover:text-white transition-all">
-                      <Store className="h-7 w-7" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-black text-slate-800 text-lg truncate">{store.name}</p>
-                      <p className="text-xs font-bold text-slate-400 uppercase tracking-tighter">รหัส: {store.code || store.id.slice(0, 8)}</p>
-                    </div>
-                    <Link
-                      href={`/order/customer?id=${store.id}`}
-                      className="h-12 w-12 rounded-full bg-[#001E5D] flex items-center justify-center text-white shadow-lg shadow-blue-900/20 active:scale-90 transition-transform"
+                viewingStores.stores.map((store) => {
+                  const isOrdered = orderedStoreIds.has(store.id);
+                  return (
+                    <button
+                      key={store.id}
+                      onClick={() => openCreateOrder(store.id)}
+                      className="flex w-full items-center gap-5 bg-white px-6 py-6 border-b border-slate-100 hover:bg-slate-50 transition-colors group text-left"
                     >
-                      <ShoppingBag className="h-6 w-6" />
-                    </Link>
-                  </div>
-                ))
+                      <div className="h-14 w-14 shrink-0 rounded-2xl bg-slate-50 flex items-center justify-center text-[#001E5D] shadow-sm group-hover:bg-[#001E5D] group-hover:text-white transition-all">
+                        <Store className="h-7 w-7" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-black text-slate-800 text-lg leading-tight truncate">{store.name}</p>
+                        <div className="flex items-center gap-2 mt-1.5">
+                          <p className="text-xs font-bold text-slate-400 uppercase tracking-tighter">รหัส: {store.code || store.id.slice(0, 8)}</p>
+                          {isOrdered ? (
+                            <span className="bg-emerald-50 text-emerald-600 text-[10px] font-black px-2 py-0.5 rounded-md border border-emerald-100 uppercase tracking-tight">สั่งแล้ววันนี้</span>
+                          ) : (
+                            <span className="bg-rose-50 text-rose-600 text-[10px] font-black px-2 py-0.5 rounded-md border border-rose-100 uppercase tracking-tight">ยังไม่สั่ง</span>
+                          )}
+                        </div>
+                      </div>
+                      <ChevronRight className="h-6 w-6 text-slate-200 group-hover:text-[#001E5D] group-hover:translate-x-1 transition-all" strokeWidth={3} />
+                    </button>
+                  );
+                })
               )}
             </div>
           </div>
