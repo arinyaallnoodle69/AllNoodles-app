@@ -101,6 +101,7 @@ type Props = {
   today?: string;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
+  hideTrigger?: boolean;
 };
 
 type ModalTab = "create" | "history";
@@ -845,6 +846,7 @@ export function CreateOrderModal({
   today = new Date().toISOString().split("T")[0],
   open: propOpen,
   onOpenChange,
+  hideTrigger,
 }: Props) {
   const [internalOpen, setInternalOpen] = useState(false);
   const open = propOpen !== undefined ? propOpen : internalOpen;
@@ -860,12 +862,7 @@ export function CreateOrderModal({
   const [customerId, setCustomerId] = useState("");
   const [orderDate, setOrderDate] = useState(today);
 
-  // Keep orderDate in sync with today prop if it changes (e.g. after pre-fetch)
-  useEffect(() => {
-    if (today && orderDate !== today) {
-      setOrderDate(today);
-    }
-  }, [today, orderDate]);
+
   const [cart, setCart] = useState<CartItem[]>([]);
   const [customerPickerOpen, setCustomerPickerOpen] = useState(false);
   const [customerPickerQuery, setCustomerPickerQuery] = useState("");
@@ -1241,20 +1238,22 @@ export function CreateOrderModal({
   return (
     <>
       {/* Trigger */}
-      <button
-        type="button"
-        onClick={() => {
-          if (closeTimerRef.current) {
-            clearTimeout(closeTimerRef.current);
-          }
-          setIsClosing(false);
-          setOpen(true);
-        }}
-        className="action-touch-safe inline-flex items-center justify-center gap-2 rounded-full bg-[#003366] px-5 py-3 text-sm font-bold text-white shadow-[0_12px_40px_rgba(0,51,102,0.35)] transition-all hover:scale-105 hover:bg-[#002244] active:scale-95 md:h-16 md:px-8 md:text-base"
-      >
-        <Plus className="h-5 w-5 md:h-6 md:w-6" strokeWidth={3} />
-        สร้างออเดอร์
-      </button>
+      {!hideTrigger && (
+        <button
+          type="button"
+          onClick={() => {
+            if (closeTimerRef.current) {
+              clearTimeout(closeTimerRef.current);
+            }
+            setIsClosing(false);
+            setOpen(true);
+          }}
+          className="action-touch-safe inline-flex items-center justify-center gap-2 rounded-full bg-[#003366] px-5 py-3 text-sm font-bold text-white shadow-[0_12px_40px_rgba(0,51,102,0.35)] transition-all hover:scale-105 hover:bg-[#002244] active:scale-95 md:h-16 md:px-8 md:text-base"
+        >
+          <Plus className="h-5 w-5 md:h-6 md:w-6" strokeWidth={3} />
+          สร้างออเดอร์
+        </button>
+      )}
 
       <CreateOrderPortal>
       {/* Main modal */}
@@ -1945,6 +1944,7 @@ export function GlobalCreateOrderModal() {
       products={data.products}
       today={data.today}
       customerOrderCountsToday={{}}
+      hideTrigger={true}
     />
   );
 }

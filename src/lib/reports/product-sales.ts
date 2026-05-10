@@ -135,6 +135,7 @@ export async function getProductSalesRanking(params: {
   pageSize?: number;
 }): Promise<{
   rows: ProductSalesRow[];
+  allRows: ProductSalesRow[];
   summary: ProductSalesSummary;
   total: number;
 }> {
@@ -298,5 +299,5 @@ export async function getProductSalesRanking(params: {
   const total = allRows.length;
   const rows = allRows.slice((page - 1) * pageSize, page * pageSize);
 
-  return { rows, summary, total };
+  return { rows, allRows, summary, total };
 }

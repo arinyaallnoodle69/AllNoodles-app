@@ -158,8 +158,10 @@
 
   .printArea {
     position: absolute;
-    inset: 0;
+    top: 0;
+    left: 0;
     width: 100%;
+    min-height: 100%;
     overflow: visible !important;
     background: #ffffff;
     padding: 0 !important;

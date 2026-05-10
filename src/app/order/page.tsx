@@ -66,7 +66,15 @@ const getCatalogData = cache(async () => {
     .order("name");
 
   if (error) {
-    console.error("Failed to load catalog:", error);
+    // During Next.js prerendering with PPR, fetch() may be aborted when a dynamic boundary is reached.
+    // We suppress these expected errors to keep the build output clean.
+    const isPrerenderAbort = 
+      error.message?.includes("prerender") || 
+      (typeof error.details === "string" && error.details.includes("prerender"));
+
+    if (!isPrerenderAbort) {
+      console.error("Failed to load catalog:", error);
+    }
   }
 
   const rawProducts = (products ?? []) as ProductWithRelations[];

@@ -439,7 +439,7 @@ export function AppSidebarLayout({ children }: { children: React.ReactNode }) {
       </aside>
 
       {/* ── Mobile: top bar (logo + page title + search icon) ───────────── */}
-      <MobileTopBar />
+      {pathname !== "/dashboard" && <MobileTopBar />}
 
       {/* ── Mobile: orders tab bar (fixed below top bar) ─────────────────── */}
       <OrdersMobileTabs />
@@ -450,7 +450,11 @@ export function AppSidebarLayout({ children }: { children: React.ReactNode }) {
       {/* ── Main content ─────────────────────────────────────────────────── */}
       <div
         className={`${collapsed ? "lg:pl-16" : "lg:pl-60"} ${
-          reportsTabsActive ? "pt-[116px] lg:pt-0" : "pt-[68px] lg:pt-0"
+          pathname === "/dashboard" 
+            ? "pt-0" 
+            : reportsTabsActive 
+              ? "pt-[116px] lg:pt-0" 
+              : "pt-[68px] lg:pt-0"
         } pb-[calc(4.5rem+env(safe-area-inset-bottom))] lg:pb-0 transition-[padding-left] duration-200 ease-in-out [will-change:padding-left] motion-reduce:transition-none`}
       >
         {children}

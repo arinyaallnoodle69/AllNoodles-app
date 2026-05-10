@@ -48,7 +48,7 @@ export async function getStoreSalesRanking(params: {
   customerIds?: string[];
   page?: number;
   pageSize?: number;
-}): Promise<{ rows: StoreSalesRow[]; summary: StoreSalesSummary; total: number }> {
+}): Promise<{ rows: StoreSalesRow[]; allRows: StoreSalesRow[]; summary: StoreSalesSummary; total: number }> {
   const { organizationId, fromDate, toDate, customerIds = [], page = 1, pageSize = 25 } = params;
   const supabase = getSupabaseAdmin();
 
@@ -150,7 +150,7 @@ export async function getStoreSalesRanking(params: {
 
   const total = allRows.length;
   const rows = allRows.slice((page - 1) * pageSize, page * pageSize);
-  return { rows, summary, total };
+  return { rows, allRows, summary, total };
 }
 
 // ─── Products sold to a single store ─────────────────────────────────────────

@@ -106,6 +106,7 @@ export async function getDeliveryNotesReport(params: {
   pageSize?: number;
 }): Promise<{
   rows: DeliveryNoteReportRow[];
+  allRows: DeliveryNoteReportRow[];
   summary: DeliveryNoteReportSummary;
   total: number;
 }> {
@@ -158,6 +159,7 @@ export async function getDeliveryNotesReport(params: {
   if (notes.length === 0) {
     return {
       rows: [],
+      allRows: [],
       summary: { noteCount: 0, totalQty: 0, totalRevenue: 0, totalCost: 0, netProfit: 0 },
       total: 0,
     };
@@ -296,5 +298,5 @@ export async function getDeliveryNotesReport(params: {
   const total = allRows.length;
   const rows = allRows.slice((page - 1) * pageSize, page * pageSize);
 
-  return { rows, summary, total };
+  return { rows, allRows, summary, total };
 }

@@ -1,7 +1,8 @@
 import "server-only";
 
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { getTodayInBangkok } from "@/lib/orders/date";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getStockDashboardData, type StockProductOption, type StockSupplierOption } from "@/lib/stock/admin";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -13,6 +14,7 @@ export type DashboardKpi = {
   pendingDeliveryAmount: number;
   monthDeliveredAmount: number;
   activeCustomerCount: number;
+  lowStockCount: number;
 };
 
 export type RecentOrder = {
@@ -50,6 +52,8 @@ export type DashboardOverview = {
   weeklyTrend: WeeklyBar[];
   topCustomers: TopCustomer[];
   topProducts: TopProduct[];
+  stockProducts: StockProductOption[];
+  stockSuppliers: StockSupplierOption[];
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -97,6 +101,7 @@ export async function getDashboardOverview(organizationId: string): Promise<Dash
     recentOrdersRes,
     weeklyOrdersRes,
     monthOrdersRes,
+    stockDashboardRes,
   ] = await Promise.all([
     // 1. Today's submitted/confirmed orders
     supabase.from("orders")
@@ -161,6 +166,9 @@ export async function getDashboardOverview(organizationId: string): Promise<Dash
       .in("status", ["submitted", "confirmed"])
       .gte("order_date", monthStart)
       .lte("order_date", today),
+
+    // 8. Stock dashboard data (for low stock count)
+    getStockDashboardData(organizationId, 0, 0),
   ]);
 
   // ── Process core KPIs ──────────────────────────────────────────────────────
@@ -199,6 +207,7 @@ export async function getDashboardOverview(organizationId: string): Promise<Dash
     pendingDeliveryAmount: pendingDeliveries.reduce((s, r) => s + toNum(r.total_amount), 0),
     monthDeliveredAmount: monthDelivered.reduce((s, r) => s + toNum(r.total_amount), 0),
     activeCustomerCount: toNum(activeCustomerRes.count),
+    lowStockCount: stockDashboardRes.lowStockCount,
   };
 
   const recentOrders: RecentOrder[] = recentRaw.map((r) => ({
@@ -276,5 +285,5 @@ export async function getDashboardOverview(organizationId: string): Promise<Dash
     .sort((a, b) => b.totalAmount - a.totalAmount)
     .slice(0, 5);
 
-  return { kpi, recentOrders, weeklyTrend, topCustomers, topProducts };
+  return { kpi, recentOrders, weeklyTrend, topCustomers, topProducts, stockProducts: stockDashboardRes.products, stockSuppliers: stockDashboardRes.suppliers };
 }

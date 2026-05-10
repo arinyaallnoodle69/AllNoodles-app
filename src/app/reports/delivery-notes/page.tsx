@@ -1,7 +1,19 @@
 import { Suspense } from "react";
-import Image from "next/image";
 import Link from "next/link";
-import { BadgeDollarSign, Building2, ChevronLeft, ChevronRight, FileSearch, Filter, Landmark, Package, PackageOpen, ReceiptText, ScrollText } from "lucide-react";
+import Image from "next/image";
+import {
+  Filter,
+  Building2,
+  ScrollText,
+  Package,
+  ChevronLeft,
+  ChevronRight,
+  FileSearch,
+  ReceiptText,
+  PackageOpen,
+  Landmark,
+  BadgeDollarSign,
+} from "lucide-react";
 import { AppSidebarLayout } from "@/components/app-sidebar";
 import { ThaiDatePicker } from "@/components/ui/thai-date-picker";
 import { PageLoader } from "@/components/page-loader";
@@ -15,7 +27,7 @@ import { MobileSearchDrawer } from "@/components/mobile-search/mobile-search-dra
 
 export const metadata = { title: "รายงานใบจัดส่งรายวัน" };
 
-const PAGE_SIZE = 20;
+const DEFAULT_PAGE_SIZE = 20;
 
 function firstOfMonth(iso: string) {
   return iso.slice(0, 7) + "-01";
@@ -139,19 +151,21 @@ function DeliveryNoteRows({ row }: { row: DeliveryNoteReportRow }) {
           <td className="px-4 py-2 font-mono text-sm text-slate-400 whitespace-nowrap">{line.productSku}</td>
           <td className="border-l border-[#003366]/10 px-4 py-2">
             <div className={`flex min-w-0 items-center gap-3 ${styles.noteProductCell}`}>
-              {line.imageUrl ? (
-                <Image
-                  src={line.imageUrl}
-                  alt={line.productName}
-                  width={36}
-                  height={36}
-                  className="h-9 w-9 shrink-0 rounded-lg object-cover"
-                />
-              ) : (
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-slate-100">
-                  <Package className="h-4 w-4 text-slate-400" strokeWidth={1.8} />
-                </div>
-              )}
+              <div className="print:hidden">
+                {line.imageUrl ? (
+                  <Image
+                    src={line.imageUrl}
+                    alt={line.productName}
+                    width={36}
+                    height={36}
+                    className="h-9 w-9 shrink-0 rounded-lg object-cover"
+                  />
+                ) : (
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-slate-100">
+                    <Package className="h-4 w-4 text-slate-400" strokeWidth={1.8} />
+                  </div>
+                )}
+              </div>
               <span className={`text-sm font-semibold text-slate-800 ${styles.noteProductName}`}>{line.productName}</span>
             </div>
           </td>
@@ -355,6 +369,7 @@ type PageProps = {
     from?: string;
     to?: string;
     page?: string;
+    pageSize?: string;
   }>;
 };
 
@@ -377,8 +392,9 @@ async function DeliveryNotesReportContent({ searchParams }: PageProps) {
   const keyword = params.q?.trim() ?? "";
   const selectedStoreIds = params.stores ? params.stores.split(",").filter(Boolean) : [];
   const page = Math.max(1, parseInt(params.page ?? "1", 10) || 1);
+  const pageSize = params.pageSize ? parseInt(params.pageSize, 10) : DEFAULT_PAGE_SIZE;
 
-  const [{ rows, summary, total }, customers] = await Promise.all([
+  const [{ rows, allRows, summary, total }, customers] = await Promise.all([
     getDeliveryNotesReport({
       organizationId: session.organizationId,
       fromDate,
@@ -387,7 +403,7 @@ async function DeliveryNotesReportContent({ searchParams }: PageProps) {
       keyword,
       billedOnly: true,
       page,
-      pageSize: PAGE_SIZE,
+      pageSize,
     }),
     getCustomersForDeliveryNoteReport(session.organizationId),
   ]);
@@ -397,12 +413,15 @@ async function DeliveryNotesReportContent({ searchParams }: PageProps) {
     ...(selectedStoreIds.length > 0 ? { stores: selectedStoreIds.join(",") } : {}),
     from: fromDate,
     to: toDate,
+    ...(params.pageSize ? { pageSize: params.pageSize } : {}),
+    ...(params.q ? { q: params.q } : {}),
   }).toString();
   const paginationBase = `/reports/delivery-notes?${filterQs}`;
   const printedAt = formatPrintedAt(new Date());
   const selectedStoreLabel = summarizeSelection(customers, selectedStoreIds, "ทุกร้านค้า");
   const keywordLabel = keyword || "ทั้งหมด";
   const groupedRows = groupRowsByDate(rows);
+  const groupedAllRows = groupRowsByDate(allRows);
 
   return (
     <AppSidebarLayout>
@@ -520,14 +539,20 @@ async function DeliveryNotesReportContent({ searchParams }: PageProps) {
                   </div>
                 </div>
 
-                <div className="w-full shrink-0 sm:w-auto">
+                <div className="flex w-full shrink-0 flex-col gap-2 sm:w-auto sm:flex-row">
                   <button
                     type="submit"
-                    className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#003366] px-6 py-2.5 text-sm font-bold text-white transition hover:bg-[#1a237e] active:scale-95 sm:w-auto"
+                    className="flex h-10 w-full items-center justify-center gap-2 rounded-xl bg-[#003366] px-6 text-sm font-bold text-white transition hover:bg-[#1a237e] active:scale-95 sm:w-auto"
                   >
-                    <Filter className="h-4 w-4" strokeWidth={2} />
+                    <Filter className="h-4 w-4" strokeWidth={2.2} />
                     ค้นหา
                   </button>
+                  <Link
+                    href={`${paginationBase}&pageSize=9999`}
+                    className="flex h-10 w-full items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-500 transition hover:border-[#003366] hover:text-[#003366] active:scale-95 sm:w-auto"
+                  >
+                    แสดงทั้งหมด
+                  </Link>
                 </div>
               </form>
             </div>
@@ -540,7 +565,7 @@ async function DeliveryNotesReportContent({ searchParams }: PageProps) {
                   {selectedStoreIds.length > 0 && ` · ${selectedStoreIds.length} ร้านค้า`}
                 </p>
               </div>
-              <PrintButton />
+              <PrintButton targetId="report-print-area" fileName="รายงานใบจัดส่งรายวัน" />
             </div>
 
             {rows.length === 0 ? (
@@ -549,104 +574,66 @@ async function DeliveryNotesReportContent({ searchParams }: PageProps) {
                 <p className="text-base">ไม่พบข้อมูลในช่วงเวลาที่เลือก</p>
               </div>
             ) : (
-              <div className={`space-y-5 px-0 py-4 sm:px-5 sm:py-5 ${styles.printArea}`}>
-                <div className={styles.printHeader}>
-                  <div className={styles.printHeaderTop}>
-                    <div className={styles.printBrand}>
-                      <Image
-                        src="/ty-noodles-logo-cropped.png"
-                        alt="T&Y Noodle"
-                        width={64}
-                        height={64}
-                        sizes="64px"
-                        className={styles.printLogo}
-                      />
-                      <div>
-                        <p className={styles.printCompanyName}>T&amp;Y Noodle</p>
-                        <p className={styles.printSubtitle}>สรุปรายใบจัดส่ง ต้นทุน ยอดขาย กำไร และอัตรากำไรของแต่ละรายการ</p>
-                      </div>
-                    </div>
-                    <div className={styles.printMeta}>
-                      <p>วันที่พิมพ์: {printedAt.datePart}</p>
-                      <p>เวลาพิมพ์: {printedAt.timePart} น.</p>
-                    </div>
-                  </div>
-                  <div className={styles.printReportTitleBlock}>
-                    <h1 className={styles.printReportTitle}>รายงานใบจัดส่งรายวัน</h1>
-                  </div>
-                  <div className={styles.printFilters}>
-                    <div className={styles.printFilterItem}>
-                      <span className={styles.printFilterLabel}>ช่วงวันที่:</span>
-                      <span className={styles.printFilterValue}>{isoToDisplay(fromDate)} - {isoToDisplay(toDate)}</span>
-                    </div>
-                    <div className={styles.printFilterItem}>
-                      <span className={styles.printFilterLabel}>ร้านค้า:</span>
-                      <span className={styles.printFilterValue}>{selectedStoreLabel}</span>
-                    </div>
-                    <div className={styles.printFilterItem}>
-                      <span className={styles.printFilterLabel}>ค้นหา:</span>
-                      <span className={styles.printFilterValue}>{keywordLabel}</span>
-                    </div>
-                  </div>
-                  <div className={styles.printDivider} />
-                </div>
-                {groupedRows.map((group) => {
-                  const totals = sumGroup(group.items);
-
-                  return (
-                    <section
-                      key={group.date}
-                      className={`-mx-0 rounded-none border-y border-[#003366]/12 bg-white shadow-[0_4px_18px_rgba(27,27,33,0.05)] sm:mx-0 sm:rounded-2xl sm:border sm:border-[#003366]/12 ${styles.printDaySection}`}
-                    >
-                      <div className="lg:hidden print:hidden">
-                        <div className="border-b border-[#003366]/12 bg-[#003366] px-4 py-2.5">
-                          <p className="text-sm font-semibold uppercase tracking-[0.12em] text-white/85">
-                            วันที่ {isoToDisplay(group.date)}
-                          </p>
-                        </div>
-                        <div className="divide-y divide-[#003366]/16">
-                          {group.items.map((row) => (
-                            <DeliveryNoteMobileCard key={row.id} row={row} />
-                          ))}
-                        </div>
-                        <div className="border-t border-[#003366]/12 bg-[#003366]/[0.03] px-3 py-3 sm:px-4">
-                          <div className="rounded-xl border border-[#003366]/12 bg-white px-3 py-2.5 text-slate-800 shadow-[0_8px_20px_rgba(27,27,33,0.1)]">
-                            <div className="mb-2 flex items-center justify-between gap-2">
-                              <p className="text-sm font-semibold">ยอดรวมทั้งวัน {isoToDisplay(group.date)}</p>
-                              <p className={`inline-flex items-center gap-1 whitespace-nowrap text-sm font-black tracking-tight ${totals.netProfit >= 0 ? "text-emerald-600" : "text-red-500"}`}>
-                                <span>{fmtMoneyCompact(totals.netProfit)}</span>
-                                <span className="opacity-80">
-                                  ({fmtPercent(totals.totalRevenue > 0 ? (totals.netProfit / totals.totalRevenue) * 100 : 0)})
-                                </span>
-                              </p>
-                            </div>
-                            <div className="grid grid-cols-3 gap-2.5">
-                              <div className="bg-white px-2.5 py-2 text-center shadow-[0_8px_18px_rgba(27,27,33,0.1)]">
-                                <p className="text-[11px] font-medium text-slate-400">ต้นทุน</p>
-                                <p className="mt-0.5 text-sm font-bold text-slate-700">{fmtMoneyCompact(totals.totalCost)}</p>
-                              </div>
-                              <div className="bg-white px-2.5 py-2 text-center shadow-[0_8px_18px_rgba(27,27,33,0.1)]">
-                                <p className="text-[11px] font-medium text-slate-400">ยอดขาย</p>
-                                <p className="mt-0.5 text-sm font-black text-[#003366]">{fmtMoneyCompact(totals.totalRevenue)}</p>
-                              </div>
-                              <div className={`rounded-md px-2.5 py-2 text-center ${totals.netProfit >= 0 ? "bg-emerald-600" : "bg-red-50"}`}>
-                                <p className={`text-[11px] font-medium ${totals.netProfit >= 0 ? "text-emerald-100" : "text-slate-400"}`}>กำไร</p>
-                                <p className={`mt-0.5 text-sm font-black ${totals.netProfit >= 0 ? "text-white" : "text-red-500"}`}>{fmtMoneyCompact(totals.netProfit)}</p>
-                              </div>
-                            </div>
+              <>
+                {/* Desktop Screen Version (Paginated) */}
+                <div className="space-y-5 px-0 py-4 sm:px-5 sm:py-5 lg:block print:hidden">
+                  {groupedRows.map((group) => {
+                    const totals = sumGroup(group.items);
+                    return (
+                      <section
+                        key={group.date}
+                        className="-mx-0 rounded-none border-y border-[#003366]/12 bg-white shadow-[0_4px_18px_rgba(27,27,33,0.05)] sm:mx-0 sm:rounded-2xl sm:border sm:border-[#003366]/12"
+                      >
+                        <div className="lg:hidden">
+                          <div className="border-b border-[#003366]/12 bg-[#003366] px-4 py-2.5">
+                            <p className="text-sm font-semibold uppercase tracking-[0.12em] text-white/85">
+                              วันที่ {isoToDisplay(group.date)}
+                            </p>
+                          </div>
+                          <div className="divide-y divide-[#003366]/16">
+                            {group.items.map((row) => (
+                              <DeliveryNoteMobileCard key={row.id} row={row} />
+                            ))}
                           </div>
                         </div>
-                      </div>
 
-                      <div className={`hidden lg:block print:block ${styles.printDesktopSection}`}>
-                        <div className={`sticky top-0 z-20 border-b border-[#003366]/12 bg-[#003366] px-4 py-2.5 sm:px-5 ${styles.printDayBar}`}>
-                          <p className="text-sm font-semibold uppercase tracking-[0.12em] text-white/85">
-                            วันที่ {isoToDisplay(group.date)}
-                          </p>
-                        </div>
-                        <div className={`sticky top-[41px] z-10 border-b border-[#003366]/12 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/90 ${styles.printStickyHead}`}>
+                        <div className="hidden lg:block">
+                          <div className="sticky top-0 z-20 border-b border-[#003366]/12 bg-[#003366] px-4 py-2.5 sm:px-5">
+                            <p className="text-sm font-semibold uppercase tracking-[0.12em] text-white/85">
+                              วันที่ {isoToDisplay(group.date)}
+                            </p>
+                          </div>
+                          <div className="sticky top-[41px] z-10 border-b border-[#003366]/12 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/90">
+                            <div className="overflow-x-auto">
+                              <table className="min-w-[980px] w-full border-collapse text-left">
+                                <colgroup>
+                                  <col className="w-[140px]" />
+                                  <col />
+                                  <col className="w-[90px]" />
+                                  <col className="w-[90px]" />
+                                  <col className="w-[130px]" />
+                                  <col className="w-[130px]" />
+                                  <col className="w-[130px]" />
+                                  <col className="w-[110px]" />
+                                </colgroup>
+                                <thead>
+                                  <tr className="bg-[#003366]/[0.04]">
+                                    <th className="px-4 py-2.5 text-xs font-semibold uppercase tracking-[0.09em] text-slate-600 whitespace-nowrap">รหัสสินค้า</th>
+                                    <th className="border-l border-[#003366]/12 px-4 py-2.5 text-xs font-semibold uppercase tracking-[0.09em] text-slate-600 whitespace-nowrap">สินค้า</th>
+                                    <th className="border-l border-[#003366]/12 px-4 py-2.5 text-center text-xs font-semibold uppercase tracking-[0.09em] text-slate-600 whitespace-nowrap">จำนวน</th>
+                                    <th className="border-l border-[#003366]/12 px-4 py-2.5 text-center text-xs font-semibold uppercase tracking-[0.09em] text-slate-600 whitespace-nowrap">หน่วย</th>
+                                    <th className="border-l border-[#003366]/12 px-4 py-2.5 text-center text-xs font-semibold uppercase tracking-[0.09em] text-slate-600 whitespace-nowrap">ต้นทุน</th>
+                                    <th className="border-l border-[#003366]/12 px-4 py-2.5 text-center text-xs font-semibold uppercase tracking-[0.09em] text-slate-600 whitespace-nowrap">ยอดขาย</th>
+                                    <th className="border-l border-[#003366]/12 px-4 py-2.5 text-center text-xs font-semibold uppercase tracking-[0.09em] text-slate-600 whitespace-nowrap">กำไร</th>
+                                    <th className="border-l border-[#003366]/12 px-4 py-2.5 text-center text-xs font-semibold uppercase tracking-[0.09em] text-slate-600 whitespace-nowrap">กำไร(%)</th>
+                                  </tr>
+                                </thead>
+                              </table>
+                            </div>
+                          </div>
+
                           <div className="overflow-x-auto">
-                            <table className={`min-w-[980px] w-full border-collapse text-left ${styles.printTable}`}>
+                            <table className="min-w-[980px] w-full border-collapse text-left">
                               <colgroup>
                                 <col className="w-[140px]" />
                                 <col />
@@ -657,72 +644,185 @@ async function DeliveryNotesReportContent({ searchParams }: PageProps) {
                                 <col className="w-[130px]" />
                                 <col className="w-[110px]" />
                               </colgroup>
-                              <thead>
+                              <tbody className="divide-y divide-[#003366]/10 bg-white">
+                                {group.items.map((row) => (
+                                  <DeliveryNoteRows key={row.id} row={row} />
+                                ))}
                                 <tr className="bg-[#003366]/[0.04]">
-                                  <th className="px-4 py-2.5 text-xs font-semibold uppercase tracking-[0.09em] text-slate-600 whitespace-nowrap">รหัสสินค้า</th>
-                                  <th className="border-l border-[#003366]/12 px-4 py-2.5 text-xs font-semibold uppercase tracking-[0.09em] text-slate-600 whitespace-nowrap">สินค้า</th>
-                                  <th className="border-l border-[#003366]/12 px-4 py-2.5 text-center text-xs font-semibold uppercase tracking-[0.09em] text-slate-600 whitespace-nowrap">จำนวน</th>
-                                  <th className="border-l border-[#003366]/12 px-4 py-2.5 text-center text-xs font-semibold uppercase tracking-[0.09em] text-slate-600 whitespace-nowrap">หน่วย</th>
-                                  <th className="border-l border-[#003366]/12 px-4 py-2.5 text-center text-xs font-semibold uppercase tracking-[0.09em] text-slate-600 whitespace-nowrap">ต้นทุน</th>
-                                  <th className="border-l border-[#003366]/12 px-4 py-2.5 text-center text-xs font-semibold uppercase tracking-[0.09em] text-slate-600 whitespace-nowrap">ยอดขาย</th>
-                                  <th className="border-l border-[#003366]/12 px-4 py-2.5 text-center text-xs font-semibold uppercase tracking-[0.09em] text-slate-600 whitespace-nowrap">กำไร</th>
-                                  <th className="border-l border-[#003366]/12 px-4 py-2.5 text-center text-xs font-semibold uppercase tracking-[0.09em] text-slate-600 whitespace-nowrap">กำไร(%)</th>
+                                  <td colSpan={4} className="px-4 py-2 text-right text-sm font-black tracking-[0.02em] text-slate-600">
+                                    ยอดรวมของวันที่ — {isoToDisplay(group.date)}
+                                  </td>
+                                  <td className="border-l border-[#003366]/10 px-4 py-2 text-center text-sm font-bold text-slate-700">
+                                    {fmtMoney(totals.totalCost)}
+                                  </td>
+                                  <td className="border-l border-[#003366]/10 px-4 py-2 text-center text-sm font-black text-[#003366]">
+                                    {fmtMoney(totals.totalRevenue)}
+                                  </td>
+                                  <td className={`border-l border-[#003366]/10 px-4 py-2 text-center text-sm font-black ${totals.netProfit >= 0 ? "text-emerald-600" : "text-red-500"}`}>
+                                    {fmtMoney(totals.netProfit)}
+                                  </td>
+                                  <td className={`border-l border-[#003366]/10 px-4 py-2 text-center text-sm font-black ${totals.netProfit >= 0 ? "text-emerald-600" : "text-red-500"}`}>
+                                    {fmtPercent(totals.totalRevenue > 0 ? (totals.netProfit / totals.totalRevenue) * 100 : 0)}
+                                  </td>
                                 </tr>
-                              </thead>
+                              </tbody>
                             </table>
                           </div>
                         </div>
+                      </section>
+                    );
+                  })}
+                </div>
 
-                        <div className="overflow-x-auto">
-                          <table className={`min-w-[980px] w-full border-collapse text-left ${styles.printTable}`}>
-                            <colgroup>
-                              <col className="w-[140px]" />
-                              <col />
-                              <col className="w-[90px]" />
-                              <col className="w-[90px]" />
-                              <col className="w-[130px]" />
-                              <col className="w-[130px]" />
-                              <col className="w-[130px]" />
-                              <col className="w-[110px]" />
-                            </colgroup>
-                            <tbody className="divide-y divide-[#003366]/10 bg-white">
-                              {group.items.map((row) => (
-                                <DeliveryNoteRows key={row.id} row={row} />
+                {/* Print only area (Full table) */}
+                <div id="report-print-area" className="hidden print:block">
+                  {(() => {
+                    const PAGE_SIZE_GROUPS = 5;
+                    const pages = [];
+                    for (let i = 0; i < groupedAllRows.length; i += PAGE_SIZE_GROUPS) {
+                      pages.push(groupedAllRows.slice(i, i + PAGE_SIZE_GROUPS));
+                    }
+                    if (pages.length === 0) return null;
+
+                    return pages.map((pageGroups, pageIdx) => (
+                      <div key={pageIdx} data-print-page="true" className={`${styles.printArea} ${styles.printPage} print:break-after-page`}>
+                        <div className={styles.printHeader}>
+                          <div className={styles.printHeaderTop}>
+                            <div className={styles.printBrand}>
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img src="/ty-noodles-logo-cropped.png" alt="T&Y Noodle" width="64" height="64" className={styles.printLogo} />
+                              <div>
+                                <p className={styles.printCompanyName}>T&amp;Y Noodle</p>
+                                <p className={styles.printSubtitle}>สรุปรายใบจัดส่ง ต้นทุน ยอดขาย กำไร และอัตรากำไร</p>
+                              </div>
+                            </div>
+                            <div className={styles.printMeta}>
+                              <p>วันที่พิมพ์: {printedAt.datePart}</p>
+                              <p>เวลาพิมพ์: {printedAt.timePart} น.</p>
+                              <p>หน้า: {pageIdx + 1} / {pages.length}</p>
+                            </div>
+                          </div>
+                          <div className={styles.printReportTitleBlock}>
+                            <h1 className={styles.printReportTitle}>รายงานใบจัดส่งรายวัน</h1>
+                          </div>
+                          <div className={styles.printFilters}>
+                            <div className={styles.printFilterItem}>
+                              <span className={styles.printFilterLabel}>ช่วงวันที่:</span>
+                              <span className={styles.printFilterValue}>{isoToDisplay(fromDate)} - {isoToDisplay(toDate)}</span>
+                            </div>
+                            <div className={styles.printFilterItem}>
+                              <span className={styles.printFilterLabel}>ร้านค้า:</span>
+                              <span className={styles.printFilterValue}>{selectedStoreLabel}</span>
+                            </div>
+                            <div className={styles.printFilterItem}>
+                              <span className={styles.printFilterLabel}>ค้นหา:</span>
+                              <span className={styles.printFilterValue}>{keywordLabel}</span>
+                            </div>
+                          </div>
+                          <div className={styles.printDivider} />
+                        </div>
+
+                        <div className="space-y-6">
+                          {pageGroups.map((group) => {
+                            const totals = sumGroup(group.items);
+                            return (
+                              <section key={group.date} className={styles.printDaySection}>
+                                <div className={styles.printDayBar}>
+                                  <p className="text-sm font-semibold uppercase tracking-[0.12em] text-white/85">
+                                    วันที่ {isoToDisplay(group.date)}
+                                  </p>
+                                </div>
+                                <div className={styles.printDesktopSection}>
+                                  <table className={`w-full border-collapse text-left ${styles.printTable}`}>
+                                    <colgroup>
+                                      <col className="w-[140px]" />
+                                      <col />
+                                      <col className="w-[90px]" />
+                                      <col className="w-[90px]" />
+                                      <col className="w-[130px]" />
+                                      <col className="w-[130px]" />
+                                      <col className="w-[130px]" />
+                                      <col className="w-[110px]" />
+                                    </colgroup>
+                                    <thead>
+                                      <tr className="bg-[#003366]/[0.04]">
+                                        <th className="px-4 py-2.5 text-xs font-semibold uppercase tracking-[0.09em] text-slate-600">รหัสสินค้า</th>
+                                        <th className="border-l border-[#003366]/12 px-4 py-2.5 text-xs font-semibold uppercase tracking-[0.09em] text-slate-600">สินค้า</th>
+                                        <th className="border-l border-[#003366]/12 px-4 py-2.5 text-center text-xs font-semibold uppercase tracking-[0.09em] text-slate-600">จำนวน</th>
+                                        <th className="border-l border-[#003366]/12 px-4 py-2.5 text-center text-xs font-semibold uppercase tracking-[0.09em] text-slate-600">หน่วย</th>
+                                        <th className="border-l border-[#003366]/12 px-4 py-2.5 text-center text-xs font-semibold uppercase tracking-[0.09em] text-slate-600">ต้นทุน</th>
+                                        <th className="border-l border-[#003366]/12 px-4 py-2.5 text-center text-xs font-semibold uppercase tracking-[0.09em] text-slate-600">ยอดขาย</th>
+                                        <th className="border-l border-[#003366]/12 px-4 py-2.5 text-center text-xs font-semibold uppercase tracking-[0.09em] text-slate-600">กำไร</th>
+                                        <th className="border-l border-[#003366]/12 px-4 py-2.5 text-center text-xs font-semibold uppercase tracking-[0.09em] text-slate-600">กำไร(%)</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-[#003366]/10 bg-white">
+                                      {group.items.map((row) => (
+                                        <DeliveryNoteRows key={row.id} row={row} />
+                                      ))}
+                                      <tr className="bg-[#003366]/[0.04]">
+                                        <td colSpan={4} className="px-4 py-2 text-right text-sm font-black">
+                                          ยอดรวมของวันที่ — {isoToDisplay(group.date)}
+                                        </td>
+                                        <td className="border-l border-[#003366]/10 px-4 py-2 text-center text-sm font-bold">
+                                          {fmtMoney(totals.totalCost)}
+                                        </td>
+                                        <td className="border-l border-[#003366]/10 px-4 py-2 text-center text-sm font-black">
+                                          {fmtMoney(totals.totalRevenue)}
+                                        </td>
+                                        <td className="border-l border-[#003366]/10 px-4 py-2 text-center text-sm font-black">
+                                          {fmtMoney(totals.netProfit)}
+                                        </td>
+                                        <td className="border-l border-[#003366]/10 px-4 py-2 text-center text-sm font-black">
+                                          {fmtPercent(totals.totalRevenue > 0 ? (totals.netProfit / totals.totalRevenue) * 100 : 0)}
+                                        </td>
+                                      </tr>
+                                    </tbody>
+                                  </table>
+                                </div>
+                              </section>
+                            );
+                          })}
+                        </div>
+                        
+                        {/* Final summary only on last page */}
+                        {pageIdx === pages.length - 1 && (
+                          <div className="mt-8 overflow-hidden rounded-xl border border-[#003366]/20 bg-[#003366]/[0.02]">
+                            <div className="bg-[#003366] px-6 py-3 text-white">
+                              <h3 className="text-base font-bold">สรุปรวมทั้งหมด ({allRows.length} ใบจัดส่ง)</h3>
+                            </div>
+                            <div className="grid grid-cols-4 gap-0 divide-x divide-[#003366]/10">
+                              {[
+                                { label: "ต้นทุนรวม", value: fmtMoney(summary.totalCost) },
+                                { label: "ยอดขายรวม", value: fmtMoney(summary.totalRevenue) },
+                                { label: "กำไรสุทธิ", value: fmtMoney(summary.netProfit), color: summary.netProfit >= 0 ? "text-emerald-600" : "text-red-500" },
+                                { label: "อัตรากำไร", value: summary.totalRevenue > 0 ? fmtPercent((summary.netProfit / summary.totalRevenue) * 100) : "0%" },
+                              ].map((item, idx) => (
+                                <div key={idx} className="p-4 text-center">
+                                  <p className="mb-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">{item.label}</p>
+                                  <p className={`text-lg font-black ${item.color || "text-[#003366]"}`}>{item.value}</p>
+                                </div>
                               ))}
-                              <tr className="bg-[#003366]/[0.04]">
-                                <td colSpan={4} className="px-4 py-2 text-right text-sm font-black tracking-[0.02em] text-slate-600">
-                                  ยอดรวมของวันที่ — {isoToDisplay(group.date)}
-                                </td>
-                                <td className="border-l border-[#003366]/10 px-4 py-2 text-center text-sm font-bold text-slate-700">
-                                  {fmtMoney(totals.totalCost)}
-                                </td>
-                                <td className="border-l border-[#003366]/10 px-4 py-2 text-center text-sm font-black text-[#003366]">
-                                  {fmtMoney(totals.totalRevenue)}
-                                </td>
-                                <td className={`border-l border-[#003366]/10 px-4 py-2 text-center text-sm font-black ${totals.netProfit >= 0 ? "text-emerald-600" : "text-red-500"}`}>
-                                  {fmtMoney(totals.netProfit)}
-                                </td>
-                                <td className={`border-l border-[#003366]/10 px-4 py-2 text-center text-sm font-black ${totals.netProfit >= 0 ? "text-emerald-600" : "text-red-500"}`}>
-                                  {fmtPercent(totals.totalRevenue > 0 ? (totals.netProfit / totals.totalRevenue) * 100 : 0)}
-                                </td>
-                              </tr>
-                            </tbody>
-                          </table>
+                            </div>
+                          </div>
+                        )}
+
+                        <div className={styles.printFooter}>
+                          พิมพ์จากระบบรายงานอัตโนมัติ (T&amp;Y Noodle) - หน้า {pageIdx + 1} / {pages.length}
                         </div>
                       </div>
-                    </section>
-                  );
-                })}
-                <div className={styles.printFooter}>พิมพ์จากระบบ T&amp;Y Noodle</div>
-              </div>
+                    ));
+                  })()}
+                </div>
+              </>
             )}
           </section>
 
-          <div className="mt-5 flex items-center justify-between gap-3">
+          <div className="mt-5 flex items-center justify-between gap-3 print:hidden">
             <p className="text-sm text-slate-400">
-              แสดง {total === 0 ? 0 : (page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, total)} จาก {fmt(total)} ใบจัดส่ง
+              แสดง {total === 0 ? 0 : (page - 1) * pageSize + 1}–{Math.min(page * pageSize, total)} จาก {fmt(total)} ใบจัดส่ง
             </p>
-            <Pagination page={page} total={total} pageSize={PAGE_SIZE} baseUrl={paginationBase} />
+            <Pagination page={page} total={total} pageSize={pageSize} baseUrl={paginationBase} />
           </div>
         </div>
       </div>

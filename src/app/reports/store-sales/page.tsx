@@ -22,7 +22,7 @@ import { getCustomersForFilter } from "@/lib/reports/product-sales";
 import { ThaiDatePicker } from "@/components/ui/thai-date-picker";
 import { StoreFilter } from "../product-sales/store-filter";
 import { StoreDetailButton } from "./store-detail-button";
-import { PrintButton } from "./print-button";
+import { PrintButton } from "../product-sales/print-button";
 import styles from "./print.module.css";
 
 export const metadata = { title: "รายงานยอดขายตามร้านค้า" };

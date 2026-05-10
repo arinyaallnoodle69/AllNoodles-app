@@ -6,6 +6,7 @@ import { requireAppSession } from "@/lib/auth/authorization";
 import { getTodayInBangkok } from "@/lib/orders/date";
 import { getSalesOverviewData, getAvailableYears } from "@/lib/reports/sales-overview";
 import { SalesCharts } from "./sales-charts";
+import { PrintButton } from "../product-sales/print-button";
 
 export const metadata = { title: "สรุปยอดขายรายปี" };
 
@@ -150,6 +151,7 @@ async function SalesOverviewContent({ searchParams }: PageProps) {
                   ภาพรวมยอดขาย กำไร และแนวโน้มรายเดือน · ปี พ.ศ. {toBuddhistYear(year)}
                 </p>
               </div>
+              <PrintButton targetId="report-print-area" fileName={`สรุปยอดขายรายปี_${toBuddhistYear(year)}`} />
             </div>
           </header>
 
@@ -159,7 +161,8 @@ async function SalesOverviewContent({ searchParams }: PageProps) {
             <YearSelector years={availableYears} selected={year} />
           </div>
 
-          {/* KPI Cards */}
+          <div id="report-print-area" className="bg-slate-50/60 p-4 -m-4 rounded-3xl">
+            {/* KPI Cards */}
           <section className="mb-6 grid grid-cols-2 gap-3 sm:mb-8 sm:gap-4 lg:grid-cols-4">
             <KpiCard
               label="ยอดขายรวมทั้งปี"
@@ -178,7 +181,7 @@ async function SalesOverviewContent({ searchParams }: PageProps) {
             <KpiCard
               label="เดือนยอดดีที่สุด"
               value={summary.peakMonth ? summary.peakMonth.monthLabel : "—"}
-              sub={summary.peakMonth ? `${fmtMoney(summary.peakMonth.revenue)} บาท` : "ยังไม่มีข้อมูล"}
+              sub={summary.peakMonth ? `${fmtMoney(summary.peakMonth.revenue)}` : "ยังไม่มีข้อมูล"}
               icon={CalendarDays}
               accent="amber"
             />
@@ -225,14 +228,15 @@ async function SalesOverviewContent({ searchParams }: PageProps) {
               }
               <p className={`text-sm font-semibold ${profitPositive ? "text-emerald-700" : "text-red-600"}`}>
                 ปี {toBuddhistYear(year)} มีกำไรสุทธิ{" "}
-                <span className="font-black">{fmtMoney(summary.totalProfit)} บาท</span>
+                <span className="font-black">{fmtMoney(summary.totalProfit)}</span>
                 {" "}คิดเป็น{" "}
                 <span className="font-black">{marginPercent.toFixed(1)}%</span>
                 {" "}ของยอดขายรวม{" "}
-                <span className="font-black">{fmtMoney(summary.totalRevenue)} บาท</span>
+                <span className="font-black">{fmtMoney(summary.totalRevenue)}</span>
               </p>
             </div>
           )}
+          </div>
 
         </div>
       </div>

@@ -7,11 +7,21 @@
 .printRankNumber {
   display: none;
 }
+:global(.capturing) .printRankNumber {
+  display: inline !important;
+}
 
 .printRevenueCell {}
 
 .printHeader {
   display: none;
+}
+:global(.capturing) .printHeader {
+  display: block !important;
+  margin-bottom: 8px;
+  border: 1px solid rgba(0, 51, 102, 0.18);
+  padding: 10px 12px 8px;
+  background: #ffffff;
 }
 
 .printHeaderTop {
@@ -123,6 +133,9 @@
 .printFooter {
   display: none;
 }
+:global(.capturing) .printFooter {
+  display: block !important;
+}
 
 @page {
   size: A4 portrait;
@@ -148,10 +161,15 @@
 
   .printArea {
     position: absolute;
-    inset: 0;
+    top: 0;
+    left: 0;
     width: 100%;
+    min-height: 100%;
     overflow: visible !important;
     background: #ffffff;
+    padding: 0 !important;
+    margin: 0 !important;
+    box-shadow: none !important;
   }
 
   .printHeader {

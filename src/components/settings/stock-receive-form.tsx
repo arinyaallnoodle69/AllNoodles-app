@@ -40,6 +40,7 @@ type StockReceiveFormProps = {
   suppliers: StockSupplierOption[];
   returnHref: string;
   defaultProductId?: string;
+  onClose?: () => void;
 };
 
 type ReceiveStep = "date" | "select" | "photo" | "review";
@@ -58,7 +59,7 @@ function formatQty(value: number, unit: string) {
   return `${value.toLocaleString("th-TH", { maximumFractionDigits: 3 })} ${unit}`;
 }
 
-export function StockReceiveForm({ products, suppliers, returnHref, defaultProductId = "" }: StockReceiveFormProps) {
+export function StockReceiveForm({ products, suppliers, returnHref, defaultProductId = "", onClose }: StockReceiveFormProps) {
   const router = useRouter();
   const [actionState, formAction, isPending] = useActionState(receiveStockAction, initialReceiveStockState);
   
@@ -133,7 +134,11 @@ export function StockReceiveForm({ products, suppliers, returnHref, defaultProdu
 
   const handleSuccess = useEffectEvent(() => {
     startTransition(() => {
-      router.replace(returnHref);
+      if (onClose) {
+        onClose();
+      } else {
+        router.replace(returnHref);
+      }
       router.refresh();
     });
   });
@@ -190,7 +195,16 @@ export function StockReceiveForm({ products, suppliers, returnHref, defaultProdu
                 <p className="text-[11px] font-black text-[#003366]/40 uppercase tracking-[0.2em]">{currentStep === 'review' ? 'ยืนยันรายการ' : 'ขั้นตอนที่ ' + (['date', 'select', 'photo', 'review'].indexOf(currentStep) + 1)}</p>
               </div>
             </div>
-            <button onClick={() => router.replace(returnHref)} className="h-11 w-11 flex items-center justify-center rounded-xl hover:bg-slate-100 text-slate-400 transition-all">
+            <button 
+              onClick={() => {
+                if (onClose) {
+                  onClose();
+                } else {
+                  router.replace(returnHref);
+                }
+              }} 
+              className="h-11 w-11 flex items-center justify-center rounded-xl hover:bg-slate-100 text-slate-400 transition-all"
+            >
               <X className="h-6 w-6" strokeWidth={3} />
             </button>
           </div>
