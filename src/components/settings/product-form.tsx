@@ -32,7 +32,6 @@ import {
   settingsSelectClass,
 } from "@/components/settings/settings-ui";
 import {
-  getEffectiveSaleUnitCost,
   type SaleUnitCostMode,
 } from "@/lib/products/sale-unit-cost";
 import type { SettingsProduct, SettingsProductCategory } from "@/lib/settings/admin";
@@ -180,7 +179,7 @@ function ProductFormBody({
         },
       ],
   );
-  const [removedSaleUnitIds, setRemovedSaleUnitIds] = useState<string[]>([]);
+  const [removedSaleUnitIds] = useState<string[]>([]);
   const [brand, setBrand] = useState(editingProduct?.brand ?? "");
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>(
     editingProduct?.categoryIds[0] ?? "",
@@ -547,23 +546,6 @@ function ProductFormBody({
     );
   }
 
-  function removeSaleUnit(key: string) {
-    setSaleUnits((current) => {
-      if (current.length <= 1) {
-        return current;
-      }
-
-      const removedSaleUnit = current.find((saleUnit) => saleUnit.key === key);
-      if (removedSaleUnit?.id) {
-        setRemovedSaleUnitIds((ids) =>
-          ids.includes(removedSaleUnit.id) ? ids : [...ids, removedSaleUnit.id],
-        );
-      }
-
-      return current.filter((saleUnit) => saleUnit.key !== key);
-    });
-  }
-
   function openCamera() {
     if (remainingImageSlots <= 0) {
       setCameraError(`เพิ่มรูปได้สูงสุด ${MAX_PRODUCT_IMAGES} รูปต่อสินค้า`);
@@ -643,26 +625,6 @@ function ProductFormBody({
   function getParsedNumber(value: string) {
     const parsed = Number(value.replace(/,/g, "").trim());
     return Number.isFinite(parsed) ? parsed : 0;
-  }
-
-  function getSaleUnitEffectiveCost(saleUnit: SaleUnitDraft) {
-    const fixedCostPrice = saleUnit.fixedCostPrice.trim()
-      ? getParsedNumber(saleUnit.fixedCostPrice)
-      : null;
-
-    return getEffectiveSaleUnitCost({
-      baseCostPrice: getParsedNumber(baseCostPrice),
-      baseUnitQuantity: getParsedNumber(saleUnit.baseUnitQuantity),
-      costMode: saleUnit.costMode,
-      fixedCostPrice,
-    });
-  }
-
-  function formatMoney(value: number) {
-    return value.toLocaleString("th-TH", {
-      maximumFractionDigits: 2,
-      minimumFractionDigits: 2,
-    });
   }
 
   const hasUnsavedChanges = useMemo(() => {
@@ -928,14 +890,14 @@ function ProductFormBody({
               </div>
             </section>
 
-            {/* Section: หน่วยขาย */}
+            {/* Section: เงื่อนไขการสั่ง */}
             <section className="space-y-3">
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400">หน่วยขาย</p>
-                  <p className="mt-1 text-xs text-slate-400">รองรับหลายหน่วยต่อสินค้า เช่น กก. และ ลัง</p>
+                  <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400">เงื่อนไขการสั่ง</p>
+                  <p className="mt-1 text-xs text-slate-400">ตั้งค่าจำนวนสั่งซื้อขั้นต่ำและรูปแบบการเพิ่มจำนวนต่อหน่วยขาย</p>
                 </div>
-                <button type="button" onClick={addSaleUnit} className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 active:scale-[0.97]">
+                <button type="button" onClick={addSaleUnit} className="hidden items-center gap-1.5 rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 active:scale-[0.97]">
                   <CirclePlus className="h-3.5 w-3.5" strokeWidth={2.2} />
                   เพิ่มหน่วย
                 </button>
@@ -947,56 +909,24 @@ function ProductFormBody({
                   return (
                     <div key={saleUnit.key} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
                       <input type="hidden" name="saleUnitId" value={saleUnit.id} />
+                      <input type="hidden" name="saleUnitLabel" value={saleUnit.label} />
+                      <input type="hidden" name="saleUnitRatio" value={saleUnit.baseUnitQuantity} />
+                      <input type="hidden" name="saleUnitFixedCostPrice" value={saleUnit.fixedCostPrice} />
+                      <input type="hidden" name="saleUnitCostMode" value={saleUnit.costMode} />
 
-                      {/* ── ชื่อ + อัตราส่วน + ลบ ── */}
-                      <div className="flex items-end gap-3">
-                        <div className="flex-1 min-w-0">
-                          <label className={settingsFieldLabelClass} htmlFor={`su-label-${uid}`}>ชื่อหน่วยขาย</label>
-                          <input id={`su-label-${uid}`} name="saleUnitLabel" required value={saleUnit.label} onChange={(e) => updateSaleUnit(saleUnit.key, "label", e.target.value)} className={settingsInputClass} placeholder="เช่น ลัง, แพ็ก, กก." />
-                        </div>
-                        <div className="w-28 shrink-0">
-                          <label className={settingsFieldLabelClass} htmlFor={`su-ratio-${uid}`}>= หน่วยฐาน</label>
-                          <input id={`su-ratio-${uid}`} name="saleUnitRatio" type="number" min="0.001" step="0.001" required value={saleUnit.baseUnitQuantity} onChange={(e) => updateSaleUnit(saleUnit.key, "baseUnitQuantity", e.target.value)} className={settingsInputClass} placeholder="1.000" />
-                        </div>
-                        <button type="button" onClick={() => removeSaleUnit(saleUnit.key)} disabled={saleUnits.length <= 1} className="mb-0.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-slate-200 text-slate-400 transition hover:border-rose-200 hover:bg-rose-50 hover:text-rose-500 disabled:cursor-not-allowed disabled:opacity-30" aria-label="ลบหน่วยขาย">
-                          <X className="h-4 w-4" strokeWidth={2.2} />
-                        </button>
+                      {/* Display unit label to know what we are configuring */}
+                      <div className="mb-3 flex items-center justify-between">
+                        <span className="text-sm font-black text-[#003366]">หน่วยขาย: {saleUnit.label || baseUnit}</span>
                       </div>
-
-                      <div className="my-4 border-t border-slate-100" />
-
-                      {/* ── ต้นทุน ── */}
-                      <div className="space-y-2.5">
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs font-semibold text-slate-500">ต้นทุน</span>
-                          <span className="text-sm font-bold text-slate-800">
-                            {formatMoney(getSaleUnitEffectiveCost(saleUnit))} บาท
-                            {saleUnit.costMode === "derived" && <span className="ml-1.5 text-xs font-normal text-slate-400">คำนวณอัตโนมัติ</span>}
-                          </span>
-                        </div>
-                        <div className="flex gap-2">
-                          {(["derived", "fixed"] as SaleUnitCostMode[]).map((mode) => (
-                            <button key={mode} type="button" onClick={() => updateSaleUnit(saleUnit.key, "costMode", mode)} className={`flex-1 rounded-xl border py-2 text-xs font-semibold transition ${saleUnit.costMode === mode ? "border-[#003366] bg-blue-50 text-[#003366]" : "border-slate-200 text-slate-500 hover:bg-slate-50"}`}>
-                              {mode === "derived" ? "อัตโนมัติ" : "กำหนดเอง"}
-                            </button>
-                          ))}
-                        </div>
-                        {saleUnit.costMode === "fixed" ? (
-                          <div className="relative">
-                            <span className="absolute left-3 top-1/2 -translate-y-1/2 font-semibold text-slate-400">฿</span>
-                            <input name="saleUnitFixedCostPrice" type="number" min="0" step="0.01" value={saleUnit.fixedCostPrice} onChange={(e) => updateSaleUnit(saleUnit.key, "fixedCostPrice", e.target.value)} className={`${settingsInputClass} pl-8`} placeholder="0.00" />
-                          </div>
-                        ) : (
-                          <input type="hidden" name="saleUnitFixedCostPrice" value={saleUnit.fixedCostPrice} />
-                        )}
-                        <input type="hidden" name="saleUnitCostMode" value={saleUnit.costMode} />
-                      </div>
-
-                      <div className="my-4 border-t border-slate-100" />
 
                       {/* ── เงื่อนไขสั่ง ── */}
                       <div className="space-y-2.5">
-                        <span className="text-xs font-semibold text-slate-500">เงื่อนไขการสั่ง</span>
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-semibold text-slate-500">รูปแบบการสั่ง</span>
+                          {index === 0 && (
+                            <span className="text-[10px] font-bold text-[#003366] bg-blue-50 px-2 py-0.5 rounded-full">หน่วยขายเริ่มต้น</span>
+                          )}
+                        </div>
                         <div className="grid grid-cols-3 gap-2">
                           {(
                             [
@@ -1070,10 +1000,6 @@ function ProductFormBody({
                               : saleUnit.stepOrderQty
                         }
                       />
-
-                      {index === 0 && (
-                        <p className="mt-3 text-xs font-medium text-[#003366]">ใช้เป็นหน่วยขายเริ่มต้น</p>
-                      )}
                     </div>
                   );
                 })}

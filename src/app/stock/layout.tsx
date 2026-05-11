@@ -13,16 +13,14 @@ export default function StockLayout({
   const pathname = usePathname();
 
   // Determine current tab from pathname
-  let current: "movements" | "stock" | "history" | "issues" = "stock";
-  if (pathname.includes("/stock/movements")) current = "movements";
-  else if (pathname.includes("/stock/history")) current = "history";
+  let current: "stock" | "history" | "issues" = "stock";
+  if (pathname.includes("/stock/history")) current = "history";
   else if (pathname.includes("/stock/issues")) current = "issues";
   else if (pathname === "/stock") current = "stock";
 
   // Dynamic description based on tab
   const descriptions = {
     stock: "ดูของคงเหลือ จองแล้ว และจัดการสต็อกพื้นฐาน",
-    movements: "ติดตามการเคลื่อนไหวเข้า-ออกของสินค้าทั้งหมด",
     history: "ดูประวัติการรับเข้าสินค้าจากผู้ขาย",
     issues: "ดูประวัติการเบิกสินค้าออกจากคลัง"
   };

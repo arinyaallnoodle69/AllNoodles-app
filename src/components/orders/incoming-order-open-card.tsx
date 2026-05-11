@@ -165,17 +165,17 @@ export function IncomingOrderOpenCard({
 
           <div className="min-w-0 border-l border-slate-300 pl-4">
             <p className="text-[11px] font-black uppercase tracking-[0.12em] text-slate-950">เลขจัดส่ง</p>
-            <div className="mt-2 min-w-0">
+            <div className="mt-1.5 min-w-0">
               {hasDelivery && deliveryNumbers ? (
                 <div className="flex flex-col gap-0.5">
                   {deliveryNumbers.map((num) => (
-                    <span key={num} className="truncate font-mono text-[13px] font-bold text-emerald-700 leading-none py-0.5">
+                    <span key={num} className="truncate font-mono text-[1.05rem] font-bold text-emerald-700 leading-none py-0.5">
                       {num}
                     </span>
                   ))}
                 </div>
               ) : (
-                <span className="text-[13px] font-medium text-slate-400">-</span>
+                <span className="text-[1.05rem] font-medium text-slate-400">-</span>
               )}
             </div>
           </div>

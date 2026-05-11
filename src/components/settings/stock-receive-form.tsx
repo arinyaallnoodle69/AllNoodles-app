@@ -66,6 +66,8 @@ export function StockReceiveForm({ products, suppliers, returnHref, defaultProdu
   const [currentStep, setCurrentStep] = useState<ReceiveStep>("date");
   const [receivedDate, setReceivedDate] = useState(() => getTodayInBangkok());
   const [selectedSupplierId, setSelectedSupplierId] = useState("");
+  const [supplierPickerOpen, setSupplierPickerOpen] = useState(false);
+  const [supplierPickerQuery, setSupplierPickerQuery] = useState("");
   
   // Multi-product selection state
   // key: productId, value: record of unitId -> quantity
@@ -89,6 +91,14 @@ export function StockReceiveForm({ products, suppliers, returnHref, defaultProdu
       p.name.toLowerCase().includes(q) || p.sku.toLowerCase().includes(q)
     ).slice(0, 40);
   }, [deferredQuery, products]);
+
+  const filteredSuppliers = useMemo(() => {
+    const q = supplierPickerQuery.trim().toLowerCase();
+    if (!q) return suppliers;
+    return suppliers.filter(s =>
+      s.name.toLowerCase().includes(q) || (s.code && s.code.toLowerCase().includes(q))
+    );
+  }, [suppliers, supplierPickerQuery]);
 
   const selectedProductList = useMemo(() => {
     return products.filter(p => selections[p.id]);
@@ -236,21 +246,39 @@ export function StockReceiveForm({ products, suppliers, returnHref, defaultProdu
 
                 <div className="bg-white p-6 rounded-[2.5rem] shadow-sm border border-slate-100 space-y-4">
                   <label className="block text-sm font-black text-slate-400 uppercase tracking-widest ml-2">ผู้ขาย (Vendor)</label>
-                  <div className="relative group">
-                    <Factory className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400 transition-colors group-focus-within:text-[#003366]" />
-                    <select
-                      value={selectedSupplierId}
-                      onChange={(e) => setSelectedSupplierId(e.target.value)}
-                      className="w-full h-14 rounded-2xl bg-slate-50 border-none pl-12 pr-4 text-lg font-bold text-slate-950 focus:ring-2 focus:ring-[#003366]/20 outline-none transition-all appearance-none"
+                  <div className="flex items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setSupplierPickerOpen(true)}
+                      className={`flex min-w-0 flex-1 items-center gap-4 rounded-2xl border h-16 px-5 text-left transition-all ${
+                        selectedSupplierId ? "border-[#003366]/40 bg-white" : "border-slate-100 bg-slate-50 hover:border-[#003366]/40"
+                      }`}
                     >
-                      <option value="" disabled>เลือกผู้ขาย...</option>
-                      {suppliers.map(s => (
-                        <option key={s.id} value={s.id}>{s.name} ({s.code})</option>
-                      ))}
-                    </select>
-                    <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none">
-                      <ChevronRight className="h-5 w-5 text-slate-400 rotate-90" strokeWidth={3} />
-                    </div>
+                      <Factory className={`h-6 w-6 shrink-0 transition-colors ${selectedSupplierId ? "text-[#003366]" : "text-slate-400"}`} />
+                      <div className="min-w-0 flex-1">
+                        {selectedSupplier ? (
+                          <>
+                            <p className="truncate text-lg font-black text-slate-900 leading-tight">
+                              {selectedSupplier.name}
+                            </p>
+                            <p className="text-sm font-bold text-slate-500 mt-0.5">{selectedSupplier.code}</p>
+                          </>
+                        ) : (
+                          <p className="text-lg font-bold text-slate-400">แตะเพื่อเลือกผู้ขาย...</p>
+                        )}
+                      </div>
+                      <ChevronRight className="h-5 w-5 shrink-0 text-slate-400" strokeWidth={3} />
+                    </button>
+                    {selectedSupplierId ? (
+                      <button
+                        type="button"
+                        onClick={() => setSelectedSupplierId("")}
+                        className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border border-slate-100 text-slate-400 hover:bg-slate-50 transition-all"
+                        aria-label="ล้างการเลือกผู้ขาย"
+                      >
+                        <X className="h-6 w-6" strokeWidth={3} />
+                      </button>
+                    ) : null}
                   </div>
                   {suppliers.length === 0 && (
                     <p className="text-xs font-bold text-rose-500 ml-2 mt-2">ยังไม่มีข้อมูลผู้ขาย กรุณาเพิ่มที่หน้าตั้งค่าก่อน</p>
@@ -565,6 +593,100 @@ export function StockReceiveForm({ products, suppliers, returnHref, defaultProdu
           </div>
         </div>
       </div>
+
+      {supplierPickerOpen ? (
+        <div className="fixed inset-0 z-[110] flex items-end justify-center bg-slate-950/50 sm:items-center sm:p-4 backdrop-blur-sm animate-in fade-in duration-300">
+          <div className="absolute inset-0" onClick={() => setSupplierPickerOpen(false)} />
+          <div className="relative flex h-full w-full max-h-full flex-col overflow-hidden rounded-none bg-white shadow-2xl sm:h-[80dvh] sm:max-w-md sm:rounded-[2.5rem] animate-in slide-in-from-bottom-full sm:slide-in-from-bottom-12 duration-500 [animation-timing-function:cubic-bezier(0.16,1,0.3,1)]">
+            <div className="sticky top-0 z-20 flex items-center justify-between gap-3 border-b border-slate-100 bg-white px-6 py-5">
+              <div className="min-w-0">
+                <h3 className="truncate text-xl font-black text-slate-950">เลือกผู้ขาย</h3>
+                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-0.5">ค้นหาด้วยชื่อ หรือรหัสผู้ขาย</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSupplierPickerOpen(false)}
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-slate-100 text-slate-400 transition hover:bg-slate-50"
+              >
+                <X className="h-6 w-6" strokeWidth={3} />
+              </button>
+            </div>
+
+            <div className="shrink-0 border-b border-slate-50 px-6 py-4">
+              <div className="flex items-center gap-3 rounded-2xl border-2 border-slate-100 bg-slate-50 px-4 py-3.5 transition focus-within:border-[#003366]/30 focus-within:bg-white shadow-sm">
+                <Search className="h-5 w-5 shrink-0 text-slate-400" strokeWidth={2.5} />
+                <input
+                  type="text"
+                  value={supplierPickerQuery}
+                  onChange={(e) => setSupplierPickerQuery(e.target.value)}
+                  placeholder="ค้นหาชื่อ หรือรหัส..."
+                  className="min-w-0 flex-1 bg-transparent text-lg font-bold text-slate-900 outline-none placeholder:text-slate-400"
+                />
+                {supplierPickerQuery ? (
+                  <button
+                    type="button"
+                    onClick={() => setSupplierPickerQuery("")}
+                    className="text-slate-400 transition hover:text-slate-600"
+                  >
+                    <X className="h-5 w-5" strokeWidth={2.5} />
+                  </button>
+                ) : null}
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto px-4 py-4 space-y-2">
+              {filteredSuppliers.length === 0 ? (
+                <div className="flex h-full min-h-[16rem] flex-col items-center justify-center rounded-[2rem] border-2 border-dashed border-slate-100 bg-slate-50/50 px-6 text-center">
+                  <div className="h-16 w-16 rounded-full bg-white flex items-center justify-center text-slate-200 mb-4 shadow-sm">
+                    <Factory className="h-8 w-8" strokeWidth={2} />
+                  </div>
+                  <p className="text-lg font-black text-slate-400">ไม่พบข้อมูลผู้ขาย</p>
+                  <p className="text-sm font-bold text-slate-300 mt-1">ลองเปลี่ยนคำค้นหาดูใหม่</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {filteredSuppliers.map((supplier) => {
+                    const isSelected = supplier.id === selectedSupplierId;
+                    return (
+                      <button
+                        key={supplier.id}
+                        type="button"
+                        onClick={() => {
+                          setSelectedSupplierId(supplier.id);
+                          setSupplierPickerOpen(false);
+                          setSupplierPickerQuery("");
+                        }}
+                        className={`group flex w-full items-center gap-4 rounded-[1.5rem] border-2 px-5 py-4 text-left transition-all active:scale-[0.98] ${
+                          isSelected
+                            ? "border-[#003366] bg-[#003366]/5 shadow-md"
+                            : "border-slate-50 bg-white hover:border-[#003366]/20 hover:shadow-sm"
+                        }`}
+                      >
+                        <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl transition-colors ${
+                          isSelected ? "bg-[#003366] text-white" : "bg-slate-50 text-slate-400 group-hover:text-[#003366]"
+                        }`}>
+                          <Factory className="h-5 w-5" strokeWidth={2.5} />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className={`text-lg font-black leading-tight transition-colors ${
+                            isSelected ? "text-[#003366]" : "text-slate-900"
+                          }`}>{supplier.name}</p>
+                          <p className="mt-0.5 text-sm font-bold text-slate-400 uppercase tracking-widest">{supplier.code}</p>
+                        </div>
+                        {isSelected && (
+                          <div className="h-6 w-6 rounded-full bg-[#003366] flex items-center justify-center text-white shadow-sm">
+                            <Check className="h-4 w-4" strokeWidth={4} />
+                          </div>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

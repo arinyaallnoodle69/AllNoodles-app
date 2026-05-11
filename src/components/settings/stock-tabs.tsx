@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 type StockTabsProps = {
-  current: "movements" | "stock" | "history" | "issues";
+  current: "stock" | "history" | "issues";
 };
 
 const tabs = [
@@ -9,11 +9,6 @@ const tabs = [
     href: "/stock",
     key: "stock",
     label: "สต็อกคงเหลือ",
-  },
-  {
-    href: "/stock/movements",
-    key: "movements",
-    label: "การเคลื่อนไหว",
   },
   {
     href: "/stock/history",

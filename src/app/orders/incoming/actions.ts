@@ -418,147 +418,175 @@ export async function updateOrderItemsBatchAction(input: {
     return { error: "สามารถแก้ไขได้เฉพาะออเดอร์ที่ยังไม่จัดส่ง" };
   }
 
-  // 2. Process Removals
+  // 2. Parallel Data Gathering
+  const itemIdsToFetch = [...removedIds, ...updates.map((u) => u.itemId)];
+  const additionProductIds = additions.map((a) => a.productId);
+  const additionSaleUnitIds = additions.map((a) => a.productSaleUnitId).filter(Boolean) as string[];
+
+  const [itemsRes, additionProductsRes, additionSaleUnitsRes] = await Promise.all([
+    itemIdsToFetch.length > 0
+      ? admin.from("order_items").select("*").in("id", itemIdsToFetch)
+      : Promise.resolve({ data: [] }),
+    additionProductIds.length > 0
+      ? admin.from("products").select("id, cost_price, stock_quantity").in("id", additionProductIds)
+      : Promise.resolve({ data: [] }),
+    additionSaleUnitIds.length > 0
+      ? admin.from("product_sale_units").select("*").in("id", additionSaleUnitIds)
+      : Promise.resolve({ data: [] }),
+  ]);
+
+  const itemsMap = new Map((itemsRes.data ?? []).map((i) => [i.id, i]));
+  const productsMap = new Map((additionProductsRes.data ?? []).map((p) => [p.id, p]));
+  const saleUnitsMap = new Map((additionSaleUnitsRes.data ?? []).map((s) => [s.id, s]));
+
+  // Also need products for existing items to handle stock correctly
+  const existingProductIds = Array.from(new Set((itemsRes.data ?? []).map((i) => i.product_id)));
+  const missingProductIdsForStock = existingProductIds.filter((id) => !productsMap.has(id));
+  if (missingProductIdsForStock.length > 0) {
+    const { data: extraProducts } = await admin
+      .from("products")
+      .select("id, cost_price, stock_quantity")
+      .in("id", missingProductIdsForStock);
+    (extraProducts ?? []).forEach((p) => productsMap.set(p.id, p));
+  }
+
+  // Handle default sale units for additions that don't specify one
+  const needsDefaultSaleUnit = additions.filter((a) => !a.productSaleUnitId).map((a) => a.productId);
+  if (needsDefaultSaleUnit.length > 0) {
+    const { data: defaultUnits } = await admin
+      .from("product_sale_units")
+      .select("*")
+      .in("product_id", needsDefaultSaleUnit)
+      .eq("is_default", true);
+    (defaultUnits ?? []).forEach((s) => saleUnitsMap.set(`default-${s.product_id}`, s));
+  }
+
+  // 3. Prepare Batch Operations
+  const upsertItems: Database["public"]["Tables"]["order_items"]["Insert"][] = [];
+  const stockDeltas = new Map<string, number>(); // productId -> total qty_in_base_unit change (+ ordered, - ordered)
+
+  // Removals
+  for (const itemId of removedIds) {
+    const item = itemsMap.get(itemId);
+    if (item && order.status === "submitted") {
+      const current = stockDeltas.get(item.product_id) || 0;
+      stockDeltas.set(item.product_id, current - Number(item.quantity_in_base_unit));
+    }
+  }
+
+  // Updates
+  for (const update of updates) {
+    const item = itemsMap.get(update.itemId);
+    if (item && Number(item.quantity) !== update.quantity) {
+      const ratio = Number(item.sale_unit_ratio) || 1;
+      const newQtyBase = update.quantity * ratio;
+      const oldQtyBase = Number(item.quantity_in_base_unit);
+      const qtyDelta = newQtyBase - oldQtyBase;
+      const newLineTotal = update.quantity * Number(item.unit_price);
+
+      upsertItems.push({
+        id: item.id,
+        order_id: item.order_id,
+        organization_id: item.organization_id,
+        product_id: item.product_id,
+        sale_unit_label: item.sale_unit_label,
+        unit_price: Number(item.unit_price),
+        quantity: update.quantity,
+        quantity_in_base_unit: newQtyBase,
+        line_total: newLineTotal,
+        product_sale_unit_id: item.product_sale_unit_id,
+        sale_unit_ratio: Number(item.sale_unit_ratio),
+        cost_price: Number(item.cost_price),
+      });
+
+      if (qtyDelta !== 0 && order.status === "submitted") {
+        const current = stockDeltas.get(item.product_id) || 0;
+        stockDeltas.set(item.product_id, current + qtyDelta);
+      }
+    }
+  }
+
+  // Additions
+  for (const add of additions) {
+    const saleUnit = add.productSaleUnitId
+      ? saleUnitsMap.get(add.productSaleUnitId)
+      : saleUnitsMap.get(`default-${add.productId}`);
+
+    if (saleUnit) {
+      const product = productsMap.get(add.productId);
+      const ratio = Number(saleUnit.base_unit_quantity) || 1;
+      const lineTotal = add.quantity * add.unitPrice;
+      const qtyBase = add.quantity * ratio;
+
+      upsertItems.push({
+        order_id: orderId,
+        organization_id: session.organizationId,
+        product_id: add.productId,
+        product_sale_unit_id: saleUnit.id,
+        quantity: add.quantity,
+        quantity_in_base_unit: qtyBase,
+        unit_price: add.unitPrice,
+        line_total: lineTotal,
+        sale_unit_label: saleUnit.unit_label,
+        sale_unit_ratio: ratio,
+        cost_price: Number(product?.cost_price ?? 0),
+      });
+
+      if (order.status === "submitted") {
+        const current = stockDeltas.get(add.productId) || 0;
+        stockDeltas.set(add.productId, current + qtyBase);
+      }
+    }
+  }
+
+  // 4. Execution
+  // Delete removed items
   if (removedIds.length > 0) {
-    for (const itemId of removedIds) {
-      const { data: item } = await admin
-        .from("order_items")
-        .select("product_id, quantity_in_base_unit")
-        .eq("id", itemId)
-        .single();
-
-      if (item) {
-        await admin.from("order_items").delete().eq("id", itemId);
-        if (order.status === "submitted") {
-          await restoreItemStock(
-            admin,
-            session.organizationId,
-            session.userId,
-            item.product_id,
-            Number(item.quantity_in_base_unit),
-            `ลบรายการจากออเดอร์ ${order.order_number} (Batch)`
-          );
-        }
-      }
-    }
+    await admin.from("order_items").delete().in("id", removedIds);
   }
 
-  // 3. Process Updates
-  if (updates.length > 0) {
-    for (const update of updates) {
-      const { data: item } = await admin
-        .from("order_items")
-        .select("id, product_id, quantity, quantity_in_base_unit, sale_unit_ratio, unit_price")
-        .eq("id", update.itemId)
-        .single();
-
-      if (item && Number(item.quantity) !== update.quantity) {
-        const ratio = Number(item.sale_unit_ratio) || 1;
-        const newQtyBase = update.quantity * ratio;
-        const oldQtyBase = Number(item.quantity_in_base_unit);
-        const qtyDelta = newQtyBase - oldQtyBase;
-        const newLineTotal = update.quantity * Number(item.unit_price);
-
-        await admin.from("order_items").update({
-          quantity: update.quantity,
-          quantity_in_base_unit: newQtyBase,
-          line_total: newLineTotal
-        }).eq("id", update.itemId);
-
-        if (qtyDelta !== 0 && order.status === "submitted") {
-          const { data: product } = await admin.from("products").select("stock_quantity").eq("id", item.product_id).single();
-          if (product) {
-            const stockBefore = Number(product.stock_quantity);
-            const stockAfter = Math.max(0, stockBefore - qtyDelta);
-            await admin.from("products").update({ stock_quantity: stockAfter }).eq("id", item.product_id);
-            await admin.from("inventory_movements").insert({
-              created_by: session.userId,
-              metadata: { order_id: orderId, source: "order_management_batch" },
-              movement_type: qtyDelta > 0 ? "issue" : "adjustment",
-              notes: `ปรับจำนวนในออเดอร์ ${order.order_number}`,
-              organization_id: session.organizationId,
-              product_id: item.product_id,
-              quantity_delta: -qtyDelta,
-              stock_after: stockAfter,
-              stock_before: stockBefore
-            });
-          }
-        }
-      }
-    }
+  // Upsert updated and new items
+  if (upsertItems.length > 0) {
+    const { error: upsertError } = await admin.from("order_items").upsert(upsertItems);
+    if (upsertError) return { error: "ไม่สามารถปรับปรุงรายการสินค้าได้: " + upsertError.message };
   }
 
-  // 4. Process Additions
-  if (additions.length > 0) {
-    for (const add of additions) {
-      let saleUnit;
-      if (add.productSaleUnitId) {
-        const res = await admin
-          .from("product_sale_units")
-          .select("id, product_id, unit_label, base_unit_quantity")
-          .eq("id", add.productSaleUnitId)
-          .single();
-        saleUnit = res.data;
-      }
+  // Update stocks and movements if needed
+  if (stockDeltas.size > 0 && order.status === "submitted") {
+    const movements: Database["public"]["Tables"]["inventory_movements"]["Insert"][] = [];
+    for (const [productId, delta] of stockDeltas.entries()) {
+      if (delta === 0) continue;
+      const product = productsMap.get(productId);
+      if (product) {
+        const stockBefore = Number(product.stock_quantity);
+        const stockAfter = Math.max(0, stockBefore - delta);
 
-      if (!saleUnit) {
-        const res = await admin
-          .from("product_sale_units")
-          .select("id, product_id, unit_label, base_unit_quantity")
-          .eq("product_id", add.productId)
-          .eq("is_default", true)
-          .single();
-        saleUnit = res.data;
-      }
-
-      if (saleUnit) {
-        const ratio = Number(saleUnit.base_unit_quantity) || 1;
-        const lineTotal = add.quantity * add.unitPrice;
-        const qtyBase = add.quantity * ratio;
-
-        const { data: product } = await admin.from("products").select("cost_price, stock_quantity").eq("id", add.productId).single();
-
-        await admin.from("order_items").insert({
-          order_id: orderId,
+        await admin.from("products").update({ stock_quantity: stockAfter }).eq("id", productId);
+        movements.push({
+          created_by: session.userId,
+          metadata: { order_id: orderId, source: "order_management_batch_optimized" },
+          movement_type: delta > 0 ? "issue" : "adjustment",
+          notes: `ปรับออเดอร์ ${order.order_number} (Batch Optimized)`,
           organization_id: session.organizationId,
-          product_id: add.productId,
-          product_sale_unit_id: saleUnit.id,
-          quantity: add.quantity,
-          quantity_in_base_unit: qtyBase,
-          unit_price: add.unitPrice,
-          line_total: lineTotal,
-          sale_unit_label: saleUnit.unit_label,
-          sale_unit_ratio: ratio,
-          cost_price: Number(product?.cost_price ?? 0)
+          product_id: productId,
+          quantity_delta: -delta,
+          stock_after: stockAfter,
+          stock_before: stockBefore,
         });
-
-        if (order.status === "submitted" && product) {
-          const stockBefore = Number(product.stock_quantity);
-          const stockAfter = stockBefore - qtyBase;
-          await admin.from("products").update({ stock_quantity: stockAfter }).eq("id", add.productId);
-          await admin.from("inventory_movements").insert({
-            created_by: session.userId,
-            metadata: { order_id: orderId, source: "order_management_batch" },
-            movement_type: "issue",
-            notes: `เพิ่มสินค้าในออเดอร์ ${order.order_number}`,
-            organization_id: session.organizationId,
-            product_id: add.productId,
-            quantity_delta: -qtyBase,
-            stock_after: stockAfter,
-            stock_before: stockBefore
-          });
-        }
       }
+    }
+    if (movements.length > 0) {
+      await admin.from("inventory_movements").insert(movements);
     }
   }
 
   // 5. Recalculate Order Total
   const { data: finalItems } = await admin.from("order_items").select("line_total").eq("order_id", orderId);
-  const finalTotal = (finalItems ?? []).reduce((sum: number, i: { line_total: number }) => sum + Number(i.line_total), 0);
+  const finalTotal = (finalItems ?? []).reduce((sum, i) => sum + Number(i.line_total), 0);
 
   await admin.from("orders").update({
     subtotal_amount: finalTotal,
-    total_amount: finalTotal
+    total_amount: finalTotal,
   }).eq("id", orderId);
 
   // 6. Sync Delivery Note if needed

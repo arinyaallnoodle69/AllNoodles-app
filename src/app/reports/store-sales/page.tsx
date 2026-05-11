@@ -1,12 +1,10 @@
 import { Suspense } from "react";
 import Link from "next/link";
-import type { LucideIcon } from "lucide-react";
 import {
   Store,
   Wallet,
   BadgeDollarSign,
   ShoppingCart,
-  Trophy,
   Filter,
   ChevronLeft,
   ChevronRight,
@@ -39,10 +37,6 @@ function fmt(n: number) {
 }
 
 function fmtMoney(n: number) {
-  return n.toLocaleString("th-TH", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
-}
-
-function fmtMoneyCompact(n: number) {
   return n.toLocaleString("th-TH", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 }
 
@@ -195,6 +189,28 @@ function StoreRowPrint({
 
 // ─── Mobile Card ──────────────────────────────────────────────────────────────
 
+function InfoBlockReport({
+  label,
+  value,
+  icon,
+  className = "",
+}: {
+  label: string;
+  value: React.ReactNode;
+  icon?: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <div className={`min-w-0 ${className}`}>
+      <p className="text-[11px] font-black uppercase tracking-[0.12em] text-slate-950">{label}</p>
+      <div className="mt-1.5 flex items-center gap-2 text-[15px] font-semibold text-slate-950">
+        {icon && <span className="shrink-0 text-slate-400">{icon}</span>}
+        <span className="truncate">{value}</span>
+      </div>
+    </div>
+  );
+}
+
 function StoreCard({
   row,
   rank,
@@ -219,22 +235,66 @@ function StoreCard({
           : undefined;
 
   return (
-    <div className="bg-white px-3 py-4 sm:px-4">
-      <div className="-ml-1 flex items-start justify-between gap-2.5">
-        <div className="flex min-w-0 items-start gap-2.5">
-          <div className="relative shrink-0 pt-1.5">
-            <span
-              className={`flex h-6 w-6 items-center justify-center rounded-full text-[11px] font-black text-white shadow-[0_6px_14px_rgba(27,27,33,0.22)] ${rankBadgeStyle ? "" : "bg-[#003366]"}`}
-              style={rankBadgeStyle}
-            >
-              {rank}
-            </span>
-          </div>
-          <div className="min-w-0">
-            <p className="truncate font-mono text-sm text-slate-400">{row.customerCode}</p>
-            <p className="mt-0.5 truncate text-lg font-black text-slate-800">{row.customerName}</p>
+    <article className="border-b border-slate-400 bg-white px-5 py-5 shadow-[0_10px_26px_rgba(15,23,42,0.1)] last:border-b-0">
+      <div className="flex items-start gap-3">
+        <div className="min-w-0 flex-1">
+          <p className="line-clamp-2 text-[1.18rem] font-bold leading-tight text-slate-950">
+            {row.customerName}
+          </p>
+          <div className="mt-1.5 flex items-center gap-2">
+            <p className="truncate font-mono text-sm font-semibold text-slate-500" translate="no">
+              {row.customerCode}
+            </p>
           </div>
         </div>
+
+        <div className="shrink-0">
+          <span
+            className={`flex h-9 w-9 items-center justify-center rounded-xl text-xs font-black text-white shadow-md ${rankBadgeStyle ? "" : "bg-[#003366]"}`}
+            style={rankBadgeStyle}
+          >
+            {rank}
+          </span>
+        </div>
+      </div>
+
+      <div className="mt-5 grid grid-cols-2 gap-x-4 gap-y-5">
+        <InfoBlockReport
+          label="ออเดอร์"
+          icon={<ShoppingCart className="h-4 w-4" strokeWidth={2.2} />}
+          value={`${fmt(row.totalOrders)} รายการ`}
+        />
+        <div className="min-w-0 border-l border-slate-300 pl-4">
+          <p className="text-[11px] font-black uppercase tracking-[0.12em] text-slate-950">ยอดขาย</p>
+          <p className="mt-1.5 text-[1.05rem] font-bold leading-none text-[#003366]">
+            {fmtMoney(row.totalRevenue)}
+          </p>
+        </div>
+
+        <InfoBlockReport
+          label="ต้นทุน"
+          icon={<Wallet className="h-4 w-4" strokeWidth={2.2} />}
+          value={fmtMoney(row.totalCost)}
+        />
+        <div className="min-w-0 border-l border-slate-300 pl-4">
+          <p className="text-[11px] font-black uppercase tracking-[0.12em] text-slate-950">กำไรสุทธิ</p>
+          <p className={`mt-1.5 text-[1.05rem] font-bold leading-none ${profitPositive ? "text-emerald-600" : "text-red-500"}`}>
+            {fmtMoney(netProfit)}
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-5 border-t border-slate-100 pt-4 flex items-center justify-between gap-4">
+        <div className="min-w-0">
+          <p className="text-[11px] font-black uppercase tracking-[0.12em] text-slate-950">กำไร (%)</p>
+          <div className="mt-1.5 flex items-center gap-2">
+            <BadgeDollarSign className={`h-4 w-4 shrink-0 ${profitPositive ? "text-emerald-500" : "text-red-400"}`} strokeWidth={2.2} />
+            <span className={`text-[15px] font-bold ${profitPositive ? "text-emerald-600" : "text-red-500"}`}>
+              {fmtPercent(margin)}
+            </span>
+          </div>
+        </div>
+
         <StoreDetailButton
           customerId={row.customerId}
           customerName={row.customerName}
@@ -243,52 +303,7 @@ function StoreCard({
           toDate={toDate}
         />
       </div>
-
-      <div className="mt-4 grid grid-cols-2 gap-2.5">
-        <div className="bg-white px-4 py-2.5 text-center shadow-[0_8px_18px_rgba(27,27,33,0.1)]">
-          <p className="text-sm text-slate-400">ออเดอร์</p>
-          <p className="mt-0.5 text-base font-bold text-slate-800 tabular-nums">{fmt(row.totalOrders)}</p>
-        </div>
-        <div className="bg-white px-4 py-2.5 text-center shadow-[0_8px_18px_rgba(27,27,33,0.1)]">
-          <p className="text-sm text-slate-400">ต้นทุน</p>
-          <p className="mt-0.5 text-base font-bold text-slate-800 tabular-nums">{fmtMoneyCompact(row.totalCost)}</p>
-        </div>
-      </div>
-
-      <div className="mt-3 grid grid-cols-2 gap-2.5">
-        <div className="bg-white px-4 py-2.5 text-center shadow-[0_8px_18px_rgba(27,27,33,0.1)]">
-          <p className="text-sm text-slate-500">ยอดขาย</p>
-          <p className="mt-0.5 text-base font-black text-[#003366] tabular-nums">{fmtMoneyCompact(row.totalRevenue)}</p>
-        </div>
-        <div className={`px-4 py-2.5 text-center shadow-[0_8px_18px_rgba(27,27,33,0.1)] ${profitPositive ? "bg-emerald-600" : "bg-red-50"}`}>
-          <p className={`text-sm ${profitPositive ? "text-emerald-100" : "text-slate-500"}`}>กำไรสุทธิ</p>
-          <p className={`mt-0.5 text-base font-black leading-tight tabular-nums ${profitPositive ? "text-white" : "text-red-500"}`}>{fmtMoneyCompact(netProfit)}</p>
-        </div>
-      </div>
-      <div className="mt-3">
-        <div className={`px-4 py-2.5 text-center shadow-[0_8px_18px_rgba(27,27,33,0.1)] ${profitPositive ? "bg-emerald-50" : "bg-red-50"}`}>
-          <p className={`text-sm ${profitPositive ? "text-emerald-700" : "text-slate-500"}`}>กำไร (%)</p>
-          <p className={`mt-0.5 text-base font-black leading-tight tabular-nums ${profitPositive ? "text-emerald-700" : "text-red-500"}`}>{fmtPercent(margin)}</p>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ─── KPI Card ─────────────────────────────────────────────────────────────────
-
-function KpiCard({ label, value, sub, icon: Icon }: { label: string; value: string; sub?: string; icon: LucideIcon }) {
-  return (
-    <div className="flex flex-col rounded-2xl bg-white p-4 shadow-[0_4px_20px_rgba(27,27,33,0.05)] transition-shadow hover:shadow-[0_12px_40px_rgba(27,27,33,0.09)] sm:p-5">
-      <div className="mb-3 flex items-center justify-between">
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#003366]/5 text-[#003366] sm:h-12 sm:w-12">
-          <Icon className="h-5 w-5 sm:h-6 sm:w-6" strokeWidth={2.2} />
-        </div>
-      </div>
-      <p className="text-xs font-bold uppercase tracking-widest text-slate-400">{label}</p>
-      <p className="mt-1 text-xl font-black text-slate-900 tabular-nums sm:text-2xl">{value}</p>
-      {sub && <p className="mt-1 text-xs font-semibold text-slate-400">{sub}</p>}
-    </div>
+    </article>
   );
 }
 
@@ -414,13 +429,6 @@ async function StoreSalesReportContent({ searchParams }: PageProps) {
               <button type="submit" className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#003366] py-3.5 text-base font-bold text-white transition hover:bg-[#1a237e]"><Filter className="h-4 w-4" strokeWidth={2} />ค้นหา</button>
             </form>
           </MobileSearchDrawer>
-
-          <section className="mb-6 grid grid-cols-2 gap-3 sm:mb-8 sm:gap-4 lg:grid-cols-4">
-            <KpiCard label="ยอดขายรวม" value={fmtMoney(summary.totalRevenue)} sub={`${fmt(summary.totalOrders)} ออเดอร์`} icon={Wallet} />
-            <KpiCard label="จำนวนร้านค้า" value={`${fmt(summary.totalStores)} ร้าน`} icon={Store} />
-            <KpiCard label="กำไรสุทธิ" value={fmtMoney(summary.totalRevenue - summary.totalCost)} sub={summary.totalRevenue > 0 ? `อัตรากำไร ${fmtPercent(marginPercent)}` : undefined} icon={profitPositive ? BadgeDollarSign : ShoppingCart} />
-            <KpiCard label="ร้านค้ายอดดีที่สุด" value={rows[0]?.customerName || "—"} sub={rows[0] ? fmtMoney(rows[0].totalRevenue) : undefined} icon={Trophy} />
-          </section>
 
           <section className="overflow-hidden rounded-2xl bg-white shadow-[0_4px_20px_rgba(27,27,33,0.05)]">
             <div className="hidden border-b border-slate-100 px-5 py-4 md:block sm:px-6 sm:py-5">

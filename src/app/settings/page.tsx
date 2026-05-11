@@ -51,7 +51,7 @@ export default async function SettingsIndexPage() {
       description="เลือกหมวดการตั้งค่าที่ต้องการจัดการต่อได้จากหน้านี้"
       floatingSubmit={false}
     >
-      <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-5">
+      <div className="grid gap-4 md:grid-cols-2 lg:gap-5 xl:grid-cols-5">
         {options.map((option) => {
           const Icon = option.icon;
 
@@ -59,16 +59,18 @@ export default async function SettingsIndexPage() {
             <Link
               key={option.href}
               href={option.href}
-              className="group rounded-[1.75rem] border border-slate-200 bg-white p-6 shadow-[0_18px_55px_rgba(15,23,42,0.05)] transition hover:-translate-y-0.5 hover:border-[#003366]/30 hover:shadow-[0_24px_60px_rgba(0,51,102,0.10)]"
+              className="group rounded-3xl border border-slate-200 bg-white p-5 shadow-[0_18px_55px_rgba(15,23,42,0.04)] transition hover:-translate-y-0.5 hover:border-[#003366]/30 hover:shadow-[0_24px_60px_rgba(0,51,102,0.08)] sm:p-6"
             >
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#003366]/10 text-[#003366]">
-                <Icon className="h-6 w-6" strokeWidth={2.2} />
+              <div className="flex items-center gap-4 sm:flex-col sm:items-start sm:gap-5">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#003366]/10 text-[#003366]">
+                  <Icon className="h-6 w-6" strokeWidth={2.2} />
+                </div>
+                <h2 className="text-lg font-bold text-slate-950 sm:text-xl">{option.label}</h2>
               </div>
 
-              <h2 className="mt-5 text-xl font-semibold text-slate-950">{option.label}</h2>
-              <p className="mt-2 text-sm leading-7 text-slate-500">{option.description}</p>
+              <p className="mt-3 text-sm leading-7 text-slate-500 sm:mt-2">{option.description}</p>
 
-              <span className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-[#003366]">
+              <span className="mt-4 inline-flex items-center gap-2 text-sm font-bold text-[#003366] sm:mt-5">
                 ไปยังหน้านี้
                 <ArrowRight
                   className="h-4 w-4 transition group-hover:translate-x-1"

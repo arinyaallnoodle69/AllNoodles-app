@@ -2,13 +2,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BarChart2, FileCheck, Store, TrendingUp } from "lucide-react";
+import { BarChart2, Store, TrendingUp } from "lucide-react";
 
 const reportTabs = [
   { href: "/reports/sales-overview", icon: BarChart2, label: "ภาพรวม" },
   { href: "/reports/product-sales", icon: TrendingUp, label: "สินค้า" },
   { href: "/reports/store-sales", icon: Store, label: "ร้านค้า" },
-  { href: "/reports/delivery-notes", icon: FileCheck, label: "ใบจัดส่ง" },
 ];
 
 export function ReportsMobileTabs() {

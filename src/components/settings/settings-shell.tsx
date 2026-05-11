@@ -3,10 +3,10 @@
 import { useState } from "react";
 import Link from "next/link";
 import type { LucideIcon } from "lucide-react";
-import { ArrowUpRight, Save, Search, X } from "lucide-react";
+import { ArrowUpRight, ChevronRight, Save, Search, X } from "lucide-react";
 import { AppSidebarLayout } from "@/components/app-sidebar";
 
-type SettingsSection = "customerData" | "customers" | "products" | "vehicles";
+type SettingsSection = "customerData" | "customers" | "products" | "vehicles" | "suppliers" | "orderWindow" | "stock";
 
 type SettingsShellProps = {
   children: React.ReactNode;
@@ -191,6 +191,14 @@ export function SettingsShell({
       </div>
 
       <main className="mx-auto min-w-0 w-full max-w-[88rem] px-4 py-4 pb-28 lg:px-3 lg:py-8 lg:pb-32">
+        {/* Mobile Breadcrumb */}
+        {current && (
+          <nav className="mb-4 flex items-center gap-1.5 text-[13px] font-bold lg:hidden">
+            <Link href="/settings" className="text-slate-400 transition hover:text-[#003366]">ตั้งค่า</Link>
+            <ChevronRight className="h-3.5 w-3.5 text-slate-300" strokeWidth={3} />
+            <span className="text-[#003366]">{title}</span>
+          </nav>
+        )}
         {children}
       </main>
 

@@ -380,8 +380,9 @@ export const getStockDashboardData = cache(
 
     return {
       lowStockCount: normalizedProducts.filter((product) => {
+        if (!product.isActive) return false;
         const availableQuantity = product.onHandQuantity - product.reservedQuantity;
-        return availableQuantity > 0 && availableQuantity <= 5;
+        return availableQuantity <= 5;
       }).length,
       movementRows: movements.map((movement) => ({
         createdAt: movement.created_at,

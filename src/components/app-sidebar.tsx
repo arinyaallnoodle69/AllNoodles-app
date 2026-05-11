@@ -11,7 +11,6 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
-  FileCheck,
   LayoutDashboard,
   LogOut,
   Package2,
@@ -39,17 +38,14 @@ import { ScrollToTopButton } from "@/components/ui/scroll-to-top-button";
 
 const PAGE_TITLES: [string, string][] = [
   ["/orders/incoming", "รายการออเดอร์"],
-  ["/orders/delivery-notes", "ใบจัดส่ง"],
   ["/orders/packing-list", "ใบจัดสินค้า"],
   ["/delivery/print", "พิมพ์ใบจัดส่ง"],
-  ["/delivery", "ใบจัดส่ง"],
   ["/billing/print", "พิมพ์ใบวางบิล"],
   ["/billing", "ใบวางบิล"],
   ["/stock/movements", "ความเคลื่อนไหวสต็อก"],
   ["/stock", "สต็อก"],
   ["/reports/product-sales", "ยอดขายสินค้า"],
   ["/reports/store-sales", "ยอดขายตามร้านค้า"],
-  ["/reports/delivery-notes", "รายงานใบจัดส่ง"],
   ["/settings/products", "จัดการสินค้า"],
   ["/settings/customers", "จัดการร้านค้า"],
   ["/settings/customer-data", "ข้อมูลลูกค้า"],
@@ -122,7 +118,6 @@ const mainNavItems = [
   { href: "/dashboard", icon: LayoutDashboard, label: "แดชบอร์ด" },
   { href: "/stock", icon: Boxes, label: "สต็อก" },
   { href: "/orders/incoming", icon: ReceiptText, label: "รายการออเดอร์" },
-  { href: "/delivery", icon: Truck, label: "ใบจัดส่ง" },
   { href: "/billing", icon: Receipt, label: "ใบวางบิล" },
 ] as const;
 
@@ -130,7 +125,6 @@ const reportsNavItems = [
   { href: "/reports/sales-overview", icon: BarChart2, label: "ภาพรวมยอดขายรายปี" },
   { href: "/reports/product-sales", icon: TrendingUp, label: "ยอดขายสินค้า" },
   { href: "/reports/store-sales", icon: Store, label: "ยอดขายตามร้านค้า" },
-  { href: "/reports/delivery-notes", icon: FileCheck, label: "รายงานใบจัดส่ง" },
 ] as const;
 
 const settingsNavItems = [

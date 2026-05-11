@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { Filter, Package, ChevronLeft, ChevronRight } from "lucide-react";
+import { Filter, Package, ChevronLeft, ChevronRight, ShoppingCart, Wallet, BadgeDollarSign } from "lucide-react";
 import { ThaiDatePicker } from "@/components/ui/thai-date-picker";
 import { AppSidebarLayout } from "@/components/app-sidebar";
 import { PageLoader } from "@/components/page-loader";
@@ -34,10 +34,6 @@ function fmt(n: number) {
 }
 
 function fmtMoney(n: number) {
-  return n.toLocaleString("th-TH", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
-}
-
-function fmtMoneyCompact(n: number) {
   return n.toLocaleString("th-TH", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 }
 
@@ -170,7 +166,30 @@ function ProductRowPrint({ row, globalRank }: { row: ProductSalesRow; globalRank
   );
 }
 
-// Mobile card
+// ─── Mobile Card ──────────────────────────────────────────────────────────────
+
+function InfoBlockReport({
+  label,
+  value,
+  icon,
+  className = "",
+}: {
+  label: string;
+  value: React.ReactNode;
+  icon?: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <div className={`min-w-0 ${className}`}>
+      <p className="text-[11px] font-black uppercase tracking-[0.12em] text-slate-950">{label}</p>
+      <div className="mt-1.5 flex items-center gap-2 text-[15px] font-semibold text-slate-950">
+        {icon && <span className="shrink-0 text-slate-400">{icon}</span>}
+        <span className="truncate">{value}</span>
+      </div>
+    </div>
+  );
+}
+
 function ProductCard({ row, globalRank }: { row: ProductSalesRow; globalRank: number }) {
   const netProfit = row.totalRevenue - row.totalCost;
   const profitPositive = netProfit >= 0;
@@ -185,61 +204,78 @@ function ProductCard({ row, globalRank }: { row: ProductSalesRow; globalRank: nu
           : undefined;
 
   return (
-    <div className="bg-white px-3 py-4 sm:px-4">
-      <div className="-ml-1 flex items-start gap-2.5">
-        <div className="relative shrink-0">
+    <article className="border-b border-slate-400 bg-white px-5 py-5 shadow-[0_10px_26px_rgba(15,23,42,0.1)] last:border-b-0">
+      <div className="flex items-start gap-3">
+        <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-slate-50 ring-1 ring-slate-200">
+          {row.imageUrl ? (
+            <Image src={row.imageUrl} alt={row.name} width={48} height={48} className="h-full w-full object-cover" />
+          ) : (
+            <Package className="h-5 w-5 text-slate-300" strokeWidth={2.2} />
+          )}
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="line-clamp-2 text-[1.1rem] font-bold leading-tight text-slate-950">
+            {row.name}
+          </p>
+          <div className="mt-1.5 flex items-center gap-2">
+            <p className="truncate font-mono text-[13px] font-semibold text-slate-500" translate="no">
+              {row.sku}
+            </p>
+          </div>
+        </div>
+
+        <div className="shrink-0">
           <span
-            className={`absolute -left-2 -top-2 z-10 flex h-6 w-6 items-center justify-center rounded-full text-[11px] font-black text-white shadow-[0_6px_14px_rgba(27,27,33,0.22)] ${rankBadgeStyle ? "" : "bg-[#003366]"}`}
+            className={`flex h-9 w-9 items-center justify-center rounded-xl text-xs font-black text-white shadow-md ${rankBadgeStyle ? "" : "bg-[#003366]"}`}
             style={rankBadgeStyle}
           >
             {globalRank}
           </span>
-          {row.imageUrl ? (
-            <Image src={row.imageUrl} alt={row.name} width={52} height={52} className="h-12 w-12 rounded-xl object-cover" />
-          ) : (
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-slate-100">
-              <Package className="h-5 w-5 text-slate-400" strokeWidth={1.5} />
-            </div>
-          )}
         </div>
-        <div className="min-w-0">
-          <p className="truncate font-mono text-sm text-slate-400">{row.sku}</p>
-          <p className="mt-1 overflow-hidden text-base font-bold leading-5 text-slate-800" style={{ display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>
-            {row.name}
+      </div>
+
+      <div className="mt-5 grid grid-cols-2 gap-x-4 gap-y-5">
+        <InfoBlockReport
+          label="จำนวนที่ขาย"
+          icon={<ShoppingCart className="h-4 w-4" strokeWidth={2.2} />}
+          value={`${fmt(row.totalQty)} ${row.unit}`}
+        />
+        <div className="min-w-0 border-l border-slate-300 pl-4">
+          <p className="text-[11px] font-black uppercase tracking-[0.12em] text-slate-950">ยอดขาย</p>
+          <p className="mt-1.5 text-[1.05rem] font-bold leading-none text-[#003366]">
+            {fmtMoney(row.totalRevenue)}
+          </p>
+        </div>
+
+        <InfoBlockReport
+          label="ต้นทุนรวม"
+          icon={<Wallet className="h-4 w-4" strokeWidth={2.2} />}
+          value={fmtMoney(row.totalCost)}
+        />
+        <div className="min-w-0 border-l border-slate-300 pl-4">
+          <p className="text-[11px] font-black uppercase tracking-[0.12em] text-slate-950">กำไรสุทธิ</p>
+          <p className={`mt-1.5 text-[1.05rem] font-bold leading-none ${profitPositive ? "text-emerald-600" : "text-red-500"}`}>
+            {fmtMoney(netProfit)}
           </p>
         </div>
       </div>
-      <div className="mt-4 grid grid-cols-2 gap-2.5">
-        <div className="bg-white px-4 py-2.5 text-center shadow-[0_8px_18px_rgba(27,27,33,0.1)]">
-          <p className="text-sm text-slate-400">จำนวน</p>
-          <p className="mt-0.5 text-base font-bold text-slate-800 tabular-nums">{fmt(row.totalQty)} <span className="text-sm font-normal text-slate-400">{row.unit}</span></p>
-        </div>
-        <div className="bg-white px-4 py-2.5 text-center shadow-[0_8px_18px_rgba(27,27,33,0.1)]">
-          <p className="text-sm text-slate-400">ต้นทุน</p>
-          <p className="mt-0.5 text-base font-bold text-slate-800 tabular-nums">{fmtMoneyCompact(row.totalCost)}</p>
-        </div>
-      </div>
-      <div className="mt-3 grid grid-cols-2 gap-2.5">
-        <div className="bg-white px-4 py-2.5 text-center shadow-[0_8px_18px_rgba(27,27,33,0.1)]">
-          <p className="text-sm text-slate-500">จำนวนเงิน</p>
-          <p className="mt-0.5 text-base font-black text-[#003366] tabular-nums">{fmtMoneyCompact(row.totalRevenue)}</p>
-        </div>
-        <div className={`px-4 py-2.5 text-center shadow-[0_8px_18px_rgba(27,27,33,0.1)] ${profitPositive ? "bg-emerald-600" : "bg-red-50"}`}>
-          <p className={`text-sm ${profitPositive ? "text-emerald-100" : "text-slate-500"}`}>กำไรสุทธิ</p>
-          <p className={`mt-0.5 text-base font-black leading-tight tracking-tight tabular-nums ${profitPositive ? "text-white" : "text-red-500"}`}>{fmtMoneyCompact(netProfit)}</p>
+
+      <div className="mt-5 border-t border-slate-100 pt-4 flex items-center justify-between">
+        <div className="min-w-0">
+          <p className="text-[11px] font-black uppercase tracking-[0.12em] text-slate-950">กำไร (%)</p>
+          <div className="mt-1.5 flex items-center gap-2">
+            <BadgeDollarSign className={`h-4 w-4 shrink-0 ${profitPositive ? "text-emerald-500" : "text-red-400"}`} strokeWidth={2.2} />
+            <span className={`text-[15px] font-bold ${profitPositive ? "text-emerald-600" : "text-red-500"}`}>
+              {fmtPercent(margin)}
+            </span>
+          </div>
         </div>
       </div>
-      <div className="mt-3">
-        <div className={`px-4 py-2.5 text-center shadow-[0_8px_18px_rgba(27,27,33,0.1)] ${profitPositive ? "bg-emerald-50" : "bg-red-50"}`}>
-          <p className={`text-sm ${profitPositive ? "text-emerald-700" : "text-slate-500"}`}>กำไร (%)</p>
-          <p className={`mt-0.5 text-base font-black leading-tight tabular-nums ${profitPositive ? "text-emerald-700" : "text-red-500"}`}>{fmtPercent(margin)}</p>
-        </div>
-      </div>
-    </div>
+    </article>
   );
 }
 
-// Pagination
+// ─── Page Props & Entry ───────────────────────────────────────────────────────
 function Pagination({ page, total, pageSize, baseUrl }: { page: number; total: number; pageSize: number; baseUrl: string }) {
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   if (totalPages <= 1) return null;

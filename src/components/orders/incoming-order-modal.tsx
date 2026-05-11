@@ -42,6 +42,12 @@ function formatTHB(v: number) {
   return v.toLocaleString("th-TH", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
+function formatDisplayDate(value: string) {
+  const [y, m, d] = value.split("-");
+  if (!y || !m || !d) return value;
+  return `${d}/${m}/${parseInt(y, 10) + 543}`;
+}
+
 // ─── Sub-components ──────────────────────────────────────────────────────────
 
 const ItemsViewList = memo(({ detail }: { detail: OrderDetailData }) => {
@@ -500,10 +506,12 @@ export function IncomingOrderModal({ allOrders, detail, expandedId, products }: 
               <h2 className="text-2xl font-black text-white leading-normal line-clamp-1">
                 {detail.customer.name}
               </h2>
-              <div className="flex items-center gap-2 mt-1">
+              <div className="flex flex-wrap items-center gap-2 mt-1">
                 <span className="font-mono text-[11px] font-black text-white/50 tracking-widest uppercase">{detail.customer.code}</span>
                 <span className="h-2 w-px bg-white/20" />
                 <span className="font-mono text-[11px] font-black text-white/80 tracking-tight">{detail.orderNumber}</span>
+                <span className="h-2 w-px bg-white/20" />
+                <span className="text-[11px] font-black text-white/80 tracking-tight">{formatDisplayDate(detail.orderDate)}</span>
               </div>
             </div>
             <button onClick={close} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white/10 text-white/70 transition hover:bg-white/20 active:scale-90"><X className="h-6 w-6" strokeWidth={3} /></button>

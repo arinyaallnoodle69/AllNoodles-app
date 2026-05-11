@@ -14,7 +14,7 @@ function formatMoney(value: number) {
 
 export function StockSummaryCards({ data }: StockSummaryCardsProps) {
   const productCount = data.products.length;
-  const outOfStockCount = data.products.filter((product) => product.onHandQuantity <= 0).length;
+  const lowStockCount = data.lowStockCount;
 
   return (
     <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
@@ -49,16 +49,16 @@ export function StockSummaryCards({ data }: StockSummaryCardsProps) {
       <article className="rounded-[1.75rem] border border-slate-200 bg-white p-5 shadow-[0_18px_55px_rgba(15,23,42,0.05)]">
         <div className="flex items-center gap-4">
           <span className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl ${
-            (data.lowStockCount + outOfStockCount) > 0 ? "bg-rose-100 text-rose-600" : "bg-emerald-100 text-emerald-600"
+            lowStockCount > 0 ? "bg-rose-100 text-rose-600" : "bg-emerald-100 text-emerald-600"
           }`}>
             <CircleAlert className="h-6 w-6" strokeWidth={2.4} />
           </span>
           <div className="min-w-0 flex-1">
             <p className="text-xs font-black uppercase tracking-widest text-slate-400">ใกล้หมด / หมด</p>
             <p className={`mt-1 truncate text-3xl font-black tracking-tight tabular-nums ${
-               (data.lowStockCount + outOfStockCount) > 0 ? "text-rose-600" : "text-slate-950"
+               lowStockCount > 0 ? "text-rose-600" : "text-slate-950"
             }`}>
-              {(data.lowStockCount + outOfStockCount).toLocaleString("th-TH")}
+              {lowStockCount.toLocaleString("th-TH")}
             </p>
           </div>
         </div>
