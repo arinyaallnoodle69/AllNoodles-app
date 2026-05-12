@@ -147,7 +147,7 @@ export async function getPendingOrders(
     .select(`
       id, order_id, product_id, quantity, quantity_in_base_unit,
       sale_unit_label, sale_unit_ratio,
-      products!inner(name, sku)
+      products!inner(name, sku, unit)
     `)
     .eq("organization_id", organizationId)
     .in("order_id", orderIds);
@@ -178,6 +178,7 @@ export async function getPendingOrders(
     products: {
       name: string;
       sku: string;
+      unit: string;
     };
   };
 
@@ -218,7 +219,7 @@ export async function getPendingOrders(
       productId: row.product_id,
       productName: row.products.name,
       productSku: row.products.sku,
-      saleUnitLabel: row.sale_unit_label ?? "หน่วย",
+      saleUnitLabel: row.products.unit,
       orderedQty: toNum(row.quantity),
       deliveredQty,
       remainingQty,
@@ -354,7 +355,7 @@ export async function getOrderItemsForDelivery(
       productSku: row.products.sku,
       productUnit: row.products.unit,
       productSaleUnitId: row.product_sale_unit_id,
-      saleUnitLabel: row.sale_unit_label ?? row.products.unit,
+      saleUnitLabel: row.products.unit,
       saleUnitRatio,
       orderedQty: toNum(row.quantity),
       orderedBaseQty,

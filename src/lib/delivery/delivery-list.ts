@@ -1,4 +1,4 @@
-﻿import "server-only";
+import "server-only";
 
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { normalizeSearch } from "@/lib/utils/search";
@@ -97,6 +97,7 @@ type RawDeliveryLineRow = {
   products: {
     name: string;
     sku: string;
+    unit: string;
   };
 };
 
@@ -192,7 +193,7 @@ export async function getDeliveryList(
     .from("delivery_note_items")
     .select(`
       id, delivery_note_id, order_item_id, product_id, quantity_delivered, unit_price, line_total, sale_unit_label,
-      products!inner(name, sku)
+      products!inner(name, sku, unit)
     `)
     .eq("organization_id", organizationId)
     .in("delivery_note_id", noteIds)
@@ -329,19 +330,19 @@ export async function getDeliveryList(
         productId: line.product_id,
         productSku: line.products.sku,
         productName: line.products.name,
-        saleUnitLabel: line.sale_unit_label,
+        saleUnitLabel: line.products.unit,
         quantityDelivered: toNum(line.quantity_delivered),
         unitPrice: toNum(line.unit_price),
         lineTotal: toNum(line.line_total),
         imageUrl: productImageMap.get(line.product_id) ?? null,
       });
 
-      const lineKey = `${line.product_id}::${line.sale_unit_label}`;
+      const lineKey = `${line.product_id}::${line.products.unit}`;
       const current = existing.lineMap.get(lineKey) ?? {
         productId: line.product_id,
         productSku: line.products.sku,
         productName: line.products.name,
-        saleUnitLabel: line.sale_unit_label,
+        saleUnitLabel: line.products.unit,
         orderedQuantity: 0,
         deliveredQuantity: 0,
         orderedLineTotal: 0,

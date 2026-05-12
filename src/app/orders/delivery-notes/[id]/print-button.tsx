@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 export function PrintButton() {
   const [isPrinting, setIsPrinting] = useState(false);
@@ -33,4 +33,17 @@ export function PrintButton() {
       {isPrinting ? "กำลังพิมพ์..." : "พิมพ์ใบส่งของ"}
     </button>
   );
+}
+
+export function AutoPrint() {
+  const mounted = useRef(false);
+  useEffect(() => {
+    if (mounted.current) return;
+    mounted.current = true;
+    const timer = setTimeout(() => {
+      window.print();
+    }, 800);
+    return () => clearTimeout(timer);
+  }, []);
+  return null;
 }

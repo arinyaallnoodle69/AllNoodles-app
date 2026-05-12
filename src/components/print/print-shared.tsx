@@ -11,28 +11,42 @@ export const NOTE_PADDING = "6mm 8mm";
 // ─── Utilities ────────────────────────────────────────────────────────────────
 
 export function formatDate(iso: string) {
-  return new Intl.DateTimeFormat("th-TH", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-    timeZone: "Asia/Bangkok",
-  }).format(new Date(iso));
+  if (!iso || iso === "null") return iso;
+  try {
+    const d = iso.includes("T") ? iso : iso + "T00:00:00";
+    return new Intl.DateTimeFormat("th-TH", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+      timeZone: "Asia/Bangkok",
+    }).format(new Date(d));
+  } catch (e) {
+    return iso;
+  }
 }
 
 export function formatDateShort(iso: string) {
-  return new Intl.DateTimeFormat("th-TH", {
-    day: "numeric",
-    month: "short",
-    year: "2-digit",
-    timeZone: "Asia/Bangkok",
-  }).format(new Date(iso));
+  if (!iso || iso === "null") return iso;
+  try {
+    const d = iso.includes("T") ? iso : iso + "T00:00:00";
+    return new Intl.DateTimeFormat("th-TH", {
+      day: "numeric",
+      month: "short",
+      year: "2-digit",
+      timeZone: "Asia/Bangkok",
+    }).format(new Date(d));
+  } catch (e) {
+    return iso;
+  }
 }
 
-export function fmt(n: number) {
+export function fmt(n: number | null | undefined) {
+  if (n === null || n === undefined || isNaN(n)) return "0.00";
   return n.toLocaleString("th-TH", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-export function fmtQty(n: number) {
+export function fmtQty(n: number | null | undefined) {
+  if (n === null || n === undefined || isNaN(n)) return "0";
   return n.toLocaleString("th-TH", { maximumFractionDigits: 3 });
 }
 

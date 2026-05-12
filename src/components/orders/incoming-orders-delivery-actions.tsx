@@ -4,10 +4,12 @@ import { AllStoresDeliveryButton } from "@/components/orders/pending-orders-sect
 
 type IncomingOrdersDeliveryActionsProps = {
   date: string;
+  endDate?: string;
   stores: {
     customerId: string;
     customerName: string;
     customerCode: string;
+    orderDate: string;
     orderIds?: string[];
     orderNumbers?: string[];
     orderRounds: number;
@@ -15,10 +17,10 @@ type IncomingOrdersDeliveryActionsProps = {
   }[];
 };
 
-export function IncomingOrdersDeliveryActions({ date, stores }: IncomingOrdersDeliveryActionsProps) {
+export function IncomingOrdersDeliveryActions({ date, endDate, stores }: IncomingOrdersDeliveryActionsProps) {
   return (
     <div className="flex items-center gap-2">
-      <AllStoresDeliveryButton date={date} stores={stores} />
+      <AllStoresDeliveryButton date={date} endDate={endDate} stores={stores} />
     </div>
   );
 }

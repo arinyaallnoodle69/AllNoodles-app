@@ -25,6 +25,7 @@ export type StockProductOption = {
     isDefault: boolean;
     label: string;
   }[];
+  categoryName: string | null;
   sku: string;
   unit: string;
 };
@@ -202,7 +203,7 @@ export const getStockReceiptDetail = cache(
         id, receipt_number, supplier_name, supplier_id, received_at, created_at, notes, receipt_url,
         inventory_receipt_items(
           product_id, quantity_received, unit, unit_cost,
-          products(name, sku)
+          products(name, sku, unit)
         ),
         suppliers(name, address, province, district, subdistrict, postal_code),
         profiles:created_by(display_name)
@@ -218,7 +219,7 @@ export const getStockReceiptDetail = cache(
       unit: string;
       unit_cost: number;
       quantity_received: number;
-      products: { name: string; sku: string } | null;
+      products: { name: string; sku: string; unit: string; } | null;
     }
 
     interface ReceiptRow {
@@ -242,7 +243,7 @@ export const getStockReceiptDetail = cache(
       productName: it.products?.name || "สินค้าไม่ทราบชื่อ",
       sku: it.products?.sku || "-",
       quantityReceived: Number(it.quantity_received),
-      unit: it.unit,
+      unit: it.products?.unit ?? it.unit,
       unitCost: Number(it.unit_cost),
       lineTotal: Number(it.quantity_received) * Number(it.unit_cost),
     }));
@@ -274,9 +275,10 @@ export const getStockDashboardData = cache(
 
     const [productsResult, imagesResult, saleUnitsResult, movementsResult, suppliersResult] = await Promise.all([
       admin.from("products")
-        .select(
-          "id, sku, name, cost_price, stock_quantity, reserved_quantity, unit, is_active",
-        )
+        .select(`
+          id, sku, name, cost_price, stock_quantity, reserved_quantity, unit, is_active,
+          product_category_items(product_categories(name))
+        `)
         .eq("organization_id", organizationId)
         .order("created_at", { ascending: false }),
       admin.from("product_images")
@@ -360,7 +362,7 @@ export const getStockDashboardData = cache(
             effectiveCostPrice: getEffectiveSaleUnitCost({ baseCostPrice, baseUnitQuantity, costMode, fixedCostPrice }),
             id: su.id,
             isDefault: su.is_default,
-            label: su.unit_label,
+            label: product.unit,
           };
         });
 
@@ -368,6 +370,8 @@ export const getStockDashboardData = cache(
         costPrice: baseCostPrice,
         id: product.id,
         imageUrl: imageMap.get(product.id) ?? null,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        categoryName: (product as any).product_category_items?.[0]?.product_categories?.name ?? null,
         isActive: product.is_active,
         name: product.name,
         onHandQuantity: Number(product.stock_quantity),

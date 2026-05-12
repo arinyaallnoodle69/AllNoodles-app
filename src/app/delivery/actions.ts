@@ -1,4 +1,4 @@
-﻿"use server";
+"use server";
 
 import { revalidateTag } from "next/cache";
 import { requireAppRole } from "@/lib/auth/authorization";

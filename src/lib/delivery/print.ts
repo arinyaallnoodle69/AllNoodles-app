@@ -166,7 +166,7 @@ export async function getDeliveryNotePrintData(
     .from("delivery_note_items")
     .select(`
       id, quantity_delivered, sale_unit_label, unit_price, line_total,
-      products!inner(name, sku)
+      products!inner(name, sku, unit)
     `)
     .eq("delivery_note_id", dn.id)
     .eq("organization_id", organizationId)
@@ -180,7 +180,7 @@ export async function getDeliveryNotePrintData(
     sale_unit_label: string;
     unit_price: number | string;
     line_total: number | string;
-    products: { name: string; sku: string };
+    products: { name: string; sku: string; unit: string; };
   };
 
   const toNum = (v: number | string | null | undefined) => {
@@ -222,7 +222,7 @@ export async function getDeliveryNotePrintData(
       productSku: item.products.sku,
       productName: item.products.name,
       quantityDelivered: toNum(item.quantity_delivered),
-      saleUnitLabel: item.sale_unit_label,
+      saleUnitLabel: item.products.unit,
       unitPrice: toNum(item.unit_price),
       lineTotal: toNum(item.line_total),
     })),

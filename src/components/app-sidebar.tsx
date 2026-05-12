@@ -23,6 +23,8 @@ import {
   Truck,
   X,
   Factory,
+  Plus,
+  ClipboardEdit,
 } from "lucide-react";
 import { signOut } from "@/app/login/actions";
 import { LineAppIcon } from "@/components/icons/line-app-icon";
@@ -90,23 +92,45 @@ function MobileTopBar() {
           {title}
         </span>
 
-        {/* Search icon / close — only shown on pages that have search */}
-        {hasSearch ? (
-          <button
-            type="button"
-            onClick={isOpen ? close : open}
-            aria-label={isOpen ? "ปิดค้นหา" : "ค้นหา"}
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-600 transition hover:bg-slate-200 active:scale-95"
-          >
-            {isOpen
-              ? <X className="h-5 w-5" strokeWidth={2.5} />
-              : <Search className="h-5 w-5" strokeWidth={2.5} />
-            }
-          </button>
-        ) : (
-          /* Spacer keeps title centred when no icon */
-          <div className="h-9 w-9 shrink-0" aria-hidden="true" />
-        )}
+        {/* Actions for specific pages */}
+        <div className="flex items-center gap-2">
+          {pathname === "/stock" && !isOpen && (
+            <div className="flex items-center gap-1.5">
+              <Link
+                href="/stock?receive=1"
+                className="flex items-center gap-1 rounded-full bg-[#003366] px-2.5 py-1.5 text-[12px] font-bold text-white shadow-lg shadow-[#003366]/20 transition active:scale-95"
+              >
+                <Plus className="h-3.5 w-3.5" strokeWidth={3} />
+                รับเข้า
+              </Link>
+              <Link
+                href="/stock?adjust=1"
+                className="flex items-center gap-1 rounded-full bg-indigo-600 px-2.5 py-1.5 text-[12px] font-bold text-white shadow-lg shadow-indigo-600/20 transition active:scale-95"
+              >
+                <ClipboardEdit className="h-3.5 w-3.5" strokeWidth={3} />
+                ปรับยอด
+              </Link>
+            </div>
+          )}
+
+          {hasSearch ? (
+            <button
+              type="button"
+              onClick={isOpen ? close : open}
+              aria-label={isOpen ? "ปิดค้นหา" : "ค้นหา"}
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-600 transition hover:bg-slate-200 active:scale-95"
+            >
+              {isOpen ? (
+                <X className="h-5 w-5" strokeWidth={2.5} />
+              ) : (
+                <Search className="h-5 w-5" strokeWidth={2.5} />
+              )}
+            </button>
+          ) : (
+            /* Spacer keeps title centred when no icon */
+            <div className="h-9 w-9 shrink-0" aria-hidden="true" />
+          )}
+        </div>
       </div>
     </header>
   );

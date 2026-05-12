@@ -10,16 +10,15 @@ type QueryError = {
 } | null;
 
 type SingleResult<T> = Promise<{ data: T | null; error: QueryError }>;
-type ManyResult<T> = Promise<{ data: T[] | null; error: QueryError }>;
 
 type SelectChain<T> = {
-  eq: (column: string, value: string) => SelectChain<T>;
-  in: (column: string, values: string[]) => {
-    order: (column: string, options: { ascending: boolean }) => ManyResult<T>;
-  };
-  order: (column: string, options: { ascending: boolean }) => ManyResult<T>;
+  eq: (column: string, value: string | number | boolean | null) => SelectChain<T>;
+  gte: (column: string, value: string | number) => SelectChain<T>;
+  lte: (column: string, value: string | number) => SelectChain<T>;
+  in: (column: string, values: Array<string | number>) => SelectChain<T>;
+  order: (column: string, options?: { ascending: boolean }) => SelectChain<T>;
   single: () => SingleResult<T>;
-};
+} & Promise<{ data: T[] | null; error: QueryError }>;
 
 type FlexibleTable<T> = {
   select: (columns: string) => SelectChain<T>;
@@ -296,7 +295,7 @@ export const getOrderDetailById = cache(async (orderId: string): Promise<OrderDe
       shortQuantity: Math.max(quantity - stockQuantity, 0),
       sku: product?.sku ?? "-",
       stockQuantity,
-      unit: item.sale_unit_label ?? product?.unit ?? "-",
+      unit: product?.unit ?? "-",
       unitPrice: normalizeNumber(item.unit_price),
     } satisfies OrderDetailItem;
   });
@@ -326,20 +325,30 @@ export const getIncomingOrders = cache(async (
   organizationId: string,
   {
     orderDate,
+    endDate,
     searchTerm,
   }: {
     orderDate: string;
+    endDate?: string | null;
     searchTerm?: string | null;
   },
 ): Promise<IncomingOrderListItem[]> => {
   const admin = getSupabaseAdmin() as unknown as OrderDetailAdminClient;
   const normalizedSearch = normalizeSearch(searchTerm ?? "");
 
-  const ordersResult = await admin
+  let query = admin
     .from("orders")
     .select("id, customer_id, order_number, order_date, status, fulfillment_status, total_amount, metadata, created_at")
-    .eq("organization_id", organizationId)
-    .eq("order_date", orderDate)
+    .eq("organization_id", organizationId);
+
+  if (endDate && endDate !== orderDate) {
+    query = query.gte("order_date", orderDate).lte("order_date", endDate);
+  } else {
+    query = query.eq("order_date", orderDate);
+  }
+
+  const ordersResult = await query
+    .order("order_date", { ascending: false })
     .order("created_at", { ascending: false });
 
   if (ordersResult.error) {
@@ -348,7 +357,7 @@ export const getIncomingOrders = cache(async (
 
   const orders = ordersResult.data ?? [];
 
-  const customerIds = Array.from(new Set(orders.map((order) => order.customer_id)));
+  const customerIds = Array.from(new Set(orders.map((order: OrderRow) => order.customer_id)));
 
   const customersResult =
     customerIds.length > 0
@@ -390,7 +399,7 @@ export const getIncomingOrders = cache(async (
     (vehiclesResult.data ?? []).map((vehicle) => [vehicle.id, vehicle.name]),
   );
 
-  const orderIds = orders.map((order) => order.id);
+  const orderIds = orders.map((order: OrderRow) => order.id);
 
   const itemsResult =
     orderIds.length > 0
@@ -409,7 +418,7 @@ export const getIncomingOrders = cache(async (
   }
 
   return orders
-    .map((order) => {
+    .map((order: OrderRow) => {
       const customer = customerMap.get(order.customer_id);
 
       return {
@@ -431,7 +440,7 @@ export const getIncomingOrders = cache(async (
           : null,
       } satisfies IncomingOrderListItem;
     })
-    .filter((order) => {
+    .filter((order: IncomingOrderListItem) => {
       if (!normalizedSearch) {
         return true;
       }
@@ -448,20 +457,28 @@ export const getIncomingOrders = cache(async (
 export const getCustomerOrderCountsByDate = cache(async (
   organizationId: string,
   orderDate: string,
+  endDate?: string,
 ): Promise<Record<string, number>> => {
   const admin = getSupabaseAdmin() as unknown as OrderDetailAdminClient;
-  const { data, error } = await admin
+  let query = admin
     .from("orders")
     .select("customer_id, status")
-    .eq("organization_id", organizationId)
-    .eq("order_date", orderDate)
-    .order("customer_id", { ascending: true });
+    .eq("organization_id", organizationId);
+
+  if (endDate && endDate !== orderDate) {
+    query = query.gte("order_date", orderDate).lte("order_date", endDate);
+  } else {
+    query = query.eq("order_date", orderDate);
+  }
+
+  const { data, error } = await query.order("customer_id", { ascending: true });
 
   if (error) {
     throw new Error(error.message ?? "Failed to load customer order counts.");
   }
 
-  return (data ?? []).filter((order) => order.status !== "cancelled").reduce<Record<string, number>>((counts, order) => {
+  const rawData = (data ?? []) as Array<{ status: string; customer_id: string }>;
+  return rawData.filter((order) => order.status !== "cancelled").reduce<Record<string, number>>((counts, order) => {
     counts[order.customer_id] = (counts[order.customer_id] ?? 0) + 1;
     return counts;
   }, {});

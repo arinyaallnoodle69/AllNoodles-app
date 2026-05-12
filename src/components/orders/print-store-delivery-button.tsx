@@ -30,7 +30,6 @@ export function PrintStoreDeliveryButton({
         if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
         setLoading(false);
       });
-      setTimeout(() => win.print(), 300);
     };
   }
 

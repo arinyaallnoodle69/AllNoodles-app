@@ -23,6 +23,11 @@ export type ReceiveStockActionState = {
   status: "error" | "idle" | "success";
 };
 
+export type AdjustStockActionState = {
+  message: string;
+  status: "error" | "idle" | "success";
+};
+
 function getText(formData: FormData, key: string) {
   return String(formData.get(key) ?? "").trim();
 }
@@ -71,9 +76,23 @@ export async function receiveStockAction(
   }
 
   const receiptNumberInput = getText(formData, "receiptNumber");
-  // Generate unique receipt number if not provided — avoids clash when submitting within the same second
-  const receiptNumber = receiptNumberInput || `RCV-${Date.now()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+  let receiptNumber = receiptNumberInput;
   
+  // Handle Images and DB init
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const admin = getSupabaseAdmin() as any;
+
+  if (!receiptNumber) {
+    const { data: generatedNumber, error: generateError } = await admin.rpc("generate_receipt_number", { 
+      p_organization_id: session.organizationId 
+    });
+    
+    if (!generateError && generatedNumber) {
+      receiptNumber = generatedNumber;
+    } else {
+      receiptNumber = `RCV-${Date.now()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+    }
+  }
   const supplierId = getText(formData, "supplierId") || null;
   const supplierName = getText(formData, "supplierName") || "ผู้ขาย";
   const receivedAt = getText(formData, "receivedAt");
@@ -89,8 +108,6 @@ export async function receiveStockAction(
   }
 
   let receiptUrl: string | null = null;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const admin = getSupabaseAdmin() as any;
 
   // Handle Image Upload if present
   if (imageFile && imageFile.size > 0) {
@@ -175,8 +192,13 @@ export async function bulkReceiveStockAction(items: BulkReceiveItem[], notes: st
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const admin = getSupabaseAdmin() as any;
   
-  const receiptNumber = `RCV-${Date.now()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
-  
+  let receiptNumber = `RCV-${Date.now()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+  const { data: generatedNumber, error: generateError } = await admin.rpc("generate_receipt_number", { 
+    p_organization_id: session.organizationId 
+  });
+  if (!generateError && generatedNumber) {
+    receiptNumber = generatedNumber;
+  }
   const { error } = await admin.rpc("create_inventory_receipt", {
     p_created_by: session.userId,
     p_items: items.map(i => ({
@@ -205,4 +227,43 @@ export async function bulkReceiveStockAction(items: BulkReceiveItem[], notes: st
   revalidatePath("/orders");
   
   return { success: true, message: "บันทึกรับสินค้าเข้าเรียบร้อยแล้ว" };
+}
+
+export async function adjustStockAction(
+  _prevState: AdjustStockActionState,
+  formData: FormData,
+): Promise<AdjustStockActionState> {
+  const session = await requireAppRole("admin");
+  const admin = getSupabaseAdmin();
+
+  const productId = getText(formData, "productId");
+  const newQuantity = getNumber(formData, "newQuantity");
+  const notes = getText(formData, "notes");
+
+  if (!productId) {
+    return { status: "error", message: "ไม่พบรหัสสินค้า" };
+  }
+
+  if (!Number.isFinite(newQuantity)) {
+    return { status: "error", message: "กรุณาระบุจำนวนสินค้าให้ถูกต้อง" };
+  }
+
+  const { error } = await admin.rpc("adjust_inventory", {
+    p_organization_id: session.organizationId,
+    p_product_id: productId,
+    p_new_stock_quantity: newQuantity,
+    p_adjusted_by: session.userId,
+    p_notes: notes || "ปรับปรุงสต็อกด้วยตนเอง",
+  });
+
+  if (error) {
+    console.error("[adjustStockAction] Error:", error);
+    return { status: "error", message: error.message || "ไม่สามารถปรับปรุงสต็อกได้" };
+  }
+
+  revalidatePath("/stock");
+  revalidatePath("/stock/movements");
+  revalidatePath("/settings/stock");
+
+  return { status: "success", message: "ปรับปรุงยอดสต็อกเรียบร้อยแล้ว" };
 }

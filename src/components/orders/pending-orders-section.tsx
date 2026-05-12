@@ -31,10 +31,13 @@ function formatPendingLine(item: PendingOrder["pendingItems"][number]) {
   return `ค้างส่ง: ${item.productName} ${formatNum(item.remainingQty)} ${item.saleUnitLabel}`;
 }
 
+
+
 type StoreSummaryForBatch = {
   customerId: string;
   customerName: string;
   customerCode: string;
+  orderDate: string;
   orderIds?: string[];
   orderNumbers?: string[];
   orderRounds: number;
@@ -118,6 +121,8 @@ function buildGroupedItemsForOrders(orders: DeliveryFormData[]): GroupedStoreIte
     })
     .sort((a, b) => a.productName.localeCompare(b.productName, "th"));
 }
+
+
 
 // Delivery Modal
 
@@ -345,7 +350,7 @@ function DeliveryModal({
               </div>
               {actionState.deliveryId && (
                 <a
-                  href={`/orders/delivery-notes/${actionState.deliveryId}`}
+                  href={`/orders/delivery-notes/${actionState.deliveryId}?autoprint=1`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-800"
@@ -799,7 +804,7 @@ function StoreDeliveryModal({
                     </div>
                     {r.deliveryId && (
                       <a
-                        href={`/orders/delivery-notes/${r.deliveryId}`}
+                        href={`/orders/delivery-notes/${r.deliveryId}?autoprint=1`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-800"
@@ -850,16 +855,18 @@ function StoreDeliveryModal({
 
 function AllStoresDeliveryModal({
   date,
+  endDate,
   stores,
   onClose,
 }: {
   date: string;
+  endDate?: string;
   stores: StoreSummaryForBatch[];
   onClose: () => void;
 }) {
   const [query, setQuery] = useState("");
   const [printSelectedIds, setPrintSelectedIds] = useState<Set<string>>(
-    () => new Set(stores.map((store) => store.customerId)),
+    () => new Set(stores.map((store) => `${store.customerId}_${store.orderDate}`)),
   );
   const [isPrintingSelected, setIsPrintingSelected] = useState(false);
   const printFallbackTimerRef = useRef<number | null>(null);
@@ -872,7 +879,7 @@ function AllStoresDeliveryModal({
         return haystack.includes(normalizedQuery);
       })
     : stores;
-  const selectedStores = stores.filter((store) => printSelectedIds.has(store.customerId));
+  const selectedStores = stores.filter((store) => printSelectedIds.has(`${store.customerId}_${store.orderDate}`));
   const selectedRounds = selectedStores.reduce((sum, store) => sum + store.orderRounds, 0);
   const selectedTotal = selectedStores.reduce((sum, store) => sum + store.totalAmount, 0);
 
@@ -885,7 +892,7 @@ function AllStoresDeliveryModal({
   }, []);
 
   function selectAllStores() {
-    setPrintSelectedIds(new Set(stores.map((store) => store.customerId)));
+    setPrintSelectedIds(new Set(stores.map((store) => `${store.customerId}_${store.orderDate}`)));
   }
 
   function clearSelection() {
@@ -894,10 +901,13 @@ function AllStoresDeliveryModal({
 
   function triggerPrintJob(customerIds: string[]) {
     if (isPrintingSelected) return;
+    
     setIsPrintingSelected(true);
+    const printUrl = `/delivery/print?date=${date}${endDate ? `&endDate=${endDate}` : ""}&customers=${encodeURIComponent(customerIds.join(","))}&autoprint=1`;
+
     const iframe = document.createElement("iframe");
     iframe.style.cssText = "position:fixed;top:-9999px;left:-9999px;width:1px;height:1px;";
-    iframe.src = "/delivery/print?date=" + date + "&customers=" + encodeURIComponent(customerIds.join(",")) + "&autoprint=1";
+    iframe.src = printUrl;
     document.body.appendChild(iframe);
 
     const done = () => {
@@ -909,38 +919,43 @@ function AllStoresDeliveryModal({
       setIsPrintingSelected(false);
     };
 
-    printFallbackTimerRef.current = window.setTimeout(done, 15000);
+    // Use a very long timeout (2 mins) for large multi-day prints
+    printFallbackTimerRef.current = window.setTimeout(done, 120000);
+    
     iframe.onload = () => {
       const win = iframe.contentWindow;
       if (!win) {
         done();
         return;
       }
-      win.addEventListener("afterprint", () => {
-        done();
-      });
-      setTimeout(() => win.print(), 300);
+      win.addEventListener("afterprint", done, { once: true });
     };
-    iframe.onerror = () => {
-      done();
-    };
+    iframe.onerror = done;
   }
 
-  function togglePrintStore(customerId: string) {
+  function togglePrintStore(compositeKey: string) {
     setPrintSelectedIds((prev) => {
       const next = new Set(prev);
-      if (next.has(customerId)) {
-        next.delete(customerId);
+      if (next.has(compositeKey)) {
+        next.delete(compositeKey);
       } else {
-        next.add(customerId);
+        next.add(compositeKey);
       }
       return next;
     });
   }
 
   function handlePrintSelected() {
-    const customerIds = Array.from(printSelectedIds);
-    if (customerIds.length === 0) return;
+    if (printSelectedIds.size === 0) return;
+    
+    // Optimization: If all stores are selected, pass "all" instead of a long list of IDs
+    if (printSelectedIds.size === stores.length) {
+      triggerPrintJob(["all"]);
+      return;
+    }
+
+    // Get unique customer IDs from selected composite keys
+    const customerIds = Array.from(new Set(Array.from(printSelectedIds).map(k => k.split("_")[0])));
     triggerPrintJob(customerIds);
   }
 
@@ -1031,16 +1046,22 @@ function AllStoresDeliveryModal({
             </div>
             <div className="divide-y divide-slate-200">
               {visibleStores.map((store) => {
-                const checked = printSelectedIds.has(store.customerId);
+                const compositeKey = `${store.customerId}_${store.orderDate}`;
+                const checked = printSelectedIds.has(compositeKey);
                 return (
                   <label
-                    key={store.customerId}
+                    key={compositeKey}
                     className="grid cursor-pointer grid-cols-[minmax(0,1fr)_auto] gap-3 px-4 py-3 transition hover:bg-slate-50 md:grid-cols-[minmax(0,1fr)_110px_140px_64px] md:items-center"
                   >
                     <span className="min-w-0">
                       <span className="block text-base font-black leading-snug text-slate-950">
                         {store.customerCode} - {store.customerName}
                       </span>
+                      {endDate && (
+                        <span className="block text-[10px] font-bold text-[#003366] uppercase mt-0.5">
+                          วันที่จัดส่ง: {formatDate(store.orderDate)}
+                        </span>
+                      )}
                       <span className="mt-1 block text-xs font-semibold text-slate-500 md:hidden">
                         {store.orderRounds} รอบ · {formatMoney(store.totalAmount)} บาท
                       </span>
@@ -1055,7 +1076,7 @@ function AllStoresDeliveryModal({
                       <input
                         type="checkbox"
                         checked={checked}
-                        onChange={() => togglePrintStore(store.customerId)}
+                        onChange={() => togglePrintStore(compositeKey)}
                         className="h-5 w-5 rounded border-slate-300 text-[#003366] focus:ring-[#003366]"
                       />
                     </span>
@@ -1113,9 +1134,11 @@ function AllStoresDeliveryModal({
 
 export function AllStoresDeliveryButton({
   date,
+  endDate,
   stores,
 }: {
   date: string;
+  endDate?: string;
   stores: StoreSummaryForBatch[];
 }) {
   const [open, setOpen] = useState(false);
@@ -1133,7 +1156,7 @@ export function AllStoresDeliveryButton({
         พิมพ์ใบส่งของทุกร้านค้า
       </button>
       {open && (
-        <AllStoresDeliveryModal date={date} stores={stores} onClose={() => setOpen(false)} />
+        <AllStoresDeliveryModal date={date} endDate={endDate} stores={stores} onClose={() => setOpen(false)} />
       )}
     </>
   );

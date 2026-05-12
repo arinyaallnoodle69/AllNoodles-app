@@ -1,6 +1,4 @@
-import { StockReceiveForm } from "@/components/settings/stock-receive-form";
-import { StockList, StockMobileReceiveButton } from "@/components/settings/stock-list";
-import { StockSummaryCards } from "@/components/settings/stock-summary-cards";
+import { StockList } from "@/components/settings/stock-list";
 import { requireAppRole } from "@/lib/auth/authorization";
 import { getStockDashboardData } from "@/lib/stock/admin";
 
@@ -8,17 +6,9 @@ export const metadata = {
   title: "จัดการสต็อก",
 };
 
-type StockPageProps = {
-  searchParams: Promise<{
-    receive?: string;
-    product?: string;
-  }>;
-};
-
-export default async function StockPage({ searchParams }: StockPageProps) {
+export default async function StockPage() {
   const session = await requireAppRole("admin");
   const data = await getStockDashboardData(session.organizationId);
-  const params = await searchParams;
 
   return (
     <>
@@ -29,25 +19,15 @@ export default async function StockPage({ searchParams }: StockPageProps) {
         </div>
       ) : null}
 
-      <StockSummaryCards data={data} />
-
       <div className="mt-8">
         <div className="-mx-3 md:mx-0">
-          <StockList products={data.products} baseHref="/stock" />
+          <StockList 
+            products={data.products} 
+            suppliers={data.suppliers}
+            baseHref="/stock" 
+          />
         </div>
       </div>
-
-      <StockMobileReceiveButton baseHref="/stock" />
-      <div className="h-20 sm:hidden" />
-
-      {params.receive === "1" ? (
-        <StockReceiveForm
-          products={data.products}
-          suppliers={data.suppliers}
-          returnHref="/stock"
-          defaultProductId={params.product ?? ""}
-        />
-      ) : null}
     </>
   );
 }

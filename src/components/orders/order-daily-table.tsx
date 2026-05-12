@@ -299,7 +299,10 @@ export function OrderDailyTable({ data, date, expanded, q, deliveredToday }: Pro
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-3">
-          <AllStoresDeliveryButton date={date} stores={stores} />
+          <AllStoresDeliveryButton 
+            date={date} 
+            stores={stores.map(s => ({ ...s, orderDate: date }))} 
+          />
         </div>
       </div>
 

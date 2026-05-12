@@ -3,15 +3,20 @@ import { requireAppRole } from "@/lib/auth/authorization";
 import { getDeliveryNotePrintData } from "@/lib/delivery/print";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { DeliveryNoteLayout } from "@/components/print/delivery-note-layout";
-import { PrintButton } from "./print-button";
+import { AutoPrint, PrintButton } from "./print-button";
 import { EditQuantitiesForm } from "./edit-quantities-form";
 
 export const metadata = { title: "ใบส่งของ" };
 
-type Props = { params: Promise<{ id: string }> };
+type Props = { 
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ autoprint?: string }>;
+};
 
-export default async function DeliveryNotePrintPage({ params }: Props) {
+export default async function DeliveryNotePrintPage({ params, searchParams }: Props) {
   const { id } = await params;
+  const { autoprint: autoprintParam } = await searchParams;
+  const autoprint = autoprintParam === "1";
   const session = await requireAppRole("admin");
   const supabase = getSupabaseAdmin();
   const { data: deliveryNoteRow } = await supabase
@@ -27,6 +32,7 @@ export default async function DeliveryNotePrintPage({ params }: Props) {
 
   return (
     <>
+      {autoprint && <AutoPrint />}
       <div className="no-print mb-4 flex flex-wrap items-center gap-3">
         <PrintButton />
         <a

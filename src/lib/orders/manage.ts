@@ -196,6 +196,7 @@ export const getProductsForOrder = cache(async (orgId: string): Promise<OrderPro
     return [];
   }
 
+  const productUnitMap = new Map((productsRes.data ?? []).map(p => [p.id, p.unit]));
   const byProduct = new Map<string, OrderProductOption["saleUnits"]>();
   for (const u of saleUnitsRes.data ?? []) {
     const list = byProduct.get(u.product_id) ?? [];
@@ -208,7 +209,7 @@ export const getProductsForOrder = cache(async (orgId: string): Promise<OrderPro
           : Number(u.fixed_cost_price),
       id: u.id,
       isDefault: u.is_default,
-      label: u.unit_label,
+      label: productUnitMap.get(u.product_id) ?? u.unit_label,
       minOrderQty: Number(u.min_order_qty ?? 1),
       stepOrderQty:
         u.step_order_qty === null || u.step_order_qty === undefined

@@ -11,6 +11,7 @@ import {
   Search,
   ShoppingBag,
   X,
+  Boxes,
 } from "lucide-react";
 import { fetchCustomerPricesAction } from "@/app/orders/incoming/actions";
 import { getEffectiveSaleUnitCost } from "@/lib/products/sale-unit-cost";
@@ -65,7 +66,7 @@ function getUnits(product: OrderProductOption): ProductUnit[] {
       fixedCostPrice: unit.fixedCostPrice ?? null,
       id: unit.id,
       isDefault: unit.isDefault,
-      label: unit.label,
+      label: product.unit,
       minOrderQty: Number(unit.minOrderQty ?? 1),
       stepOrderQty:
         unit.stepOrderQty === null || unit.stepOrderQty === undefined
@@ -426,14 +427,25 @@ export function OrderAddProductPicker({
                         </div>
                         <div className="min-w-0 flex-1">
                           <p className="line-clamp-2 text-lg font-black leading-tight text-slate-950">
-                            <span className="mr-2 text-[#003366]/40 font-bold uppercase tracking-tighter">{product.sku}</span>
+                            <span className="mr-2 text-slate-950 font-bold uppercase tracking-tighter">{product.sku}</span>
                             {product.name}
                           </p>
-                          {cost > 0 && isBelowCost && (
-                            <div className="mt-2 inline-flex items-center rounded-lg bg-[#FF0000] px-2 py-0.5 text-xs font-black text-white animate-pulse">
-                              ต่ำกว่าทุน!
-                            </div>
-                          )}
+                          <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                            <span className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-[13.5px] font-black shadow-sm ${
+                              product.stockQuantity < 0 
+                                ? "bg-[#FF0000] text-white" 
+                                : "bg-[#003366] text-white"
+                            }`}>
+                              <Boxes className="h-4 w-4" strokeWidth={2.5} />
+                              สต็อก: {product.stockQuantity.toLocaleString("th-TH")} {product.unit}
+                            </span>
+                            
+                            {cost > 0 && isBelowCost && (
+                              <div className="inline-flex items-center rounded-lg bg-[#FF0000] px-2 py-1 text-[10px] font-black text-white animate-pulse">
+                                ต่ำกว่าทุน!
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </button>
 

@@ -126,7 +126,10 @@ const getCatalogData = cache(async () => {
 
   const catalogProducts: CatalogProduct[] = rawProducts.map((product) => {
     const activeSaleUnits =
-      product.product_sale_units?.filter((saleUnit) => saleUnit.is_active) ?? [];
+      (product.product_sale_units?.filter((saleUnit) => saleUnit.is_active) ?? []).map((saleUnit) => ({
+        ...saleUnit,
+        unit_label: product.unit,
+      }));
     const saleUnits =
       activeSaleUnits.length > 0
         ? activeSaleUnits.toSorted((left, right) => {
@@ -269,7 +272,7 @@ function getProductShareMetadata(productId: string | undefined, products: Catalo
     typeof metadata.description === "string" ? metadata.description.trim() : "";
   const description =
     rawDescription.replace(/\s*\n+\s*/g, " ").trim() ||
-    `สั่งซื้อ ${selectedProduct.name} หน่วย ${selectedProduct.sale_unit_label} กับ T&Y Noodle`;
+    `สั่งซื้อ ${selectedProduct.name} หน่วย ${selectedProduct.unit ?? selectedProduct.sale_unit_label} กับ T&Y Noodle`;
 
   return {
     title: `${selectedProduct.name} | สั่งสินค้า`,

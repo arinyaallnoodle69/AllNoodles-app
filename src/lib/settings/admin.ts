@@ -1,6 +1,6 @@
 import "server-only";
 
-import { unstable_cache } from "next/cache";
+import { cacheLife, cacheTag } from "next/cache";
 import { sortProductsByCategory } from "@/lib/products/sort-by-category";
 
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
@@ -513,7 +513,7 @@ async function fetchSettingsData(organizationId: string): Promise<SettingsData> 
       fixedCostPrice,
       id: saleUnit.id,
       isDefault: saleUnit.is_default,
-      label: saleUnit.unit_label,
+      label: product?.unit ?? saleUnit.unit_label,
       minOrderQty: Number(saleUnit.min_order_qty ?? 1),
       sortOrder: Number(saleUnit.sort_order),
       stepOrderQty: saleUnit.step_order_qty !== null && saleUnit.step_order_qty !== undefined
@@ -557,6 +557,7 @@ async function fetchSettingsData(organizationId: string): Promise<SettingsData> 
         imageUrl: imageMap.get(product.id)?.[0] ?? null,
         name: product.name,
         sku: product.sku,
+        unit: product.unit,
       },
     ]),
   );
@@ -600,7 +601,7 @@ async function fetchSettingsData(organizationId: string): Promise<SettingsData> 
       saleUnitLabel:
         saleUnitMap
           .get(price.product_id)
-          ?.find((saleUnit) => saleUnit.id === price.product_sale_unit_id)?.label ?? "-",
+          ?.find((saleUnit) => saleUnit.id === price.product_sale_unit_id)?.label ?? productMap.get(price.product_id)?.unit ?? "-",
       sku: productMap.get(price.product_id)?.sku ?? "-",
     })),
     nextProductSku: getNextProductSku(products.map((product) => product.sku)),
@@ -674,7 +675,7 @@ async function fetchSettingsData(organizationId: string): Promise<SettingsData> 
           ?.find((u) => u.id === saleUnit.id)?.effectiveCostPrice ?? 0,
       id: saleUnit.id,
       imageUrl: productMap.get(saleUnit.product_id)?.imageUrl ?? null,
-      label: saleUnit.unit_label,
+      label: productMap.get(saleUnit.product_id)?.unit ?? saleUnit.unit_label,
       productId: saleUnit.product_id,
       productName: productMap.get(saleUnit.product_id)?.name ?? "สินค้าไม่ทราบชื่อ",
       sku: productMap.get(saleUnit.product_id)?.sku ?? "-",
@@ -694,12 +695,11 @@ async function fetchSettingsData(organizationId: string): Promise<SettingsData> 
   };
 }
 
-export function getSettingsData(organizationId: string): Promise<SettingsData> {
-  return unstable_cache(
-    () => fetchSettingsData(organizationId),
-    ["settings-v2", organizationId],
-    { tags: [`settings-${organizationId}`] },
-  )();
+export async function getSettingsData(organizationId: string): Promise<SettingsData> {
+  "use cache";
+  cacheTag(`settings-${organizationId}`);
+  cacheLife("max");
+  return fetchSettingsData(organizationId);
 }
 
 async function fetchSettingsProductsData(organizationId: string): Promise<SettingsProductsData> {
@@ -775,6 +775,10 @@ async function fetchSettingsProductsData(organizationId: string): Promise<Settin
     products.map((product) => [product.id, Number(product.cost_price ?? 0)]),
   );
 
+  const productMap = new Map<string, ProductRow>(
+    products.map((product) => [product.id, product]),
+  );
+
   const saleUnitMap = new Map<
     string,
     {
@@ -792,6 +796,7 @@ async function fetchSettingsProductsData(organizationId: string): Promise<Settin
   >();
 
   for (const saleUnit of activeSaleUnits) {
+    const product = productMap.get(saleUnit.product_id);
     const current = saleUnitMap.get(saleUnit.product_id) ?? [];
     const baseCostPrice = productCostMap.get(saleUnit.product_id) ?? 0;
     const baseUnitQuantity = Number(saleUnit.base_unit_quantity);
@@ -811,7 +816,7 @@ async function fetchSettingsProductsData(organizationId: string): Promise<Settin
       fixedCostPrice,
       id: saleUnit.id,
       isDefault: saleUnit.is_default,
-      label: saleUnit.unit_label,
+      label: product?.unit ?? saleUnit.unit_label,
       minOrderQty: Number(saleUnit.min_order_qty ?? 1),
       sortOrder: Number(saleUnit.sort_order),
       stepOrderQty: saleUnit.step_order_qty !== null && saleUnit.step_order_qty !== undefined
@@ -914,12 +919,11 @@ async function fetchSettingsProductsData(organizationId: string): Promise<Settin
   };
 }
 
-export function getSettingsProductsData(
+export async function getSettingsProductsData(
   organizationId: string,
 ): Promise<SettingsProductsData> {
-  return unstable_cache(
-    () => fetchSettingsProductsData(organizationId),
-    ["settings-products-v2", organizationId],
-    { tags: [`settings-${organizationId}`] },
-  )();
+  "use cache";
+  cacheTag(`settings-${organizationId}`);
+  cacheLife("max");
+  return fetchSettingsProductsData(organizationId);
 }

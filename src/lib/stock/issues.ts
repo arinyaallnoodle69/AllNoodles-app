@@ -144,7 +144,7 @@ export const getStockIssueHistoryData = cache(async (organizationId: string, lim
       quantity,
       quantityInBaseUnit: toNumber(item.quantity_in_base_unit),
       sku: product?.sku ?? "-",
-      unit: item.sale_unit_label || product?.unit || "-",
+      unit: product?.unit || "-",
       unitPrice,
     });
     itemMap.set(item.order_id, current);

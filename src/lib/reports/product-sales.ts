@@ -161,6 +161,7 @@ export async function getProductSalesRanking(params: {
         quantity_in_base_unit,
         unit_price,
         line_total,
+        sale_unit_label,
         products!inner(id, name, sku, unit, cost_price, product_images(public_url, sort_order))
       )
     `)
@@ -183,6 +184,7 @@ export async function getProductSalesRanking(params: {
       quantity_in_base_unit: unknown;
       unit_price: unknown;
       line_total: unknown;
+      sale_unit_label: string;
       products: {
         id: string;
         name: string;

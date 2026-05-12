@@ -11,6 +11,8 @@ type QuerySingle<T> = Promise<{ data: T | null; error: QueryError }>;
 
 type GenericSelect<T> = {
   eq: (column: string, value: string | number | boolean) => GenericSelect<T>;
+  gte: (column: string, value: string | number) => GenericSelect<T>;
+  lte: (column: string, value: string | number) => GenericSelect<T>;
   in: (column: string, values: string[]) => GenericSelect<T>;
   order: (column: string, options: { ascending: boolean }) => GenericSelect<T>;
   select: (columns: string) => GenericSelect<T>;
@@ -392,16 +394,24 @@ export async function createPendingLineOrder(input: {
 
 export async function getPendingLineOrders(
   organizationId: string,
-  opts: { orderDate: string; searchTerm?: string },
+  opts: { orderDate: string; endDate?: string; searchTerm?: string },
 ): Promise<PendingLineOrderListItem[]> {
   const admin = getAdmin();
-  const { data: pendingOrders, error } = await admin
+  let query = admin
     .from<PendingOrderRow>("line_pending_orders")
-    .select("id, line_order_customer_id, line_user_id, line_display_name, line_picture_url, order_date, created_at, status, converted_order_id")
+    .select(
+      "id, line_order_customer_id, line_user_id, line_display_name, line_picture_url, order_date, created_at, status, converted_order_id",
+    )
     .eq("organization_id", organizationId)
-    .eq("status", "pending_link")
-    .eq("order_date", opts.orderDate)
-    .order("created_at", { ascending: false });
+    .eq("status", "pending_link");
+
+  if (opts.endDate && opts.endDate !== opts.orderDate) {
+    query = query.gte("order_date", opts.orderDate).lte("order_date", opts.endDate);
+  } else {
+    query = query.eq("order_date", opts.orderDate);
+  }
+
+  const { data: pendingOrders, error } = await query.order("created_at", { ascending: false });
 
   if (error) {
     throw new Error(error.message ?? "Failed to load pending LINE orders.");
@@ -437,7 +447,7 @@ export async function getPendingLineOrders(
       productId: item.product_id,
       productName: product?.name ?? "-",
       quantity: Number(item.quantity) || 0,
-      saleUnitLabel: item.sale_unit_label,
+      saleUnitLabel: product?.unit ?? item.sale_unit_label,
       sku: product?.sku ?? "-",
     });
     itemsByPendingId.set(item.pending_order_id, list);
@@ -544,7 +554,7 @@ async function convertSinglePendingOrder(input: {
       product_sale_unit_id: item.product_sale_unit_id,
       quantity,
       quantity_in_base_unit: quantity * ratio,
-      sale_unit_label: saleUnit?.unit_label ?? item.sale_unit_label,
+      sale_unit_label: product?.unit ?? item.sale_unit_label,
       sale_unit_ratio: ratio,
       unit_price: unitPrice,
     };
@@ -630,7 +640,7 @@ async function convertSinglePendingOrder(input: {
       items: orderItems.map((item) => ({
         name: productById.get(item.product_id)?.name ?? "-",
         quantity: Number(item.quantity) || 0,
-        saleUnitLabel: item.sale_unit_label,
+        saleUnitLabel: productById.get(item.product_id)?.unit ?? item.sale_unit_label,
       })),
       lineUserId: input.lineUserId,
       orderDate: newOrder.created_at ?? input.order.created_at,

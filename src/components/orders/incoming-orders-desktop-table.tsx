@@ -110,15 +110,29 @@ export const IncomingOrdersDesktopTable = memo(function IncomingOrdersDesktopTab
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200">
-              {orders.map((order) => {
+              {orders.map((order, index) => {
                 const isExpanded = expandedOrderId === order.id && visibleOrderIds.has(order.id);
                 const detail = detailByOrderId[order.id] ?? null;
-                const deliveryNumbers = deliveryByCustomerId[order.customerId];
+                const deliveryNumbers = deliveryByCustomerId[`${order.customerId}_${order.orderDate}`];
                 const hasDelivery = Boolean(deliveryNumbers && deliveryNumbers.length > 0);
                 const isLoading = loadingOrderId === order.id || (isPending && isExpanded && !detail);
+                const showDivider = index === 0 || order.orderDate !== orders[index - 1].orderDate;
 
                 return (
                   <Fragment key={order.id}>
+                    {showDivider && (
+                      <tr className="bg-slate-50/50">
+                        <td colSpan={7} className="px-6 py-4 border-y border-slate-200">
+                           <div className="flex items-center gap-4">
+                             <div className="h-px flex-1 bg-slate-300"></div>
+                             <span className="text-xs font-black text-[#003366] uppercase tracking-[0.2em] bg-white px-5 py-2 rounded-2xl border border-slate-200 shadow-sm">
+                               {formatOrderDate(order.orderDate)}
+                             </span>
+                             <div className="h-px flex-1 bg-slate-300"></div>
+                           </div>
+                        </td>
+                      </tr>
+                    )}
                     <tr className="align-middle transition-colors hover:bg-slate-50/80">
                       <td className="px-3 py-5">
                         <div className="min-w-0">
@@ -212,7 +226,7 @@ export const IncomingOrdersDesktopTable = memo(function IncomingOrdersDesktopTab
                           </button>
                           {hasDelivery ? (
                             <PrintStoreDeliveryButton
-                              date={orderDate}
+                              date={order.orderDate}
                               customerId={order.customerId}
                               label="พิมพ์ใบส่งของ"
                               iconOnly

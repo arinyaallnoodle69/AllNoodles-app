@@ -37,7 +37,11 @@ export function PrintButton() {
 
 export function AutoPrint() {
   useEffect(() => {
-    window.print();
+    // Add a small delay to ensure hydration and layout are stable
+    const timer = setTimeout(() => {
+      window.print();
+    }, 800);
+    return () => clearTimeout(timer);
   }, []);
   return null;
 }

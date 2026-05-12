@@ -340,16 +340,22 @@ async function syncCategoryMetadataForProducts(
 }
 
 function revalidateSettingsSurfaces(organizationId: string) {
-  // Read-your-own-write: expire immediately so reopening modal sees fresh data
-  updateTag(`settings-${organizationId}`);
-  updateTag(`orders-${organizationId}`);
-  revalidatePath("/order");
-  revalidatePath("/orders/incoming");
-  revalidatePath("/orders");
-  revalidatePath("/settings/products", "page");
-  // Keep SWR revalidation for any stale readers still holding old cache entries
-  revalidateTag(`settings-${organizationId}`, "max");
-  revalidateTag(`orders-${organizationId}`, "max");
+  try {
+    // Nuclear option: revalidate all layouts to ensure no stale data remains in any shared components
+    revalidatePath("/", "layout");
+
+    // Standard cache tag invalidation
+    revalidateTag(`settings-${organizationId}`, "max");
+    revalidateTag(`orders-${organizationId}`, "max");
+    revalidateTag(`stock-${organizationId}`, "max");
+    
+    // Attempt immediate updateTag if supported
+    updateTag(`settings-${organizationId}`);
+    updateTag(`orders-${organizationId}`);
+    updateTag(`stock-${organizationId}`);
+  } catch (err) {
+    console.error("[revalidateSettingsSurfaces] Error invalidating cache:", err);
+  }
 }
 
 export async function createCustomer(formData: FormData) {
@@ -431,6 +437,15 @@ export async function createProduct(formData: FormData): Promise<boolean> {
     )
   ) {
     return false;
+  }
+
+  const labelSet = new Set<string>();
+  for (const su of saleUnits) {
+    const lowerLabel = su.label.toLowerCase();
+    if (labelSet.has(lowerLabel)) {
+      throw new Error(`ชื่อหน่วยขายซ้ำกัน: "${su.label}"`);
+    }
+    labelSet.add(lowerLabel);
   }
 
   const sku = await generateProductSku(session.organizationId);
@@ -601,19 +616,36 @@ export async function updateProduct(formData: FormData): Promise<boolean> {
     return false;
   }
 
+  // Ensure all sale unit labels are unique (case-insensitive)
+  // Otherwise the database unique constraint on (product_id, lower(unit_label)) will cause partial updates.
+  const labelSet = new Set<string>();
+  for (const su of saleUnits) {
+    const lowerLabel = su.label.toLowerCase();
+    if (labelSet.has(lowerLabel)) {
+      throw new Error(`ชื่อหน่วยขายซ้ำกัน: "${su.label}"`);
+    }
+    labelSet.add(lowerLabel);
+  }
+
+  console.log("[updateProduct] VALIDATION PASSED — will update DB with unit:", baseUnit);
+
   // Run all independent reads in parallel
   const [
     { categoryIds, categoryNames },
-    { data: oldProduct },
-    { data: existingSaleUnits },
+    { data: oldProduct, error: oldProductError },
+    { data: existingSaleUnits, error: existingSaleUnitsError },
   ] = await Promise.all([
     resolveCategorySelection(admin, session.organizationId, requestedCategoryIds),
-    admin.from("products").select("cost_price").eq("id", productId).single(),
+    admin.from("products").select("cost_price").eq("id", productId).eq("organization_id", session.organizationId).maybeSingle(),
     admin
       .from("product_sale_units")
       .select("id, unit_label, base_unit_quantity, cost_mode, fixed_cost_price, is_default, sort_order")
-      .eq("product_id", productId),
+      .eq("product_id", productId)
+      .eq("organization_id", session.organizationId),
   ]);
+
+  throwIfError(oldProductError, "ไม่พบข้อมูลสินค้าเดิม");
+  throwIfError(existingSaleUnitsError, "ไม่พบข้อมูลหน่วยขายเดิม");
 
   const metadata: Record<string, string> = {};
   if (brand) metadata.brand = brand;
@@ -632,7 +664,21 @@ export async function updateProduct(formData: FormData): Promise<boolean> {
     .filter((u) => removedSaleUnitIds.has(u.id) || !submittedIds.has(u.id))
     .map((u) => u.id);
 
-  await Promise.all([
+  // PREVENT UNIQUE CONSTRAINT VIOLATION:
+  // If we are deactivating an old unit that has the SAME name as the NEW unit,
+  // we must rename the old unit first. Otherwise, the new unit's update will fail!
+  const submittedLabels = new Set(saleUnits.map(u => u.label.toLowerCase()));
+  for (const existing of (existingSaleUnits ?? [])) {
+    if (toDeactivateIds.includes(existing.id) && submittedLabels.has(existing.unit_label.toLowerCase())) {
+      await admin
+        .from("product_sale_units")
+        .update({ unit_label: `${existing.unit_label}_del_${Date.now()}` })
+        .eq("id", existing.id)
+        .eq("organization_id", session.organizationId);
+    }
+  }
+
+  const mutationResults = await Promise.all([
     admin.from("products").update({
       cost_price: costPrice,
       metadata: metadata as Json,
@@ -640,7 +686,7 @@ export async function updateProduct(formData: FormData): Promise<boolean> {
       sku,
       stock_quantity: stockQuantity,
       unit: baseUnit,
-    }).eq("id", productId),
+    }).eq("id", productId).eq("organization_id", session.organizationId),
     ...saleUnits.map((saleUnit, index) =>
       saleUnit.id
         ? admin.from("product_sale_units").update({
@@ -653,7 +699,7 @@ export async function updateProduct(formData: FormData): Promise<boolean> {
           sort_order: index,
           step_order_qty: saleUnit.stepOrderQty,
           unit_label: saleUnit.label,
-        }).eq("id", saleUnit.id)
+        }).eq("id", saleUnit.id).eq("organization_id", session.organizationId)
         : admin.from("product_sale_units").insert({
           base_unit_quantity: saleUnit.baseUnitQuantity,
           cost_mode: saleUnit.costMode,
@@ -672,8 +718,15 @@ export async function updateProduct(formData: FormData): Promise<boolean> {
       ? admin.from("product_sale_units")
         .update({ is_active: false, is_default: false })
         .in("id", toDeactivateIds)
-      : Promise.resolve(),
+        .eq("organization_id", session.organizationId)
+      : Promise.resolve({ error: null }),
   ]);
+
+  mutationResults.forEach((res, idx) => {
+    if ("error" in res && res.error) {
+      throwIfError(res.error, `การอัปเดตลำดับที่ ${idx + 1} ล้มเหลว`);
+    }
+  });
 
   // Log cost history for any changed values
   {
@@ -835,9 +888,9 @@ export async function createProductFormAction(
       message: "เพิ่มสินค้าสำเร็จแล้ว",
       status: "success",
     };
-  } catch {
+  } catch (error) {
     return {
-      message: "อัปโหลดรูปไม่สำเร็จ กรุณาตรวจสอบไฟล์รูปและลองใหม่อีกครั้ง",
+      message: error instanceof Error ? error.message : "เกิดข้อผิดพลาดไม่ทราบสาเหตุ",
       status: "error",
     };
   }
@@ -859,9 +912,9 @@ export async function updateProductFormAction(
       message: "แก้ไขสินค้าสำเร็จแล้ว",
       status: "success",
     };
-  } catch {
+  } catch (error) {
     return {
-      message: "อัปโหลดรูปไม่สำเร็จ กรุณาตรวจสอบไฟล์รูปและลองใหม่อีกครั้ง",
+      message: error instanceof Error ? error.message : "เกิดข้อผิดพลาดไม่ทราบสาเหตุ",
       status: "error",
     };
   }
@@ -1011,18 +1064,29 @@ export async function setProductActive(formData: FormData) {
   revalidateTag(`settings-${session.organizationId}`, "max");
 }
 
-export async function deleteProduct(formData: FormData) {
+export async function deleteProduct(formData: FormData): Promise<{ success: boolean; error?: string }> {
   const session = await requireAppRole("admin");
   const admin = getSupabaseAdmin() as SettingsAdmin;
   const productId = safeText(formData.get("productId"));
 
   if (!productId) {
-    return;
+    return { success: false, error: "ไม่พบรหัสสินค้า" };
   }
 
-  await admin.from("products").delete().eq("id", productId);
+  const { error } = await admin.from("products").delete().eq("id", productId);
+  
+  if (error) {
+    if (error.code === "23503") {
+      return { 
+        success: false, 
+        error: "ไม่สามารถลบสินค้านี้ได้ เนื่องจากมีการใช้งานในระบบ (เช่น มีออเดอร์หรือประวัติสต็อก) แนะนำให้ใช้การ 'ปิดใช้งาน' แทนการลบ" 
+      };
+    }
+    return { success: false, error: error.message };
+  }
 
   revalidateTag(`settings-${session.organizationId}`, "max");
+  return { success: true };
 }
 
 export type ProductCostHistoryRow = {

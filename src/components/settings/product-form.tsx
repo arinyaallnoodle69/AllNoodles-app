@@ -153,7 +153,7 @@ function ProductFormBody({
   );
   const [saleUnits, setSaleUnits] = useState<SaleUnitDraft[]>(
     editingProduct?.saleUnits.length
-      ? editingProduct.saleUnits.map((saleUnit) => ({
+      ? [editingProduct.saleUnits[0]].map((saleUnit) => ({
         baseUnitQuantity: String(saleUnit.baseUnitQuantity),
         costMode: saleUnit.costMode,
         fixedCostPrice:
@@ -813,7 +813,23 @@ function ProductFormBody({
                 </div>
                 <div>
                   <label className={settingsFieldLabelClass} htmlFor="product-base-unit">หน่วยฐาน</label>
-                  <input id="product-base-unit" name="baseUnit" required value={baseUnit} onChange={(e) => setBaseUnit(e.target.value)} className={settingsInputClass} placeholder="เช่น kg, แพ็ค, ชิ้น" />
+                  <input
+                    id="product-base-unit"
+                    name="baseUnit"
+                    required
+                    value={baseUnit}
+                    onChange={(e) => {
+                      const newUnit = e.target.value;
+                      setBaseUnit(newUnit);
+                      setSaleUnits((current) =>
+                        current.map((unit, index) =>
+                          index === 0 ? { ...unit, label: newUnit } : unit,
+                        ),
+                      );
+                    }}
+                    className={settingsInputClass}
+                    placeholder="เช่น kg, แพ็ค, ชิ้น"
+                  />
                 </div>
               </div>
 
@@ -909,23 +925,15 @@ function ProductFormBody({
                   return (
                     <div key={saleUnit.key} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
                       <input type="hidden" name="saleUnitId" value={saleUnit.id} />
-                      <input type="hidden" name="saleUnitLabel" value={saleUnit.label} />
+                      <input type="hidden" name="saleUnitLabel" value={baseUnit} />
                       <input type="hidden" name="saleUnitRatio" value={saleUnit.baseUnitQuantity} />
                       <input type="hidden" name="saleUnitFixedCostPrice" value={saleUnit.fixedCostPrice} />
                       <input type="hidden" name="saleUnitCostMode" value={saleUnit.costMode} />
-
-                      {/* Display unit label to know what we are configuring */}
-                      <div className="mb-3 flex items-center justify-between">
-                        <span className="text-sm font-black text-[#003366]">หน่วยขาย: {saleUnit.label || baseUnit}</span>
-                      </div>
 
                       {/* ── เงื่อนไขสั่ง ── */}
                       <div className="space-y-2.5">
                         <div className="flex items-center justify-between">
                           <span className="text-xs font-semibold text-slate-500">รูปแบบการสั่ง</span>
-                          {index === 0 && (
-                            <span className="text-[10px] font-bold text-[#003366] bg-blue-50 px-2 py-0.5 rounded-full">หน่วยขายเริ่มต้น</span>
-                          )}
                         </div>
                         <div className="grid grid-cols-3 gap-2">
                           {(
@@ -1442,6 +1450,26 @@ export function ProductForm({
   const canGoPrev = hasNav && currentIndex > 0;
   const canGoNext = hasNav && currentIndex < productList.length - 1;
 
+  // Build a lightweight fingerprint of the product data so that when the
+  // server returns updated values (after router.refresh()), the key changes
+  // and ProductFormBody remounts with fresh state from props.
+  const productDataFingerprint = useMemo(() => {
+    if (!currentProduct) return "new";
+    const su = currentProduct.saleUnits
+      .map((u) => `${u.id}:${u.label}:${u.costMode}:${u.fixedCostPrice}:${u.baseUnitQuantity}:${u.minOrderQty}:${u.stepOrderQty}`)
+      .join("|");
+    return [
+      currentProduct.id,
+      currentProduct.baseUnit,
+      currentProduct.costPrice,
+      currentProduct.brand,
+      currentProduct.description,
+      currentProduct.categoryIds.join(","),
+      currentProduct.stockQuantity,
+      currentProduct.imageUrls.join(","),
+      su,
+    ].join("\0");
+  }, [currentProduct]);
   // Keyboard arrow navigation
   useEffect(() => {
     if (!hasNav || isSubmitting) return;
@@ -1534,9 +1562,10 @@ export function ProductForm({
           ) : null}
         </div>
 
-        {/* Form body - key forces full remount when product changes */}
+        {/* Form body - key includes data fingerprint so component remounts
+            when server returns updated product data after router.refresh() */}
         <ProductFormBody
-          key={currentProduct?.id ?? "new"}
+          key={productDataFingerprint}
           categories={categories}
           editingProduct={currentProduct}
           nextSku={nextSku}

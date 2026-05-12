@@ -3,47 +3,45 @@
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import {
-  CalendarDays,
-  Camera,
   Check,
   ChevronLeft,
-  ChevronRight,
-  CirclePlus,
   Loader2,
-  Minus,
   Package2,
   Plus,
+  Minus,
   Save,
   Search,
   X,
   Factory,
+  Calendar,
+  ChevronRight,
+  Camera,
+  ImagePlus,
+  Trash2,
+  AlertCircle,
+  Sparkles,
 } from "lucide-react";
 import {
   useActionState,
-  useCallback,
   useDeferredValue,
   useEffect,
   useEffectEvent,
   useMemo,
-  useRef,
   useState,
   startTransition,
+  useRef,
 } from "react";
 import { receiveStockAction } from "@/app/settings/stock/actions";
 import type { ReceiveStockActionState } from "@/app/settings/stock/actions";
 import type { StockProductOption, StockSupplierOption } from "@/lib/stock/admin";
 import { ThaiDatePicker } from "@/components/ui/thai-date-picker";
-import { getTodayInBangkok } from "@/lib/utils/date-client";
 
 type StockReceiveFormProps = {
   products: StockProductOption[];
   suppliers: StockSupplierOption[];
   returnHref: string;
-  defaultProductId?: string;
   onClose?: () => void;
 };
-
-type ReceiveStep = "date" | "select" | "photo" | "review";
 
 const initialReceiveStockState: ReceiveStockActionState = {
   fieldErrors: {},
@@ -51,121 +49,76 @@ const initialReceiveStockState: ReceiveStockActionState = {
   status: "idle",
 };
 
-function formatMoney(value: number) {
-  return value.toLocaleString("th-TH", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-}
-
-function formatQty(value: number, unit: string) {
-  return `${value.toLocaleString("th-TH", { maximumFractionDigits: 3 })} ${unit}`;
-}
-
-export function StockReceiveForm({ products, suppliers, returnHref, defaultProductId = "", onClose }: StockReceiveFormProps) {
+export function StockReceiveForm({
+  products,
+  suppliers,
+  returnHref,
+  onClose,
+}: StockReceiveFormProps) {
   const router = useRouter();
-  const [actionState, formAction, isPending] = useActionState(receiveStockAction, initialReceiveStockState);
-  
-  const [currentStep, setCurrentStep] = useState<ReceiveStep>("date");
-  const [receivedDate, setReceivedDate] = useState(() => getTodayInBangkok());
-  const [selectedSupplierId, setSelectedSupplierId] = useState("");
-  const [supplierPickerOpen, setSupplierPickerOpen] = useState(false);
-  const [supplierPickerQuery, setSupplierPickerQuery] = useState("");
-  
-  // Multi-product selection state
-  // key: productId, value: record of unitId -> quantity
-  const [selections, setSelections] = useState<Record<string, Record<string, string>>>(() => {
-    if (defaultProductId) {
-      return { [defaultProductId]: {} };
-    }
-    return {};
-  });
+  const [actionState, formAction, isPending] = useActionState(
+    receiveStockAction,
+    initialReceiveStockState,
+  );
 
+  // Flow: 1: Info (Supplier/Date), 2: Products (Search/Select), 3: Photo & Submit
+  const [step, setStep] = useState<1 | 2 | 3>(1);
+  const [selections, setSelections] = useState<Record<string, Record<string, string>>>({});
+  const [supplierId, setSupplierId] = useState("");
+  const [supplierName, setSupplierName] = useState("");
+  const [receiveDate, setReceiveDate] = useState(new Date().toISOString().split("T")[0]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [receiptImage, setReceiptImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [isSupplierDrawerOpen, setIsSupplierDrawerOpen] = useState(false);
+  const [validationError, setValidationError] = useState<string | null>(null);
+  
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const deferredQuery = useDeferredValue(searchQuery);
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const categories = useMemo(() => {
+    const cats = new Set<string>();
+    products.forEach(p => {
+      if (p.categoryName) cats.add(p.categoryName);
+    });
+    return Array.from(cats).sort();
+  }, [products]);
 
   const filteredProducts = useMemo(() => {
+    let result = products;
+    
+    // Category Filter
+    if (selectedCategory !== "all") {
+      result = result.filter(p => p.categoryName === selectedCategory);
+    }
+    
+    // Search Query
     const q = deferredQuery.trim().toLowerCase();
-    if (!q) return products.slice(0, 40);
-    return products.filter(p => 
-      p.name.toLowerCase().includes(q) || p.sku.toLowerCase().includes(q)
-    ).slice(0, 40);
-  }, [deferredQuery, products]);
-
-  const filteredSuppliers = useMemo(() => {
-    const q = supplierPickerQuery.trim().toLowerCase();
-    if (!q) return suppliers;
-    return suppliers.filter(s =>
-      s.name.toLowerCase().includes(q) || (s.code && s.code.toLowerCase().includes(q))
-    );
-  }, [suppliers, supplierPickerQuery]);
-
-  const selectedProductList = useMemo(() => {
-    return products.filter(p => selections[p.id]);
-  }, [products, selections]);
-
-  const selectedSupplier = useMemo(() => {
-    return suppliers.find(s => s.id === selectedSupplierId);
-  }, [suppliers, selectedSupplierId]);
-
-  const calculateProductTotals = useCallback((productId: string) => {
-    const product = products.find(p => p.id === productId);
-    if (!product) return { totalBaseQty: 0, totalCost: 0 };
-    
-    let totalBaseQty = 0;
-    let totalCost = 0;
-    const qtys = selections[productId] || {};
-    
-    for (const unit of product.saleUnits) {
-      const val = qtys[unit.id];
-      const qty = val ? Number(val) : 0;
-      if (qty <= 0 || !Number.isFinite(qty)) continue;
-      totalBaseQty += qty * unit.baseUnitQuantity;
-      totalCost += qty * unit.effectiveCostPrice;
+    if (q) {
+      result = result.filter((p) => 
+        p.name.toLowerCase().includes(q) || 
+        p.sku.toLowerCase().includes(q)
+      );
     }
-    return { totalBaseQty, totalCost };
-  }, [products, selections]);
-
-  const grandTotals = useMemo(() => {
-    let totalBaseQty = 0;
-    let totalCost = 0;
-    let itemCount = 0;
-
-    for (const productId in selections) {
-      const { totalBaseQty: pQty, totalCost: pCost } = calculateProductTotals(productId);
-      if (pQty > 0) {
-        totalBaseQty += pQty;
-        totalCost += pCost;
-        itemCount++;
-      }
-    }
-    return { totalBaseQty, totalCost, itemCount };
-  }, [selections, calculateProductTotals]);
-
-  const handleSuccess = useEffectEvent(() => {
-    startTransition(() => {
-      if (onClose) {
-        onClose();
-      } else {
-        router.replace(returnHref);
-      }
-      router.refresh();
-    });
-  });
-
-  useEffect(() => {
-    if (actionState.status === "success") handleSuccess();
-  }, [actionState.status]);
+    
+    return result;
+  }, [deferredQuery, products, selectedCategory]);
 
   const toggleProduct = (productId: string) => {
     setSelections(prev => {
-      const next = { ...prev };
-      if (next[productId]) {
+      if (prev[productId]) {
+        const next = { ...prev };
         delete next[productId];
-      } else {
-        next[productId] = {};
+        return next;
       }
-      return next;
+      // Initialize with default sale unit if possible
+      const p = products.find(prod => prod.id === productId);
+      const defaultUnitId = p?.saleUnits.find(u => u.isDefault)?.id || p?.saleUnits[0]?.id;
+      return { 
+        ...prev, 
+        [productId]: defaultUnitId ? { [defaultUnitId]: "" } : {} 
+      };
     });
   };
 
@@ -179,207 +132,377 @@ export function StockReceiveForm({ products, suppliers, returnHref, defaultProdu
     }));
   };
 
+  const selectedCount = Object.keys(selections).length;
+
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       setReceiptImage(file);
       const reader = new FileReader();
-      reader.onloadend = () => setImagePreview(reader.result as string);
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string);
+      };
       reader.readAsDataURL(file);
     }
   };
 
+  const handleSuccess = useEffectEvent(() => {
+    startTransition(() => {
+      if (onClose) {
+        onClose();
+      } else {
+        router.replace(returnHref);
+      }
+      router.refresh();
+    });
+  });
+
+  useEffect(() => {
+    if (actionState.status === "success") {
+      handleSuccess();
+    }
+  }, [actionState.status]);
+
+  const [isClosing, setIsClosing] = useState(false);
+
+  const handleClose = () => {
+    setIsClosing(true);
+    setTimeout(() => {
+      if (onClose) onClose();
+      else router.replace(returnHref);
+    }, 400);
+  };
+
+  const showAlert = (message: string) => {
+    setValidationError(message);
+    setTimeout(() => setValidationError(null), 3000);
+  };
+
+  const onSubmit = () => {
+    const formData = new FormData();
+    formData.append("supplierId", supplierId);
+    formData.append("supplierName", supplierName);
+    formData.append("receivedAt", receiveDate);
+    formData.append("notes", ""); // Notes removed as per request
+    
+    if (receiptImage) {
+      formData.append("receiptImage", receiptImage);
+    }
+
+    const items = Object.entries(selections).flatMap(([pid, units]) => {
+      const p = products.find(prod => prod.id === pid);
+      return Object.entries(units).map(([uid, qty]) => {
+        const unit = p?.saleUnits.find(u => u.id === uid);
+        return {
+          productId: pid,
+          quantityReceived: Number(qty) || 0,
+          unit: unit?.label || p?.unit || "หน่วย",
+          unitCost: unit?.effectiveCostPrice || 0,
+        };
+      });
+    }).filter(item => item.quantityReceived > 0);
+
+    formData.append("itemsJson", JSON.stringify(items));
+    
+    startTransition(() => {
+      formAction(formData);
+    });
+  };
+
+  const nextStep = () => {
+    if (step === 1) {
+      if (!supplierId) {
+        setIsSupplierDrawerOpen(true);
+        return;
+      }
+      setStep(2);
+      return;
+    }
+
+    if (step === 2) {
+      if (selectedCount === 0) {
+        showAlert("กรุณาเลือกสินค้าอย่างน้อย 1 รายการ");
+        return;
+      }
+
+      // Check if all selected products have at least one unit with quantity > 0
+      const missingQty = Object.entries(selections).some(([_, units]) => {
+        return !Object.values(units).some(qty => Number(qty) > 0);
+      });
+
+      if (missingQty) {
+        showAlert("กรุณาระบุจำนวนสินค้าให้ครบถ้วน");
+        return;
+      }
+
+      setStep(3);
+    }
+  };
+
+  const prevStep = () => {
+    setStep((prev) => (prev - 1) as 1 | 2);
+  };
+
   return (
-    <div className="fixed inset-0 z-[100] flex items-start justify-center bg-slate-950/40 p-0 md:p-4 backdrop-blur-[2px] animate-in fade-in duration-500 ease-out">
-      <div className="flex h-full w-full max-w-4xl flex-col overflow-hidden bg-[#F8FAFC] shadow-[0_40px_120px_rgba(0,0,0,0.3)] md:h-[min(900px,94dvh)] md:rounded-[2.8rem] border border-white/40 animate-in slide-in-from-top-12 duration-700 [animation-timing-function:cubic-bezier(0.16,1,0.3,1)]">
+    <div className={`fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/60 p-0 md:p-4 ${
+      isClosing ? "animate-fade-out" : "animate-fade-in"
+    }`}>
+      <style jsx global>{`
+        @keyframes float {
+          0% { transform: translateY(0px) translateX(0px) rotate(0deg); }
+          33% { transform: translateY(-20px) translateX(10px) rotate(2deg); }
+          66% { transform: translateY(10px) translateX(-10px) rotate(-1deg); }
+          100% { transform: translateY(0px) translateX(0px) rotate(0deg); }
+        }
+        @keyframes drift {
+          0% { transform: scale(1) translate(0, 0); }
+          50% { transform: scale(1.1) translate(10%, 10%); }
+          100% { transform: scale(1) translate(0, 0); }
+        }
+        .animate-float { animation: float 15s ease-in-out infinite; }
+        .animate-float-slow { animation: float 25s ease-in-out infinite; }
+        .animate-drift { animation: drift 20s ease-in-out infinite; }
+      `}</style>
+
+      <div 
+        onClick={handleClose}
+        className="absolute inset-0" 
+      />
+      <div className={`relative flex h-full w-full max-w-4xl flex-col overflow-hidden bg-[#F8FAFC] shadow-[0_40px_120px_rgba(0,0,0,0.4)] md:h-[min(900px,94dvh)] md:rounded-[2.8rem] border border-white/40 ${
+        isClosing ? "animate-slide-up-premium" : "animate-slide-down-premium"
+      }`}>
         
+        {/* Validation Alert Popup */}
+        {validationError && (
+          <div className="absolute top-24 left-1/2 -translate-x-1/2 z-[110] w-[calc(100%-3rem)] max-w-md animate-in slide-in-from-top-8 duration-500">
+            <div className="bg-rose-600/90 text-white p-4 rounded-3xl shadow-2xl shadow-rose-600/40 flex items-center gap-4 border border-white/20 backdrop-blur-xl">
+              <div className="h-10 w-10 shrink-0 rounded-2xl bg-white/20 flex items-center justify-center animate-pulse">
+                <AlertCircle className="h-6 w-6" strokeWidth={3} />
+              </div>
+              <p className="font-black text-lg">{validationError}</p>
+            </div>
+          </div>
+        )}
+
         {/* Modern Glass Header */}
         <div className="shrink-0 bg-white/80 backdrop-blur-md px-6 py-6 border-b border-slate-200/60 sticky top-0 z-10">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <div className="h-12 w-12 rounded-2xl bg-[#003366] flex items-center justify-center text-white shadow-lg shadow-[#003366]/20">
-                <CirclePlus className="h-7 w-7" strokeWidth={2.5} />
-              </div>
-              <div>
-                <h3 className="text-2xl font-black tracking-tight text-slate-950">รับสินค้าเข้า</h3>
-                <p className="text-[11px] font-black text-[#003366]/40 uppercase tracking-[0.2em]">{currentStep === 'review' ? 'ยืนยันรายการ' : 'ขั้นตอนที่ ' + (['date', 'select', 'photo', 'review'].indexOf(currentStep) + 1)}</p>
+              <div className="relative">
+                <div className="absolute -inset-2 bg-[#003366]/5 rounded-full blur-xl animate-pulse" />
+                <h2 className="relative text-2xl font-black text-[#003366] tracking-tight">รับสินค้าเข้าคลัง</h2>
+                <p className="relative text-[10px] font-black text-[#003366]/40 tracking-[0.2em] uppercase mt-0.5">
+                  {step === 1 && "Step 1: Information"}
+                  {step === 2 && `Step 2: Selection (${selectedCount})`}
+                  {step === 3 && "Step 3: Confirmation"}
+                </p>
               </div>
             </div>
-            <button 
-              onClick={() => {
-                if (onClose) {
-                  onClose();
-                } else {
-                  router.replace(returnHref);
-                }
-              }} 
-              className="h-11 w-11 flex items-center justify-center rounded-xl hover:bg-slate-100 text-slate-400 transition-all"
+            
+            <button
+              type="button"
+              onClick={handleClose}
+              className="group relative h-12 w-12 flex items-center justify-center rounded-2xl bg-rose-900 text-white active:scale-90 transition-all shadow-lg shadow-rose-900/20 overflow-hidden"
             >
-              <X className="h-6 w-6" strokeWidth={3} />
+              <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity" />
+              <X className="h-6 w-6 relative z-10" strokeWidth={3} />
             </button>
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-0 py-8 md:px-6">
-          {/* Step 1: Date & Supplier */}
-          {currentStep === "date" && (
-            <div className="max-w-xl mx-auto space-y-8 py-6 px-6 animate-in fade-in zoom-in-95 duration-400">
-              <div className="text-center space-y-3">
-                <div className="inline-flex h-20 w-20 items-center justify-center rounded-[2rem] bg-white shadow-xl text-[#003366] mb-4">
-                  <CalendarDays className="h-10 w-10" strokeWidth={2.5} />
-                </div>
-                <h4 className="text-3xl font-black text-slate-900 tracking-tight">ข้อมูลการรับของ</h4>
-                <p className="text-lg font-bold text-slate-400">ระบุวันที่และผู้ขายที่ส่งสินค้าชุดนี้</p>
+        <div className="flex-1 overflow-y-auto no-scrollbar relative flex flex-col">
+          {/* Animated Background Blobs */}
+          <div className="absolute top-1/4 -right-20 w-64 h-64 bg-indigo-200/20 rounded-full blur-[80px] animate-drift pointer-events-none" />
+          <div className="absolute bottom-1/4 -left-20 w-80 h-80 bg-rose-200/10 rounded-full blur-[100px] animate-drift [animation-delay:-5s] pointer-events-none" />
+          
+          {step === 1 ? (
+            <div className="p-6 space-y-6 sm:space-y-12 animate-in fade-in slide-in-from-left-12 duration-700 relative z-10 flex-1 flex flex-col">
+              {/* Decorative Floating Background Icons */}
+              <div className="absolute top-20 right-0 -mr-16 opacity-[0.04] pointer-events-none select-none animate-float-slow">
+                <Factory size={400} className="text-[#003366]" strokeWidth={1} />
               </div>
 
-              <div className="space-y-6">
-                <div className="bg-white p-6 rounded-[2.5rem] shadow-sm border border-slate-100 space-y-4">
-                  <label className="block text-sm font-black text-slate-400 uppercase tracking-widest ml-2">วันที่รับเข้า</label>
-                  <ThaiDatePicker
-                    id="receive-date"
-                    name="receivedDate"
-                    defaultValue={receivedDate}
-                    onChange={setReceivedDate}
-                    placeholder="แตะเลือกวันที่"
-                  />
+              <div className="grid gap-6 sm:gap-10">
+                <div className="space-y-3 sm:space-y-5">
+                  <label className="text-xl sm:text-2xl font-black text-slate-950 uppercase tracking-tight flex items-center gap-3">
+                    <Calendar className="h-6 w-6 sm:h-7 sm:w-7 text-[#003366]" /> วันที่รับเข้า
+                  </label>
+                  <div className="relative group scale-105 origin-left">
+                    <div className="absolute -inset-1 bg-[#003366]/5 rounded-[2rem] blur opacity-0 group-hover:opacity-100 transition-opacity" />
+                    <ThaiDatePicker
+                      id="receive-date"
+                      name="receivedAt"
+                      value={receiveDate}
+                      onChange={setReceiveDate}
+                    />
+                  </div>
                 </div>
 
-                <div className="bg-white p-6 rounded-[2.5rem] shadow-sm border border-slate-100 space-y-4">
-                  <label className="block text-sm font-black text-slate-400 uppercase tracking-widest ml-2">ผู้ขาย (Vendor)</label>
-                  <div className="flex items-center gap-3">
-                    <button
-                      type="button"
-                      onClick={() => setSupplierPickerOpen(true)}
-                      className={`flex min-w-0 flex-1 items-center gap-4 rounded-2xl border h-16 px-5 text-left transition-all ${
-                        selectedSupplierId ? "border-[#003366]/40 bg-white" : "border-slate-100 bg-slate-50 hover:border-[#003366]/40"
-                      }`}
-                    >
-                      <Factory className={`h-6 w-6 shrink-0 transition-colors ${selectedSupplierId ? "text-[#003366]" : "text-slate-400"}`} />
-                      <div className="min-w-0 flex-1">
-                        {selectedSupplier ? (
-                          <>
-                            <p className="truncate text-lg font-black text-slate-900 leading-tight">
-                              {selectedSupplier.name}
-                            </p>
-                            <p className="text-sm font-bold text-slate-500 mt-0.5">{selectedSupplier.code}</p>
-                          </>
-                        ) : (
-                          <p className="text-lg font-bold text-slate-400">แตะเพื่อเลือกผู้ขาย...</p>
-                        )}
+                <div className="space-y-3 sm:space-y-5">
+                  <label className="text-xl sm:text-2xl font-black text-slate-950 uppercase tracking-tight flex items-center gap-3">
+                    <Factory className="h-6 w-6 sm:h-7 sm:w-7 text-[#003366]" /> ผู้จัดจำหน่าย
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setIsSupplierDrawerOpen(true)}
+                    className={`group relative w-full h-24 sm:h-28 px-8 flex items-center justify-between bg-white border-2 transition-all rounded-[2.2rem] shadow-sm hover:shadow-xl hover:shadow-indigo-100/40 active:scale-[0.98] ${
+                      supplierId ? "border-[#003366]/20" : "border-slate-100"
+                    }`}
+                  >
+                    <div className="flex items-center gap-5">
+                      <div className={`h-14 w-14 sm:h-16 sm:w-16 rounded-[1.5rem] flex items-center justify-center transition-all ${
+                        supplierId ? "bg-indigo-50 text-[#003366]" : "bg-slate-50 text-slate-300"
+                      }`}>
+                        <Factory size={32} />
                       </div>
-                      <ChevronRight className="h-5 w-5 shrink-0 text-slate-400" strokeWidth={3} />
-                    </button>
-                    {selectedSupplierId ? (
-                      <button
-                        type="button"
-                        onClick={() => setSelectedSupplierId("")}
-                        className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border border-slate-100 text-slate-400 hover:bg-slate-50 transition-all"
-                        aria-label="ล้างการเลือกผู้ขาย"
-                      >
-                        <X className="h-6 w-6" strokeWidth={3} />
-                      </button>
-                    ) : null}
+                      <span className={`text-2xl sm:text-3xl font-black ${supplierId ? "text-slate-950" : "text-slate-300"}`}>
+                        {supplierName || "กดเลือกผู้ขาย..."}
+                      </span>
+                    </div>
+                    <ChevronRight className={`h-8 w-8 transition-transform group-hover:translate-x-2 ${supplierId ? "text-[#003366]" : "text-slate-200"}`} strokeWidth={4} />
+                  </button>
+                </div>
+                
+                {/* Premium Visual Flair Card - Optimized for space */}
+                <div className="relative overflow-hidden group mt-auto sm:mt-0">
+                  <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/10 via-white/5 to-rose-500/10 animate-drift" />
+                  <div className="relative bg-white/40 backdrop-blur-xl rounded-[2.5rem] p-6 sm:p-10 border border-white/60 shadow-xl shadow-indigo-100/20 flex items-center gap-6 sm:gap-8">
+                    <div className="relative h-16 w-16 sm:h-24 sm:w-24 shrink-0 rounded-[1.5rem] sm:rounded-[2rem] bg-white flex items-center justify-center text-[#003366] shadow-2xl shadow-[#003366]/10 animate-float">
+                      <Sparkles size={32} className="sm:hidden" />
+                      <Sparkles size={48} className="hidden sm:block" />
+                    </div>
+                    <div>
+                      <h4 className="text-xl sm:text-2xl font-black text-slate-950 tracking-tight">ข้อมูลพื้นฐาน</h4>
+                      <p className="text-sm sm:text-lg font-bold text-slate-600 mt-1 leading-tight">
+                        ระบุวันที่และผู้ขายให้ครบถ้วน <br />
+                        ก่อนดำเนินการเลือกสินค้า
+                      </p>
+                    </div>
                   </div>
-                  {suppliers.length === 0 && (
-                    <p className="text-xs font-bold text-rose-500 ml-2 mt-2">ยังไม่มีข้อมูลผู้ขาย กรุณาเพิ่มที่หน้าตั้งค่าก่อน</p>
-                  )}
                 </div>
               </div>
             </div>
-          )}
-
-          {/* Step 2: Select & Qty */}
-          {currentStep === "select" && (
-            <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-400">
-              <div className="flex gap-4 sticky top-0 z-20 bg-[#F8FAFC]/90 backdrop-blur-sm pb-4 px-4 md:px-0">
-                <div className="relative flex-1">
-                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
-                  <input
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="ค้นหาสินค้าที่ต้องการรับเข้า..."
-                    className="w-full h-14 rounded-2xl bg-white border-2 border-slate-100 pl-12 pr-4 text-lg font-bold text-slate-900 shadow-sm focus:border-[#003366]/30 outline-none transition-all"
-                  />
-                </div>
-                {grandTotals.itemCount > 0 && (
-                  <div className="hidden sm:flex h-14 items-center px-6 rounded-2xl bg-[#003366] text-white font-black shadow-lg">
-                    เลือกแล้ว {grandTotals.itemCount} รายการ
-                  </div>
-                )}
+          ) : step === 2 ? (
+            <div className="p-6 space-y-8 animate-in fade-in slide-in-from-right-12 duration-700">
+              {/* Category Filter */}
+              <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2 px-1">
+                <button
+                  onClick={() => setSelectedCategory("all")}
+                  className={`shrink-0 px-7 py-3 rounded-[1.2rem] text-sm font-black transition-all active:scale-95 ${
+                    selectedCategory === "all"
+                      ? "bg-[#003366] text-white shadow-xl shadow-[#003366]/20"
+                      : "bg-white text-slate-500 border border-slate-100 hover:border-slate-200"
+                  }`}
+                >
+                  ทั้งหมด
+                </button>
+                {categories.map(cat => (
+                  <button
+                    key={cat}
+                    onClick={() => setSelectedCategory(cat)}
+                    className={`shrink-0 px-7 py-3 rounded-[1.2rem] text-sm font-black transition-all active:scale-95 ${
+                      selectedCategory === cat
+                        ? "bg-[#003366] text-white shadow-xl shadow-[#003366]/20"
+                        : "bg-white text-slate-500 border border-slate-100 hover:border-slate-200"
+                  }`}
+                  >
+                    {cat}
+                  </button>
+                ))}
               </div>
 
-              <div className="grid gap-0.5 sm:gap-4">
+              {/* Search Bar */}
+              <div className="relative group">
+                <div className="absolute -inset-1 bg-gradient-to-r from-[#003366]/10 to-indigo-500/10 rounded-[2rem] blur-md opacity-0 group-focus-within:opacity-100 transition-opacity" />
+                <div className="relative">
+                  <Search className="absolute left-6 top-1/2 -translate-y-1/2 h-6 w-6 text-slate-300 group-focus-within:text-[#003366] transition-colors" />
+                  <input
+                    type="text"
+                    placeholder="ค้นหาสินค้าเพื่อรับเข้า..."
+                    className="w-full h-18 pl-16 pr-8 bg-white border-2 border-slate-100 rounded-[1.8rem] outline-none focus:border-[#003366]/20 transition-all text-xl font-bold shadow-sm"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              {/* Product List */}
+              <div className="space-y-4 -mx-2">
                 {filteredProducts.map((p) => {
                   const isSelected = !!selections[p.id];
                   return (
                     <div
                       key={p.id}
-                      className={`group relative flex flex-col border-y transition-all duration-300 sm:rounded-[2rem] sm:border-2 ${
+                      className={`group relative flex flex-col transition-all duration-500 rounded-[2rem] border overflow-hidden ${
                         isSelected 
-                          ? "border-[#003366]/50 bg-white shadow-lg z-10" 
-                          : "border-slate-100 bg-white hover:bg-slate-50"
-                      } -mx-0 sm:mx-0`}
+                          ? "bg-white border-[#003366]/20 shadow-xl shadow-[#003366]/5" 
+                          : "bg-transparent border-transparent hover:bg-white hover:border-slate-100 hover:shadow-lg"
+                      }`}
                     >
                       <button
                         onClick={() => toggleProduct(p.id)}
-                        className="flex items-center gap-4 p-5 text-left w-full sm:p-6"
+                        className="flex items-center gap-5 px-6 py-5 text-left w-full"
                       >
-                        <div className={`h-5 w-5 shrink-0 flex items-center justify-center rounded-md border-2 transition-all ${
-                          isSelected ? "bg-[#003366] border-[#003366] text-white" : "border-slate-200 text-transparent"
+                        <div className={`h-8 w-8 shrink-0 flex items-center justify-center rounded-xl border-2 transition-all ${
+                          isSelected ? "bg-[#003366] border-[#003366] text-white shadow-lg shadow-[#003366]/20" : "border-slate-200 text-transparent"
                         }`}>
-                          <Check className="h-3 w-3" strokeWidth={6} />
+                          <Check className="h-5 w-5" strokeWidth={4} />
                         </div>
-                        <div className="relative h-20 w-20 sm:h-24 sm:w-24 shrink-0 overflow-hidden rounded-2xl">
+                        <div className="relative h-20 w-20 sm:h-24 sm:w-24 shrink-0 overflow-hidden rounded-[1.8rem] bg-white shadow-inner border border-slate-50">
                           {p.imageUrl ? (
                             <Image src={p.imageUrl} alt={p.name} fill className="object-contain" />
                           ) : (
-                            <div className="flex h-full w-full items-center justify-center bg-slate-50/50">
-                              <Package2 className="h-8 w-8 text-slate-200" />
-                            </div>
+                            <Package2 className="m-auto h-10 w-10 text-slate-100" />
                           )}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-[10px] font-black text-[#003366]/30 uppercase tracking-[0.2em] leading-none mb-1.5">{p.sku}</p>
-                          <p className="text-lg font-black text-slate-950 leading-tight line-clamp-2">{p.name}</p>
-                          <div className="mt-2 flex items-center gap-2">
-                            <span className="text-xs font-bold text-slate-400">สต็อก: {p.onHandQuantity} {p.unit}</span>
+                          <p className="text-[10px] font-black text-[#003366]/30 uppercase tracking-[0.25em] leading-none mb-2">{p.sku}</p>
+                          <p className="text-xl font-black text-slate-950 leading-tight truncate tracking-tight">{p.name}</p>
+                          <div className="mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-1.5">
+                            <div className="flex items-center gap-2 bg-slate-50 px-3 py-1 rounded-full border border-slate-100">
+                              <div className="h-1.5 w-1.5 rounded-full bg-slate-300" />
+                              <span className="text-xs font-black text-slate-400">สต็อก: <span className="text-slate-700">{p.onHandQuantity} {p.unit}</span></span>
+                            </div>
+                            <div className="flex items-center gap-2 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-100">
+                              <div className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                              <span className="text-xs font-black text-emerald-700/60">ต้นทุน: <span className="text-emerald-700">฿{p.costPrice.toLocaleString()}</span></span>
+                            </div>
                             {isSelected && (
-                              <span className="h-1.5 w-1.5 rounded-full bg-[#003366] animate-pulse" />
+                              <span className="h-2 w-2 rounded-full bg-[#003366] animate-pulse ml-1" />
                             )}
                           </div>
                         </div>
                       </button>
 
                       {isSelected && (
-                        <div className="px-5 pb-8 pt-2 space-y-5 animate-in fade-in slide-in-from-top-2 duration-300 sm:px-8">
-                          <div className="h-px bg-slate-100" />
-                          <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+                        <div className="px-6 pb-8 pt-2 space-y-6 animate-in fade-in slide-in-from-top-4 duration-500 bg-slate-50/30">
+                          <div className="grid gap-5 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
                             {p.saleUnits.map(unit => (
-                              <div key={unit.id} className="bg-slate-50/80 rounded-3xl p-5 border border-slate-100 transition-all hover:bg-slate-50">
-                                <div className="flex justify-between items-center mb-3">
-                                  <label className="text-[14px] font-black text-slate-600 uppercase tracking-wider">{unit.label}</label>
-                                  <span className="text-[11px] font-black text-[#003366]/40 bg-white px-2 py-0.5 rounded-lg border border-slate-100">฿{unit.effectiveCostPrice}</span>
+                              <div key={unit.id} className="group/unit bg-white rounded-[2rem] p-6 border border-slate-100 transition-all hover:border-[#003366]/20 hover:shadow-xl shadow-sm">
+                                <div className="flex justify-between items-center mb-4">
+                                  <label className="text-sm font-black text-slate-400 uppercase tracking-[0.15em]">{unit.label}</label>
+                                  <span className="text-[12px] font-black text-[#003366] bg-indigo-50 px-3 py-1 rounded-xl">฿{unit.effectiveCostPrice}</span>
                                 </div>
-                                <div className="flex items-center gap-3">
+                                <div className="flex items-center gap-4">
                                   <button 
                                     onClick={() => updateQty(p.id, unit.id, String(Math.max(0, Number(selections[p.id]?.[unit.id] ?? 0) - 1)))}
-                                    className="h-12 w-12 shrink-0 flex items-center justify-center rounded-2xl bg-white text-slate-400 shadow-sm border border-slate-200 active:scale-90 transition-all"
+                                    className="h-14 w-14 shrink-0 flex items-center justify-center rounded-2xl bg-slate-50 text-slate-400 hover:bg-slate-100 active:scale-90 transition-all"
                                   >
-                                    <Minus className="h-6 w-6" strokeWidth={3} />
+                                    <Minus className="h-7 w-7" strokeWidth={3} />
                                   </button>
                                   <input
                                     type="number"
                                     inputMode="decimal"
                                     value={selections[p.id]?.[unit.id] ?? ""}
                                     onChange={(e) => updateQty(p.id, unit.id, e.target.value)}
-                                    className="w-full h-12 bg-transparent text-center text-2xl font-black text-slate-950 outline-none"
+                                    className="w-full h-14 bg-transparent text-center text-3xl font-black text-slate-950 outline-none placeholder:text-slate-100"
                                     placeholder="0"
                                   />
                                   <button 
                                     onClick={() => updateQty(p.id, unit.id, String(Number(selections[p.id]?.[unit.id] ?? 0) + 1))}
-                                    className="h-12 w-12 shrink-0 flex items-center justify-center rounded-2xl bg-[#003366] text-white shadow-lg shadow-[#003366]/10 active:scale-90 transition-all"
+                                    className="h-14 w-14 shrink-0 flex items-center justify-center rounded-2xl bg-[#003366] text-white shadow-xl shadow-[#003366]/20 hover:scale-105 active:scale-90 transition-all"
                                   >
-                                    <Plus className="h-6 w-6" strokeWidth={3} />
+                                    <Plus className="h-7 w-7" strokeWidth={3} />
                                   </button>
                                 </div>
                               </div>
@@ -392,301 +515,210 @@ export function StockReceiveForm({ products, suppliers, returnHref, defaultProdu
                 })}
               </div>
             </div>
-          )}
+          ) : (
+            <div className="p-6 space-y-10 animate-in fade-in slide-in-from-right-12 duration-700">
+              <div className="space-y-5">
+                <label className="text-[11px] font-black text-[#003366]/40 uppercase tracking-[0.3em] pl-2 flex items-center gap-3">
+                  <Camera className="h-4 w-4" /> ถ่ายรูปบิลหรือใบส่งของ
+                </label>
+                
+                <input
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  className="hidden"
+                  ref={fileInputRef}
+                  onChange={handleImageChange}
+                />
 
-          {/* Step 3: Photo */}
-          {currentStep === "photo" && (
-            <div className="max-w-xl mx-auto space-y-10 py-10 px-6 animate-in fade-in zoom-in-95 duration-400">
-              <div className="text-center space-y-3">
-                <div className="inline-flex h-20 w-20 items-center justify-center rounded-[2rem] bg-white shadow-xl text-[#003366] mb-4">
-                  <Camera className="h-10 w-10" strokeWidth={2.5} />
-                </div>
-                <h4 className="text-3xl font-black text-slate-900 tracking-tight">ถ่ายรูปบิลหรือใบรับของ</h4>
-                <p className="text-lg font-bold text-slate-400">อัปโหลดภาพเพื่อใช้เป็นหลักฐานอ้างอิง</p>
-              </div>
-
-              <div className="relative">
-                <input type="file" accept="image/*" className="hidden" ref={fileInputRef} onChange={handleImageChange} />
-                {!imagePreview ? (
-                  <button
-                    type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    className="flex w-full flex-col items-center justify-center gap-6 rounded-[3.5rem] border-4 border-dashed border-slate-200 bg-white py-24 text-slate-400 transition-all hover:border-[#003366]/20 hover:bg-white/50 group"
-                  >
-                    <div className="h-24 w-24 flex items-center justify-center rounded-full bg-slate-50 text-[#003366] shadow-inner transition-transform group-hover:scale-110">
-                      <Camera className="h-12 w-12" strokeWidth={2} />
+                {imagePreview ? (
+                  <div className="relative aspect-video w-full rounded-[2.8rem] overflow-hidden bg-slate-100 border-4 border-white shadow-2xl group">
+                    <Image src={imagePreview} alt="Preview" fill className="object-cover" />
+                    <div className="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-6 backdrop-blur-sm">
+                      <button
+                        onClick={() => fileInputRef.current?.click()}
+                        className="h-18 w-18 rounded-full bg-white text-[#003366] flex items-center justify-center shadow-2xl active:scale-90 transition-all hover:scale-110"
+                      >
+                        <Camera className="h-8 w-8" strokeWidth={2.5} />
+                      </button>
+                      <button
+                        onClick={() => {
+                          setReceiptImage(null);
+                          setImagePreview(null);
+                        }}
+                        className="h-18 w-18 rounded-full bg-rose-600 text-white flex items-center justify-center shadow-2xl active:scale-90 transition-all hover:scale-110"
+                      >
+                        <Trash2 className="h-8 w-8" strokeWidth={2.5} />
+                      </button>
                     </div>
-                    <div className="text-center">
-                      <p className="text-2xl font-black text-slate-700">แตะเพื่อถ่ายรูปบิล</p>
-                      <p className="text-base font-bold text-slate-400 mt-2">หรือเลือกรูปภาพจากเครื่อง</p>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    className="w-full aspect-video rounded-[2.8rem] border-4 border-dashed border-slate-100 bg-white/60 hover:bg-white hover:border-[#003366]/10 transition-all flex flex-col items-center justify-center gap-6 group relative overflow-hidden shadow-sm"
+                  >
+                    <div className="absolute inset-0 bg-gradient-to-b from-indigo-50/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                    <div className="relative h-24 w-24 rounded-[2rem] bg-slate-50 flex items-center justify-center group-hover:scale-110 group-hover:bg-[#003366]/5 transition-all duration-500">
+                      <ImagePlus className="h-12 w-12 text-slate-300 group-hover:text-[#003366] transition-colors" strokeWidth={1.5} />
+                    </div>
+                    <div className="text-center relative">
+                      <p className="text-2xl font-black text-slate-900">แตะเพื่อถ่ายรูปบิล</p>
+                      <p className="text-sm font-bold text-slate-400 mt-2 tracking-wide uppercase">Capture Receipt / Delivery Note</p>
                     </div>
                   </button>
-                ) : (
-                  <div className="relative aspect-[3/4] w-full max-w-sm mx-auto overflow-hidden rounded-[3rem] border-[12px] border-white shadow-[0_40px_80px_rgba(0,0,0,0.2)]">
-                    <Image src={imagePreview} alt="Preview" fill className="object-cover" />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-                    <button
-                      onClick={() => { setReceiptImage(null); setImagePreview(null); }}
-                      className="absolute right-6 top-6 h-14 w-14 flex items-center justify-center rounded-full bg-rose-600 text-white shadow-2xl active:scale-90 transition-all"
-                    >
-                      <X className="h-8 w-8" strokeWidth={3} />
-                    </button>
-                  </div>
                 )}
               </div>
-            </div>
-          )}
 
-          {/* Step 4: Summary Review */}
-          {currentStep === "review" && (
-            <div className="space-y-6 animate-in fade-in zoom-in-95 duration-500">
-              {/* Official Summary Card */}
-              <div className="bg-white rounded-[2rem] border-2 border-slate-200 p-6 sm:p-8 shadow-sm">
-                <div className="flex items-center justify-between border-b-2 border-slate-100 pb-4 mb-6">
-                  <div>
-                    <h4 className="text-xl font-black text-slate-900">สรุปการรับเข้าสินค้า</h4>
-                    <p className="text-sm font-bold text-slate-500">ตรวจสอบความถูกต้องก่อนบันทึก</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">วันที่รับของ</p>
-                    <p className="text-lg font-black text-[#003366]">{receivedDate}</p>
-                  </div>
+              <div className="relative bg-white rounded-[2.5rem] border border-slate-100 p-8 shadow-xl shadow-slate-200/40 overflow-hidden">
+                <div className="absolute top-0 right-0 p-8 opacity-[0.03] rotate-12">
+                  <Check size={120} className="text-[#003366]" />
                 </div>
-
-                {/* Vendor Info */}
-                <div className="mb-6 flex items-center gap-4 bg-slate-50 p-4 rounded-2xl border border-slate-100">
-                  <div className="h-12 w-12 rounded-xl bg-white flex items-center justify-center text-[#003366] shadow-sm border border-slate-100">
-                    <Factory className="h-6 w-6" />
+                <h4 className="text-[11px] font-black text-[#003366]/40 uppercase tracking-[0.3em] mb-6">สรุปรายการทั้งหมด</h4>
+                <div className="grid gap-6">
+                  <div className="flex justify-between items-center bg-slate-50/50 p-4 rounded-2xl">
+                    <span className="text-slate-400 font-black text-sm uppercase">วันที่รับเข้า</span>
+                    <span className="font-black text-xl text-[#003366]">
+                      {receiveDate ? (
+                        new Date(receiveDate).toLocaleDateString("th-TH", {
+                          day: "2-digit",
+                          month: "long",
+                          year: "numeric",
+                        })
+                      ) : "-"}
+                    </span>
                   </div>
-                  <div>
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">ผู้ขาย (Vendor)</p>
-                    <p className="text-lg font-black text-slate-950">{selectedSupplier?.name ?? "-"}</p>
+                  <div className="flex justify-between items-center bg-slate-50/50 p-4 rounded-2xl">
+                    <span className="text-slate-400 font-black text-sm uppercase">ผู้จัดจำหน่าย</span>
+                    <span className="font-black text-xl text-[#003366]">{supplierName}</span>
                   </div>
-                </div>
-
-                {/* Primary Stats - Clear & Big */}
-                <div className="grid grid-cols-2 gap-4 mb-6">
-                  <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 text-center">
-                    <p className="text-xs font-bold text-slate-500 mb-1">จำนวนรวมทั้งหมด</p>
-                    <p className="text-2xl font-black text-slate-900 tabular-nums">
-                      {grandTotals.totalBaseQty.toLocaleString()}
-                    </p>
-                  </div>
-                  <div className="bg-[#003366]/5 p-4 rounded-2xl border border-[#003366]/10 text-center">
-                    <p className="text-xs font-bold text-[#003366]/60 mb-1">มูลค่ารวม (บาท)</p>
-                    <p className="text-2xl font-black text-[#003366] tabular-nums">
-                      ฿{formatMoney(grandTotals.totalCost)}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Item List Table Style */}
-                <div className="space-y-2">
-                  <p className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1 mb-2">รายการสินค้า ({grandTotals.itemCount})</p>
-                  <div className="divide-y divide-slate-100 border-t border-slate-100">
-                    {selectedProductList.map(p => {
-                      const { totalBaseQty } = calculateProductTotals(p.id);
-                      if (totalBaseQty <= 0) return null;
-                      return (
-                        <div key={p.id} className="py-3 flex items-center justify-between gap-4">
-                          <div className="min-w-0 flex-1">
-                            <p className="text-base font-black text-slate-950 truncate leading-tight">{p.name}</p>
-                            <p className="text-xs font-bold text-slate-400">{p.sku}</p>
-                          </div>
-                          <p className="text-base font-black text-slate-900 tabular-nums shrink-0">
-                            {formatQty(totalBaseQty, p.unit)}
-                          </p>
-                        </div>
-                      );
-                    })}
+                  <div className="flex justify-between items-center bg-[#003366]/5 p-4 rounded-2xl">
+                    <span className="text-slate-400 font-black text-sm uppercase">รายการสินค้า</span>
+                    <span className="font-black text-2xl text-[#003366]">{selectedCount} <span className="text-sm">รายการ</span></span>
                   </div>
                 </div>
               </div>
-
-              {/* Receipt Image - Professional Placement */}
-              {imagePreview && (
-                <div className="bg-white rounded-[2rem] border-2 border-slate-200 p-4 shadow-sm flex items-center gap-4">
-                  <div className="relative h-20 w-20 rounded-xl overflow-hidden border border-slate-100 shrink-0">
-                    <Image src={imagePreview} alt="Receipt" fill className="object-cover" />
-                  </div>
-                  <div className="flex-1">
-                    <h5 className="text-sm font-black text-slate-900">มีรูปถ่ายบิลแนบไว้</h5>
-                    <p className="text-xs font-bold text-emerald-600">รูปภาพถูกบันทึกเป็นหลักฐานแล้ว</p>
-                  </div>
-                  <button 
-                    onClick={() => setCurrentStep("photo")}
-                    className="h-10 px-4 rounded-xl bg-slate-50 text-xs font-black text-slate-600 border border-slate-200 active:scale-95 transition-all"
-                  >
-                    ดู/แก้ไข
-                  </button>
-                </div>
-              )}
             </div>
           )}
         </div>
 
-        {/* Action Bar - Optimized for Mobile & Fit */}
-        <div className="shrink-0 bg-white border-t border-slate-200/60 p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))]">
-          <div className="flex gap-3">
-            {currentStep !== "date" && (
-              <button
-                type="button"
-                onClick={() => {
-                  const steps: ReceiveStep[] = ["date", "select", "photo", "review"];
-                  setCurrentStep(steps[steps.indexOf(currentStep) - 1]);
-                }}
-                className="h-12 w-16 flex items-center justify-center rounded-xl bg-slate-100 text-slate-500 transition-all active:scale-95"
-              >
-                <ChevronLeft className="h-6 w-6" strokeWidth={3} />
-              </button>
-            )}
-            
-            {currentStep !== "review" ? (
-              <button
-                type="button"
-                disabled={(currentStep === 'date' && (!receivedDate || !selectedSupplierId)) || (currentStep === 'select' && grandTotals.itemCount === 0)}
-                onClick={() => {
-                  const steps: ReceiveStep[] = ["date", "select", "photo", "review"];
-                  setCurrentStep(steps[steps.indexOf(currentStep) + 1]);
-                }}
-                className="flex-1 h-12 flex items-center justify-center gap-2 rounded-xl bg-[#003366] text-base font-black text-white shadow-lg shadow-[#003366]/20 transition-all active:scale-[0.98] disabled:opacity-40"
-              >
-                ถัดไป
-                <ChevronRight className="h-5 w-5" strokeWidth={3} />
-              </button>
-            ) : (
-              <form action={formAction} className="flex-1 flex">
-                {/* Bundle all items into a single JSON string for the action */}
-                <input 
-                  type="hidden" 
-                  name="itemsJson" 
-                  value={JSON.stringify(selectedProductList.map(p => {
-                    const { totalBaseQty, totalCost } = calculateProductTotals(p.id);
-                    return {
-                      productId: p.id,
-                      quantityReceived: totalBaseQty,
-                      unit: p.unit,
-                      unitCost: totalBaseQty > 0 ? totalCost / totalBaseQty : 0
-                    };
-                  }).filter(item => item.quantityReceived > 0))} 
-                />
-                
-                <input type="hidden" name="receivedAt" value={receivedDate} />
-                <input type="hidden" name="supplierId" value={selectedSupplierId} />
-                <input type="hidden" name="notes" value="" />
-                {receiptImage && <input type="file" name="receiptImage" className="hidden" ref={(el) => { if (el) { const data = new DataTransfer(); data.items.add(receiptImage); el.files = data.files; } }} />}
-                
-                <button
-                  type="submit"
-                  disabled={isPending || grandTotals.itemCount === 0}
-                  className="flex-1 h-12 flex items-center justify-center gap-2 rounded-xl bg-[#003366] text-base font-black text-white shadow-xl shadow-[#003366]/20 transition-all active:scale-[0.98] disabled:opacity-50"
-                >
-                  {isPending ? (
-                    <Loader2 className="h-5 w-5 animate-spin" />
-                  ) : (
-                    <Save className="h-5 w-5" strokeWidth={2.5} />
-                  )}
-                  {isPending ? "กำลังบันทึก..." : "ยืนยันและบันทึกข้อมูล"}
-                </button>
-              </form>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {supplierPickerOpen ? (
-        <div className="fixed inset-0 z-[110] flex items-end justify-center bg-slate-950/50 sm:items-center sm:p-4 backdrop-blur-sm animate-in fade-in duration-300">
-          <div className="absolute inset-0" onClick={() => setSupplierPickerOpen(false)} />
-          <div className="relative flex h-full w-full max-h-full flex-col overflow-hidden rounded-none bg-white shadow-2xl sm:h-[80dvh] sm:max-w-md sm:rounded-[2.5rem] animate-in slide-in-from-bottom-full sm:slide-in-from-bottom-12 duration-500 [animation-timing-function:cubic-bezier(0.16,1,0.3,1)]">
-            <div className="sticky top-0 z-20 flex items-center justify-between gap-3 border-b border-slate-100 bg-white px-6 py-5">
-              <div className="min-w-0">
-                <h3 className="truncate text-xl font-black text-slate-950">เลือกผู้ขาย</h3>
-                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-0.5">ค้นหาด้วยชื่อ หรือรหัสผู้ขาย</p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setSupplierPickerOpen(false)}
-                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-slate-100 text-slate-400 transition hover:bg-slate-50"
-              >
-                <X className="h-6 w-6" strokeWidth={3} />
-              </button>
-            </div>
-
-            <div className="shrink-0 border-b border-slate-50 px-6 py-4">
-              <div className="flex items-center gap-3 rounded-2xl border-2 border-slate-100 bg-slate-50 px-4 py-3.5 transition focus-within:border-[#003366]/30 focus-within:bg-white shadow-sm">
-                <Search className="h-5 w-5 shrink-0 text-slate-400" strokeWidth={2.5} />
-                <input
-                  type="text"
-                  value={supplierPickerQuery}
-                  onChange={(e) => setSupplierPickerQuery(e.target.value)}
-                  placeholder="ค้นหาชื่อ หรือรหัส..."
-                  className="min-w-0 flex-1 bg-transparent text-lg font-bold text-slate-900 outline-none placeholder:text-slate-400"
-                />
-                {supplierPickerQuery ? (
-                  <button
-                    type="button"
-                    onClick={() => setSupplierPickerQuery("")}
-                    className="text-slate-400 transition hover:text-slate-600"
-                  >
-                    <X className="h-5 w-5" strokeWidth={2.5} />
-                  </button>
-                ) : null}
-              </div>
-            </div>
-
-            <div className="flex-1 overflow-y-auto px-4 py-4 space-y-2">
-              {filteredSuppliers.length === 0 ? (
-                <div className="flex h-full min-h-[16rem] flex-col items-center justify-center rounded-[2rem] border-2 border-dashed border-slate-100 bg-slate-50/50 px-6 text-center">
-                  <div className="h-16 w-16 rounded-full bg-white flex items-center justify-center text-slate-200 mb-4 shadow-sm">
-                    <Factory className="h-8 w-8" strokeWidth={2} />
-                  </div>
-                  <p className="text-lg font-black text-slate-400">ไม่พบข้อมูลผู้ขาย</p>
-                  <p className="text-sm font-bold text-slate-300 mt-1">ลองเปลี่ยนคำค้นหาดูใหม่</p>
-                </div>
+        {/* Footer Action */}
+        <div className="shrink-0 p-5 sm:p-8 bg-white border-t border-slate-100 shadow-[0_-20px_60px_rgba(0,0,0,0.03)] flex items-center gap-4">
+          {step > 1 && (
+            <button
+              onClick={prevStep}
+              className="flex-1 h-16 sm:h-20 bg-slate-50 text-slate-500 rounded-[1.5rem] sm:rounded-[2.2rem] font-black text-lg sm:text-2xl flex items-center justify-center gap-3 active:scale-95 transition-all whitespace-nowrap hover:bg-slate-100"
+            >
+              <ChevronLeft className="h-6 w-6 sm:h-8 sm:w-8 shrink-0" strokeWidth={3} />
+              <span>ย้อนกลับ</span>
+            </button>
+          )}
+          
+          {step < 3 ? (
+            <button
+              onClick={nextStep}
+              className="flex-1 h-16 sm:h-20 bg-[#003366] text-white rounded-[1.5rem] sm:rounded-[2.2rem] font-black text-lg sm:text-2xl flex items-center justify-center gap-3 shadow-2xl shadow-[#003366]/30 active:scale-95 transition-all whitespace-nowrap group relative overflow-hidden"
+            >
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:animate-[shimmer_2s_infinite] pointer-events-none" />
+              <span>ต่อไป</span>
+              <ChevronRight className="h-6 w-6 sm:h-8 sm:w-8 shrink-0 transition-transform group-hover:translate-x-2" strokeWidth={3} />
+            </button>
+          ) : (
+            <button
+              onClick={onSubmit}
+              disabled={isPending}
+              className="flex-1 h-16 sm:h-20 bg-gradient-to-br from-[#003366] to-[#002244] text-white rounded-[1.5rem] sm:rounded-[2.2rem] font-black text-lg sm:text-2xl flex items-center justify-center gap-3 shadow-2xl shadow-[#003366]/40 disabled:opacity-50 active:scale-95 transition-all whitespace-nowrap group"
+            >
+              {isPending ? (
+                <Loader2 className="h-7 w-7 sm:h-9 sm:w-9 animate-spin" />
               ) : (
-                <div className="space-y-2">
-                  {filteredSuppliers.map((supplier) => {
-                    const isSelected = supplier.id === selectedSupplierId;
-                    return (
-                      <button
-                        key={supplier.id}
-                        type="button"
-                        onClick={() => {
-                          setSelectedSupplierId(supplier.id);
-                          setSupplierPickerOpen(false);
-                          setSupplierPickerQuery("");
-                        }}
-                        className={`group flex w-full items-center gap-4 rounded-[1.5rem] border-2 px-5 py-4 text-left transition-all active:scale-[0.98] ${
-                          isSelected
-                            ? "border-[#003366] bg-[#003366]/5 shadow-md"
-                            : "border-slate-50 bg-white hover:border-[#003366]/20 hover:shadow-sm"
-                        }`}
-                      >
-                        <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl transition-colors ${
-                          isSelected ? "bg-[#003366] text-white" : "bg-slate-50 text-slate-400 group-hover:text-[#003366]"
-                        }`}>
-                          <Factory className="h-5 w-5" strokeWidth={2.5} />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <p className={`text-lg font-black leading-tight transition-colors ${
-                            isSelected ? "text-[#003366]" : "text-slate-900"
-                          }`}>{supplier.name}</p>
-                          <p className="mt-0.5 text-sm font-bold text-slate-400 uppercase tracking-widest">{supplier.code}</p>
-                        </div>
-                        {isSelected && (
-                          <div className="h-6 w-6 rounded-full bg-[#003366] flex items-center justify-center text-white shadow-sm">
-                            <Check className="h-4 w-4" strokeWidth={4} />
-                          </div>
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
+                <>
+                  <Save className="h-6 w-6 sm:h-8 sm:w-8 shrink-0 group-hover:scale-110 transition-transform" strokeWidth={3} />
+                  <span>บันทึกรับสินค้า</span>
+                </>
               )}
+            </button>
+          )}
+        </div>
+
+        {/* Supplier Selection Drawer (Bottom Sheet) */}
+        {isSupplierDrawerOpen && (
+          <div className="absolute inset-0 z-50 flex flex-col justify-end bg-slate-950/40 backdrop-blur-[6px] animate-in fade-in duration-500">
+            <div 
+              onClick={() => setIsSupplierDrawerOpen(false)}
+              className="absolute inset-0" 
+            />
+            <div className="relative w-full max-h-[85%] bg-white rounded-t-[3.5rem] shadow-[0_-30px_100px_rgba(0,0,0,0.3)] flex flex-col overflow-hidden animate-in slide-in-from-bottom duration-700">
+              {/* Drag Handle Indicator */}
+              <div className="w-16 h-1.5 bg-slate-100 rounded-full mx-auto mt-4 mb-2" />
+              
+              <div className="shrink-0 p-8 border-b border-slate-50 flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="h-14 w-14 rounded-[1.5rem] bg-indigo-50 flex items-center justify-center text-[#003366] shadow-inner">
+                    <Factory size={28} />
+                  </div>
+                  <div>
+                    <h3 className="text-2xl font-black text-[#003366] tracking-tight">เลือกผู้จัดจำหน่าย</h3>
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-0.5">Select a Supplier</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setIsSupplierDrawerOpen(false)}
+                  className="h-12 w-12 rounded-2xl bg-rose-900 text-white flex items-center justify-center active:scale-90 transition-all shadow-xl shadow-rose-900/20"
+                >
+                  <X className="h-6 w-6" strokeWidth={3} />
+                </button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-6 space-y-4 no-scrollbar">
+                {suppliers.map(s => {
+                  const isSelected = supplierId === s.id;
+                  return (
+                    <button
+                      key={s.id}
+                      onClick={() => {
+                        setSupplierId(s.id);
+                        setSupplierName(s.name);
+                        setIsSupplierDrawerOpen(false);
+                      }}
+                      className={`group w-full flex items-center justify-between p-6 rounded-[2rem] border-2 transition-all text-left active:scale-[0.98] ${
+                        isSelected 
+                          ? "bg-indigo-50/50 border-[#003366] shadow-xl shadow-[#003366]/5" 
+                          : "bg-white border-slate-50 hover:border-slate-200 hover:shadow-lg"
+                      }`}
+                    >
+                      <div className="flex items-center gap-5">
+                        <div className={`h-14 w-14 rounded-2xl flex items-center justify-center transition-all ${
+                          isSelected ? "bg-white text-[#003366] shadow-lg" : "bg-slate-50 text-slate-300 group-hover:bg-indigo-50 group-hover:text-indigo-400"
+                        }`}>
+                          <Factory size={28} />
+                        </div>
+                        <div>
+                          <p className={`font-black text-xl transition-colors ${isSelected ? "text-slate-900" : "text-slate-600 group-hover:text-slate-900"}`}>{s.name}</p>
+                          <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Code: {s.code}</p>
+                        </div>
+                      </div>
+                      <div className={`h-8 w-8 rounded-full border-2 flex items-center justify-center transition-all ${
+                        isSelected ? "bg-[#003366] border-[#003366] shadow-lg" : "border-slate-100 group-hover:border-slate-200"
+                      }`}>
+                        {isSelected && <Check className="h-4 w-4 text-white" strokeWidth={6} />}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="shrink-0 p-8 bg-slate-50/50 backdrop-blur-sm border-t border-slate-100">
+                <button
+                  onClick={() => setIsSupplierDrawerOpen(false)}
+                  className="w-full h-16 bg-white text-slate-600 border border-slate-200 rounded-[1.8rem] font-black text-lg active:scale-95 transition-all shadow-sm hover:bg-slate-50"
+                >
+                  ยกเลิกรายการ
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      ) : null}
+        )}
+      </div>
     </div>
   );
 }

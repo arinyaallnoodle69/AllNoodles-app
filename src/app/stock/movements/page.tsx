@@ -1,7 +1,7 @@
 import { StockMobileReceiveButton } from "@/components/settings/stock-list";
 import { StockMovementTable } from "@/components/settings/stock-movement-table";
 import { StockReceiveForm } from "@/components/settings/stock-receive-form";
-import { StockSummaryCards } from "@/components/settings/stock-summary-cards";
+
 import { requireAppRole } from "@/lib/auth/authorization";
 import { getStockDashboardData } from "@/lib/stock/admin";
 
@@ -31,7 +31,7 @@ export default async function StockMovementsPage({
         </div>
       ) : null}
 
-      <StockSummaryCards data={data} />
+
 
       <div className="mt-8">
         <StockMovementTable initialMovementRows={data.movementRows} />

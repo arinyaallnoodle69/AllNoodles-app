@@ -3,25 +3,37 @@
 import { LayoutList } from "lucide-react";
 import { useState } from "react";
 
-export function PrintPackingListButton({ date }: { date: string }) {
+export function PrintPackingListButton({ date, endDate }: { date: string; endDate?: string }) {
   const [loading, setLoading] = useState(false);
 
   function handlePrint() {
+    if (loading) return;
+
     setLoading(true);
+    const printUrl = `/orders/packing-list?date=${date}${endDate ? `&endDate=${endDate}` : ""}&autoprint=1`;
+
     const iframe = document.createElement("iframe");
     iframe.style.cssText = "position:fixed;top:-9999px;left:-9999px;width:1px;height:1px;";
-    iframe.src = `/orders/packing-list?date=${date}`;
+    iframe.src = printUrl;
     document.body.appendChild(iframe);
+
+    const done = () => {
+      if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
+      setLoading(false);
+    };
 
     iframe.onload = () => {
       const win = iframe.contentWindow;
-      if (!win) return;
-      win.addEventListener("afterprint", () => {
-        if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
-        setLoading(false);
-      });
-      setTimeout(() => win.print(), 500);
+      if (!win) {
+        done();
+        return;
+      }
+      win.addEventListener("afterprint", done, { once: true });
     };
+    iframe.onerror = done;
+    
+    // Safety timeout (2 mins)
+    setTimeout(done, 120000);
   }
 
   return (

@@ -73,9 +73,11 @@ function CostChangeRow({ row }: { row: ProductCostHistoryRow }) {
 export function ProductCostHistoryButton({
   productId,
   productName,
+  triggerClassName,
 }: {
   productId: string;
   productName: string;
+  triggerClassName?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [rows, setRows] = useState<ProductCostHistoryRow[]>([]);
@@ -103,7 +105,7 @@ export function ProductCostHistoryButton({
       <button
         type="button"
         onClick={handleOpen}
-        className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-700 transition hover:bg-slate-50 hover:text-slate-950"
+        className={triggerClassName || "inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-700 transition hover:bg-slate-50 hover:text-slate-950"}
       >
         <History className="h-3.5 w-3.5" strokeWidth={2} />
         ประวัติ

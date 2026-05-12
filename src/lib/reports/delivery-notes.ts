@@ -65,6 +65,7 @@ type RawDeliveryLine = {
   products: {
     name: string;
     sku: string;
+    unit: string;
     cost_price: number | string | null;
     product_images: Array<{
       public_url: string;
@@ -176,7 +177,7 @@ export async function getDeliveryNotesReport(params: {
       quantity_in_base_unit,
       line_total,
       sale_unit_label,
-      products!inner(name, sku, cost_price, product_images(public_url, sort_order))
+      products!inner(name, sku, unit, cost_price, product_images(public_url, sort_order))
     `)
     .eq("organization_id", organizationId)
     .in("delivery_note_id", noteIds)
@@ -196,7 +197,7 @@ export async function getDeliveryNotesReport(params: {
     );
     const imageUrl = sortedImages[0]?.public_url ?? null;
     const noteBucket = lineBucketsByNote.get(line.delivery_note_id) ?? new Map<string, DeliveryNoteReportLine>();
-    const lineKey = `${line.products?.sku ?? "-"}::${line.sale_unit_label}`;
+    const lineKey = `${line.products?.sku ?? "-"}::${line.products?.unit ?? "-"}`;
     const existing = noteBucket.get(lineKey);
 
     if (existing) {
@@ -210,7 +211,7 @@ export async function getDeliveryNotesReport(params: {
         productName: line.products?.name ?? "-",
         productSku: line.products?.sku ?? "-",
         imageUrl,
-        saleUnitLabel: line.sale_unit_label,
+        saleUnitLabel: line.products?.unit ?? "-",
         quantityDelivered: qty,
         lineTotal: toNum(line.line_total),
         lineCost,

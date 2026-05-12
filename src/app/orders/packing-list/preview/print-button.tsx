@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 export function PackingListPrintButton({
   unassignedStores = [],
@@ -56,4 +56,17 @@ export function PackingListPrintButton({
       {isPrinting ? "กำลังพิมพ์..." : "พิมพ์"}
     </button>
   );
+}
+
+export function AutoPrint() {
+  const mounted = useRef(false);
+  useEffect(() => {
+    if (mounted.current) return;
+    mounted.current = true;
+    const timer = setTimeout(() => {
+      window.print();
+    }, 1200);
+    return () => clearTimeout(timer);
+  }, []);
+  return null;
 }

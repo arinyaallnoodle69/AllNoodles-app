@@ -2,6 +2,7 @@
 
 import React, { useState, useMemo, useTransition } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import {
   TrendingUp,
   Bell,
@@ -234,7 +235,10 @@ export function DashboardClient({
             </div>
           </div>
 
-          <div className="bg-white p-6 rounded-[2.5rem] border border-slate-50 shadow-[0_8px_30px_rgb(0,0,0,0.02)] flex flex-col relative overflow-hidden group">
+          <Link 
+            href="/stock"
+            className="bg-white p-6 rounded-[2.5rem] border border-slate-50 shadow-[0_8px_30px_rgb(0,0,0,0.02)] flex flex-col relative overflow-hidden group hover:shadow-lg hover:border-orange-200 transition-all active:scale-[0.98]"
+          >
             <div className="flex items-center space-x-3 mb-6">
               <div className="bg-orange-50 p-2 rounded-xl group-hover:bg-[#FF6B00] group-hover:text-white transition-colors">
                 <Bell className="h-5 w-5 text-[#FF6B00] group-hover:text-white" strokeWidth={2.5} />
@@ -247,7 +251,7 @@ export function DashboardClient({
               <span className="text-5xl md:text-6xl font-black text-[#FF6B00] tabular-nums">{fmtNumber(kpi.lowStockCount)}</span>
               <span className="text-sm font-bold text-slate-400">รายการ</span>
             </div>
-          </div>
+          </Link>
         </section>
 
         {/* ── Mid Row: Trend (Full Width when Tasks are hidden) ── */}
@@ -428,14 +432,12 @@ export function DashboardClient({
       )}
 
       {isStockModalOpen && (
-        <div className="fixed inset-0 z-[200] animate-in fade-in duration-300">
-          <StockReceiveForm
-            products={stockProducts}
-            suppliers={stockSuppliers}
-            returnHref="/dashboard"
-            onClose={() => setIsStockModalOpen(false)}
-          />
-        </div>
+        <StockReceiveForm
+          products={stockProducts}
+          suppliers={stockSuppliers}
+          returnHref="/dashboard"
+          onClose={() => setIsStockModalOpen(false)}
+        />
       )}
 
       {expandedOrderId && (

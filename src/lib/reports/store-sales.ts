@@ -171,6 +171,7 @@ export async function getStoreProductSales(params: {
         quantity_delivered,
         quantity_in_base_unit,
         line_total,
+        sale_unit_label,
         products!inner(id, name, sku, unit, cost_price, product_images(public_url, sort_order))
       )
     `)
@@ -187,6 +188,7 @@ export async function getStoreProductSales(params: {
       quantity_delivered: unknown;
       quantity_in_base_unit: unknown;
       line_total: unknown;
+      sale_unit_label: string;
       products: {
         id: string;
         name: string;

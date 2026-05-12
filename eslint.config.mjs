@@ -14,6 +14,10 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
     "tynoodle-app/**",
     ".codex/**",
+    "fix-revalidate.js",
+    "fix-revalidate-back.js",
+    "lint_output.txt",
+    "fix-unit.sql",
   ]),
 ]);
 

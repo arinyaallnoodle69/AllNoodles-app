@@ -17,6 +17,7 @@ import {
   Clock,
   Edit3,
   Loader2,
+  Boxes,
 } from "lucide-react";
 import type { OrderDetailData, IncomingOrderListItem } from "@/lib/orders/detail";
 import type { OrderProductOption } from "@/lib/orders/manage";
@@ -74,16 +75,17 @@ const ItemsViewList = memo(({ detail }: { detail: OrderDetailData }) => {
                   {item.productName}
                 </p>
                 <div className="flex items-center gap-3">
-                  <span className="font-mono text-[11px] font-black text-slate-400 uppercase tracking-tighter">{item.sku}</span>
+                  <span className="font-mono text-[11px] font-black text-slate-950 uppercase tracking-tighter">{item.sku}</span>
                   <span className="h-3 w-px bg-slate-200" />
                   <span className="text-[14px] font-black text-slate-500">฿{formatTHB(item.unitPrice)} / {item.unit}</span>
                 </div>
               </div>
 
               <div className="flex items-center gap-3 mt-3 h-8">
-                <div className={`flex h-full items-center gap-2 px-2.5 border-2 ${item.stockQuantity <= 0 ? "bg-rose-50 border-rose-200 text-rose-700" : "bg-slate-100 border-slate-300 text-slate-900"}`}>
-                  <span className="text-[10px] font-black uppercase tracking-wider">สต็อค:</span>
-                  <span className="text-[14px] font-black tabular-nums">{item.stockQuantity.toLocaleString("th-TH")}</span>
+                <div className={`flex h-full items-center gap-2 px-2.5 border-2 rounded-lg ${item.stockQuantity < 0 ? "bg-[#FF0000] border-[#FF0000] text-white shadow-sm" : "bg-[#003366] border-[#003366] text-white shadow-sm"}`}>
+                  <Boxes className="h-4 w-4" />
+                  <span className="text-[12px] font-black uppercase tracking-wider">สต็อค:</span>
+                  <span className="text-[16px] font-black tabular-nums">{item.stockQuantity.toLocaleString("th-TH")}</span>
                 </div>
                 {item.shortQuantity > 0 && (
                   <div className="flex h-full items-center gap-2 bg-rose-600 px-2.5 border border-rose-700 shadow-sm">
@@ -267,118 +269,216 @@ const EditItemsPanel = memo(({
 
         <div className="pb-24">
           <div className="bg-white">
-            <div className="hidden grid-cols-[minmax(0,1fr)_128px_144px_96px_160px_56px] items-center border-b-2 border-slate-900 bg-white px-5 py-4 text-[13px] font-black uppercase tracking-[0.08em] text-slate-950 md:grid">
-              <span className="text-center">สินค้า</span>
-              <span className="text-center">ราคา</span>
-              <span className="text-center">ยอดรวม</span>
-              <span className="text-center">สต็อค</span>
-              <span className="text-center">จำนวน</span>
-              <span />
+            {/* Desktop Table View (md+) */}
+            <div className="hidden overflow-x-auto border-b border-slate-300 md:block">
+              <table className="min-w-full border-collapse text-left">
+                <thead>
+                  <tr className="bg-[#003366]">
+                    <th className="px-5 py-4 text-[13px] font-black uppercase tracking-widest border-r border-white/5 text-white">สินค้า</th>
+                    <th className="px-5 py-4 text-[13px] font-black uppercase tracking-widest border-r border-white/5 text-center text-white">ราคา/หน่วย</th>
+                    <th className="px-5 py-4 text-[13px] font-black uppercase tracking-widest border-r border-white/5 text-center text-white">ยอดรวม</th>
+                    <th className="px-5 py-4 text-[13px] font-black uppercase tracking-widest border-r border-white/5 text-center text-white">สต็อก</th>
+                    <th className="px-5 py-4 text-[13px] font-black uppercase tracking-widest border-r border-white/5 text-center text-white">จำนวน</th>
+                    <th className="px-5 py-4 w-16"></th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-300 bg-white">
+                  {addedItems.map((item) => {
+                    const stock = getAddedItemStock(item);
+                    return (
+                      <tr key={item.key} className="transition-colors hover:bg-emerald-50/30">
+                        <td className="px-5 py-4 border-r border-slate-100">
+                          <div className="flex items-center gap-3">
+                            <div className="relative h-12 w-12 shrink-0 overflow-hidden">
+                              {item.imageUrl ? (
+                                <Image src={item.imageUrl} alt={item.productName} fill sizes="48px" className="object-contain" />
+                              ) : (
+                                <Package2 className="h-6 w-6 text-slate-200 mx-auto mt-3" />
+                              )}
+                            </div>
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-2 mb-0.5">
+                                <span className="rounded bg-emerald-600 px-1 py-0.5 text-[9px] font-black uppercase text-white">ใหม่</span>
+                                <span className="font-mono text-[10px] font-bold text-slate-950">{item.sku}</span>
+                              </div>
+                              <p className="text-sm font-black text-slate-950 truncate max-w-[180px]">{item.productName}</p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-5 py-4 text-center font-black text-slate-600 border-r border-slate-100">฿{formatTHB(item.unitPrice)}</td>
+                        <td className="px-5 py-4 text-center font-black text-slate-950 border-r border-slate-100">฿{formatTHB(item.quantity * item.unitPrice)}</td>
+                        <td className="px-5 py-4 text-center border-r border-slate-100">
+                          <span className={`inline-flex min-w-[60px] justify-center rounded-lg px-2 py-1 text-xs font-black shadow-sm ${stock < 0 ? "bg-[#FF0000] text-white" : "bg-[#003366] text-white"}`}>
+                            {stock.toLocaleString("th-TH")}
+                          </span>
+                        </td>
+                        <td className="px-5 py-4">
+                          <div className="flex items-center justify-center gap-3">
+                            <button onClick={() => handleAddedQty(item.key, -1)} className="h-8 w-8 rounded-lg bg-slate-100 text-slate-600 flex items-center justify-center active:scale-90"><Minus className="h-4 w-4" strokeWidth={3} /></button>
+                            <span className="min-w-[30px] text-center font-black text-slate-950 tabular-nums">{item.quantity}</span>
+                            <button onClick={() => handleAddedQty(item.key, +1)} className="h-8 w-8 rounded-lg bg-[#003366] text-white flex items-center justify-center active:scale-90"><Plus className="h-4 w-4" strokeWidth={3} /></button>
+                          </div>
+                        </td>
+                        <td className="px-5 py-4 text-center">
+                          <button onClick={() => setAddedItems((current) => current.filter((draft) => draft.key !== item.key))} className="text-rose-500 p-2 rounded-lg hover:bg-rose-50 transition-colors active:scale-90">
+                            <Trash2 className="h-5 w-5" strokeWidth={2.3} />
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                  {activeItems.map((item) => {
+                    const qty = quantities[item.id] ?? item.quantity;
+                    return (
+                      <tr key={item.id} className="transition-colors hover:bg-slate-50">
+                        <td className="px-5 py-4 border-r border-slate-100">
+                          <div className="flex items-center gap-3">
+                            <div className="relative h-12 w-12 shrink-0 overflow-hidden">
+                              {item.imageUrl ? (
+                                <Image src={item.imageUrl} alt={item.productName} fill sizes="48px" className="object-contain" />
+                              ) : (
+                                <Package2 className="h-6 w-6 text-slate-200 mx-auto mt-3" />
+                              )}
+                            </div>
+                            <div className="min-w-0">
+                              <span className="font-mono text-[10px] font-bold text-slate-950 block mb-0.5">{item.sku}</span>
+                              <p className="text-sm font-black text-slate-950 truncate max-w-[180px]">{item.productName}</p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-5 py-4 text-center font-black text-slate-600 border-r border-slate-100">฿{formatTHB(item.unitPrice)}</td>
+                        <td className="px-5 py-4 text-center font-black text-slate-950 border-r border-slate-100">฿{formatTHB(qty * item.unitPrice)}</td>
+                        <td className="px-5 py-4 text-center border-r border-slate-100">
+                          <span className={`inline-flex min-w-[60px] justify-center rounded-lg px-2 py-1 text-xs font-black shadow-sm ${item.stockQuantity < 0 ? "bg-[#FF0000] text-white" : "bg-[#003366] text-white"}`}>
+                            {item.stockQuantity.toLocaleString("th-TH")}
+                          </span>
+                        </td>
+                        <td className="px-5 py-4">
+                          <div className="flex items-center justify-center gap-3">
+                            <button onClick={() => handleQty(item.id, -1)} className="h-8 w-8 rounded-lg bg-slate-100 text-slate-600 flex items-center justify-center active:scale-90"><Minus className="h-4 w-4" strokeWidth={3} /></button>
+                            <span className="min-w-[30px] text-center font-black text-slate-950 tabular-nums">{qty}</span>
+                            <button onClick={() => handleQty(item.id, +1)} className="h-8 w-8 rounded-lg bg-[#003366] text-white flex items-center justify-center active:scale-90"><Plus className="h-4 w-4" strokeWidth={3} /></button>
+                          </div>
+                        </td>
+                        <td className="px-5 py-4 text-center">
+                          <button onClick={() => setRemoved((current) => new Set([...current, item.id]))} className="text-rose-500 p-2 rounded-lg hover:bg-rose-50 transition-colors active:scale-90">
+                            <Trash2 className="h-5 w-5" strokeWidth={2.3} />
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
 
-            <div className="divide-y-2 divide-slate-900">
+            {/* Mobile Card View (md:hidden) */}
+            <div className="divide-y divide-slate-300/80 bg-slate-50/30 md:hidden border-b border-slate-300">
               {addedItems.map((item) => {
                 const stock = getAddedItemStock(item);
-
                 return (
-                  <div key={item.key} className="grid gap-3 px-5 py-4 transition-colors hover:bg-emerald-50/40 md:grid-cols-[minmax(0,1fr)_128px_144px_96px_160px_56px] md:items-center">
-                    <div className="flex min-w-0 items-center gap-4">
-                      <div className="relative h-18 w-18 shrink-0 overflow-hidden">
-                        {item.imageUrl ? (
-                          <Image src={item.imageUrl} alt={item.productName} fill sizes="72px" className="object-contain" />
-                        ) : (
-                          <div className="flex h-full w-full items-center justify-center">
-                            <Package2 className="h-9 w-9 text-slate-300" strokeWidth={1.6} />
+                  <article key={item.key} className="bg-white p-5 transition-all active:bg-slate-50">
+                    <div className="flex gap-4">
+                      <div className="relative h-20 w-20 shrink-0 overflow-hidden">
+                        {item.imageUrl ? <Image src={item.imageUrl} alt={item.productName} fill sizes="80px" className="object-contain" /> : <Package2 className="h-9 w-9 text-slate-200 mx-auto mt-5" />}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <div className="mb-1.5 flex flex-wrap items-center gap-2">
+                              <span className="rounded bg-emerald-600 px-1.5 py-0.5 text-[9px] font-black uppercase text-white">ใหม่</span>
+                              <span className="font-mono text-[11px] font-black uppercase tracking-tighter text-slate-950">{item.sku}</span>
+                            </div>
+                            <h4 className="line-clamp-2 text-[1.1rem] font-black leading-tight text-slate-950">{item.productName}</h4>
                           </div>
-                        )}
-                      </div>
-                      <div className="min-w-0">
-                        <div className="mb-1.5 flex flex-wrap items-center gap-2">
-                          <span className="rounded-full bg-emerald-600 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-white">ใหม่</span>
-                          <span className="font-mono text-xs font-black uppercase tracking-wide text-[#003366]/70">{item.sku}</span>
+                          <button onClick={() => setAddedItems((current) => current.filter((draft) => draft.key !== item.key))} className="shrink-0 rounded-lg p-1.5 text-slate-300 active:text-rose-500">
+                            <Trash2 className="h-5 w-5" strokeWidth={2.3} />
+                          </button>
                         </div>
-                        <p className="max-w-[28rem] text-[15px] font-black leading-snug text-slate-950">{item.productName}</p>
-                        <p className="mt-1 text-xs font-bold text-slate-500">หน่วย {item.unitLabel}</p>
+                        <div className="mt-4 grid grid-cols-2 gap-4">
+                          <div>
+                            <p className="text-[10px] font-black uppercase tracking-[0.12em] text-slate-400">สต็อกสินค้า</p>
+                            <div className="mt-1.5 flex items-center">
+                              <span className={`inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-[13.5px] font-black shadow-sm ${stock < 0 ? "bg-[#FF0000] text-white" : "bg-[#003366] text-white"}`}>
+                                <Boxes className="h-3.5 w-3.5" />
+                                {stock.toLocaleString("th-TH")}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="border-l border-slate-300 pl-4">
+                            <p className="text-[10px] font-black uppercase tracking-[0.12em] text-slate-400">ราคาต่อหน่วย</p>
+                            <p className="mt-1.5 text-[15px] font-black text-slate-950">฿{formatTHB(item.unitPrice)}</p>
+                          </div>
+                        </div>
                       </div>
                     </div>
-
-                    <div className="flex items-center justify-between gap-2 md:block md:flex md:justify-end">
-                      <span className="text-xs font-black text-slate-400 md:hidden">ราคา</span>
-                      <p className="text-base font-black text-[#003366] tabular-nums">{formatTHB(item.unitPrice)} บาท</p>
+                    <div className="mt-5 flex items-center justify-between gap-4 border-t border-slate-300 pt-4">
+                      <div className="flex items-center gap-3">
+                        <button onClick={() => handleAddedQty(item.key, -1)} className="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-100 text-slate-600 active:scale-95"><Minus className="h-6 w-6" strokeWidth={3} /></button>
+                        <span className="min-w-[40px] text-center text-2xl font-black text-slate-950 tabular-nums">{item.quantity}</span>
+                        <button onClick={() => handleAddedQty(item.key, +1)} className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#003366] text-white shadow-md active:scale-95"><Plus className="h-6 w-6" strokeWidth={3} /></button>
+                      </div>
+                      <div className="h-10 border-l border-slate-200" />
+                      <div className="text-right flex-1">
+                        <p className="mb-1 text-[10px] font-black uppercase tracking-widest text-slate-400">ยอดรวมสินค้า</p>
+                        <p className="text-[1.3rem] font-black text-[#003366] tabular-nums leading-none">฿{formatTHB(item.quantity * item.unitPrice)}</p>
+                      </div>
                     </div>
-
-                    <div className="flex items-center justify-between gap-2 md:block md:flex md:justify-end">
-                      <span className="text-xs font-black text-slate-400 md:hidden">ยอดรวม</span>
-                      <p className="text-base font-black text-slate-950 tabular-nums">{formatTHB(item.quantity * item.unitPrice)} บาท</p>
-                    </div>
-
-                    <div className="flex items-center justify-between gap-2 md:block md:flex md:justify-center">
-                      <span className="text-xs font-black text-slate-400 md:hidden">สต็อค</span>
-                      <span className={`inline-flex min-w-12 justify-center text-sm font-black tabular-nums ${stock <= 0 ? "text-rose-700" : "text-slate-950"}`}>
-                        {stock.toLocaleString("th-TH")}
-                      </span>
-                    </div>
-
-                    <div className="flex items-center justify-between gap-3 px-0 py-0 md:justify-center">
-                      <button onClick={() => handleAddedQty(item.key, -1)} className="flex h-9 w-9 items-center justify-center rounded-full bg-[#003366] text-white shadow-sm transition active:scale-90"><Minus className="h-4.5 w-4.5" strokeWidth={3} /></button>
-                      <span className="min-w-9 text-center text-lg font-black text-slate-950 tabular-nums">{item.quantity.toLocaleString("th-TH")}</span>
-                      <button onClick={() => handleAddedQty(item.key, +1)} className="flex h-9 w-9 items-center justify-center rounded-full bg-[#003366] text-white shadow-sm transition active:scale-90"><Plus className="h-4.5 w-4.5" strokeWidth={3} /></button>
-                    </div>
-
-                    <button onClick={() => setAddedItems((current) => current.filter((draft) => draft.key !== item.key))} className="flex h-10 w-10 items-center justify-center justify-self-center rounded-full text-rose-500 transition hover:bg-rose-50 active:scale-90" aria-label={`ลบ ${item.productName}`}>
-                      <Trash2 className="h-5 w-5" strokeWidth={2.3} />
-                    </button>
-                  </div>
+                  </article>
                 );
               })}
-
-              {activeItems.map((item) => (
-                <div key={item.id} className="grid gap-3 px-5 py-4 transition-colors hover:bg-slate-50 md:grid-cols-[minmax(0,1fr)_128px_144px_96px_160px_56px] md:items-center">
-                  <div className="flex min-w-0 items-center gap-4">
-                    <div className="relative h-18 w-18 shrink-0 overflow-hidden">
-                      {item.imageUrl ? (
-                        <Image src={item.imageUrl} alt={item.productName} fill sizes="72px" className="object-contain" />
-                      ) : (
-                        <div className="flex h-full w-full items-center justify-center">
-                          <Package2 className="h-9 w-9 text-slate-300" strokeWidth={1.6} />
+              {activeItems.map((item) => {
+                const qty = quantities[item.id] ?? item.quantity;
+                return (
+                  <article key={item.id} className="bg-white p-5 transition-all active:bg-slate-50">
+                    <div className="flex gap-4">
+                      <div className="relative h-20 w-20 shrink-0 overflow-hidden">
+                        {item.imageUrl ? <Image src={item.imageUrl} alt={item.productName} fill sizes="80px" className="object-contain" /> : <Package2 className="h-9 w-9 text-slate-200 mx-auto mt-5" />}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <div className="mb-1.5 flex flex-wrap items-center gap-2">
+                              <span className="font-mono text-[11px] font-black uppercase tracking-tighter text-slate-950">{item.sku}</span>
+                            </div>
+                            <h4 className="line-clamp-2 text-[1.1rem] font-black leading-tight text-slate-950">{item.productName}</h4>
+                          </div>
+                          <button onClick={() => setRemoved((current) => new Set([...current, item.id]))} className="shrink-0 rounded-lg p-1.5 text-slate-300 active:text-rose-500">
+                            <Trash2 className="h-5 w-5" strokeWidth={2.3} />
+                          </button>
                         </div>
-                      )}
+                        <div className="mt-4 grid grid-cols-2 gap-4">
+                          <div>
+                            <p className="text-[10px] font-black uppercase tracking-[0.12em] text-slate-400">สต็อกสินค้า</p>
+                            <div className="mt-1.5 flex items-center">
+                              <span className={`inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-[13.5px] font-black shadow-sm ${item.stockQuantity < 0 ? "bg-[#FF0000] text-white" : "bg-[#003366] text-white"}`}>
+                                <Boxes className="h-3.5 w-3.5" />
+                                {item.stockQuantity.toLocaleString("th-TH")}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="border-l border-slate-300 pl-4">
+                            <p className="text-[10px] font-black uppercase tracking-[0.12em] text-slate-400">ราคาต่อหน่วย</p>
+                            <p className="mt-1.5 text-[15px] font-black text-slate-950">฿{formatTHB(item.unitPrice)}</p>
+                          </div>
+                        </div>
+                      </div>
                     </div>
-                    <div className="min-w-0">
-                      <p className="font-mono text-xs font-black uppercase tracking-wide text-[#003366]/70">{item.sku}</p>
-                      <p className="mt-1 max-w-[28rem] text-[15px] font-black leading-snug text-slate-950">{item.productName}</p>
-                      <p className="mt-1 text-xs font-bold text-slate-500">หน่วย {item.unit}</p>
+                    <div className="mt-5 flex items-center justify-between gap-4 border-t border-slate-300 pt-4">
+                      <div className="flex items-center gap-3">
+                        <button onClick={() => handleQty(item.id, -1)} className="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-100 text-slate-600 active:scale-95"><Minus className="h-6 w-6" strokeWidth={3} /></button>
+                        <span className="min-w-[40px] text-center text-2xl font-black text-slate-950 tabular-nums">{qty}</span>
+                        <button onClick={() => handleQty(item.id, +1)} className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#003366] text-white shadow-md active:scale-95"><Plus className="h-6 w-6" strokeWidth={3} /></button>
+                      </div>
+                      <div className="h-10 border-l border-slate-200" />
+                      <div className="text-right flex-1">
+                        <p className="mb-1 text-[10px] font-black uppercase tracking-widest text-slate-400">ยอดรวมสินค้า</p>
+                        <p className="text-[1.3rem] font-black text-[#003366] tabular-nums leading-none">฿{formatTHB(qty * item.unitPrice)}</p>
+                      </div>
                     </div>
-                  </div>
-
-                  <div className="flex items-center justify-between gap-2 md:block md:flex md:justify-end">
-                    <span className="text-xs font-black text-slate-400 md:hidden">ราคา</span>
-                    <p className="text-base font-black text-[#003366] tabular-nums">{formatTHB(item.unitPrice)} บาท</p>
-                  </div>
-
-                  <div className="flex items-center justify-between gap-2 md:block md:flex md:justify-end">
-                    <span className="text-xs font-black text-slate-400 md:hidden">ยอดรวม</span>
-                    <p className="text-base font-black text-slate-950 tabular-nums">{formatTHB((quantities[item.id] ?? item.quantity) * item.unitPrice)} บาท</p>
-                  </div>
-
-                  <div className="flex items-center justify-between gap-2 md:block md:flex md:justify-center">
-                    <span className="text-xs font-black text-slate-400 md:hidden">สต็อค</span>
-                    <span className={`inline-flex min-w-12 justify-center text-sm font-black tabular-nums ${item.stockQuantity <= 0 ? "text-rose-700" : "text-slate-950"}`}>
-                      {item.stockQuantity.toLocaleString("th-TH")}
-                    </span>
-                  </div>
-
-                  <div className="flex items-center justify-between gap-3 px-0 py-0 md:justify-center">
-                    <button onClick={() => handleQty(item.id, -1)} className="flex h-9 w-9 items-center justify-center rounded-full bg-[#003366] text-white shadow-sm transition active:scale-90"><Minus className="h-4.5 w-4.5" strokeWidth={3} /></button>
-                    <span className="min-w-9 text-center text-lg font-black text-slate-950 tabular-nums">{(quantities[item.id] ?? item.quantity).toLocaleString("th-TH")}</span>
-                    <button onClick={() => handleQty(item.id, +1)} className="flex h-9 w-9 items-center justify-center rounded-full bg-[#003366] text-white shadow-sm transition active:scale-90"><Plus className="h-4.5 w-4.5" strokeWidth={3} /></button>
-                  </div>
-
-                  <button onClick={() => setRemoved((current) => new Set([...current, item.id]))} className="flex h-10 w-10 items-center justify-center justify-self-center rounded-full text-rose-500 transition hover:bg-rose-50 active:scale-90" aria-label={`ลบ ${item.productName}`}>
-                    <Trash2 className="h-5 w-5" strokeWidth={2.3} />
-                  </button>
-                </div>
-              ))}
+                  </article>
+                );
+              })}
             </div>
           </div>
         </div>
@@ -514,7 +614,15 @@ export function IncomingOrderModal({ allOrders, detail, expandedId, products }: 
                 <span className="text-[11px] font-black text-white/80 tracking-tight">{formatDisplayDate(detail.orderDate)}</span>
               </div>
             </div>
-            <button onClick={close} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white/10 text-white/70 transition hover:bg-white/20 active:scale-90"><X className="h-6 w-6" strokeWidth={3} /></button>
+            <button
+              onClick={() => {
+                if (editMode) setEditMode(false);
+                else close();
+              }}
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white/10 text-white/70 transition hover:bg-white/20 active:scale-90"
+            >
+              <X className="h-6 w-6" strokeWidth={3} />
+            </button>
           </div>
 
           <div className="mt-3 flex items-center justify-between relative z-10">

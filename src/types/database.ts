@@ -1895,6 +1895,16 @@ export type Database = {
             }
             Returns: undefined
           }
+      adjust_inventory: {
+        Args: {
+          p_adjusted_by: string
+          p_new_stock_quantity: number
+          p_notes: string
+          p_organization_id: string
+          p_product_id: string
+        }
+        Returns: undefined
+      }
       allocate_requisition_document_numbers: {
         Args: { requested_at?: string; requested_count?: number }
         Returns: {

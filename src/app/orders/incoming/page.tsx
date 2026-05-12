@@ -1,4 +1,5 @@
 import { Search } from "lucide-react";
+import { Fragment } from "react";
 import { SettingsShell } from "@/components/settings/settings-shell";
 import { IncomingOrderModal } from "@/components/orders/incoming-order-modal";
 import { CreateOrderModal } from "@/components/orders/create-order-modal";
@@ -19,7 +20,7 @@ import { PrintPackingListButton } from "@/components/orders/print-packing-list-b
 export const metadata = { title: "รายการออเดอร์" };
 
 type IncomingOrdersPageProps = {
-  searchParams: Promise<{ create?: string; date?: string; expanded?: string; q?: string }>;
+  searchParams: Promise<{ create?: string; date?: string; endDate?: string; expanded?: string; q?: string }>;
 };
 
 function formatCurrency(value: number) {
@@ -36,6 +37,7 @@ export default async function IncomingOrdersPage({ searchParams }: IncomingOrder
   const session = await requireAppRole("admin");
   const params = await searchParams;
   const orderDate = normalizeOrderDate(params.date);
+  const endDate = params.endDate ? normalizeOrderDate(params.endDate) : orderDate;
   const searchTerm = params.q?.trim() ?? "";
   const expandedOrderId = params.expanded?.trim() ?? "";
   const autoOpenCreateModal = params.create === "1";
@@ -49,19 +51,20 @@ const [
   customerOrderCountsToday,
   deliveryData,
 ] = await Promise.all([
-  getIncomingOrders(session.organizationId, { orderDate, searchTerm }),
+  getIncomingOrders(session.organizationId, { orderDate, endDate, searchTerm }),
   expandedOrderId ? getOrderDetailById(expandedOrderId) : Promise.resolve(null),
   getCustomersForOrder(session.organizationId),
   getProductsForOrder(session.organizationId),
   getVehiclesForOrder(session.organizationId),
-  getPendingLineOrders(session.organizationId, { orderDate, searchTerm }),
-  getCustomerOrderCountsByDate(session.organizationId, orderDate),
-  getDeliveryList(session.organizationId, orderDate, orderDate, searchTerm || ""),
+  getPendingLineOrders(session.organizationId, { orderDate, endDate, searchTerm }),
+  getCustomerOrderCountsByDate(session.organizationId, orderDate, endDate),
+  getDeliveryList(session.organizationId, orderDate, endDate, searchTerm || ""),
 ]);
 
   function buildExpandedHref(nextExpandedId: string | null) {
     const p = new URLSearchParams();
     p.set("date", orderDate);
+    if (endDate !== orderDate) p.set("endDate", endDate);
     if (searchTerm) p.set("q", searchTerm);
     if (nextExpandedId) p.set("expanded", nextExpandedId);
     return `/orders/incoming?${p.toString()}`;
@@ -69,8 +72,9 @@ const [
 
   const deliveryMap = new Map<string, string[]>();
   for (const item of deliveryData) {
+    const key = `${item.customerId}_${item.deliveryDate}`;
     deliveryMap.set(
-      item.customerId,
+      key,
       item.deliveryNotes.map((note) => note.deliveryNumber),
     );
   }
@@ -79,10 +83,12 @@ const [
     orders
       .filter((order) => order.status === "submitted" || order.status === "confirmed")
       .reduce((storeMap, order) => {
-        const current = storeMap.get(order.customerId) ?? {
+        const groupKey = `${order.customerId}_${order.orderDate}`;
+        const current = storeMap.get(groupKey) ?? {
           customerId: order.customerId,
           customerName: order.customerName,
           customerCode: order.customerCode,
+          orderDate: order.orderDate,
           orderIds: [] as string[],
           orderNumbers: [] as string[],
           orderRounds: 0,
@@ -94,13 +100,15 @@ const [
         current.orderNumbers.push(order.orderNumber);
         current.orderRounds += 1;
         current.totalAmount += order.totalAmount;
-        storeMap.set(order.customerId, current);
+        storeMap.set(groupKey, current);
         return storeMap;
-      }, new Map<string, { customerId: string; customerName: string; customerCode: string; orderIds: string[]; orderNumbers: string[]; orderRounds: number; totalAmount: number; hasDelivery: boolean }>())
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      }, new Map<string, any>())
       .values(),
-  ).map(store => ({
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ).map((store: any) => ({
     ...store,
-    hasDelivery: !!(deliveryMap.get(store.customerId)?.length)
+    hasDelivery: !!(deliveryMap.get(`${store.customerId}_${store.orderDate}`)?.length)
   }));
   const deliveryByCustomerId = Object.fromEntries(deliveryMap.entries());
 
@@ -130,12 +138,24 @@ const [
             </button>
 
             <div className="ml-2 flex items-center gap-2 border-l border-white/20 pl-4">
-              <div className="w-44">
-                <IncomingOrderDateFilter
-                  id="incoming-date"
-                  name="date"
-                  defaultValue={orderDate}
-                />
+              <div className="flex items-center gap-2">
+                <div className="w-40">
+                  <IncomingOrderDateFilter
+                    id="incoming-date"
+                    name="date"
+                    defaultValue={orderDate}
+                    noAutoSubmit={true}
+                  />
+                </div>
+                <span className="text-white/40 font-bold">ถึง</span>
+                <div className="w-40">
+                  <IncomingOrderDateFilter
+                    id="incoming-endDate"
+                    name="endDate"
+                    defaultValue={endDate}
+                    noAutoSubmit={true}
+                  />
+                </div>
               </div>
             </div>
           </form>
@@ -161,13 +181,25 @@ const [
 
         <MobileSearchDrawer title="ค้นหาออเดอร์">
           <form action="/orders/incoming" method="get" className="flex flex-col gap-4 pb-32">
-            <div className="space-y-1">
-              <label className="ml-1 text-xs font-bold text-slate-900">เลือกวันที่</label>
-              <IncomingOrderDateFilter
-                id="m-incoming-date"
-                name="date"
-                defaultValue={orderDate}
-              />
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <label className="ml-1 text-xs font-bold text-slate-900">จากวันที่</label>
+                <IncomingOrderDateFilter
+                  id="m-incoming-date"
+                  name="date"
+                  defaultValue={orderDate}
+                  noAutoSubmit={true}
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="ml-1 text-xs font-bold text-slate-900">ถึงวันที่</label>
+                <IncomingOrderDateFilter
+                  id="m-incoming-endDate"
+                  name="endDate"
+                  defaultValue={endDate}
+                  noAutoSubmit={true}
+                />
+              </div>
             </div>
             <div className="space-y-1">
               <label className="ml-1 text-xs font-bold text-slate-900">ค้นหาออเดอร์</label>
@@ -205,8 +237,8 @@ const [
             </div>
             <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1 -mx-1 px-1 sm:overflow-visible sm:pb-0 sm:mx-0 sm:px-0">
               <div className="flex flex-nowrap items-center gap-1.5 min-w-max">
-                <PrintPackingListButton date={orderDate} />
-                <IncomingOrdersDeliveryActions date={orderDate} stores={visibleOrderStores} />
+                <PrintPackingListButton date={orderDate} endDate={endDate} />
+                <IncomingOrdersDeliveryActions date={orderDate} endDate={endDate} stores={visibleOrderStores} />
               </div>
             </div>
           </div>
@@ -215,28 +247,43 @@ const [
             <>
               <div className="relative left-1/2 w-screen -translate-x-1/2 lg:hidden">
                 <div className="grid grid-cols-1 divide-y divide-slate-200 border-t border-slate-200 sm:grid-cols-2 sm:divide-y-0 sm:gap-px sm:bg-slate-200">
-                  {orders.map((order) => (
-                    <IncomingOrderOpenCard
-                      key={order.id}
-                      href={buildExpandedHref(order.id)}
-                      orderId={order.id}
-                      orderNumber={order.orderNumber}
-                      customerId={order.customerId}
-                      customerName={order.customerName}
-                      customerCode={order.customerCode}
-                      channelLabel={order.channelLabel}
-                      displayDate={formatDisplayDate(order.orderDate)}
-                      totalAmountText={`${formatCurrency(order.totalAmount)} บาท`}
-                      vehicleId={order.vehicleId}
-                      vehicleName={order.vehicleName}
-                      vehicles={vehicles}
-                      deliveryNumbers={deliveryMap.get(order.customerId)}
-                      orderDate={order.orderDate}
-                      currentListDate={orderDate}
-                      productCount={order.productCount}
-                      searchTerm={searchTerm}
-                    />
-                  ))}
+                  {orders.map((order, index) => {
+                    const showDivider = index === 0 || order.orderDate !== orders[index - 1].orderDate;
+                    return (
+                      <Fragment key={order.id}>
+                        {showDivider && (
+                          <div className="col-span-full bg-slate-50/80 px-4 py-3 flex items-center gap-3">
+                            <div className="h-[2px] flex-1 bg-slate-200"></div>
+                            <div className="shrink-0 px-4 py-1.5 rounded-2xl bg-white border border-slate-200 shadow-sm">
+                              <span className="text-[13px] font-black text-[#003366] tracking-wider uppercase">
+                                {formatDisplayDate(order.orderDate)}
+                              </span>
+                            </div>
+                            <div className="h-[2px] flex-1 bg-slate-200"></div>
+                          </div>
+                        )}
+                        <IncomingOrderOpenCard
+                          href={buildExpandedHref(order.id)}
+                          orderId={order.id}
+                          orderNumber={order.orderNumber}
+                          customerId={order.customerId}
+                          customerName={order.customerName}
+                          customerCode={order.customerCode}
+                          channelLabel={order.channelLabel}
+                          displayDate={formatDisplayDate(order.orderDate)}
+                          totalAmountText={`${formatCurrency(order.totalAmount)} บาท`}
+                          vehicleId={order.vehicleId}
+                          vehicleName={order.vehicleName}
+                          vehicles={vehicles}
+                          deliveryNumbers={deliveryMap.get(`${order.customerId}_${order.orderDate}`)}
+                          orderDate={order.orderDate}
+                          currentListDate={orderDate}
+                          productCount={order.productCount}
+                          searchTerm={searchTerm}
+                        />
+                      </Fragment>
+                    );
+                  })}
                 </div>
               </div>
 
@@ -256,7 +303,9 @@ const [
             </>
           ) : (
             <div className="px-6 py-16 text-center">
-              <p className="text-lg font-semibold text-slate-950">ยังไม่มีออเดอร์เข้าในวันที่เลือก</p>
+            <p className="text-lg font-semibold text-slate-950">
+              ยังไม่มีออเดอร์เข้าในช่วงวันที่เลือก
+            </p>
               <p className="mt-2 text-sm font-medium text-slate-950">
                 เมื่อลูกค้าส่งคำสั่งซื้อเข้ามา ระบบจะแสดงรายการออเดอร์แต่ละใบที่หน้านี้
               </p>

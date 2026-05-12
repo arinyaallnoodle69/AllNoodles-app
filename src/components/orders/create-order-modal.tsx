@@ -23,6 +23,7 @@ import {
   Truck,
   Unlock,
   X,
+  Boxes,
 } from "lucide-react";
 import { useCreateOrder } from "./create-order-context";
 import { getEffectiveSaleUnitCost } from "@/lib/products/sale-unit-cost";
@@ -192,7 +193,7 @@ function getUnits(product: OrderProductOption): ProductUnit[] {
       fixedCostPrice: unit.fixedCostPrice ?? null,
       id: unit.id,
       isDefault: unit.isDefault,
-      label: unit.label,
+      label: product.unit,
       minOrderQty: Number(unit.minOrderQty ?? 1),
       stepOrderQty:
         unit.stepOrderQty === null || unit.stepOrderQty === undefined
@@ -344,9 +345,20 @@ const ProductRow = React.memo(({
 
         <div className="min-w-0 flex-1">
           <p className="line-clamp-2 text-[19px] font-black leading-tight text-slate-950">
-            <span className="mr-2 text-[#003366]/40 font-bold uppercase tracking-tighter">{product.sku}</span>
+            <span className="mr-2 text-slate-950 font-bold uppercase tracking-tighter">{product.sku}</span>
             {product.name}
           </p>
+
+          <div className="mt-1.5 flex flex-wrap items-center gap-2">
+            <span className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-[13.5px] font-black shadow-sm ${
+              product.stockQuantity < 0 
+                ? "bg-[#FF0000] text-white" 
+                : "bg-[#003366] text-white"
+            }`}>
+              <Boxes className="h-4 w-4" strokeWidth={2.5} />
+              สต็อก: {product.stockQuantity.toLocaleString("th-TH")} {product.unit}
+            </span>
+          </div>
           
           <div className="mt-2.5 flex flex-wrap items-center gap-3">
             {/* Customer Specific Price Badge */}
@@ -642,14 +654,14 @@ function ProductSelectModal({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-[420] flex items-end justify-center bg-slate-950/60 p-0 sm:items-center sm:p-4">
+    <div className="fixed inset-0 z-[10000] flex items-end justify-center bg-slate-950/60 p-0 sm:items-center sm:p-4">
       <div className="absolute inset-0" onClick={onClose} />
       <div className="relative flex h-full w-full max-h-full flex-col overflow-hidden bg-white shadow-2xl sm:h-[90dvh] sm:max-h-[90dvh] sm:max-w-4xl sm:rounded-[2.5rem]">
         <ActionPopup message={popupMessage} onClose={() => setPopupMessage(null)} />
         
         {/* Cost Warning Blocking Popup */}
         {costWarningInfo && (
-          <div className="absolute inset-0 z-[430] flex items-center justify-center bg-slate-950/70 p-4 backdrop-blur-sm">
+          <div className="absolute inset-0 z-[10010] flex items-center justify-center bg-slate-950/70 p-4 backdrop-blur-sm">
             <div className="w-full max-w-sm rounded-[2.5rem] bg-white p-8 shadow-2xl animate-in zoom-in-95 duration-200">
               <div className="flex flex-col items-center text-center">
                 <div className="mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-rose-50 text-rose-500 shadow-inner">
@@ -792,7 +804,7 @@ function ProductSelectModal({
 
         {/* Sliding Category Picker */}
         {categoryPickerOpen && (
-          <div className="absolute inset-0 z-[430] flex flex-col bg-slate-950/40 backdrop-blur-sm">
+          <div className="absolute inset-0 z-[10010] flex flex-col bg-slate-950/40 backdrop-blur-sm">
             <div className="absolute inset-0" onClick={() => setCategoryPickerOpen(false)} />
             <div className="mt-auto relative flex max-h-[85%] flex-col overflow-hidden rounded-t-[3rem] bg-white shadow-2xl animate-in slide-in-from-bottom duration-300">
               <div className="flex items-center justify-between border-b border-slate-100 px-8 py-6">
@@ -1270,7 +1282,7 @@ export function CreateOrderModal({
       {/* Main modal */}
       {(open || isClosing) && (
         <div
-          className={`fixed inset-0 z-[400] flex items-center justify-center bg-slate-950/60 p-0 sm:p-4 ${
+          className={`fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/60 p-0 sm:p-4 ${
             isClosing ? "animate-fade-out" : "animate-fade-in"
           }`}
         >
@@ -1720,7 +1732,7 @@ export function CreateOrderModal({
       )}
 
       {open && customerPickerOpen ? (
-        <div className="fixed inset-0 z-[420] flex items-end justify-center bg-slate-950/50 sm:items-center sm:p-4">
+        <div className="fixed inset-0 z-[10000] flex items-end justify-center bg-slate-950/50 sm:items-center sm:p-4">
           <div className="absolute inset-0" onClick={() => setCustomerPickerOpen(false)} />
           <div className="relative flex h-full w-full max-h-full flex-col overflow-hidden rounded-none bg-white shadow-2xl sm:h-[80dvh] sm:max-w-md sm:rounded-[2rem]">
             <div className="sticky top-0 z-20 flex items-center justify-between gap-3 border-b border-slate-200 bg-white px-4 py-2.5 sm:py-4">
@@ -1929,7 +1941,7 @@ export function GlobalCreateOrderModal() {
 
   if (!data) {
     return (
-      <div className="fixed inset-0 z-[400] flex items-center justify-center bg-slate-950/60 p-4">
+      <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/60 p-4">
         <button
           type="button"
           className="absolute inset-0"
