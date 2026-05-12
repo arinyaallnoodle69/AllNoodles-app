@@ -20,7 +20,7 @@ export function formatDate(iso: string) {
       year: "numeric",
       timeZone: "Asia/Bangkok",
     }).format(new Date(d));
-  } catch (e) {
+  } catch {
     return iso;
   }
 }
@@ -35,7 +35,7 @@ export function formatDateShort(iso: string) {
       year: "2-digit",
       timeZone: "Asia/Bangkok",
     }).format(new Date(d));
-  } catch (e) {
+  } catch {
     return iso;
   }
 }

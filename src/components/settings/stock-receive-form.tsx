@@ -226,7 +226,7 @@ export function StockReceiveForm({
       }
 
       // Check if all selected products have at least one unit with quantity > 0
-      const missingQty = Object.entries(selections).some(([_, units]) => {
+      const missingQty = Object.entries(selections).some(([, units]) => {
         return !Object.values(units).some(qty => Number(qty) > 0);
       });
 

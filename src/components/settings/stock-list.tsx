@@ -1,9 +1,9 @@
 "use client";
 
-import React, { memo, useState, useEffect, useTransition } from "react";
+import React, { memo, useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { Boxes, Package2, Plus, ClipboardEdit, Coins, Wallet } from "lucide-react";
 import {
   SettingsEmptyState,

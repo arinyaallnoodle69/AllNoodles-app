@@ -1,7 +1,5 @@
 import { requireAppRole } from "@/lib/auth/authorization";
 import {
-  getAllDeliveryNotesPrintDataForDate,
-  getMergedDeliveryPrintData,
   type DeliveryNotePrintData,
 } from "@/lib/delivery/print";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
@@ -87,12 +85,11 @@ export default async function DeliveryBatchPrintPage({ searchParams }: Props) {
     }
 
     dns = Array.from(groupMap.values()).map((rowsRaw) => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const rows = rowsRaw as any[]; 
-      const base = rows[0] as any;
-      const org = base.organizations;
+      const rows = rowsRaw as unknown[]; 
+      const base = rows[0] as Record<string, unknown>;
+      const org = base.organizations as Record<string, unknown> | null;
       const organizationMetadata = (org?.metadata as Record<string, unknown>) || {};
-      const cust = base.customers;
+      const cust = base.customers as Record<string, unknown> | null;
       const ord = Array.isArray(base.orders) ? base.orders[0] : base.orders;
       
       const itemMap = new Map<string, {
@@ -107,28 +104,30 @@ export default async function DeliveryBatchPrintPage({ searchParams }: Props) {
       }>();
 
       for (const row of rows) {
-        const items = Array.isArray(row.delivery_note_items) ? row.delivery_note_items : [];
+        const rowData = row as Record<string, unknown>;
+        const items = Array.isArray(rowData.delivery_note_items) ? rowData.delivery_note_items as unknown[] : [];
         for (const item of items) {
-          const prod = item.products;
-          const sku = (prod?.sku || "").trim();
-          const name = (prod?.name || "").trim();
-          const unitLabel = (prod?.unit || "").trim();
+          const itemData = item as Record<string, unknown>;
+          const prod = itemData.products as Record<string, unknown> | null;
+          const sku = String(prod?.sku || "").trim();
+          const name = String(prod?.name || "").trim();
+          const unitLabel = String(prod?.unit || "").trim();
           const key = `${sku.toLowerCase() || name.toLowerCase()}||${unitLabel.toLowerCase()}`;
           
           if (itemMap.has(key)) {
             const existing = itemMap.get(key)!;
-            existing.quantityDelivered += (Number(item.quantity_delivered) || 0);
-            existing.lineTotal += (Number(item.line_total) || 0);
+            existing.quantityDelivered += (Number(itemData.quantity_delivered) || 0);
+            existing.lineTotal += (Number(itemData.line_total) || 0);
           } else {
             itemMap.set(key, {
-              id: item.id,
+              id: String(itemData.id),
               lineNumber: 0,
               productSku: sku,
               productName: name,
-              quantityDelivered: Number(item.quantity_delivered) || 0,
+              quantityDelivered: Number(itemData.quantity_delivered) || 0,
               saleUnitLabel: unitLabel,
-              unitPrice: Number(item.unit_price) || 0,
-              lineTotal: Number(item.line_total) || 0,
+              unitPrice: Number(itemData.unit_price) || 0,
+              lineTotal: Number(itemData.line_total) || 0,
             });
           }
         }
@@ -137,37 +136,37 @@ export default async function DeliveryBatchPrintPage({ searchParams }: Props) {
       const mergedItems = Array.from(itemMap.values());
       mergedItems.forEach((it, i) => { it.lineNumber = i + 1; });
 
-      const totalAmount = rows.reduce((s, r) => s + (Number(r.total_amount) || 0), 0);
-      const deliveryNumber = rows.length > 1 ? `${base.delivery_number} +${rows.length - 1}` : base.delivery_number;
-      const mergedNotes = rows.map(r => r.notes).filter(Boolean).join(" / ") || null;
+      const totalAmount = rows.reduce((s: number, r) => s + (Number((r as Record<string, unknown>).total_amount) || 0), 0);
+      const deliveryNumber = rows.length > 1 ? `${String((base as Record<string, unknown>).delivery_number)} +${rows.length - 1}` : String((base as Record<string, unknown>).delivery_number);
+      const mergedNotes = rows.map(r => (r as Record<string, unknown>).notes).filter(Boolean).join(" / ") || null;
 
-      const getVehName = (v: any) => {
+      const getVehName = (v: unknown): string | null => {
         if (!v) return null;
-        if (Array.isArray(v)) return v[0]?.name ?? null;
+        if (Array.isArray(v)) return (v[0] as { name: string }).name ?? null;
         return (v as { name: string }).name ?? null;
       };
 
       return {
         deliveryNumber,
-        deliveryDate: base.delivery_date,
-        orderNumber: ord?.order_number || null,
+        deliveryDate: String((base as Record<string, unknown>).delivery_date),
+        orderNumber: (ord as Record<string, unknown> | null)?.order_number ? String((ord as Record<string, unknown>).order_number) : null,
         totalAmount,
         notes: mergedNotes,
         organization: {
-          name: org?.name || "T&Y Noodle",
+          name: (org?.name as string) || "T&Y Noodle",
           logoUrl: (organizationMetadata?.logo_url as string) || null,
           address: (organizationMetadata?.address as string) || null,
           phone: (organizationMetadata?.phone as string) || null,
         },
         customer: {
-          name: cust?.name || "Unknown",
-          code: cust?.customer_code || "Unknown",
-          address: cust?.address || "Unknown",
-          vehicleId: cust?.default_vehicle_id || null,
+          name: (cust?.name as string) || "Unknown",
+          code: (cust?.customer_code as string) || "Unknown",
+          address: (cust?.address as string) || "Unknown",
+          vehicleId: (cust?.default_vehicle_id as string) || null,
           vehicleName: getVehName(cust?.vehicles),
         },
         items: mergedItems,
-      };
+      } as DeliveryNotePrintData;
     });
   }
 

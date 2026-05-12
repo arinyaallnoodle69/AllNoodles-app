@@ -69,7 +69,7 @@ export function DeleteProductButton({ formId, productName, triggerClassName }: D
               <h3 className="text-2xl font-black tracking-tight">ยืนยันการลบสินค้าถาวร?</h3>
               <div className="mt-4 space-y-3">
                 <p className="text-lg font-bold text-white/90 leading-relaxed">
-                  คุณกำลังจะลบรายการ <span className="text-amber-300">"{productName}"</span> ออกจากระบบ
+                  คุณกำลังจะลบรายการ <span className="text-amber-300">&quot;{productName}&quot;</span> ออกจากระบบ
                 </p>
                 <p className="text-sm font-medium text-white/60 leading-relaxed bg-black/20 p-4 rounded-2xl border border-white/5">
                   คำเตือน: การลบจะทำให้ข้อมูลประวัติสต็อก และการตั้งค่าราคาขายทั้งหมดหายไปทันที และไม่สามารถกู้คืนได้

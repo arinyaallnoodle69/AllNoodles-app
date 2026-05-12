@@ -3,7 +3,6 @@
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import {
-  Check,
   ChevronLeft,
   Loader2,
   Package2,
@@ -12,7 +11,6 @@ import {
   Save,
   Search,
   X,
-  ClipboardCheck,
 } from "lucide-react";
 import {
   useActionState,
