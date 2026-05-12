@@ -1,6 +1,6 @@
 "use client";
 
-import { X, Camera } from "lucide-react";
+import { X, Camera, Edit3 } from "lucide-react";
 import Image from "next/image";
 import { useState } from "react";
 import type { StockReceiptDetail } from "@/lib/stock/admin";
@@ -9,6 +9,7 @@ import { fmtDateTimeTH, fmtDateTH } from "@/lib/utils/date";
 type Props = {
   detail: StockReceiptDetail;
   onClose: () => void;
+  onEdit: () => void;
 };
 
 function formatCurrency(value: number) {
@@ -24,7 +25,7 @@ function formatQuantity(value: number) {
   });
 }
 
-export function StockReceiptDetailModal({ detail, onClose }: Props) {
+export function StockReceiptDetailModal({ detail, onClose, onEdit }: Props) {
   const [showImage, setShowImage] = useState(false);
 
   return (
@@ -58,6 +59,16 @@ export function StockReceiptDetailModal({ detail, onClose }: Props) {
                 <div className="text-[11px] leading-relaxed text-slate-500">T&Y Noodle - ใบรับสินค้าเข้า</div>
                 <div className="text-[14px] font-[800] leading-tight mt-0.5">เลขที่ออเดอร์: {detail.receiptNumber}</div>
                 <div className="text-[12px] leading-relaxed text-slate-500 mt-1">{fmtDateTimeTH(detail.receivedAt)}</div>
+              </div>
+
+              <div className="flex justify-center mb-6">
+                 <button 
+                   onClick={onEdit}
+                   className="inline-flex items-center gap-2 px-6 py-2 rounded-full bg-slate-900 text-white text-[13px] font-black shadow-lg active:scale-95 transition-all"
+                 >
+                   <Edit3 className="h-4 w-4" />
+                   แก้ไขรายการนี้
+                 </button>
               </div>
 
               <div className="h-[2px] bg-black mb-4" />
@@ -139,9 +150,16 @@ export function StockReceiptDetailModal({ detail, onClose }: Props) {
                   <h1 className="text-[20px] font-black leading-tight text-black">T&Y NOODLES</h1>
                 </div>
               </div>
-              <div className="text-left sm:text-right">
-                <h2 className="text-[18px] font-black text-[#0051d5] md:text-[20px]">ใบรับสินค้าเข้า</h2>
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#45464d]">Goods Receipt Voucher</p>
+                <div className="text-left sm:text-right">
+                 <h2 className="text-[18px] font-black text-[#0051d5] md:text-[20px]">ใบรับสินค้าเข้า</h2>
+                 <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#45464d]">Goods Receipt Voucher</p>
+                 <button 
+                   onClick={onEdit}
+                   className="mt-2 inline-flex items-center gap-2 px-3 py-1 rounded-lg border border-[#c6c6cd] hover:bg-slate-50 text-[11px] font-black transition-all active:scale-95"
+                 >
+                   <Edit3 className="h-3.5 w-3.5 text-slate-500" />
+                   แก้ไขข้อมูล
+                 </button>
               </div>
             </div>
 

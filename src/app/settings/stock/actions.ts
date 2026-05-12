@@ -267,3 +267,132 @@ export async function adjustStockAction(
 
   return { status: "success", message: "ปรับปรุงยอดสต็อกเรียบร้อยแล้ว" };
 }
+
+export type UpdateStockReceiptActionState = {
+  fieldErrors: Partial<Record<"receivedAt" | "supplierId" | "supplierName" | "notes" | "items", string>>;
+  message: string;
+  status: "error" | "idle" | "success";
+};
+
+export async function updateStockReceiptAction(
+  _prevState: UpdateStockReceiptActionState,
+  formData: FormData,
+): Promise<UpdateStockReceiptActionState> {
+  const session = await requireAppRole("admin");
+  const admin = getSupabaseAdmin();
+
+  const receiptId = getText(formData, "receiptId");
+  const receivedAt = getText(formData, "receivedAt");
+  const supplierId = getText(formData, "supplierId");
+  const supplierName = getText(formData, "supplierName");
+  const notes = getText(formData, "notes");
+
+  // Extract items from form data
+  const items: Array<{
+    productId: string;
+    quantityReceived: number;
+    unit: string;
+    unitCost: number;
+  }> = [];
+  
+  let itemIndex = 0;
+  while (true) {
+    const productId = getText(formData, `items[${itemIndex}].productId`);
+    const quantityReceived = getNumber(formData, `items[${itemIndex}].quantityReceived`);
+    const unit = getText(formData, `items[${itemIndex}].unit`);
+    const unitCost = getNumber(formData, `items[${itemIndex}].unitCost`);
+    
+    if (!productId) break;
+    
+    if (quantityReceived <= 0 || !unit || unitCost < 0) {
+      return { 
+        status: "error", 
+        message: "กรุณาระบุข้อมูลสินค้าให้ถูกต้อง (จำนวนต้องมากกว่า 0 และราคาต้องไม่ติดลบ)", 
+        fieldErrors: { items: "ข้อมูลสินค้าไม่ถูกต้อง" } 
+      };
+    }
+    
+    items.push({ productId, quantityReceived, unit, unitCost });
+    itemIndex++;
+  }
+
+  if (!receiptId) {
+    return { status: "error", message: "ไม่พบรหัสใบรับสินค้า", fieldErrors: {} };
+  }
+
+  if (!receivedAt) {
+    return { fieldErrors: { receivedAt: "กรุณาระบุวันที่รับสินค้า" }, status: "error", message: "กรุณาระบุวันที่รับสินค้า" };
+  }
+
+  if (items.length === 0) {
+    return { status: "error", message: "ต้องมีรายการสินค้าอย่างน้อย 1 รายการ", fieldErrors: { items: "ไม่พบรายการสินค้า" } };
+  }
+
+  try {
+    const parsedDate = new Date(receivedAt + "T00:00:00");
+    if (isNaN(parsedDate.getTime())) {
+      return { fieldErrors: { receivedAt: "รูปแบบวันที่ไม่ถูกต้อง" }, status: "error", message: "รูปแบบวันที่ไม่ถูกต้อง" };
+    }
+
+    // Start a transaction-like operation
+    // 1. Update receipt header
+    const { error: receiptError } = await admin
+      .from("inventory_receipts")
+      .update({
+        received_at: parsedDate.toISOString(),
+        supplier_id: supplierId || null,
+        supplier_name: supplierName || undefined,
+        notes: notes || undefined,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", receiptId)
+      .eq("organization_id", session.organizationId);
+
+    if (receiptError) {
+      console.error("[updateStockReceiptAction] Receipt update error:", receiptError);
+      return { status: "error", message: receiptError.message || "ไม่สามารถอัปเดตข้อมูลใบรับสินค้าได้", fieldErrors: {} };
+    }
+
+    // 2. Delete existing items
+    const { error: deleteError } = await admin
+      .from("inventory_receipt_items")
+      .delete()
+      .eq("receipt_id", receiptId);
+
+    if (deleteError) {
+      console.error("[updateStockReceiptAction] Items delete error:", deleteError);
+      return { status: "error", message: "ไม่สามารถอัปเดตรายการสินค้าได้", fieldErrors: {} };
+    }
+
+    // 3. Insert new items
+    const itemsToInsert = items.map(item => ({
+      receipt_id: receiptId,
+      product_id: item.productId,
+      quantity_received: item.quantityReceived,
+      unit: item.unit,
+      unit_cost: item.unitCost,
+      organization_id: session.organizationId,
+      created_at: new Date().toISOString(),
+      stock_before: 0, // Will be calculated by trigger
+      stock_after: 0,  // Will be calculated by trigger
+    }));
+
+    const { error: insertError } = await admin
+      .from("inventory_receipt_items")
+      .insert(itemsToInsert);
+
+    if (insertError) {
+      console.error("[updateStockReceiptAction] Items insert error:", insertError);
+      return { status: "error", message: "ไม่สามารถบันทึกรายการสินค้าใหม่ได้", fieldErrors: {} };
+    }
+
+    revalidatePath("/stock/history");
+    revalidatePath("/stock");
+    revalidatePath("/settings/stock");
+
+    return { status: "success", message: "อัปเดตข้อมูลใบรับสินค้าเรียบร้อยแล้ว", fieldErrors: {} };
+  } catch (error) {
+    console.error("[updateStockReceiptAction] Unexpected error:", error);
+    return { status: "error", message: "เกิดข้อผิดพลาดที่ไม่คาดคิด", fieldErrors: {} };
+  }
+}
