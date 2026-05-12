@@ -52,7 +52,7 @@ const [
   deliveryData,
 ] = await Promise.all([
   getIncomingOrders(session.organizationId, { orderDate, endDate, searchTerm }),
-  expandedOrderId ? getOrderDetailById(expandedOrderId) : Promise.resolve(null),
+  expandedOrderId ? getOrderDetailById(session.organizationId, expandedOrderId) : Promise.resolve(null),
   getCustomersForOrder(session.organizationId),
   getProductsForOrder(session.organizationId),
   getVehiclesForOrder(session.organizationId),

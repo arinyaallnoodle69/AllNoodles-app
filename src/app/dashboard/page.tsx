@@ -40,7 +40,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
     const results = await Promise.all([
       getDashboardOverview(session.organizationId),
       getOrderStoreStatusSummary(session.organizationId, orderDate),
-      expandedOrderId ? getOrderDetailById(expandedOrderId) : Promise.resolve(null),
+      expandedOrderId ? getOrderDetailById(session.organizationId, expandedOrderId) : Promise.resolve(null),
       expandedOrderId ? getIncomingOrders(session.organizationId, { orderDate }) : Promise.resolve([]),
       expandedOrderId ? getProductsForOrder(session.organizationId) : Promise.resolve([]),
     ]);

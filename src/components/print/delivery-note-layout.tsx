@@ -2,7 +2,6 @@ import type { DeliveryNotePrintData } from "@/lib/delivery/print";
 import {
   PRINT_ORGANIZATION_NAME,
   SHEET_WIDTH_MM,
-  SHEET_HEIGHT_MM,
   HALF_SHEET_HEIGHT_MM,
   NOTE_PADDING,
   chunkItems,
@@ -138,16 +137,15 @@ function DeliveryNotePageView({
 
 export function DeliveryNoteLayout({ dns, showIntermediateFooter = false }: Props) {
   const notePages = buildNotePages(dns);
-  const sheets = chunkItems(notePages, 2);
 
   return (
     <>
       <style>{`
-        @page { size: ${SHEET_WIDTH_MM}mm ${SHEET_HEIGHT_MM}mm; margin: 0; }
+        @page { size: ${SHEET_WIDTH_MM}mm ${HALF_SHEET_HEIGHT_MM}mm; margin: 0; }
         @media print {
           html, body {
             width: ${SHEET_WIDTH_MM}mm;
-            height: ${SHEET_HEIGHT_MM}mm;
+            height: ${HALF_SHEET_HEIGHT_MM}mm;
           }
           body {
             margin: 0;
@@ -155,13 +153,15 @@ export function DeliveryNoteLayout({ dns, showIntermediateFooter = false }: Prop
             -webkit-print-color-adjust: exact;
           }
           .no-print { display: none !important; }
-          .sheet-page {
+          .note-page {
             box-shadow: none !important;
             border: none !important;
             page-break-after: always;
+            break-after: page;
           }
-          .sheet-page:last-child {
+          .note-page:last-child {
             page-break-after: avoid;
+            break-after: auto;
           }
         }
         @media screen {
@@ -175,43 +175,35 @@ export function DeliveryNoteLayout({ dns, showIntermediateFooter = false }: Prop
             gap: 24px;
           }
         }
-        .sheet-page {
+        .note-page {
           background: white;
           width: ${SHEET_WIDTH_MM}mm;
-          height: ${SHEET_HEIGHT_MM}mm;
+          height: ${HALF_SHEET_HEIGHT_MM}mm;
           overflow: hidden;
           display: flex;
           flex-direction: column;
+          box-sizing: border-box;
+          padding: ${NOTE_PADDING};
         }
         @media screen {
-          .sheet-page {
+          .note-page {
             box-shadow: 0 4px 32px rgba(0,0,0,0.12);
           }
         }
-        .note-slot {
-          box-sizing: border-box;
+        .note-page__content {
           width: 100%;
-          height: ${HALF_SHEET_HEIGHT_MM}mm;
-          padding: ${NOTE_PADDING};
+          height: 100%;
           overflow: hidden;
           display: flex;
           flex-direction: column;
         }
-        .note-slot--empty {
-          visibility: hidden;
-        }
       `}</style>
 
-      {sheets.map((sheet, sheetIndex) => (
-        <div key={`sheet-${sheetIndex + 1}`} className="sheet-page">
-          {sheet.map((notePage) => (
-            <div key={notePage.key} className="note-slot">
+      {notePages.map((notePage) => (
+        <div key={notePage.key} className="note-page">
+          <div className="note-page__content">
               <DeliveryNotePageView notePage={notePage} showIntermediateFooter={showIntermediateFooter} />
-            </div>
-          ))}
-          {sheet.length < 2 && (
-            <div className="note-slot note-slot--empty" aria-hidden="true" />
-          )}
+          </div>
         </div>
       ))}
     </>

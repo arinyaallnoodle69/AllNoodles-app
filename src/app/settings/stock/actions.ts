@@ -1,10 +1,9 @@
-"use server";
+﻿"use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag, updateTag } from "next/cache";
 import { requireAppRole } from "@/lib/auth/authorization";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { getStockReceiptDetail, type StockReceiptDetail } from "@/lib/stock/admin";
-
 import { createActionClient } from "@/lib/supabase/action";
 
 const STOCK_RECEIPT_IMAGES_BUCKET = "stock-receipts";
@@ -28,6 +27,23 @@ export type AdjustStockActionState = {
   status: "error" | "idle" | "success";
 };
 
+function revalidateStockSurfaces(organizationId: string) {
+  revalidateTag(`stock-${organizationId}`, "max");
+  revalidateTag(`orders-${organizationId}`, "max");
+  revalidateTag(`settings-${organizationId}`, "max");
+
+  updateTag(`stock-${organizationId}`);
+  updateTag(`orders-${organizationId}`);
+  updateTag(`settings-${organizationId}`);
+
+  revalidatePath("/stock");
+  revalidatePath("/stock/movements");
+  revalidatePath("/settings/stock");
+  revalidatePath("/orders/incoming");
+  revalidatePath("/orders");
+  revalidatePath("/dashboard");
+}
+
 function getText(formData: FormData, key: string) {
   return String(formData.get(key) ?? "").trim();
 }
@@ -47,52 +63,52 @@ export async function receiveStockAction(
   formData: FormData,
 ): Promise<ReceiveStockActionState> {
   const session = await requireAppRole("admin");
-  
-  // Support for multiple items via JSON string
+
   const itemsJson = getText(formData, "itemsJson");
   let items: ReceiveStockItemInput[] = [];
-  
+
   if (itemsJson) {
     try {
       items = JSON.parse(itemsJson) as ReceiveStockItemInput[];
-    } catch (e) {
-      console.error("[receiveStockAction] JSON parse error:", e);
+    } catch (error) {
+      console.error("[receiveStockAction] JSON parse error:", error);
     }
   } else {
-    // Fallback to single product fields for backward compatibility
     const productId = getText(formData, "productId");
     const totalQuantity = getNumber(formData, "totalQuantity");
     const baseUnit = getText(formData, "baseUnit");
     const avgUnitCost = getNumber(formData, "avgUnitCost");
-    
+
     if (productId && totalQuantity > 0) {
-      items = [{
-        productId,
-        quantityReceived: totalQuantity,
-        unit: baseUnit,
-        unitCost: Number.isFinite(avgUnitCost) && avgUnitCost >= 0 ? avgUnitCost : 0,
-      }];
+      items = [
+        {
+          productId,
+          quantityReceived: totalQuantity,
+          unit: baseUnit,
+          unitCost: Number.isFinite(avgUnitCost) && avgUnitCost >= 0 ? avgUnitCost : 0,
+        },
+      ];
     }
   }
 
   const receiptNumberInput = getText(formData, "receiptNumber");
   let receiptNumber = receiptNumberInput;
-  
-  // Handle Images and DB init
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const admin = getSupabaseAdmin() as any;
 
   if (!receiptNumber) {
-    const { data: generatedNumber, error: generateError } = await admin.rpc("generate_receipt_number", { 
-      p_organization_id: session.organizationId 
+    const { data: generatedNumber, error: generateError } = await admin.rpc("generate_receipt_number", {
+      p_organization_id: session.organizationId,
     });
-    
+
     if (!generateError && generatedNumber) {
       receiptNumber = generatedNumber;
     } else {
       receiptNumber = `RCV-${Date.now()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
     }
   }
+
   const supplierId = getText(formData, "supplierId") || null;
   const supplierName = getText(formData, "supplierName") || "ผู้ขาย";
   const receivedAt = getText(formData, "receivedAt");
@@ -109,7 +125,6 @@ export async function receiveStockAction(
 
   let receiptUrl: string | null = null;
 
-  // Handle Image Upload if present
   if (imageFile && imageFile.size > 0) {
     try {
       const supabase = await createActionClient();
@@ -133,13 +148,13 @@ export async function receiveStockAction(
         };
       }
 
-      const { data: { publicUrl } } = supabase.storage
-        .from(STOCK_RECEIPT_IMAGES_BUCKET)
-        .getPublicUrl(fileName);
-      
+      const {
+        data: { publicUrl },
+      } = supabase.storage.from(STOCK_RECEIPT_IMAGES_BUCKET).getPublicUrl(fileName);
+
       receiptUrl = publicUrl;
-    } catch (e) {
-      console.error("[receiveStockAction:upload_catch]", e);
+    } catch (error) {
+      console.error("[receiveStockAction:upload_catch]", error);
       return {
         fieldErrors: {},
         message: "เกิดข้อผิดพลาดในการอัปโหลดรูปภาพ",
@@ -187,26 +202,30 @@ export type BulkReceiveItem = {
   unitRatio: number;
 };
 
-export async function bulkReceiveStockAction(items: BulkReceiveItem[], notes: string = "รับเข้าจากการตั้งเตือนสต็อกไม่พอ") {
+export async function bulkReceiveStockAction(
+  items: BulkReceiveItem[],
+  notes: string = "รับเข้าจากการตั้งเตือนสต็อกไม่พอ",
+) {
   const session = await requireAppRole("admin");
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const admin = getSupabaseAdmin() as any;
-  
+
   let receiptNumber = `RCV-${Date.now()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
-  const { data: generatedNumber, error: generateError } = await admin.rpc("generate_receipt_number", { 
-    p_organization_id: session.organizationId 
+  const { data: generatedNumber, error: generateError } = await admin.rpc("generate_receipt_number", {
+    p_organization_id: session.organizationId,
   });
   if (!generateError && generatedNumber) {
     receiptNumber = generatedNumber;
   }
+
   const { error } = await admin.rpc("create_inventory_receipt", {
     p_created_by: session.userId,
-    p_items: items.map(i => ({
-      productId: i.productId,
-      quantityReceived: i.quantityReceived,
-      unit: i.unit,
-      unitRatio: i.unitRatio,
-      unitCost: 0
+    p_items: items.map((item) => ({
+      productId: item.productId,
+      quantityReceived: item.quantityReceived,
+      unit: item.unit,
+      unitRatio: item.unitRatio,
+      unitCost: 0,
     })),
     p_notes: notes,
     p_organization_id: session.organizationId,
@@ -225,7 +244,7 @@ export async function bulkReceiveStockAction(items: BulkReceiveItem[], notes: st
   revalidatePath("/settings/stock");
   revalidatePath("/settings/products");
   revalidatePath("/orders");
-  
+
   return { success: true, message: "บันทึกรับสินค้าเข้าเรียบร้อยแล้ว" };
 }
 
@@ -261,9 +280,7 @@ export async function adjustStockAction(
     return { status: "error", message: error.message || "ไม่สามารถปรับปรุงสต็อกได้" };
   }
 
-  revalidatePath("/stock");
-  revalidatePath("/stock/movements");
-  revalidatePath("/settings/stock");
+  revalidateStockSurfaces(session.organizationId);
 
   return { status: "success", message: "ปรับปรุงยอดสต็อกเรียบร้อยแล้ว" };
 }
@@ -279,120 +296,130 @@ export async function updateStockReceiptAction(
   formData: FormData,
 ): Promise<UpdateStockReceiptActionState> {
   const session = await requireAppRole("admin");
-  const admin = getSupabaseAdmin();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const admin = getSupabaseAdmin() as any;
 
   const receiptId = getText(formData, "receiptId");
   const receivedAt = getText(formData, "receivedAt");
+  const originalReceivedAt = getText(formData, "originalReceivedAt");
   const supplierId = getText(formData, "supplierId");
   const supplierName = getText(formData, "supplierName");
   const notes = getText(formData, "notes");
 
-  // Extract items from form data
   const items: Array<{
     productId: string;
     quantityReceived: number;
     unit: string;
     unitCost: number;
   }> = [];
-  
+
   let itemIndex = 0;
   while (true) {
     const productId = getText(formData, `items[${itemIndex}].productId`);
     const quantityReceived = getNumber(formData, `items[${itemIndex}].quantityReceived`);
     const unit = getText(formData, `items[${itemIndex}].unit`);
     const unitCost = getNumber(formData, `items[${itemIndex}].unitCost`);
-    
+
     if (!productId) break;
-    
+
     if (quantityReceived <= 0 || !unit || unitCost < 0) {
-      return { 
-        status: "error", 
-        message: "กรุณาระบุข้อมูลสินค้าให้ถูกต้อง (จำนวนต้องมากกว่า 0 และราคาต้องไม่ติดลบ)", 
-        fieldErrors: { items: "ข้อมูลสินค้าไม่ถูกต้อง" } 
+      return {
+        status: "error",
+        message: "Please enter valid item values. Quantity must be greater than 0 and cost cannot be negative.",
+        fieldErrors: { items: "Invalid item data." },
       };
     }
-    
+
     items.push({ productId, quantityReceived, unit, unitCost });
     itemIndex++;
   }
 
   if (!receiptId) {
-    return { status: "error", message: "ไม่พบรหัสใบรับสินค้า", fieldErrors: {} };
+    return { status: "error", message: "Receipt ID is missing.", fieldErrors: {} };
   }
 
   if (!receivedAt) {
-    return { fieldErrors: { receivedAt: "กรุณาระบุวันที่รับสินค้า" }, status: "error", message: "กรุณาระบุวันที่รับสินค้า" };
+    return {
+      fieldErrors: { receivedAt: "Please choose the receipt date." },
+      status: "error",
+      message: "Please choose the receipt date.",
+    };
   }
 
   if (items.length === 0) {
-    return { status: "error", message: "ต้องมีรายการสินค้าอย่างน้อย 1 รายการ", fieldErrors: { items: "ไม่พบรายการสินค้า" } };
+    return {
+      status: "error",
+      message: "At least one item is required.",
+      fieldErrors: { items: "No items found." },
+    };
   }
 
   try {
     const parsedDate = new Date(receivedAt + "T00:00:00");
-    if (isNaN(parsedDate.getTime())) {
-      return { fieldErrors: { receivedAt: "รูปแบบวันที่ไม่ถูกต้อง" }, status: "error", message: "รูปแบบวันที่ไม่ถูกต้อง" };
+    const originalDate = originalReceivedAt ? new Date(originalReceivedAt) : null;
+    if (isNaN(parsedDate.getTime()) || (originalDate && isNaN(originalDate.getTime()))) {
+      return {
+        fieldErrors: { receivedAt: "Invalid date format." },
+        status: "error",
+        message: "Invalid date format.",
+      };
     }
 
-    // Start a transaction-like operation
-    // 1. Update receipt header
-    const { error: receiptError } = await admin
-      .from("inventory_receipts")
-      .update({
-        received_at: parsedDate.toISOString(),
-        supplier_id: supplierId || null,
-        supplier_name: supplierName || undefined,
-        notes: notes || undefined,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", receiptId)
-      .eq("organization_id", session.organizationId);
+    const originalDateKey = originalReceivedAt ? originalReceivedAt.split("T")[0] : "";
+    const nextReceivedAt =
+      originalDate && originalDateKey
+        ? originalDateKey === receivedAt
+          ? originalDate.toISOString()
+          : new Date(
+              Date.UTC(
+                parsedDate.getUTCFullYear(),
+                parsedDate.getUTCMonth(),
+                parsedDate.getUTCDate(),
+                originalDate.getUTCHours(),
+                originalDate.getUTCMinutes(),
+                originalDate.getUTCSeconds(),
+                originalDate.getUTCMilliseconds(),
+              ),
+            ).toISOString()
+        : parsedDate.toISOString();
+
+    const { error: receiptError } = await admin.rpc("update_inventory_receipt", {
+      p_organization_id: session.organizationId,
+      p_receipt_id: receiptId,
+      p_received_at: nextReceivedAt,
+      p_supplier_id: supplierId || null,
+      p_supplier_name: supplierName || null,
+      p_notes: notes || null,
+      p_items: items,
+      p_updated_by: session.userId,
+    });
 
     if (receiptError) {
       console.error("[updateStockReceiptAction] Receipt update error:", receiptError);
-      return { status: "error", message: receiptError.message || "ไม่สามารถอัปเดตข้อมูลใบรับสินค้าได้", fieldErrors: {} };
-    }
-
-    // 2. Delete existing items
-    const { error: deleteError } = await admin
-      .from("inventory_receipt_items")
-      .delete()
-      .eq("receipt_id", receiptId);
-
-    if (deleteError) {
-      console.error("[updateStockReceiptAction] Items delete error:", deleteError);
-      return { status: "error", message: "ไม่สามารถอัปเดตรายการสินค้าได้", fieldErrors: {} };
-    }
-
-    // 3. Insert new items
-    const itemsToInsert = items.map(item => ({
-      receipt_id: receiptId,
-      product_id: item.productId,
-      quantity_received: item.quantityReceived,
-      unit: item.unit,
-      unit_cost: item.unitCost,
-      organization_id: session.organizationId,
-      created_at: new Date().toISOString(),
-      stock_before: 0, // Will be calculated by trigger
-      stock_after: 0,  // Will be calculated by trigger
-    }));
-
-    const { error: insertError } = await admin
-      .from("inventory_receipt_items")
-      .insert(itemsToInsert);
-
-    if (insertError) {
-      console.error("[updateStockReceiptAction] Items insert error:", insertError);
-      return { status: "error", message: "ไม่สามารถบันทึกรายการสินค้าใหม่ได้", fieldErrors: {} };
+      return {
+        status: "error",
+        message: receiptError.message || "Failed to update the stock receipt.",
+        fieldErrors: {},
+      };
     }
 
     revalidatePath("/stock/history");
     revalidatePath("/stock");
     revalidatePath("/settings/stock");
+    revalidatePath("/orders");
+    revalidatePath("/orders/incoming");
 
-    return { status: "success", message: "อัปเดตข้อมูลใบรับสินค้าเรียบร้อยแล้ว", fieldErrors: {} };
+    return {
+      status: "success",
+      message: "Stock receipt updated successfully.",
+      fieldErrors: {},
+    };
   } catch (error) {
     console.error("[updateStockReceiptAction] Unexpected error:", error);
-    return { status: "error", message: "เกิดข้อผิดพลาดที่ไม่คาดคิด", fieldErrors: {} };
+    return {
+      status: "error",
+      message: "Unexpected error while updating the stock receipt.",
+      fieldErrors: {},
+    };
   }
 }

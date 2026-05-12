@@ -1,5 +1,5 @@
 import "server-only";
-import { cache } from "react";
+import { cacheLife, cacheTag } from "next/cache";
 
 import type { Json } from "@/types/database";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
@@ -196,7 +196,14 @@ function getChannelLabel(metadata: Json) {
   return channelValue.toUpperCase();
 }
 
-export const getOrderDetailById = cache(async (orderId: string): Promise<OrderDetailData | null> => {
+export async function getOrderDetailById(
+  organizationId: string,
+  orderId: string,
+): Promise<OrderDetailData | null> {
+  "use cache";
+  cacheTag(`orders-${organizationId}`);
+  cacheTag(`stock-${organizationId}`);
+  cacheLife("max");
   const admin = getSupabaseAdmin() as unknown as OrderDetailAdminClient;
 
   const orderResult = await admin
@@ -204,6 +211,7 @@ export const getOrderDetailById = cache(async (orderId: string): Promise<OrderDe
     .select(
       "id, customer_id, order_number, order_date, status, subtotal_amount, total_amount, notes, metadata, created_at",
     )
+    .eq("organization_id", organizationId)
     .eq("id", orderId)
     .single();
 
@@ -319,9 +327,9 @@ export const getOrderDetailById = cache(async (orderId: string): Promise<OrderDe
     totalAmount: normalizeNumber(order.total_amount),
     totalQuantity: items.reduce((total, item) => total + item.quantity, 0),
   };
-});
+}
 
-export const getIncomingOrders = cache(async (
+export async function getIncomingOrders(
   organizationId: string,
   {
     orderDate,
@@ -332,7 +340,11 @@ export const getIncomingOrders = cache(async (
     endDate?: string | null;
     searchTerm?: string | null;
   },
-): Promise<IncomingOrderListItem[]> => {
+): Promise<IncomingOrderListItem[]> {
+  "use cache";
+  cacheTag(`orders-${organizationId}`);
+  cacheTag(`settings-${organizationId}`);
+  cacheLife("max");
   const admin = getSupabaseAdmin() as unknown as OrderDetailAdminClient;
   const normalizedSearch = normalizeSearch(searchTerm ?? "");
 
@@ -452,13 +464,16 @@ export const getIncomingOrders = cache(async (
         normalizeSearch(order.channelLabel).includes(normalizedSearch)
       );
     });
-});
+}
 
-export const getCustomerOrderCountsByDate = cache(async (
+export async function getCustomerOrderCountsByDate(
   organizationId: string,
   orderDate: string,
   endDate?: string,
-): Promise<Record<string, number>> => {
+): Promise<Record<string, number>> {
+  "use cache";
+  cacheTag(`orders-${organizationId}`);
+  cacheLife("max");
   const admin = getSupabaseAdmin() as unknown as OrderDetailAdminClient;
   let query = admin
     .from("orders")
@@ -482,4 +497,4 @@ export const getCustomerOrderCountsByDate = cache(async (
     counts[order.customer_id] = (counts[order.customer_id] ?? 0) + 1;
     return counts;
   }, {});
-});
+}

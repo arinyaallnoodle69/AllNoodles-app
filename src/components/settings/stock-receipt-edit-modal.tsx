@@ -115,6 +115,7 @@ export function StockReceiptEditModal({ receipt, suppliers, isOpen, onClose, onS
         {/* Form */}
         <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
           <input type="hidden" name="receiptId" value={receipt.id} />
+          <input type="hidden" name="originalReceivedAt" value={receipt.receivedAt} />
 
           {/* Scrollable body */}
           <div className="flex-1 overflow-y-auto overscroll-contain">

@@ -1,4 +1,4 @@
-import { Suspense } from "react";
+﻿import { Suspense } from "react";
 import { getStockHistoryData, getStockDashboardData } from "@/lib/stock/admin";
 import { requireAppRole } from "@/lib/auth/authorization";
 import { PageLoader } from "@/components/page-loader";

@@ -73,8 +73,10 @@ export function StockReceiveForm({
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isSupplierDrawerOpen, setIsSupplierDrawerOpen] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const galleryInputRef = useRef<HTMLInputElement>(null);
   const deferredQuery = useDeferredValue(searchQuery);
 
   const categories = useMemo(() => {
@@ -146,24 +148,37 @@ export function StockReceiveForm({
     }
   };
 
-  const handleSuccess = useEffectEvent(() => {
-    startTransition(() => {
-      if (onClose) {
-        onClose();
-      } else {
-        router.replace(returnHref);
-      }
-      router.refresh();
-    });
+  const [isClosing, setIsClosing] = useState(false);
+
+  const showAlert = (message: string) => {
+    setValidationError(message);
+    setTimeout(() => setValidationError(null), 3000);
+  };
+  const displayErrorMessage =
+    validationError ?? (actionState.status === "error" ? actionState.message : null);
+
+  const handleSuccess = useEffectEvent((message: string) => {
+    setValidationError(null);
+    setSuccessMessage(message);
+    setIsClosing(true);
+
+    setTimeout(() => {
+      startTransition(() => {
+        if (onClose) {
+          onClose();
+        } else {
+          router.replace(returnHref);
+        }
+        router.refresh();
+      });
+    }, 700);
   });
 
   useEffect(() => {
     if (actionState.status === "success") {
-      handleSuccess();
+      handleSuccess(actionState.message || "บันทึกรับสินค้าเรียบร้อยแล้ว");
     }
-  }, [actionState.status]);
-
-  const [isClosing, setIsClosing] = useState(false);
+  }, [actionState.message, actionState.status]);
 
   const handleClose = () => {
     setIsClosing(true);
@@ -173,12 +188,10 @@ export function StockReceiveForm({
     }, 400);
   };
 
-  const showAlert = (message: string) => {
-    setValidationError(message);
-    setTimeout(() => setValidationError(null), 3000);
-  };
-
   const onSubmit = () => {
+    setValidationError(null);
+    setSuccessMessage(null);
+
     const formData = new FormData();
     formData.append("supplierId", supplierId);
     formData.append("supplierName", supplierName);
@@ -268,18 +281,29 @@ export function StockReceiveForm({
         onClick={handleClose}
         className="absolute inset-0" 
       />
-      <div className={`relative flex h-full w-full max-w-4xl flex-col overflow-hidden bg-[#F8FAFC] shadow-[0_40px_120px_rgba(0,0,0,0.4)] md:h-[min(900px,94dvh)] md:rounded-[2.8rem] border border-white/40 ${
+      <div className={`relative flex h-full w-full max-w-4xl flex-col overflow-hidden overscroll-x-none bg-[#F8FAFC] shadow-[0_40px_120px_rgba(0,0,0,0.4)] md:h-[min(900px,94dvh)] md:max-w-[1180px] md:rounded-[2.8rem] border border-white/40 ${
         isClosing ? "animate-slide-up-premium" : "animate-slide-down-premium"
       }`}>
         
         {/* Validation Alert Popup */}
-        {validationError && (
+        {displayErrorMessage && (
           <div className="absolute top-24 left-1/2 -translate-x-1/2 z-[110] w-[calc(100%-3rem)] max-w-md animate-in slide-in-from-top-8 duration-500">
             <div className="bg-rose-600/90 text-white p-4 rounded-3xl shadow-2xl shadow-rose-600/40 flex items-center gap-4 border border-white/20 backdrop-blur-xl">
               <div className="h-10 w-10 shrink-0 rounded-2xl bg-white/20 flex items-center justify-center animate-pulse">
                 <AlertCircle className="h-6 w-6" strokeWidth={3} />
               </div>
-              <p className="font-black text-lg">{validationError}</p>
+              <p className="font-black text-lg">{displayErrorMessage}</p>
+            </div>
+          </div>
+        )}
+
+        {successMessage && (
+          <div className="absolute top-24 left-1/2 z-[110] w-[calc(100%-3rem)] max-w-md -translate-x-1/2 animate-in slide-in-from-top-8 duration-500">
+            <div className="flex items-center gap-4 rounded-3xl border border-white/20 bg-emerald-600/90 p-4 text-white shadow-2xl shadow-emerald-600/40 backdrop-blur-xl">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-white/20">
+                <Check className="h-6 w-6" strokeWidth={3} />
+              </div>
+              <p className="text-lg font-black">{successMessage}</p>
             </div>
           </div>
         )}
@@ -310,7 +334,7 @@ export function StockReceiveForm({
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto no-scrollbar relative flex flex-col">
+        <div className="relative flex flex-1 flex-col overflow-x-hidden overflow-y-auto no-scrollbar">
           {/* Animated Background Blobs */}
           <div className="absolute top-1/4 -right-20 w-64 h-64 bg-indigo-200/20 rounded-full blur-[80px] animate-drift pointer-events-none" />
           <div className="absolute bottom-1/4 -left-20 w-80 h-80 bg-rose-200/10 rounded-full blur-[100px] animate-drift [animation-delay:-5s] pointer-events-none" />
@@ -383,12 +407,13 @@ export function StockReceiveForm({
               </div>
             </div>
           ) : step === 2 ? (
-            <div className="p-6 space-y-8 animate-in fade-in slide-in-from-right-12 duration-700">
+            <div className="p-6 space-y-8 animate-in fade-in slide-in-from-right-12 duration-700 md:grid md:grid-cols-[320px_minmax(0,1fr)] md:gap-8 md:space-y-0">
+              <div className="space-y-6 md:sticky md:top-6 md:self-start md:rounded-[2rem] md:border md:border-slate-100 md:bg-white/90 md:p-5 md:shadow-sm">
               {/* Category Filter */}
-              <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2 px-1">
+              <div className="flex flex-wrap gap-3 pb-2 px-1">
                 <button
                   onClick={() => setSelectedCategory("all")}
-                  className={`shrink-0 px-7 py-3 rounded-[1.2rem] text-sm font-black transition-all active:scale-95 ${
+                  className={`px-7 py-3 rounded-[1.2rem] text-sm font-black transition-all active:scale-95 ${
                     selectedCategory === "all"
                       ? "bg-[#003366] text-white shadow-xl shadow-[#003366]/20"
                       : "bg-white text-slate-500 border border-slate-100 hover:border-slate-200"
@@ -400,7 +425,7 @@ export function StockReceiveForm({
                   <button
                     key={cat}
                     onClick={() => setSelectedCategory(cat)}
-                    className={`shrink-0 px-7 py-3 rounded-[1.2rem] text-sm font-black transition-all active:scale-95 ${
+                    className={`px-7 py-3 rounded-[1.2rem] text-sm font-black transition-all active:scale-95 ${
                       selectedCategory === cat
                         ? "bg-[#003366] text-white shadow-xl shadow-[#003366]/20"
                         : "bg-white text-slate-500 border border-slate-100 hover:border-slate-200"
@@ -425,9 +450,10 @@ export function StockReceiveForm({
                   />
                 </div>
               </div>
+              </div>
 
               {/* Product List */}
-              <div className="space-y-4 -mx-2">
+              <div className="space-y-4 -mx-2 md:mx-0">
                 {filteredProducts.map((p) => {
                   const isSelected = !!selections[p.id];
                   return (
@@ -441,23 +467,23 @@ export function StockReceiveForm({
                     >
                       <button
                         onClick={() => toggleProduct(p.id)}
-                        className="flex items-center gap-5 px-6 py-5 text-left w-full"
+                        className="flex w-full items-start gap-5 px-6 py-5 text-left"
                       >
                         <div className={`h-8 w-8 shrink-0 flex items-center justify-center rounded-xl border-2 transition-all ${
                           isSelected ? "bg-[#003366] border-[#003366] text-white shadow-lg shadow-[#003366]/20" : "border-slate-200 text-transparent"
                         }`}>
                           <Check className="h-5 w-5" strokeWidth={4} />
                         </div>
-                        <div className="relative h-20 w-20 sm:h-24 sm:w-24 shrink-0 overflow-hidden rounded-[1.8rem] bg-white shadow-inner border border-slate-50">
+                        <div className="relative mt-1 h-20 w-20 shrink-0 overflow-hidden rounded-[1.8rem] border border-slate-50 bg-white shadow-inner sm:h-24 sm:w-24">
                           {p.imageUrl ? (
                             <Image src={p.imageUrl} alt={p.name} fill className="object-contain" />
                           ) : (
                             <Package2 className="m-auto h-10 w-10 text-slate-100" />
                           )}
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-[10px] font-black text-[#003366]/30 uppercase tracking-[0.25em] leading-none mb-2">{p.sku}</p>
-                          <p className="text-xl font-black text-slate-950 leading-tight truncate tracking-tight">{p.name}</p>
+                        <div className="min-w-0 flex-1 pt-1">
+                          <p className="mb-2 text-[10px] font-black uppercase leading-none tracking-[0.25em] text-[#003366]/30">{p.sku}</p>
+                          <p className="min-h-[2.9rem] break-words text-xl font-black leading-[1.18] tracking-tight text-slate-950 line-clamp-2">{p.name}</p>
                           <div className="mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-1.5">
                             <div className="flex items-center gap-2 bg-slate-50 px-3 py-1 rounded-full border border-slate-100">
                               <div className="h-1.5 w-1.5 rounded-full bg-slate-300" />
@@ -527,7 +553,14 @@ export function StockReceiveForm({
                   accept="image/*"
                   capture="environment"
                   className="hidden"
-                  ref={fileInputRef}
+                  ref={cameraInputRef}
+                  onChange={handleImageChange}
+                />
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  ref={galleryInputRef}
                   onChange={handleImageChange}
                 />
 
@@ -536,12 +569,21 @@ export function StockReceiveForm({
                     <Image src={imagePreview} alt="Preview" fill className="object-cover" />
                     <div className="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-6 backdrop-blur-sm">
                       <button
-                        onClick={() => fileInputRef.current?.click()}
+                        type="button"
+                        onClick={() => cameraInputRef.current?.click()}
                         className="h-18 w-18 rounded-full bg-white text-[#003366] flex items-center justify-center shadow-2xl active:scale-90 transition-all hover:scale-110"
                       >
                         <Camera className="h-8 w-8" strokeWidth={2.5} />
                       </button>
                       <button
+                        type="button"
+                        onClick={() => galleryInputRef.current?.click()}
+                        className="h-18 w-18 rounded-full bg-white text-[#003366] flex items-center justify-center shadow-2xl active:scale-90 transition-all hover:scale-110"
+                      >
+                        <ImagePlus className="h-8 w-8" strokeWidth={2.5} />
+                      </button>
+                      <button
+                        type="button"
                         onClick={() => {
                           setReceiptImage(null);
                           setImagePreview(null);
@@ -553,19 +595,36 @@ export function StockReceiveForm({
                     </div>
                   </div>
                 ) : (
-                  <button
-                    onClick={() => fileInputRef.current?.click()}
-                    className="w-full aspect-video rounded-[2.8rem] border-4 border-dashed border-slate-100 bg-white/60 hover:bg-white hover:border-[#003366]/10 transition-all flex flex-col items-center justify-center gap-6 group relative overflow-hidden shadow-sm"
-                  >
-                    <div className="absolute inset-0 bg-gradient-to-b from-indigo-50/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                    <div className="relative h-24 w-24 rounded-[2rem] bg-slate-50 flex items-center justify-center group-hover:scale-110 group-hover:bg-[#003366]/5 transition-all duration-500">
-                      <ImagePlus className="h-12 w-12 text-slate-300 group-hover:text-[#003366] transition-colors" strokeWidth={1.5} />
-                    </div>
-                    <div className="text-center relative">
-                      <p className="text-2xl font-black text-slate-900">แตะเพื่อถ่ายรูปบิล</p>
-                      <p className="text-sm font-bold text-slate-400 mt-2 tracking-wide uppercase">Capture Receipt / Delivery Note</p>
-                    </div>
-                  </button>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <button
+                      type="button"
+                      onClick={() => cameraInputRef.current?.click()}
+                      className="w-full aspect-video rounded-[2.8rem] border-4 border-dashed border-slate-100 bg-white/60 hover:bg-white hover:border-[#003366]/10 transition-all flex flex-col items-center justify-center gap-6 group relative overflow-hidden shadow-sm"
+                    >
+                      <div className="absolute inset-0 bg-gradient-to-b from-indigo-50/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                      <div className="relative h-24 w-24 rounded-[2rem] bg-slate-50 flex items-center justify-center group-hover:scale-110 group-hover:bg-[#003366]/5 transition-all duration-500">
+                        <Camera className="h-12 w-12 text-slate-300 group-hover:text-[#003366] transition-colors" strokeWidth={1.5} />
+                      </div>
+                      <div className="text-center relative">
+                        <p className="text-2xl font-black text-slate-900">ถ่ายรูปบิล</p>
+                        <p className="text-sm font-bold text-slate-400 mt-2 tracking-wide uppercase">Open Camera</p>
+                      </div>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => galleryInputRef.current?.click()}
+                      className="w-full aspect-video rounded-[2.8rem] border-4 border-dashed border-slate-100 bg-white/60 hover:bg-white hover:border-[#003366]/10 transition-all flex flex-col items-center justify-center gap-6 group relative overflow-hidden shadow-sm"
+                    >
+                      <div className="absolute inset-0 bg-gradient-to-b from-indigo-50/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                      <div className="relative h-24 w-24 rounded-[2rem] bg-slate-50 flex items-center justify-center group-hover:scale-110 group-hover:bg-[#003366]/5 transition-all duration-500">
+                        <ImagePlus className="h-12 w-12 text-slate-300 group-hover:text-[#003366] transition-colors" strokeWidth={1.5} />
+                      </div>
+                      <div className="text-center relative">
+                        <p className="text-2xl font-black text-slate-900">เลือกรูปจากเครื่อง</p>
+                        <p className="text-sm font-bold text-slate-400 mt-2 tracking-wide uppercase">Choose from Device</p>
+                      </div>
+                    </button>
+                  </div>
                 )}
               </div>
 

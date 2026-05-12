@@ -187,8 +187,7 @@ const DesktopStockRow = memo(({
       <td className="whitespace-nowrap border-b border-r border-slate-300 px-5 py-4 text-center align-middle">
         <div className="flex flex-col gap-1">
           {product.saleUnits.map((unit) => (
-            <div key={unit.id} className="flex items-center justify-center gap-1.5">
-              <span className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">{unit.label}</span>
+            <div key={unit.id} className="flex items-center justify-center">
               <span className="text-sm font-bold text-slate-700">
                 ฿{formatMoney(unit.effectiveCostPrice)}
               </span>

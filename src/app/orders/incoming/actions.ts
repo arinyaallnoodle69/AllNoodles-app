@@ -50,7 +50,7 @@ export async function fetchIncomingOrderDetailAction(
     return { detail: null, error: "ไม่พบออเดอร์นี้ในองค์กรของคุณ" };
   }
 
-  const detail = await getOrderDetailById(id);
+  const detail = await getOrderDetailById(session.organizationId, id);
   return { detail };
 }
 

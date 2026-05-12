@@ -1825,7 +1825,8 @@ export function CreateOrderModal({
       ) : null}
 
       {open && editingCartItem && editingCartIndex !== null ? (
-        <div className="fixed inset-0 z-[420] flex items-center justify-center bg-slate-950/55 p-4">
+        <CreateOrderPortal>
+        <div className="fixed inset-0 z-[10020] flex items-center justify-center bg-slate-950/55 p-4">
           <button
             type="button"
             className="absolute inset-0"
@@ -1914,6 +1915,7 @@ export function CreateOrderModal({
             </div>
           </div>
         </div>
+        </CreateOrderPortal>
       ) : null}
 
       <ProductSelectModal

@@ -1,5 +1,5 @@
 import "server-only";
-import { cache } from "react";
+import { cacheLife, cacheTag } from "next/cache";
 
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
@@ -125,7 +125,11 @@ export type OrderProductOption = {
 
 // Queries
 
-export const getCustomersForOrder = cache(async (orgId: string): Promise<OrderCustomerOption[]> => {
+export async function getCustomersForOrder(orgId: string): Promise<OrderCustomerOption[]> {
+  "use cache";
+  cacheTag(`orders-${orgId}`);
+  cacheTag(`settings-${orgId}`);
+  cacheLife("max");
   const admin = getSupabaseAdmin() as unknown as ManageAdmin;
   const { data } = await admin
     .from("customers")
@@ -137,9 +141,13 @@ export const getCustomersForOrder = cache(async (orgId: string): Promise<OrderCu
   return (data ?? [])
     .map((c) => ({ code: c.customer_code, id: c.id, name: c.name }))
     .toSorted(compareCustomerCode);
-});
+}
 
-export const getVehiclesForOrder = cache(async (orgId: string): Promise<OrderVehicleOption[]> => {
+export async function getVehiclesForOrder(orgId: string): Promise<OrderVehicleOption[]> {
+  "use cache";
+  cacheTag(`orders-${orgId}`);
+  cacheTag(`settings-${orgId}`);
+  cacheLife("max");
   const admin = getSupabaseAdmin() as unknown as ManageAdmin;
   const { data } = await admin
     .from("vehicles")
@@ -152,9 +160,14 @@ export const getVehiclesForOrder = cache(async (orgId: string): Promise<OrderVeh
     id: vehicle.id,
     name: vehicle.name,
   }));
-});
+}
 
-export const getProductsForOrder = cache(async (orgId: string): Promise<OrderProductOption[]> => {
+export async function getProductsForOrder(orgId: string): Promise<OrderProductOption[]> {
+  "use cache";
+  cacheTag(`orders-${orgId}`);
+  cacheTag(`settings-${orgId}`);
+  cacheTag(`stock-${orgId}`);
+  cacheLife("max");
   const admin = getSupabaseAdmin();
 
   const [productsRes, saleUnitsRes, productImagesRes, categoriesRes, categoryItemsRes] =
@@ -266,7 +279,5 @@ export const getProductsForOrder = cache(async (orgId: string): Promise<OrderPro
     };
   });
 
-  console.log(`[getProductsForOrder] Success! Mapped ${mapped.length} products. Sample baseCostPrice:`, mapped[0]?.baseCostPrice);
-
   return mapped.toSorted(compareProductSku);
-});
+}
