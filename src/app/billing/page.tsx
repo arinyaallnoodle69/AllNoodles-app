@@ -1,20 +1,30 @@
-import { Fragment, Suspense } from "react";
-import { Building2, CalendarDays, FileText, Lock, Printer, Receipt } from "lucide-react";
+import { Suspense } from "react";
+import { Receipt, History, Search } from "lucide-react";
 import { AppSidebarLayout } from "@/components/app-sidebar";
 import { requireAppRole } from "@/lib/auth/authorization";
 import {
   getBillingCandidates,
   getBillingHistory,
+  getCustomersForBilling,
   type BillingRecord,
 } from "@/lib/billing/billing-statement";
 import { BillingForm } from "./billing-form";
+import { HistorySearchForm } from "./history-search-form";
+import { HistoryTable } from "./history-table";
 import { fmt } from "@/components/print/print-shared";
-import { fmtDateTH } from "@/lib/utils/date";
 
 export const metadata = { title: "ใบวางบิล | T&Y Noodles" };
 
 type BillingPageProps = {
-  searchParams: Promise<{ from?: string; to?: string }>;
+  searchParams: Promise<{ 
+    from?: string; 
+    to?: string;
+    h_from?: string;
+    h_to?: string;
+    h_q?: string;
+    h_show?: string;
+    h_customers?: string;
+  }>;
 };
 
 function todayISO() {
@@ -35,232 +45,16 @@ function fmtBaht(amount: number) {
   return `${fmt(amount)} บาท`;
 }
 
-function reprintUrl(record: BillingRecord) {
-  return `/billing/print?customers=${record.customer_id}&from=${record.from_date}&to=${record.to_date}&save=false`;
-}
-
-function HistoryTable({ history }: { history: BillingRecord[] }) {
-  return (
-    <div className="hidden overflow-hidden rounded-2xl border border-slate-200 shadow-sm lg:block">
-      <table className="w-full border-collapse bg-white text-sm">
-        <thead className="bg-[#0f2f56]">
-          <tr>
-            <th className="w-12 px-4 py-3.5 text-center text-xs font-semibold uppercase tracking-[0.1em] text-white/80">#</th>
-            <th className="px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-[0.1em] text-white/80">เลขที่ใบจัดส่ง</th>
-            <th className="px-4 py-3.5 text-center text-xs font-semibold uppercase tracking-[0.1em] text-white/80">วันที่ส่งของ</th>
-            <th className="px-4 py-3.5 text-right text-xs font-semibold uppercase tracking-[0.1em] text-white/80">ยอด (บาท)</th>
-            <th className="px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-[0.1em] text-white/80">หมายเหตุ</th>
-          </tr>
-        </thead>
-
-        <tbody>
-          {history.map((record, groupIndex) => (
-            <Fragment key={record.id}>
-              <tr className={groupIndex > 0 ? "border-t-[3px] border-slate-200" : ""}>
-                <td colSpan={5} className="bg-slate-50 px-4 py-3">
-                  <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2">
-                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                      <div className="flex items-center gap-2">
-                        <Lock className="h-3.5 w-3.5 shrink-0 text-emerald-600" strokeWidth={2.5} />
-                        <span className="font-mono text-[15px] font-extrabold tracking-tight text-[#0f2f56]">
-                          {record.billing_number}
-                        </span>
-                        {record.isSnapshotLocked ? (
-                          <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 ring-1 ring-emerald-200">
-                            ยอดล็อก
-                          </span>
-                        ) : null}
-                      </div>
-
-                      <span className="text-slate-300">·</span>
-
-                      <div className="flex items-center gap-1.5">
-                        <Building2 className="h-3.5 w-3.5 shrink-0 text-slate-400" strokeWidth={2} />
-                        <span className="font-semibold text-slate-700">{record.customer_name}</span>
-                        <span className="font-mono text-xs text-slate-400">({record.customer_code})</span>
-                      </div>
-
-                      <span className="text-slate-300">·</span>
-
-                      <div className="flex items-center gap-1.5">
-                        <CalendarDays className="h-3.5 w-3.5 shrink-0 text-slate-400" strokeWidth={2} />
-                        <span className="text-slate-600">
-                          {fmtDateTH(record.from_date)}
-                          <span className="mx-1 text-slate-400">–</span>
-                          {fmtDateTH(record.to_date)}
-                        </span>
-                      </div>
-
-                      <span className="text-xs text-slate-400">
-                        ออกวันที่ {fmtDateTH(record.billing_date)}
-                      </span>
-                    </div>
-
-                    <a
-                      href={reprintUrl(record)}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 shadow-sm transition hover:border-[#003366] hover:bg-[#003366] hover:text-white active:scale-95"
-                    >
-                      <Printer className="h-3.5 w-3.5" strokeWidth={2.2} />
-                      พิมพ์อีกครั้ง
-                    </a>
-                  </div>
-                </td>
-              </tr>
-
-              {record.snapshot_rows.length === 0 ? (
-                <tr>
-                  <td colSpan={5} className="bg-white px-4 py-4 text-center text-sm italic text-slate-400">
-                    ไม่มีข้อมูลรายการใบจัดส่ง
-                  </td>
-                </tr>
-              ) : (
-                record.snapshot_rows.map((row) => (
-                  <tr
-                    key={row.deliveryNumber}
-                    className="border-t border-slate-100 bg-white transition-colors hover:bg-[#003366]/[0.025]"
-                  >
-                    <td className="px-4 py-3 text-center">
-                      <span className="tabular-nums text-xs font-semibold text-slate-400">
-                        {row.lineNumber}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className="font-mono font-bold text-[#003366]">{row.deliveryNumber}</span>
-                    </td>
-                    <td className="px-4 py-3 text-center text-slate-600">{fmtDateTH(row.deliveryDate)}</td>
-                    <td className="px-4 py-3 text-right font-mono font-semibold tabular-nums text-slate-800">
-                      {fmtBaht(row.totalAmount)}
-                    </td>
-                    <td className="px-4 py-3 text-slate-400">{row.notes ?? "—"}</td>
-                  </tr>
-                ))
-              )}
-
-              {record.snapshot_rows.length > 0 ? (
-                <tr className="border-t border-slate-200 bg-slate-50/80">
-                  <td colSpan={3} className="px-4 py-2.5 text-right text-xs font-semibold text-slate-500">
-                    รวม {record.snapshot_rows.length} ใบจัดส่ง
-                  </td>
-                  <td className="px-4 py-2.5 text-right font-mono text-sm font-extrabold tabular-nums text-slate-800 underline decoration-dotted underline-offset-2">
-                    {fmtBaht(record.total_amount)}
-                  </td>
-                  <td className="px-4 py-2.5" />
-                </tr>
-              ) : null}
-            </Fragment>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-}
-
-function BillingMobileCard({ record }: { record: BillingRecord }) {
-  return (
-    <article className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-      <div className="flex items-center justify-between gap-3 border-b border-slate-100 bg-slate-50 px-4 py-3.5">
-        <div className="flex items-center gap-2.5">
-          <Lock className="h-3.5 w-3.5 shrink-0 text-emerald-600" strokeWidth={2.5} />
-          <span className="font-mono text-[15px] font-extrabold tracking-tight text-[#0f2f56]">
-            {record.billing_number}
-          </span>
-          {record.isSnapshotLocked ? (
-            <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-200">
-              ยอดล็อก
-            </span>
-          ) : null}
-        </div>
-        <a
-          href={reprintUrl(record)}
-          target="_blank"
-          rel="noreferrer"
-          className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 shadow-sm transition hover:bg-slate-50 active:scale-95"
-        >
-          <Printer className="h-3.5 w-3.5" strokeWidth={2.2} />
-          พิมพ์
-        </a>
-      </div>
-
-      <div className="grid grid-cols-2 divide-x divide-slate-100 border-b border-slate-100">
-        <div className="px-4 py-3">
-          <p className="mb-1 flex items-center gap-1 text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">
-            <Building2 className="h-3 w-3" strokeWidth={2} />
-            ร้านค้า
-          </p>
-          <p className="text-sm font-bold text-slate-800">{record.customer_name}</p>
-          <p className="font-mono text-xs text-slate-400">{record.customer_code}</p>
-        </div>
-        <div className="px-4 py-3">
-          <p className="mb-1 flex items-center gap-1 text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">
-            <CalendarDays className="h-3 w-3" strokeWidth={2} />
-            ช่วงวันที่
-          </p>
-          <p className="text-sm font-semibold text-slate-700">
-            {fmtDateTH(record.from_date)}
-            <span className="mx-1 text-slate-400">–</span>
-            {fmtDateTH(record.to_date)}
-          </p>
-          <p className="text-xs text-slate-400">ออก {fmtDateTH(record.billing_date)}</p>
-        </div>
-      </div>
-
-      <div>
-        <div className="flex items-center gap-2 border-b border-slate-100 bg-slate-50/50 px-4 py-2">
-          <FileText className="h-3.5 w-3.5 text-slate-400" strokeWidth={2} />
-          <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">
-            รายการใบจัดส่ง
-          </p>
-        </div>
-        {record.snapshot_rows.length === 0 ? (
-          <p className="px-4 py-4 text-sm italic text-slate-400">ไม่มีข้อมูลรายการ</p>
-        ) : (
-          <div className="divide-y divide-slate-100">
-            {record.snapshot_rows.map((row) => (
-              <div key={row.deliveryNumber} className="flex items-center justify-between px-4 py-3">
-                <div className="flex items-center gap-3">
-                  <span className="w-5 shrink-0 text-center text-xs font-semibold tabular-nums text-slate-400">
-                    {row.lineNumber}
-                  </span>
-                  <div>
-                    <p className="font-mono text-sm font-bold leading-tight text-[#003366]">
-                      {row.deliveryNumber}
-                    </p>
-                    <p className="text-xs text-slate-400">{fmtDateTH(row.deliveryDate)}</p>
-                  </div>
-                </div>
-                <p className="font-mono text-sm font-semibold tabular-nums text-slate-800">
-                  {fmtBaht(row.totalAmount)}
-                </p>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      <div className="flex items-center justify-between border-t-2 border-slate-100 bg-slate-50 px-4 py-3">
-        <div className="flex items-center gap-2 text-slate-500">
-          <Receipt className="h-4 w-4" strokeWidth={2} />
-          <p className="text-sm font-semibold">รวม {record.snapshot_rows.length} ใบจัดส่ง</p>
-        </div>
-        <p className="font-mono text-lg font-extrabold tabular-nums text-slate-900">
-          {fmtBaht(record.total_amount)}
-        </p>
-      </div>
-    </article>
-  );
-}
 
 function EmptyHistory() {
   return (
-    <div className="flex flex-col items-center rounded-2xl border border-dashed border-slate-200 bg-white py-16 text-center">
-      <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-slate-50">
-        <FileText className="h-8 w-8 text-slate-300" strokeWidth={1.5} />
+    <div className="flex flex-col items-center justify-center py-24 text-center">
+      <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-slate-50 text-slate-200">
+        <History className="h-10 w-10" />
       </div>
-      <p className="text-lg font-semibold text-slate-500">ยังไม่มีประวัติการวางบิล</p>
-      <p className="mt-1 text-sm text-slate-400">
-        ใบวางบิลที่กด &quot;บันทึกและพิมพ์&quot; จะแสดงที่นี่
+      <h3 className="text-xl font-black text-slate-800">ไม่พบประวัติการวางบิล</h3>
+      <p className="mt-2 text-sm font-medium text-slate-500">
+        เลือกวันที่และร้านค้าเพื่อค้นหาประวัติการวางบิล
       </p>
     </div>
   );
@@ -269,84 +63,139 @@ function EmptyHistory() {
 async function BillingPageContent({ searchParams }: BillingPageProps) {
   const session = await requireAppRole("admin");
   const params = await searchParams;
-  const fromDate = isValidDate(params.from) ? params.from : daysAgoISO(6);
-  const toDate = isValidDate(params.to) ? params.to : todayISO();
 
-  const [candidates, history] = await Promise.all([
-    getBillingCandidates(session.organizationId, fromDate, toDate),
-    getBillingHistory(session.organizationId),
+  const currentTab = params.h_show === "1" ? "history" : "create";
+  
+  const from = isValidDate(params.from) ? params.from : daysAgoISO(30);
+  const to = isValidDate(params.to) ? params.to : todayISO();
+
+  const h_from = params.h_from || "";
+  const h_to = params.h_to || "";
+  const h_q = params.h_q || "";
+  const h_show = params.h_show;
+  const h_customers_raw = params.h_customers;
+  const h_customers = h_customers_raw ? h_customers_raw.split(",") : [];
+
+  // Only fetch history if at least one filter is active or 'h_show' was triggered by a search action
+  // In our case, we'll check if the user has provided a date range or a search query
+  const isSearching = h_from || h_to || h_q || h_customers.length > 0;
+
+  const [candidates, history, allCustomers] = await Promise.all([
+    getBillingCandidates(session.organizationId, from, to),
+    (h_show === "1" && isSearching)
+      ? getBillingHistory(session.organizationId, { from: h_from, to: h_to, query: h_q, customerIds: h_customers })
+      : Promise.resolve([] as BillingRecord[]),
+    getCustomersForBilling(session.organizationId),
   ]);
 
-  const totalBilled = history.reduce((sum, record) => sum + record.total_amount, 0);
+  const totalBilled = history.reduce((sum: number, record: BillingRecord) => sum + record.total_amount, 0);
 
   return (
     <AppSidebarLayout>
-      <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-10">
-        <div className="mb-8 flex items-center gap-4 border-b border-slate-100 pb-6">
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#003366] shadow-md shadow-[#003366]/20">
-            <FileText className="h-6 w-6 text-white" strokeWidth={2.2} />
+      <div className="mx-auto max-w-7xl px-0 md:px-4 py-6 sm:px-8 sm:py-10">
+        <header className="mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4 px-4 md:px-0">
+          <div className="flex items-center gap-4">
+            <div className="flex h-14 w-14 items-center justify-center bg-[#003366] text-white shadow-xl shadow-[#003366]/20">
+              <Receipt className="h-7 w-7" strokeWidth={2.2} />
+            </div>
+            <div>
+              <h1 className="text-3xl font-black tracking-tight text-slate-900">จัดการใบวางบิล</h1>
+              <p className="text-slate-500 font-medium">จัดการการออกใบวางบิลและเรียกดูประวัติ</p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-2xl font-extrabold tracking-tight text-slate-900">ใบวางบิล</h1>
-            <p className="text-sm text-slate-500">
-              เลือกร้านจากใบจัดส่งที่ยืนยันแล้ว และพิมพ์ใบวางบิลเฉพาะร้านที่ต้องการ
-            </p>
-          </div>
+        </header>
+
+        {/* Tab Navigation */}
+        <div className="mb-8 flex border-b border-slate-200 md:px-0">
+          <a
+            href="/billing"
+            className={`flex-1 text-center px-2 md:px-8 py-4 text-sm md:text-base font-bold transition-all border-b-4 ${
+              currentTab === "create"
+                ? "border-[#003366] text-[#003366]"
+                : "border-transparent text-slate-400 hover:text-slate-600"
+            }`}
+          >
+            ออกใบวางบิลใหม่
+          </a>
+          <a
+            href="/billing?h_show=1"
+            className={`flex-1 text-center px-2 md:px-8 py-4 text-sm md:text-base font-bold transition-all border-b-4 ${
+              currentTab === "history"
+                ? "border-[#003366] text-[#003366]"
+                : "border-transparent text-slate-400 hover:text-slate-600"
+            }`}
+          >
+            ประวัติการวางบิล
+          </a>
         </div>
 
-        <div className="flex flex-col gap-10">
-          <section className="mx-auto w-full max-w-4xl">
-            <h2 className="mb-4 text-base font-bold text-slate-700">ออกใบวางบิลใหม่</h2>
-            <div className="overflow-visible rounded-2xl border border-slate-200 bg-white shadow-sm">
-              <div className="p-6 sm:p-8">
+        <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+          {currentTab === "create" ? (
+            <section>
+              <div className="border-y md:border border-slate-200 bg-white p-4 md:p-8 shadow-none md:shadow-md">
                 <BillingForm
-                  key={`${fromDate}:${toDate}:${candidates.length}`}
-                  initialFromDate={fromDate}
-                  initialToDate={toDate}
+                  initialFromDate={from}
+                  initialToDate={to}
                   candidates={candidates}
+                  allCustomers={allCustomers}
                 />
               </div>
-            </div>
-          </section>
-
-          <section>
-            <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
-              <div>
-                <h2 className="text-base font-bold text-slate-700">ประวัติการวางบิล</h2>
-                <p className="mt-0.5 text-xs text-slate-400">
-                  ยอดในใบที่ออกแล้วจะถูกล็อกไว้ แม้มีการแก้ย้อนหลังที่ใบจัดส่ง
-                </p>
+            </section>
+          ) : (
+            <section className="space-y-8">
+              <div className="flex flex-wrap items-end justify-between gap-6">
+                <div className="flex items-center gap-3">
+                  <div className="h-8 w-1.5 rounded-full bg-[#003366]" />
+                  <div>
+                    <h2 className="text-xl font-extrabold text-slate-900">ค้นหาประวัติ</h2>
+                  </div>
+                </div>
+                {(isSearching && history.length > 0) && (
+                  <div className="border border-emerald-100 bg-emerald-50/50 px-5 py-3 text-right">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-emerald-600">
+                      รวมรายการที่ค้นพบ {history.length} ฉบับ
+                    </p>
+                    <p className="font-mono text-xl font-extrabold tabular-nums text-[#003366]">
+                      {fmtBaht(totalBilled)}
+                    </p>
+                  </div>
+                )}
               </div>
-              {history.length > 0 ? (
-                <div className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-right shadow-sm">
-                  <p className="text-[10px] font-medium uppercase tracking-[0.08em] text-slate-400">
-                    รวมทั้งหมด {history.length} ฉบับ
-                  </p>
-                  <p className="font-mono text-base font-extrabold tabular-nums text-slate-800">
-                    {fmtBaht(totalBilled)}
-                  </p>
-                </div>
-              ) : null}
-            </div>
 
-            {history.length === 0 ? (
-              <EmptyHistory />
-            ) : (
-              <>
-                <HistoryTable history={history} />
-                <div className="flex flex-col gap-4 lg:hidden">
-                  {history.map((record) => (
-                    <BillingMobileCard key={record.id} record={record} />
-                  ))}
-                </div>
-              </>
-            )}
-          </section>
+              <HistorySearchForm 
+                initialFrom={h_from}
+                initialTo={h_to}
+                initialQuery={h_q}
+                initialCustomers={h_customers}
+                allCustomers={allCustomers}
+              />
+
+              <div className="min-h-[300px]">
+                {!isSearching ? (
+                  <div className="flex flex-col items-center justify-center py-24 text-center">
+                    <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-slate-50 text-slate-300">
+                      <Search className="h-10 w-10" />
+                    </div>
+                    <h3 className="text-xl font-black text-slate-800">ยินดีต้อนรับสู่ระบบค้นหาประวัติ</h3>
+                    <p className="mt-2 text-sm font-medium text-slate-500 max-w-sm">
+                      กรุณาเลือกช่วงเวลา หรือระบุชื่อร้านค้าที่ต้องการ <br />เพื่อเรียกดูรายการใบวางบิลย้อนหลัง
+                    </p>
+                  </div>
+                ) : history.length === 0 ? (
+                  <EmptyHistory />
+                ) : (
+                  <HistoryTable history={history} />
+                )}
+              </div>
+            </section>
+          )}
         </div>
       </div>
     </AppSidebarLayout>
   );
 }
+
+
 
 export default function BillingPage(props: BillingPageProps) {
   return (

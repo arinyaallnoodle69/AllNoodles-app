@@ -155,7 +155,7 @@ export async function getDeliveryList(
 ): Promise<DeliveryListItem[]> {
   const supabase = getSupabaseAdmin();
 
-  const { data: notesData, error: notesError } = await supabase
+  let query = supabase
     .from("delivery_notes")
     .select(`
       id, delivery_number, delivery_date, total_amount, notes,
@@ -163,9 +163,17 @@ export async function getDeliveryList(
       orders(order_number)
     `)
     .eq("organization_id", organizationId)
-    .gte("delivery_date", from)
-    .lte("delivery_date", to)
-    .eq("status", "confirmed")
+    .eq("status", "confirmed");
+
+  // If keyword is provided, search across all dates
+  if (!keyword) {
+    query = query.gte("delivery_date", from).lte("delivery_date", to);
+  } else {
+    // Limit global search results for performance
+    query = query.limit(100);
+  }
+
+  const { data: notesData, error: notesError } = await query
     .order("delivery_date", { ascending: true })
     .order("created_at", { ascending: true });
 

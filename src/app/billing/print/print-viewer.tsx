@@ -11,12 +11,14 @@ export function PrintViewer({
   shouldSave,
   fromDate,
   toDate,
+  autoprint,
 }: {
   initialData: BillingStatementData | BillingStatementData[];
   organizationId: string;
   shouldSave: boolean;
   fromDate: string;
   toDate: string;
+  autoprint?: boolean;
 }) {
   void fromDate;
   void toDate;
@@ -61,6 +63,7 @@ export function PrintViewer({
             .map((item) => item.billingNumber)
             .filter((value): value is string => value !== null)}
           onSaved={handleSaved}
+          autoprint={autoprint}
         />
         <span className="text-sm font-semibold text-slate-700">
           {label}

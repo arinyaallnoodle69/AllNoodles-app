@@ -1061,7 +1061,7 @@ export async function setProductActive(formData: FormData) {
     is_active: nextState,
   }).eq("id", productId);
 
-  revalidateTag(`settings-${session.organizationId}`, "max");
+  revalidateSettingsSurfaces(session.organizationId);
 }
 
 export async function deleteProduct(formData: FormData): Promise<{ success: boolean; error?: string }> {
@@ -1077,15 +1077,25 @@ export async function deleteProduct(formData: FormData): Promise<{ success: bool
   
   if (error) {
     if (error.code === "23503") {
-      return { 
-        success: false, 
-        error: "ไม่สามารถลบสินค้านี้ได้ เนื่องจากมีการใช้งานในระบบ (เช่น มีออเดอร์หรือประวัติสต็อก) แนะนำให้ใช้การ 'ปิดใช้งาน' แทนการลบ" 
-      };
+      // Soft Delete Fallback: Cannot hard delete due to history, so we hide it instead.
+      const { data: product } = await admin.from("products").select("metadata").eq("id", productId).single();
+      const currentMetadata = typeof product?.metadata === "object" && product?.metadata !== null ? product.metadata : {};
+      
+      const { error: updateError } = await admin.from("products").update({
+        metadata: { ...currentMetadata, deleted: true }
+      }).eq("id", productId);
+
+      if (updateError) {
+        return { success: false, error: updateError.message };
+      }
+
+      revalidateSettingsSurfaces(session.organizationId);
+      return { success: true };
     }
     return { success: false, error: error.message };
   }
 
-  revalidateTag(`settings-${session.organizationId}`, "max");
+  revalidateSettingsSurfaces(session.organizationId);
   return { success: true };
 }
 

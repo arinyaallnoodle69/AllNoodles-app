@@ -3,6 +3,7 @@
 import { useTransition, useState } from "react";
 import { deleteProduct } from "@/app/dashboard/settings/actions";
 import { AlertTriangle, Trash2, X, AlertCircle, Loader2 } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 type DeleteProductButtonProps = {
   formId: string;
@@ -11,9 +12,11 @@ type DeleteProductButtonProps = {
 };
 
 export function DeleteProductButton({ formId, productName, triggerClassName }: DeleteProductButtonProps) {
+  const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [isOpen, setIsOpen] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
 
   const confirmDelete = async () => {
     const form = document.getElementById(formId) as HTMLFormElement | null;
@@ -28,6 +31,7 @@ export function DeleteProductButton({ formId, productName, triggerClassName }: D
         setErrorMsg(result.error || "ไม่สามารถลบสินค้าได้ในขณะนี้");
       } else {
         setIsOpen(false);
+        router.refresh();
       }
     });
   };
@@ -36,7 +40,10 @@ export function DeleteProductButton({ formId, productName, triggerClassName }: D
     <>
       <button
         type="button"
-        onClick={() => setIsOpen(true)}
+        onClick={() => {
+          setErrorMsg(null);
+          setIsOpen(true);
+        }}
         disabled={isPending}
         className={triggerClassName || "action-touch-safe inline-flex items-center gap-1.5 rounded-lg border border-red-200 px-3 py-2 text-xs font-medium text-red-600 transition hover:bg-red-50 disabled:opacity-50"}
       >
@@ -66,20 +73,20 @@ export function DeleteProductButton({ formId, productName, triggerClassName }: D
 
             {/* Body */}
             <div className="px-10 pb-8 text-center">
-              <h3 className="text-2xl font-black tracking-tight">ยืนยันการลบสินค้าถาวร?</h3>
+              <h3 className="text-2xl font-black tracking-tight">ยืนยันการลบสินค้า?</h3>
               <div className="mt-4 space-y-3">
                 <p className="text-lg font-bold text-white/90 leading-relaxed">
-                  คุณกำลังจะลบรายการ <span className="text-amber-300">&quot;{productName}&quot;</span> ออกจากระบบ
+                  คุณกำลังจะลบรายการ <span className="text-amber-300">&quot;{productName}&quot;</span> ออกจากหน้าระบบ
                 </p>
                 <p className="text-sm font-medium text-white/60 leading-relaxed bg-black/20 p-4 rounded-2xl border border-white/5">
-                  คำเตือน: การลบจะทำให้ข้อมูลประวัติสต็อก และการตั้งค่าราคาขายทั้งหมดหายไปทันที และไม่สามารถกู้คืนได้
+                  หมายเหตุ: หากสินค้านี้เคยมีประวัติการขายหรือรับเข้าสต็อก ระบบจะเก็บข้อมูลเหล่านั้นไว้ในรายงานเพื่อความถูกต้องทางบัญชี แต่สินค้าจะถูกลบออกจากหน้ารายการปกติ
                 </p>
               </div>
 
               {errorMsg && (
-                <div className="mt-6 p-4 rounded-2xl bg-rose-500/20 border border-rose-500/30 flex items-start gap-3 text-left animate-in slide-in-from-top-2">
+                <div className="mt-6 p-5 rounded-3xl bg-rose-500/20 border border-rose-500/30 flex items-start gap-3 text-left animate-in slide-in-from-top-2">
                   <AlertCircle className="h-5 w-5 shrink-0 text-rose-300" />
-                  <p className="text-xs font-bold text-rose-200 leading-normal">{errorMsg}</p>
+                  <p className="text-[13px] font-bold text-rose-100 leading-snug">{errorMsg}</p>
                 </div>
               )}
             </div>

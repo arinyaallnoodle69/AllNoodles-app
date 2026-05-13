@@ -79,6 +79,18 @@ const [
     );
   }
 
+  interface GroupedOrderStore {
+    customerId: string;
+    customerName: string;
+    customerCode: string;
+    orderDate: string;
+    orderIds: string[];
+    orderNumbers: string[];
+    orderRounds: number;
+    totalAmount: number;
+    hasDelivery: boolean;
+  }
+
   const visibleOrderStores = Array.from(
     orders
       .filter((order) => order.status === "submitted" || order.status === "confirmed")
@@ -102,11 +114,9 @@ const [
         current.totalAmount += order.totalAmount;
         storeMap.set(groupKey, current);
         return storeMap;
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      }, new Map<string, any>())
+      }, new Map<string, GroupedOrderStore>())
       .values(),
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  ).map((store: any) => ({
+  ).map((store) => ({
     ...store,
     hasDelivery: !!(deliveryMap.get(`${store.customerId}_${store.orderDate}`)?.length)
   }));

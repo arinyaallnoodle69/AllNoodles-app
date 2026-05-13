@@ -70,6 +70,11 @@ type ProductRow = {
   sku: string;
   stock_quantity: number | string;
   unit: string;
+  product_category_items: Array<{
+    product_categories: {
+      name: string;
+    } | null;
+  }>;
 };
 
 type ProductImageRow = {
@@ -370,8 +375,7 @@ export const getStockDashboardData = cache(
         costPrice: baseCostPrice,
         id: product.id,
         imageUrl: imageMap.get(product.id) ?? null,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        categoryName: (product as any).product_category_items?.[0]?.product_categories?.name ?? null,
+        categoryName: product.product_category_items?.[0]?.product_categories?.name ?? null,
         isActive: product.is_active,
         name: product.name,
         onHandQuantity: Number(product.stock_quantity),

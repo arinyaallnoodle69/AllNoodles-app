@@ -381,8 +381,7 @@ async function fetchSettingsData(organizationId: string): Promise<SettingsData> 
         .eq("organization_id", organizationId)
         .eq("is_active", true)
         .order("customer_code", { ascending: true }),
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (admin as any)
+      admin
         .from("suppliers")
         .select(
           "id, supplier_code, name, address, province, district, subdistrict, postal_code, metadata",
@@ -439,7 +438,9 @@ async function fetchSettingsData(organizationId: string): Promise<SettingsData> 
     };
   }
 
-  const products = (productsResult.data ?? []) as ProductRow[];
+  const products = ((productsResult.data ?? []) as ProductRow[]).filter(
+    (product) => !(getRecord(product.metadata)?.deleted)
+  );
   const images = (imagesResult.data ?? []) as ProductImageRow[];
   const saleUnits = (saleUnitsResult.data ?? []) as ProductSaleUnitRow[];
   const customers = (customersResult.data ?? []) as CustomerRow[];
@@ -751,7 +752,9 @@ async function fetchSettingsProductsData(organizationId: string): Promise<Settin
     };
   }
 
-  const products = (productsResult.data ?? []) as ProductRow[];
+  const products = ((productsResult.data ?? []) as ProductRow[]).filter(
+    (product) => !(getRecord(product.metadata)?.deleted)
+  );
   const images = (imagesResult.data ?? []) as ProductImageRow[];
   const saleUnits = (saleUnitsResult.data ?? []) as ProductSaleUnitRow[];
   const activeSaleUnits = saleUnits.filter((saleUnit) => saleUnit.is_active);

@@ -55,7 +55,7 @@ async function PackingListPage({ searchParams }: Props) {
   const endDate = params.endDate || date;
 
   const admin = getSupabaseAdmin();
-  let ordersQuery = admin
+  const ordersQueryBase = admin
     .from("orders")
     .select(`
       id, order_number, order_date, total_amount, metadata, status,
@@ -69,13 +69,9 @@ async function PackingListPage({ searchParams }: Props) {
     .eq("organization_id", session.organizationId)
     .neq("status", "cancelled");
 
-  if (endDate && endDate !== date) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    ordersQuery = (ordersQuery as any).gte("order_date", date).lte("order_date", endDate);
-  } else {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    ordersQuery = (ordersQuery as any).eq("order_date", date);
-  }
+  const filteredQuery = endDate && endDate !== date
+    ? ordersQueryBase.gte("order_date", date).lte("order_date", endDate)
+    : ordersQueryBase.eq("order_date", date);
 
   const [vehicleRows, ordersResult] = await Promise.all([
     admin
@@ -84,8 +80,7 @@ async function PackingListPage({ searchParams }: Props) {
       .eq("organization_id", session.organizationId)
       .order("sort_order", { ascending: true })
       .order("created_at", { ascending: true }),
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (ordersQuery as any).order("order_date", { ascending: true }).order("created_at", { ascending: true }),
+    filteredQuery.order("order_date", { ascending: true }).order("created_at", { ascending: true }),
   ]);
 
   const vehicles: PackingListVehicle[] = (vehicleRows.data ?? []).map(

@@ -1,10 +1,11 @@
-﻿"use server";
+"use server";
 
 import { revalidatePath, revalidateTag, updateTag } from "next/cache";
 import { requireAppRole } from "@/lib/auth/authorization";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { getStockReceiptDetail, type StockReceiptDetail } from "@/lib/stock/admin";
 import { createActionClient } from "@/lib/supabase/action";
+import type { Json } from "@/types/database";
 
 const STOCK_RECEIPT_IMAGES_BUCKET = "stock-receipts";
 
@@ -94,8 +95,7 @@ export async function receiveStockAction(
   const receiptNumberInput = getText(formData, "receiptNumber");
   let receiptNumber = receiptNumberInput;
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const admin = getSupabaseAdmin() as any;
+  const admin = getSupabaseAdmin();
 
   if (!receiptNumber) {
     const { data: generatedNumber, error: generateError } = await admin.rpc("generate_receipt_number", {
@@ -207,8 +207,7 @@ export async function bulkReceiveStockAction(
   notes: string = "รับเข้าจากการตั้งเตือนสต็อกไม่พอ",
 ) {
   const session = await requireAppRole("admin");
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const admin = getSupabaseAdmin() as any;
+  const admin = getSupabaseAdmin();
 
   let receiptNumber = `RCV-${Date.now()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
   const { data: generatedNumber, error: generateError } = await admin.rpc("generate_receipt_number", {
@@ -296,8 +295,7 @@ export async function updateStockReceiptAction(
   formData: FormData,
 ): Promise<UpdateStockReceiptActionState> {
   const session = await requireAppRole("admin");
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const admin = getSupabaseAdmin() as any;
+  const admin = getSupabaseAdmin();
 
   const receiptId = getText(formData, "receiptId");
   const receivedAt = getText(formData, "receivedAt");
@@ -387,10 +385,10 @@ export async function updateStockReceiptAction(
       p_organization_id: session.organizationId,
       p_receipt_id: receiptId,
       p_received_at: nextReceivedAt,
-      p_supplier_id: supplierId || null,
-      p_supplier_name: supplierName || null,
-      p_notes: notes || null,
-      p_items: items,
+      p_supplier_id: (supplierId || null) as unknown as string,
+      p_supplier_name: (supplierName || null) as unknown as string,
+      p_notes: (notes || null) as unknown as string,
+      p_items: items as unknown as Json,
       p_updated_by: session.userId,
     });
 

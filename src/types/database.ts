@@ -2096,6 +2096,19 @@ export type Database = {
         }[]
       }
       revoke_app_session: { Args: { p_session_id: string }; Returns: undefined }
+      update_inventory_receipt: {
+        Args: {
+          p_items: Json
+          p_notes: string
+          p_organization_id: string
+          p_receipt_id: string
+          p_received_at: string
+          p_supplier_id: string
+          p_supplier_name: string
+          p_updated_by: string
+        }
+        Returns: undefined
+      }
     }
     Enums: {
       app_role: "admin" | "member" | "warehouse"

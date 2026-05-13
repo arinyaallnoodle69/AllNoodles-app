@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { AlertTriangle, Loader2, Printer, X } from "lucide-react";
 import { recordBillingHistoryAction } from "@/lib/billing/actions";
 import type { SnapshotRow } from "@/lib/billing/billing-statement";
@@ -171,19 +171,22 @@ export function PrintButton({
   shouldSave,
   billingNumbers = [],
   onSaved,
+  autoprint,
 }: {
   organizationId: string;
   items: Item[];
   shouldSave: boolean;
   billingNumbers?: string[];
   onSaved?: (results: { customerId: string; billingNumber: string }[]) => void;
+  autoprint?: boolean;
 }) {
   const [isSaving, setIsSaving] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
   const [showReprintDialog, setShowReprintDialog] = useState(false);
   const isReprint = (!shouldSave || isSaved) && billingNumbers.length > 0;
+  const hasAutoPrinted = useRef(false);
 
-  async function executePrint() {
+  const executePrint = useCallback(async () => {
     if (shouldSave && !isSaved) {
       setIsSaving(true);
       try {
@@ -194,7 +197,10 @@ export function PrintButton({
         }
         setIsSaved(true);
         onSaved?.(result.results);
-        setTimeout(() => window.print(), 500);
+        setTimeout(() => {
+          window.focus();
+          window.print();
+        }, 500);
       } catch (error) {
         console.error(error);
         alert("เกิดข้อผิดพลาดในการบันทึก");
@@ -204,8 +210,22 @@ export function PrintButton({
       return;
     }
 
+    window.focus();
     window.print();
-  }
+  }, [shouldSave, isSaved, organizationId, items, onSaved]);
+
+  useEffect(() => {
+    if (autoprint && !hasAutoPrinted.current) {
+      hasAutoPrinted.current = true;
+      if (isReprint) {
+        // If it's a reprint and autoprint is enabled, we bypass the reprint dialog
+        // to allow silent/automatic printing from the billing page checkboxes.
+        void executePrint();
+      } else {
+        void executePrint();
+      }
+    }
+  }, [autoprint, isReprint, executePrint]);
 
   function handleClick() {
     if (isReprint) {

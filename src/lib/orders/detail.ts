@@ -16,6 +16,8 @@ type SelectChain<T> = {
   gte: (column: string, value: string | number) => SelectChain<T>;
   lte: (column: string, value: string | number) => SelectChain<T>;
   in: (column: string, values: Array<string | number>) => SelectChain<T>;
+  ilike: (column: string, pattern: string) => SelectChain<T>;
+  limit: (count: number) => SelectChain<T>;
   order: (column: string, options?: { ascending: boolean }) => SelectChain<T>;
   single: () => SingleResult<T>;
 } & Promise<{ data: T[] | null; error: QueryError }>;
@@ -353,10 +355,16 @@ export async function getIncomingOrders(
     .select("id, customer_id, order_number, order_date, status, fulfillment_status, total_amount, metadata, created_at")
     .eq("organization_id", organizationId);
 
-  if (endDate && endDate !== orderDate) {
-    query = query.gte("order_date", orderDate).lte("order_date", endDate);
+  // If searchTerm is provided, we search across all dates (Global Search)
+  if (!searchTerm) {
+    if (endDate && endDate !== orderDate) {
+      query = query.gte("order_date", orderDate).lte("order_date", endDate);
+    } else {
+      query = query.eq("order_date", orderDate);
+    }
   } else {
-    query = query.eq("order_date", orderDate);
+    // Limit global search to latest 100 results for performance
+    query = query.limit(100);
   }
 
   const ordersResult = await query
@@ -367,7 +375,36 @@ export async function getIncomingOrders(
     throw new Error(ordersResult.error.message ?? "Failed to load incoming orders.");
   }
 
-  const orders = ordersResult.data ?? [];
+  let orders = ordersResult.data ?? [];
+
+  // If searchTerm is provided, also search for delivery notes by delivery_number
+  // because the orders table doesn't contain DN numbers directly.
+  if (searchTerm && searchTerm.trim().length >= 2) {
+    const cleanSearch = searchTerm.trim();
+    const { data: dnOrders } = await admin
+      .from("delivery_notes")
+      .select("order_id")
+      .eq("organization_id", organizationId)
+      .ilike("delivery_number", `%${cleanSearch}%`)
+      .limit(50);
+    
+    if (dnOrders && dnOrders.length > 0) {
+      const dnOrderIds = Array.from(new Set(dnOrders.map(d => d.order_id).filter(Boolean))) as string[];
+      // Only fetch orders that aren't already in our result set
+      const missingOrderIds = dnOrderIds.filter(id => !orders.some(o => o.id === id));
+      
+      if (missingOrderIds.length > 0) {
+        const { data: additionalOrders } = await admin
+          .from("orders")
+          .select("id, customer_id, order_number, order_date, status, fulfillment_status, total_amount, metadata, created_at")
+          .in("id", missingOrderIds);
+          
+        if (additionalOrders) {
+          orders = [...orders, ...additionalOrders];
+        }
+      }
+    }
+  }
 
   const customerIds = Array.from(new Set(orders.map((order: OrderRow) => order.customer_id)));
 

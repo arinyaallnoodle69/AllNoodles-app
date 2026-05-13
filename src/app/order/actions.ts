@@ -104,7 +104,7 @@ function buildClientOrderItems(
   });
 }
 
-function normalizeOrderForClient(order: Database["public"]["Tables"]["orders"]["Row"] & { order_items?: unknown[] | null }) {
+function normalizeOrderForClient<T extends { order_items?: unknown }>(order: T) {
   return {
     ...order,
     order_items: Array.isArray(order?.order_items) ? order.order_items : [],
@@ -657,8 +657,7 @@ export async function getCustomerOrders(
     return { success: false, error: "ไม่สามารถโหลดประวัติการสั่งซื้อได้" };
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const normalizedOrders = (data ?? []).map((order) => normalizeOrderForClient(order as any));
+  const normalizedOrders = (data ?? []).map((order) => normalizeOrderForClient(order));
 
   return { success: true, data: normalizedOrders };
 }
@@ -1123,8 +1122,8 @@ export async function updateCustomerOrder(
 
   return {
     success: true,
-    data: normalizeOrderForClient({
-      ...updatedOrder,
+    data: {
+      ...normalizeOrderForClient(updatedOrder),
       receiptItems: orderItemsData.map((item) => ({
         name: productMap.get(item.product_id)?.name ?? "-",
         saleUnitLabel: item.sale_unit_label,
@@ -1132,7 +1131,6 @@ export async function updateCustomerOrder(
         unitPrice: item.unit_price,
         lineTotal: item.line_total,
       })),
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } as any),
+    },
   };
 }

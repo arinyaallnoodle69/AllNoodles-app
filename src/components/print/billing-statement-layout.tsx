@@ -86,7 +86,7 @@ function BillPageView({
         pageLabel={totalPages > 1 ? `หน้า ${pageIndex + 1}/${totalPages}` : undefined}
       />
 
-      <PrintCustomerRow customer={data.customer} />
+      <PrintCustomerRow customer={{ ...data.customer, address: data.customer.address ?? "-" }} />
 
       <table
         style={{

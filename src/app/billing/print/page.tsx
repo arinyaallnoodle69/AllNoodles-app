@@ -18,6 +18,7 @@ type Props = {
     to?: string;
     batch?: string;
     save?: string;
+    autoprint?: string;
   }>;
 };
 
@@ -103,6 +104,8 @@ async function BillingPrintPageContent({ searchParams }: Props) {
     );
   }
 
+  const autoprint = params.autoprint === "1";
+
   return (
     <>
       <style>{`
@@ -115,7 +118,22 @@ async function BillingPrintPageContent({ searchParams }: Props) {
         shouldSave={shouldSave}
         fromDate={fromDate}
         toDate={toDate}
+        autoprint={autoprint}
       />
+      {autoprint && (
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              window.onload = function() {
+                setTimeout(function() {
+                  window.focus();
+                  window.print();
+                }, 1000);
+              };
+            `,
+          }}
+        />
+      )}
     </>
   );
 }

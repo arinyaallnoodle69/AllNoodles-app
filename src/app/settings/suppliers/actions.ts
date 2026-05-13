@@ -15,8 +15,7 @@ export async function createSupplierAction(
   formData: FormData
 ): Promise<SupplierActionState> {
   const session = await requireAppRole("admin");
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const admin = getSupabaseAdmin() as any;
+  const admin = getSupabaseAdmin();
 
   const name = String(formData.get("name") ?? "").trim();
   const addressDetails = String(formData.get("addressDetails") ?? "").trim();
@@ -78,8 +77,7 @@ export async function updateSupplierAction(
   formData: FormData
 ): Promise<SupplierActionState> {
   const session = await requireAppRole("admin");
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const admin = getSupabaseAdmin() as any;
+  const admin = getSupabaseAdmin();
 
   const name = String(formData.get("name") ?? "").trim();
   const addressDetails = String(formData.get("addressDetails") ?? "").trim();
@@ -132,8 +130,7 @@ export async function updateSupplierAction(
 
 export async function deleteSupplierAction(supplierId: string): Promise<{ success: boolean; error?: string }> {
   const session = await requireAppRole("admin");
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const admin = getSupabaseAdmin() as any;
+  const admin = getSupabaseAdmin();
 
   const { error } = await admin
     .from("suppliers")

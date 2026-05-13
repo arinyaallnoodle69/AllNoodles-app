@@ -871,6 +871,7 @@ export function CreateOrderModal({
   const [productModalOpen, setProductModalOpen] = useState(false);
   const [pending, startTransition] = useTransition();
   const [success, setSuccess] = useState<{ orderNumber: string; deliveryNumber?: string } | null>(null);
+  const [showSuccessOverlay, setShowSuccessOverlay] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [historyNotice, setHistoryNotice] = useState<string | null>(null);
   const [customerId, setCustomerId] = useState("");
@@ -1242,11 +1243,19 @@ export function CreateOrderModal({
         setError(result.error);
         return;
       }
+      
+      // SHOW SUCCESS OVERLAY AND RESET FORM (DON'T CLOSE)
       setSuccess({
         orderNumber: result.orderNumber ?? "",
         deliveryNumber: result.deliveryNumber
       });
-      setTimeout(handleClose, 3500);
+      setShowSuccessOverlay(true);
+      
+      // Clear overlay after 3 seconds and reset form
+      setTimeout(() => {
+        setShowSuccessOverlay(false);
+        resetForm();
+      }, 2500);
     });
   }
 
@@ -1294,6 +1303,28 @@ export function CreateOrderModal({
             }`}
           >
             <ActionPopup message={submitPopupMessage} onClose={() => setSubmitPopupMessage(null)} />
+
+            {/* Premium Success Overlay */}
+            {showSuccessOverlay && success && (
+              <div className="absolute inset-0 z-[100] flex items-center justify-center bg-white/60 backdrop-blur-md animate-in fade-in duration-300">
+                <div className="flex w-full max-w-sm flex-col items-center rounded-[2.5rem] bg-white p-10 text-center shadow-[0_32px_64px_rgba(0,0,0,0.15)] ring-1 ring-slate-100 animate-in zoom-in-95 duration-500">
+                  <div className="mb-6 flex h-24 w-24 items-center justify-center rounded-full bg-emerald-500 text-white shadow-lg shadow-emerald-500/20">
+                    <Check className="h-14 w-14" strokeWidth={4} />
+                  </div>
+                  <h3 className="mb-2 text-3xl font-black text-slate-900 tracking-tight">บันทึกสำเร็จ!</h3>
+                  <div className="space-y-1 text-slate-500">
+                    <p className="text-sm font-bold uppercase tracking-widest opacity-60">เลขที่ออเดอร์</p>
+                    <p className="font-mono text-2xl font-black text-[#003366]">{success.orderNumber}</p>
+                  </div>
+                  {success.deliveryNumber && (
+                    <div className="mt-4 rounded-2xl bg-slate-50 px-6 py-3 border border-slate-100">
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">ใบส่งของ</p>
+                      <p className="font-mono text-lg font-black text-slate-700">{success.deliveryNumber}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* Header */}
             <div className="sticky top-0 z-40 flex shrink-0 items-center justify-between gap-3 border-b border-[#003366]/30 bg-[#003366] px-4 py-2.5 pt-[max(0.625rem,env(safe-area-inset-top))] text-white shadow-sm sm:px-5 sm:py-4 sm:pt-4">

@@ -23,20 +23,27 @@ export async function recordBillingHistoryAction(params: {
   const db = billingTable(supabase);
   const results: { customerId: string; billingNumber: string }[] = [];
 
-  for (const item of params.items) {
-    const { data: existing } = await db
-      .from("billing_records")
-      .select("billing_number")
-      .eq("organization_id", params.organizationId)
-      .eq("customer_id", item.customerId)
-      .eq("from_date", item.fromDate)
-      .eq("to_date", item.toDate)
-      .maybeSingle();
+  const { data: existingRecords } = await db
+    .from("billing_records")
+    .select("customer_id, billing_number")
+    .eq("organization_id", params.organizationId)
+    .in("customer_id", params.items.map(i => i.customerId))
+    .in("from_date", params.items.map(i => i.fromDate))
+    .in("to_date", params.items.map(i => i.toDate));
 
-    if (existing) {
+  const existingMap = new Map<string, string>();
+  existingRecords?.forEach(r => {
+    // Note: Matches logic in statement.ts where we check exact period
+    existingMap.set(r.customer_id, r.billing_number);
+  });
+
+  for (const item of params.items) {
+    const existingNumber = existingMap.get(item.customerId);
+
+    if (existingNumber) {
       results.push({
         customerId: item.customerId,
-        billingNumber: (existing as { billing_number: string }).billing_number,
+        billingNumber: existingNumber,
       });
       continue;
     }
@@ -64,4 +71,43 @@ export async function recordBillingHistoryAction(params: {
 
   revalidatePath("/billing");
   return { success: true, results };
+}
+
+export async function confirmAndSaveBillingBatchAction(params: {
+  fromDate: string;
+  toDate: string;
+  customerIds: string[];
+  billingDate: string;
+}) {
+  const { requireAppRole } = await import("@/lib/auth/authorization");
+  const { getBatchBillingData } = await import("@/lib/billing/billing-statement");
+  const session = await requireAppRole("admin");
+
+  const dataList = await getBatchBillingData(
+    session.organizationId,
+    params.fromDate,
+    params.toDate,
+    params.billingDate,
+    params.customerIds,
+  );
+
+  if (dataList.length === 0) {
+    return { success: false, error: "No records found" };
+  }
+
+  const items = dataList.map((item) => ({
+    customerId: item.customer.id,
+    billingDate: item.billingDate,
+    fromDate: item.fromDate,
+    toDate: item.toDate,
+    totalAmount: item.grandTotal,
+    snapshotRows: item.rows,
+  }));
+
+  const result = await recordBillingHistoryAction({
+    organizationId: session.organizationId,
+    items,
+  });
+
+  return result;
 }
