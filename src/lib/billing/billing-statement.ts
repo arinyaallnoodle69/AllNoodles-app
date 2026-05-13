@@ -2,8 +2,6 @@ import "server-only";
 
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
-// billing_records / billing_number_counters ยังไม่อยู่ใน database.ts types
-// run `npm run gen:types` หลัง apply migration เพื่อเอา cast ออก
 const billingTable = (supabase: ReturnType<typeof getSupabaseAdmin>) => supabase;
 
 export type SnapshotRow = {
@@ -19,7 +17,7 @@ export type BillingStatementData = {
   billingDate: string;
   fromDate: string;
   toDate: string;
-  isLocked: boolean; // true = ยอดมาจาก snapshot (ล็อกแล้ว)
+  isLocked: boolean;
   customer: {
     id: string;
     name: string;
@@ -47,33 +45,124 @@ export type BillingRecord = {
   to_date: string;
   created_at: string;
   snapshot_rows: SnapshotRow[];
-  /** true = ข้อมูลจาก snapshot ที่ล็อกไว้ตอนออกใบ / false = ข้อมูลสดจากใบส่งของปัจจุบัน */
   isSnapshotLocked: boolean;
 };
 
-export type BillingCustomer = {
-  id: string;
-  name: string;
-  code: string;
+export type BillingCandidate = {
+  customerId: string;
+  customerName: string;
+  customerCode: string;
+  deliveryCount: number;
+  totalAmount: number;
+  latestDeliveryDate: string;
+  deliveryNumbers: string[];
+  billingNumber: string | null;
 };
 
-export async function getBillingCustomers(
-  organizationId: string,
-): Promise<BillingCustomer[]> {
-  const supabase = getSupabaseAdmin();
-  const { data } = await supabase
-    .from("customers")
-    .select("id, name, customer_code")
-    .eq("organization_id", organizationId)
-    .eq("is_active", true)
-    .order("customer_code", { ascending: true });
+type CustomerLookup = {
+  id: string;
+  name: string;
+  customer_code: string;
+  address: string | null;
+};
 
-  if (!data) return [];
-  return (data as { id: string; name: string; customer_code: string }[]).map((c) => ({
-    id: c.id,
-    name: c.name,
-    code: c.customer_code,
-  }));
+type RawDeliveryNote = {
+  id: string;
+  customer_id: string;
+  delivery_number: string;
+  delivery_date: string;
+  total_amount: number | string;
+  notes: string | null;
+  customers: {
+    id: string;
+    name: string;
+    customer_code: string;
+  };
+};
+
+function toNum(v: number | string | null | undefined) {
+  const n = Number(v ?? 0);
+  return Number.isFinite(n) ? n : 0;
+}
+
+function sortByCustomerCode<T extends { customerCode: string; customerName: string }>(rows: T[]) {
+  return rows.sort((a, b) => {
+    const codeCompare = a.customerCode.localeCompare(b.customerCode, "th");
+    if (codeCompare !== 0) return codeCompare;
+    return a.customerName.localeCompare(b.customerName, "th");
+  });
+}
+
+export async function getBillingCandidates(
+  organizationId: string,
+  fromDate: string,
+  toDate: string,
+): Promise<BillingCandidate[]> {
+  const supabase = getSupabaseAdmin();
+  const { data: notesData, error } = await supabase
+    .from("delivery_notes")
+    .select(`
+      id,
+      customer_id,
+      delivery_number,
+      delivery_date,
+      total_amount,
+      notes,
+      customers!inner(id, name, customer_code)
+    `)
+    .eq("organization_id", organizationId)
+    .gte("delivery_date", fromDate)
+    .lte("delivery_date", toDate)
+    .eq("status", "confirmed")
+    .order("delivery_date", { ascending: true })
+    .order("created_at", { ascending: true });
+
+  if (error || !notesData) return [];
+
+  const grouped = new Map<string, BillingCandidate>();
+
+  for (const note of notesData as RawDeliveryNote[]) {
+    const current = grouped.get(note.customer_id) ?? {
+      customerId: note.customer_id,
+      customerName: note.customers.name,
+      customerCode: note.customers.customer_code,
+      deliveryCount: 0,
+      totalAmount: 0,
+      latestDeliveryDate: note.delivery_date,
+      deliveryNumbers: [],
+      billingNumber: null,
+    };
+
+    current.deliveryCount += 1;
+    current.totalAmount += toNum(note.total_amount);
+    if (note.delivery_date > current.latestDeliveryDate) {
+      current.latestDeliveryDate = note.delivery_date;
+    }
+    current.deliveryNumbers.push(note.delivery_number);
+    grouped.set(note.customer_id, current);
+  }
+
+  const candidates = Array.from(grouped.values());
+  if (candidates.length === 0) return [];
+
+  const { data: billingRows } = await supabase
+    .from("billing_records")
+    .select("customer_id, billing_number")
+    .eq("organization_id", organizationId)
+    .eq("from_date", fromDate)
+    .eq("to_date", toDate)
+    .in("customer_id", candidates.map((candidate) => candidate.customerId));
+
+  const billingByCustomer = new Map<string, string>();
+  for (const row of (billingRows ?? []) as { customer_id: string; billing_number: string }[]) {
+    billingByCustomer.set(row.customer_id, row.billing_number);
+  }
+
+  for (const candidate of candidates) {
+    candidate.billingNumber = billingByCustomer.get(candidate.customerId) ?? null;
+  }
+
+  return sortByCustomerCode(candidates);
 }
 
 export async function getBillingHistory(
@@ -101,80 +190,70 @@ export async function getBillingHistory(
 
   if (!data) return [];
 
-  const records: BillingRecord[] = (data as Array<Record<string, unknown>>).map((d) => ({
-    id: d.id as string,
-    billing_number: d.billing_number as string,
-    customer_id: d.customer_id as string,
-    billing_date: d.billing_date as string,
-    total_amount: Number(d.total_amount),
-    from_date: d.from_date as string,
-    to_date: d.to_date as string,
-    created_at: d.created_at as string,
-    snapshot_rows: Array.isArray(d.snapshot_rows) && d.snapshot_rows.length > 0
-      ? (d.snapshot_rows as unknown as SnapshotRow[])
-      : [],
-    isSnapshotLocked: Array.isArray(d.snapshot_rows) && d.snapshot_rows.length > 0,
-    customer_name: (d.customers as { name: string } | null)?.name ?? "N/A",
-    customer_code: (d.customers as { customer_code: string } | null)?.customer_code ?? "N/A",
+  const records: BillingRecord[] = (data as Array<Record<string, unknown>>).map((row) => ({
+    id: row.id as string,
+    billing_number: row.billing_number as string,
+    customer_id: row.customer_id as string,
+    customer_name: (row.customers as { name: string } | null)?.name ?? "ไม่ทราบชื่อร้าน",
+    customer_code: (row.customers as { customer_code: string } | null)?.customer_code ?? "-",
+    billing_date: row.billing_date as string,
+    total_amount: toNum(row.total_amount as number | string | null | undefined),
+    from_date: row.from_date as string,
+    to_date: row.to_date as string,
+    created_at: row.created_at as string,
+    snapshot_rows:
+      Array.isArray(row.snapshot_rows) && row.snapshot_rows.length > 0
+        ? (row.snapshot_rows as unknown as SnapshotRow[])
+        : [],
+    isSnapshotLocked: Array.isArray(row.snapshot_rows) && row.snapshot_rows.length > 0,
   }));
 
-  // Fallback: ดึง delivery_notes สดมาแทนสำหรับ records ที่ไม่มี snapshot
-  // (records ที่ออกก่อนระบบ snapshot_rows ถูกเพิ่ม)
-  const missing = records.filter((r) => r.snapshot_rows.length === 0);
-  if (missing.length > 0) {
-    const customerIds = [...new Set(missing.map((r) => r.customer_id))];
-    const minDate = missing.reduce(
-      (min, r) => (r.from_date < min ? r.from_date : min),
-      missing[0].from_date,
-    );
-    const maxDate = missing.reduce(
-      (max, r) => (r.to_date > max ? r.to_date : max),
-      missing[0].to_date,
-    );
+  const missingSnapshots = records.filter((record) => record.snapshot_rows.length === 0);
+  if (missingSnapshots.length === 0) return records;
 
-    const { data: dnsData } = await supabase
-      .from("delivery_notes")
-      .select("delivery_number, delivery_date, total_amount, notes, customer_id")
-      .eq("organization_id", organizationId)
-      .in("customer_id", customerIds)
-      .gte("delivery_date", minDate)
-      .lte("delivery_date", maxDate)
-      .eq("status", "confirmed")
-      .order("delivery_date", { ascending: true })
-      .order("created_at", { ascending: true });
+  const customerIds = Array.from(new Set(missingSnapshots.map((record) => record.customer_id)));
+  const minDate = missingSnapshots.reduce(
+    (min, record) => (record.from_date < min ? record.from_date : min),
+    missingSnapshots[0].from_date,
+  );
+  const maxDate = missingSnapshots.reduce(
+    (max, record) => (record.to_date > max ? record.to_date : max),
+    missingSnapshots[0].to_date,
+  );
 
-    if (dnsData) {
-      type RawDN = {
-        delivery_number: string;
-        delivery_date: string;
-        total_amount: number | string;
-        notes: string | null;
-        customer_id: string;
-      };
+  const { data: freshNotes } = await supabase
+    .from("delivery_notes")
+    .select("delivery_number, delivery_date, total_amount, notes, customer_id")
+    .eq("organization_id", organizationId)
+    .in("customer_id", customerIds)
+    .gte("delivery_date", minDate)
+    .lte("delivery_date", maxDate)
+    .eq("status", "confirmed")
+    .order("delivery_date", { ascending: true })
+    .order("created_at", { ascending: true });
 
-      // Group delivery notes by customer_id for fast lookup
-      const dnsByCustomer = new Map<string, RawDN[]>();
-      for (const dn of dnsData as RawDN[]) {
-        const list = dnsByCustomer.get(dn.customer_id) ?? [];
-        list.push(dn);
-        dnsByCustomer.set(dn.customer_id, list);
-      }
+  if (!freshNotes) return records;
 
-      for (const record of records) {
-        if (record.snapshot_rows.length > 0) continue;
-        const customerDns = dnsByCustomer.get(record.customer_id) ?? [];
-        const inRange = customerDns.filter(
-          (dn) => dn.delivery_date >= record.from_date && dn.delivery_date <= record.to_date,
-        );
-        record.snapshot_rows = inRange.map((dn, idx) => ({
-          lineNumber: idx + 1,
-          deliveryNumber: dn.delivery_number,
-          deliveryDate: dn.delivery_date,
-          totalAmount: Number(dn.total_amount),
-          notes: dn.notes ?? null,
-        }));
-      }
-    }
+  const notesByCustomer = new Map<string, RawDeliveryNote[]>();
+  for (const note of freshNotes as unknown as RawDeliveryNote[]) {
+    const bucket = notesByCustomer.get(note.customer_id) ?? [];
+    bucket.push(note);
+    notesByCustomer.set(note.customer_id, bucket);
+  }
+
+  for (const record of records) {
+    if (record.snapshot_rows.length > 0) continue;
+    const customerNotes = notesByCustomer.get(record.customer_id) ?? [];
+    const rows = customerNotes
+      .filter((note) => note.delivery_date >= record.from_date && note.delivery_date <= record.to_date)
+      .map((note, index) => ({
+        lineNumber: index + 1,
+        deliveryNumber: note.delivery_number,
+        deliveryDate: note.delivery_date,
+        totalAmount: toNum(note.total_amount),
+        notes: note.notes,
+      }));
+    record.snapshot_rows = rows;
   }
 
   return records;
@@ -186,12 +265,11 @@ export async function getBillingStatementData(
   fromDate: string,
   toDate: string,
   billingDate: string,
-  options: { saveHistory?: boolean; existingBillingNumber?: string } = {},
+  options: { existingBillingNumber?: string } = {},
 ): Promise<BillingStatementData | null> {
   const supabase = getSupabaseAdmin();
   const db = billingTable(supabase);
 
-  // 1. ตรวจสอบว่าเคยออกใบวางบิลช่วงนี้ไว้แล้วไหม
   const { data: existingRecord } = await db
     .from("billing_records")
     .select("billing_number, snapshot_rows")
@@ -206,7 +284,6 @@ export async function getBillingStatementData(
     snapshot_rows: SnapshotRow[] | null;
   } | null;
 
-  // 2. ดึงข้อมูลลูกค้าและบริษัทเสมอ (header ของใบ)
   const [{ data: customerData }, { data: orgData }] = await Promise.all([
     supabase
       .from("customers")
@@ -222,41 +299,36 @@ export async function getBillingStatementData(
 
   if (!customerData || !orgData) return null;
 
-  const meta =
+  const customer = customerData as CustomerLookup;
+  const metadata =
     typeof orgData.metadata === "object" && orgData.metadata !== null
       ? (orgData.metadata as Record<string, unknown>)
-      : ({} as Record<string, unknown>);
+      : {};
 
-  type CustomerRow = { id: string; name: string; customer_code: string; address: string | null };
-  const c = customerData as unknown as CustomerRow;
-
-  const toNum = (v: number | string | null | undefined) => {
-    const n = Number(v ?? 0);
-    return Number.isFinite(n) ? n : 0;
-  };
-
-  // 3. ถ้ามี snapshot → ใช้ข้อมูลที่ล็อกไว้ (ยอดไม่เปลี่ยนแม้แก้ DN ย้อนหลัง)
   if (locked?.snapshot_rows && locked.snapshot_rows.length > 0) {
-    const rows = locked.snapshot_rows;
     return {
       billingNumber: locked.billing_number,
       billingDate,
       fromDate,
       toDate,
       isLocked: true,
-      customer: { id: c.id, name: c.name, code: c.customer_code, address: c.address ?? "" },
+      customer: {
+        id: customer.id,
+        name: customer.name,
+        code: customer.customer_code,
+        address: customer.address ?? "",
+      },
       organization: {
         name: orgData.name,
-        address: (meta.address as string) ?? null,
-        phone: (meta.phone as string) ?? null,
+        address: (metadata.address as string) ?? null,
+        phone: (metadata.phone as string) ?? null,
       },
-      rows,
-      grandTotal: rows.reduce((s, r) => s + r.totalAmount, 0),
+      rows: locked.snapshot_rows,
+      grandTotal: locked.snapshot_rows.reduce((sum, row) => sum + row.totalAmount, 0),
     };
   }
 
-  // 4. ยังไม่มี snapshot → ดึงข้อมูล DN สด
-  const { data: dns, error } = await supabase
+  const { data: notesData, error } = await supabase
     .from("delivery_notes")
     .select("delivery_number, delivery_date, total_amount, notes")
     .eq("organization_id", organizationId)
@@ -267,21 +339,19 @@ export async function getBillingStatementData(
     .order("delivery_date", { ascending: true })
     .order("created_at", { ascending: true });
 
-  if (error || !dns || (dns as unknown[]).length === 0) return null;
+  if (error || !notesData || notesData.length === 0) return null;
 
-  type RawDN = {
+  const rows: SnapshotRow[] = (notesData as {
     delivery_number: string;
     delivery_date: string;
     total_amount: number | string;
     notes: string | null;
-  };
-
-  const rows: SnapshotRow[] = (dns as RawDN[]).map((row, idx) => ({
-    lineNumber: idx + 1,
+  }[]).map((row, index) => ({
+    lineNumber: index + 1,
     deliveryNumber: row.delivery_number,
     deliveryDate: row.delivery_date,
     totalAmount: toNum(row.total_amount),
-    notes: row.notes ?? null,
+    notes: row.notes,
   }));
 
   return {
@@ -290,14 +360,19 @@ export async function getBillingStatementData(
     fromDate,
     toDate,
     isLocked: false,
-    customer: { id: c.id, name: c.name, code: c.customer_code, address: c.address ?? "" },
+    customer: {
+      id: customer.id,
+      name: customer.name,
+      code: customer.customer_code,
+      address: customer.address ?? "",
+    },
     organization: {
       name: orgData.name,
-      address: (meta.address as string) ?? null,
-      phone: (meta.phone as string) ?? null,
+      address: (metadata.address as string) ?? null,
+      phone: (metadata.phone as string) ?? null,
     },
     rows,
-    grandTotal: rows.reduce((s, r) => s + r.totalAmount, 0),
+    grandTotal: rows.reduce((sum, row) => sum + row.totalAmount, 0),
   };
 }
 
@@ -306,11 +381,11 @@ export async function getBatchBillingData(
   fromDate: string,
   toDate: string,
   billingDate: string,
-  options: { saveHistory?: boolean } = {},
+  customerIds?: string[],
 ): Promise<BillingStatementData[]> {
   const supabase = getSupabaseAdmin();
 
-  const { data: dns } = await supabase
+  let query = supabase
     .from("delivery_notes")
     .select("customer_id")
     .eq("organization_id", organizationId)
@@ -319,22 +394,35 @@ export async function getBatchBillingData(
     .eq("status", "confirmed")
     .order("customer_id");
 
-  if (!dns || dns.length === 0) return [];
+  if (customerIds && customerIds.length > 0) {
+    query = query.in("customer_id", customerIds);
+  }
 
-  const uniqueIds = Array.from(new Set(dns.map((d) => d.customer_id)));
+  const { data } = await query;
+  if (!data || data.length === 0) return [];
+
+  const uniqueIds = customerIds && customerIds.length > 0
+    ? customerIds
+    : Array.from(new Set(data.map((row) => row.customer_id)));
+
   const results: BillingStatementData[] = [];
-
   for (const customerId of uniqueIds) {
-    const data = await getBillingStatementData(
+    const statement = await getBillingStatementData(
       organizationId,
       customerId,
       fromDate,
       toDate,
       billingDate,
-      options,
     );
-    if (data) results.push(data);
+    if (statement) results.push(statement);
   }
 
-  return results;
+  const sortableResults = results.map((row) => ({
+    row,
+    customerCode: row.customer.code,
+    customerName: row.customer.name,
+  }));
+
+  sortByCustomerCode(sortableResults);
+  return sortableResults.map((item) => item.row);
 }

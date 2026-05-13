@@ -131,12 +131,24 @@ const EditItemsPanel = memo(({
   const [quantities, setQuantities] = useState<Record<string, number>>(
     Object.fromEntries(detail.items.map((i) => [i.id, i.quantity])),
   );
+  const [quantityInputs, setQuantityInputs] = useState<Record<string, string>>(
+    Object.fromEntries(detail.items.map((i) => [i.id, String(i.quantity)])),
+  );
   const [removed, setRemoved] = useState<Set<string>>(new Set());
   const [addedItems, setAddedItems] = useState<AddedOrderItemDraft[]>([]);
+  const [addedQuantityInputs, setAddedQuantityInputs] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
   const activeItems = detail.items.filter((i) => !removed.has(i.id));
+
+  useEffect(() => {
+    setQuantities(Object.fromEntries(detail.items.map((i) => [i.id, i.quantity])));
+    setQuantityInputs(Object.fromEntries(detail.items.map((i) => [i.id, String(i.quantity)])));
+    setRemoved(new Set());
+    setAddedItems([]);
+    setAddedQuantityInputs({});
+  }, [detail]);
 
   function getItemRules(productId: string, saleUnitId: string | null) {
     const product = products.find((p) => p.id === productId);
@@ -156,6 +168,7 @@ const EditItemsPanel = memo(({
       const current = prev[itemId] ?? item.quantity;
       const nextRaw = current + delta * step;
       const next = Math.max(min, Math.round((nextRaw - min) / step) * step + min);
+      setQuantityInputs((prevInputs) => ({ ...prevInputs, [itemId]: String(Number(next.toFixed(3))) }));
       return { ...prev, [itemId]: Number(next.toFixed(3)) };
     });
   }
@@ -171,24 +184,91 @@ const EditItemsPanel = memo(({
       const next = Math.max(min, Math.round((nextRaw - min) / step) * step + min);
       const nextItems = [...prev];
       nextItems[idx] = { ...item, quantity: Number(next.toFixed(3)) };
+      setAddedQuantityInputs((prevInputs) => ({
+        ...prevInputs,
+        [key]: String(Number(next.toFixed(3))),
+      }));
       return nextItems;
     });
+  }
+
+  function sanitizeManualQuantity(value: number, fallback: number) {
+    if (!Number.isFinite(value) || value <= 0) {
+      return Number(fallback.toFixed(3));
+    }
+    return Number(value.toFixed(3));
+  }
+
+  function handleQuantityInput(itemId: string, raw: string) {
+    setError(null);
+    setQuantityInputs((prev) => ({ ...prev, [itemId]: raw }));
+    const parsed = Number(raw);
+    if (!Number.isFinite(parsed) || raw.trim() === "") return;
+    setQuantities((prev) => ({ ...prev, [itemId]: parsed }));
+  }
+
+  function commitQuantityInput(itemId: string) {
+    const item = detail.items.find((i) => i.id === itemId);
+    if (!item) return;
+    const parsed = Number(quantityInputs[itemId] ?? quantities[itemId] ?? item.quantity);
+    const nextValue = sanitizeManualQuantity(parsed, item.quantity);
+    setQuantities((prev) => ({ ...prev, [itemId]: nextValue }));
+    setQuantityInputs((prev) => ({ ...prev, [itemId]: String(nextValue) }));
+  }
+
+  function handleAddedQuantityInput(key: string, raw: string) {
+    setError(null);
+    setAddedQuantityInputs((prev) => ({ ...prev, [key]: raw }));
+    const parsed = Number(raw);
+    if (!Number.isFinite(parsed) || raw.trim() === "") return;
+    setAddedItems((prev) =>
+      prev.map((item) => (item.key === key ? { ...item, quantity: parsed } : item)),
+    );
+  }
+
+  function commitAddedQuantityInput(key: string) {
+    const item = addedItems.find((i) => i.key === key);
+    if (!item) return;
+    const parsed = Number(addedQuantityInputs[key] ?? item.quantity);
+    const normalized = sanitizeManualQuantity(parsed, item.quantity);
+    setAddedItems((prev) =>
+      prev.map((current) => (current.key === key ? { ...current, quantity: normalized } : current)),
+    );
+    setAddedQuantityInputs((prev) => ({ ...prev, [key]: String(normalized) }));
   }
 
   async function handleSave() {
     setIsSaving(true);
     setError(null);
     try {
+      const normalizedQuantities = Object.fromEntries(
+        activeItems.map((item) => {
+          const current = quantities[item.id] ?? item.quantity;
+          return [item.id, sanitizeManualQuantity(current, item.quantity)];
+        }),
+      );
+      const normalizedAddedItems = addedItems.map((item) => ({
+        ...item,
+        quantity: sanitizeManualQuantity(item.quantity, item.quantity),
+      }));
+
+      if (
+        Object.values(normalizedQuantities).some((qty) => !Number.isFinite(qty) || qty <= 0) ||
+        normalizedAddedItems.some((item) => !Number.isFinite(item.quantity) || item.quantity <= 0)
+      ) {
+        throw new Error("จำนวนสินค้าต้องมากกว่า 0");
+      }
+
       const result = await updateOrderItemsBatchAction({
         orderId: detail.id,
         removedIds: Array.from(removed),
-        updates: Object.entries(quantities)
+        updates: Object.entries(normalizedQuantities)
           .filter(([id, qty]) => {
             const original = detail.items.find((i) => i.id === id);
             return original && Number(original.quantity) !== qty;
           })
           .map(([itemId, quantity]) => ({ itemId, quantity })),
-        additions: addedItems.map((item) => ({
+        additions: normalizedAddedItems.map((item) => ({
           productId: item.productId,
           productSaleUnitId: item.productSaleUnitId,
           quantity: item.quantity,
@@ -223,44 +303,53 @@ const EditItemsPanel = memo(({
           <OrderAddProductPicker
             addedItems={addedItems}
             customerId={detail.customer.id}
-            onAddMany={(newItems: AddedOrderItemDraft[]) => {
-              setError(null);
-              const nextRemoved = new Set(removed);
-              const nextQuantities = { ...quantities };
-              const nextAdded = [...addedItems];
-
-              for (const newItem of newItems) {
+	            onAddMany={(newItems: AddedOrderItemDraft[]) => {
+	              setError(null);
+	              const nextRemoved = new Set(removed);
+	              const nextQuantities = { ...quantities };
+                const nextQuantityInputs = { ...quantityInputs };
+	              const nextAdded = [...addedItems];
+                const nextAddedInputs = { ...addedQuantityInputs };
+	
+	              for (const newItem of newItems) {
                 const newUnitId = newItem.productSaleUnitId || null;
                 const existingIdx = detail.items.findIndex(
                   (i) => i.productId === newItem.productId && (i.productSaleUnitId || null) === newUnitId
                 );
 
-                if (existingIdx >= 0) {
-                  const existingItem = detail.items[existingIdx];
-                  nextRemoved.delete(existingItem.id);
-                  const currentQty = nextQuantities[existingItem.id] ?? existingItem.quantity;
-                  nextQuantities[existingItem.id] = Number((currentQty + newItem.quantity).toFixed(3));
-                  continue;
-                }
+	                if (existingIdx >= 0) {
+	                  const existingItem = detail.items[existingIdx];
+	                  nextRemoved.delete(existingItem.id);
+	                  const currentQty = nextQuantities[existingItem.id] ?? existingItem.quantity;
+                    const mergedQty = Number((currentQty + newItem.quantity).toFixed(3));
+	                  nextQuantities[existingItem.id] = mergedQty;
+                    nextQuantityInputs[existingItem.id] = String(mergedQty);
+	                  continue;
+	                }
 
                 const addedIdx = nextAdded.findIndex(
                   (i) => i.productId === newItem.productId && (i.productSaleUnitId || null) === newUnitId
                 );
 
-                if (addedIdx >= 0) {
-                  nextAdded[addedIdx] = {
-                    ...nextAdded[addedIdx],
-                    quantity: Number((nextAdded[addedIdx].quantity + newItem.quantity).toFixed(3)),
-                  };
-                } else {
-                  nextAdded.push(newItem);
-                }
-              }
-
-              setRemoved(nextRemoved);
-              setQuantities(nextQuantities);
-              setAddedItems(nextAdded);
-            }}
+	                if (addedIdx >= 0) {
+                    const mergedQty = Number((nextAdded[addedIdx].quantity + newItem.quantity).toFixed(3));
+	                  nextAdded[addedIdx] = {
+	                    ...nextAdded[addedIdx],
+	                    quantity: mergedQty,
+	                  };
+                    nextAddedInputs[nextAdded[addedIdx].key] = String(mergedQty);
+	                } else {
+	                  nextAdded.push(newItem);
+                    nextAddedInputs[newItem.key] = String(newItem.quantity);
+	                }
+	              }
+	
+	              setRemoved(nextRemoved);
+	              setQuantities(nextQuantities);
+                setQuantityInputs(nextQuantityInputs);
+	              setAddedItems(nextAdded);
+                setAddedQuantityInputs(nextAddedInputs);
+	            }}
             products={products}
           />
         </div>
@@ -315,7 +404,16 @@ const EditItemsPanel = memo(({
                         <td className="px-5 py-4">
                           <div className="flex items-center justify-center gap-3">
                             <button onClick={() => handleAddedQty(item.key, -1)} className="h-8 w-8 rounded-lg bg-slate-100 text-slate-600 flex items-center justify-center active:scale-90"><Minus className="h-4 w-4" strokeWidth={3} /></button>
-                            <span className="min-w-[30px] text-center font-black text-slate-950 tabular-nums">{item.quantity}</span>
+                            <input
+                              type="number"
+                              inputMode="decimal"
+                              min={1}
+                              step="0.001"
+                              value={addedQuantityInputs[item.key] ?? String(item.quantity)}
+                              onChange={(e) => handleAddedQuantityInput(item.key, e.target.value)}
+                              onBlur={() => commitAddedQuantityInput(item.key)}
+                              className="h-9 w-24 rounded-lg border border-slate-200 bg-white px-2 text-center font-black text-slate-950 outline-none transition focus:border-[#003366] focus:ring-2 focus:ring-[#003366]/10"
+                            />
                             <button onClick={() => handleAddedQty(item.key, +1)} className="h-8 w-8 rounded-lg bg-[#003366] text-white flex items-center justify-center active:scale-90"><Plus className="h-4 w-4" strokeWidth={3} /></button>
                           </div>
                         </td>
@@ -356,7 +454,16 @@ const EditItemsPanel = memo(({
                         <td className="px-5 py-4">
                           <div className="flex items-center justify-center gap-3">
                             <button onClick={() => handleQty(item.id, -1)} className="h-8 w-8 rounded-lg bg-slate-100 text-slate-600 flex items-center justify-center active:scale-90"><Minus className="h-4 w-4" strokeWidth={3} /></button>
-                            <span className="min-w-[30px] text-center font-black text-slate-950 tabular-nums">{qty}</span>
+                            <input
+                              type="number"
+                              inputMode="decimal"
+                              min={1}
+                              step="0.001"
+                              value={quantityInputs[item.id] ?? String(qty)}
+                              onChange={(e) => handleQuantityInput(item.id, e.target.value)}
+                              onBlur={() => commitQuantityInput(item.id)}
+                              className="h-9 w-24 rounded-lg border border-slate-200 bg-white px-2 text-center font-black text-slate-950 outline-none transition focus:border-[#003366] focus:ring-2 focus:ring-[#003366]/10"
+                            />
                             <button onClick={() => handleQty(item.id, +1)} className="h-8 w-8 rounded-lg bg-[#003366] text-white flex items-center justify-center active:scale-90"><Plus className="h-4 w-4" strokeWidth={3} /></button>
                           </div>
                         </td>
@@ -415,7 +522,16 @@ const EditItemsPanel = memo(({
                     <div className="mt-5 flex items-center justify-between gap-4 border-t border-slate-300 pt-4">
                       <div className="flex items-center gap-3">
                         <button onClick={() => handleAddedQty(item.key, -1)} className="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-100 text-slate-600 active:scale-95"><Minus className="h-6 w-6" strokeWidth={3} /></button>
-                        <span className="min-w-[40px] text-center text-2xl font-black text-slate-950 tabular-nums">{item.quantity}</span>
+                        <input
+                          type="number"
+                          inputMode="decimal"
+                          min={1}
+                          step="0.001"
+                          value={addedQuantityInputs[item.key] ?? String(item.quantity)}
+                          onChange={(e) => handleAddedQuantityInput(item.key, e.target.value)}
+                          onBlur={() => commitAddedQuantityInput(item.key)}
+                          className="h-11 w-24 rounded-2xl border border-slate-200 bg-white px-3 text-center text-2xl font-black text-slate-950 tabular-nums outline-none transition focus:border-[#003366] focus:ring-2 focus:ring-[#003366]/10"
+                        />
                         <button onClick={() => handleAddedQty(item.key, +1)} className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#003366] text-white shadow-md active:scale-95"><Plus className="h-6 w-6" strokeWidth={3} /></button>
                       </div>
                       <div className="h-10 border-l border-slate-200" />
@@ -467,7 +583,16 @@ const EditItemsPanel = memo(({
                     <div className="mt-5 flex items-center justify-between gap-4 border-t border-slate-300 pt-4">
                       <div className="flex items-center gap-3">
                         <button onClick={() => handleQty(item.id, -1)} className="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-100 text-slate-600 active:scale-95"><Minus className="h-6 w-6" strokeWidth={3} /></button>
-                        <span className="min-w-[40px] text-center text-2xl font-black text-slate-950 tabular-nums">{qty}</span>
+                        <input
+                          type="number"
+                          inputMode="decimal"
+                          min={1}
+                          step="0.001"
+                          value={quantityInputs[item.id] ?? String(qty)}
+                          onChange={(e) => handleQuantityInput(item.id, e.target.value)}
+                          onBlur={() => commitQuantityInput(item.id)}
+                          className="h-11 w-24 rounded-2xl border border-slate-200 bg-white px-3 text-center text-2xl font-black text-slate-950 tabular-nums outline-none transition focus:border-[#003366] focus:ring-2 focus:ring-[#003366]/10"
+                        />
                         <button onClick={() => handleQty(item.id, +1)} className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#003366] text-white shadow-md active:scale-95"><Plus className="h-6 w-6" strokeWidth={3} /></button>
                       </div>
                       <div className="h-10 border-l border-slate-200" />
@@ -527,6 +652,7 @@ export function IncomingOrderModal({ allOrders, detail, expandedId, products }: 
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [navPending, startNavTransition] = useTransition();
   const [actionPending, startActionTransition] = useTransition();
+  const [isDesktopViewport, setIsDesktopViewport] = useState(false);
 
   const [slideAnim, setSlideAnim] = useState<"slide-left" | "slide-right" | null>(null);
   const [isClosing, setIsClosing] = useState(false);
@@ -537,6 +663,17 @@ export function IncomingOrderModal({ allOrders, detail, expandedId, products }: 
     setConfirmCancel(false);
     setSlideAnim(null);
   }, [expandedId, startInEditMode]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const mediaQuery = window.matchMedia("(min-width: 768px)");
+    const updateViewport = () => setIsDesktopViewport(mediaQuery.matches);
+
+    updateViewport();
+    mediaQuery.addEventListener("change", updateViewport);
+    return () => mediaQuery.removeEventListener("change", updateViewport);
+  }, []);
 
   const currentIndex = allOrders.findIndex((o) => o.id === expandedId);
   const prevOrder = currentIndex >= 0 && allOrders.length > 1 ? allOrders[(currentIndex - 1 + allOrders.length) % allOrders.length] : null;
@@ -616,8 +753,11 @@ export function IncomingOrderModal({ allOrders, detail, expandedId, products }: 
             </div>
             <button
               onClick={() => {
-                if (editMode) setEditMode(false);
-                else close();
+                if (editMode && !isDesktopViewport) {
+                  setEditMode(false);
+                  return;
+                }
+                close();
               }}
               className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white/10 text-white/70 transition hover:bg-white/20 active:scale-90"
             >
@@ -690,7 +830,16 @@ export function IncomingOrderModal({ allOrders, detail, expandedId, products }: 
               </div>
             </div>
           ) : editMode ? (
-            <EditItemsPanel detail={detail} onDone={() => { setEditMode(false); router.refresh(); }} products={products} />
+            <EditItemsPanel
+              detail={detail}
+              onDone={() => {
+                if (!isDesktopViewport) {
+                  setEditMode(false);
+                }
+                router.refresh();
+              }}
+              products={products}
+            />
           ) : (
             <div className="flex flex-col h-full">
               {/* Scrollable Body */}

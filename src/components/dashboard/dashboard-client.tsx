@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useState, useMemo, useTransition } from "react";
 import Image from "next/image";
@@ -6,6 +6,7 @@ import Link from "next/link";
 import {
   TrendingUp,
   Bell,
+  AlertCircle,
   ChevronRight,
   Phone,
   Truck,
@@ -14,6 +15,9 @@ import {
   Store,
   X,
   Loader2,
+  BarChart3,
+  MessageCircle,
+  Package2,
 } from "lucide-react";
 import {
   BarChart,
@@ -41,7 +45,6 @@ type Props = {
   storeStatusSummary: OrderStoreStatusSummary;
   stockProducts: StockProductOption[];
   stockSuppliers: StockSupplierOption[];
-  displayName: string;
   today: string;
   orderDate: string;
   expandedDetail: OrderDetailData | null;
@@ -50,12 +53,76 @@ type Props = {
   products: OrderProductOption[];
 };
 
+function DashboardStatCard({
+  title,
+  value,
+  unit,
+  accent,
+  icon,
+  ghost,
+}: {
+  title: string;
+  value: string;
+  unit: string;
+  accent: "blue" | "green" | "line" | "orange";
+  icon: React.ReactNode;
+  ghost: React.ReactNode;
+}) {
+  const tone = {
+    blue: {
+      value: "text-[#1746a2]",
+      badge: "bg-[#eef3ff] text-[#1746a2]",
+      ghost: "text-[#d7e0f2]",
+    },
+    green: {
+      value: "text-[#10a760]",
+      badge: "bg-[#ecfbf3] text-[#10a760]",
+      ghost: "text-[#d8eadf]",
+    },
+    line: {
+      value: "text-[#10a760]",
+      badge: "bg-[#ecfbf3] text-[#10a760]",
+      ghost: "text-[#dce6e5]",
+    },
+    orange: {
+      value: "text-[#ff6b00]",
+      badge: "bg-[#fff3e8] text-[#ff6b00]",
+      ghost: "text-[#ece3db]",
+    },
+  }[accent];
+
+  return (
+    <div className="relative overflow-hidden rounded-[1.1rem] border border-[#eef2f7] bg-white pl-2.5 pr-2.5 pb-4 pt-4 shadow-[0_10px_22px_rgba(15,23,42,0.045)]">
+      <div className="flex items-center gap-1.5">
+        <div className={`flex h-7.5 w-7.5 shrink-0 items-center justify-center rounded-full ${tone.badge}`}>
+          {icon}
+        </div>
+        <span className="min-w-0 whitespace-nowrap text-[12.5px] font-bold leading-none text-[#111111] sm:text-[13px] md:text-base">
+          {title}
+        </span>
+      </div>
+
+      <div className="relative mt-5 min-h-[4.85rem]">
+        <div className="relative z-10">
+          <p className={`text-[2.55rem] font-black leading-none tabular-nums tracking-[-0.03em] sm:text-[2.85rem] ${tone.value}`}>
+            {value}
+          </p>
+          <p className="mt-2 text-[12.5px] font-extrabold text-slate-500">{unit}</p>
+        </div>
+
+        <div className={`pointer-events-none absolute bottom-0 right-[-0.15rem] opacity-[0.72] ${tone.ghost}`}>
+          {ghost}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function DashboardClient({
   overview,
   storeStatusSummary,
   stockProducts,
   stockSuppliers,
-  displayName,
   today,
   orderDate,
   expandedDetail,
@@ -91,12 +158,17 @@ export function DashboardClient({
   return (
     <div className="min-h-screen bg-[#F8FAFC] text-slate-800 pb-24 font-apple-ui">
 
-      {/* ── Header Section (Responsive) ── */}
+      {/* Header Section */}
       <header className="px-5 pt-8 mb-6 max-w-7xl mx-auto">
         <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-2">
           <div>
-            <h1 className="text-3xl md:text-4xl font-black text-[#002581] leading-tight tracking-tight">ภาพรวมวันนี้</h1>
-            <p className="text-[14px] md:text-base font-bold text-slate-400 mt-1">สวัสดี {displayName} • {fmtThaiDateLong(today)}</p>
+            <div className="flex items-center gap-3">
+              <div className="relative h-14 w-14 shrink-0 overflow-hidden">
+                <Image src="/ty-noodles-logo-cropped.png" alt="T&Y Noodles" fill className="object-contain" />
+              </div>
+              <h1 className="text-3xl md:text-4xl font-black text-[#002581] leading-tight tracking-tight">ภาพรวมวันนี้</h1>
+            </div>
+            <p className="mt-1 text-[14px] font-bold text-slate-400 md:text-base">สวัสดี T&Y Noodles • {fmtThaiDateLong(today)}</p>
           </div>
           <div className="hidden md:flex items-center gap-3 bg-white px-4 py-2 rounded-2xl border border-slate-100 shadow-sm">
             <div className="w-3 h-3 rounded-full bg-emerald-500 animate-pulse"></div>
@@ -107,154 +179,130 @@ export function DashboardClient({
 
       <main className="px-5 mt-4 space-y-8 max-w-7xl mx-auto">
 
-        {/* ── Top Row: Status + Actions ── */}
-        <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
+        {/* Top Row: Status + Actions */}
+        <div className="grid grid-cols-1 gap-6 xl:grid-cols-12">
 
-          {/* Store Status Summary (8 units on XL) */}
-          <section className="xl:col-span-8 flex flex-col gap-4 md:gap-6">
-            {/* Top Row: ร้านค้าทั้งหมด */}
+          {/* Quick Actions (4 units on XL) */}
+          <div className="order-1 grid grid-cols-2 gap-4 xl:col-span-4 xl:order-2 xl:grid-cols-1">
             <button
-              onClick={() => setViewingStores({ title: "ร้านค้าทั้งหมด", stores: storeStatusSummary.allStores })}
-              className="group flex items-center gap-5 bg-white p-5 md:p-7 rounded-[2rem] border border-slate-200 shadow-sm hover:shadow-md hover:border-[#002581]/30 transition-all active:scale-[0.99] text-left w-full"
+              onClick={() => openCreateOrder()}
+              className="flex min-h-[4.25rem] flex-row items-center justify-center gap-3 rounded-[1rem] bg-[#0038b8] px-4 py-4 text-white shadow-[0_10px_24px_rgba(0,56,184,0.22)] transition-transform active:scale-95"
             >
-              <div className="flex h-14 w-14 md:h-20 md:w-20 shrink-0 items-center justify-center rounded-3xl bg-[#002581]/5 text-[#002581] group-hover:bg-[#002581] group-hover:text-white transition-colors">
-                <Store className="h-7 w-7 md:h-10 md:w-10" strokeWidth={2} />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-xs md:text-sm font-bold uppercase tracking-[0.2em] text-slate-400 mb-1">ร้านค้าทั้งหมดในระบบ</p>
-                <div className="flex items-baseline gap-2">
-                  <p className="text-3xl md:text-5xl font-black text-slate-900 tabular-nums leading-none tracking-tight">
-                    {fmtNumber(storeStatusSummary.allStores.length)}
-                  </p>
-                  <span className="text-sm md:text-lg font-bold text-slate-400">ร้านค้า</span>
-                </div>
-              </div>
-              <ChevronRight className="h-8 w-8 text-slate-200 group-hover:text-[#002581] transition-colors" strokeWidth={3} />
+              <Phone className="h-5 w-5 shrink-0 rotate-90" fill="white" strokeWidth={0} />
+              <span className="whitespace-nowrap text-base font-extrabold md:text-lg">รับออเดอร์</span>
             </button>
 
-            {/* Bottom Row: ยังไม่สั่ง + สั่งแล้ว */}
+            <button
+              onClick={() => setIsStockModalOpen(true)}
+              className="flex min-h-[4.25rem] flex-row items-center justify-center gap-3 rounded-[1rem] border border-[#d8f2df] bg-[#eefcf0] px-4 py-4 text-[#14a44d] shadow-[0_10px_24px_rgba(20,164,77,0.08)] transition-transform active:scale-95"
+            >
+              <Truck className="h-5 w-5 shrink-0" strokeWidth={2.2} />
+              <span className="whitespace-nowrap text-base font-extrabold md:text-lg">รับสินค้า</span>
+            </button>
+          </div>
+
+          {/* Store Status Summary (8 units on XL) */}
+          <section className="order-2 flex flex-col gap-4 md:gap-6 xl:col-span-8 xl:order-1">
+            <button
+              onClick={() => setViewingStores({ title: "ร้านค้าทั้งหมด", stores: storeStatusSummary.allStores })}
+              className="group flex w-full items-center gap-5 rounded-[1.35rem] border border-slate-200 bg-white p-5 text-left shadow-sm transition-all hover:border-[#002581]/30 hover:shadow-md active:scale-[0.99] md:p-7"
+            >
+              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-3xl bg-[#002581]/5 text-[#002581] transition-colors group-hover:bg-[#002581] group-hover:text-white md:h-20 md:w-20">
+                <Store className="h-7 w-7 md:h-10 md:w-10" strokeWidth={2} />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="mb-1 text-[14px] font-bold text-slate-400 md:text-base">ร้านค้าทั้งหมดในระบบ</p>
+                <div className="flex items-baseline gap-2">
+                  <p className="text-3xl font-black leading-none tracking-tight text-slate-900 tabular-nums md:text-5xl">
+                    {fmtNumber(storeStatusSummary.allStores.length)}
+                  </p>
+                  <span className="text-sm font-bold text-slate-400 md:text-lg">ร้านค้า</span>
+                </div>
+              </div>
+              <ChevronRight className="h-8 w-8 text-slate-200 transition-colors group-hover:text-[#002581]" strokeWidth={3} />
+            </button>
+
             <div className="grid grid-cols-2 gap-4 md:gap-6">
-              {/* ยังไม่สั่ง */}
               <button
-                onClick={() => setViewingStores({ title: "ร้านที่ยังไม่สั่ง", stores: storeStatusSummary.unorderedStores })}
-                className="group flex items-center gap-4 bg-white p-4 md:p-6 rounded-[2rem] border border-slate-200 shadow-sm hover:shadow-md hover:border-rose-200 transition-all active:scale-[0.98] text-left"
+                onClick={() => setViewingStores({ title: "ร้านค้าที่ยังไม่ได้สั่ง", stores: storeStatusSummary.unorderedStores })}
+                className="group flex items-center gap-4 rounded-[1.35rem] border border-slate-200 bg-white p-4 text-left shadow-sm transition-all hover:border-rose-200 hover:shadow-md active:scale-[0.98] md:p-6"
               >
-                <div className="flex h-12 w-12 md:h-16 md:w-16 shrink-0 items-center justify-center rounded-2xl bg-rose-50 text-rose-600 group-hover:bg-rose-600 group-hover:text-white transition-colors">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-rose-50 text-rose-600 transition-colors group-hover:bg-rose-600 group-hover:text-white md:h-16 md:w-16">
                   <ShoppingBag className="h-6 w-6 md:h-8 md:w-8" strokeWidth={2} />
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-[10px] md:text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">ยังไม่สั่ง</p>
-                  <p className="text-2xl md:text-4xl font-black text-rose-600 tabular-nums leading-none">
+                <div className="min-w-0 flex-1">
+                  <p className="mb-1 whitespace-nowrap text-[12px] font-bold leading-none text-slate-400 md:text-base">ยังไม่ได้สั่ง</p>
+                  <p className="text-2xl font-black leading-none text-rose-600 tabular-nums md:text-4xl">
                     {fmtNumber(storeStatusSummary.unorderedStores.length)}
                   </p>
                 </div>
               </button>
 
-              {/* สั่งแล้ว */}
               <button
-                onClick={() => setViewingStores({ title: "ร้านที่สั่งแล้ว", stores: storeStatusSummary.orderedStores })}
-                className="group flex items-center gap-4 bg-white p-4 md:p-6 rounded-[2rem] border border-slate-200 shadow-sm hover:shadow-md hover:border-emerald-200 transition-all active:scale-[0.98] text-left"
+                onClick={() => setViewingStores({ title: "ร้านค้าที่สั่งแล้ว", stores: storeStatusSummary.orderedStores })}
+                className="group flex items-center gap-4 rounded-[1.35rem] border border-slate-200 bg-white p-4 text-left shadow-sm transition-all hover:border-emerald-200 hover:shadow-md active:scale-[0.98] md:p-6"
               >
-                <div className="flex h-12 w-12 md:h-16 md:w-16 shrink-0 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white transition-colors">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600 transition-colors group-hover:bg-emerald-600 group-hover:text-white md:h-16 md:w-16">
                   <ClipboardList className="h-6 w-6 md:h-8 md:w-8" strokeWidth={2} />
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-[10px] md:text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">สั่งแล้ววันนี้</p>
-                  <p className="text-2xl md:text-4xl font-black text-emerald-600 tabular-nums leading-none">
+                <div className="min-w-0 flex-1">
+                  <p className="mb-1 whitespace-nowrap text-[12px] font-bold leading-none text-slate-400 md:text-base">สั่งแล้ววันนี้</p>
+                  <p className="text-2xl font-black leading-none text-emerald-600 tabular-nums md:text-4xl">
                     {fmtNumber(storeStatusSummary.orderedStores.length)}
                   </p>
                 </div>
               </button>
             </div>
           </section>
-
-          {/* Quick Actions (4 units on XL) */}
-          <div className="xl:col-span-4 grid grid-cols-2 xl:grid-cols-1 gap-4">
-            <button
-              onClick={() => openCreateOrder()}
-              className="bg-[#002581] text-white rounded-[2rem] py-6 flex flex-row items-center justify-center space-x-3 shadow-xl shadow-blue-900/10 active:scale-95 transition-transform px-4"
-            >
-              <Phone className="h-6 w-6 rotate-90 shrink-0" fill="white" strokeWidth={0} />
-              <span className="text-lg md:text-xl font-black whitespace-nowrap">รับออเดอร์</span>
-            </button>
-
-            <button
-              onClick={() => setIsStockModalOpen(true)}
-              className="bg-[#E6F4EA] text-[#28A745] rounded-[2rem] py-6 flex flex-row items-center justify-center space-x-3 active:scale-95 transition-transform border border-[#D1EAD8] px-4"
-            >
-              <Truck className="h-6 w-6 shrink-0" strokeWidth={2.5} />
-              <span className="text-lg md:text-xl font-black whitespace-nowrap">รับสินค้า</span>
-            </button>
-          </div>
         </div>
 
-        {/* ── Statistics Grid (2 cols on mobile, 4 on desktop) ── */}
-        <section className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-          <div className="bg-white p-6 rounded-[2.5rem] border border-slate-50 shadow-[0_8px_30px_rgb(0,0,0,0.02)] flex flex-col relative overflow-hidden group">
-            <div className="flex items-center space-x-3 mb-6">
-              <div className="bg-blue-50 p-2 rounded-xl group-hover:bg-[#002581] group-hover:text-white transition-colors">
-                <ClipboardList className="h-5 w-5" strokeWidth={2.5} />
-              </div>
-              <div className="h-10 flex items-center">
-                <span className="text-[13px] md:text-sm font-bold text-slate-700 leading-tight">ออเดอร์วันนี้</span>
-              </div>
-            </div>
-            <div className="flex items-baseline space-x-2">
-              <span className="text-5xl md:text-6xl font-black text-slate-800 tabular-nums">{fmtNumber(kpi.todayOrderCount)}</span>
-              <span className="text-sm font-bold text-slate-400">รายการ</span>
-            </div>
-          </div>
+        {/* Statistics Grid (2 cols on mobile, 4 on desktop) */}
+        <section className="-mx-2 grid grid-cols-2 gap-2.5 px-2 md:mx-0 md:gap-5 md:px-0 lg:grid-cols-4">
+          <DashboardStatCard
+            title="รวมออเดอร์วันนี้"
+            value={fmtNumber(kpi.todayOrderCount)}
+            unit="รายการ"
+            accent="blue"
+            icon={<ClipboardList className="h-[1.15rem] w-[1.15rem]" strokeWidth={2.15} />}
+            ghost={<ClipboardList className="h-[4.2rem] w-[4.2rem] sm:h-[4.6rem] sm:w-[4.6rem]" strokeWidth={1.15} />}
+          />
 
-          <div className="bg-white p-6 rounded-[2.5rem] border border-slate-50 shadow-[0_8px_30px_rgb(0,0,0,0.02)] flex flex-col relative overflow-hidden group">
-            <div className="flex items-center space-x-3 mb-6">
-              <div className="bg-green-50 p-2 rounded-xl group-hover:bg-[#28A745] group-hover:text-white transition-colors">
-                <TrendingUp className="h-5 w-5" strokeWidth={2.5} />
-              </div>
-              <div className="h-10 flex items-center">
-                <span className="text-[13px] md:text-sm font-bold text-slate-700 leading-tight">ยอดขายวันนี้</span>
-              </div>
-            </div>
-            <div className="flex items-baseline space-x-1">
-              <span className="text-[28px] md:text-3xl font-black text-[#28A745] tabular-nums">฿{fmtMoney(kpi.todayOrderAmount)}</span>
-              <span className="text-sm font-bold text-slate-400"></span>
-            </div>
-          </div>
+          <DashboardStatCard
+            title="ยอดขายวันนี้"
+            value={`฿${fmtMoney(kpi.todayOrderAmount)}`}
+            unit="บาท"
+            accent="green"
+            icon={<TrendingUp className="h-[1.15rem] w-[1.15rem]" strokeWidth={2.15} />}
+            ghost={<BarChart3 className="h-[4.2rem] w-[4.2rem] sm:h-[4.6rem] sm:w-[4.6rem]" strokeWidth={1.15} />}
+          />
 
-          <div className="bg-white p-6 rounded-[2.5rem] border border-slate-50 shadow-[0_8px_30px_rgb(0,0,0,0.02)] flex flex-col relative overflow-hidden group">
-            <div className="flex items-center space-x-3 mb-6">
-              <div className="bg-[#06C755]/10 p-2 rounded-xl text-[#06C755] group-hover:bg-[#06C755] group-hover:text-white transition-colors">
-                <LineAppIcon className="h-6 w-6" />
-              </div>
-              <div className="h-10 flex items-center">
-                <span className="text-[13px] md:text-sm font-bold text-slate-700 leading-tight">ออเดอร์จาก LINE</span>
-              </div>
-            </div>
-            <div className="flex items-baseline space-x-2">
-              <span className="text-5xl md:text-6xl font-black text-[#28A745] tabular-nums">{fmtNumber(kpi.submittedOrderCount)}</span>
-              <span className="text-sm font-bold text-slate-400">รายการ</span>
-            </div>
-          </div>
+          <DashboardStatCard
+            title="ออเดอร์จากLINE"
+            value={fmtNumber(kpi.submittedOrderCount)}
+            unit="รายการ"
+            accent="line"
+            icon={<LineAppIcon className="h-[1.2rem] w-[1.2rem]" />}
+            ghost={<MessageCircle className="h-[4.2rem] w-[4.2rem] sm:h-[4.6rem] sm:w-[4.6rem]" strokeWidth={1.15} />}
+          />
 
-          <Link 
-            href="/stock"
-            className="bg-white p-6 rounded-[2.5rem] border border-slate-50 shadow-[0_8px_30px_rgb(0,0,0,0.02)] flex flex-col relative overflow-hidden group hover:shadow-lg hover:border-orange-200 transition-all active:scale-[0.98]"
-          >
-            <div className="flex items-center space-x-3 mb-6">
-              <div className="bg-orange-50 p-2 rounded-xl group-hover:bg-[#FF6B00] group-hover:text-white transition-colors">
-                <Bell className="h-5 w-5 text-[#FF6B00] group-hover:text-white" strokeWidth={2.5} />
-              </div>
-              <div className="h-10 flex items-center">
-                <span className="text-[13px] md:text-sm font-bold text-slate-700 leading-tight">แจ้งสต็อกขาด</span>
-              </div>
-            </div>
-            <div className="flex items-baseline space-x-2">
-              <span className="text-5xl md:text-6xl font-black text-[#FF6B00] tabular-nums">{fmtNumber(kpi.lowStockCount)}</span>
-              <span className="text-sm font-bold text-slate-400">รายการ</span>
-            </div>
+          <Link href="/stock" className="block transition-transform active:scale-[0.98]">
+            <DashboardStatCard
+              title="สต็อคขาด"
+              value={fmtNumber(kpi.lowStockCount)}
+              unit="รายการ"
+              accent="orange"
+              icon={<Bell className="h-[1.15rem] w-[1.15rem]" strokeWidth={2.15} />}
+              ghost={
+                <div className="relative h-[4.2rem] w-[4.2rem] sm:h-[4.6rem] sm:w-[4.6rem]">
+                  <Package2 className="h-full w-full" strokeWidth={1.15} />
+                  <AlertCircle className="absolute -bottom-1 -right-1 h-5 w-5 text-[#ff7f11]" strokeWidth={1.6} />
+                </div>
+              }
+            />
           </Link>
         </section>
 
-        {/* ── Mid Row: Trend (Full Width when Tasks are hidden) ── */}
+        {/* Mid Row: Trend */}
         <div className="grid grid-cols-1 gap-8">
 
           {/* Functional Task List - Hidden per user request */}
@@ -301,11 +349,11 @@ export function DashboardClient({
           </section>
         </div>
 
-        {/* ── Bottom Row: Rankings (Side by Side on Desktop) ── */}
+        {/* Bottom Row: Rankings */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
 
           <section>
-            <h2 className="text-2xl font-black text-slate-900 tracking-tight mb-6 px-2">สินค้าขายดี เดือนนี้</h2>
+            <h2 className="mb-6 px-2 text-2xl font-black tracking-tight text-slate-900">สินค้าขายดี เดือนนี้</h2>
             <div className="flex flex-col gap-4">
               {topProducts.map((product, idx) => (
                 <div key={product.productId} className="flex items-center gap-5 bg-white p-5 rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.02)] border border-slate-50 hover:shadow-md transition-shadow group">
@@ -319,7 +367,7 @@ export function DashboardClient({
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-lg md:text-xl font-black text-slate-800 truncate">{product.productName}</p>
-                    <p className="text-base font-black text-[#28A745] mt-1">฿{fmtMoney(product.totalAmount)}</p>
+                    <p className="mt-1 text-base font-black text-[#28A745]">฿{fmtMoney(product.totalAmount)}</p>
                   </div>
                   <div className="hidden md:block pr-4">
                     <ChevronRight className="h-6 w-6 text-slate-100 group-hover:text-slate-300 transition-colors" />
@@ -330,7 +378,7 @@ export function DashboardClient({
           </section>
 
           <section>
-            <h2 className="text-2xl font-black text-slate-900 tracking-tight mb-6 px-2">ลูกค้าชั้นนำ เดือนนี้</h2>
+            <h2 className="mb-6 px-2 text-2xl font-black tracking-tight text-slate-900">ลูกค้าชั้นนำ เดือนนี้</h2>
             <div className="flex flex-col gap-4">
               {topCustomers.map((customer, idx) => (
                 <div key={customer.customerId} className="flex items-center gap-5 bg-white p-5 rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.02)] border border-slate-50 hover:shadow-md transition-shadow group">
@@ -341,7 +389,7 @@ export function DashboardClient({
                     <p className="text-lg md:text-xl font-black text-slate-800 truncate">{customer.customerName}</p>
                   </div>
                   <div className="text-right">
-                    <p className="text-xl md:text-2xl font-black text-[#002581]">฿{fmtMoney(customer.totalAmount)}</p>
+                    <p className="text-xl font-black text-[#002581] md:text-2xl">฿{fmtMoney(customer.totalAmount)}</p>
                   </div>
                 </div>
               ))}
@@ -351,7 +399,7 @@ export function DashboardClient({
 
       </main>
 
-      {/* ── Modals ── */}
+      {/* Modals */}
       {viewingStores && (
         <div className="fixed inset-0 z-[300] flex items-end justify-center bg-slate-950/60 p-0 backdrop-blur-[6px] sm:items-center sm:p-4">
           <div className="w-full max-w-xl animate-in slide-in-from-bottom duration-300 rounded-t-[3rem] bg-white pb-12 pt-4 sm:rounded-[3rem] shadow-2xl overflow-hidden">
@@ -412,11 +460,11 @@ export function DashboardClient({
                         <div className="flex-1 min-w-0">
                           <p className="font-black text-slate-800 text-lg leading-tight truncate">{store.name}</p>
                           <div className="flex items-center gap-2 mt-1.5">
-                            <p className="text-xs font-bold text-slate-400 uppercase tracking-tighter">รหัส: {store.code || store.id.slice(0, 8)}</p>
+                            <p className="text-xs font-bold uppercase tracking-tighter text-slate-400">รหัส: {store.code || store.id.slice(0, 8)}</p>
                             {isOrdered ? (
-                              <span className="bg-emerald-50 text-emerald-600 text-[10px] font-black px-2 py-0.5 rounded-md border border-emerald-100 uppercase tracking-tight">สั่งแล้ววันนี้</span>
+                              <span className="rounded-md border border-emerald-100 bg-emerald-50 px-2 py-0.5 text-[10px] font-black uppercase tracking-tight text-emerald-600">สั่งแล้ววันนี้</span>
                             ) : (
-                              <span className="bg-rose-50 text-rose-600 text-[10px] font-black px-2 py-0.5 rounded-md border border-rose-100 uppercase tracking-tight">ยังไม่สั่ง</span>
+                              <span className="rounded-md border border-rose-100 bg-rose-50 px-2 py-0.5 text-[10px] font-black uppercase tracking-tight text-rose-600">ยังไม่สั่ง</span>
                             )}
                           </div>
                         </div>

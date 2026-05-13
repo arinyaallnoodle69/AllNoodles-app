@@ -84,7 +84,6 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
         storeStatusSummary={storeStatusSummary}
         stockProducts={overview.stockProducts}
         stockSuppliers={overview.stockSuppliers}
-        displayName={session.displayName}
         today={today}
         orderDate={orderDate}
         expandedDetail={expandedDetail}

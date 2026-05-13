@@ -5,10 +5,25 @@ import { PwaProvider } from "@/components/pwa-provider";
 import { getSiteUrl } from "@/lib/site-url";
 
 const sukhumvit = localFont({
-  src: "../../public/fonts/SukhumvitSet-SemiBold.ttf",
+  src: [
+    {
+      path: "../../public/fonts/SukhumvitSet-Medium.ttf",
+      weight: "500",
+      style: "normal",
+    },
+    {
+      path: "../../public/fonts/SukhumvitSet-SemiBold.ttf",
+      weight: "600",
+      style: "normal",
+    },
+    {
+      path: "../../public/fonts/SukhumvitSet-Bold.ttf",
+      weight: "700",
+      style: "normal",
+    },
+  ],
   display: "swap",
   variable: "--font-sukhumvit",
-  weight: "600",
 });
 
 const siteDescription =
@@ -82,7 +97,6 @@ export default function RootLayout({
   return (
     <html lang="th">
       <head>
-        {/* Preconnect to LINE profile CDN for faster user avatar loading */}
         <link rel="preconnect" href="https://profile.line-scdn.net" crossOrigin="anonymous" />
       </head>
       <body

@@ -215,7 +215,7 @@ export async function updateOrderItemQtyAction(formData: FormData): Promise<Acti
       const stockBefore = Number(product.stock_quantity);
       // qtyDelta > 0 means more items ordered -> deduct stock
       // qtyDelta < 0 means fewer items ordered -> restore stock
-      const stockAfter = Math.max(0, stockBefore - qtyDelta);
+      const stockAfter = stockBefore - qtyDelta;
 
       await Promise.all([
         admin.from("products").update({ stock_quantity: stockAfter }).eq("id", item.product_id),
@@ -559,7 +559,7 @@ export async function updateOrderItemsBatchAction(input: {
       const product = productsMap.get(productId);
       if (product) {
         const stockBefore = Number(product.stock_quantity);
-        const stockAfter = Math.max(0, stockBefore - delta);
+        const stockAfter = stockBefore - delta;
 
         await admin.from("products").update({ stock_quantity: stockAfter }).eq("id", productId);
         movements.push({
@@ -1157,7 +1157,6 @@ export async function syncOrderDeliveryNoteAction(orderId: string): Promise<Acti
   const session = await requireAppRole("admin");
   const admin = getSupabaseAdmin() as unknown as ActionsAdmin;
 
-  // 1. Fetch order details
   const { data: order, error: orderError } = await admin
     .from("orders")
     .select("id, customer_id, order_date, notes")
@@ -1169,7 +1168,6 @@ export async function syncOrderDeliveryNoteAction(orderId: string): Promise<Acti
     return { error: `ไม่พบข้อมูลออเดอร์ (ID: ${orderId.slice(0, 8)}...) ${orderError?.message ?? ""}` };
   }
 
-  // 1.1 Fetch customer's default vehicle (since vehicle_id is not in orders table)
   const { data: customer } = await admin
     .from("customers")
     .select("default_vehicle_id")
@@ -1178,19 +1176,19 @@ export async function syncOrderDeliveryNoteAction(orderId: string): Promise<Acti
 
   const vehicleId = customer?.default_vehicle_id || null;
 
-  // 1.2 Fetch order items separately (safer than joined select)
   const { data: orderItems, error: itemsError } = await admin
     .from("order_items")
     .select("*")
     .eq("order_id", orderId)
     .order("created_at", { ascending: true });
 
-  if (itemsError) return { error: "ไม่สามารถโหลดรายการสินค้าในออเดอร์ได้" };
-  const items = orderItems ?? [];
+  if (itemsError) {
+    return { error: "ไม่สามารถโหลดรายการสินค้าในออเดอร์ได้" };
+  }
 
-  // 1.5 Robust cleanup: find and remove existing DN items for this order to avoid duplicates.
-  // We must restore stock for these items because the RPC will re-deduct it.
-  const orderItemIds = items.map((oi: { id: string }) => oi.id);
+  const items = orderItems ?? [];
+  const orderItemIds = items.map((item: { id: string }) => item.id);
+
   if (orderItemIds.length > 0) {
     const { data: existingDnItems } = await admin
       .from("delivery_note_items")
@@ -1199,25 +1197,72 @@ export async function syncOrderDeliveryNoteAction(orderId: string): Promise<Acti
 
     if (existingDnItems && existingDnItems.length > 0) {
       const dnId = existingDnItems[0].delivery_note_id;
-      let totalRemovedAmount = 0;
+      const totalRemovedAmount = existingDnItems.reduce(
+        (total, item) => total + Number(item.line_total),
+        0,
+      );
+      const restoreByProduct = new Map<string, number>();
 
-      for (const dni of existingDnItems) {
-        await restoreItemStock(
-          admin,
-          session.organizationId,
-          session.userId,
-          dni.product_id,
-          Number(dni.quantity_in_base_unit),
-          `ปรับปรุงออเดอร์ ${orderId} (คืนสต็อกก่อนลงใหม่)`,
+      for (const item of existingDnItems) {
+        restoreByProduct.set(
+          item.product_id,
+          (restoreByProduct.get(item.product_id) ?? 0) + Number(item.quantity_in_base_unit),
         );
-        totalRemovedAmount += Number(dni.line_total);
       }
 
-      // Delete the items
-      await admin.from("delivery_note_items").delete().in("id", existingDnItems.map((d: { id: string }) => d.id));
+      const productIdsToRestore = Array.from(restoreByProduct.keys());
+      if (productIdsToRestore.length > 0) {
+        const { data: productsToRestore } = await admin
+          .from("products")
+          .select("id, stock_quantity")
+          .in("id", productIdsToRestore);
 
-      // Subtract from DN total (RPC will add it back)
-      const { data: dn } = await admin.from("delivery_notes").select("total_amount").eq("id", dnId).single();
+        const productMap = new Map(
+          (productsToRestore ?? []).map((product) => [product.id, Number(product.stock_quantity)]),
+        );
+        const inventoryMovements: Database["public"]["Tables"]["inventory_movements"]["Insert"][] = [];
+
+        await Promise.all(
+          productIdsToRestore.map(async (productId) => {
+            const qtyBase = restoreByProduct.get(productId) ?? 0;
+            if (qtyBase <= 0) return;
+
+            const stockBefore = productMap.get(productId);
+            if (stockBefore === undefined) return;
+
+            const stockAfter = stockBefore + qtyBase;
+            inventoryMovements.push({
+              created_by: session.userId,
+              metadata: { source: "order_management" },
+              movement_type: "adjustment",
+              notes: `ปรับปรุงออเดอร์ ${orderId} (คืนสต็อกก่อนลงใหม่)`,
+              organization_id: session.organizationId,
+              product_id: productId,
+              quantity_delta: qtyBase,
+              stock_after: stockAfter,
+              stock_before: stockBefore,
+            });
+
+            await admin.from("products").update({ stock_quantity: stockAfter }).eq("id", productId);
+          }),
+        );
+
+        if (inventoryMovements.length > 0) {
+          await admin.from("inventory_movements").insert(inventoryMovements);
+        }
+      }
+
+      await admin
+        .from("delivery_note_items")
+        .delete()
+        .in("id", existingDnItems.map((item: { id: string }) => item.id));
+
+      const { data: dn } = await admin
+        .from("delivery_notes")
+        .select("total_amount")
+        .eq("id", dnId)
+        .single();
+
       if (dn) {
         const nextTotal = Math.max(0, Number(dn.total_amount) - totalRemovedAmount);
         await admin.from("delivery_notes").update({ total_amount: nextTotal }).eq("id", dnId);
@@ -1225,18 +1270,26 @@ export async function syncOrderDeliveryNoteAction(orderId: string): Promise<Acti
     }
   }
 
-  // 2. Prepare items payload for RPC
-  const payloadItems = items.map((oi: { id: string; product_id: string; product_sale_unit_id: string | null; quantity: number; sale_unit_label: string; sale_unit_ratio: number; unit_price: number }) => ({
-    orderItemId: oi.id,
-    productId: oi.product_id,
-    productSaleUnitId: oi.product_sale_unit_id,
-    quantityDelivered: Number(oi.quantity),
-    saleUnitLabel: oi.sale_unit_label,
-    saleUnitRatio: Number(oi.sale_unit_ratio),
-    unitPrice: Number(oi.unit_price),
-  }));
+  const payloadItems = items.map(
+    (item: {
+      id: string;
+      product_id: string;
+      product_sale_unit_id: string | null;
+      quantity: number;
+      sale_unit_label: string;
+      sale_unit_ratio: number;
+      unit_price: number;
+    }) => ({
+      orderItemId: item.id,
+      productId: item.product_id,
+      productSaleUnitId: item.product_sale_unit_id,
+      quantityDelivered: Number(item.quantity),
+      saleUnitLabel: item.sale_unit_label,
+      saleUnitRatio: Number(item.sale_unit_ratio),
+      unitPrice: Number(item.unit_price),
+    }),
+  );
 
-  // 3. Call RPC to update/create delivery note
   const { data: deliveryNumber, error: deliveryError } = await admin.rpc("create_store_delivery_note", {
     p_organization_id: session.organizationId,
     p_order_ids: [order.id],
@@ -1248,7 +1301,9 @@ export async function syncOrderDeliveryNoteAction(orderId: string): Promise<Acti
     p_items: payloadItems,
   });
 
-  if (deliveryError) return { error: "ปรับปรุงใบส่งของไม่สำเร็จ: " + deliveryError.message };
+  if (deliveryError) {
+    return { error: "ปรับปรุงใบส่งของไม่สำเร็จ: " + deliveryError.message };
+  }
 
   revalidatePath("/orders/incoming");
   return { success: true, deliveryNumber: String(deliveryNumber) };

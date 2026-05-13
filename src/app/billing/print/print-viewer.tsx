@@ -20,35 +20,33 @@ export function PrintViewer({
 }) {
   void fromDate;
   void toDate;
-  const [data, setData] = useState(initialData);
 
+  const [data, setData] = useState(initialData);
   const dataList = Array.isArray(data) ? data : [data];
 
-  const itemsToRecord = dataList.map((d) => ({
-    customerId: d.customer.id,
-    billingDate: d.billingDate,
-    fromDate: d.fromDate,
-    toDate: d.toDate,
-    totalAmount: d.grandTotal,
-    snapshotRows: d.rows, // ส่ง rows ไป save เป็น snapshot
+  const itemsToRecord = dataList.map((item) => ({
+    customerId: item.customer.id,
+    billingDate: item.billingDate,
+    fromDate: item.fromDate,
+    toDate: item.toDate,
+    totalAmount: item.grandTotal,
+    snapshotRows: item.rows,
   }));
 
   const label = Array.isArray(data)
     ? `ทั้งหมด ${data.length} ร้านค้า`
     : `${data.customer.code} ${data.customer.name}`;
 
-  // ถ้าทุกร้านมีเลขวางบิลแล้ว (ออกไปแล้ว) ไม่ต้อง save ซ้ำ
-  const allAlreadySaved = dataList.every((d) => d.billingNumber !== null);
+  const allAlreadySaved = dataList.every((item) => item.billingNumber !== null);
 
   function handleSaved(results: { customerId: string; billingNumber: string }[]) {
-    setData((prev) => {
-      const list = Array.isArray(prev) ? [...prev] : [{ ...prev }];
-      const updated = list.map((d) => {
-        const found = results.find((r) => r.customerId === d.customer.id);
-        if (found) return { ...d, billingNumber: found.billingNumber, isLocked: true };
-        return d;
+    setData((current) => {
+      const list = Array.isArray(current) ? [...current] : [{ ...current }];
+      const updated = list.map((item) => {
+        const found = results.find((result) => result.customerId === item.customer.id);
+        return found ? { ...item, billingNumber: found.billingNumber, isLocked: true } : item;
       });
-      return Array.isArray(prev) ? updated : updated[0];
+      return Array.isArray(current) ? updated : updated[0];
     });
   }
 
@@ -59,21 +57,23 @@ export function PrintViewer({
           organizationId={organizationId}
           items={itemsToRecord}
           shouldSave={shouldSave && !allAlreadySaved}
-          billingNumbers={dataList.map((d) => d.billingNumber).filter((n): n is string => n !== null)}
+          billingNumbers={dataList
+            .map((item) => item.billingNumber)
+            .filter((value): value is string => value !== null)}
           onSaved={handleSaved}
         />
         <span className="text-sm font-semibold text-slate-700">
           {label}
-          {allAlreadySaved && (
+          {allAlreadySaved ? (
             <span className="ml-2 text-xs font-normal text-emerald-600">
               (ออกใบวางบิลแล้ว · ยอดล็อก)
             </span>
-          )}
-          {!allAlreadySaved && shouldSave && (
+          ) : null}
+          {!allAlreadySaved && shouldSave ? (
             <span className="ml-2 text-xs font-normal text-slate-400">
               (จะบันทึกเมื่อกดพิมพ์)
             </span>
-          )}
+          ) : null}
         </span>
         <a
           href="/billing"
