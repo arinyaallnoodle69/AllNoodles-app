@@ -14,6 +14,7 @@ type Props = {
   searchParams: Promise<{
     customer?: string;
     customers?: string;
+    deliveries?: string;
     from?: string;
     to?: string;
     batch?: string;
@@ -38,12 +39,21 @@ function parseCustomerIds(value: string | undefined) {
     .filter(Boolean);
 }
 
+function parseDeliveryNumbers(value: string | undefined) {
+  if (!value) return [];
+  return value
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
 async function BillingPrintPageContent({ searchParams }: Props) {
   const session = await requireAppRole("admin");
   const params = await searchParams;
 
   const customerId = params.customer;
   const customerIds = parseCustomerIds(params.customers);
+  const deliveryNumbers = parseDeliveryNumbers(params.deliveries);
   const fromDate = params.from;
   const toDate = params.to;
   const isBatch = params.batch === "true" || customerIds.length > 0;
@@ -63,6 +73,7 @@ async function BillingPrintPageContent({ searchParams }: Props) {
       toDate,
       billingDate,
       customerIds,
+      deliveryNumbers,
     );
   } else if (isBatch) {
     data = await getBatchBillingData(
@@ -70,6 +81,8 @@ async function BillingPrintPageContent({ searchParams }: Props) {
       fromDate,
       toDate,
       billingDate,
+      undefined,
+      deliveryNumbers,
     );
   } else if (customerId) {
     data = await getBillingStatementData(
@@ -78,6 +91,7 @@ async function BillingPrintPageContent({ searchParams }: Props) {
       fromDate,
       toDate,
       billingDate,
+      deliveryNumbers,
     );
   }
 

@@ -71,6 +71,14 @@ export type BillingStatementData = {
   }[];
 };
 
+type DeliveryNoteRow = {
+  customer_id: string;
+  delivery_number: string;
+  delivery_date: string;
+  total_amount: number;
+  notes: string | null;
+};
+
 function toNum(v: number | string | null | undefined) {
   const n = Number(v ?? 0);
   return Number.isFinite(n) ? n : 0;
@@ -278,22 +286,29 @@ export async function getBillingStatementData(
   customerId: string,
   fromDate: string,
   toDate: string,
-  billingDate: string
+  billingDate: string,
+  deliveryNumbers?: string[],
 ): Promise<BillingStatementData | null> {
   const supabase = getSupabaseAdmin();
 
-  // Optimized parallel fetching
+  let notesQuery = supabase
+    .from("delivery_notes")
+    .select("customer_id, delivery_number, delivery_date, total_amount, notes")
+    .eq("organization_id", organizationId)
+    .eq("customer_id", customerId)
+    .eq("status", "confirmed")
+    .gte("delivery_date", fromDate)
+    .lte("delivery_date", toDate)
+    .order("delivery_date", { ascending: true });
+
+  if (deliveryNumbers && deliveryNumbers.length > 0) {
+    notesQuery = notesQuery.in("delivery_number", deliveryNumbers);
+  }
+
   const [orgResult, custResult, notesResult, historyResult] = await Promise.all([
     supabase.from("organizations").select("name, metadata").eq("id", organizationId).single(),
     supabase.from("customers").select("id, name, customer_code, address, phone").eq("id", customerId).single(),
-    supabase.from("delivery_notes")
-      .select("delivery_number, delivery_date, total_amount, notes")
-      .eq("organization_id", organizationId)
-      .eq("customer_id", customerId)
-      .eq("status", "confirmed")
-      .gte("delivery_date", fromDate)
-      .lte("delivery_date", toDate)
-      .order("delivery_date", { ascending: true }),
+    notesQuery,
     supabase.from("billing_records")
       .select("billing_number")
       .eq("organization_id", organizationId)
@@ -315,7 +330,7 @@ export async function getBillingStatementData(
     phone: orgMeta.phone || "-",
   };
 
-  const rows = notesResult.data.map((note, idx) => ({
+  const rows = (notesResult.data as DeliveryNoteRow[]).map((note, idx) => ({
     lineNumber: idx + 1,
     deliveryNumber: note.delivery_number,
     deliveryDate: note.delivery_date,
@@ -347,28 +362,43 @@ export async function getBatchBillingData(
   fromDate: string,
   toDate: string,
   billingDate: string,
-  customerIds?: string[]
+  customerIds?: string[],
+  deliveryNumbers?: string[],
 ): Promise<BillingStatementData[]> {
   const supabase = getSupabaseAdmin();
 
-  // 1. Resolve customer IDs if not provided
   let targetIds = customerIds;
-  if (!targetIds) {
-    const { data: notes } = await supabase
+  if (!targetIds || targetIds.length === 0) {
+    let customerSourceQuery = supabase
       .from("delivery_notes")
       .select("customer_id")
       .eq("organization_id", organizationId)
       .eq("status", "confirmed")
       .gte("delivery_date", fromDate)
       .lte("delivery_date", toDate);
+
+    if (deliveryNumbers && deliveryNumbers.length > 0) {
+      customerSourceQuery = customerSourceQuery.in("delivery_number", deliveryNumbers);
+    }
+
+    const { data: notes } = await customerSourceQuery;
     if (!notes) return [];
-    targetIds = Array.from(new Set(notes.map(n => n.customer_id)));
+    targetIds = Array.from(new Set(notes.map((note) => note.customer_id)));
   }
   if (targetIds.length === 0) return [];
 
-  // 2. Fetch everything in parallel to minimize latency
   const results = await Promise.all(
-    targetIds.map(id => getBillingStatementData(organizationId, id, fromDate, toDate, billingDate))
+    targetIds.map((id) => {
+      const customerDeliveryNumbers = deliveryNumbers;
+      return getBillingStatementData(
+        organizationId,
+        id,
+        fromDate,
+        toDate,
+        billingDate,
+        customerDeliveryNumbers,
+      );
+    }),
   );
 
   return results.filter((r): r is BillingStatementData => r !== null);

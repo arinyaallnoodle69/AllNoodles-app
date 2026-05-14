@@ -109,13 +109,13 @@ export function BillingForm({
   const handlePrint = () => {
     if (isPending || isPrinting || visibleCandidates.length === 0) return;
 
-    // Filter out delivery notes that are already billed
     const unbilledByCustomer = visibleCandidates.map(c => ({
       customerId: c.customerId,
       deliveryNumbers: c.deliveries.filter(d => !d.isAlreadyBilled).map(d => d.number)
     })).filter(c => c.deliveryNumbers.length > 0);
+    const deliveryNumbers = unbilledByCustomer.flatMap((customer) => customer.deliveryNumbers);
 
-    if (unbilledByCustomer.length === 0) {
+    if (deliveryNumbers.length === 0) {
       alert("รายการที่เลือกถูกวางบิลไปทั้งหมดแล้ว");
       return;
     }
@@ -123,6 +123,7 @@ export function BillingForm({
     setIsPrinting(true);
     const params = new URLSearchParams({
       customers: unbilledByCustomer.map(c => c.customerId).join(","),
+      deliveries: deliveryNumbers.join(","),
       from: fromDate,
       to: toDate,
       save: "true",
@@ -434,9 +435,9 @@ export function BillingForm({
         ) : (
           <div className="space-y-8">
             {visibleCandidates.map((candidate) => (
-              <div key={candidate.customerId} className="overflow-hidden border-y border-slate-200 bg-white shadow-sm md:rounded-xl md:border md:shadow-md">
-                {/* Table Header / Customer Info */}
-                <div className="flex items-center gap-4 bg-[#003366] py-3 md:py-2.5 px-4 md:px-6 text-white">
+                <div key={candidate.customerId} className="overflow-hidden border-y border-slate-200 bg-white shadow-sm md:border md:shadow-md">
+                  {/* Table Header / Customer Info */}
+                  <div className="flex items-center gap-4 bg-[#003366] py-2 md:py-2 px-4 md:px-6 text-white">
                   <div className="flex h-8 w-8 shrink-0 items-center justify-center bg-white/10">
                     <User className="h-4 w-4 text-white" />
                   </div>
@@ -463,22 +464,22 @@ export function BillingForm({
                     <tbody className="divide-y divide-slate-100">
                       {candidate.deliveries.map((d) => (
                         <tr key={d.number} className="group hover:bg-slate-50 transition-colors">
-                          <td className="px-6 py-3">
+                          <td className="px-6 py-2">
                             <span className="font-mono text-sm font-black text-[#003366]">{d.number}</span>
                           </td>
-                          <td className="px-6 py-3 text-center">
+                          <td className="px-6 py-2 text-center">
                             <div className="inline-flex items-center gap-2 text-xs font-bold text-slate-600">
                               <Calendar className="h-3.5 w-3.5 text-slate-300" />
                               {fmtDateTH(d.date)}
                             </div>
                           </td>
-                          <td className="px-6 py-3 text-right font-mono text-sm font-black text-slate-800">
+                          <td className="px-6 py-2 text-right font-mono text-sm font-black text-slate-800">
                             {d.amount.toLocaleString("th-TH", { minimumFractionDigits: 2 })}
                           </td>
-                          <td className="px-6 py-3 text-right font-mono text-sm font-black text-slate-800">
+                          <td className="px-6 py-2 text-right font-mono text-sm font-black text-slate-800">
                             {d.amount.toLocaleString("th-TH", { minimumFractionDigits: 2 })}
                           </td>
-                          <td className="px-6 py-3">
+                          <td className="px-6 py-2">
                             <div className="flex justify-center">
                               {d.isAlreadyBilled ? (
                                 <div className="flex items-center gap-2 bg-[#059669] px-4 py-1 shadow-sm">
@@ -502,7 +503,7 @@ export function BillingForm({
                 {/* Mobile Card View */}
                 <div className="md:hidden divide-y divide-slate-100">
                   {candidate.deliveries.map((d) => (
-                    <div key={d.number} className="p-4 space-y-3 bg-white active:bg-slate-50">
+                    <div key={d.number} className="p-3 space-y-2 bg-white active:bg-slate-50">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <FileText className="h-4 w-4 text-[#003366]" />
@@ -520,7 +521,7 @@ export function BillingForm({
                         )}
                       </div>
 
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-2 gap-3">
                         <div className="space-y-1">
                           <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">วันที่จัดส่ง</p>
                           <div className="flex items-center gap-1.5 text-xs font-bold text-slate-700">
@@ -536,8 +537,8 @@ export function BillingForm({
                         </div>
                       </div>
 
-                      {d.isAlreadyBilled && (
-                        <div className="mt-2 flex items-center justify-between rounded-lg bg-[#059669] px-3 py-2 shadow-sm">
+                        {d.isAlreadyBilled && (
+                          <div className="mt-1.5 flex items-center justify-between rounded-lg bg-[#059669] px-3 py-1 shadow-sm">
                           <span className="text-[10px] font-black text-white/80 uppercase tracking-wider">อ้างอิงใบวางบิล</span>
                           <span className="font-mono text-[12px] font-black text-white">{d.billingNumber}</span>
                         </div>
@@ -546,12 +547,12 @@ export function BillingForm({
                   ))}
                 </div>
                 {/* Unified Customer Footer (Summary) */}
-                <div className="bg-slate-50/50 border-t border-slate-200 px-4 md:px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-2 md:gap-4">
+                <div className="bg-slate-50/50 border-t border-slate-200 px-4 md:px-6 py-2.5 flex flex-col sm:flex-row items-center justify-between gap-1.5 md:gap-3">
                   <span className="text-[10px] md:text-xs font-black uppercase tracking-widest text-slate-400">
                     รวมยอดร้านนี้ ({candidate.deliveries.length} ใบจัดส่ง)
                   </span>
-                  <div className="flex items-baseline gap-2">
-                    <span className="font-mono text-xl md:text-2xl font-black text-[#003366]">
+                  <div className="flex items-baseline gap-1.5">
+                    <span className="font-mono text-lg md:text-xl font-black leading-none text-[#003366]">
                       {candidate.deliveries.reduce((sum, d) => sum + d.amount, 0).toLocaleString("th-TH", { minimumFractionDigits: 2 })}
                     </span>
                     <span className="text-[11px] font-bold text-slate-400 uppercase tracking-tight">บาท</span>
@@ -621,3 +622,4 @@ export function BillingForm({
     </div>
   );
 }
+
