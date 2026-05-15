@@ -197,6 +197,37 @@ export async function getBillingCandidates(
   return sortByCustomerCode(candidates);
 }
 
+export async function getBilledDeliveryNumbersForRange(
+  organizationId: string,
+  fromDate: string,
+  toDate: string,
+): Promise<Set<string>> {
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase
+    .from("billing_records")
+    .select("snapshot_rows")
+    .eq("organization_id", organizationId)
+    .lte("from_date", toDate)
+    .gte("to_date", fromDate);
+
+  if (error || !data) {
+    return new Set();
+  }
+
+  const billedDeliveryNumbers = new Set<string>();
+
+  for (const row of data as Array<{ snapshot_rows: SnapshotRow[] | null }>) {
+    const snapshotRows = Array.isArray(row.snapshot_rows) ? row.snapshot_rows : [];
+    for (const snapshot of snapshotRows) {
+      if (snapshot.deliveryNumber) {
+        billedDeliveryNumbers.add(snapshot.deliveryNumber);
+      }
+    }
+  }
+
+  return billedDeliveryNumbers;
+}
+
 export async function getCustomersForBilling(organizationId: string) {
   const supabase = getSupabaseAdmin();
   const { data, error } = await supabase

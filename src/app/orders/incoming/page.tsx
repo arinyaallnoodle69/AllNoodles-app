@@ -11,6 +11,7 @@ import { MobileSearchDrawer } from "@/components/mobile-search/mobile-search-dra
 import { requireAppRole } from "@/lib/auth/authorization";
 import { normalizeOrderDate, getTodayInBangkok } from "@/lib/orders/date";
 import { getCustomerOrderCountsByDate, getIncomingOrders, getOrderDetailById } from "@/lib/orders/detail";
+import { getBilledDeliveryNumbersForRange } from "@/lib/billing/billing-statement";
 import { getPendingLineOrders } from "@/lib/orders/line-pending";
 import { getCustomersForOrder, getProductsForOrder, getVehiclesForOrder } from "@/lib/orders/manage";
 import { getDeliveryList } from "@/lib/delivery/delivery-list";
@@ -50,6 +51,7 @@ const [
   pendingLineOrders,
   customerOrderCountsToday,
   deliveryData,
+  billedDeliveryNumbers,
 ] = await Promise.all([
   getIncomingOrders(session.organizationId, { orderDate, endDate, searchTerm }),
   expandedOrderId ? getOrderDetailById(session.organizationId, expandedOrderId) : Promise.resolve(null),
@@ -59,6 +61,7 @@ const [
   getPendingLineOrders(session.organizationId, { orderDate, endDate, searchTerm }),
   getCustomerOrderCountsByDate(session.organizationId, orderDate, endDate),
   getDeliveryList(session.organizationId, orderDate, endDate, searchTerm || ""),
+  getBilledDeliveryNumbersForRange(session.organizationId, orderDate, endDate),
 ]);
 
   function buildExpandedHref(nextExpandedId: string | null) {
@@ -121,6 +124,12 @@ const [
     hasDelivery: !!(deliveryMap.get(`${store.customerId}_${store.orderDate}`)?.length)
   }));
   const deliveryByCustomerId = Object.fromEntries(deliveryMap.entries());
+  const billedDeliveryByCustomerDate = Object.fromEntries(
+    Array.from(deliveryMap.entries()).map(([key, deliveryNumbers]) => [
+      key,
+      deliveryNumbers.some((deliveryNumber) => billedDeliveryNumbers.has(deliveryNumber)),
+    ]),
+  );
 
   return (
     <SettingsShell
@@ -286,6 +295,7 @@ const [
                           vehicleName={order.vehicleName}
                           vehicles={vehicles}
                           deliveryNumbers={deliveryMap.get(`${order.customerId}_${order.orderDate}`)}
+                          isBilled={billedDeliveryByCustomerDate[`${order.customerId}_${order.orderDate}`] ?? false}
                           orderDate={order.orderDate}
                           currentListDate={orderDate}
                           productCount={order.productCount}
@@ -300,6 +310,7 @@ const [
               <div className="hidden overflow-x-auto no-scrollbar lg:block">
                 <div className="min-w-[1100px]">
                   <IncomingOrdersDesktopTable
+                    billedByCustomerDate={billedDeliveryByCustomerDate}
                     deliveryByCustomerId={deliveryByCustomerId}
                     initialExpandedDetail={expandedDetail}
                     initialExpandedOrderId={expandedOrderId}

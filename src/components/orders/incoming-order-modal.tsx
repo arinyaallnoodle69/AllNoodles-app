@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { memo, useEffect, useState, useTransition } from "react";
 import dynamic from "next/dynamic";
@@ -6,6 +6,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import {
   AlertTriangle,
+  CheckCircle2,
   ChevronLeft,
   ChevronRight,
   Minus,
@@ -27,8 +28,11 @@ import {
   updateOrderItemsBatchAction,
 } from "@/app/orders/incoming/actions";
 
+const loadOrderAddProductPicker = () =>
+  import("@/components/orders/order-add-product-picker").then((mod) => mod.OrderAddProductPicker);
+
 const OrderAddProductPicker = dynamic(
-  () => import("@/components/orders/order-add-product-picker").then((mod) => mod.OrderAddProductPicker),
+  loadOrderAddProductPicker,
   {
     loading: () => (
       <div className="flex h-[56px] items-center justify-center rounded-xl border-2 border-dashed border-slate-100 bg-white text-[10px] font-black text-slate-300 uppercase tracking-widest">
@@ -49,7 +53,7 @@ function formatDisplayDate(value: string) {
   return `${d}/${m}/${parseInt(y, 10) + 543}`;
 }
 
-// ─── Sub-components ──────────────────────────────────────────────────────────
+// â”€â”€â”€ Sub-components â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 const ItemsViewList = memo(({ detail }: { detail: OrderDetailData }) => {
   return (
@@ -84,7 +88,7 @@ const ItemsViewList = memo(({ detail }: { detail: OrderDetailData }) => {
               <div className="flex items-center gap-3 mt-3 h-8">
                 <div className={`flex h-full items-center gap-2 px-2.5 border-2 rounded-lg ${item.stockQuantity < 0 ? "bg-[#FF0000] border-[#FF0000] text-white shadow-sm" : "bg-[#003366] border-[#003366] text-white shadow-sm"}`}>
                   <Boxes className="h-4 w-4" />
-                  <span className="text-[12px] font-black uppercase tracking-wider">สต็อค:</span>
+                  <span className="text-[12px] font-black uppercase tracking-wider">สต็อก:</span>
                   <span className="text-[16px] font-black tabular-nums">{item.stockQuantity.toLocaleString("th-TH")}</span>
                 </div>
                 {item.shortQuantity > 0 && (
@@ -125,7 +129,7 @@ const EditItemsPanel = memo(({
   products,
 }: {
   detail: OrderDetailData;
-  onDone: () => void;
+  onDone: (message?: string) => void;
   products: OrderProductOption[];
 }) => {
   const [quantities, setQuantities] = useState<Record<string, number>>(
@@ -277,7 +281,7 @@ const EditItemsPanel = memo(({
       });
 
       if ("error" in result) throw new Error(result.error);
-      onDone();
+      onDone("บันทึกรายการสำเร็จแล้ว");
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "เกิดข้อผิดพลาดในการบันทึกข้อมูล");
     } finally {
@@ -297,7 +301,22 @@ const EditItemsPanel = memo(({
   }
 
   return (
-    <div className="flex flex-col h-full bg-white">
+    <div className="relative flex h-full flex-col bg-white">
+      {isSaving ? (
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-white/78 backdrop-blur-[1px]">
+          <div className="flex flex-col items-center gap-4 rounded-3xl border border-slate-100 bg-white/95 px-8 py-7 shadow-[0_24px_80px_rgba(15,23,42,0.18)]">
+            <div className="relative flex items-center justify-center">
+              <div className="absolute h-12 w-12 rounded-full border-2 border-[#003366]/10" />
+              <Loader2 className="h-12 w-12 animate-spin text-[#003366]" strokeWidth={1.5} />
+            </div>
+            <div className="text-center">
+              <p className="text-[10px] font-black uppercase tracking-[0.3em] text-[#003366]">กำลังบันทึกรายการ</p>
+              <p className="mt-2 text-sm font-bold text-slate-500">ระบบกำลังอัปเดตออเดอร์และใบจัดส่ง</p>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       <div className="flex-1 overflow-y-auto px-5 py-4 custom-scrollbar">
         <div className="mb-4">
           <OrderAddProductPicker
@@ -618,7 +637,7 @@ const EditItemsPanel = memo(({
             </p>
           </div>
           <div className="flex items-center gap-3">
-            <button onClick={onDone} disabled={isSaving} className="rounded-xl bg-slate-50 px-6 py-3 text-sm font-black text-slate-500 uppercase tracking-widest active:scale-95 disabled:opacity-50">ยกเลิก</button>
+            <button onClick={() => onDone()} disabled={isSaving} className="rounded-xl bg-slate-50 px-6 py-3 text-sm font-black text-slate-500 uppercase tracking-widest active:scale-95 disabled:opacity-50">ยกเลิก</button>
             <button onClick={handleSave} disabled={isSaving} className="rounded-xl bg-[#003366] px-8 py-3 text-sm font-black text-white shadow-lg uppercase tracking-widest active:scale-95 disabled:opacity-50 flex items-center gap-2">
               {isSaving ? <Loader2 className="h-4.5 w-4.5 animate-spin" /> : null}
               {isSaving ? "กำลังบันทึก..." : "บันทึก"}
@@ -631,7 +650,7 @@ const EditItemsPanel = memo(({
 });
 EditItemsPanel.displayName = "EditItemsPanel";
 
-// ─── Main modal ───────────────────────────────────────────────────────────────
+// â”€â”€â”€ Main modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 type Props = {
   allOrders: IncomingOrderListItem[];
@@ -652,16 +671,19 @@ export function IncomingOrderModal({ allOrders, detail, expandedId, products }: 
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [navPending, startNavTransition] = useTransition();
   const [actionPending, startActionTransition] = useTransition();
+  const [editModePending, startEditModeTransition] = useTransition();
   const [isDesktopViewport, setIsDesktopViewport] = useState(false);
+  const [isPreparingEdit, setIsPreparingEdit] = useState(false);
+  const [saveToast, setSaveToast] = useState<string | null>(null);
 
   const [slideAnim, setSlideAnim] = useState<"slide-left" | "slide-right" | null>(null);
   const [isClosing, setIsClosing] = useState(false);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- Reset modal state when navigating between order records.
     setEditMode(startInEditMode);
     setConfirmCancel(false);
     setSlideAnim(null);
+    setSaveToast(null);
   }, [expandedId, startInEditMode]);
 
   useEffect(() => {
@@ -674,6 +696,15 @@ export function IncomingOrderModal({ allOrders, detail, expandedId, products }: 
     mediaQuery.addEventListener("change", updateViewport);
     return () => mediaQuery.removeEventListener("change", updateViewport);
   }, []);
+
+  useEffect(() => {
+    if (!detail) return;
+    const preloadTimer = window.setTimeout(() => {
+      void loadOrderAddProductPicker();
+    }, 120);
+
+    return () => window.clearTimeout(preloadTimer);
+  }, [detail]);
 
   const currentIndex = allOrders.findIndex((o) => o.id === expandedId);
   const prevOrder = currentIndex >= 0 && allOrders.length > 1 ? allOrders[(currentIndex - 1 + allOrders.length) % allOrders.length] : null;
@@ -706,6 +737,21 @@ export function IncomingOrderModal({ allOrders, detail, expandedId, products }: 
     }, 350);
   }
 
+  async function openEditMode() {
+    if (editMode || isPreparingEdit || editModePending) return;
+
+    setIsPreparingEdit(true);
+
+    try {
+      await loadOrderAddProductPicker();
+    } finally {
+      startEditModeTransition(() => {
+        setEditMode(true);
+      });
+      setIsPreparingEdit(false);
+    }
+  }
+
   if (!detail) return null;
 
   return (
@@ -736,6 +782,20 @@ export function IncomingOrderModal({ allOrders, detail, expandedId, products }: 
 
       {/* Main Container */}
       <div className={`${isClosing ? "m-anim-out" : "m-anim"} relative z-10 flex flex-col bg-white w-full h-full lg:h-[90vh] lg:max-w-4xl lg:rounded-[2.5rem] overflow-hidden shadow-2xl`}>
+        {saveToast ? (
+          <div className="pointer-events-none absolute left-1/2 top-5 z-[70] w-[calc(100%-2.5rem)] max-w-md -translate-x-1/2 lg:top-6">
+            <div className="flex items-center gap-3 rounded-2xl border border-emerald-200 bg-white/96 px-4 py-3 text-sm font-black text-emerald-700 shadow-[0_22px_60px_rgba(16,185,129,0.18)] backdrop-blur-sm">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-50">
+                <CheckCircle2 className="h-5 w-5" strokeWidth={2.5} />
+              </div>
+              <div className="min-w-0">
+                <p className="text-[10px] uppercase tracking-[0.22em] text-emerald-500">บันทึกสำเร็จ</p>
+                <p className="mt-0.5 truncate text-sm font-black text-emerald-700">{saveToast}</p>
+              </div>
+            </div>
+          </div>
+        ) : null}
+
         {/* Modern Navy Header */}
         <div className="shrink-0 bg-[#003366] px-6 py-4 pt-[max(1rem,env(safe-area-inset-top))] lg:pt-6 relative">
           <div className="flex items-center justify-between gap-4 relative z-10">
@@ -814,6 +874,20 @@ export function IncomingOrderModal({ allOrders, detail, expandedId, products }: 
             </div>
           )}
 
+          {(isPreparingEdit || editModePending) && !navPending ? (
+            <div className="absolute inset-0 z-50 flex items-center justify-center bg-white/78 backdrop-blur-[1px]">
+              <div className="flex flex-col items-center gap-4">
+                <div className="relative flex items-center justify-center">
+                  <div className="absolute h-12 w-12 rounded-full border-2 border-[#003366]/10" />
+                  <Loader2 className="h-12 w-12 animate-spin text-[#003366]" strokeWidth={1.5} />
+                </div>
+                <p className="text-[10px] font-black uppercase tracking-[0.3em] text-[#003366] animate-pulse">
+                  กำลังเปิดโหมดแก้ไข
+                </p>
+              </div>
+            </div>
+          ) : null}
+
           {confirmCancel ? (
             <div className="flex h-full flex-col items-center justify-center text-center px-10 animate-in fade-in zoom-in-95 duration-200">
               <div className="mb-6 rounded-[2.5rem] bg-rose-50 p-8 shadow-inner">
@@ -822,7 +896,7 @@ export function IncomingOrderModal({ allOrders, detail, expandedId, products }: 
               <h3 className="text-2xl font-black text-slate-950 tracking-tight">ยืนยันการยกเลิก?</h3>
               <p className="mt-4 text-sm font-medium text-slate-500 leading-relaxed max-w-xs mx-auto">
                 คุณแน่ใจหรือไม่ว่าต้องการยกเลิกออเดอร์ <span className="font-mono font-bold text-slate-950">{detail.orderNumber}</span>?
-                การดำเนินการนี้จะคืนสินค้าเข้าสต็อกทั้งหมด
+                การดำเนินการนี้จะคืนสินค้าเข้าสู่สต็อกทั้งหมด
               </p>
               <div className="mt-12 flex w-full max-w-xs gap-3">
                 <button onClick={() => setConfirmCancel(false)} className="flex-1 rounded-2xl border border-slate-200 py-4 text-xs font-black text-slate-500 uppercase tracking-widest active:scale-95 transition-all">กลับ</button>
@@ -832,11 +906,19 @@ export function IncomingOrderModal({ allOrders, detail, expandedId, products }: 
           ) : editMode ? (
             <EditItemsPanel
               detail={detail}
-              onDone={() => {
+              onDone={(message) => {
+                if (message) {
+                  setSaveToast(message);
+                  window.setTimeout(() => {
+                    setSaveToast((current) => (current === message ? null : current));
+                  }, 2200);
+                }
                 if (!isDesktopViewport) {
                   setEditMode(false);
                 }
-                router.refresh();
+                window.setTimeout(() => {
+                  router.refresh();
+                }, 140);
               }}
               products={products}
             />
@@ -864,12 +946,25 @@ export function IncomingOrderModal({ allOrders, detail, expandedId, products }: 
                 </div>
 
                 <div className="flex gap-3">
-                  <button onClick={() => setConfirmCancel(true)} className="flex-1 flex items-center justify-center gap-2 rounded-2xl bg-rose-700 py-4 text-[13px] font-black text-white uppercase tracking-widest active:scale-95 transition-all shadow-lg shadow-rose-100">
+                  <button
+                    onClick={() => setConfirmCancel(true)}
+                    className="flex-1 flex items-center justify-center gap-2 rounded-2xl bg-rose-700 py-4 text-[13px] font-black text-white uppercase tracking-widest active:scale-95 transition-all shadow-lg shadow-rose-100"
+                  >
                     ยกเลิก
                   </button>
-                  <button onClick={() => setEditMode(true)} className="flex-[2] flex items-center justify-center gap-2 rounded-2xl bg-[#003366] py-4 text-[14px] font-black text-white shadow-xl shadow-[#003366]/20 uppercase tracking-widest active:scale-95 transition-all">
-                    <Edit3 className="h-5 w-5" />
-                    แก้ไขรายการ
+                  <button
+                    onClick={() => void openEditMode()}
+                    disabled={isPreparingEdit || editModePending}
+                    className="flex-[2] flex items-center justify-center gap-2 rounded-2xl bg-[#003366] py-4 text-[14px] font-black text-white shadow-xl shadow-[#003366]/20 uppercase tracking-widest active:scale-95 transition-all disabled:opacity-75"
+                  >
+                    {isPreparingEdit || editModePending ? (
+                      <Loader2 className="h-5 w-5 animate-spin" />
+                    ) : (
+                      <Edit3 className="h-5 w-5" />
+                    )}
+                    <span className="leading-none text-white">
+                      {isPreparingEdit || editModePending ? "กำลังเปิด..." : "แก้ไขรายการ"}
+                    </span>
                   </button>
                 </div>
               </div>

@@ -8,6 +8,7 @@ import { getTodayInBangkok } from "@/lib/orders/date";
 import { getEffectiveSaleUnitCost } from "@/lib/products/sale-unit-cost";
 import { getCustomersForOrder, getProductsForOrder, type OrderCustomerOption, type OrderProductOption } from "@/lib/orders/manage";
 import { getOrderDetailById, type OrderDetailData } from "@/lib/orders/detail";
+import { syncBillingSnapshotsForDeliveryNumbers } from "@/lib/billing/actions";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/types/database";
 import type { ActionResult, CustomerLastOrderSnapshot, CustomerLastOrderItem } from "./types";
@@ -1303,6 +1304,16 @@ export async function syncOrderDeliveryNoteAction(orderId: string): Promise<Acti
 
   if (deliveryError) {
     return { error: "ปรับปรุงใบส่งของไม่สำเร็จ: " + deliveryError.message };
+  }
+
+  const billingSyncResult = await syncBillingSnapshotsForDeliveryNumbers({
+    organizationId: session.organizationId,
+    customerId: order.customer_id,
+    deliveryNumbers: [String(deliveryNumber)],
+  });
+
+  if (!billingSyncResult.success) {
+    return { error: billingSyncResult.error };
   }
 
   revalidatePath("/orders/incoming");

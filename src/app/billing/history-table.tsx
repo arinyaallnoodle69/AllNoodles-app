@@ -16,6 +16,26 @@ export function HistoryTable({ history }: Props) {
 
   const closeModal = () => setSelectedRecord(null);
 
+  function buildReprintUrl(record: BillingRecord) {
+    const params = new URLSearchParams({
+      customers: record.customer_id,
+      from: record.from_date,
+      to: record.to_date,
+      save: "false",
+    });
+
+    const deliveries = record.snapshot_rows
+      .map((row) => row.deliveryNumber)
+      .filter(Boolean)
+      .join(",");
+
+    if (deliveries) {
+      params.set("deliveries", deliveries);
+    }
+
+    return `/billing/print?${params.toString()}`;
+  }
+
   return (
     <>
       {/* Desktop View */}
@@ -70,7 +90,7 @@ export function HistoryTable({ history }: Props) {
                   <div className="flex items-center justify-center gap-2">
                     <div onClick={(e) => e.stopPropagation()}>
                       <ReprintButton 
-                        url={`/billing/print?customers=${record.customer_id}&from=${record.from_date}&to=${record.to_date}&save=false`} 
+                        url={buildReprintUrl(record)} 
                         title="พิมพ์ใบวางบิลนี้อีกครั้ง"
                       />
                     </div>
@@ -158,7 +178,7 @@ export function HistoryTable({ history }: Props) {
                 </div>
                 <div className="flex items-center gap-3">
                    <ReprintButton 
-                    url={`/billing/print?customers=${selectedRecord.customer_id}&from=${selectedRecord.from_date}&to=${selectedRecord.to_date}&save=false`} 
+                    url={buildReprintUrl(selectedRecord)} 
                     title="พิมพ์ใบวางบิลนี้อีกครั้ง"
                    />
                    <div className="bg-slate-50 px-6 py-3 text-right border border-slate-100">

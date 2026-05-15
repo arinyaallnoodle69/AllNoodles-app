@@ -26,6 +26,7 @@ type IncomingOrderOpenCardProps = {
   orderDate: string;
   productCount: number;
   searchTerm?: string;
+  isBilled: boolean;
 };
 
 function InfoBlock({
@@ -71,6 +72,7 @@ export function IncomingOrderOpenCard({
   orderDate,
   productCount,
   searchTerm,
+  isBilled,
 }: IncomingOrderOpenCardProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -86,100 +88,101 @@ export function IncomingOrderOpenCard({
   return (
     <article className="border-b border-slate-400 bg-white px-5 py-4 shadow-[0_10px_26px_rgba(15,23,42,0.1)] last:border-b-0">
       <div className="flex items-start gap-3">
-          <div className="min-w-0 flex-1">
-            <p className="line-clamp-2 text-[1.18rem] font-bold leading-tight text-slate-950">
-              <span translate="no">{customerCode}</span> - {customerName}
+        <div className="min-w-0 flex-1">
+          <p className="line-clamp-2 text-[1.18rem] font-bold leading-tight text-slate-950">
+            <span translate="no">{customerCode}</span> - {customerName}
+          </p>
+          <div className="mt-1.5 flex items-center gap-2">
+            <p className="truncate font-mono text-sm font-semibold text-slate-700" translate="no">
+              {orderNumber}
             </p>
-            <div className="mt-1.5 flex items-center gap-2">
-              <p className="truncate font-mono text-sm font-semibold text-slate-700" translate="no">
-                {orderNumber}
-              </p>
-              {hasDelivery ? (
-                <span
-                  className="inline-flex size-5 shrink-0 items-center justify-center rounded-full bg-emerald-700 text-white"
-                  title="สร้างใบส่งของแล้ว"
-                  aria-label="สร้างใบส่งของแล้ว"
-                >
-                  <Check className="h-3 w-3" strokeWidth={3} />
-                </span>
-              ) : null}
-            </div>
-          </div>
-
-          <div className="flex shrink-0 items-center gap-2">
-            <IncomingOrderDateButton
-              currentListDate={currentListDate}
-              orderDate={orderDate}
-              orderId={orderId}
-              orderNumber={orderNumber}
-              searchTerm={searchTerm}
-            />
+            {isBilled ? (
+              <span
+                className="inline-flex size-5 shrink-0 items-center justify-center rounded-full bg-emerald-700 text-white"
+                title="วางบิลแล้ว"
+                aria-label="วางบิลแล้ว"
+              >
+                <Check className="h-3 w-3" strokeWidth={3} />
+              </span>
+            ) : null}
           </div>
         </div>
+
+        <div className="flex shrink-0 items-center gap-2">
+          <IncomingOrderDateButton
+            currentListDate={currentListDate}
+            orderDate={orderDate}
+            orderId={orderId}
+            orderNumber={orderNumber}
+            searchTerm={searchTerm}
+          />
+        </div>
+      </div>
 
       <div className="mt-4 grid grid-cols-2 gap-x-4 gap-y-4">
-          <InfoBlock
-            label="วันที่ออเดอร์"
-            icon={<CalendarDays className="h-4 w-4" strokeWidth={2.2} />}
-            value={displayDate}
-          />
-          <div className="min-w-0 border-l border-slate-300 pl-4">
-            <p className="text-[11px] font-black uppercase tracking-[0.12em] text-slate-950">ช่องทาง</p>
-            <div className="mt-1.5 flex items-center justify-between gap-2">
-              <span className="inline-flex min-h-8 items-center py-1 text-sm font-semibold text-slate-950">
-                {channelLabel}
-              </span>
-              {!hasDelivery ? (
-                <span className="text-[11px] font-medium text-amber-700">รอใบส่งของ</span>
-              ) : null}
-            </div>
-          </div>
-
-          <InfoBlock
-            label="สินค้า"
-            icon={<Package2 className="h-4 w-4" strokeWidth={2.2} />}
-            value={`${productCount.toLocaleString("th-TH")} รายการ`}
-          />
-          <div className="min-w-0 border-l border-slate-300 pl-4">
-            <p className="text-[11px] font-black uppercase tracking-[0.12em] text-slate-950">ยอดรวม</p>
-            <p className="mt-1.5 text-[1.05rem] font-bold leading-none text-slate-950">{totalAmountText}</p>
+        <InfoBlock
+          label="วันที่ออเดอร์"
+          icon={<CalendarDays className="h-4 w-4" strokeWidth={2.2} />}
+          value={displayDate}
+        />
+        <div className="min-w-0 border-l border-slate-300 pl-4">
+          <p className="text-[11px] font-black uppercase tracking-[0.12em] text-slate-950">ช่องทาง</p>
+          <div className="mt-1.5 flex items-center justify-between gap-2">
+            <span className="inline-flex min-h-8 items-center py-1 text-sm font-semibold text-slate-950">
+              {channelLabel}
+            </span>
           </div>
         </div>
 
-      <div className="mt-4 border-t border-slate-200 pt-4 grid grid-cols-2 gap-4">
-          <div className="min-w-0">
-            <p className="text-[11px] font-black uppercase tracking-[0.12em] text-slate-950">การจัดส่ง</p>
-            <div className="mt-2 flex items-center gap-2">
-              <Truck className="h-4 w-4 shrink-0 text-slate-400" strokeWidth={2.2} />
-              <div className="min-w-0 flex-1">
-                <IncomingOrderVehicleSelect
-                  customerId={customerId}
-                  currentVehicleId={vehicleId}
-                  currentVehicleName={vehicleName}
-                  vehicles={vehicles}
-                  variant="card"
-                  orderDate={orderDate}
-                />              </div>
-            </div>
-          </div>
+        <InfoBlock
+          label="สินค้า"
+          icon={<Package2 className="h-4 w-4" strokeWidth={2.2} />}
+          value={`${productCount.toLocaleString("th-TH")} รายการ`}
+        />
+        <div className="min-w-0 border-l border-slate-300 pl-4">
+          <p className="text-[11px] font-black uppercase tracking-[0.12em] text-slate-950">ยอดรวม</p>
+          <p className="mt-1.5 text-[1.05rem] font-bold leading-none text-slate-950">{totalAmountText}</p>
+        </div>
+      </div>
 
-          <div className="min-w-0 border-l border-slate-300 pl-4">
-            <p className="text-[11px] font-black uppercase tracking-[0.12em] text-slate-950">เลขจัดส่ง</p>
-            <div className="mt-1.5 min-w-0">
-              {hasDelivery && deliveryNumbers ? (
-                <div className="flex flex-col gap-0.5">
-                  {deliveryNumbers.map((num) => (
-                    <span key={num} className="truncate font-mono text-[1.05rem] font-bold text-emerald-700 leading-none py-0.5">
-                      {num}
-                    </span>
-                  ))}
-                </div>
-              ) : (
-                <span className="text-[1.05rem] font-medium text-slate-400">-</span>
-              )}
+      <div className="mt-4 grid grid-cols-2 gap-4 border-t border-slate-200 pt-4">
+        <div className="min-w-0">
+          <p className="text-[11px] font-black uppercase tracking-[0.12em] text-slate-950">การจัดส่ง</p>
+          <div className="mt-2 flex items-center gap-2">
+            <Truck className="h-4 w-4 shrink-0 text-slate-400" strokeWidth={2.2} />
+            <div className="min-w-0 flex-1">
+              <IncomingOrderVehicleSelect
+                customerId={customerId}
+                currentVehicleId={vehicleId}
+                currentVehicleName={vehicleName}
+                vehicles={vehicles}
+                variant="card"
+                orderDate={orderDate}
+              />
             </div>
           </div>
         </div>
+
+        <div className="min-w-0 border-l border-slate-300 pl-4">
+          <p className="text-[11px] font-black uppercase tracking-[0.12em] text-slate-950">เลขจัดส่ง</p>
+          <div className="mt-1.5 min-w-0">
+            {hasDelivery && deliveryNumbers ? (
+              <div className="flex flex-col gap-0.5">
+                {deliveryNumbers.map((num) => (
+                  <span
+                    key={num}
+                    className="truncate py-0.5 font-mono text-[1.05rem] font-bold leading-none text-emerald-700"
+                  >
+                    {num}
+                  </span>
+                ))}
+              </div>
+            ) : (
+              <span className="text-[1.05rem] font-medium text-slate-400">-</span>
+            )}
+          </div>
+        </div>
+      </div>
 
       <div className="mt-4 flex items-center gap-2">
         <button

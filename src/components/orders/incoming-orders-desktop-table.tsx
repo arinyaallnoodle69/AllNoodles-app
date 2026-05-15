@@ -11,6 +11,7 @@ import type { IncomingOrderListItem, OrderDetailData } from "@/lib/orders/detail
 import type { OrderVehicleOption } from "@/lib/orders/manage";
 
 type IncomingOrdersDesktopTableProps = {
+  billedByCustomerDate: Record<string, boolean>;
   deliveryByCustomerId: Record<string, string[]>;
   initialExpandedDetail: OrderDetailData | null;
   initialExpandedOrderId: string;
@@ -31,6 +32,7 @@ function formatOrderDate(value: string) {
 }
 
 export const IncomingOrdersDesktopTable = memo(function IncomingOrdersDesktopTable({
+  billedByCustomerDate,
   deliveryByCustomerId,
   initialExpandedDetail,
   initialExpandedOrderId,
@@ -104,35 +106,38 @@ export const IncomingOrdersDesktopTable = memo(function IncomingOrdersDesktopTab
                 <th className="w-[12%] px-3 py-4 text-center text-sm font-bold tracking-[0.04em] text-slate-950">วันที่</th>
                 <th className="w-[10%] px-3 py-4 text-center text-sm font-bold tracking-[0.04em] text-slate-950">สินค้า</th>
                 <th className="w-[12%] whitespace-nowrap px-3 py-4 text-center text-sm font-bold tracking-[0.04em] text-slate-950">ยอดรวม</th>
-                <th className="w-[16%] px-3 py-4 text-center text-sm font-bold tracking-[0.04em] text-slate-950 text-left">เลขจัดส่ง</th>
-                <th className="w-[18%] px-3 py-4 text-center text-sm font-bold tracking-[0.04em] text-slate-950 text-left">การจัดส่ง</th>
+                <th className="w-[16%] px-3 py-4 text-left text-sm font-bold tracking-[0.04em] text-slate-950">เลขจัดส่ง</th>
+                <th className="w-[18%] px-3 py-4 text-left text-sm font-bold tracking-[0.04em] text-slate-950">การจัดส่ง</th>
                 <th className="w-[12%] px-3 py-4 text-center text-sm font-bold tracking-[0.04em] text-slate-950">จัดการ</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200">
               {orders.map((order, index) => {
+                const orderKey = `${order.customerId}_${order.orderDate}`;
                 const isExpanded = expandedOrderId === order.id && visibleOrderIds.has(order.id);
                 const detail = detailByOrderId[order.id] ?? null;
-                const deliveryNumbers = deliveryByCustomerId[`${order.customerId}_${order.orderDate}`];
+                const deliveryNumbers = deliveryByCustomerId[orderKey];
                 const hasDelivery = Boolean(deliveryNumbers && deliveryNumbers.length > 0);
+                const isBilled = billedByCustomerDate[orderKey] ?? false;
                 const isLoading = loadingOrderId === order.id || (isPending && isExpanded && !detail);
                 const showDivider = index === 0 || order.orderDate !== orders[index - 1].orderDate;
 
                 return (
                   <Fragment key={order.id}>
-                    {showDivider && (
+                    {showDivider ? (
                       <tr className="bg-slate-50/50">
-                        <td colSpan={7} className="px-6 py-4 border-y border-slate-200">
-                           <div className="flex items-center gap-4">
-                             <div className="h-px flex-1 bg-slate-300"></div>
-                             <span className="text-xs font-black text-[#003366] uppercase tracking-[0.2em] bg-white px-5 py-2 rounded-2xl border border-slate-200 shadow-sm">
-                               {formatOrderDate(order.orderDate)}
-                             </span>
-                             <div className="h-px flex-1 bg-slate-300"></div>
-                           </div>
+                        <td colSpan={7} className="border-y border-slate-200 px-6 py-4">
+                          <div className="flex items-center gap-4">
+                            <div className="h-px flex-1 bg-slate-300" />
+                            <span className="rounded-2xl border border-slate-200 bg-white px-5 py-2 text-xs font-black uppercase tracking-[0.2em] text-[#003366] shadow-sm">
+                              {formatOrderDate(order.orderDate)}
+                            </span>
+                            <div className="h-px flex-1 bg-slate-300" />
+                          </div>
                         </td>
                       </tr>
-                    )}
+                    ) : null}
+
                     <tr className="align-middle transition-colors hover:bg-slate-50/80">
                       <td className="px-3 py-5">
                         <div className="min-w-0">
@@ -146,14 +151,17 @@ export const IncomingOrdersDesktopTable = memo(function IncomingOrdersDesktopTab
                             </span>
                           </div>
                           <div className="mt-1 flex items-center gap-2 pl-6">
-                            <p className="whitespace-nowrap font-mono text-sm font-semibold leading-5 text-slate-950" translate="no">
+                            <p
+                              className="whitespace-nowrap font-mono text-sm font-semibold leading-5 text-slate-950"
+                              translate="no"
+                            >
                               {order.orderNumber}
                             </p>
-                            {hasDelivery ? (
+                            {isBilled ? (
                               <span
                                 className="inline-flex size-5 shrink-0 items-center justify-center rounded-full bg-emerald-700 text-white"
-                                title="มีใบส่งของแล้ว"
-                                aria-label="มีใบส่งของแล้ว"
+                                title="วางบิลแล้ว"
+                                aria-label="วางบิลแล้ว"
                               >
                                 <Check className="h-3 w-3" strokeWidth={3} />
                               </span>
@@ -188,7 +196,7 @@ export const IncomingOrdersDesktopTable = memo(function IncomingOrdersDesktopTab
                         )}
                       </td>
                       <td className="min-w-0 px-3 py-5">
-                        <div className="flex justify-start min-w-0 max-w-full">
+                        <div className="flex min-w-0 max-w-full justify-start">
                           <IncomingOrderVehicleSelect
                             customerId={order.customerId}
                             currentVehicleId={order.vehicleId}

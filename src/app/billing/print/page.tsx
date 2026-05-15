@@ -134,20 +134,6 @@ async function BillingPrintPageContent({ searchParams }: Props) {
         toDate={toDate}
         autoprint={autoprint}
       />
-      {autoprint && (
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              window.onload = function() {
-                setTimeout(function() {
-                  window.focus();
-                  window.print();
-                }, 1000);
-              };
-            `,
-          }}
-        />
-      )}
     </>
   );
 }
