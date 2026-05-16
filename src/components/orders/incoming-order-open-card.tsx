@@ -3,9 +3,9 @@
 import { useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { CalendarDays, Check, ChevronRight, Loader2, Package2, Truck } from "lucide-react";
+import { OrderDeliveryActionButton } from "@/components/orders/order-delivery-action-button";
 import { IncomingOrderDateButton } from "@/components/orders/incoming-order-date-button";
 import { IncomingOrderVehicleSelect } from "@/components/orders/incoming-order-vehicle-select";
-import { PrintStoreDeliveryButton } from "@/components/orders/print-store-delivery-button";
 import type { OrderVehicleOption } from "@/lib/orders/manage";
 
 type IncomingOrderOpenCardProps = {
@@ -26,6 +26,7 @@ type IncomingOrderOpenCardProps = {
   orderDate: string;
   productCount: number;
   searchTerm?: string;
+  selectedCustomerIds?: string[];
   isBilled: boolean;
 };
 
@@ -72,6 +73,7 @@ export function IncomingOrderOpenCard({
   orderDate,
   productCount,
   searchTerm,
+  selectedCustomerIds = [],
   isBilled,
 }: IncomingOrderOpenCardProps) {
   const router = useRouter();
@@ -115,6 +117,7 @@ export function IncomingOrderOpenCard({
             orderId={orderId}
             orderNumber={orderNumber}
             searchTerm={searchTerm}
+            selectedCustomerIds={selectedCustomerIds}
           />
         </div>
       </div>
@@ -199,11 +202,13 @@ export function IncomingOrderOpenCard({
           )}
         </button>
         {hasDelivery ? (
-          <PrintStoreDeliveryButton
-            date={orderDate}
+          <OrderDeliveryActionButton
             customerId={customerId}
-            label="พิมพ์ใบส่งของ"
+            customerName={customerName}
+            date={orderDate}
             iconOnly
+            label="ดูใบยืนยัน"
+            orderId={orderId}
           />
         ) : null}
       </div>

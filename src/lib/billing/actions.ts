@@ -15,6 +15,72 @@ type BillingItem = {
   snapshotRows: SnapshotRow[];
 };
 
+async function getDeliveryNumberActualTotals(
+  supabase: ReturnType<typeof getSupabaseAdmin>,
+  deliveryNumbers: string[],
+) {
+  if (deliveryNumbers.length === 0) {
+    return new Map<string, { deliveryDate: string; totalAmount: number; notes: string | null }>();
+  }
+
+  const { data: deliveryNotes } = await supabase
+    .from("delivery_notes")
+    .select("id, delivery_number, delivery_date, total_amount, notes")
+    .in("delivery_number", deliveryNumbers);
+
+  if (!deliveryNotes || deliveryNotes.length === 0) {
+    return new Map<string, { deliveryDate: string; totalAmount: number; notes: string | null }>();
+  }
+
+  const noteIds = deliveryNotes.map((note) => note.id);
+  const { data: dnItems } = await supabase
+    .from("delivery_note_items")
+    .select("delivery_note_id, order_item_id")
+    .in("delivery_note_id", noteIds);
+
+  const orderItemIds = Array.from(
+    new Set((dnItems ?? []).map((item) => item.order_item_id).filter(Boolean) as string[]),
+  );
+  const { data: orderItems } = orderItemIds.length
+    ? await supabase
+        .from("order_items")
+        .select("id, line_total")
+        .in("id", orderItemIds)
+    : { data: [] as { id: string; line_total: number | null }[] };
+
+  const orderItemTotalMap = new Map(
+    (orderItems ?? []).map((item) => [item.id, Number(item.line_total ?? 0)]),
+  );
+  const totalsByNoteId = new Map<string, number>();
+
+  for (const noteId of noteIds) {
+    totalsByNoteId.set(noteId, 0);
+  }
+
+  const seenPairs = new Set<string>();
+  for (const item of dnItems ?? []) {
+    if (!item.order_item_id) continue;
+    const dedupeKey = `${item.delivery_note_id}:${item.order_item_id}`;
+    if (seenPairs.has(dedupeKey)) continue;
+    seenPairs.add(dedupeKey);
+    totalsByNoteId.set(
+      item.delivery_note_id,
+      (totalsByNoteId.get(item.delivery_note_id) ?? 0) + (orderItemTotalMap.get(item.order_item_id) ?? 0),
+    );
+  }
+
+  return new Map(
+    deliveryNotes.map((note) => [
+      note.delivery_number,
+      {
+        deliveryDate: note.delivery_date,
+        totalAmount: totalsByNoteId.get(note.id) ?? Number(note.total_amount ?? 0),
+        notes: note.notes ?? null,
+      },
+    ]),
+  );
+}
+
 export async function recordBillingHistoryAction(params: {
   organizationId: string;
   items: BillingItem[];
@@ -117,27 +183,7 @@ export async function syncBillingSnapshotsForDeliveryNumbers(params: {
     return { success: true as const, updated: 0 };
   }
 
-  const { data: deliveryNotes, error: deliveryNotesError } = await supabase
-    .from("delivery_notes")
-    .select("delivery_number, delivery_date, total_amount, notes")
-    .eq("organization_id", params.organizationId)
-    .eq("customer_id", params.customerId)
-    .in("delivery_number", deliveryNumbers);
-
-  if (deliveryNotesError) {
-    return { success: false as const, error: deliveryNotesError.message ?? "โหลดข้อมูลใบจัดส่งไม่สำเร็จ" };
-  }
-
-  const deliveryMap = new Map(
-    (deliveryNotes ?? []).map((note) => [
-      note.delivery_number,
-      {
-        deliveryDate: note.delivery_date,
-        totalAmount: Number(note.total_amount ?? 0),
-        notes: note.notes ?? null,
-      },
-    ]),
-  );
+  const deliveryMap = await getDeliveryNumberActualTotals(supabase, deliveryNumbers);
 
   let updated = 0;
 
@@ -147,33 +193,51 @@ export async function syncBillingSnapshotsForDeliveryNumbers(params: {
       : [];
 
     let touched = false;
-    const nextRows = snapshotRows.map((row, index) => {
+    const nextRows = snapshotRows.flatMap((row) => {
+      if (deliveryNumbers.includes(row.deliveryNumber) && !deliveryMap.has(row.deliveryNumber)) {
+        touched = true;
+        return [];
+      }
+
       const live = deliveryMap.get(row.deliveryNumber);
       if (!live) {
-        return {
-          ...row,
-          lineNumber: index + 1,
-        };
+        return [row];
       }
 
       touched = true;
-      return {
+      return [{
         ...row,
-        lineNumber: index + 1,
         deliveryDate: live.deliveryDate,
         totalAmount: live.totalAmount,
         notes: live.notes,
-      };
+      }];
     });
 
     if (!touched) continue;
 
-    const nextTotal = nextRows.reduce((sum, row) => sum + Number(row.totalAmount ?? 0), 0);
+    const normalizedRows = nextRows.map((row, index) => ({
+      ...row,
+      lineNumber: index + 1,
+    }));
+
+    if (normalizedRows.length === 0) {
+      const { error: deleteError } = await supabase
+        .from("billing_records")
+        .delete()
+        .eq("id", record.id);
+
+      if (!deleteError) {
+        updated += 1;
+      }
+      continue;
+    }
+
+    const nextTotal = normalizedRows.reduce((sum, row) => sum + Number(row.totalAmount ?? 0), 0);
 
     const { error: updateError } = await supabase
       .from("billing_records")
       .update({
-        snapshot_rows: nextRows,
+        snapshot_rows: normalizedRows,
         total_amount: nextTotal,
       })
       .eq("id", record.id);

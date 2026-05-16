@@ -853,40 +853,132 @@ export async function createOrder(
 
   const supabase = getSupabaseAdmin();
 
-  // 1. Generate order number via atomic DB sequence (ORD + YYYYMMDD + 5-digit running)
+  // 1. Check for existing order on the same day to merge
   const orderDate = new Date().toISOString().slice(0, 10);
-  const { data: orderNumber, error: seqError } = await supabase.rpc(
-    "next_order_number",
-    { p_organization_id: organizationId, p_order_date: orderDate },
-  );
-  if (seqError || !orderNumber) {
-    console.error("[createOrder:orderNumber]", seqError);
-    return { success: false, error: "ไม่สามารถสร้างเลขออเดอร์ได้" };
+  
+  const { data: existingOrder } = await supabase
+    .from("orders")
+    .select("id, order_number, status")
+    .eq("customer_id", customerId)
+    .eq("order_date", orderDate)
+    .eq("organization_id", organizationId)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  let isUpdating = false;
+  let orderIdToUse = "";
+  let orderNumberToUse = "";
+  let itemsToProcess = items;
+
+  if (existingOrder) {
+    const isEditable = await isCustomerOrderEditable(organizationId, orderDate, existingOrder.status);
+    if (isEditable) {
+      isUpdating = true;
+      orderIdToUse = existingOrder.id;
+      orderNumberToUse = existingOrder.order_number;
+
+      // Fetch existing items to merge
+      const { data: existingItems } = await supabase
+        .from("order_items")
+        .select("product_id, product_sale_unit_id, quantity")
+        .eq("order_id", existingOrder.id);
+
+      if (existingItems) {
+        const mergedMap = new Map<string, OrderMutationItemInput>();
+        
+        existingItems.forEach(item => {
+          const key = `${item.product_id}:${item.product_sale_unit_id}`;
+          mergedMap.set(key, {
+            productId: item.product_id as string,
+            productSaleUnitId: item.product_sale_unit_id as string,
+            quantity: Number(item.quantity)
+          });
+        });
+
+        items.forEach(item => {
+          const key = `${item.productId}:${item.productSaleUnitId}`;
+          const existing = mergedMap.get(key);
+          if (existing) {
+            existing.quantity += item.quantity;
+          } else {
+            mergedMap.set(key, item);
+          }
+        });
+
+        itemsToProcess = Array.from(mergedMap.values());
+      }
+    }
   }
 
-  const builtItems = await buildOrderItemData(supabase, organizationId, customerId, items);
+  let orderNumber = orderNumberToUse;
+  if (!isUpdating) {
+    const { data: nextNum, error: seqError } = await supabase.rpc(
+      "next_order_number",
+      { p_organization_id: organizationId, p_order_date: orderDate },
+    );
+    if (seqError || !nextNum) {
+      console.error("[createOrder:orderNumber]", seqError);
+      return { success: false, error: "ไม่สามารถสร้างเลขออเดอร์ได้" };
+    }
+    orderNumber = nextNum;
+  }
+
+  // 2. Validate and build item data
+  const builtItems = await buildOrderItemData(supabase, organizationId, customerId, itemsToProcess);
   if (!builtItems.success) {
     return { success: false, error: builtItems.error };
   }
 
   const { orderItemsData, productMap } = builtItems.data;
-
   const totalAmount = orderItemsData.reduce((sum, item) => sum + item.line_total, 0);
 
-  // 3. Create the order
-  const { data: order, error: oError } = await supabase.from("orders").insert({
-    organization_id: organizationId,
-    customer_id: customerId,
-    order_number: orderNumber,
-    status: "submitted",
-    total_amount: totalAmount,
-    subtotal_amount: totalAmount,
-    order_date: orderDate,
-  }).select().single();
+  let order: Database["public"]["Tables"]["orders"]["Row"];
+  if (isUpdating) {
+    // Update the existing order's total amount
+    const { data: updatedOrder, error: uError } = await supabase
+      .from("orders")
+      .update({
+        total_amount: totalAmount,
+        subtotal_amount: totalAmount,
+      })
+      .eq("id", orderIdToUse)
+      .select()
+      .single();
 
-  if (oError || !order) {
-    console.error("[createOrder:insertOrder]", oError);
-    return { success: false, error: "ไม่สามารถสร้างคำสั่งซื้อได้" };
+    if (uError || !updatedOrder) {
+      console.error("[createOrder:updateOrder]", uError);
+      return { success: false, error: "ไม่สามารถอัปเดตคำสั่งซื้อได้" };
+    }
+    order = updatedOrder;
+
+    // Delete old items
+    const { error: deleteError } = await supabase
+      .from("order_items")
+      .delete()
+      .eq("order_id", orderIdToUse);
+
+    if (deleteError) {
+      console.error("[createOrder:deleteItems]", deleteError);
+      return { success: false, error: "ไม่สามารถอัปเดตรายการสินค้าได้" };
+    }
+  } else {
+    // Create new order
+    const { data: newOrder, error: oError } = await supabase.from("orders").insert({
+      organization_id: organizationId,
+      customer_id: customerId,
+      order_number: orderNumber,
+      status: "submitted",
+      total_amount: totalAmount,
+      subtotal_amount: totalAmount,
+      order_date: orderDate,
+    }).select().single();
+
+    if (oError || !newOrder) {
+      console.error("[createOrder:insertOrder]", oError);
+      return { success: false, error: "ไม่สามารถสร้างคำสั่งซื้อได้" };
+    }
+    order = newOrder;
   }
 
   // 4. Create order items
@@ -899,8 +991,6 @@ export async function createOrder(
 
   if (itemsError) {
     console.error("[createOrder:insertItems]", itemsError);
-    // Ideally we'd rollback order creation, but Supabase/PostgREST doesn't support 
-    // transactions across multiple inserts easily without RPC.
     return { success: false, error: "ไม่สามารถบันทึกรายการสินค้าได้" };
   }
 

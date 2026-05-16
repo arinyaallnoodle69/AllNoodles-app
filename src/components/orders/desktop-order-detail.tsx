@@ -2,17 +2,14 @@
 
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import {
-  Building2,
-  ClipboardList,
-  Package2,
-  Plus,
-  XCircle,
-} from "lucide-react";
+import { Building2, ClipboardList, Package2, Plus, XCircle } from "lucide-react";
 import type { OrderDetailData } from "@/lib/orders/detail";
 
 function formatCurrency(value: number) {
-  return value.toLocaleString("th-TH", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return value.toLocaleString("th-TH", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
 }
 
 type Props = {
@@ -22,14 +19,24 @@ type Props = {
 
 export function DesktopOrderDetail({ detail, deliveryNumbers }: Props) {
   const router = useRouter();
-  const canEdit = detail.status === "submitted" || detail.status === "confirmed";
+  const canEdit = detail.status !== "cancelled";
+  const canDelete = detail.status !== "cancelled";
   const deliveryNumberText = Array.from(new Set(deliveryNumbers ?? [])).join(", ");
 
   function handleEditInModal() {
-    const p = new URLSearchParams(window.location.search);
-    p.set("expanded", detail.id);
-    p.set("edit", "1");
-    router.replace(`/orders/incoming?${p.toString()}`, { scroll: false });
+    const params = new URLSearchParams(window.location.search);
+    params.set("expanded", detail.id);
+    params.set("edit", "1");
+    params.delete("delete");
+    router.replace(`/orders/incoming?${params.toString()}`, { scroll: false });
+  }
+
+  function handleDeleteInModal() {
+    const params = new URLSearchParams(window.location.search);
+    params.set("expanded", detail.id);
+    params.set("delete", "1");
+    params.delete("edit");
+    router.replace(`/orders/incoming?${params.toString()}`, { scroll: false });
   }
 
   return (
@@ -46,6 +53,7 @@ export function DesktopOrderDetail({ detail, deliveryNumbers }: Props) {
                 <p className="mt-0.5 font-mono text-base font-bold text-[#003366]">{detail.customer.code}</p>
               </div>
             </div>
+
             <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 text-base font-semibold text-slate-700">
               <span className="inline-flex items-center gap-2">
                 <ClipboardList className="h-4 w-4 text-slate-400" />
@@ -54,48 +62,51 @@ export function DesktopOrderDetail({ detail, deliveryNumbers }: Props) {
               {deliveryNumberText ? (
                 <>
                   <span className="h-4 w-px bg-slate-200" aria-hidden="true" />
-                  <span>ใบส่งของ: <span className="font-mono text-slate-900" translate="no">{deliveryNumberText}</span></span>
+                  <span>
+                    ใบส่งของ: <span className="font-mono text-slate-900" translate="no">{deliveryNumberText}</span>
+                  </span>
                 </>
               ) : null}
               <span className="h-4 w-px bg-slate-200" aria-hidden="true" />
-              <span>ช่องทาง: <span className="text-slate-900">{detail.channelLabel}</span></span>
+              <span>
+                ช่องทาง: <span className="text-slate-900">{detail.channelLabel}</span>
+              </span>
               <span className="h-4 w-px bg-slate-200" aria-hidden="true" />
-              <span>รวม: <span className="text-slate-900">{detail.totalQuantity.toLocaleString("th-TH")} หน่วย</span></span>
+              <span>
+                รวม: <span className="text-slate-900">{detail.totalQuantity.toLocaleString("th-TH")} หน่วย</span>
+              </span>
               {detail.notes ? (
                 <>
                   <span className="h-4 w-px bg-slate-200" aria-hidden="true" />
-                  <span className="flex-1">หมายเหตุ: <span className="text-slate-900 italic">&ldquo;{detail.notes}&rdquo;</span></span>
+                  <span className="flex-1">
+                    หมายเหตุ: <span className="text-slate-900 italic">&ldquo;{detail.notes}&rdquo;</span>
+                  </span>
                 </>
               ) : null}
             </div>
           </div>
 
           <div className="flex shrink-0 items-center gap-2">
-            {canEdit && (
-              <>
-                <button
-                  type="button"
-                  onClick={handleEditInModal}
-                  className="inline-flex items-center gap-2 rounded-lg bg-[#003366] px-5 py-2.5 text-sm font-bold text-white shadow-[0_8px_20px_rgba(0,51,102,0.12)] transition hover:bg-[#002244] active:scale-[0.98]"
-                >
-                  <Plus className="h-4 w-4" strokeWidth={2.5} />
-                  แก้ไขรายการ
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const p = new URLSearchParams(window.location.search);
-                    p.set("expanded", detail.id);
-                    p.set("edit", "1"); // We can use the modal's cancel confirm logic
-                    router.replace(`/orders/incoming?${p.toString()}`, { scroll: false });
-                  }}
-                  className="inline-flex items-center gap-2 rounded-lg border border-rose-100 bg-rose-50 px-5 py-2.5 text-sm font-bold text-rose-600 transition hover:bg-rose-100 active:scale-[0.98]"
-                >
-                  <XCircle className="h-4 w-4" />
-                  ยกเลิกออเดอร์
-                </button>
-              </>
-            )}
+            {canEdit ? (
+              <button
+                type="button"
+                onClick={handleEditInModal}
+                className="inline-flex items-center gap-2 rounded-lg bg-[#003366] px-5 py-2.5 text-sm font-bold text-white shadow-[0_8px_20px_rgba(0,51,102,0.12)] transition hover:bg-[#002244] active:scale-[0.98]"
+              >
+                <Plus className="h-4 w-4" strokeWidth={2.5} />
+                แก้ไขรายการ
+              </button>
+            ) : null}
+            {canDelete ? (
+              <button
+                type="button"
+                onClick={handleDeleteInModal}
+                className="inline-flex items-center gap-2 rounded-lg border border-rose-100 bg-rose-50 px-5 py-2.5 text-sm font-bold text-rose-600 transition hover:bg-rose-100 active:scale-[0.98]"
+              >
+                <XCircle className="h-4 w-4" />
+                ลบออเดอร์
+              </button>
+            ) : null}
           </div>
         </div>
       </div>
@@ -104,12 +115,12 @@ export function DesktopOrderDetail({ detail, deliveryNumbers }: Props) {
         <thead>
           <tr className="border-b border-slate-300 bg-slate-50">
             {(["รหัสสินค้า", "รายการสินค้า", "จำนวน", "หน่วย", "สต็อก", "ราคา/หน่วย", "รวม"] as const).map(
-              (col) => (
+              (column) => (
                 <th
-                  key={col}
+                  key={column}
                   className="px-6 py-3.5 text-center text-sm font-bold uppercase tracking-widest text-slate-700"
                 >
-                  {col}
+                  {column}
                 </th>
               ),
             )}
@@ -142,7 +153,7 @@ export function DesktopOrderDetail({ detail, deliveryNumbers }: Props) {
               </td>
 
               <td className="px-6 py-4 text-center">
-                <span className="text-xl font-bold text-slate-950 tabular-nums">
+                <span className="text-xl font-bold tabular-nums text-slate-950">
                   {item.quantity.toLocaleString("th-TH")}
                 </span>
               </td>
@@ -184,7 +195,7 @@ export function DesktopOrderDetail({ detail, deliveryNumbers }: Props) {
             </td>
             <td className="px-8 py-4 text-center">
               <p className="font-mono text-xl font-bold tabular-nums text-[#003366]">
-                {formatCurrency(detail.items.reduce((s, i) => s + i.lineTotal, 0))} บาท
+                {formatCurrency(detail.items.reduce((sum, item) => sum + item.lineTotal, 0))} บาท
               </p>
             </td>
           </tr>

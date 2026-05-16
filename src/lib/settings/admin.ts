@@ -703,6 +703,12 @@ export async function getSettingsData(organizationId: string): Promise<SettingsD
   return fetchSettingsData(organizationId);
 }
 
+export async function getSettingsDataFresh(
+  organizationId: string,
+): Promise<SettingsData> {
+  return fetchSettingsData(organizationId);
+}
+
 async function fetchSettingsProductsData(organizationId: string): Promise<SettingsProductsData> {
   const admin = getSupabaseAdmin();
   const productsTable = admin.from("products") as unknown as SelectTable;

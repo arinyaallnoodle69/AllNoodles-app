@@ -6,7 +6,7 @@ import { fetchIncomingOrderDetailAction } from "@/app/orders/incoming/actions";
 import { DesktopOrderDetail } from "@/components/orders/desktop-order-detail";
 import { IncomingOrderDateButton } from "@/components/orders/incoming-order-date-button";
 import { IncomingOrderVehicleSelect } from "@/components/orders/incoming-order-vehicle-select";
-import { PrintStoreDeliveryButton } from "@/components/orders/print-store-delivery-button";
+import { OrderDeliveryActionButton } from "@/components/orders/order-delivery-action-button";
 import type { IncomingOrderListItem, OrderDetailData } from "@/lib/orders/detail";
 import type { OrderVehicleOption } from "@/lib/orders/manage";
 
@@ -18,6 +18,7 @@ type IncomingOrdersDesktopTableProps = {
   orderDate: string;
   orders: IncomingOrderListItem[];
   searchTerm: string;
+  selectedCustomerIds: string[];
   vehicles: OrderVehicleOption[];
 };
 
@@ -39,6 +40,7 @@ export const IncomingOrdersDesktopTable = memo(function IncomingOrdersDesktopTab
   orderDate,
   orders,
   searchTerm,
+  selectedCustomerIds,
   vehicles,
 }: IncomingOrdersDesktopTableProps) {
   const [expandedOrderId, setExpandedOrderId] = useState(initialExpandedOrderId);
@@ -62,7 +64,6 @@ export const IncomingOrdersDesktopTable = memo(function IncomingOrdersDesktopTab
     }
 
     setExpandedOrderId(orderId);
-
     if (detailByOrderId[orderId]) return;
 
     setLoadingOrderId(orderId);
@@ -73,7 +74,8 @@ export const IncomingOrdersDesktopTable = memo(function IncomingOrdersDesktopTab
           setDetailError(result.error ?? "โหลดรายละเอียดออเดอร์ไม่สำเร็จ");
           return;
         }
-        setDetailByOrderId((current) => ({ ...current, [orderId]: result.detail! }));
+        const nextDetail = result.detail;
+        setDetailByOrderId((current) => ({ ...current, [orderId]: nextDetail }));
       } catch {
         setDetailError("โหลดรายละเอียดออเดอร์ไม่สำเร็จ");
       } finally {
@@ -83,7 +85,7 @@ export const IncomingOrdersDesktopTable = memo(function IncomingOrdersDesktopTab
   }
 
   return (
-    <div className="overflow-x-auto no-scrollbar rounded-[1.25rem] border border-slate-200 bg-white shadow-[0_18px_48px_rgba(15,23,42,0.05)] lg:block">
+    <div className="rounded-[1.25rem] border border-slate-200 bg-white shadow-[0_18px_48px_rgba(15,23,42,0.05)] lg:block">
       <div className="min-w-[1150px]">
         <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
           <div>
@@ -151,10 +153,7 @@ export const IncomingOrdersDesktopTable = memo(function IncomingOrdersDesktopTab
                             </span>
                           </div>
                           <div className="mt-1 flex items-center gap-2 pl-6">
-                            <p
-                              className="whitespace-nowrap font-mono text-sm font-semibold leading-5 text-slate-950"
-                              translate="no"
-                            >
+                            <p className="whitespace-nowrap font-mono text-sm font-semibold leading-5 text-slate-950" translate="no">
                               {order.orderNumber}
                             </p>
                             {isBilled ? (
@@ -178,9 +177,7 @@ export const IncomingOrdersDesktopTable = memo(function IncomingOrdersDesktopTab
                         </p>
                       </td>
                       <td className="whitespace-nowrap px-3 py-5 text-center">
-                        <p className="font-mono text-base font-bold text-slate-950">
-                          ฿{formatCurrency(order.totalAmount)}
-                        </p>
+                        <p className="font-mono text-base font-bold text-slate-950">฿{formatCurrency(order.totalAmount)}</p>
                       </td>
                       <td className="min-w-0 px-3 py-5 text-left">
                         {hasDelivery && deliveryNumbers ? (
@@ -214,6 +211,7 @@ export const IncomingOrdersDesktopTable = memo(function IncomingOrdersDesktopTab
                             orderId={order.id}
                             orderNumber={order.orderNumber}
                             searchTerm={searchTerm}
+                            selectedCustomerIds={selectedCustomerIds}
                           />
                           <button
                             type="button"
@@ -233,7 +231,7 @@ export const IncomingOrdersDesktopTable = memo(function IncomingOrdersDesktopTab
                             )}
                           </button>
                           {hasDelivery ? (
-                            <PrintStoreDeliveryButton
+                            <OrderDeliveryActionButton
                               date={order.orderDate}
                               customerId={order.customerId}
                               label="พิมพ์ใบส่งของ"

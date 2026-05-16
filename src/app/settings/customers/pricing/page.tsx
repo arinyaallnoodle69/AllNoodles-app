@@ -1,6 +1,6 @@
 import { requireAppRole } from "@/lib/auth/authorization";
 import type { CustomerPriceGroup } from "@/components/settings/customer-price-panel";
-import { getSettingsData } from "@/lib/settings/admin";
+import { getSettingsDataFresh } from "@/lib/settings/admin";
 import { SettingsCustomerPricingPageClient } from "./settings-pricing-client";
 
 export const metadata = {
@@ -9,7 +9,7 @@ export const metadata = {
 
 export default async function SettingsCustomerPricingPage() {
   const session = await requireAppRole("admin");
-  const data = await getSettingsData(session.organizationId);
+  const data = await getSettingsDataFresh(session.organizationId);
 
   const priceGroups: CustomerPriceGroup[] = data.customers.map((customer) => ({
     customerId: customer.id,

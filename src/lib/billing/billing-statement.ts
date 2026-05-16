@@ -72,6 +72,7 @@ export type BillingStatementData = {
 };
 
 type DeliveryNoteRow = {
+  id: string;
   customer_id: string;
   delivery_number: string;
   delivery_date: string;
@@ -82,6 +83,54 @@ type DeliveryNoteRow = {
 function toNum(v: number | string | null | undefined) {
   const n = Number(v ?? 0);
   return Number.isFinite(n) ? n : 0;
+}
+
+async function getDeliveryNoteActualTotals(
+  supabase: ReturnType<typeof getSupabaseAdmin>,
+  noteIds: string[],
+) {
+  if (noteIds.length === 0) {
+    return new Map<string, number>();
+  }
+
+  const { data: dnItems } = await supabase
+    .from("delivery_note_items")
+    .select("delivery_note_id, order_item_id")
+    .in("delivery_note_id", noteIds);
+
+  const orderItemIds = Array.from(
+    new Set((dnItems ?? []).map((item) => item.order_item_id).filter(Boolean) as string[]),
+  );
+  const { data: orderItems } = orderItemIds.length
+    ? await supabase
+        .from("order_items")
+        .select("id, line_total")
+        .in("id", orderItemIds)
+    : { data: [] as { id: string; line_total: number | null }[] };
+
+  const orderItemTotalMap = new Map(
+    (orderItems ?? []).map((item) => [item.id, toNum(item.line_total)]),
+  );
+  const deliveryTotals = new Map<string, number>();
+
+  for (const noteId of noteIds) {
+    deliveryTotals.set(noteId, 0);
+  }
+
+  const seenPairs = new Set<string>();
+  for (const item of dnItems ?? []) {
+    if (!item.order_item_id) continue;
+    const dedupeKey = `${item.delivery_note_id}:${item.order_item_id}`;
+    if (seenPairs.has(dedupeKey)) continue;
+    seenPairs.add(dedupeKey);
+    const currentTotal = deliveryTotals.get(item.delivery_note_id) ?? 0;
+    deliveryTotals.set(
+      item.delivery_note_id,
+      currentTotal + (orderItemTotalMap.get(item.order_item_id) ?? 0),
+    );
+  }
+
+  return deliveryTotals;
 }
 
 function sortByCustomerCode<T extends { customerCode: string; customerName: string }>(rows: T[]) {
@@ -121,9 +170,15 @@ export async function getBillingCandidates(
 
   if (notesError || !notes) return [];
 
+  const deliveryTotals = await getDeliveryNoteActualTotals(
+    supabase,
+    (notes as { id: string }[]).map((note) => note.id),
+  );
+
   const grouped = new Map<string, BillingCandidate>();
 
   for (const note of (notes as {
+    id: string;
     customer_id: string;
     total_amount: number;
     delivery_number: string;
@@ -140,15 +195,19 @@ export async function getBillingCandidates(
       deliveries: [] as BillingCandidate["deliveries"],
     };
 
+    const actualAmount = deliveryTotals.has(note.id)
+      ? (deliveryTotals.get(note.id) ?? 0)
+      : toNum(note.total_amount);
+
     current.deliveryCount += 1;
-    current.totalAmount += toNum(note.total_amount);
+    current.totalAmount += actualAmount;
     if (note.delivery_date > current.latestDeliveryDate) {
       current.latestDeliveryDate = note.delivery_date;
     }
     current.deliveries.push({
       number: note.delivery_number,
       date: note.delivery_date,
-      amount: toNum(note.total_amount),
+      amount: actualAmount,
       isAlreadyBilled: false,
       billingNumber: null,
     });
@@ -324,7 +383,7 @@ export async function getBillingStatementData(
 
   let notesQuery = supabase
     .from("delivery_notes")
-    .select("customer_id, delivery_number, delivery_date, total_amount, notes")
+    .select("id, customer_id, delivery_number, delivery_date, total_amount, notes")
     .eq("organization_id", organizationId)
     .eq("customer_id", customerId)
     .eq("status", "confirmed")
@@ -353,6 +412,10 @@ export async function getBillingStatementData(
   if (!orgResult.data || !custResult.data || !notesResult.data || notesResult.data.length === 0) {
     return null;
   }
+  const deliveryTotals = await getDeliveryNoteActualTotals(
+    supabase,
+    (notesResult.data as DeliveryNoteRow[]).map((note) => note.id),
+  );
 
   const orgMeta = (orgResult.data.metadata as Record<string, string>) || {};
   const orgInfo = {
@@ -365,7 +428,9 @@ export async function getBillingStatementData(
     lineNumber: idx + 1,
     deliveryNumber: note.delivery_number,
     deliveryDate: note.delivery_date,
-    totalAmount: toNum(note.total_amount),
+    totalAmount: deliveryTotals.has(note.id)
+      ? (deliveryTotals.get(note.id) ?? 0)
+      : toNum(note.total_amount),
     notes: note.notes,
   }));
 

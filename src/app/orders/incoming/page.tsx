@@ -8,6 +8,7 @@ import { IncomingOrderOpenCard } from "@/components/orders/incoming-order-open-c
 import { IncomingOrderDateFilter } from "@/components/orders/incoming-order-date-filter";
 import { PendingLineOrdersSection } from "@/components/orders/pending-line-orders-section";
 import { MobileSearchDrawer } from "@/components/mobile-search/mobile-search-drawer";
+import { OrderCustomerFilter } from "@/components/orders/order-customer-filter";
 import { requireAppRole } from "@/lib/auth/authorization";
 import { normalizeOrderDate, getTodayInBangkok } from "@/lib/orders/date";
 import { getCustomerOrderCountsByDate, getIncomingOrders, getOrderDetailById } from "@/lib/orders/detail";
@@ -21,7 +22,14 @@ import { PrintPackingListButton } from "@/components/orders/print-packing-list-b
 export const metadata = { title: "รายการออเดอร์" };
 
 type IncomingOrdersPageProps = {
-  searchParams: Promise<{ create?: string; date?: string; endDate?: string; expanded?: string; q?: string }>;
+  searchParams: Promise<{
+    create?: string;
+    customers?: string;
+    date?: string;
+    endDate?: string;
+    expanded?: string;
+    q?: string;
+  }>;
 };
 
 function formatCurrency(value: number) {
@@ -42,35 +50,65 @@ export default async function IncomingOrdersPage({ searchParams }: IncomingOrder
   const searchTerm = params.q?.trim() ?? "";
   const expandedOrderId = params.expanded?.trim() ?? "";
   const autoOpenCreateModal = params.create === "1";
-const [
-  orders,
-  expandedDetail,
-  customers,
-  products,
-  vehicles,
-  pendingLineOrders,
-  customerOrderCountsToday,
-  deliveryData,
-  billedDeliveryNumbers,
-] = await Promise.all([
-  getIncomingOrders(session.organizationId, { orderDate, endDate, searchTerm }),
-  expandedOrderId ? getOrderDetailById(session.organizationId, expandedOrderId) : Promise.resolve(null),
-  getCustomersForOrder(session.organizationId),
-  getProductsForOrder(session.organizationId),
-  getVehiclesForOrder(session.organizationId),
-  getPendingLineOrders(session.organizationId, { orderDate, endDate, searchTerm }),
-  getCustomerOrderCountsByDate(session.organizationId, orderDate, endDate),
-  getDeliveryList(session.organizationId, orderDate, endDate, searchTerm || ""),
-  getBilledDeliveryNumbersForRange(session.organizationId, orderDate, endDate),
-]);
+  const selectedCustomerIds = Array.from(
+    new Set(
+      (params.customers ?? "")
+        .split(",")
+        .map((value) => value.trim())
+        .filter(Boolean),
+    ),
+  );
+
+  const [
+    orders,
+    expandedDetail,
+    customers,
+    products,
+    vehicles,
+    pendingLineOrders,
+    customerOrderCountsToday,
+    deliveryData,
+    billedDeliveryNumbers,
+  ] = await Promise.all([
+    getIncomingOrders(session.organizationId, { orderDate, endDate, searchTerm }),
+    expandedOrderId ? getOrderDetailById(session.organizationId, expandedOrderId) : Promise.resolve(null),
+    getCustomersForOrder(session.organizationId),
+    getProductsForOrder(session.organizationId),
+    getVehiclesForOrder(session.organizationId),
+    getPendingLineOrders(session.organizationId, { orderDate, endDate, searchTerm }),
+    getCustomerOrderCountsByDate(session.organizationId, orderDate, endDate),
+    getDeliveryList(session.organizationId, orderDate, endDate, searchTerm || ""),
+    getBilledDeliveryNumbersForRange(session.organizationId, orderDate, endDate),
+  ]);
+
+  const customerOptions = customers.map((customer) => ({
+    id: customer.id,
+    code: customer.code,
+    name: customer.name,
+  }));
+
+  const activeOrders = orders.filter((order) => order.status !== "cancelled");
+
+  const filteredOrders =
+    selectedCustomerIds.length > 0
+      ? activeOrders.filter((order) => selectedCustomerIds.includes(order.customerId))
+      : activeOrders;
+
+  const filteredExpandedDetail =
+    expandedDetail &&
+    expandedDetail.status !== "cancelled" &&
+    (selectedCustomerIds.length === 0 || selectedCustomerIds.includes(expandedDetail.customer.id))
+      ? expandedDetail
+      : null;
 
   function buildExpandedHref(nextExpandedId: string | null) {
-    const p = new URLSearchParams();
-    p.set("date", orderDate);
-    if (endDate !== orderDate) p.set("endDate", endDate);
-    if (searchTerm) p.set("q", searchTerm);
-    if (nextExpandedId) p.set("expanded", nextExpandedId);
-    return `/orders/incoming?${p.toString()}`;
+    const query = new URLSearchParams();
+    query.set("date", orderDate);
+    if (endDate !== orderDate) query.set("endDate", endDate);
+    if (searchTerm) query.set("q", searchTerm);
+    if (selectedCustomerIds.length > 0) query.set("customers", selectedCustomerIds.join(","));
+    if (nextExpandedId) query.set("expanded", nextExpandedId);
+    return `/orders/incoming?${query.toString()}`;
   }
 
   const deliveryMap = new Map<string, string[]>();
@@ -82,20 +120,20 @@ const [
     );
   }
 
-  interface GroupedOrderStore {
+  type GroupedOrderStore = {
     customerId: string;
     customerName: string;
     customerCode: string;
+    hasDelivery: boolean;
     orderDate: string;
     orderIds: string[];
     orderNumbers: string[];
     orderRounds: number;
     totalAmount: number;
-    hasDelivery: boolean;
-  }
+  };
 
   const visibleOrderStores = Array.from(
-    orders
+    filteredOrders
       .filter((order) => order.status === "submitted" || order.status === "confirmed")
       .reduce((storeMap, order) => {
         const groupKey = `${order.customerId}_${order.orderDate}`;
@@ -103,12 +141,12 @@ const [
           customerId: order.customerId,
           customerName: order.customerName,
           customerCode: order.customerCode,
+          hasDelivery: false,
           orderDate: order.orderDate,
           orderIds: [] as string[],
           orderNumbers: [] as string[],
           orderRounds: 0,
           totalAmount: 0,
-          hasDelivery: false,
         };
 
         current.orderIds.push(order.id);
@@ -121,8 +159,9 @@ const [
       .values(),
   ).map((store) => ({
     ...store,
-    hasDelivery: !!(deliveryMap.get(`${store.customerId}_${store.orderDate}`)?.length)
+    hasDelivery: Boolean(deliveryMap.get(`${store.customerId}_${store.orderDate}`)?.length),
   }));
+
   const deliveryByCustomerId = Object.fromEntries(deliveryMap.entries());
   const billedDeliveryByCustomerDate = Object.fromEntries(
     Array.from(deliveryMap.entries()).map(([key, deliveryNumbers]) => [
@@ -149,6 +188,15 @@ const [
                 className="w-full rounded-lg border border-white/25 bg-white py-2.5 pl-10 pr-4 text-sm font-medium text-slate-950 outline-none transition focus:border-white focus:ring-2 focus:ring-white/25"
               />
             </label>
+
+            <div className="w-72">
+              <OrderCustomerFilter
+                options={customerOptions}
+                selectedIds={selectedCustomerIds}
+                placeholder="เลือกร้านค้า"
+              />
+            </div>
+
             <button
               type="submit"
               className="rounded-lg bg-white px-5 py-2.5 text-sm font-bold text-[#003366] shadow-sm transition hover:bg-slate-100 active:scale-[0.98]"
@@ -166,7 +214,7 @@ const [
                     noAutoSubmit={true}
                   />
                 </div>
-                <span className="text-white/40 font-bold">ถึง</span>
+                <span className="font-bold text-white/40">ถึง</span>
                 <div className="w-40">
                   <IncomingOrderDateFilter
                     id="incoming-endDate"
@@ -182,10 +230,9 @@ const [
       }
     >
       <div className="space-y-6">
-        {/* Floating Create Order Button for Desktop - Positioned at the very bottom-right, below Scroll-to-Top (which is at bottom-24) */}
         <div className="fixed bottom-6 right-6 z-[100] hidden lg:block">
           <div className="group relative">
-            <div className="absolute -inset-1 rounded-full bg-gradient-to-r from-[#003366] to-[#1a237e] opacity-25 blur transition duration-300 group-hover:opacity-50"></div>
+            <div className="absolute -inset-1 rounded-full bg-gradient-to-r from-[#003366] to-[#1a237e] opacity-25 blur transition duration-300 group-hover:opacity-50" />
             <div className="relative">
               <CreateOrderModal
                 autoOpen={autoOpenCreateModal}
@@ -220,6 +267,7 @@ const [
                 />
               </div>
             </div>
+
             <div className="space-y-1">
               <label className="ml-1 text-xs font-bold text-slate-900">ค้นหาออเดอร์</label>
               <label className="relative block">
@@ -233,6 +281,16 @@ const [
                 />
               </label>
             </div>
+
+            <div className="space-y-1">
+              <label className="ml-1 text-xs font-bold text-slate-900">เลือกร้านค้า</label>
+              <OrderCustomerFilter
+                options={customerOptions}
+                selectedIds={selectedCustomerIds}
+                placeholder="เลือกร้านค้า"
+              />
+            </div>
+
             <button
               type="submit"
               className="mt-2 w-full rounded-2xl bg-[#003366] py-4 text-base font-bold text-white shadow-[0_12px_24px_rgba(0,51,102,0.2)] transition active:scale-[0.98]"
@@ -248,39 +306,42 @@ const [
           <div className="flex flex-col gap-1.5 px-1 py-1 sm:flex-row sm:items-center sm:justify-between sm:py-3">
             <div className="flex items-center gap-2">
               <h2 className="text-base font-bold text-slate-950 sm:text-xl">รายการออเดอร์เข้า</h2>
-              {orders.length > 0 ? (
+              {filteredOrders.length > 0 ? (
                 <span className="rounded-md bg-slate-100 px-1 py-0.5 text-[9px] font-bold text-slate-950 ring-1 ring-slate-200 sm:text-xs">
-                  {orders.length}
+                  {filteredOrders.length}
                 </span>
               ) : null}
             </div>
-            <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1 -mx-1 px-1 sm:overflow-visible sm:pb-0 sm:mx-0 sm:px-0">
-              <div className="flex flex-nowrap items-center gap-1.5 min-w-max">
+
+            <div className="no-scrollbar -mx-1 flex items-center gap-2 overflow-x-auto px-1 pb-1 sm:mx-0 sm:overflow-visible sm:px-0 sm:pb-0">
+              <div className="flex min-w-max flex-nowrap items-center gap-1.5">
                 <PrintPackingListButton date={orderDate} endDate={endDate} />
                 <IncomingOrdersDeliveryActions date={orderDate} endDate={endDate} stores={visibleOrderStores} />
               </div>
             </div>
           </div>
 
-          {orders.length > 0 ? (
+          {filteredOrders.length > 0 ? (
             <>
-              <div className="relative left-1/2 w-screen -translate-x-1/2 lg:hidden">
+              <div className="relative left-1/2 w-screen -translate-x-1/2 xl:hidden">
                 <div className="grid grid-cols-1 divide-y divide-slate-200 border-t border-slate-200 sm:grid-cols-2 sm:divide-y-0 sm:gap-px sm:bg-slate-200">
-                  {orders.map((order, index) => {
-                    const showDivider = index === 0 || order.orderDate !== orders[index - 1].orderDate;
+                  {filteredOrders.map((order, index) => {
+                    const showDivider = index === 0 || order.orderDate !== filteredOrders[index - 1].orderDate;
+
                     return (
                       <Fragment key={order.id}>
-                        {showDivider && (
-                          <div className="col-span-full bg-slate-50/80 px-4 py-3 flex items-center gap-3">
-                            <div className="h-[2px] flex-1 bg-slate-200"></div>
-                            <div className="shrink-0 px-4 py-1.5 rounded-2xl bg-white border border-slate-200 shadow-sm">
-                              <span className="text-[13px] font-black text-[#003366] tracking-wider uppercase">
+                        {showDivider ? (
+                          <div className="col-span-full flex items-center gap-3 bg-slate-50/80 px-4 py-3">
+                            <div className="h-[2px] flex-1 bg-slate-200" />
+                            <div className="shrink-0 rounded-2xl border border-slate-200 bg-white px-4 py-1.5 shadow-sm">
+                              <span className="text-[13px] font-black uppercase tracking-wider text-[#003366]">
                                 {formatDisplayDate(order.orderDate)}
                               </span>
                             </div>
-                            <div className="h-[2px] flex-1 bg-slate-200"></div>
+                            <div className="h-[2px] flex-1 bg-slate-200" />
                           </div>
-                        )}
+                        ) : null}
+
                         <IncomingOrderOpenCard
                           href={buildExpandedHref(order.id)}
                           orderId={order.id}
@@ -289,17 +350,18 @@ const [
                           customerName={order.customerName}
                           customerCode={order.customerCode}
                           channelLabel={order.channelLabel}
+                          currentListDate={orderDate}
+                          deliveryNumbers={deliveryMap.get(`${order.customerId}_${order.orderDate}`)}
                           displayDate={formatDisplayDate(order.orderDate)}
+                          isBilled={billedDeliveryByCustomerDate[`${order.customerId}_${order.orderDate}`] ?? false}
+                          orderDate={order.orderDate}
+                          productCount={order.productCount}
+                          searchTerm={searchTerm}
+                          selectedCustomerIds={selectedCustomerIds}
                           totalAmountText={`${formatCurrency(order.totalAmount)} บาท`}
                           vehicleId={order.vehicleId}
                           vehicleName={order.vehicleName}
                           vehicles={vehicles}
-                          deliveryNumbers={deliveryMap.get(`${order.customerId}_${order.orderDate}`)}
-                          isBilled={billedDeliveryByCustomerDate[`${order.customerId}_${order.orderDate}`] ?? false}
-                          orderDate={order.orderDate}
-                          currentListDate={orderDate}
-                          productCount={order.productCount}
-                          searchTerm={searchTerm}
                         />
                       </Fragment>
                     );
@@ -307,16 +369,17 @@ const [
                 </div>
               </div>
 
-              <div className="hidden overflow-x-auto no-scrollbar lg:block">
+              <div className="hidden overflow-x-auto no-scrollbar xl:block">
                 <div className="min-w-[1100px]">
                   <IncomingOrdersDesktopTable
                     billedByCustomerDate={billedDeliveryByCustomerDate}
                     deliveryByCustomerId={deliveryByCustomerId}
-                    initialExpandedDetail={expandedDetail}
+                    initialExpandedDetail={filteredExpandedDetail}
                     initialExpandedOrderId={expandedOrderId}
                     orderDate={orderDate}
-                    orders={orders}
+                    orders={filteredOrders}
                     searchTerm={searchTerm}
+                    selectedCustomerIds={selectedCustomerIds}
                     vehicles={vehicles}
                   />
                 </div>
@@ -324,9 +387,7 @@ const [
             </>
           ) : (
             <div className="px-6 py-16 text-center">
-            <p className="text-lg font-semibold text-slate-950">
-              ยังไม่มีออเดอร์เข้าในช่วงวันที่เลือก
-            </p>
+              <p className="text-lg font-semibold text-slate-950">ยังไม่มีออเดอร์เข้าในช่วงวันที่เลือก</p>
               <p className="mt-2 text-sm font-medium text-slate-950">
                 เมื่อลูกค้าส่งคำสั่งซื้อเข้ามา ระบบจะแสดงรายการออเดอร์แต่ละใบที่หน้านี้
               </p>
@@ -335,11 +396,11 @@ const [
         </section>
       </div>
 
-      {expandedOrderId ? (
+      {expandedOrderId && filteredExpandedDetail ? (
         <IncomingOrderModal
-          allOrders={orders}
+          allOrders={filteredOrders}
           date={orderDate}
-          detail={expandedDetail}
+          detail={filteredExpandedDetail}
           expandedId={expandedOrderId}
           products={products}
           searchTerm={searchTerm}

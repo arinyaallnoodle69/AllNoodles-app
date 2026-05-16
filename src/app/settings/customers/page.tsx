@@ -1,5 +1,5 @@
 import { requireAppRole } from "@/lib/auth/authorization";
-import { getSettingsData } from "@/lib/settings/admin";
+import { getSettingsDataFresh } from "@/lib/settings/admin";
 import { SettingsCustomersPageClient } from "./settings-customers-client";
 
 export const metadata = {
@@ -17,9 +17,10 @@ export default async function SettingsCustomersPage({
   searchParams,
 }: SettingsCustomersPageProps) {
   const session = await requireAppRole("admin");
-  const data = await getSettingsData(session.organizationId);
+  const data = await getSettingsDataFresh(session.organizationId);
   const params = await searchParams;
-  const editingCustomer = data.customers.find((customer) => customer.id === params.edit) ?? null;
+  const editingCustomer =
+    data.customers.find((customer) => customer.id === params.edit) ?? null;
 
   return (
     <SettingsCustomersPageClient

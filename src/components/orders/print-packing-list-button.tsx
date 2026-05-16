@@ -31,8 +31,6 @@ export function PrintPackingListButton({ date, endDate }: { date: string; endDat
       win.addEventListener("afterprint", done, { once: true });
     };
     iframe.onerror = done;
-    
-    // Safety timeout (2 mins)
     setTimeout(done, 120000);
   }
 

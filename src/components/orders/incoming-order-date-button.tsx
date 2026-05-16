@@ -12,6 +12,7 @@ type IncomingOrderDateButtonProps = {
   orderId: string;
   orderNumber: string;
   searchTerm?: string;
+  selectedCustomerIds?: string[];
 };
 
 export function IncomingOrderDateButton({
@@ -20,6 +21,7 @@ export function IncomingOrderDateButton({
   orderId,
   orderNumber,
   searchTerm = "",
+  selectedCustomerIds = [],
 }: IncomingOrderDateButtonProps) {
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
@@ -56,6 +58,9 @@ export function IncomingOrderDateButton({
       params.set("date", targetDate);
       if (searchTerm.trim()) {
         params.set("q", searchTerm.trim());
+      }
+      if (selectedCustomerIds.length > 0) {
+        params.set("customers", selectedCustomerIds.join(","));
       }
 
       setIsOpen(false);

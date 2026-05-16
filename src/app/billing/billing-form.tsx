@@ -18,6 +18,7 @@ import { MobileSearchDrawer } from "@/components/mobile-search/mobile-search-dra
 import { useMobileSearch } from "@/components/mobile-search/mobile-search-context";
 import type { BillingCandidate } from "@/lib/billing/billing-statement";
 import { fmtDateTH } from "@/lib/utils/date";
+import { BillingPreviewButton } from "./billing-preview-button";
 
 type BillingFormProps = {
   initialFromDate: string;
@@ -551,11 +552,21 @@ export function BillingForm({
                   <span className="text-[10px] md:text-xs font-black uppercase tracking-widest text-slate-400">
                     รวมยอดร้านนี้ ({candidate.deliveries.length} ใบจัดส่ง)
                   </span>
-                  <div className="flex items-baseline gap-1.5">
-                    <span className="font-mono text-lg md:text-xl font-black leading-none text-[#003366]">
-                      {candidate.deliveries.reduce((sum, d) => sum + d.amount, 0).toLocaleString("th-TH", { minimumFractionDigits: 2 })}
-                    </span>
-                    <span className="text-[11px] font-bold text-slate-400 uppercase tracking-tight">บาท</span>
+                  <div className="flex items-center gap-4">
+                    <div className="flex items-baseline gap-1.5">
+                      <span className="font-mono text-lg md:text-xl font-black leading-none text-[#003366]">
+                        {candidate.deliveries.reduce((sum, d) => sum + d.amount, 0).toLocaleString("th-TH", { minimumFractionDigits: 2 })}
+                      </span>
+                      <span className="text-[11px] font-bold text-slate-400 uppercase tracking-tight">บาท</span>
+                    </div>
+                    <BillingPreviewButton
+                      customerName={candidate.customerName}
+                      customerCode={candidate.customerCode}
+                      fromDate={fromDate}
+                      toDate={toDate}
+                      deliveries={candidate.deliveries}
+                      totalAmount={candidate.deliveries.reduce((sum, d) => sum + d.amount, 0)}
+                    />
                   </div>
                 </div>
               </div>

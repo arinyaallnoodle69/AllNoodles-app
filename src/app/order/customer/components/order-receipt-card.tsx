@@ -71,10 +71,8 @@ export function OrderReceiptCard({
         />
       </div>
 
-      <div style={{ textAlign: "center", padding: `0px ${SIDE_PADDING} 10px` }}>
-        <div style={{ fontSize: "12px", lineHeight: 1.6 }}>
-          T&amp;Y Noodle - ใบยืนยันคำสั่งซื้อ
-        </div>
+      <div style={{ textAlign: "center", padding: `0 ${SIDE_PADDING} 10px` }}>
+        <div style={{ fontSize: "12px", lineHeight: 1.6 }}>T&amp;Y Noodle - ใบยืนยันคำสั่งซื้อ</div>
         <div style={{ fontSize: "16px", fontWeight: 800, lineHeight: 1.3, marginTop: "2px" }}>
           เลขที่ออเดอร์: {orderNumber}
         </div>
@@ -108,7 +106,7 @@ export function OrderReceiptCard({
       <div style={LINE} />
 
       {items.map((item, index) => (
-        <div key={index}>
+        <div key={`${item.name}-${item.saleUnitLabel}-${index}`}>
           <div
             style={{
               display: "grid",
@@ -130,9 +128,7 @@ export function OrderReceiptCard({
 
       <div style={{ padding: `36px ${SIDE_PADDING} 32px`, textAlign: "center" }}>
         <div style={{ fontSize: "14px", fontWeight: 800, lineHeight: 1.6 }}>เส้นรังนก T&amp;Y Noodle</div>
-        <div style={{ fontSize: "13px", marginTop: "2px", lineHeight: 1.6 }}>
-          ขอบคุณสำหรับการสนับสนุนครับ
-        </div>
+        <div style={{ fontSize: "13px", marginTop: "2px", lineHeight: 1.6 }}>ขอบคุณสำหรับการสนับสนุนครับ</div>
       </div>
     </div>
   );

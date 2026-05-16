@@ -24,7 +24,7 @@ import type { OrderDetailData, IncomingOrderListItem } from "@/lib/orders/detail
 import type { OrderProductOption } from "@/lib/orders/manage";
 import type { AddedOrderItemDraft } from "@/components/orders/order-add-product-picker";
 import {
-  cancelOrderAction,
+  deleteOrderCascadeActionV3,
   updateOrderItemsBatchAction,
 } from "@/app/orders/incoming/actions";
 
@@ -52,6 +52,8 @@ function formatDisplayDate(value: string) {
   if (!y || !m || !d) return value;
   return `${d}/${m}/${parseInt(y, 10) + 543}`;
 }
+
+type StockReductionMode = "return" | "lost";
 
 // â”€â”€â”€ Sub-components â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
@@ -85,16 +87,18 @@ const ItemsViewList = memo(({ detail }: { detail: OrderDetailData }) => {
                 </div>
               </div>
 
-              <div className="flex items-center gap-3 mt-3 h-8">
-                <div className={`flex h-full items-center gap-2 px-2.5 border-2 rounded-lg ${item.stockQuantity < 0 ? "bg-[#FF0000] border-[#FF0000] text-white shadow-sm" : "bg-[#003366] border-[#003366] text-white shadow-sm"}`}>
+              <div className="mt-3 flex h-8 items-center gap-2.5">
+                <div
+                  className={`flex h-full shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg border-2 px-2 ${item.stockQuantity < 0 ? "bg-[#FF0000] border-[#FF0000] text-white shadow-sm" : "bg-[#003366] border-[#003366] text-white shadow-sm"}`}
+                >
                   <Boxes className="h-4 w-4" />
-                  <span className="text-[12px] font-black uppercase tracking-wider">สต็อก:</span>
-                  <span className="text-[16px] font-black tabular-nums">{item.stockQuantity.toLocaleString("th-TH")}</span>
+                  <span className="text-[11px] font-black uppercase tracking-[0.08em]">สต็อก:</span>
+                  <span className="text-[15px] font-black tabular-nums">{item.stockQuantity.toLocaleString("th-TH")}</span>
                 </div>
                 {item.shortQuantity > 0 && (
-                  <div className="flex h-full items-center gap-2 bg-rose-600 px-2.5 border border-rose-700 shadow-sm">
+                  <div className="flex h-full min-w-0 items-center gap-1.5 whitespace-nowrap border border-rose-700 bg-rose-600 px-2 shadow-sm">
                     <AlertTriangle className="h-3.5 w-3.5 text-white" />
-                    <span className="text-[10px] font-black text-white uppercase tracking-wider">ขาด {item.shortQuantity}</span>
+                    <span className="text-[9.5px] font-black uppercase tracking-[0.08em] text-white">ขาด {item.shortQuantity}</span>
                   </div>
                 )}
               </div>
@@ -141,6 +145,9 @@ const EditItemsPanel = memo(({
   const [removed, setRemoved] = useState<Set<string>>(new Set());
   const [addedItems, setAddedItems] = useState<AddedOrderItemDraft[]>([]);
   const [addedQuantityInputs, setAddedQuantityInputs] = useState<Record<string, string>>({});
+  const [reductionModes, setReductionModes] = useState<Record<string, StockReductionMode>>(
+    Object.fromEntries(detail.items.map((item) => [item.id, "return"])),
+  );
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -152,6 +159,7 @@ const EditItemsPanel = memo(({
     setRemoved(new Set());
     setAddedItems([]);
     setAddedQuantityInputs({});
+    setReductionModes(Object.fromEntries(detail.items.map((item) => [item.id, "return"])));
   }, [detail]);
 
   function getItemRules(productId: string, saleUnitId: string | null) {
@@ -271,7 +279,15 @@ const EditItemsPanel = memo(({
             const original = detail.items.find((i) => i.id === id);
             return original && Number(original.quantity) !== qty;
           })
-          .map(([itemId, quantity]) => ({ itemId, quantity })),
+          .map(([itemId, quantity]) => {
+            const original = detail.items.find((item) => item.id === itemId);
+            const reductionMode =
+              original && quantity < Number(original.quantity)
+                ? (reductionModes[itemId] ?? "return")
+                : undefined;
+
+            return { itemId, quantity, reductionMode };
+          }),
         additions: normalizedAddedItems.map((item) => ({
           productId: item.productId,
           productSaleUnitId: item.productSaleUnitId,
@@ -298,6 +314,11 @@ const EditItemsPanel = memo(({
     const unit = product.saleUnits.find((saleUnit) => saleUnit.id === item.productSaleUnitId);
     const ratio = unit?.baseUnitQuantity && unit.baseUnitQuantity > 0 ? unit.baseUnitQuantity : 1;
     return Math.floor(product.stockQuantity / ratio);
+  }
+
+  function isQuantityReduced(itemId: string, currentQuantity: number) {
+    const original = detail.items.find((item) => item.id === itemId);
+    return original ? currentQuantity < Number(original.quantity) : false;
   }
 
   return (
@@ -471,19 +492,47 @@ const EditItemsPanel = memo(({
                           </span>
                         </td>
                         <td className="px-5 py-4">
-                          <div className="flex items-center justify-center gap-3">
-                            <button onClick={() => handleQty(item.id, -1)} className="h-8 w-8 rounded-lg bg-slate-100 text-slate-600 flex items-center justify-center active:scale-90"><Minus className="h-4 w-4" strokeWidth={3} /></button>
-                            <input
-                              type="number"
-                              inputMode="decimal"
-                              min={1}
-                              step="0.001"
-                              value={quantityInputs[item.id] ?? String(qty)}
-                              onChange={(e) => handleQuantityInput(item.id, e.target.value)}
-                              onBlur={() => commitQuantityInput(item.id)}
-                              className="h-9 w-24 rounded-lg border border-slate-200 bg-white px-2 text-center font-black text-slate-950 outline-none transition focus:border-[#003366] focus:ring-2 focus:ring-[#003366]/10"
-                            />
-                            <button onClick={() => handleQty(item.id, +1)} className="h-8 w-8 rounded-lg bg-[#003366] text-white flex items-center justify-center active:scale-90"><Plus className="h-4 w-4" strokeWidth={3} /></button>
+                          <div className="flex flex-col items-center gap-2">
+                            <div className="flex items-center justify-center gap-3">
+                              <button onClick={() => handleQty(item.id, -1)} className="h-8 w-8 rounded-lg bg-slate-100 text-slate-600 flex items-center justify-center active:scale-90"><Minus className="h-4 w-4" strokeWidth={3} /></button>
+                              <input
+                                type="number"
+                                inputMode="decimal"
+                                min={1}
+                                step="0.001"
+                                value={quantityInputs[item.id] ?? String(qty)}
+                                onChange={(e) => handleQuantityInput(item.id, e.target.value)}
+                                onBlur={() => commitQuantityInput(item.id)}
+                                className="h-9 w-24 rounded-lg border border-slate-200 bg-white px-2 text-center font-black text-slate-950 outline-none transition focus:border-[#003366] focus:ring-2 focus:ring-[#003366]/10"
+                              />
+                              <button onClick={() => handleQty(item.id, +1)} className="h-8 w-8 rounded-lg bg-[#003366] text-white flex items-center justify-center active:scale-90"><Plus className="h-4 w-4" strokeWidth={3} /></button>
+                            </div>
+                            {isQuantityReduced(item.id, qty) ? (
+                              <div className="inline-flex items-center rounded-xl border border-slate-200 bg-white p-1">
+                                <button
+                                  type="button"
+                                  onClick={() => setReductionModes((current) => ({ ...current, [item.id]: "return" }))}
+                                  className={`rounded-lg px-2.5 py-1 text-[10px] font-black transition ${
+                                    (reductionModes[item.id] ?? "return") === "return"
+                                      ? "bg-[#003366] text-white"
+                                      : "text-slate-500"
+                                  }`}
+                                >
+                                  คืนสต็อค
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setReductionModes((current) => ({ ...current, [item.id]: "lost" }))}
+                                  className={`rounded-lg px-2.5 py-1 text-[10px] font-black transition ${
+                                    reductionModes[item.id] === "lost"
+                                      ? "bg-rose-600 text-white"
+                                      : "text-slate-500"
+                                  }`}
+                                >
+                                  ของหาย
+                                </button>
+                              </div>
+                            ) : null}
                           </div>
                         </td>
                         <td className="px-5 py-4 text-center">
@@ -600,19 +649,47 @@ const EditItemsPanel = memo(({
                       </div>
                     </div>
                     <div className="mt-5 flex items-center justify-between gap-4 border-t border-slate-300 pt-4">
-                      <div className="flex items-center gap-3">
-                        <button onClick={() => handleQty(item.id, -1)} className="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-100 text-slate-600 active:scale-95"><Minus className="h-6 w-6" strokeWidth={3} /></button>
-                        <input
-                          type="number"
-                          inputMode="decimal"
-                          min={1}
-                          step="0.001"
-                          value={quantityInputs[item.id] ?? String(qty)}
-                          onChange={(e) => handleQuantityInput(item.id, e.target.value)}
-                          onBlur={() => commitQuantityInput(item.id)}
-                          className="h-11 w-24 rounded-2xl border border-slate-200 bg-white px-3 text-center text-2xl font-black text-slate-950 tabular-nums outline-none transition focus:border-[#003366] focus:ring-2 focus:ring-[#003366]/10"
-                        />
-                        <button onClick={() => handleQty(item.id, +1)} className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#003366] text-white shadow-md active:scale-95"><Plus className="h-6 w-6" strokeWidth={3} /></button>
+                      <div className="flex flex-col gap-2">
+                        <div className="flex items-center gap-3">
+                          <button onClick={() => handleQty(item.id, -1)} className="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-100 text-slate-600 active:scale-95"><Minus className="h-6 w-6" strokeWidth={3} /></button>
+                          <input
+                            type="number"
+                            inputMode="decimal"
+                            min={1}
+                            step="0.001"
+                            value={quantityInputs[item.id] ?? String(qty)}
+                            onChange={(e) => handleQuantityInput(item.id, e.target.value)}
+                            onBlur={() => commitQuantityInput(item.id)}
+                            className="h-11 w-24 rounded-2xl border border-slate-200 bg-white px-3 text-center text-2xl font-black text-slate-950 tabular-nums outline-none transition focus:border-[#003366] focus:ring-2 focus:ring-[#003366]/10"
+                          />
+                          <button onClick={() => handleQty(item.id, +1)} className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#003366] text-white shadow-md active:scale-95"><Plus className="h-6 w-6" strokeWidth={3} /></button>
+                        </div>
+                        {isQuantityReduced(item.id, qty) ? (
+                          <div className="inline-flex items-center self-start rounded-2xl border border-slate-200 bg-white p-1">
+                            <button
+                              type="button"
+                              onClick={() => setReductionModes((current) => ({ ...current, [item.id]: "return" }))}
+                              className={`rounded-xl px-3 py-1.5 text-[11px] font-black transition ${
+                                (reductionModes[item.id] ?? "return") === "return"
+                                  ? "bg-[#003366] text-white"
+                                  : "text-slate-500"
+                              }`}
+                            >
+                              คืนสต็อค
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setReductionModes((current) => ({ ...current, [item.id]: "lost" }))}
+                              className={`rounded-xl px-3 py-1.5 text-[11px] font-black transition ${
+                                reductionModes[item.id] === "lost"
+                                  ? "bg-rose-600 text-white"
+                                  : "text-slate-500"
+                              }`}
+                            >
+                              ของหาย
+                            </button>
+                          </div>
+                        ) : null}
                       </div>
                       <div className="h-10 border-l border-slate-200" />
                       <div className="text-right flex-1">
@@ -666,25 +743,27 @@ export function IncomingOrderModal({ allOrders, detail, expandedId, products }: 
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const startInEditMode = searchParams.get("edit") === "1";
+  const startInDeleteMode = searchParams.get("delete") === "1";
 
   const [editMode, setEditMode] = useState(startInEditMode);
-  const [confirmCancel, setConfirmCancel] = useState(false);
+  const [confirmCancel, setConfirmCancel] = useState(startInDeleteMode);
   const [navPending, startNavTransition] = useTransition();
   const [actionPending, startActionTransition] = useTransition();
   const [editModePending, startEditModeTransition] = useTransition();
   const [isDesktopViewport, setIsDesktopViewport] = useState(false);
   const [isPreparingEdit, setIsPreparingEdit] = useState(false);
   const [saveToast, setSaveToast] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const [slideAnim, setSlideAnim] = useState<"slide-left" | "slide-right" | null>(null);
   const [isClosing, setIsClosing] = useState(false);
 
   useEffect(() => {
     setEditMode(startInEditMode);
-    setConfirmCancel(false);
+    setConfirmCancel(startInDeleteMode);
     setSlideAnim(null);
     setSaveToast(null);
-  }, [expandedId, startInEditMode]);
+  }, [expandedId, startInDeleteMode, startInEditMode]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -732,9 +811,38 @@ export function IncomingOrderModal({ allOrders, detail, expandedId, products }: 
     setIsClosing(true);
     setTimeout(() => {
       const p = new URLSearchParams(searchParams.toString());
-      p.delete("expanded"); p.delete("edit");
+      p.delete("expanded"); p.delete("edit"); p.delete("delete");
       startActionTransition(() => { router.replace(`${pathname}?${p.toString()}`, { scroll: false }); });
     }, 350);
+  }
+
+  function closeDeletePrompt() {
+    setConfirmCancel(false);
+    setDeleteError(null);
+    if (searchParams.get("delete") === "1") {
+      const params = new URLSearchParams(searchParams.toString());
+      params.delete("delete");
+      router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+    }
+  }
+
+  async function handleDeleteOrder() {
+    if (!detail) {
+      setDeleteError("ไม่พบออเดอร์ที่ต้องการลบ");
+      return;
+    }
+    setDeleteError(null);
+    const fd = new FormData();
+    fd.set("orderId", detail.id);
+    const result = await deleteOrderCascadeActionV3(fd);
+    if ("error" in result && result.error) {
+      setDeleteError(result.error);
+      return;
+    }
+    close();
+    window.setTimeout(() => {
+      router.refresh();
+    }, 140);
   }
 
   async function openEditMode() {
@@ -895,12 +1003,17 @@ export function IncomingOrderModal({ allOrders, detail, expandedId, products }: 
               </div>
               <h3 className="text-2xl font-black text-slate-950 tracking-tight">ยืนยันการยกเลิก?</h3>
               <p className="mt-4 text-sm font-medium text-slate-500 leading-relaxed max-w-xs mx-auto">
-                คุณแน่ใจหรือไม่ว่าต้องการยกเลิกออเดอร์ <span className="font-mono font-bold text-slate-950">{detail.orderNumber}</span>?
-                การดำเนินการนี้จะคืนสินค้าเข้าสู่สต็อกทั้งหมด
+                คุณแน่ใจหรือไม่ว่าต้องการลบออเดอร์ <span className="font-mono font-bold text-slate-950">{detail.orderNumber}</span>?
+                การดำเนินการนี้จะลบออเดอร์ออกจากรายการและอัปเดตสต็อกกับใบวางบิลตามข้อมูลล่าสุด
               </p>
+              {deleteError ? (
+                <div className="mt-4 max-w-sm rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-bold text-rose-700">
+                  {deleteError}
+                </div>
+              ) : null}
               <div className="mt-12 flex w-full max-w-xs gap-3">
-                <button onClick={() => setConfirmCancel(false)} className="flex-1 rounded-2xl border border-slate-200 py-4 text-xs font-black text-slate-500 uppercase tracking-widest active:scale-95 transition-all">กลับ</button>
-                <button onClick={() => { startActionTransition(async () => { const fd = new FormData(); fd.set("orderId", detail.id); await cancelOrderAction(fd); close(); }); }} disabled={actionPending} className="flex-1 rounded-2xl bg-rose-600 py-4 text-xs font-black text-white shadow-xl uppercase tracking-widest active:scale-95 disabled:opacity-50">ยืนยันยกเลิก</button>
+                <button onClick={closeDeletePrompt} className="flex-1 rounded-2xl border border-slate-200 py-4 text-xs font-black text-slate-500 uppercase tracking-widest active:scale-95 transition-all">กลับ</button>
+                <button onClick={() => { startActionTransition(handleDeleteOrder); }} disabled={actionPending} className="flex-1 rounded-2xl bg-rose-600 py-4 text-xs font-black text-white shadow-xl uppercase tracking-widest active:scale-95 disabled:opacity-50">ยืนยันลบ</button>
               </div>
             </div>
           ) : editMode ? (
@@ -924,13 +1037,38 @@ export function IncomingOrderModal({ allOrders, detail, expandedId, products }: 
             />
           ) : (
             <div className="flex flex-col h-full">
+              <div className="hidden shrink-0 border-b border-slate-200 bg-white px-6 py-4 lg:block">
+                <div className="flex items-center justify-end gap-3">
+                  <button
+                    onClick={() => setConfirmCancel(true)}
+                    className="inline-flex items-center justify-center rounded-2xl bg-rose-700 px-5 py-3 text-[12px] font-black uppercase tracking-[0.18em] text-white shadow-lg shadow-rose-100 transition-all active:scale-95"
+                  >
+                    ลบออเดอร์
+                  </button>
+                  <button
+                    onClick={() => void openEditMode()}
+                    disabled={isPreparingEdit || editModePending}
+                    className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#003366] px-5 py-3 text-[12px] font-black uppercase tracking-[0.18em] text-white shadow-xl shadow-[#003366]/20 transition-all active:scale-95 disabled:opacity-75"
+                  >
+                    {isPreparingEdit || editModePending ? (
+                      <Loader2 className="h-4.5 w-4.5 animate-spin" />
+                    ) : (
+                      <Edit3 className="h-4.5 w-4.5" />
+                    )}
+                    <span className="leading-none">
+                      {isPreparingEdit || editModePending ? "กำลังเปิด..." : "แก้ไขรายการ"}
+                    </span>
+                  </button>
+                </div>
+              </div>
+
               {/* Scrollable Body */}
               <div className="flex-1 overflow-y-auto custom-scrollbar">
                 <ItemsViewList detail={detail} />
               </div>
 
               {/* Sticky Bottom Actions */}
-              <div className="shrink-0 border-t-2 border-slate-200 bg-white px-6 py-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-[0_-15px_40px_rgba(0,0,0,0.06)]">
+              <div className="shrink-0 border-t-2 border-slate-200 bg-white px-6 py-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-[0_-15px_40px_rgba(0,0,0,0.06)] lg:py-5">
                 <div className="mb-5 flex items-end justify-between">
                   <div className="min-w-0">
                     <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 leading-none mb-1.5">ยอดรวมสุทธิ</p>
@@ -945,12 +1083,12 @@ export function IncomingOrderModal({ allOrders, detail, expandedId, products }: 
                   </div>
                 </div>
 
-                <div className="flex gap-3">
+                <div className="flex gap-3 lg:hidden">
                   <button
                     onClick={() => setConfirmCancel(true)}
                     className="flex-1 flex items-center justify-center gap-2 rounded-2xl bg-rose-700 py-4 text-[13px] font-black text-white uppercase tracking-widest active:scale-95 transition-all shadow-lg shadow-rose-100"
                   >
-                    ยกเลิก
+                    ลบออเดอร์
                   </button>
                   <button
                     onClick={() => void openEditMode()}
