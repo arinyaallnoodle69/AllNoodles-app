@@ -63,7 +63,8 @@ const getCatalogData = cache(async () => {
     .from("products")
     .select("*, product_images(*), product_sale_units(*)")
     .eq("is_active", true)
-    .order("name");
+    .order("display_order", { ascending: true })
+    .order("name", { ascending: true });
 
   if (error) {
     // During Next.js prerendering with PPR, fetch() may be aborted when a dynamic boundary is reached.

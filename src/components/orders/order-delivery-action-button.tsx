@@ -99,26 +99,21 @@ export function OrderDeliveryActionButton({
     if (!receiptCardRef.current || isSaving) return;
 
     setIsSaving(true);
-    let cloneHost: HTMLDivElement | null = null;
+    let tempContainer: HTMLDivElement | null = null;
     try {
-      const { default: html2canvas } = await import("html2canvas");
+      const htmlToImage = await import("html-to-image");
       const outerPadding = 24;
       const target = receiptCardRef.current;
-      cloneHost = document.createElement("div");
-
-      cloneHost.style.cssText = [
-        "position:fixed",
-        "left:-10000px",
-        "top:0",
-        `padding:${outerPadding}px`,
-        "margin:0",
-        "background:#ffffff",
-        "z-index:-1",
-        "overflow:visible",
-        `width:${RECEIPT_EXPORT_WIDTH + outerPadding * 2}px`,
-        "box-sizing:border-box",
-      ].join(";");
-
+      
+      tempContainer = document.createElement("div");
+      tempContainer.style.position = "fixed";
+      tempContainer.style.left = "-10000px";
+      tempContainer.style.top = "0";
+      tempContainer.style.padding = `${outerPadding}px`;
+      tempContainer.style.background = "#ffffff";
+      tempContainer.style.zIndex = "-1000";
+      tempContainer.style.width = `${RECEIPT_EXPORT_WIDTH + outerPadding * 2}px`;
+      
       const clone = target.cloneNode(true) as HTMLDivElement;
       clone.style.width = `${RECEIPT_EXPORT_WIDTH}px`;
       clone.style.minWidth = `${RECEIPT_EXPORT_WIDTH}px`;
@@ -126,42 +121,33 @@ export function OrderDeliveryActionButton({
       clone.style.margin = "0";
       clone.style.transform = "none";
 
-      cloneHost.appendChild(clone);
-      document.body.appendChild(cloneHost);
+      tempContainer.appendChild(clone);
+      document.body.appendChild(tempContainer);
 
-      const captureWidth = RECEIPT_EXPORT_WIDTH + outerPadding * 2;
-      const captureHeight = Math.ceil(cloneHost.scrollHeight);
-      const canvas = await html2canvas(cloneHost, {
-        allowTaint: false,
+      // Wait for layout and images to load
+      await new Promise(r => setTimeout(r, 500));
+
+      const dataUrl = await htmlToImage.toPng(tempContainer, {
+        quality: 1,
         backgroundColor: "#ffffff",
-        height: captureHeight,
-        logging: false,
-        scale: 3,
-        scrollX: 0,
-        scrollY: 0,
-        useCORS: true,
-        width: captureWidth,
-        windowHeight: captureHeight,
-        windowWidth: captureWidth,
+        pixelRatio: 2,
+        width: RECEIPT_EXPORT_WIDTH + outerPadding * 2,
+        height: tempContainer.scrollHeight,
       });
 
-      const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/png", 1));
-      if (!blob) return;
-
-      const objectUrl = URL.createObjectURL(blob);
       const downloadLink = document.createElement("a");
-      downloadLink.href = objectUrl;
+      downloadLink.href = dataUrl;
       downloadLink.download = `TYNoodle-${detail?.orderNumber ?? "order"}.png`;
       downloadLink.rel = "noopener";
       document.body.appendChild(downloadLink);
       downloadLink.click();
       document.body.removeChild(downloadLink);
-      URL.revokeObjectURL(objectUrl);
-    } catch {
+    } catch (error) {
+      console.error("Save image error:", error);
       setErrorMessage("บันทึกรูปใบยืนยันไม่สำเร็จ");
     } finally {
-      if (cloneHost && document.body.contains(cloneHost)) {
-        document.body.removeChild(cloneHost);
+      if (tempContainer && document.body.contains(tempContainer)) {
+        document.body.removeChild(tempContainer);
       }
       setIsSaving(false);
     }

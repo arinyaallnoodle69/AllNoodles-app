@@ -149,6 +149,7 @@ type ProductRow = {
   sku: string;
   stock_quantity: number | string;
   unit: string;
+  display_order?: number;
 };
 
 type ProductImageRow = {
@@ -359,9 +360,11 @@ async function fetchSettingsData(organizationId: string): Promise<SettingsData> 
     vehiclesResult,
   ] =
     await Promise.all([
-      productsTable
-        .select("id, organization_id, sku, name, cost_price, stock_quantity, unit, is_active, metadata")
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (productsTable as any)
+        .select("id, organization_id, sku, name, cost_price, stock_quantity, unit, is_active, metadata, display_order")
         .eq("organization_id", organizationId)
+        .order("display_order", { ascending: true })
         .order("sku", { ascending: true }),
       imagesTable
         .select("product_id, public_url, sort_order")
@@ -719,9 +722,11 @@ async function fetchSettingsProductsData(organizationId: string): Promise<Settin
 
   const [productsResult, imagesResult, saleUnitsResult, categoriesResult, categoryItemsResult] =
     await Promise.all([
-      productsTable
-        .select("id, organization_id, sku, name, cost_price, stock_quantity, unit, is_active, metadata")
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (productsTable as any)
+        .select("id, organization_id, sku, name, cost_price, stock_quantity, unit, is_active, metadata, display_order")
         .eq("organization_id", organizationId)
+        .order("display_order", { ascending: true })
         .order("sku", { ascending: true }),
       imagesTable
         .select("product_id, public_url, sort_order")
@@ -918,9 +923,15 @@ async function fetchSettingsProductsData(organizationId: string): Promise<Settin
             })) ?? [],
           sku: product.sku,
           stockQuantity: Number(product.stock_quantity),
+          display_order: product.display_order,
         };
       })
-      .toSorted(compareProductSku),
+      .toSorted((left, right) => {
+        const orderA = left.display_order ?? 0;
+        const orderB = right.display_order ?? 0;
+        if (orderA !== orderB) return orderA - orderB;
+        return compareProductSku(left, right);
+      }),
     setupHint:
       categoryErrors.length > 0 && categoryErrors.every((error) => isMissingTableError(error?.message))
         ? "ระบบหมวดหมู่สินค้ายังไม่พร้อมใช้งาน"

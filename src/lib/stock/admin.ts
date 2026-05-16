@@ -281,11 +281,12 @@ export const getStockDashboardData = cache(
     const [productsResult, imagesResult, saleUnitsResult, movementsResult, suppliersResult] = await Promise.all([
       admin.from("products")
         .select(`
-          id, sku, name, cost_price, stock_quantity, reserved_quantity, unit, is_active,
+          id, sku, name, cost_price, stock_quantity, reserved_quantity, unit, is_active, display_order,
           product_category_items(product_categories(name))
         `)
         .eq("organization_id", organizationId)
-        .order("created_at", { ascending: false }),
+        .order("display_order", { ascending: true })
+        .order("sku", { ascending: true }),
       admin.from("product_images")
         .select("product_id, public_url, sort_order")
         .eq("organization_id", organizationId)

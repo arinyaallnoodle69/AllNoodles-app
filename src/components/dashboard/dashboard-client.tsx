@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useState, useMemo, useTransition } from "react";
 import Image from "next/image";
@@ -143,7 +143,7 @@ export function DashboardClient({
 
   // Formatters
   const fmtNumber = (n: number) => (n ?? 0).toLocaleString("th-TH");
-  const fmtMoney = (n: number) => (n ?? 0).toLocaleString("th-TH", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+  const fmtMoney = (n: number) => (n ?? 0).toLocaleString("th-TH", { minimumFractionDigits: 0, maximumFractionDigits: 2 });
 
   function fmtThaiDateLong(iso: string) {
     if (!iso) return "";
@@ -157,7 +157,6 @@ export function DashboardClient({
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] text-slate-800 pb-24 font-apple-ui">
-
       {/* Header Section */}
       <header className="px-5 pt-8 mb-6 max-w-7xl mx-auto">
         <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-2">

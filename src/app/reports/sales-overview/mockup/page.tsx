@@ -81,7 +81,7 @@ const summary: SalesOverviewSummary = {
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function fmtMoney(n: number) {
-  return n.toLocaleString("th-TH", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+  return n.toLocaleString("th-TH", { minimumFractionDigits: 0, maximumFractionDigits: 2 });
 }
 function fmtMoneyShort(n: number) {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(2)} ล.`;

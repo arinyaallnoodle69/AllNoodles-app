@@ -34,15 +34,15 @@ function firstOfMonth(iso: string) {
 }
 
 function fmt(n: number) {
-  return n.toLocaleString("th-TH", { maximumFractionDigits: 0 });
+  return n.toLocaleString("th-TH", { maximumFractionDigits: 2 });
 }
 
 function fmtMoney(n: number) {
-  return n.toLocaleString("th-TH", { minimumFractionDigits: 0, maximumFractionDigits: 0 }) + " บาท";
+  return n.toLocaleString("th-TH", { minimumFractionDigits: 0, maximumFractionDigits: 2 }) + " บาท";
 }
 
 function fmtMoneyCompact(n: number) {
-  return n.toLocaleString("th-TH", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+  return n.toLocaleString("th-TH", { minimumFractionDigits: 0, maximumFractionDigits: 2 });
 }
 
 function fmtPercent(n: number) {

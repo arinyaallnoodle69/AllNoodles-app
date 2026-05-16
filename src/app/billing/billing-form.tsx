@@ -591,7 +591,7 @@ export function BillingForm({
               <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-[0.1em] text-slate-400">รวมเงิน</span>
               <div className="flex items-baseline gap-1">
                 <span className="font-mono text-base sm:text-2xl font-black text-slate-900">
-                  {totalAmount.toLocaleString("th-TH", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                  {totalAmount.toLocaleString("th-TH", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
                 </span>
                 <span className="text-[10px] sm:text-[11px] font-bold text-slate-400 uppercase">บ.</span>
               </div>

@@ -1123,3 +1123,26 @@ export async function fetchProductCostHistory(productId: string): Promise<Produc
 
   return (data ?? []) as ProductCostHistoryRow[];
 }
+
+export async function updateProductOrder(productIds: string[]) {
+  const session = await requireAppRole("admin");
+  const admin = getSupabaseAdmin();
+  
+  // Update display_order for each product
+  const updates = productIds.map((id, index) => 
+    admin.from("products").update({ display_order: index }).eq("id", id)
+  );
+  
+  const results = await Promise.all(updates);
+  
+  // Check for errors
+  for (const res of results) {
+    if (res.error) {
+      throw new Error(`Failed to update order: ${res.error.message}`);
+    }
+  }
+  
+  revalidateSettingsSurfaces(session.organizationId);
+  return { success: true };
+}
+

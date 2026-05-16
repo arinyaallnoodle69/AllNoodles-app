@@ -66,9 +66,10 @@ export async function getProductsForFilter(
   const supabase = getSupabaseAdmin();
   const [productsResult, categoriesResult, categoryItemsResult] = await Promise.all([
         supabase.from("products")
-      .select("id, name, sku, product_images(public_url, sort_order)")
+      .select("id, name, sku, display_order, product_images(public_url, sort_order)")
       .eq("organization_id", organizationId)
       .eq("is_active", true)
+      .order("display_order", { ascending: true })
       .order("name", { ascending: true }),
         supabase.from("product_categories")
       .select("id, name")

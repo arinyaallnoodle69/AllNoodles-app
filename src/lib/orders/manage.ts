@@ -13,6 +13,7 @@ type ProductRow = {
   sku: string;
   stock_quantity: number | string;
   unit: string;
+  display_order?: number;
 };
 type ProductImageRow = {
   product_id: string;
@@ -121,6 +122,7 @@ export type OrderProductOption = {
   sku: string;
   stockQuantity: number;
   unit: string;
+  display_order?: number;
 };
 
 // Queries
@@ -174,9 +176,10 @@ export async function getProductsForOrder(orgId: string): Promise<OrderProductOp
     await Promise.all([
       admin
         .from("products")
-        .select("id, name, sku, unit, stock_quantity, cost_price")
+        .select("id, name, sku, unit, stock_quantity, cost_price, display_order")
         .eq("organization_id", orgId)
         .eq("is_active", true)
+        .order("display_order", { ascending: true })
         .order("name", { ascending: true }),
       admin
         .from("product_sale_units")
@@ -276,8 +279,14 @@ export async function getProductsForOrder(orgId: string): Promise<OrderProductOp
       sku: p.sku,
       stockQuantity: Number(p.stock_quantity),
       unit: p.unit,
+      display_order: p.display_order ?? undefined,
     };
   });
 
-  return mapped.toSorted(compareProductSku);
+  return mapped.toSorted((left, right) => {
+    const orderA = left.display_order ?? 0;
+    const orderB = right.display_order ?? 0;
+    if (orderA !== orderB) return orderA - orderB;
+    return compareProductSku(left, right);
+  });
 }

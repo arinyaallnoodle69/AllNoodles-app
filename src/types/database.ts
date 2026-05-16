@@ -1628,6 +1628,7 @@ export type Database = {
         Row: {
           cost_price: number
           created_at: string
+          display_order: number | null
           id: string
           is_active: boolean
           metadata: Json
@@ -1642,6 +1643,7 @@ export type Database = {
         Insert: {
           cost_price?: number
           created_at?: string
+          display_order?: number | null
           id?: string
           is_active?: boolean
           metadata?: Json
@@ -1656,6 +1658,7 @@ export type Database = {
         Update: {
           cost_price?: number
           created_at?: string
+          display_order?: number | null
           id?: string
           is_active?: boolean
           metadata?: Json

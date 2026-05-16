@@ -7,11 +7,11 @@ import { fetchStoreProductSalesAction } from "./actions";
 import type { StoreProductRow } from "@/lib/reports/store-sales";
 
 function fmt(n: number) {
-  return n.toLocaleString("th-TH", { maximumFractionDigits: 0 });
+  return n.toLocaleString("th-TH", { maximumFractionDigits: 2 });
 }
 
 function fmtMoney(n: number) {
-  return n.toLocaleString("th-TH", { minimumFractionDigits: 0, maximumFractionDigits: 0 }) + " บาท";
+  return n.toLocaleString("th-TH", { minimumFractionDigits: 0, maximumFractionDigits: 2 }) + " บาท";
 }
 
 function RankBadge({ rank }: { rank: number }) {
