@@ -1,44 +1,35 @@
 "use client";
 
-import React, { useState, useMemo, useTransition } from "react";
+import React, { useEffect, useMemo, useState, useTransition } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import {
-  TrendingUp,
-  Bell,
   AlertCircle,
-  ChevronRight,
-  Phone,
-  Truck,
-  ClipboardList,
-  ShoppingBag,
-  Store,
-  X,
-  Loader2,
   BarChart3,
+  Bell,
+  ChevronRight,
+  ClipboardList,
+  HandCoins,
+  Loader2,
   MessageCircle,
   Package2,
+  Phone,
+  ShoppingBag,
+  Store,
+  TrendingUp,
+  Truck,
+  X,
 } from "lucide-react";
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
-  Cell,
-  CartesianGrid
-} from "recharts";
+import { useRouter, useSearchParams } from "next/navigation";
+import { LineAppIcon } from "@/components/icons/line-app-icon";
 import { useCreateOrder } from "@/components/orders/create-order-context";
-import { StockReceiveForm } from "@/components/settings/stock-receive-form";
 import { IncomingOrderModal } from "@/components/orders/incoming-order-modal";
+import { StockReceiveForm } from "@/components/settings/stock-receive-form";
 import type { DashboardOverview } from "@/lib/dashboard/overview";
+import type { IncomingOrderListItem, OrderDetailData } from "@/lib/orders/detail";
+import type { OrderProductOption } from "@/lib/orders/manage";
 import type { OrderStoreStatusSummary } from "@/lib/orders/store-status";
 import type { StockProductOption, StockSupplierOption } from "@/lib/stock/admin";
-import type { OrderDetailData, IncomingOrderListItem } from "@/lib/orders/detail";
-import type { OrderProductOption } from "@/lib/orders/manage";
-import { LineAppIcon } from "@/components/icons/line-app-icon";
-import { useRouter, useSearchParams } from "next/navigation";
 
 type Props = {
   overview: DashboardOverview;
@@ -53,6 +44,16 @@ type Props = {
   products: OrderProductOption[];
 };
 
+type StoreListModalState = {
+  title: string;
+  stores: Array<{
+    id: string;
+    name: string;
+    code?: string;
+    latestOrderId?: string | null;
+  }>;
+};
+
 function DashboardStatCard({
   title,
   value,
@@ -60,13 +61,17 @@ function DashboardStatCard({
   accent,
   icon,
   ghost,
+  className = "",
+  compact = false,
 }: {
   title: string;
   value: string;
   unit: string;
-  accent: "blue" | "green" | "line" | "orange";
+  accent: "blue" | "green" | "line" | "orange" | "teal";
   icon: React.ReactNode;
   ghost: React.ReactNode;
+  className?: string;
+  compact?: boolean;
 }) {
   const tone = {
     blue: {
@@ -89,12 +94,21 @@ function DashboardStatCard({
       badge: "bg-[#fff3e8] text-[#ff6b00]",
       ghost: "text-[#ece3db]",
     },
+    teal: {
+      value: "text-[#0f766e]",
+      badge: "bg-[#ecfdf5] text-[#0f766e]",
+      ghost: "text-[#d6efe9]",
+    },
   }[accent];
 
   return (
-    <div className="relative overflow-hidden rounded-[1.1rem] border border-[#eef2f7] bg-white pl-2.5 pr-2.5 pb-4 pt-4 shadow-[0_10px_22px_rgba(15,23,42,0.045)]">
+    <div
+      className={`relative overflow-hidden rounded-[1.1rem] border border-[#eef2f7] bg-white pl-2.5 pr-2.5 shadow-[0_10px_22px_rgba(15,23,42,0.045)] ${compact ? "pb-3 pt-3" : "pb-4 pt-4"} ${className}`}
+    >
       <div className="flex items-center gap-1.5">
-        <div className={`flex h-7.5 w-7.5 shrink-0 items-center justify-center rounded-full ${tone.badge}`}>
+        <div
+          className={`flex h-7.5 w-7.5 shrink-0 items-center justify-center rounded-full ${tone.badge}`}
+        >
           {icon}
         </div>
         <span className="min-w-0 whitespace-nowrap text-[12.5px] font-bold leading-none text-[#111111] sm:text-[13px] md:text-base">
@@ -102,12 +116,16 @@ function DashboardStatCard({
         </span>
       </div>
 
-      <div className="relative mt-5 min-h-[4.85rem]">
+      <div className={`relative ${compact ? "mt-3 min-h-[3.7rem]" : "mt-5 min-h-[4.85rem]"}`}>
         <div className="relative z-10">
-          <p className={`text-[2.55rem] font-black leading-none tabular-nums tracking-[-0.03em] sm:text-[2.85rem] ${tone.value}`}>
+          <p
+            className={`font-black leading-none tabular-nums tracking-[-0.03em] ${compact ? "text-[1.4rem] sm:text-[2.15rem]" : "text-[1.5rem] sm:text-[2.55rem]"} ${tone.value}`}
+          >
             {value}
           </p>
-          <p className="mt-2 text-[12.5px] font-extrabold text-slate-500">{unit}</p>
+          <p className={`${compact ? "mt-1" : "mt-2"} text-[12.5px] font-extrabold text-slate-500`}>
+            {unit}
+          </p>
         </div>
 
         <div className={`pointer-events-none absolute bottom-0 right-[-0.15rem] opacity-[0.72] ${tone.ghost}`}>
@@ -116,6 +134,73 @@ function DashboardStatCard({
       </div>
     </div>
   );
+}
+
+function toThaiShortDate(isoDate: string) {
+  return new Intl.DateTimeFormat("th-TH", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    timeZone: "Asia/Bangkok",
+  }).format(new Date(`${isoDate}T00:00:00+07:00`));
+}
+
+function toThaiLongDate(isoDate: string) {
+  return new Intl.DateTimeFormat("th-TH-u-ca-buddhist", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+    timeZone: "Asia/Bangkok",
+  }).format(new Date(`${isoDate}T00:00:00+07:00`));
+}
+
+function formatRange(startIso: string | null, endIso: string | null) {
+  if (!startIso || !endIso) return "-";
+  const start = new Intl.DateTimeFormat("th-TH", {
+    day: "numeric",
+    month: "short",
+    timeZone: "Asia/Bangkok",
+  }).format(new Date(`${startIso}T00:00:00+07:00`));
+  const end = new Intl.DateTimeFormat("th-TH", {
+    day: "numeric",
+    month: "short",
+    timeZone: "Asia/Bangkok",
+  }).format(new Date(`${endIso}T00:00:00+07:00`));
+  return `${start} - ${end}`;
+}
+
+function formatYAxis(value: number) {
+  const rounded = Math.round(value / 500) * 500;
+  return rounded.toLocaleString("th-TH", { maximumFractionDigits: 0 });
+}
+
+function buildChartPoints(values: number[], width: number, height: number, padding: number, forcedMax?: number) {
+  if (values.length === 0) return [];
+  const max = forcedMax ?? Math.max(...values, 1);
+  const usableWidth = width - padding * 2;
+  const usableHeight = height - padding * 2;
+  const stepX = values.length === 1 ? 0 : usableWidth / (values.length - 1);
+
+  return values.map((value, index) => {
+    const x = padding + stepX * index;
+    const ratio = value / max;
+    const y = height - padding - ratio * usableHeight;
+    return { x, y };
+  });
+}
+
+function pointsToPath(points: { x: number; y: number }[]) {
+  if (points.length === 0) return "";
+  return points
+    .map((point, index) => `${index === 0 ? "M" : "L"} ${point.x.toFixed(2)} ${point.y.toFixed(2)}`)
+    .join(" ");
+}
+
+function areaToPath(points: { x: number; y: number }[], height: number, bottomPadding: number) {
+  if (points.length === 0) return "";
+  const first = points[0];
+  const last = points[points.length - 1];
+  return `${pointsToPath(points)} L ${last.x.toFixed(2)} ${(height - bottomPadding).toFixed(2)} L ${first.x.toFixed(2)} ${(height - bottomPadding).toFixed(2)} Z`;
 }
 
 export function DashboardClient({
@@ -128,67 +213,147 @@ export function DashboardClient({
   expandedDetail,
   expandedOrderId,
   allOrders,
-  products
+  products,
 }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [isNavigating, startTransition] = useTransition();
   const { open: openCreateOrder } = useCreateOrder();
   const [isStockModalOpen, setIsStockModalOpen] = useState(false);
-  const [viewingStores, setViewingStores] = useState<{ title: string; stores: Array<{ id: string; name: string; code?: string; latestOrderId?: string | null }> } | null>(null);
+  const [viewingStores, setViewingStores] = useState<StoreListModalState | null>(null);
 
-  const orderedStoreIds = useMemo(() => new Set(storeStatusSummary.orderedStores.map(s => s.id)), [storeStatusSummary.orderedStores]);
+  const [now, setNow] = useState(new Date());
+  const [prevSs, setPrevSs] = useState("");
 
-  const { kpi, weeklyTrend, topCustomers, topProducts } = overview;
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setPrevSs(String(now.getSeconds()).padStart(2, '0'));
+      setNow(new Date());
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [now]);
 
-  // Formatters
-  const fmtNumber = (n: number) => (n ?? 0).toLocaleString("th-TH");
-  const fmtMoney = (n: number) => (n ?? 0).toLocaleString("th-TH", { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+  const orderedStoreIds = useMemo(
+    () => new Set(storeStatusSummary.orderedStores.map((store) => store.id)),
+    [storeStatusSummary.orderedStores],
+  );
 
-  function fmtThaiDateLong(iso: string) {
-    if (!iso) return "";
-    return new Intl.DateTimeFormat("th-TH-u-ca-buddhist", {
-      day: "numeric",
-      month: "long",
-      year: "numeric",
-      timeZone: "Asia/Bangkok",
-    }).format(new Date(`${iso}T00:00:00+07:00`));
-  }
+  const {
+    kpi,
+    dailyPerformanceRows,
+    dailyPerformanceRangeStartDate,
+    dailyPerformanceRangeEndDate,
+    topCustomers,
+    topProducts,
+  } = overview;
+
+  const fmtNumber = (value: number) => (value ?? 0).toLocaleString("th-TH");
+  const fmtMoney = (value: number) =>
+    (value ?? 0).toLocaleString("th-TH", {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2,
+    });
+
+  const chartWidth = 400;
+  const chartHeight = 104;
+  const chartPaddingTop = 8;
+  const chartPaddingBottom = 16;
+  const chartRevenueValues = dailyPerformanceRows.map((row) => row.revenue);
+  const chartProfitValues = dailyPerformanceRows.map((row) => Math.max(row.profit, 0));
+  const commonMax = Math.max(...chartRevenueValues, ...chartProfitValues, 1);
+  const revenuePoints = buildChartPoints(
+    chartRevenueValues,
+    chartWidth,
+    chartHeight,
+    chartPaddingTop,
+    commonMax
+  );
+  const profitPoints = buildChartPoints(
+    chartProfitValues,
+    chartWidth,
+    chartHeight,
+    chartPaddingTop,
+    commonMax
+  );
+  const peakIndex =
+    chartRevenueValues.length > 0
+      ? chartRevenueValues.reduce(
+          (best, current, index, array) => (current > array[best] ? index : best),
+          0,
+        )
+      : -1;
+  const markerPoint = peakIndex >= 0 ? revenuePoints[peakIndex] : null;
+  const yAxisMax = Math.max(...chartRevenueValues, 0);
+  const yAxisMid = yAxisMax / 2;
+  const dailySummaryRows = [...dailyPerformanceRows].reverse().slice(0, 7);
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] text-slate-800 pb-24 font-apple-ui">
-      {/* Header Section */}
-      <header className="px-5 pt-8 mb-6 max-w-7xl mx-auto">
-        <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-2">
+    <div className="min-h-screen bg-[#F8FAFC] pb-24 font-apple-ui text-slate-800">
+      <header className="mx-auto mb-6 max-w-7xl px-5 pt-8">
+        <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
           <div>
             <div className="flex items-center gap-3">
               <div className="relative h-14 w-14 shrink-0 overflow-hidden">
-                <Image src="/ty-noodles-logo-cropped.png" alt="T&Y Noodles" fill className="object-contain" />
+                <Image
+                  src="/ty-noodles-logo-cropped.png"
+                  alt="T&Y Noodles"
+                  fill
+                  className="object-contain"
+                />
               </div>
-              <h1 className="text-3xl md:text-4xl font-black text-[#002581] leading-tight tracking-tight">ภาพรวมวันนี้</h1>
+              <h1 className="text-3xl font-black leading-tight tracking-tight text-[#002581] md:text-4xl">
+                ภาพรวมวันนี้
+              </h1>
             </div>
-            <p className="mt-1 text-[14px] font-bold text-slate-400 md:text-base">สวัสดี T&Y Noodles • {fmtThaiDateLong(today)}</p>
+            <style>{`
+              @keyframes slideUpOut {
+                from { transform: translateY(0); opacity: 1; }
+                to { transform: translateY(-100%); opacity: 0; }
+              }
+              @keyframes slideUpIn {
+                from { transform: translateY(100%); opacity: 0; }
+                to { transform: translateY(0); opacity: 1; }
+              }
+              .animate-slide-up-out {
+                animation: slideUpOut 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+              }
+              .animate-slide-up-in {
+                animation: slideUpIn 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+              }
+            `}</style>
+            <p className="mt-1 text-[14px] font-bold text-slate-400 md:text-base flex items-center">
+              สวัสดี T&Y Noodles • {toThaiLongDate(today)}
+              <span className="ml-1.5 tabular-nums">
+                {String(now.getHours()).padStart(2, '0')}:{String(now.getMinutes()).padStart(2, '0')}:
+              </span>
+              <span className="relative inline-block w-[2ch] h-[1em] overflow-hidden tabular-nums leading-none">
+                <span key={`prev-${prevSs}`} className="absolute left-0 top-0 animate-slide-up-out leading-none">
+                  {prevSs}
+                </span>
+                <span key={`curr-${String(now.getSeconds()).padStart(2, '0')}`} className="absolute left-0 top-0 animate-slide-up-in leading-none">
+                  {String(now.getSeconds()).padStart(2, '0')}
+                </span>
+              </span>
+            </p>
           </div>
-          <div className="hidden md:flex items-center gap-3 bg-white px-4 py-2 rounded-2xl border border-slate-100 shadow-sm">
-            <div className="w-3 h-3 rounded-full bg-emerald-500 animate-pulse"></div>
+          <div className="hidden items-center gap-3 rounded-2xl border border-slate-100 bg-white px-4 py-2 shadow-sm md:flex">
+            <div className="h-3 w-3 animate-pulse rounded-full bg-emerald-500" />
             <span className="text-sm font-bold text-slate-600">ระบบทำงานปกติ</span>
           </div>
         </div>
       </header>
 
-      <main className="px-5 mt-4 space-y-8 max-w-7xl mx-auto">
-
-        {/* Top Row: Status + Actions */}
+      <main className="mx-auto mt-4 max-w-7xl space-y-8 px-5">
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-12">
-
-          {/* Quick Actions (4 units on XL) */}
-          <div className="order-1 grid grid-cols-2 gap-4 xl:col-span-4 xl:order-2 xl:grid-cols-1">
+          <div className="order-1 grid grid-cols-2 gap-4 xl:order-2 xl:col-span-4 xl:grid-cols-1">
             <button
               onClick={() => openCreateOrder()}
               className="flex min-h-[4.25rem] flex-row items-center justify-center gap-3 rounded-[1rem] bg-[#0038b8] px-4 py-4 text-white shadow-[0_10px_24px_rgba(0,56,184,0.22)] transition-transform active:scale-95"
             >
               <Phone className="h-5 w-5 shrink-0 rotate-90" fill="white" strokeWidth={0} />
-              <span className="whitespace-nowrap text-base font-extrabold md:text-lg">รับออเดอร์</span>
+              <span className="whitespace-nowrap text-base font-extrabold md:text-lg">
+                รับออเดอร์
+              </span>
             </button>
 
             <button
@@ -196,21 +361,29 @@ export function DashboardClient({
               className="flex min-h-[4.25rem] flex-row items-center justify-center gap-3 rounded-[1rem] border border-[#d8f2df] bg-[#eefcf0] px-4 py-4 text-[#14a44d] shadow-[0_10px_24px_rgba(20,164,77,0.08)] transition-transform active:scale-95"
             >
               <Truck className="h-5 w-5 shrink-0" strokeWidth={2.2} />
-              <span className="whitespace-nowrap text-base font-extrabold md:text-lg">รับสินค้า</span>
+              <span className="whitespace-nowrap text-base font-extrabold md:text-lg">
+                รับสินค้า
+              </span>
             </button>
           </div>
 
-          {/* Store Status Summary (8 units on XL) */}
-          <section className="order-2 flex flex-col gap-4 md:gap-6 xl:col-span-8 xl:order-1">
+          <section className="order-2 flex flex-col gap-4 md:gap-6 xl:order-1 xl:col-span-8">
             <button
-              onClick={() => setViewingStores({ title: "ร้านค้าทั้งหมด", stores: storeStatusSummary.allStores })}
+              onClick={() =>
+                setViewingStores({
+                  title: "ร้านค้าทั้งหมด",
+                  stores: storeStatusSummary.allStores,
+                })
+              }
               className="group flex w-full items-center gap-5 rounded-[1.35rem] border border-slate-200 bg-white p-5 text-left shadow-sm transition-all hover:border-[#002581]/30 hover:shadow-md active:scale-[0.99] md:p-7"
             >
               <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-3xl bg-[#002581]/5 text-[#002581] transition-colors group-hover:bg-[#002581] group-hover:text-white md:h-20 md:w-20">
                 <Store className="h-7 w-7 md:h-10 md:w-10" strokeWidth={2} />
               </div>
               <div className="min-w-0 flex-1">
-                <p className="mb-1 text-[14px] font-bold text-slate-400 md:text-base">ร้านค้าทั้งหมดในระบบ</p>
+                <p className="mb-1 text-[14px] font-bold text-slate-400 md:text-base">
+                  ร้านค้าทั้งหมดในระบบ
+                </p>
                 <div className="flex items-baseline gap-2">
                   <p className="text-3xl font-black leading-none tracking-tight text-slate-900 tabular-nums md:text-5xl">
                     {fmtNumber(storeStatusSummary.allStores.length)}
@@ -218,19 +391,29 @@ export function DashboardClient({
                   <span className="text-sm font-bold text-slate-400 md:text-lg">ร้านค้า</span>
                 </div>
               </div>
-              <ChevronRight className="h-8 w-8 text-slate-200 transition-colors group-hover:text-[#002581]" strokeWidth={3} />
+              <ChevronRight
+                className="h-8 w-8 text-slate-200 transition-colors group-hover:text-[#002581]"
+                strokeWidth={3}
+              />
             </button>
 
             <div className="grid grid-cols-2 gap-4 md:gap-6">
               <button
-                onClick={() => setViewingStores({ title: "ร้านค้าที่ยังไม่ได้สั่ง", stores: storeStatusSummary.unorderedStores })}
+                onClick={() =>
+                  setViewingStores({
+                    title: "ร้านค้าที่ยังไม่ได้สั่ง",
+                    stores: storeStatusSummary.unorderedStores,
+                  })
+                }
                 className="group flex items-center gap-4 rounded-[1.35rem] border border-slate-200 bg-white p-4 text-left shadow-sm transition-all hover:border-rose-200 hover:shadow-md active:scale-[0.98] md:p-6"
               >
                 <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-rose-50 text-rose-600 transition-colors group-hover:bg-rose-600 group-hover:text-white md:h-16 md:w-16">
                   <ShoppingBag className="h-6 w-6 md:h-8 md:w-8" strokeWidth={2} />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="mb-1 whitespace-nowrap text-[12px] font-bold leading-none text-slate-400 md:text-base">ยังไม่ได้สั่ง</p>
+                  <p className="mb-1 whitespace-nowrap text-[12px] font-bold leading-none text-slate-400 md:text-base">
+                    ยังไม่ได้สั่ง
+                  </p>
                   <p className="text-2xl font-black leading-none text-rose-600 tabular-nums md:text-4xl">
                     {fmtNumber(storeStatusSummary.unorderedStores.length)}
                   </p>
@@ -238,14 +421,21 @@ export function DashboardClient({
               </button>
 
               <button
-                onClick={() => setViewingStores({ title: "ร้านค้าที่สั่งแล้ว", stores: storeStatusSummary.orderedStores })}
+                onClick={() =>
+                  setViewingStores({
+                    title: "ร้านค้าที่สั่งแล้ว",
+                    stores: storeStatusSummary.orderedStores,
+                  })
+                }
                 className="group flex items-center gap-4 rounded-[1.35rem] border border-slate-200 bg-white p-4 text-left shadow-sm transition-all hover:border-emerald-200 hover:shadow-md active:scale-[0.98] md:p-6"
               >
                 <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600 transition-colors group-hover:bg-emerald-600 group-hover:text-white md:h-16 md:w-16">
                   <ClipboardList className="h-6 w-6 md:h-8 md:w-8" strokeWidth={2} />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="mb-1 whitespace-nowrap text-[12px] font-bold leading-none text-slate-400 md:text-base">สั่งแล้ววันนี้</p>
+                  <p className="mb-1 whitespace-nowrap text-[12px] font-bold leading-none text-slate-400 md:text-base">
+                    สั่งแล้ววันนี้
+                  </p>
                   <p className="text-2xl font-black leading-none text-emerald-600 tabular-nums md:text-4xl">
                     {fmtNumber(storeStatusSummary.orderedStores.length)}
                   </p>
@@ -255,7 +445,6 @@ export function DashboardClient({
           </section>
         </div>
 
-        {/* Statistics Grid (2 cols on mobile, 4 on desktop) */}
         <section className="-mx-2 grid grid-cols-2 gap-2.5 px-2 md:mx-0 md:gap-5 md:px-0 lg:grid-cols-4">
           <DashboardStatCard
             title="รวมออเดอร์วันนี้"
@@ -294,82 +483,197 @@ export function DashboardClient({
               ghost={
                 <div className="relative h-[4.2rem] w-[4.2rem] sm:h-[4.6rem] sm:w-[4.6rem]">
                   <Package2 className="h-full w-full" strokeWidth={1.15} />
-                  <AlertCircle className="absolute -bottom-1 -right-1 h-5 w-5 text-[#ff7f11]" strokeWidth={1.6} />
+                  <AlertCircle
+                    className="absolute -bottom-1 -right-1 h-5 w-5 text-[#ff7f11]"
+                    strokeWidth={1.6}
+                  />
                 </div>
               }
             />
           </Link>
+
+          <DashboardStatCard
+            title="กำไรสุทธิวันนี้"
+            value={`฿${fmtMoney(kpi.todayNetProfit)}`}
+            unit="บาท"
+            accent="teal"
+            className="col-span-2"
+            compact
+            icon={<HandCoins className="h-[1.15rem] w-[1.15rem]" strokeWidth={2.15} />}
+            ghost={<HandCoins className="h-[3.65rem] w-[3.65rem] sm:h-[4rem] sm:w-[4rem]" strokeWidth={1.15} />}
+          />
         </section>
 
-        {/* Mid Row: Trend */}
         <div className="grid grid-cols-1 gap-8">
-
-          {/* Functional Task List - Hidden per user request */}
-          {/* 
-          <section className="space-y-6">
-            ...
-          </section> 
-          */}
-
-          {/* Sales Trend Chart */}
-          <section className="bg-white p-8 rounded-[2.5rem] border border-slate-50 shadow-[0_8px_30px_rgb(0,0,0,0.02)] flex flex-col">
-            <div className="mb-8 flex items-center justify-between">
-              <h3 className="text-xl font-black text-[#002581]">แนวโน้มยอดขาย 7 วัน</h3>
-              <div className="bg-slate-50 px-3 py-1 rounded-full text-[11px] font-black text-slate-400 uppercase tracking-widest">Revenue Tracking</div>
+          <section className="rounded-2xl border border-gray-50 bg-white p-4 shadow-sm">
+            <div className="mb-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <h3 className="text-[15px] font-bold leading-none text-slate-800">
+                  กราฟเปรียบเทียบรายวัน
+                </h3>
+                <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-bold leading-none text-slate-500">
+                  7 วันล่าสุด
+                </span>
+              </div>
+              <p className="mt-1 text-[11px] font-medium text-slate-500">
+                {formatRange(dailyPerformanceRangeStartDate, dailyPerformanceRangeEndDate)}
+              </p>
+              <div className="mt-1 flex flex-wrap items-center gap-2.5 text-[10px] font-medium text-slate-600">
+                <div className="flex items-center gap-1.5">
+                  <span className="h-0.5 w-4 rounded-full bg-blue-600" />
+                  <span>ยอดขายรายวัน</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="h-0.5 w-4 border-t-2 border-dashed border-emerald-500" />
+                  <span>กำไรสุทธิรายวัน</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="h-3 w-0.5 bg-[#F59E0B]" />
+                  <span>วันที่ยอดขายสูงสุด</span>
+                </div>
+              </div>
             </div>
-            <div className="flex-1 h-[350px] min-h-[350px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={weeklyTrend} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                  <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fontSize: 12, fontWeight: 700, fill: "#94a3b8" }} dy={12} />
-                  <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fontWeight: 700, fill: "#94a3b8" }} />
-                  <Tooltip
-                    cursor={{ fill: "#F8FAFC", radius: 12 }}
-                    content={({ active, payload }) => {
-                      if (active && payload && payload.length) {
-                        return (
-                          <div className="bg-white p-4 rounded-2xl shadow-2xl border border-slate-50 animate-in fade-in zoom-in-95 duration-200">
-                            <p className="text-sm font-bold text-slate-400 mb-1">{payload[0].payload.date}</p>
-                            <p className="text-xl font-black text-[#002581]">฿{fmtMoney(Number(payload[0].value))}</p>
-                          </div>
-                        );
-                      }
-                      return null;
-                    }}
-                  />
-                  <Bar dataKey="amount" radius={[8, 8, 8, 8]} barSize={32}>
-                    {weeklyTrend.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={index === weeklyTrend.length - 1 ? "#002581" : "#E2E8F0"} className="hover:fill-[#002581] transition-colors duration-300" />
+
+            {dailyPerformanceRows.length > 0 ? (
+              <>
+                <div className="relative h-32 w-full pl-6">
+                  <svg
+                    className="h-full w-full overflow-visible"
+                    preserveAspectRatio="none"
+                    viewBox={`0 0 ${chartWidth} ${chartHeight}`}
+                  >
+                    {[0, 0.33, 0.66, 1].map((ratio) => {
+                      const y =
+                        chartHeight -
+                        chartPaddingBottom -
+                        (chartHeight - chartPaddingTop - chartPaddingBottom) * ratio;
+                      return <line key={ratio} x1="0" x2={chartWidth} y1={y} y2={y} stroke="#F1F5F9" />;
+                    })}
+
+                    <path
+                      d={areaToPath(revenuePoints, chartHeight, chartPaddingBottom)}
+                      fill="rgba(59,130,246,0.18)"
+                    />
+                    <path d={pointsToPath(revenuePoints)} fill="none" stroke="#1D4ED8" strokeWidth="2" />
+                    <path
+                      d={pointsToPath(profitPoints)}
+                      fill="none"
+                      stroke="#10B981"
+                      strokeDasharray="4"
+                      strokeWidth="2"
+                    />
+
+                    {markerPoint ? (
+                      <line
+                        x1={markerPoint.x}
+                        x2={markerPoint.x}
+                        y1={chartPaddingTop}
+                        y2={chartHeight - chartPaddingBottom}
+                        stroke="#F59E0B"
+                        strokeWidth="2"
+                      />
+                    ) : null}
+                  </svg>
+
+                  <div className="absolute left-0 top-0 flex h-full flex-col justify-between text-[8px] font-medium text-gray-400">
+                    <span>{formatYAxis(yAxisMax)}</span>
+                    <span>{formatYAxis(yAxisMid)}</span>
+                    <span>0</span>
+                  </div>
+                </div>
+
+                <div className="mt-2 flex justify-between pl-6 pr-1 text-[8px] font-medium text-gray-500">
+                  {dailyPerformanceRows.map((row) => (
+                    <span key={row.isoDate}>{row.monthLabel}</span>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-10 text-center text-sm font-bold text-slate-400">
+                ยังไม่มีข้อมูลกราฟรายวัน
+              </div>
+            )}
+          </section>
+
+          <section className="rounded-[2rem] border border-slate-100 bg-white p-5 shadow-[0_8px_30px_rgb(0,0,0,0.02)] md:p-6">
+            <div className="mb-4 flex flex-wrap items-center gap-2">
+              <h3 className="text-lg font-black leading-none text-slate-900 md:text-xl">
+                รายงานผลประกอบการรายวัน
+              </h3>
+              <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-black leading-none text-slate-500">
+                7 วันล่าสุด
+              </span>
+            </div>
+            {dailySummaryRows.length > 0 ? (
+              <div className="overflow-hidden">
+                <table className="w-full text-sm">
+                  <thead className="border-b border-slate-100 bg-slate-50 text-slate-600">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-[13px] font-black">วัน</th>
+                      <th className="px-4 py-3 text-right text-[13px] font-black">ยอดขาย</th>
+                      <th className="px-4 py-3 text-right text-[13px] font-black">กำไรสุทธิ</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 bg-white">
+                    {dailySummaryRows.map((row, index) => (
+                      <tr key={row.isoDate}>
+                        <td
+                          className={`whitespace-nowrap px-4 py-3 text-[12px] font-bold ${index === 0 ? "text-slate-900" : "text-slate-700"}`}
+                        >
+                          {index === 0
+                            ? `${toThaiShortDate(row.isoDate)} (วันนี้)`
+                            : toThaiShortDate(row.isoDate)}
+                        </td>
+                        <td className="whitespace-nowrap px-4 py-3 text-right text-[12px] font-black tabular-nums text-slate-800">
+                          {fmtMoney(row.revenue)}
+                        </td>
+                        <td className="whitespace-nowrap px-4 py-3 text-right text-[12px] font-black tabular-nums text-slate-800">
+                          {fmtMoney(row.profit)}
+                        </td>
+                      </tr>
                     ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-10 text-center text-sm font-bold text-slate-400">
+                ยังไม่มีข้อมูลผลประกอบการรายวัน
+              </div>
+            )}
           </section>
         </div>
 
-        {/* Bottom Row: Rankings */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
-
+        <div className="mb-12 grid grid-cols-1 gap-8 lg:grid-cols-2">
           <section>
-            <h2 className="mb-6 px-2 text-2xl font-black tracking-tight text-slate-900">สินค้าขายดี เดือนนี้</h2>
+            <h2 className="mb-6 px-2 text-2xl font-black tracking-tight text-slate-900">
+              สินค้าขายดี เดือนนี้
+            </h2>
             <div className="flex flex-col gap-4">
               {topProducts.map((product, idx) => (
-                <div key={product.productId} className="flex items-center gap-5 bg-white p-5 rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.02)] border border-slate-50 hover:shadow-md transition-shadow group">
-                  <div className="relative h-16 w-16 md:h-20 md:w-20 rounded-3xl bg-slate-50 flex items-center justify-center font-black text-2xl text-[#002581] overflow-hidden group-hover:scale-105 transition-transform">
+                <div
+                  key={product.productId}
+                  className="group flex items-center gap-5 rounded-[2rem] border border-slate-50 bg-white p-5 shadow-[0_8px_30px_rgb(0,0,0,0.02)] transition-shadow hover:shadow-md"
+                >
+                  <div className="relative flex h-16 w-16 items-center justify-center overflow-hidden rounded-3xl bg-slate-50 font-black text-2xl text-[#002581] transition-transform group-hover:scale-105 md:h-20 md:w-20">
                     {product.imageUrl ? (
                       <Image src={product.imageUrl} alt={product.productName} fill className="object-cover" />
                     ) : (
                       <ShoppingBag className="h-10 w-10 text-slate-200" />
                     )}
-                    <div className="absolute left-0 top-0 bg-[#002581] text-white w-6 h-6 flex items-center justify-center text-xs font-black rounded-br-xl shadow-md">{idx + 1}</div>
+                    <div className="absolute left-0 top-0 flex h-6 w-6 items-center justify-center rounded-br-xl bg-[#002581] text-xs font-black text-white shadow-md">
+                      {idx + 1}
+                    </div>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-lg md:text-xl font-black text-slate-800 truncate">{product.productName}</p>
-                    <p className="mt-1 text-base font-black text-[#28A745]">฿{fmtMoney(product.totalAmount)}</p>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-lg font-black text-slate-800 md:text-xl">
+                      {product.productName}
+                    </p>
+                    <p className="mt-1 text-base font-black text-[#28A745]">
+                      ฿{fmtMoney(product.totalAmount)}
+                    </p>
                   </div>
-                  <div className="hidden md:block pr-4">
-                    <ChevronRight className="h-6 w-6 text-slate-100 group-hover:text-slate-300 transition-colors" />
+                  <div className="hidden pr-4 md:block">
+                    <ChevronRight className="h-6 w-6 text-slate-100 transition-colors group-hover:text-slate-300" />
                   </div>
                 </div>
               ))}
@@ -377,97 +681,121 @@ export function DashboardClient({
           </section>
 
           <section>
-            <h2 className="mb-6 px-2 text-2xl font-black tracking-tight text-slate-900">ลูกค้าชั้นนำ เดือนนี้</h2>
+            <h2 className="mb-6 px-2 text-2xl font-black tracking-tight text-slate-900">
+              ลูกค้าชั้นนำ เดือนนี้
+            </h2>
             <div className="flex flex-col gap-4">
               {topCustomers.map((customer, idx) => (
-                <div key={customer.customerId} className="flex items-center gap-5 bg-white p-5 rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.02)] border border-slate-50 hover:shadow-md transition-shadow group">
-                  <div className="h-14 w-14 md:h-16 md:w-16 rounded-[1.5rem] bg-blue-50 flex items-center justify-center text-2xl font-black text-[#002581] group-hover:bg-[#002581] group-hover:text-white transition-all">
+                <div
+                  key={customer.customerId}
+                  className="group flex items-center gap-5 rounded-[2rem] border border-slate-50 bg-white p-5 shadow-[0_8px_30px_rgb(0,0,0,0.02)] transition-shadow hover:shadow-md"
+                >
+                  <div className="flex h-14 w-14 items-center justify-center rounded-[1.5rem] bg-blue-50 text-2xl font-black text-[#002581] transition-all group-hover:bg-[#002581] group-hover:text-white md:h-16 md:w-16">
                     {idx + 1}
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-lg md:text-xl font-black text-slate-800 truncate">{customer.customerName}</p>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-lg font-black text-slate-800 md:text-xl">
+                      {customer.customerName}
+                    </p>
                   </div>
                   <div className="text-right">
-                    <p className="text-xl font-black text-[#002581] md:text-2xl">฿{fmtMoney(customer.totalAmount)}</p>
+                    <p className="text-xl font-black text-[#002581] md:text-2xl">
+                      ฿{fmtMoney(customer.totalAmount)}
+                    </p>
                   </div>
                 </div>
               ))}
             </div>
           </section>
         </div>
-
       </main>
 
-      {/* Modals */}
-      {viewingStores && (
+      {viewingStores ? (
         <div className="fixed inset-0 z-[300] flex items-end justify-center bg-slate-950/60 p-0 backdrop-blur-[6px] sm:items-center sm:p-4">
-          <div className="w-full max-w-xl animate-in slide-in-from-bottom duration-300 rounded-t-[3rem] bg-white pb-12 pt-4 sm:rounded-[3rem] shadow-2xl overflow-hidden">
+          <div className="w-full max-w-xl animate-in slide-in-from-bottom overflow-hidden rounded-t-[3rem] bg-white pb-12 pt-4 shadow-2xl sm:rounded-[3rem]">
             <div className="mb-6 flex justify-center">
               <div className="h-1.5 w-16 rounded-full bg-slate-200" />
             </div>
-            <div className="px-8 mb-8 flex items-center justify-between">
+            <div className="mb-8 flex items-center justify-between px-8">
               <div>
-                <h3 className="text-2xl font-black text-[#001E5D] tracking-tight">{viewingStores.title}</h3>
-                <p className="text-xs font-bold text-slate-400 mt-1 uppercase tracking-widest">Store Registry</p>
+                <h3 className="text-2xl font-black tracking-tight text-[#001E5D]">
+                  {viewingStores.title}
+                </h3>
+                <p className="mt-1 text-xs font-bold uppercase tracking-widest text-slate-400">
+                  Store Registry
+                </p>
               </div>
               <button
                 onClick={() => setViewingStores(null)}
-                className="h-12 w-12 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-400 active:scale-90 transition-transform"
+                className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 text-slate-400 transition-transform active:scale-90"
               >
                 <X className="h-6 w-6" strokeWidth={3} />
               </button>
             </div>
 
-            <div className="max-h-[60vh] overflow-y-auto space-y-px no-scrollbar pb-10">
+            <div className="no-scrollbar max-h-[60vh] space-y-px overflow-y-auto pb-10">
               {viewingStores.stores.length === 0 ? (
-                <div className="py-24 text-center flex flex-col items-center">
-                  <div className="bg-slate-50 p-7 rounded-full mb-5">
+                <div className="flex flex-col items-center py-24 text-center">
+                  <div className="mb-5 rounded-full bg-slate-50 p-7">
                     <Store className="h-14 w-14 text-slate-200" />
                   </div>
                   <p className="text-xl font-black text-slate-300">ไม่มีข้อมูลร้านค้าในขณะนี้</p>
                 </div>
               ) : (
                 <div className="relative">
-                  {isNavigating && (
+                  {isNavigating ? (
                     <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/60 backdrop-blur-[1px]">
                       <Loader2 className="h-10 w-10 animate-spin text-[#001E5D]" strokeWidth={3} />
                     </div>
-                  )}
+                  ) : null}
                   {viewingStores.stores.map((store) => {
                     const isOrdered = orderedStoreIds.has(store.id);
+
                     return (
                       <button
                         key={store.id}
                         onClick={() => {
                           if (isOrdered && store.latestOrderId) {
                             startTransition(() => {
-                              const p = new URLSearchParams(searchParams.toString());
-                              p.set("expanded", store.latestOrderId!);
-                              router.push("/dashboard?" + p.toString(), { scroll: false });
+                              const params = new URLSearchParams(searchParams.toString());
+                              params.set("expanded", store.latestOrderId ?? "");
+                              router.push(`/dashboard?${params.toString()}`, { scroll: false });
                               setViewingStores(null);
                             });
-                          } else {
-                            openCreateOrder(store.id);
+                            return;
                           }
+
+                          openCreateOrder(store.id);
                         }}
-                        className="flex w-full items-center gap-5 bg-white px-6 py-6 border-b border-slate-100 hover:bg-slate-50 transition-colors group text-left disabled:opacity-50"
+                        className="group flex w-full items-center gap-5 border-b border-slate-100 bg-white px-6 py-6 text-left transition-colors hover:bg-slate-50 disabled:opacity-50"
                         disabled={isNavigating}
                       >
-                        <div className="h-14 w-14 shrink-0 rounded-2xl bg-slate-50 flex items-center justify-center text-[#001E5D] shadow-sm group-hover:bg-[#001E5D] group-hover:text-white transition-all">
+                        <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-slate-50 text-[#001E5D] shadow-sm transition-all group-hover:bg-[#001E5D] group-hover:text-white">
                           <Store className="h-7 w-7" />
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="font-black text-slate-800 text-lg leading-tight truncate">{store.name}</p>
-                          <div className="flex items-center gap-2 mt-1.5">
-                            <p className="text-xs font-bold uppercase tracking-tighter text-slate-400">รหัส: {store.code || store.id.slice(0, 8)}</p>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-lg font-black leading-tight text-slate-800">
+                            {store.name}
+                          </p>
+                          <div className="mt-1.5 flex items-center gap-2">
+                            <p className="text-xs font-bold uppercase tracking-tighter text-slate-400">
+                              รหัส: {store.code || store.id.slice(0, 8)}
+                            </p>
                             {isOrdered ? (
-                              <span className="rounded-md border border-emerald-100 bg-emerald-50 px-2 py-0.5 text-[10px] font-black uppercase tracking-tight text-emerald-600">สั่งแล้ววันนี้</span>
+                              <span className="rounded-md border border-emerald-100 bg-emerald-50 px-2 py-0.5 text-[10px] font-black uppercase tracking-tight text-emerald-600">
+                                สั่งแล้ววันนี้
+                              </span>
                             ) : (
-                              <span className="rounded-md border border-rose-100 bg-rose-50 px-2 py-0.5 text-[10px] font-black uppercase tracking-tight text-rose-600">ยังไม่สั่ง</span>
+                              <span className="rounded-md border border-rose-100 bg-rose-50 px-2 py-0.5 text-[10px] font-black uppercase tracking-tight text-rose-600">
+                                ยังไม่สั่ง
+                              </span>
                             )}
                           </div>
                         </div>
-                        <ChevronRight className="h-6 w-6 text-slate-200 group-hover:text-[#001E5D] group-hover:translate-x-1 transition-all" strokeWidth={3} />
+                        <ChevronRight
+                          className="h-6 w-6 text-slate-200 transition-all group-hover:translate-x-1 group-hover:text-[#001E5D]"
+                          strokeWidth={3}
+                        />
                       </button>
                     );
                   })}
@@ -476,18 +804,18 @@ export function DashboardClient({
             </div>
           </div>
         </div>
-      )}
+      ) : null}
 
-      {isStockModalOpen && (
+      {isStockModalOpen ? (
         <StockReceiveForm
           products={stockProducts}
           suppliers={stockSuppliers}
           returnHref="/dashboard"
           onClose={() => setIsStockModalOpen(false)}
         />
-      )}
+      ) : null}
 
-      {expandedOrderId && (
+      {expandedOrderId ? (
         <IncomingOrderModal
           allOrders={allOrders}
           date={orderDate}
@@ -496,7 +824,7 @@ export function DashboardClient({
           products={products}
           searchTerm=""
         />
-      )}
+      ) : null}
     </div>
   );
 }

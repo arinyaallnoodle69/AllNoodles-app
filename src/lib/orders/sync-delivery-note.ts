@@ -1,6 +1,8 @@
 import "server-only";
 
 import { syncBillingSnapshotsForDeliveryNumbers } from "@/lib/billing/actions";
+import { revalidateDashboardPages } from "@/lib/dashboard/revalidate-dashboard-pages";
+import { revalidateReportPages } from "@/lib/reports/revalidate-report-pages";
 import type { Database } from "@/types/database";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -217,5 +219,7 @@ export async function syncDeliveryNoteForOrder(
     return { error: billingSyncResult.error };
   }
 
+  revalidateReportPages();
+  revalidateDashboardPages();
   return { success: true, deliveryNumber: String(deliveryNumber) };
 }

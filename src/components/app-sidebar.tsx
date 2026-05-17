@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
   BarChart2,
+  CircleDollarSign,
   Boxes,
   Clock,
   ChevronDown,
@@ -47,7 +48,8 @@ const PAGE_TITLES: [string, string][] = [
   ["/stock/movements", "ความเคลื่อนไหวสต็อก"],
   ["/stock", "สต็อก"],
   ["/reports/product-sales", "ยอดขายสินค้า"],
-  ["/reports/store-sales", "ยอดขายตามร้านค้า"],
+  ["/reports/profit-sales", "รายงานกำไรขาย"],
+  ["/reports/billing", "รายงานใบวางบิล"],
   ["/settings/products", "จัดการสินค้า"],
   ["/settings/customers", "จัดการร้านค้า"],
   ["/settings/customer-data", "ข้อมูลลูกค้า"],
@@ -146,9 +148,9 @@ const mainNavItems = [
 ] as const;
 
 const reportsNavItems = [
-  { href: "/reports/sales-overview", icon: BarChart2, label: "ภาพรวมยอดขายรายปี" },
+  { href: "/reports/profit-sales", icon: CircleDollarSign, label: "รายงานกำไรขาย" },
   { href: "/reports/product-sales", icon: TrendingUp, label: "ยอดขายสินค้า" },
-  { href: "/reports/store-sales", icon: Store, label: "ยอดขายตามร้านค้า" },
+  { href: "/reports/billing", icon: Receipt, label: "รายงานใบวางบิล" },
 ] as const;
 
 const settingsNavItems = [
@@ -199,9 +201,8 @@ function SidebarLink({
     <Link
       href={item.href}
       title={collapsed ? item.label : undefined}
-      className={`flex items-center gap-3 rounded-xl px-2.5 py-2.5 text-sm font-medium transition-colors ${
-        active ? "bg-[#003366]/10 text-[#003366]" : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
-      } ${collapsed ? "justify-center" : ""} ${indent && !collapsed ? "pl-9" : ""}`}
+      className={`flex items-center gap-3 rounded-xl px-2.5 py-2.5 text-sm font-medium transition-colors ${active ? "bg-[#003366]/10 text-[#003366]" : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+        } ${collapsed ? "justify-center" : ""} ${indent && !collapsed ? "pl-9" : ""}`}
     >
       <Icon className="h-4.5 w-4.5 shrink-0" strokeWidth={2.2} />
       {!collapsed && <span className="truncate">{item.label}</span>}
@@ -211,10 +212,20 @@ function SidebarLink({
 
 // ─── Layout ───────────────────────────────────────────────────────────────────
 
-export function AppSidebarLayout({ children }: { children: React.ReactNode }) {
+export function AppSidebarLayout({
+  children,
+  hideMobileTopBar = false,
+  hideOrdersTabs = false,
+  hideReportsTabs = false,
+}: {
+  children: React.ReactNode;
+  hideMobileTopBar?: boolean;
+  hideOrdersTabs?: boolean;
+  hideReportsTabs?: boolean;
+}) {
   const [mounted, setMounted] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
-  
+
   const pathname = usePathname();
 
   const isReportsPage = pathname.startsWith("/reports");
@@ -257,229 +268,233 @@ export function AppSidebarLayout({ children }: { children: React.ReactNode }) {
 
   const anyReportsActive = reportsNavItems.some((item) => pathname.startsWith(item.href));
   const anySettingsActive = settingsNavItems.some((item) => pathname.startsWith(item.href));
-  const reportsTabsActive = pathname.startsWith("/reports");
+  const showMobileTopBar = pathname !== "/dashboard" && !hideMobileTopBar;
+  const showOrdersTabs = !hideOrdersTabs;
+  const showReportsTabs = !hideReportsTabs;
+  const reportsTabsActive = pathname.startsWith("/reports") && showReportsTabs && showMobileTopBar;
+  const mobileTopOffset = showMobileTopBar ? 68 : 0;
+  const mobileContentTopPaddingClass =
+    pathname === "/dashboard"
+      ? "pt-0"
+      : reportsTabsActive
+        ? "pt-[116px] lg:pt-0"
+        : mobileTopOffset === 68
+          ? "pt-[68px] lg:pt-0"
+          : "pt-0";
 
   return (
     <CreateOrderProvider>
       <GlobalCreateOrderModal />
       <MobileSearchProvider>
-      {/* ── Desktop sidebar (fixed) ───────────────────────────────────────── */}
-      <aside
-        className={`hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-50 lg:flex lg:flex-col lg:border-r lg:border-slate-200 lg:bg-white lg:shadow-[2px_0_20px_rgba(15,23,42,0.06)] ${
-          collapsed ? "w-16" : "w-60"
-        } transition-[width] duration-200 ease-in-out [will-change:width] motion-reduce:transition-none`}
-      >
-        {/* Logo + toggle */}
-        <div
-          className={`flex h-[68px] shrink-0 items-center border-b border-slate-100 ${
-            collapsed ? "justify-center px-3" : "justify-between px-4"
-          }`}
+        {/* ── Desktop sidebar (fixed) ───────────────────────────────────────── */}
+        <aside
+          className={`hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-50 lg:flex lg:flex-col lg:border-r lg:border-slate-200 lg:bg-white lg:shadow-[2px_0_20px_rgba(15,23,42,0.06)] ${collapsed ? "w-16" : "w-60"
+            } transition-[width] duration-200 ease-in-out [will-change:width] motion-reduce:transition-none`}
         >
-          {!collapsed && (
-            <Link href="/dashboard" className="flex min-w-0 shrink items-center gap-2.5">
-              <Image
-                src="/ty-noodles-logo-cropped.png"
-                alt="T&Y Noodles"
-                width={176}
-                height={64}
-                priority
-                className="h-12 w-auto object-contain"
-              />
-              <span className="truncate text-base font-bold tracking-tight text-slate-800">
-                T&amp;Y Noodle
-              </span>
-            </Link>
-          )}
-          <button
-            type="button"
-            onClick={toggleCollapsed}
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"
-            aria-label={collapsed ? "ขยาย sidebar" : "ย่อ sidebar"}
+          {/* Logo + toggle */}
+          <div
+            className={`flex h-[68px] shrink-0 items-center border-b border-slate-100 ${collapsed ? "justify-center px-3" : "justify-between px-4"
+              }`}
           >
-            {collapsed ? (
-              <ChevronRight className="h-4 w-4" strokeWidth={2.2} />
-            ) : (
-              <ChevronLeft className="h-4 w-4" strokeWidth={2.2} />
-            )}
-          </button>
-        </div>
-
-        {/* Navigation */}
-        <nav className="flex-1 overflow-y-auto overflow-x-hidden py-3">
-          {/* Main nav items */}
-          <div className="space-y-0.5 px-2">
-            {mainNavItems.map((item) => (
-              <SidebarLink key={item.href} item={item} collapsed={isSidebarCollapsed} pathname={pathname} />
-            ))}
-          </div>
-
-          {/* Divider */}
-          <div className="mx-3 my-3 border-t border-slate-100" />
-
-          {/* Reports collapsible section */}
-          <div className="px-2">
-            {collapsed ? (
-              <Link
-                href="/reports/sales-overview"
-                title="Reports"
-                className={`flex items-center justify-center rounded-xl px-2.5 py-2.5 text-sm font-medium transition-colors ${
-                  anyReportsActive
-                    ? "bg-[#003366]/10 text-[#003366]"
-                    : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
-                }`}
-              >
-                <BarChart2 className="h-4.5 w-4.5 shrink-0" strokeWidth={2.2} />
+            {!collapsed && (
+              <Link href="/dashboard" className="flex min-w-0 shrink items-center gap-2.5">
+                <Image
+                  src="/ty-noodles-logo-cropped.png"
+                  alt="T&Y Noodles"
+                  width={176}
+                  height={64}
+                  priority
+                  className="h-12 w-auto object-contain"
+                />
+                <span className="truncate text-base font-bold tracking-tight text-slate-800">
+                  T&amp;Y Noodle
+                </span>
               </Link>
-            ) : (
-              <>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setReportsOpenInternal(!reportsOpen);
-                    setReportsUserToggled(true);
-                  }}
-                  className={`flex w-full items-center justify-between rounded-xl px-2.5 py-2.5 text-sm font-medium transition-colors ${
-                    anyReportsActive
-                      ? "text-[#003366]"
-                      : "text-slate-500 hover:bg-slate-100 hover:text-slate-900"
-                  }`}
-                >
-                  <span className="flex items-center gap-3">
-                    <BarChart2 className="h-4.5 w-4.5 shrink-0" strokeWidth={2.2} />
-                    <span>รายงาน</span>
-                  </span>
-                  <ChevronDown
-                    className={`h-4 w-4 shrink-0 transition-transform duration-200 ${
-                      reportsOpen ? "rotate-180" : ""
-                    }`}
-                    strokeWidth={2.2}
-                  />
-                </button>
-                <div
-                  className={`overflow-hidden transition-all duration-200 ${
-                    reportsOpen ? "max-h-56 opacity-100" : "max-h-0 opacity-0"
-                  }`}
-                >
-                  <div className="mt-0.5 space-y-0.5">
-                    {reportsNavItems.map((item) => (
-                      <SidebarLink
-                        key={item.href}
-                        item={item}
-                        collapsed={isSidebarCollapsed}
-                        pathname={pathname}
-                        indent
-                      />
-                    ))}
-                  </div>
-                </div>
-              </>
             )}
-          </div>
-
-          {/* Divider */}
-          <div className="mx-3 my-3 border-t border-slate-100" />
-
-          {/* Settings collapsible section */}
-          <div className="px-2">
-            {collapsed ? (
-              <Link
-                href="/settings/products"
-                title="Settings"
-                className={`flex items-center justify-center rounded-xl px-2.5 py-2.5 text-sm font-medium transition-colors ${
-                  anySettingsActive
-                    ? "bg-[#003366]/10 text-[#003366]"
-                    : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
-                }`}
-              >
-                <Settings2 className="h-4.5 w-4.5 shrink-0" strokeWidth={2.2} />
-              </Link>
-            ) : (
-              <>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSettingsOpenInternal(!settingsOpen);
-                    setSettingsUserToggled(true);
-                  }}
-                  className={`flex w-full items-center justify-between rounded-xl px-2.5 py-2.5 text-sm font-medium transition-colors ${
-                    anySettingsActive
-                      ? "text-[#003366]"
-                      : "text-slate-500 hover:bg-slate-100 hover:text-slate-900"
-                  }`}
-                >
-                  <span className="flex items-center gap-3">
-                    <Settings2 className="h-4.5 w-4.5 shrink-0" strokeWidth={2.2} />
-                    <span>ตั้งค่า</span>
-                  </span>
-                  <ChevronDown
-                    className={`h-4 w-4 shrink-0 transition-transform duration-200 ${
-                      settingsOpen ? "rotate-180" : ""
-                    }`}
-                    strokeWidth={2.2}
-                  />
-                </button>
-
-                <div
-                  className={`overflow-hidden transition-all duration-200 ${
-                    settingsOpen ? "max-h-64 opacity-100" : "max-h-0 opacity-0"
-                  }`}
-                >
-                  <div className="mt-0.5 space-y-0.5">
-                    {settingsNavItems.map((item) => (
-                      <SidebarLink
-                        key={item.href}
-                        item={item}
-                        collapsed={isSidebarCollapsed}
-                        pathname={pathname}
-                        indent
-                      />
-                    ))}
-                  </div>
-                </div>
-              </>
-            )}
-          </div>
-        </nav>
-
-        {/* Logout button */}
-        <div className={`shrink-0 border-t border-slate-100 p-2 ${collapsed ? "" : "px-2"}`}>
-          <form action={signOut}>
             <button
-              type="submit"
-              title={collapsed ? "ออกจากระบบ" : undefined}
-              className={`flex w-full items-center gap-3 rounded-xl px-2.5 py-2.5 text-sm font-medium text-slate-500 transition-colors hover:bg-rose-50 hover:text-rose-600 ${collapsed ? "justify-center" : ""}`}
+              type="button"
+              onClick={toggleCollapsed}
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"
+              aria-label={collapsed ? "ขยาย sidebar" : "ย่อ sidebar"}
             >
-              <LogOut className="h-4.5 w-4.5 shrink-0" strokeWidth={2.2} />
-              {!collapsed && <span>ออกจากระบบ</span>}
+              {collapsed ? (
+                <ChevronRight className="h-4 w-4" strokeWidth={2.2} />
+              ) : (
+                <ChevronLeft className="h-4 w-4" strokeWidth={2.2} />
+              )}
             </button>
-          </form>
+          </div>
+
+          {/* Navigation */}
+          <nav className="flex-1 overflow-y-auto overflow-x-hidden py-3">
+            {/* Main nav items */}
+            <div className="space-y-0.5 px-2">
+              {mainNavItems.map((item) => (
+                <SidebarLink key={item.href} item={item} collapsed={isSidebarCollapsed} pathname={pathname} />
+              ))}
+            </div>
+
+            {/* Divider */}
+            <div className="mx-3 my-3 border-t border-slate-100" />
+
+            {/* Reports collapsible section */}
+            <div className="px-2">
+              {collapsed ? (
+                <Link
+                  href="/reports/profit-sales"
+                  title="Reports"
+                  className={`flex items-center justify-center rounded-xl px-2.5 py-2.5 text-sm font-medium transition-colors ${anyReportsActive
+                      ? "bg-[#003366]/10 text-[#003366]"
+                      : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                    }`}
+                >
+                  <BarChart2 className="h-4.5 w-4.5 shrink-0" strokeWidth={2.2} />
+                </Link>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setReportsOpenInternal(!reportsOpen);
+                      setReportsUserToggled(true);
+                    }}
+                    className={`flex w-full items-center justify-between rounded-xl px-2.5 py-2.5 text-sm font-medium transition-colors ${anyReportsActive
+                        ? "text-[#003366]"
+                        : "text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+                      }`}
+                  >
+                    <span className="flex items-center gap-3">
+                      <BarChart2 className="h-4.5 w-4.5 shrink-0" strokeWidth={2.2} />
+                      <span>รายงาน</span>
+                    </span>
+                    <ChevronDown
+                      className={`h-4 w-4 shrink-0 transition-transform duration-200 ${reportsOpen ? "rotate-180" : ""
+                        }`}
+                      strokeWidth={2.2}
+                    />
+                  </button>
+                  <div
+                    className={`overflow-hidden transition-all duration-200 ${reportsOpen ? "max-h-56 opacity-100" : "max-h-0 opacity-0"
+                      }`}
+                  >
+                    <div className="mt-0.5 space-y-0.5">
+                      {reportsNavItems.map((item) => (
+                        <SidebarLink
+                          key={item.href}
+                          item={item}
+                          collapsed={isSidebarCollapsed}
+                          pathname={pathname}
+                          indent
+                        />
+                      ))}
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Divider */}
+            <div className="mx-3 my-3 border-t border-slate-100" />
+
+            {/* Settings collapsible section */}
+            <div className="px-2">
+              {collapsed ? (
+                <Link
+                  href="/settings/products"
+                  title="Settings"
+                  className={`flex items-center justify-center rounded-xl px-2.5 py-2.5 text-sm font-medium transition-colors ${anySettingsActive
+                      ? "bg-[#003366]/10 text-[#003366]"
+                      : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                    }`}
+                >
+                  <Settings2 className="h-4.5 w-4.5 shrink-0" strokeWidth={2.2} />
+                </Link>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSettingsOpenInternal(!settingsOpen);
+                      setSettingsUserToggled(true);
+                    }}
+                    className={`flex w-full items-center justify-between rounded-xl px-2.5 py-2.5 text-sm font-medium transition-colors ${anySettingsActive
+                        ? "text-[#003366]"
+                        : "text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+                      }`}
+                  >
+                    <span className="flex items-center gap-3">
+                      <Settings2 className="h-4.5 w-4.5 shrink-0" strokeWidth={2.2} />
+                      <span>ตั้งค่า</span>
+                    </span>
+                    <ChevronDown
+                      className={`h-4 w-4 shrink-0 transition-transform duration-200 ${settingsOpen ? "rotate-180" : ""
+                        }`}
+                      strokeWidth={2.2}
+                    />
+                  </button>
+
+                  <div
+                    className={`overflow-hidden transition-all duration-200 ${settingsOpen ? "max-h-64 opacity-100" : "max-h-0 opacity-0"
+                      }`}
+                  >
+                    <div className="mt-0.5 space-y-0.5">
+                      {settingsNavItems.map((item) => (
+                        <SidebarLink
+                          key={item.href}
+                          item={item}
+                          collapsed={isSidebarCollapsed}
+                          pathname={pathname}
+                          indent
+                        />
+                      ))}
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          </nav>
+
+          {/* Logout button */}
+          <div className={`shrink-0 border-t border-slate-100 p-2 ${collapsed ? "" : "px-2"}`}>
+            <form action={signOut}>
+              <button
+                type="submit"
+                title={collapsed ? "ออกจากระบบ" : undefined}
+                className={`flex w-full items-center gap-3 rounded-xl px-2.5 py-2.5 text-sm font-medium text-slate-500 transition-colors hover:bg-rose-50 hover:text-rose-600 ${collapsed ? "justify-center" : ""}`}
+              >
+                <LogOut className="h-4.5 w-4.5 shrink-0" strokeWidth={2.2} />
+                {!collapsed && <span>ออกจากระบบ</span>}
+              </button>
+            </form>
+          </div>
+        </aside>
+
+        {/* ── Mobile: top bar (logo + page title + search icon) ───────────── */}
+        <div className="no-print">
+          {showMobileTopBar && <MobileTopBar />}
         </div>
-      </aside>
 
-      {/* ── Mobile: top bar (logo + page title + search icon) ───────────── */}
-      {pathname !== "/dashboard" && <MobileTopBar />}
+        {/* ── Mobile: orders tab bar (fixed below top bar) ─────────────────── */}
+        <div className="no-print">
+          {showOrdersTabs ? <OrdersMobileTabs /> : null}
+        </div>
 
-      {/* ── Mobile: orders tab bar (fixed below top bar) ─────────────────── */}
-      <OrdersMobileTabs />
+        {/* ── Mobile: reports tab bar (fixed below top bar) ────────────────── */}
+        <div className="no-print">
+          {showReportsTabs ? <ReportsMobileTabs /> : null}
+        </div>
 
-      {/* ── Mobile: reports tab bar (fixed below top bar) ────────────────── */}
-      <ReportsMobileTabs />
+        {/* ── Main content ─────────────────────────────────────────────────── */}
+        <div
+          className={`${collapsed ? "lg:pl-16" : "lg:pl-60"} ${mobileContentTopPaddingClass} pb-[calc(4.5rem+env(safe-area-inset-bottom))] lg:pb-0 print:pl-0 print:pt-0 print:pb-0 transition-[padding-left] duration-200 ease-in-out [will-change:padding-left] motion-reduce:transition-none`}
+        >
+          {children}
+        </div>
 
-      {/* ── Main content ─────────────────────────────────────────────────── */}
-      <div
-        className={`${collapsed ? "lg:pl-16" : "lg:pl-60"} ${
-          pathname === "/dashboard" 
-            ? "pt-0" 
-            : reportsTabsActive 
-              ? "pt-[116px] lg:pt-0" 
-              : "pt-[68px] lg:pt-0"
-        } pb-[calc(4.5rem+env(safe-area-inset-bottom))] lg:pb-0 transition-[padding-left] duration-200 ease-in-out [will-change:padding-left] motion-reduce:transition-none`}
-      >
-        {children}
-      </div>
-
-      <SettingsMobileBottomNav />
-      <ScrollToTopButton enabled={shouldShowScrollTopButton(pathname)} />
+        <div className="no-print">
+          <SettingsMobileBottomNav />
+          <ScrollToTopButton enabled={shouldShowScrollTopButton(pathname)} />
+        </div>
       </MobileSearchProvider>
     </CreateOrderProvider>
   );

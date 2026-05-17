@@ -1,0 +1,89 @@
+import "server-only";
+
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
+
+export type BillingReportRow = {
+  id: string;
+  billingDate: string;
+  customerCode: string;
+  customerName: string;
+  totalAmount: number;
+};
+
+export type BillingReportData = {
+  rows: BillingReportRow[];
+  summary: {
+    totalAmount: number;
+    totalBills: number;
+  };
+};
+
+type BillingRecord = {
+  id: string;
+  billing_date: string;
+  total_amount: number | string | null;
+  customer_id: string | null;
+};
+
+type CustomerRecord = {
+  id: string;
+  customer_code: string | null;
+  name: string | null;
+};
+
+export async function getBillingReport(fromDate: string, toDate: string): Promise<BillingReportData> {
+  const supabase = getSupabaseAdmin();
+
+  const { data: records, error: recordsError } = await supabase
+    .from("billing_records")
+    .select("id, billing_date, total_amount, customer_id")
+    .gte("billing_date", fromDate)
+    .lte("billing_date", toDate)
+    .order("billing_date", { ascending: true });
+
+  if (recordsError) {
+    console.error("Error fetching billing records:", recordsError.message, recordsError.code);
+    return { rows: [], summary: { totalAmount: 0, totalBills: 0 } };
+  }
+
+  const billingRecords = (records ?? []) as BillingRecord[];
+  const customerIds = [
+    ...new Set(billingRecords.map((r) => r.customer_id).filter((id): id is string => Boolean(id))),
+  ];
+
+  const customerResult =
+    customerIds.length > 0
+      ? await supabase
+          .from("customers")
+          .select("id, customer_code, name")
+          .in("id", customerIds)
+      : { data: [] as CustomerRecord[], error: null };
+
+  if (customerResult.error) {
+    console.error("Error fetching customers for billing:", customerResult.error.message);
+  }
+
+  const customers = (customerResult.data ?? []) as CustomerRecord[];
+  const customerMap = new Map(customers.map((c) => [c.id, c]));
+
+  const rows: BillingReportRow[] = billingRecords.map((item) => {
+    const customer = item.customer_id ? customerMap.get(item.customer_id) : undefined;
+    return {
+      id: item.id,
+      billingDate: item.billing_date,
+      customerCode: customer?.customer_code ?? "-",
+      customerName: customer?.name ?? "ไม่ทราบชื่อ",
+      totalAmount: Number(item.total_amount ?? 0),
+    };
+  });
+
+  const totalAmount = rows.reduce((sum, row) => sum + row.totalAmount, 0);
+
+  return {
+    rows,
+    summary: {
+      totalAmount,
+      totalBills: rows.length,
+    },
+  };
+}

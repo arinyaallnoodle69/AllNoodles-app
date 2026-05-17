@@ -601,7 +601,7 @@ export function BillingForm({
           <button
             onClick={handlePrint}
             disabled={isPending || isPrinting || visibleCandidates.length === 0}
-            className="group relative flex h-11 sm:h-12 min-w-[120px] sm:w-[240px] items-center justify-center gap-2 bg-[#003366] px-4 sm:px-6 text-sm sm:text-base font-black tracking-wide text-white transition-all hover:bg-[#0a2340] active:scale-95 disabled:opacity-50 disabled:grayscale disabled:pointer-events-none rounded-xl sm:rounded-none"
+            className="group relative hidden md:flex h-11 sm:h-12 min-w-[120px] sm:w-[240px] items-center justify-center gap-2 bg-[#003366] px-4 sm:px-6 text-sm sm:text-base font-black tracking-wide text-white transition-all hover:bg-[#0a2340] active:scale-95 disabled:opacity-50 disabled:grayscale disabled:pointer-events-none rounded-xl sm:rounded-none"
           >
             {isPrinting ? (
               <Loader2 className="h-4 w-4 sm:h-5 sm:w-5 animate-spin" />

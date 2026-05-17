@@ -95,9 +95,7 @@ export function IncomingOrderOpenCard({
             <span translate="no">{customerCode}</span> - {customerName}
           </p>
           <div className="mt-1.5 flex items-center gap-2">
-            <p className="truncate font-mono text-sm font-semibold text-slate-700" translate="no">
-              {orderNumber}
-            </p>
+
             {isBilled ? (
               <span
                 className="inline-flex size-5 shrink-0 items-center justify-center rounded-full bg-emerald-700 text-white"

@@ -19,7 +19,8 @@ import {
   DndContext,
   closestCenter,
   KeyboardSensor,
-  PointerSensor,
+  MouseSensor,
+  TouchSensor,
   useSensor,
   useSensors,
   DragEndEvent
@@ -324,9 +325,15 @@ export function ProductList({ products, baseListHref = "/settings/products" }: P
 
   // DnD Sensors
   const sensors = useSensors(
-    useSensor(PointerSensor, {
+    useSensor(MouseSensor, {
       activationConstraint: {
-        distance: 8, // Require 8px movement to start drag (helps prevent accidental drags on touch)
+        distance: 8, // Require 8px movement to start drag on desktop
+      },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: {
+        delay: 250, // Press and hold for 250ms to start drag on mobile (like professional apps)
+        tolerance: 5, // Allow 5px movement during the delay
       },
     }),
     useSensor(KeyboardSensor, {

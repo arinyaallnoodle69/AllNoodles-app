@@ -913,15 +913,32 @@ export async function createOrder(
 
   let orderNumber = orderNumberToUse;
   if (!isUpdating) {
-    const { data: nextNum, error: seqError } = await supabase.rpc(
-      "next_order_number",
-      { p_organization_id: organizationId, p_order_date: orderDate },
-    );
-    if (seqError || !nextNum) {
-      console.error("[createOrder:orderNumber]", seqError);
+    const year = orderDate.substring(0, 4);
+    const month = orderDate.substring(5, 7);
+    const startDateStr = `${year}-${month}-01`;
+    
+    let nextYear = Number(year);
+    let nextMonth = Number(month) + 1;
+    if (nextMonth > 12) {
+      nextMonth = 1;
+      nextYear += 1;
+    }
+    const nextMonthStr = `${nextYear}-${String(nextMonth).padStart(2, "0")}-01`;
+
+    const { count, error: countError } = await supabase
+      .from("orders")
+      .select("*", { count: "exact", head: true })
+      .eq("organization_id", organizationId)
+      .gte("order_date", startDateStr)
+      .lt("order_date", nextMonthStr);
+
+    if (countError) {
+      console.error("[createOrder:countError]", countError);
       return { success: false, error: "ไม่สามารถสร้างเลขออเดอร์ได้" };
     }
-    orderNumber = nextNum;
+
+    const nextNum = (count ?? 0) + 1;
+    orderNumber = `DN${year}${month}${String(nextNum).padStart(4, "0")}`;
   }
 
   // 2. Validate and build item data

@@ -31,6 +31,7 @@ import type { OrderCustomerOption, OrderProductOption } from "@/lib/orders/manag
 import { normalizeSearch } from "@/lib/utils/search";
 import {
   createManualOrderAction,
+  fetchCustomerOrderCountsForDateAction,
   fetchCustomerLastOrderItemsAction,
   fetchCustomerPricesAction,
   upsertCustomerPriceFromOrderModalAction,
@@ -870,12 +871,14 @@ export function CreateOrderModal({
   const [activeTab, setActiveTab] = useState<ModalTab>("create");
   const [productModalOpen, setProductModalOpen] = useState(false);
   const [pending, startTransition] = useTransition();
-  const [success, setSuccess] = useState<{ orderNumber: string; deliveryNumber?: string } | null>(null);
+  const [success, setSuccess] = useState<{ deliveryNumber: string } | null>(null);
   const [showSuccessOverlay, setShowSuccessOverlay] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [historyNotice, setHistoryNotice] = useState<string | null>(null);
   const [customerId, setCustomerId] = useState("");
   const [orderDate, setOrderDate] = useState(today);
+  const [customerOrderCountsByDate, setCustomerOrderCountsByDate] =
+    useState<Record<string, number>>(customerOrderCountsToday);
 
 
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -900,7 +903,7 @@ export function CreateOrderModal({
     () => customers.find((customer) => customer.id === customerId) ?? null,
     [customers, customerId],
   );
-  const selectedCustomerOrderCount = customerId ? customerOrderCountsToday[customerId] ?? 0 : 0;
+  const selectedCustomerOrderCount = customerId ? customerOrderCountsByDate[customerId] ?? 0 : 0;
   const orderedCustomers = useMemo(
     () => customers.toSorted(compareCustomerCode),
     [customers],
@@ -931,6 +934,21 @@ export function CreateOrderModal({
       setOpen(true);
     }
   }, [autoOpen, setOpen]);
+
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    (async () => {
+      const counts = await fetchCustomerOrderCountsForDateAction(orderDate);
+      if (!cancelled) {
+        setCustomerOrderCountsByDate(counts);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [open, orderDate]);
 
   const filteredCustomers = customerPickerQuery
     ? orderedCustomers.filter((c) => {
@@ -1245,10 +1263,16 @@ export function CreateOrderModal({
       }
       
       // SHOW SUCCESS OVERLAY AND RESET FORM (DON'T CLOSE)
-      setSuccess({
-        orderNumber: result.orderNumber ?? "",
-        deliveryNumber: result.deliveryNumber
-      });
+      const resolvedDeliveryNumber =
+        (result.deliveryNumber && String(result.deliveryNumber).trim()) ||
+        (result.orderNumber && String(result.orderNumber).trim().startsWith("DN")
+          ? String(result.orderNumber).trim()
+          : "");
+      if (resolvedDeliveryNumber) {
+        setSuccess({ deliveryNumber: resolvedDeliveryNumber });
+      } else {
+        setSuccess(null);
+      }
       setShowSuccessOverlay(true);
       
       // Clear overlay after 3 seconds and reset form
@@ -1313,8 +1337,8 @@ export function CreateOrderModal({
                   </div>
                   <h3 className="mb-2 text-3xl font-black text-slate-900 tracking-tight">บันทึกสำเร็จ!</h3>
                   <div className="space-y-1 text-slate-500">
-                    <p className="text-sm font-bold uppercase tracking-widest opacity-60">เลขที่ออเดอร์</p>
-                    <p className="font-mono text-2xl font-black text-[#003366]">{success.orderNumber}</p>
+                    <p className="text-sm font-bold uppercase tracking-widest opacity-60">เลขที่ใบส่งของ</p>
+                    <p className="font-mono text-2xl font-black text-[#003366]">{success.deliveryNumber}</p>
                   </div>
                   {success.deliveryNumber && (
                     <div className="mt-4 rounded-2xl bg-slate-50 px-6 py-3 border border-slate-100">
@@ -1358,13 +1382,7 @@ export function CreateOrderModal({
                     <div>
                       <p className="text-base font-bold leading-tight">บันทึกออเดอร์สำเร็จ!</p>
                       <p className="mt-1 text-sm font-semibold opacity-90">
-                        ออเดอร์: <span className="font-mono text-emerald-700">{success.orderNumber}</span>
-                        {success.deliveryNumber && (
-                          <>
-                            {" · "}
-                            ใบส่งของ: <span className="font-mono text-[#003366] font-bold">{success.deliveryNumber}</span>
-                          </>
-                        )}
+                        ใบส่งของ: <span className="font-mono text-[#003366] font-bold">{success.deliveryNumber}</span>
                       </p>
                     </div>
                   </div>
@@ -1814,7 +1832,7 @@ export function CreateOrderModal({
                 <div className="space-y-2">
                   {filteredCustomers.map((customer) => {
                     const isSelected = customer.id === customerId;
-                    const orderCountToday = customerOrderCountsToday[customer.id] ?? 0;
+                    const orderCountToday = customerOrderCountsByDate[customer.id] ?? 0;
                     return (
                       <button
                         key={customer.id}

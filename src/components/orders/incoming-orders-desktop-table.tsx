@@ -153,9 +153,7 @@ export const IncomingOrdersDesktopTable = memo(function IncomingOrdersDesktopTab
                             </span>
                           </div>
                           <div className="mt-1 flex items-center gap-2 pl-6">
-                            <p className="whitespace-nowrap font-mono text-sm font-semibold leading-5 text-slate-950" translate="no">
-                              {order.orderNumber}
-                            </p>
+
                             {isBilled ? (
                               <span
                                 className="inline-flex size-5 shrink-0 items-center justify-center rounded-full bg-emerald-700 text-white"

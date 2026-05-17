@@ -19,6 +19,7 @@ type SelectChain<T> = {
   ilike: (column: string, pattern: string) => SelectChain<T>;
   limit: (count: number) => SelectChain<T>;
   order: (column: string, options?: { ascending: boolean }) => SelectChain<T>;
+  maybeSingle: () => SingleResult<T>;
   single: () => SingleResult<T>;
 } & Promise<{ data: T[] | null; error: QueryError }>;
 
@@ -215,7 +216,7 @@ export async function getOrderDetailById(
     )
     .eq("organization_id", organizationId)
     .eq("id", orderId)
-    .single();
+    .maybeSingle();
 
   if (orderResult.error) {
     throw new Error(orderResult.error.message ?? "Failed to load order.");

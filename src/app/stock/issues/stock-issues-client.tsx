@@ -82,8 +82,7 @@ function StockIssueDetailModal({
               <div className="text-center mb-4">
                 <div className="text-[11px] leading-relaxed text-slate-500">T&Y Noodle - ใบจัดส่งสินค้า</div>
                 <div className="text-[14px] font-black leading-tight mt-0.5">
-                  เลขที่ออเดอร์: {issue.orderNumber}
-                  {issue.issueNumber && <span className="block mt-0.5">เลขใบจัดส่ง: {issue.issueNumber}</span>}
+                  เลขที่เอกสาร: {issue.issueNumber || issue.orderNumber}
                 </div>
                 <div className="text-[12px] leading-relaxed text-slate-500 mt-1">{fmtDateTH(issue.orderDate)}</div>
               </div>
@@ -152,7 +151,7 @@ function StockIssueDetailModal({
                 <div className="flex justify-between items-baseline gap-2">
                   <span className="shrink-0 text-[10px] font-black uppercase tracking-wider text-[#45464d]">เลขที่เอกสาร / No:</span>
                   <span className="font-mono text-[13px] font-black text-black">
-                    {issue.orderNumber} / {issue.issueNumber}
+                    {issue.issueNumber || issue.orderNumber}
                   </span>
                 </div>
                 <div className="flex justify-between items-baseline gap-2 border-t border-dashed border-[#c6c6cd] pt-1">

@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { revalidateReportPages } from "@/lib/reports/revalidate-report-pages";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import type { SnapshotRow } from "@/lib/billing/billing-statement";
 
@@ -81,6 +82,45 @@ async function getDeliveryNumberActualTotals(
   );
 }
 
+async function getDeliveryRowsForBillingRecord(
+  supabase: ReturnType<typeof getSupabaseAdmin>,
+  organizationId: string,
+  customerId: string,
+  fromDate: string,
+  toDate: string,
+) {
+  const { data: deliveryNotes, error } = await supabase
+    .from("delivery_notes")
+    .select("id, delivery_number, delivery_date, total_amount, notes")
+    .eq("organization_id", organizationId)
+    .eq("customer_id", customerId)
+    .eq("status", "confirmed")
+    .gte("delivery_date", fromDate)
+    .lte("delivery_date", toDate)
+    .order("delivery_date", { ascending: true })
+    .order("delivery_number", { ascending: true });
+
+  if (error || !deliveryNotes || deliveryNotes.length === 0) {
+    return [] as SnapshotRow[];
+  }
+
+  const totalsByDeliveryNumber = await getDeliveryNumberActualTotals(
+    supabase,
+    deliveryNotes.map((note) => String(note.delivery_number)),
+  );
+
+  return deliveryNotes.map((note, index) => {
+    const live = totalsByDeliveryNumber.get(String(note.delivery_number));
+    return {
+      lineNumber: index + 1,
+      deliveryNumber: String(note.delivery_number),
+      deliveryDate: live?.deliveryDate ?? String(note.delivery_date),
+      totalAmount: Number(live?.totalAmount ?? note.total_amount ?? 0),
+      notes: live?.notes ?? note.notes ?? null,
+    };
+  });
+}
+
 export async function recordBillingHistoryAction(params: {
   organizationId: string;
   items: BillingItem[];
@@ -144,6 +184,7 @@ export async function recordBillingHistoryAction(params: {
   }
 
   revalidatePath("/billing");
+  revalidateReportPages();
   return { success: true, results };
 }
 
@@ -153,14 +194,11 @@ export async function syncBillingSnapshotsForDeliveryNumbers(params: {
   deliveryNumbers: string[];
 }) {
   const deliveryNumbers = Array.from(new Set(params.deliveryNumbers.filter(Boolean)));
-  if (deliveryNumbers.length === 0) {
-    return { success: true as const, updated: 0 };
-  }
 
   const supabase = getSupabaseAdmin();
   const { data: records, error: recordsError } = await supabase
     .from("billing_records")
-    .select("id, total_amount, snapshot_rows")
+    .select("id, total_amount, snapshot_rows, from_date, to_date")
     .eq("organization_id", params.organizationId)
     .eq("customer_id", params.customerId);
 
@@ -169,21 +207,9 @@ export async function syncBillingSnapshotsForDeliveryNumbers(params: {
   }
 
   if (!records || records.length === 0) {
+    revalidateReportPages();
     return { success: true as const, updated: 0 };
   }
-
-  const hasRelevantBillingRecord = records.some((record) => {
-    const snapshotRows = Array.isArray(record.snapshot_rows)
-      ? (record.snapshot_rows as SnapshotRow[])
-      : [];
-    return snapshotRows.some((row) => deliveryNumbers.includes(row.deliveryNumber));
-  });
-
-  if (!hasRelevantBillingRecord) {
-    return { success: true as const, updated: 0 };
-  }
-
-  const deliveryMap = await getDeliveryNumberActualTotals(supabase, deliveryNumbers);
 
   let updated = 0;
 
@@ -192,33 +218,18 @@ export async function syncBillingSnapshotsForDeliveryNumbers(params: {
       ? (record.snapshot_rows as SnapshotRow[])
       : [];
 
-    let touched = false;
-    const nextRows = snapshotRows.flatMap((row) => {
-      if (deliveryNumbers.includes(row.deliveryNumber) && !deliveryMap.has(row.deliveryNumber)) {
-        touched = true;
-        return [];
-      }
+    if (deliveryNumbers.length > 0) {
+      const touched = snapshotRows.some((row) => deliveryNumbers.includes(row.deliveryNumber));
+      if (!touched) continue;
+    }
 
-      const live = deliveryMap.get(row.deliveryNumber);
-      if (!live) {
-        return [row];
-      }
-
-      touched = true;
-      return [{
-        ...row,
-        deliveryDate: live.deliveryDate,
-        totalAmount: live.totalAmount,
-        notes: live.notes,
-      }];
-    });
-
-    if (!touched) continue;
-
-    const normalizedRows = nextRows.map((row, index) => ({
-      ...row,
-      lineNumber: index + 1,
-    }));
+    const normalizedRows = await getDeliveryRowsForBillingRecord(
+      supabase,
+      params.organizationId,
+      params.customerId,
+      String(record.from_date),
+      String(record.to_date),
+    );
 
     if (normalizedRows.length === 0) {
       const { error: deleteError } = await supabase
@@ -232,7 +243,7 @@ export async function syncBillingSnapshotsForDeliveryNumbers(params: {
       continue;
     }
 
-    const nextTotal = normalizedRows.reduce((sum, row) => sum + Number(row.totalAmount ?? 0), 0);
+    const nextTotal = normalizedRows.reduce((sum, row) => sum + Number(row.totalAmount), 0);
 
     const { error: updateError } = await supabase
       .from("billing_records")
@@ -250,6 +261,7 @@ export async function syncBillingSnapshotsForDeliveryNumbers(params: {
   if (updated > 0) {
     revalidatePath("/billing");
   }
+  revalidateReportPages();
 
   return { success: true as const, updated };
 }

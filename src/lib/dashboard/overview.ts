@@ -1,6 +1,7 @@
 import "server-only";
 
 import { getTodayInBangkok } from "@/lib/orders/date";
+import { getRecentDailyPerformance } from "@/lib/reports/sales-overview";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { getStockDashboardData, type StockProductOption, type StockSupplierOption } from "@/lib/stock/admin";
 
@@ -9,6 +10,7 @@ import { getStockDashboardData, type StockProductOption, type StockSupplierOptio
 export type DashboardKpi = {
   todayOrderCount: number;
   todayOrderAmount: number;
+  todayNetProfit: number;
   submittedOrderCount: number;
   pendingDeliveryCount: number;
   pendingDeliveryAmount: number;
@@ -46,14 +48,49 @@ export type TopProduct = {
   imageUrl: string | null;
 };
 
+export type DashboardDailyPerformanceRow = {
+  isoDate: string;
+  monthLabel: string;
+  revenue: number;
+  profit: number;
+  orderCount: number;
+};
+
 export type DashboardOverview = {
   kpi: DashboardKpi;
   recentOrders: RecentOrder[];
   weeklyTrend: WeeklyBar[];
+  dailyPerformanceRows: DashboardDailyPerformanceRow[];
+  dailyPerformanceRangeStartDate: string | null;
+  dailyPerformanceRangeEndDate: string | null;
   topCustomers: TopCustomer[];
   topProducts: TopProduct[];
   stockProducts: StockProductOption[];
   stockSuppliers: StockSupplierOption[];
+};
+
+type DeliveryNoteRow = {
+  id: string;
+  total_amount: number | string | null;
+};
+
+type DeliveryNoteItemRow = {
+  delivery_note_id: string;
+  quantity_delivered: number | string | null;
+  product_sale_unit_id: string | null;
+};
+
+type ProductSaleUnitRow = {
+  id: string;
+  product_id: string;
+  base_unit_quantity: number | string | null;
+  cost_mode: string | null;
+  fixed_cost_price: number | string | null;
+};
+
+type ProductRow = {
+  id: string;
+  cost_price: number | string | null;
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -84,6 +121,80 @@ function thaiDayShort(isoDate: string): string {
   return THAI_DAY_SHORT[new Date(y, m - 1, d).getDay()];
 }
 
+async function loadTodayNetProfit(organizationId: string, isoDate: string): Promise<number> {
+  const supabase = getSupabaseAdmin();
+  const { data: notes } = await supabase
+    .from("delivery_notes")
+    .select("id, total_amount")
+    .eq("organization_id", organizationId)
+    .eq("status", "confirmed")
+    .eq("delivery_date", isoDate);
+
+  const typedNotes = (notes ?? []) as DeliveryNoteRow[];
+  if (typedNotes.length === 0) {
+    return 0;
+  }
+
+  const noteIds = typedNotes.map((note) => note.id);
+  const { data: items } = await supabase
+    .from("delivery_note_items")
+    .select("delivery_note_id, quantity_delivered, product_sale_unit_id")
+    .in("delivery_note_id", noteIds);
+
+  const typedItems = (items ?? []) as DeliveryNoteItemRow[];
+  const saleUnitIds = [
+    ...new Set(
+      typedItems
+        .map((item) => item.product_sale_unit_id)
+        .filter((value): value is string => Boolean(value)),
+    ),
+  ];
+
+  const { data: saleUnits } =
+    saleUnitIds.length > 0
+      ? await supabase
+          .from("product_sale_units")
+          .select("id, product_id, base_unit_quantity, cost_mode, fixed_cost_price")
+          .in("id", saleUnitIds)
+      : { data: [] };
+
+  const typedSaleUnits = (saleUnits ?? []) as ProductSaleUnitRow[];
+  const productIds = [...new Set(typedSaleUnits.map((unit) => unit.product_id))];
+  const { data: products } =
+    productIds.length > 0
+      ? await supabase.from("products").select("id, cost_price").in("id", productIds)
+      : { data: [] };
+
+  const productCostById = new Map(
+    ((products ?? []) as ProductRow[]).map((product) => [product.id, toNum(product.cost_price)]),
+  );
+
+  const saleUnitCostById = new Map(
+    typedSaleUnits.map((unit) => {
+      const productCost = productCostById.get(unit.product_id) ?? 0;
+      const baseQuantity = toNum(unit.base_unit_quantity);
+      const effectiveCost =
+        unit.cost_mode === "fixed" && unit.fixed_cost_price != null
+          ? toNum(unit.fixed_cost_price)
+          : productCost * baseQuantity;
+
+      return [unit.id, effectiveCost];
+    }),
+  );
+
+  const totalRevenue = typedNotes.reduce((sum, note) => sum + toNum(note.total_amount), 0);
+  const totalCost = typedItems.reduce((sum, item) => {
+    const quantity = toNum(item.quantity_delivered);
+    const unitCost = item.product_sale_unit_id
+      ? (saleUnitCostById.get(item.product_sale_unit_id) ?? 0)
+      : 0;
+
+    return sum + unitCost * quantity;
+  }, 0);
+
+  return totalRevenue - totalCost;
+}
+
 // ─── Query ────────────────────────────────────────────────────────────────────
 
 export async function getDashboardOverview(organizationId: string): Promise<DashboardOverview> {
@@ -102,6 +213,7 @@ export async function getDashboardOverview(organizationId: string): Promise<Dash
     weeklyOrdersRes,
     monthOrdersRes,
     stockDashboardRes,
+    recentDailyPerformance,
   ] = await Promise.all([
     // 1. Today's submitted/confirmed orders
     supabase.from("orders")
@@ -169,7 +281,12 @@ export async function getDashboardOverview(organizationId: string): Promise<Dash
 
     // 8. Stock dashboard data (for low stock count)
     getStockDashboardData(organizationId, 0, 0),
+
+    // 9. Recent daily performance for dashboard report section
+    getRecentDailyPerformance(organizationId, 7, today),
   ]);
+
+  const todayNetProfit = await loadTodayNetProfit(organizationId, today);
 
   // ── Process core KPIs ──────────────────────────────────────────────────────
 
@@ -202,6 +319,7 @@ export async function getDashboardOverview(organizationId: string): Promise<Dash
   const kpi: DashboardKpi = {
     todayOrderCount: todayOrders.length,
     todayOrderAmount: todayOrders.reduce((s, r) => s + toNum(r.total_amount), 0),
+    todayNetProfit,
     submittedOrderCount: toNum(submittedOrdersRes.count),
     pendingDeliveryCount: pendingDeliveries.length,
     pendingDeliveryAmount: pendingDeliveries.reduce((s, r) => s + toNum(r.total_amount), 0),
@@ -235,6 +353,14 @@ export async function getDashboardOverview(organizationId: string): Promise<Dash
     const entry = byDate.get(date) ?? { amount: 0, count: 0 };
     return { date, amount: entry.amount, count: entry.count, label: thaiDayShort(date) };
   });
+
+  const dailyPerformanceRows: DashboardDailyPerformanceRow[] = recentDailyPerformance.rows.map((row) => ({
+    isoDate: row.isoDate,
+    monthLabel: row.monthLabel,
+    revenue: row.revenue,
+    profit: row.profit,
+    orderCount: row.orderCount,
+  }));
 
   // ── Top 5 customers (by total order amount this month) ────────────────────
 
@@ -285,5 +411,16 @@ export async function getDashboardOverview(organizationId: string): Promise<Dash
     .sort((a, b) => b.totalAmount - a.totalAmount)
     .slice(0, 5);
 
-  return { kpi, recentOrders, weeklyTrend, topCustomers, topProducts, stockProducts: stockDashboardRes.products, stockSuppliers: stockDashboardRes.suppliers };
+  return {
+    kpi,
+    recentOrders,
+    weeklyTrend,
+    dailyPerformanceRows,
+    dailyPerformanceRangeStartDate: recentDailyPerformance.rangeStartDate,
+    dailyPerformanceRangeEndDate: recentDailyPerformance.rangeEndDate,
+    topCustomers,
+    topProducts,
+    stockProducts: stockDashboardRes.products,
+    stockSuppliers: stockDashboardRes.suppliers,
+  };
 }

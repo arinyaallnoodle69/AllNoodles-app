@@ -2,18 +2,18 @@ import "server-only";
 
 import { redirect } from "next/navigation";
 import { AppSidebarLayout } from "@/components/app-sidebar";
+import { DashboardClient } from "@/components/dashboard/dashboard-client";
 import { requireAppSession, roleHomePage } from "@/lib/auth/authorization";
 import { getDashboardOverview } from "@/lib/dashboard/overview";
-import { getTodayInBangkok } from "@/lib/orders/date";
-import { getOrderStoreStatusSummary } from "@/lib/orders/store-status";
-import { DashboardClient } from "@/components/dashboard/dashboard-client";
 import { getIncomingOrders, getOrderDetailById } from "@/lib/orders/detail";
+import { getTodayInBangkok } from "@/lib/orders/date";
 import { getProductsForOrder } from "@/lib/orders/manage";
+import { getOrderStoreStatusSummary } from "@/lib/orders/store-status";
 
 import type { DashboardOverview } from "@/lib/dashboard/overview";
-import type { OrderStoreStatusSummary } from "@/lib/orders/store-status";
-import type { OrderDetailData, IncomingOrderListItem } from "@/lib/orders/detail";
+import type { IncomingOrderListItem, OrderDetailData } from "@/lib/orders/detail";
 import type { OrderProductOption } from "@/lib/orders/manage";
+import type { OrderStoreStatusSummary } from "@/lib/orders/store-status";
 
 export const metadata = { title: "ภาพรวม" };
 
@@ -23,13 +23,15 @@ type DashboardPageProps = {
 
 export default async function DashboardPage({ searchParams }: DashboardPageProps) {
   const session = await requireAppSession();
-  if (session.role === "warehouse") redirect(roleHomePage("warehouse"));
+  if (session.role === "warehouse") {
+    redirect(roleHomePage("warehouse"));
+  }
 
   const params = await searchParams;
   const today = getTodayInBangkok();
   const orderDate = params.date || today;
   const expandedOrderId = params.expanded?.trim() ?? "";
-  
+
   let overview: DashboardOverview | null = null;
   let storeStatusSummary: OrderStoreStatusSummary | null = null;
   let expandedDetail: OrderDetailData | null = null;
@@ -40,10 +42,13 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
     const results = await Promise.all([
       getDashboardOverview(session.organizationId),
       getOrderStoreStatusSummary(session.organizationId, orderDate),
-      expandedOrderId ? getOrderDetailById(session.organizationId, expandedOrderId) : Promise.resolve(null),
+      expandedOrderId
+        ? getOrderDetailById(session.organizationId, expandedOrderId)
+        : Promise.resolve(null),
       expandedOrderId ? getIncomingOrders(session.organizationId, { orderDate }) : Promise.resolve([]),
       expandedOrderId ? getProductsForOrder(session.organizationId) : Promise.resolve([]),
     ]);
+
     overview = results[0];
     storeStatusSummary = results[1];
     expandedDetail = results[2];
@@ -51,11 +56,11 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
     products = results[4];
   } catch (error) {
     console.error("Dashboard data fetch error:", error);
-    // Fallback empty states to prevent crash
     overview = {
       kpi: {
         todayOrderCount: 0,
         todayOrderAmount: 0,
+        todayNetProfit: 0,
         submittedOrderCount: 0,
         pendingDeliveryCount: 0,
         pendingDeliveryAmount: 0,
@@ -65,6 +70,9 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
       },
       recentOrders: [],
       weeklyTrend: [],
+      dailyPerformanceRows: [],
+      dailyPerformanceRangeStartDate: null,
+      dailyPerformanceRangeEndDate: null,
       topCustomers: [],
       topProducts: [],
       stockProducts: [],
@@ -79,7 +87,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
 
   return (
     <AppSidebarLayout>
-      <DashboardClient 
+      <DashboardClient
         overview={overview}
         storeStatusSummary={storeStatusSummary}
         stockProducts={overview.stockProducts}

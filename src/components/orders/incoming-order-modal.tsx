@@ -53,6 +53,11 @@ function formatDisplayDate(value: string) {
   return `${d}/${m}/${parseInt(y, 10) + 543}`;
 }
 
+function resolveDeliveryNumber(orderNumber: string) {
+  const normalized = orderNumber.trim();
+  return normalized.startsWith("DN") ? normalized : null;
+}
+
 type StockReductionMode = "return" | "lost";
 
 // â”€â”€â”€ Sub-components â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -861,6 +866,7 @@ export function IncomingOrderModal({ allOrders, detail, expandedId, products }: 
   }
 
   if (!detail) return null;
+  const deliveryNumber = resolveDeliveryNumber(detail.orderNumber);
 
   return (
     <div className={`fixed inset-0 z-[250] flex flex-col items-center justify-end lg:justify-center overflow-hidden`}>
@@ -914,8 +920,12 @@ export function IncomingOrderModal({ allOrders, detail, expandedId, products }: 
               <div className="flex flex-wrap items-center gap-2 mt-1">
                 <span className="font-mono text-[11px] font-black text-white/50 tracking-widest uppercase">{detail.customer.code}</span>
                 <span className="h-2 w-px bg-white/20" />
-                <span className="font-mono text-[11px] font-black text-white/80 tracking-tight">{detail.orderNumber}</span>
-                <span className="h-2 w-px bg-white/20" />
+                {deliveryNumber ? (
+                  <>
+                    <span className="font-mono text-[11px] font-black text-white/80 tracking-tight">{deliveryNumber}</span>
+                    <span className="h-2 w-px bg-white/20" />
+                  </>
+                ) : null}
                 <span className="text-[11px] font-black text-white/80 tracking-tight">{formatDisplayDate(detail.orderDate)}</span>
               </div>
             </div>
@@ -1003,7 +1013,7 @@ export function IncomingOrderModal({ allOrders, detail, expandedId, products }: 
               </div>
               <h3 className="text-2xl font-black text-slate-950 tracking-tight">ยืนยันการยกเลิก?</h3>
               <p className="mt-4 text-sm font-medium text-slate-500 leading-relaxed max-w-xs mx-auto">
-                คุณแน่ใจหรือไม่ว่าต้องการลบออเดอร์ <span className="font-mono font-bold text-slate-950">{detail.orderNumber}</span>?
+                คุณแน่ใจหรือไม่ว่าต้องการลบออเดอร์ {deliveryNumber ? <span className="font-mono font-bold text-slate-950">{deliveryNumber}</span> : "รายการนี้"}?
                 การดำเนินการนี้จะลบออเดอร์ออกจากรายการและอัปเดตสต็อกกับใบวางบิลตามข้อมูลล่าสุด
               </p>
               {deleteError ? (

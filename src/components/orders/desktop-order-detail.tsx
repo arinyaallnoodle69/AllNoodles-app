@@ -55,19 +55,12 @@ export function DesktopOrderDetail({ detail, deliveryNumbers }: Props) {
             </div>
 
             <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 text-base font-semibold text-slate-700">
-              <span className="inline-flex items-center gap-2">
-                <ClipboardList className="h-4 w-4 text-slate-400" />
-                ออเดอร์: <span className="font-mono text-slate-900" translate="no">{detail.orderNumber}</span>
-              </span>
               {deliveryNumberText ? (
-                <>
-                  <span className="h-4 w-px bg-slate-200" aria-hidden="true" />
-                  <span>
-                    ใบส่งของ: <span className="font-mono text-slate-900" translate="no">{deliveryNumberText}</span>
-                  </span>
-                </>
+                <span>
+                  ใบส่งของ: <span className="font-mono text-slate-900" translate="no">{deliveryNumberText}</span>
+                </span>
               ) : null}
-              <span className="h-4 w-px bg-slate-200" aria-hidden="true" />
+              {deliveryNumberText ? <span className="h-4 w-px bg-slate-200" aria-hidden="true" /> : null}
               <span>
                 ช่องทาง: <span className="text-slate-900">{detail.channelLabel}</span>
               </span>

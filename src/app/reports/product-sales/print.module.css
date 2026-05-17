@@ -11,7 +11,7 @@
   width: 210mm !important;
   height: 297mm !important; /* STRICT A4 HEIGHT */
   background: #ffffff !important;
-  padding: 8mm !important; 
+  padding: 4mm !important; 
   margin: 0 !important;
   box-sizing: border-box !important;
   overflow: hidden !important;
@@ -74,8 +74,8 @@
 }
 
 /* COMPACT ROWS FOR 30 ITEMS - PERFECT CALIBRATION */
-.printArea thead th { padding: 1.5mm 1mm !important; font-size: 8pt !important; font-weight: 900 !important; background: #f8fafc !important; border-bottom: 1.2pt solid #003366 !important; color: #003366 !important; text-transform: uppercase !important; }
-.printArea tbody td { padding: 1.6mm 1mm !important; font-size: 9.5pt !important; border-bottom: 0.5pt solid #e2e8f0 !important; color: #111111 !important; }
+.printArea thead th { padding: 0.8mm 1mm !important; font-size: 8pt !important; font-weight: 900 !important; background: #f8fafc !important; border-bottom: 1.2pt solid #003366 !important; color: #003366 !important; text-transform: uppercase !important; }
+.printArea tbody td { padding: 1.2mm 1mm !important; font-size: 9pt !important; border-bottom: 0.5pt solid #e2e8f0 !important; color: #111111 !important; }
 
 .printProductCell { display: flex !important; align-items: center !important; gap: 1.2mm !important; min-width: 0 !important; }
 .printProductName { font-size: 9.5pt !important; font-weight: 800 !important; color: #111111 !important; white-space: normal !important; line-height: 1.2 !important; }

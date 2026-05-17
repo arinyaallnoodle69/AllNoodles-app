@@ -1,6 +1,6 @@
 "use client";
 
-import { Printer, Image as ImageIcon, X, Loader2, Share2 } from "lucide-react";
+import { Printer, Image as ImageIcon, X, Loader2, Download } from "lucide-react";
 import { useRef, useState } from "react";
 import * as htmlToImage from "html-to-image";
 import { createPortal } from "react-dom";
@@ -11,7 +11,15 @@ type PreviewImage = {
   name: string;
 };
 
-export function PrintButton({ targetId = "report-print-area", fileName = "report" }: { targetId?: string; fileName?: string }) {
+export function PrintButton({
+  targetId = "report-print-area",
+  fileName = "report",
+  hidePrintOnMobile = false,
+}: {
+  targetId?: string;
+  fileName?: string;
+  hidePrintOnMobile?: boolean;
+}) {
   const [isPrinting, setIsPrinting] = useState(false);
   const [isCapturing, setIsCapturing] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
@@ -103,7 +111,11 @@ export function PrintButton({ targetId = "report-print-area", fileName = "report
         if (clonedPages.length > 0) {
           clonedPages.forEach((p, idx) => {
             if (idx === i) {
-              (p as HTMLElement).style.display = "flex";
+              const originalPage = originalPages[idx] as HTMLElement | undefined;
+              const originalDisplay =
+                originalPage != null ? window.getComputedStyle(originalPage).display : "block";
+              (p as HTMLElement).style.display =
+                originalDisplay && originalDisplay !== "none" ? originalDisplay : "block";
               (p as HTMLElement).style.visibility = "visible";
               (p as HTMLElement).style.opacity = "1";
               targetNode = p as HTMLElement;
@@ -168,29 +180,6 @@ export function PrintButton({ targetId = "report-print-area", fileName = "report
   async function downloadAll() {
     if (previewImages.length === 0) return;
 
-    // Check if Web Share API is available and supports files (iOS/Android Safari/Chrome)
-    const files = previewImages.map(img => new File([img.blob], img.name, { type: 'image/png' }));
-    
-    if (navigator.canShare && navigator.canShare({ files })) {
-      try {
-        await navigator.share({
-          files,
-          title: fileName,
-          text: `รายงาน ${fileName}`
-        });
-        // On successful share/save, close the preview
-        setShowPreview(false);
-        return;
-      } catch (err: unknown) {
-        // AbortError is thrown when user cancels the share sheet. We don't want to alert on this.
-        if (err instanceof Error && err.name !== 'AbortError') {
-          console.error("Share failed:", err);
-        }
-        return;
-      }
-    }
-
-    // Fallback for Desktop (Multiple downloads via a tags)
     previewImages.forEach((img, idx) => {
       setTimeout(() => {
         const link = document.createElement("a");
@@ -201,6 +190,8 @@ export function PrintButton({ targetId = "report-print-area", fileName = "report
         document.body.removeChild(link);
       }, idx * 600);
     });
+
+    setShowPreview(false);
   }
 
   return (
@@ -220,7 +211,7 @@ export function PrintButton({ targetId = "report-print-area", fileName = "report
         type="button"
         onClick={handlePrint}
         disabled={isPrinting || isCapturing}
-        className="flex h-10 items-center justify-center gap-2 rounded-xl bg-[#003366] px-3 text-white transition hover:bg-[#002244] active:scale-95 disabled:opacity-50"
+        className={`${hidePrintOnMobile ? "hidden md:flex" : "flex"} h-10 items-center justify-center gap-2 rounded-xl bg-[#003366] px-3 text-white transition hover:bg-[#002244] active:scale-95 disabled:opacity-50`}
         aria-label="พิมพ์รายงาน"
       >
         <Printer className="h-4.5 w-4.5 shrink-0" strokeWidth={2} />
@@ -254,7 +245,7 @@ export function PrintButton({ targetId = "report-print-area", fileName = "report
                   onClick={downloadAll}
                   className="hidden items-center gap-2.5 rounded-xl bg-white px-5 py-2.5 text-sm font-black text-[#0a0c10] shadow-[0_8px_20px_rgba(255,255,255,0.15)] transition hover:bg-slate-100 active:scale-95 sm:flex"
                 >
-                  <Share2 className="h-4.5 w-4.5" strokeWidth={3} />
+                  <Download className="h-4.5 w-4.5" strokeWidth={3} />
                   บันทึกทั้งหมด
                 </button>
               )}
@@ -313,8 +304,8 @@ export function PrintButton({ targetId = "report-print-area", fileName = "report
                 onClick={downloadAll}
                 className="flex w-full items-center justify-center gap-3 rounded-2xl bg-emerald-600 py-4 text-lg font-black text-white shadow-[0_15px_30px_rgba(255,255,255,0.1)] active:scale-95 transition"
               >
-                <Share2 className="h-6 w-6 text-white" strokeWidth={3} />
-                แชร์ / บันทึกลงเครื่อง
+                <Download className="h-6 w-6 text-white" strokeWidth={3} />
+                บันทึกลงเครื่อง
               </button>
             </div>
           )}

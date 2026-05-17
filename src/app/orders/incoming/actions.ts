@@ -9,6 +9,7 @@ import { getEffectiveSaleUnitCost } from "@/lib/products/sale-unit-cost";
 import { getCustomersForOrder, getProductsForOrder, type OrderCustomerOption, type OrderProductOption } from "@/lib/orders/manage";
 import { getOrderDetailById, type OrderDetailData } from "@/lib/orders/detail";
 import { syncBillingSnapshotsForDeliveryNumbers } from "@/lib/billing/actions";
+import { revalidateDashboardPages } from "@/lib/dashboard/revalidate-dashboard-pages";
 import { mergeItemsIntoOrder, type MergeableOrderItemInput } from "@/lib/orders/merge-order-items";
 import { syncDeliveryNoteForOrder } from "@/lib/orders/sync-delivery-note";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -173,6 +174,7 @@ export async function cancelOrderAction(formData: FormData): Promise<ActionResul
 
   revalidatePath("/orders/incoming");
   revalidatePath("/orders");
+  revalidateDashboardPages();
   return { success: true };
 }
 
@@ -264,6 +266,7 @@ export async function updateOrderItemQtyAction(formData: FormData): Promise<Acti
   revalidatePath("/orders/incoming");
   revalidatePath("/orders");
   revalidatePath("/billing");
+  revalidateDashboardPages();
   return { success: true };
 }
 
@@ -335,6 +338,7 @@ export async function removeOrderItemAction(formData: FormData): Promise<ActionR
   revalidatePath("/orders/incoming");
   revalidatePath("/orders");
   revalidatePath("/billing");
+  revalidateDashboardPages();
   return { success: true };
 }
 
@@ -628,6 +632,9 @@ export async function updateOrderItemsBatchAction(input: {
   }
 
   revalidatePath("/orders/incoming");
+  revalidatePath("/orders");
+  revalidatePath("/billing");
+  revalidateDashboardPages();
   return { success: true };
 }
 
@@ -769,6 +776,7 @@ export async function addOrderItemAction(formData: FormData): Promise<ActionResu
   revalidatePath("/orders/incoming");
   revalidatePath("/orders");
   revalidatePath("/billing");
+  revalidateDashboardPages();
   return { success: true };
 }
 
@@ -1006,7 +1014,7 @@ export async function createManualOrderAction(formData: FormData): Promise<Actio
   let orderId = existingOrder?.id ?? null;
   let effectiveOrderNumber = existingOrder?.order_number ?? null;
 
-  if (!orderId || !effectiveOrderNumber) {
+  if (!orderId) {
     const { data: nextOrderNumber } = await admin.rpc("next_order_number", {
       p_order_date: orderDate,
       p_organization_id: session.organizationId,
@@ -1115,8 +1123,16 @@ export async function createManualOrderAction(formData: FormData): Promise<Actio
     };
   }
 
+  const syncedDeliveryNumber = String(syncResult.deliveryNumber);
+  effectiveOrderNumber = syncedDeliveryNumber;
+  await admin
+    .from("orders")
+    .update({ order_number: syncedDeliveryNumber })
+    .eq("id", orderId);
+
   revalidatePath("/orders/incoming");
   revalidatePath("/orders");
+  revalidateDashboardPages();
   return {
     success: true,
     orderNumber: String(effectiveOrderNumber),
@@ -1130,7 +1146,7 @@ export async function linkPendingLineOrderAction(formData: FormData): Promise<Ac
   const customerId = String(formData.get("customerId") ?? "").trim();
 
   if (!pendingOrderId || !customerId) {
-    return { error: "à¸à¸£à¸¸à¸“à¸²à¹€à¸¥à¸·à¸­à¸à¸£à¹‰à¸²à¸™à¸„à¹‰à¸²à¸—à¸µà¹ˆà¸•à¹‰à¸­à¸‡à¸à¸²à¸£à¸œà¸¹à¸" };
+    return { error: "กรุณาเลือกร้านค้าที่ต้องการผูก" };
   }
 
   const result = await linkLineCustomerAndConvertPendingOrders({
@@ -1143,6 +1159,11 @@ export async function linkPendingLineOrderAction(formData: FormData): Promise<Ac
   if ("error" in result) {
     return { error: result.error ?? "à¸œà¸¹à¸à¸£à¹‰à¸²à¸™à¸„à¹‰à¸²à¹„à¸¡à¹ˆà¸ªà¸³à¹€à¸£à¹‡à¸ˆ" };
   }
+
+  revalidatePath("/orders/incoming");
+  revalidatePath("/orders");
+  revalidatePath("/billing");
+  revalidateDashboardPages();
 
   return {
     receiptWarning: result.receiptErrors.length > 0
@@ -1169,7 +1190,7 @@ export async function updateIncomingOrderDateAction(formData: FormData): Promise
 
   const { data: order } = await admin
     .from("orders")
-    .select("id, status, order_number, order_date, organization_id")
+    .select("id, status, order_number, order_date, organization_id, customer_id")
     .eq("id", orderId)
     .single();
 
@@ -1185,14 +1206,141 @@ export async function updateIncomingOrderDateAction(formData: FormData): Promise
     return { success: true, orderDate: nextOrderDate, orderNumber: order.order_number };
   }
 
-  const { data: nextOrderNumber, error: nextOrderNumberError } = await admin.rpc("next_order_number", {
-    p_order_date: nextOrderDate,
-    p_organization_id: session.organizationId,
-  });
+  // 1. Check if an order already exists on the NEXT date
+  const { data: existingOrder } = await admin
+    .from("orders")
+    .select("id, status, total_amount")
+    .eq("organization_id", session.organizationId)
+    .eq("customer_id", order.customer_id)
+    .eq("order_date", nextOrderDate)
+    .neq("status", "cancelled")
+    .limit(1)
+    .maybeSingle();
 
-  if (nextOrderNumberError || !nextOrderNumber) {
-    return { error: nextOrderNumberError?.message ?? "à¸ªà¸£à¹‰à¸²à¸‡à¹€à¸¥à¸‚à¸­à¸­à¹€à¸”à¸­à¸£à¹Œà¹ƒà¸«à¸¡à¹ˆà¹„à¸¡à¹ˆà¸ªà¸³à¹€à¸£à¹‡à¸ˆ" };
-  }
+  if (existingOrder) {
+    // CASE 1: Order exists on next date -> MERGE!
+    
+    // Fetch items of the current order (to be moved)
+    const { data: orderItems } = await admin
+      .from("order_items")
+      .select("*")
+      .eq("order_id", orderId);
+
+    const mergeableItems = (orderItems ?? []).map((item) => ({
+      costPrice: Number(item.cost_price),
+      productId: item.product_id,
+      productSaleUnitId: item.product_sale_unit_id,
+      quantity: Number(item.quantity),
+      quantityInBaseUnit: Number(item.quantity_in_base_unit),
+      saleUnitLabel: item.sale_unit_label,
+      saleUnitRatio: Number(item.sale_unit_ratio),
+      unitPrice: Number(item.unit_price),
+    }));
+
+    // Merge items into the existing order on the next date
+    const mergeResult = await mergeItemsIntoOrder(admin, {
+      items: mergeableItems,
+      orderId: existingOrder.id,
+      organizationId: session.organizationId,
+    });
+
+    if ("error" in mergeResult) {
+      return { error: "ไม่สามารถรวมรายการสินค้าได้: " + mergeResult.error };
+    }
+
+    // Recalculate total for the target order
+    const { data: finalItems } = await admin
+      .from("order_items")
+      .select("line_total")
+      .eq("order_id", existingOrder.id);
+      
+    const finalTotal = (finalItems ?? []).reduce((sum, i) => sum + Number(i.line_total), 0);
+
+    await admin.from("orders").update({
+      subtotal_amount: finalTotal,
+      total_amount: finalTotal,
+    }).eq("id", existingOrder.id);
+
+    // Clean up the SOURCE order and its items
+    await admin.from("order_items").delete().eq("order_id", orderId);
+    await admin.from("orders").delete().eq("id", orderId);
+
+    // Clean up the SOURCE delivery note (if any) on the old date
+    const { data: sourceDn } = await admin
+      .from("delivery_notes")
+      .select("id, delivery_number")
+      .eq("organization_id", session.organizationId)
+      .eq("customer_id", order.customer_id)
+      .eq("delivery_date", order.order_date)
+      .maybeSingle();
+
+    if (sourceDn) {
+      await admin.from("delivery_note_items").delete().eq("delivery_note_id", sourceDn.id);
+      await admin.from("delivery_notes").delete().eq("id", sourceDn.id);
+    }
+
+    // Sync the delivery note on the NEXT date
+    const syncRes = await syncOrderDeliveryNoteAction(existingOrder.id);
+
+    if ("error" in syncRes) {
+      return { error: "ปรับปรุงใบส่งของไม่สำเร็จ: " + syncRes.error };
+    }
+
+    const deliveryNumber = "deliveryNumber" in syncRes ? String(syncRes.deliveryNumber) : undefined;
+    const deliveryNumbersForBillingSync = Array.from(
+      new Set([
+        sourceDn?.delivery_number ? String(sourceDn.delivery_number) : "",
+        deliveryNumber ?? "",
+      ].filter(Boolean)),
+    );
+
+    if (deliveryNumbersForBillingSync.length > 0) {
+      const billingSync = await syncBillingSnapshotsForDeliveryNumbers({
+        organizationId: session.organizationId,
+        customerId: order.customer_id,
+        deliveryNumbers: deliveryNumbersForBillingSync,
+      });
+      if (!billingSync.success) {
+        return { error: billingSync.error };
+      }
+    }
+
+    revalidatePath("/orders/incoming");
+    revalidatePath("/orders");
+    revalidatePath("/delivery");
+    revalidatePath("/billing");
+    revalidatePath("/reports/billing");
+    revalidateDashboardPages();
+
+    return { success: true, orderDate: nextOrderDate, deliveryNumber };
+  } else {
+    // CASE 2: No order on next date -> Just update date!
+    const year = nextOrderDate.substring(0, 4);
+    const month = nextOrderDate.substring(5, 7);
+    const startDateStr = `${year}-${month}-01`;
+    
+    let nextYear = Number(year);
+    let nextMonth = Number(month) + 1;
+    if (nextMonth > 12) {
+      nextMonth = 1;
+      nextYear += 1;
+    }
+    const nextMonthStr = `${nextYear}-${String(nextMonth).padStart(2, "0")}-01`;
+
+    const { count, error: countError } = await admin
+      .from("orders")
+      .select("*", { count: "exact", head: true })
+      .eq("organization_id", session.organizationId)
+      .gte("order_date", startDateStr)
+      .lt("order_date", nextMonthStr);
+
+    if (countError) {
+      console.error("[updateOrderDate:countError]", countError);
+      return { error: "ไม่สามารถสร้างเลขออเดอร์ได้" };
+    }
+
+    const nextNum = (count ?? 0) + 1;
+    const nextOrderNumber = `DN${year}${month}${String(nextNum).padStart(4, "0")}`;
 
   const { error: updateError } = await admin
     .from("orders")
@@ -1206,11 +1354,56 @@ export async function updateIncomingOrderDateAction(formData: FormData): Promise
     return { error: updateError.message ?? "à¸šà¸±à¸™à¸—à¸¶à¸à¸§à¸±à¸™à¸—à¸µà¹ˆà¸­à¸­à¹€à¸”à¸­à¸£à¹Œà¹„à¸¡à¹ˆà¸ªà¸³à¹€à¸£à¹‡à¸ˆ" };
   }
 
+  // Clean up the SOURCE delivery note (if any) on the old date
+  // Since the order is moved, there are no orders left on the old date
+  const { data: sourceDn } = await admin
+    .from("delivery_notes")
+    .select("id, delivery_number")
+    .eq("organization_id", session.organizationId)
+    .eq("customer_id", order.customer_id)
+    .eq("delivery_date", order.order_date)
+    .maybeSingle();
+
+  if (sourceDn) {
+    await admin.from("delivery_note_items").delete().eq("delivery_note_id", sourceDn.id);
+    await admin.from("delivery_notes").delete().eq("id", sourceDn.id);
+  }
+
+  // Sync the delivery note on the NEXT date (using the updated order)
+  const syncRes = await syncOrderDeliveryNoteAction(orderId);
+
+  if ("error" in syncRes) {
+    return { error: "ปรับปรุงใบส่งของไม่สำเร็จ: " + syncRes.error };
+  }
+
+    const deliveryNumber = "deliveryNumber" in syncRes ? String(syncRes.deliveryNumber) : undefined;
+    const deliveryNumbersForBillingSync = Array.from(
+      new Set([
+        sourceDn?.delivery_number ? String(sourceDn.delivery_number) : "",
+        deliveryNumber ?? "",
+      ].filter(Boolean)),
+    );
+
+    if (deliveryNumbersForBillingSync.length > 0) {
+      const billingSync = await syncBillingSnapshotsForDeliveryNumbers({
+        organizationId: session.organizationId,
+        customerId: order.customer_id,
+        deliveryNumbers: deliveryNumbersForBillingSync,
+      });
+      if (!billingSync.success) {
+        return { error: billingSync.error };
+      }
+    }
+
   revalidatePath("/orders/incoming");
   revalidatePath("/orders");
   revalidatePath("/delivery");
+  revalidatePath("/billing");
+  revalidatePath("/reports/billing");
+  revalidateDashboardPages();
 
-  return { success: true, orderDate: nextOrderDate, orderNumber: String(nextOrderNumber) };
+    return { success: true, orderDate: nextOrderDate, orderNumber: String(nextOrderNumber), deliveryNumber };
+  }
 }
 // â”€â”€â”€ Fetch data for Global Create Order Modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export async function fetchOrderModalDataAction(): Promise<{
@@ -1231,6 +1424,29 @@ export async function fetchOrderModalDataAction(): Promise<{
   };
 }
 
+export async function fetchCustomerOrderCountsForDateAction(
+  orderDate: string,
+): Promise<Record<string, number>> {
+  const session = await requireAppRole("admin");
+  const admin = getSupabaseAdmin() as unknown as ActionsAdmin;
+  const normalizedDate = /^\d{4}-\d{2}-\d{2}$/.test(orderDate) ? orderDate : getTodayInBangkok();
+
+  const { data, error } = await admin
+    .from("orders")
+    .select("customer_id, status")
+    .eq("organization_id", session.organizationId)
+    .eq("order_date", normalizedDate);
+
+  if (error) return {};
+
+  return (data ?? [])
+    .filter((row) => row.status !== "cancelled")
+    .reduce<Record<string, number>>((acc, row) => {
+      acc[row.customer_id] = (acc[row.customer_id] ?? 0) + 1;
+      return acc;
+    }, {});
+}
+
 export async function syncOrderDeliveryNoteAction(
   orderId: string,
   options?: {
@@ -1239,6 +1455,32 @@ export async function syncOrderDeliveryNoteAction(
 ): Promise<ActionResult> {
   const session = await requireAppRole("admin");
   const admin = getSupabaseAdmin() as unknown as ActionsAdmin;
+  const { data: orderBeforeSync } = await admin
+    .from("orders")
+    .select("id, customer_id, order_date")
+    .eq("id", orderId)
+    .eq("organization_id", session.organizationId)
+    .maybeSingle();
+
+  const { data: oldOrderDnItems } = await admin
+    .from("delivery_note_items")
+    .select("delivery_note_id")
+    .eq("order_id", orderId);
+
+  const oldDeliveryNoteIds = Array.from(
+    new Set((oldOrderDnItems ?? []).map((row) => String(row.delivery_note_id)).filter(Boolean)),
+  );
+  let oldDeliveryNumbers: string[] = [];
+  if (oldDeliveryNoteIds.length > 0) {
+    const { data: oldDeliveryNotes } = await admin
+      .from("delivery_notes")
+      .select("delivery_number")
+      .in("id", oldDeliveryNoteIds);
+    oldDeliveryNumbers = Array.from(
+      new Set((oldDeliveryNotes ?? []).map((row) => String(row.delivery_number)).filter(Boolean)),
+    );
+  }
+
   const syncResult = await syncDeliveryNoteForOrder(admin, {
     lossInBaseUnitByItemId: options?.lossInBaseUnitByItemId,
     orderId,
@@ -1250,8 +1492,47 @@ export async function syncOrderDeliveryNoteAction(
     return { error: syncResult.error };
   }
 
+  const syncedDeliveryNumber = String(syncResult.deliveryNumber);
+  await admin
+    .from("orders")
+    .update({ order_number: syncedDeliveryNumber })
+    .eq("id", orderId)
+    .eq("organization_id", session.organizationId);
+
+  if (orderBeforeSync) {
+    const { data: customerDayNotes } = await admin
+      .from("delivery_notes")
+      .select("delivery_number")
+      .eq("organization_id", session.organizationId)
+      .eq("customer_id", orderBeforeSync.customer_id)
+      .eq("delivery_date", orderBeforeSync.order_date);
+
+    const deliveryNumbers = Array.from(
+      new Set(
+        [
+          ...oldDeliveryNumbers,
+          syncedDeliveryNumber,
+          ...((customerDayNotes ?? []).map((row) => String(row.delivery_number))),
+        ].filter(Boolean),
+      ),
+    );
+
+    if (deliveryNumbers.length > 0) {
+      const billingSync = await syncBillingSnapshotsForDeliveryNumbers({
+        organizationId: session.organizationId,
+        customerId: orderBeforeSync.customer_id,
+        deliveryNumbers,
+      });
+
+      if (!billingSync.success) {
+        return { error: billingSync.error };
+      }
+    }
+  }
+
   revalidatePath("/orders/incoming");
-  return { success: true, deliveryNumber: String(syncResult.deliveryNumber) };
+  revalidatePath("/billing");
+  return { success: true, deliveryNumber: syncedDeliveryNumber };
 }
 
 export async function deleteOrderAction(formData: FormData): Promise<ActionResult> {
@@ -1385,6 +1666,7 @@ export async function deleteOrderAction(formData: FormData): Promise<ActionResul
   revalidatePath("/orders/incoming");
   revalidatePath("/orders");
   revalidatePath("/billing");
+  revalidateDashboardPages();
   return { success: true };
 }
 
