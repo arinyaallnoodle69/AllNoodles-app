@@ -367,7 +367,7 @@ export function OrderAddProductPicker({
                 </div>
               ) : null}
 
-              <div className="grid gap-3 lg:grid-cols-2">
+              <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
                 {filteredProducts.map((product) => {
                   const draft = selections[product.id];
                   const units = getUnits(product);

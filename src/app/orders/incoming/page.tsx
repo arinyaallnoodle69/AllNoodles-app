@@ -323,7 +323,7 @@ export default async function IncomingOrdersPage({ searchParams }: IncomingOrder
 
           {filteredOrders.length > 0 ? (
             <>
-              <div className="relative left-1/2 w-screen -translate-x-1/2 xl:hidden">
+              <div className="relative left-1/2 w-screen -translate-x-1/2 lg:hidden">
                 <div className="grid grid-cols-1 divide-y divide-slate-200 border-t border-slate-200 sm:grid-cols-2 sm:divide-y-0 sm:gap-px sm:bg-slate-200">
                   {filteredOrders.map((order, index) => {
                     const showDivider = index === 0 || order.orderDate !== filteredOrders[index - 1].orderDate;
@@ -369,8 +369,8 @@ export default async function IncomingOrdersPage({ searchParams }: IncomingOrder
                 </div>
               </div>
 
-              <div className="hidden overflow-x-auto no-scrollbar xl:block">
-                <div className="min-w-[1100px]">
+              <div className="hidden overflow-x-auto no-scrollbar lg:block">
+                <div className="lg:min-w-0 xl:min-w-[1100px]">
                   <IncomingOrdersDesktopTable
                     billedByCustomerDate={billedDeliveryByCustomerDate}
                     deliveryByCustomerId={deliveryByCustomerId}

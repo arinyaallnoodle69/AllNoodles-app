@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import dynamic from "next/dynamic";
+import { createPortal } from "react-dom";
 import {
   useCallback,
   useDeferredValue,
@@ -18,6 +19,8 @@ import {
   ChevronLeft,
   ChevronRight,
   ChevronDown,
+  Download,
+  Image as ImageIcon,
   Loader2,
   MapPin,
   Package,
@@ -320,6 +323,8 @@ export default function OrderClient({
   const [receiptImageUrl, setReceiptImageUrl] = useState<string | null>(null);
   const [isReceiptPopupOpen, setIsReceiptPopupOpen] = useState(false);
   const [receiptPopupUrl, setReceiptPopupUrl] = useState<string | null>(null);
+  const [receiptBlob, setReceiptBlob] = useState<Blob | null>(null);
+  const [receiptFileName, setReceiptFileName] = useState<string>("");
   const receiptCardRef = useRef<HTMLDivElement | null>(null);
   const receiptCaptureLockRef = useRef(false);
   const receiptPushStatusRef = useRef<Record<string, "sending" | "sent" | "failed">>({});
@@ -1626,19 +1631,61 @@ export default function OrderClient({
       if (!captured) return;
 
       const objectUrl = URL.createObjectURL(captured.blob);
-      const downloadLink = document.createElement("a");
-      downloadLink.href = objectUrl;
-      downloadLink.download = captured.fileName;
-      downloadLink.rel = "noopener";
-      document.body.appendChild(downloadLink);
-      downloadLink.click();
-      document.body.removeChild(downloadLink);
-      URL.revokeObjectURL(objectUrl);
+      setReceiptPopupUrl(objectUrl);
+      setReceiptBlob(captured.blob);
+      setReceiptFileName(captured.fileName);
+      setIsReceiptPopupOpen(true);
     } catch (err) {
       console.error("[saveReceiptAsImage]", err);
     } finally {
       setIsSavingImage(false);
     }
+  };
+
+  const closeReceiptPopup = () => {
+    setIsReceiptPopupOpen(false);
+    if (receiptPopupUrl) {
+      URL.revokeObjectURL(receiptPopupUrl);
+      setReceiptPopupUrl(null);
+    }
+    setReceiptBlob(null);
+    setReceiptFileName("");
+  };
+
+  const handleDownloadReceipt = async () => {
+    if (!receiptBlob || !receiptPopupUrl) return;
+
+    // Check if iOS
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
+                  (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+    const file = new File([receiptBlob], receiptFileName, { type: "image/png" });
+
+    if (isIOS && navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+      try {
+        await navigator.share({
+          files: [file],
+          title: "ใบเสร็จ",
+        });
+        closeReceiptPopup();
+        return;
+      } catch (err) {
+        console.error("[WebShare]", err);
+        if (err instanceof Error && err.name === "AbortError") {
+          return; // Stay on the page if cancelled!
+        }
+      }
+    }
+
+    // Fallback or non-iOS behavior
+    const link = document.createElement("a");
+    link.href = receiptPopupUrl;
+    link.download = receiptFileName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    closeReceiptPopup();
   };
 
   useEffect(() => {
@@ -2945,38 +2992,67 @@ export default function OrderClient({
       )}
 
       {/* iOS Receipt Image Popup */}
-      {isReceiptPopupOpen && receiptPopupUrl && (
-        <div className="fixed inset-0 bg-black/80 z-[100] flex flex-col items-center justify-center p-4">
-          <div className="bg-white rounded-xl w-full max-w-sm overflow-hidden flex flex-col">
-            <div className="p-4 border-b flex justify-between items-center">
-              <h3 className="text-lg font-bold text-gray-900">บันทึกรูปภาพ</h3>
-              <button 
-                onClick={() => setIsReceiptPopupOpen(false)}
-                className="p-2 hover:bg-gray-100 rounded-full"
-              >
-                <X className="w-6 h-6 text-gray-500" />
-              </button>
-            </div>
-            <div className="p-4 flex flex-col items-center gap-4">
-              <p className="text-sm text-gray-600 text-center">
-                กดค้างที่รูปภาพเพื่อบันทึกลงเครื่อง หรือแชร์ต่อ
-              </p>
-              <div className="border rounded-lg overflow-hidden max-h-[60vh] overflow-y-auto">
-                <img 
-                  src={receiptPopupUrl} 
-                  alt="Receipt" 
-                  className="w-full h-auto"
-                />
+      {isReceiptPopupOpen && receiptPopupUrl && createPortal(
+        <div className="fixed inset-0 z-[500] flex flex-col bg-[#0a0c10] animate-in fade-in duration-300">
+          {/* ─── Premium Glassmorphism Header ─── */}
+          <div className="sticky top-0 z-50 flex shrink-0 items-center justify-between border-b border-white/5 bg-[#12151c]/80 px-4 py-3 backdrop-blur-xl sm:px-8 sm:py-5">
+            <div className="flex items-center gap-4">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#003366] text-white shadow-[0_0_20px_rgba(0,51,102,0.4)] sm:h-12 sm:w-12">
+                <ImageIcon className="h-5 w-5 sm:h-6 sm:w-6" strokeWidth={2.5} />
               </div>
+              <div className="min-w-0">
+                <h3 className="text-base font-black tracking-tight text-white sm:text-xl">ตัวอย่างใบเสร็จ</h3>
+                <div className="flex items-center gap-2">
+                  <span className="flex h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                  <p className="truncate text-[10px] font-bold uppercase tracking-[0.15em] text-slate-400 sm:text-xs">
+                    พร้อมบันทึก 1 หน้า
+                  </p>
+                </div>
+              </div>
+            </div>
+            
+            <div className="flex items-center gap-2 sm:gap-4">
               <button
-                onClick={() => setIsReceiptPopupOpen(false)}
-                className="w-full py-3 bg-[#00E000] text-white font-bold rounded-lg hover:bg-[#00c000] transition-colors"
+                onClick={handleDownloadReceipt}
+                className="hidden items-center gap-2.5 rounded-xl bg-white px-5 py-2.5 text-sm font-black text-[#0a0c10] shadow-[0_8px_20px_rgba(255,255,255,0.15)] transition hover:bg-slate-100 active:scale-95 sm:flex"
               >
-                เสร็จสิ้น
+                <Download className="h-4.5 w-4.5" strokeWidth={3} />
+                บันทึกลงเครื่อง
+              </button>
+              <button
+                onClick={closeReceiptPopup}
+                className="group flex h-10 w-10 items-center justify-center rounded-xl bg-white/5 text-white/50 transition hover:bg-rose-500/10 hover:text-rose-500 active:scale-95 sm:h-12 sm:w-12"
+              >
+                <X className="h-6 w-6 transition group-hover:rotate-90" strokeWidth={2.5} />
               </button>
             </div>
           </div>
-        </div>
+
+          {/* ─── Scrollable Preview Body ─── */}
+          <div className="flex-1 overflow-y-auto bg-[radial-gradient(circle_at_center,rgba(0,51,102,0.05)_0%,transparent_70%)] p-6 sm:p-12">
+            <div className="mx-auto flex flex-col items-center gap-12 sm:gap-20">
+              <div className="group relative flex flex-col items-center">
+                {/* Document Container */}
+                <div className="relative overflow-hidden rounded-sm bg-white shadow-[0_40px_100px_rgba(0,0,0,0.6)] ring-1 ring-white/5 transition duration-500 group-hover:scale-[1.02] group-hover:shadow-[0_50px_120px_rgba(0,0,0,0.8)]">
+                  <img src={receiptPopupUrl} alt="Receipt" className="h-auto w-full max-w-[210mm] bg-white sm:w-[500px]" />
+                  <div className="pointer-events-none absolute inset-0 bg-gradient-to-tr from-transparent via-white/5 to-transparent opacity-0 transition-opacity duration-700 group-hover:opacity-100" />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* ─── Modern Mobile Navigation ─── */}
+          <div className="border-t border-white/5 bg-[#12151c]/90 p-4 pb-safe-offset-4 backdrop-blur-xl sm:hidden">
+            <button
+              onClick={handleDownloadReceipt}
+              className="flex w-full items-center justify-center gap-3 rounded-2xl bg-emerald-600 py-4 text-lg font-black text-white shadow-[0_15px_30px_rgba(255,255,255,0.1)] active:scale-95 transition"
+            >
+              <Download className="h-6 w-6 text-white" strokeWidth={3} />
+              บันทึกลงเครื่อง
+            </button>
+          </div>
+        </div>,
+        document.body
       )}
 
     </div>

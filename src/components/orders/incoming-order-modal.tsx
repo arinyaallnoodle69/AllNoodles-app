@@ -856,6 +856,7 @@ export function IncomingOrderModal({ allOrders, detail, expandedId, products }: 
   const startInEditMode = searchParams.get("edit") === "1";
   const startInDeleteMode = searchParams.get("delete") === "1";
 
+  const [isOpen, setIsOpen] = useState(true);
   const [editMode, setEditMode] = useState(startInEditMode);
   const [confirmCancel, setConfirmCancel] = useState(startInDeleteMode);
   const [navPending, startNavTransition] = useTransition();
@@ -874,6 +875,8 @@ export function IncomingOrderModal({ allOrders, detail, expandedId, products }: 
     setConfirmCancel(startInDeleteMode);
     setSlideAnim(null);
     setSaveToast(null);
+    setIsOpen(true);
+    setIsClosing(false);
   }, [expandedId, startInDeleteMode, startInEditMode]);
 
   useEffect(() => {
@@ -921,9 +924,10 @@ export function IncomingOrderModal({ allOrders, detail, expandedId, products }: 
     if (isClosing) return;
     setIsClosing(true);
     setTimeout(() => {
+      setIsOpen(false);
       const p = new URLSearchParams(searchParams.toString());
       p.delete("expanded"); p.delete("edit"); p.delete("delete");
-      startActionTransition(() => { router.replace(`${pathname}?${p.toString()}`, { scroll: false }); });
+      router.replace(`${pathname}?${p.toString()}`, { scroll: false });
     }, 350);
   }
 
@@ -971,7 +975,7 @@ export function IncomingOrderModal({ allOrders, detail, expandedId, products }: 
     }
   }
 
-  if (!detail) return null;
+  if (!isOpen || !detail) return null;
   const deliveryNumber =
     detail.deliveryNumber || (detail.orderNumber.startsWith("DN") ? detail.orderNumber : null);
 
@@ -981,18 +985,40 @@ export function IncomingOrderModal({ allOrders, detail, expandedId, products }: 
         @keyframes slideInL { from { transform: translateX(20px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
         @keyframes slideInR { from { transform: translateX(-20px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
         @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
-        .m-anim { animation: slide-down-premium 0.6s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
-        .m-anim-out { animation: slide-up-premium 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
+        /* Mobile bottom sheet animations */
+        @keyframes mobilePopIn {
+          from { transform: translateY(100%); }
+          to { transform: translateY(0); }
+        }
+        @keyframes mobilePopOut {
+          from { transform: translateY(0); }
+          to { transform: translateY(100%); }
+        }
+
+        /* Desktop premium pop/scale animations */
+        @keyframes desktopPopIn {
+          from { transform: scale(0.96); opacity: 0; }
+          to { transform: scale(1); opacity: 1; }
+        }
+        @keyframes desktopPopOut {
+          from { transform: scale(1); opacity: 1; }
+          to { transform: scale(0.97); opacity: 0; }
+        }
+
+        .m-anim { animation: mobilePopIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        .m-anim-out { animation: mobilePopOut 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
         
         @media (min-width: 1024px) { 
-          .m-anim { animation: modalPop 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-          .m-anim-out { animation: modalPush 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+          .m-anim { animation: desktopPopIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+          .m-anim-out { animation: desktopPopOut 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
         }
 
         .c-slide-l { animation: slideInL 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
         .c-slide-r { animation: slideInR 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
-        .backdrop-out { animation: fadeOut 0.35s ease forwards; }
+        .backdrop-out { animation: fadeOut 0.3s ease forwards; }
+        .animate-fade-in { animation: fadeIn 0.3s ease forwards; }
 
         .custom-scrollbar::-webkit-scrollbar { width: 3px; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
@@ -1043,13 +1069,7 @@ export function IncomingOrderModal({ allOrders, detail, expandedId, products }: 
               </div>
             </div>
             <button
-              onClick={() => {
-                if (editMode && !isDesktopViewport) {
-                  setEditMode(false);
-                  return;
-                }
-                close();
-              }}
+              onClick={close}
               className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white/10 text-white/70 transition hover:bg-white/20 active:scale-90"
             >
               <X className="h-6 w-6" strokeWidth={3} />
@@ -1145,16 +1165,18 @@ export function IncomingOrderModal({ allOrders, detail, expandedId, products }: 
               onDone={(message) => {
                 if (message) {
                   setSaveToast(message);
-                  window.setTimeout(() => {
-                    setSaveToast((current) => (current === message ? null : current));
-                  }, 2200);
-                }
-                if (!isDesktopViewport) {
-                  setEditMode(false);
-                }
-                window.setTimeout(() => {
                   router.refresh();
-                }, 140);
+                  window.setTimeout(() => {
+                    setSaveToast(null);
+                    close();
+                  }, 1200);
+                } else {
+                  if (!isDesktopViewport) {
+                    setEditMode(false);
+                  } else {
+                    close();
+                  }
+                }
               }}
               products={products}
             />

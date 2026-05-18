@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
 import { requireAppRole } from "@/lib/auth/authorization";
 import { linkLineCustomerAndConvertPendingOrders } from "@/lib/orders/line-pending";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
@@ -252,9 +253,13 @@ export async function updateOrderItemQtyAction(formData: FormData): Promise<Acti
     }
   }
 
-  const receiptWarning = await notifyUpdatedCustomerReceiptForOrder(admin, {
-    orderId: item.order_id,
-    organizationId: session.organizationId,
+  after(() => {
+    notifyUpdatedCustomerReceiptForOrder(admin, {
+      orderId: item.order_id,
+      organizationId: session.organizationId,
+    }).catch((err) => {
+      console.error("Background notify error:", err);
+    });
   });
 
   revalidatePath("/orders/incoming");
@@ -262,7 +267,7 @@ export async function updateOrderItemQtyAction(formData: FormData): Promise<Acti
   revalidatePath("/billing");
   revalidatePath("/settings/customers/pricing");
   revalidateDashboardPages();
-  return receiptWarning ? { receiptWarning, success: true } : { success: true };
+  return { success: true };
 }
 
 
@@ -330,16 +335,20 @@ export async function removeOrderItemAction(formData: FormData): Promise<ActionR
     }
   }
 
-  const receiptWarning = await notifyUpdatedCustomerReceiptForOrder(admin, {
-    orderId: item.order_id,
-    organizationId: session.organizationId,
+  after(() => {
+    notifyUpdatedCustomerReceiptForOrder(admin, {
+      orderId: item.order_id,
+      organizationId: session.organizationId,
+    }).catch((err) => {
+      console.error("Background notify error:", err);
+    });
   });
 
   revalidatePath("/orders/incoming");
   revalidatePath("/orders");
   revalidatePath("/billing");
   revalidateDashboardPages();
-  return receiptWarning ? { receiptWarning, success: true } : { success: true };
+  return { success: true };
 }
 
 
@@ -697,16 +706,20 @@ export async function updateOrderItemsBatchAction(input: {
     if ("error" in syncRes) return { error: "ปรับปรุงใบส่งของไม่สำเร็จ: " + syncRes.error };
   }
 
-  const receiptWarning = await notifyUpdatedCustomerReceiptForOrder(admin, {
-    orderId,
-    organizationId: session.organizationId,
+  after(() => {
+    notifyUpdatedCustomerReceiptForOrder(admin, {
+      orderId,
+      organizationId: session.organizationId,
+    }).catch((err) => {
+      console.error("Background notify error:", err);
+    });
   });
 
   revalidatePath("/orders/incoming");
   revalidatePath("/orders");
   revalidatePath("/billing");
   revalidateDashboardPages();
-  return receiptWarning ? { receiptWarning, success: true } : { success: true };
+  return { success: true };
 }
 
 export async function addOrderItemAction(formData: FormData): Promise<ActionResult> {
@@ -844,16 +857,20 @@ export async function addOrderItemAction(formData: FormData): Promise<ActionResu
     }
   }
 
-  const receiptWarning = await notifyUpdatedCustomerReceiptForOrder(admin, {
-    orderId,
-    organizationId: session.organizationId,
+  after(() => {
+    notifyUpdatedCustomerReceiptForOrder(admin, {
+      orderId,
+      organizationId: session.organizationId,
+    }).catch((err) => {
+      console.error("Background notify error:", err);
+    });
   });
 
   revalidatePath("/orders/incoming");
   revalidatePath("/orders");
   revalidatePath("/billing");
   revalidateDashboardPages();
-  return receiptWarning ? { receiptWarning, success: true } : { success: true };
+  return { success: true };
 }
 
 export async function fetchCustomerPricesAction(
@@ -1388,14 +1405,16 @@ export async function updateIncomingOrderDateAction(formData: FormData): Promise
 	    revalidatePath("/reports/billing");
 	    revalidateDashboardPages();
 
-	    const receiptWarning = await notifyUpdatedCustomerReceiptForOrder(admin, {
-	      orderId: existingOrder.id,
-	      organizationId: session.organizationId,
+	    after(() => {
+	      notifyUpdatedCustomerReceiptForOrder(admin, {
+	        orderId: existingOrder.id,
+	        organizationId: session.organizationId,
+	      }).catch((err) => {
+	        console.error("Background notify error:", err);
+	      });
 	    });
 
-	    return receiptWarning
-	      ? { receiptWarning, success: true, orderDate: nextOrderDate, deliveryNumber }
-	      : { success: true, orderDate: nextOrderDate, deliveryNumber };
+	    return { success: true, orderDate: nextOrderDate, deliveryNumber };
 	  } else {
     // CASE 2: No order on next date -> Just update date!
     const year = nextOrderDate.substring(0, 4);
@@ -1485,20 +1504,16 @@ export async function updateIncomingOrderDateAction(formData: FormData): Promise
 	  revalidatePath("/reports/billing");
 	  revalidateDashboardPages();
 
-	    const receiptWarning = await notifyUpdatedCustomerReceiptForOrder(admin, {
-	      orderId,
-	      organizationId: session.organizationId,
+	    after(() => {
+	      notifyUpdatedCustomerReceiptForOrder(admin, {
+	        orderId,
+	        organizationId: session.organizationId,
+	      }).catch((err) => {
+	        console.error("Background notify error:", err);
+	      });
 	    });
 
-	    return receiptWarning
-	      ? {
-	          receiptWarning,
-	          success: true,
-	          orderDate: nextOrderDate,
-	          orderNumber: String(nextOrderNumber),
-	          deliveryNumber,
-	        }
-	      : { success: true, orderDate: nextOrderDate, orderNumber: String(nextOrderNumber), deliveryNumber };
+	    return { success: true, orderDate: nextOrderDate, orderNumber: String(nextOrderNumber), deliveryNumber };
 	  }
 }
 

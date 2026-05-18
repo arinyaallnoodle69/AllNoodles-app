@@ -72,13 +72,12 @@
   margin-top: 1.2mm !important;
   flex-shrink: 0 !important;
 }
-
-/* COMPACT ROWS FOR 30 ITEMS - PERFECT CALIBRATION */
+/* COMPACT ROWS FOR 35 ITEMS - PERFECT CALIBRATION */
 .printArea thead th { padding: 0.8mm 1mm !important; font-size: 8pt !important; font-weight: 900 !important; background: #f8fafc !important; border-bottom: 1.2pt solid #003366 !important; color: #003366 !important; text-transform: uppercase !important; }
-.printArea tbody td { padding: 1.2mm 1mm !important; font-size: 9pt !important; border-bottom: 0.5pt solid #e2e8f0 !important; color: #111111 !important; }
+.printArea tbody td { padding: 1.05mm 1mm !important; font-size: 8.8pt !important; border-bottom: 0.5pt solid #e2e8f0 !important; color: #111111 !important; }
 
-.printProductCell { display: flex !important; align-items: center !important; gap: 1.2mm !important; min-width: 0 !important; }
-.printProductName { font-size: 9.5pt !important; font-weight: 800 !important; color: #111111 !important; white-space: normal !important; line-height: 1.2 !important; }
+.printProductCell { display: flex !important; align-items: center !important; gap: 1mm !important; min-width: 0 !important; }
+.printProductName { font-size: 9pt !important; font-weight: 800 !important; color: #111111 !important; white-space: normal !important; line-height: 1.15 !important; }
 
 .printFooter { 
   display: block !important; 
@@ -91,7 +90,6 @@
   text-align: right !important; 
   flex-shrink: 0 !important;
 }
-
 /* ─── Media Print Specifics ─── */
 @media print {
   :global(header), :global(aside), :global(nav), :global(footer), 

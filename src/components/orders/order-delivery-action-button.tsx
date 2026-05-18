@@ -110,9 +110,37 @@ export function OrderDeliveryActionButton({
         pixelRatio: 2,
       });
 
+      const fileName = `TYNoodle-${detail?.orderNumber ?? "order"}.png`;
+
+      // Check if iOS
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
+                    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+      if (isIOS && navigator.share && navigator.canShare) {
+        try {
+          const res = await fetch(dataUrl);
+          const blob = await res.blob();
+          const file = new File([blob], fileName, { type: "image/png" });
+
+          if (navigator.canShare({ files: [file] })) {
+            await navigator.share({
+              files: [file],
+              title: "ใบยืนยันคำสั่งซื้อ",
+            });
+            return;
+          }
+        } catch (err) {
+          console.error("[WebShare:IncomingOrder]", err);
+          if (err instanceof Error && err.name === "AbortError") {
+            return; // Stay on the page if cancelled!
+          }
+          // Fallback to normal download if WebShare fails
+        }
+      }
+
       const downloadLink = document.createElement("a");
       downloadLink.href = dataUrl;
-      downloadLink.download = `TYNoodle-${detail?.orderNumber ?? "order"}.png`;
+      downloadLink.download = fileName;
       downloadLink.rel = "noopener";
       document.body.appendChild(downloadLink);
       downloadLink.click();
@@ -176,24 +204,25 @@ export function OrderDeliveryActionButton({
                 if (event.target === event.currentTarget) setIsOpen(false);
               }}
             >
+              {/* Floating Close Button inside viewport for perfect mobile visibility */}
+              <button
+                onClick={() => setIsOpen(false)}
+                className="fixed top-4 right-4 z-[550] flex items-center gap-1.5 rounded-full bg-black/70 px-4 py-2 text-white shadow-lg backdrop-blur-md transition active:scale-95 hover:bg-black/80"
+              >
+                <X className="h-5 w-5" strokeWidth={3} />
+                <span className="text-sm font-bold tracking-tight">ปิดหน้าต่างนี้</span>
+              </button>
+
               <div
                 className="relative w-full max-w-[480px] animate-in zoom-in-95 duration-300"
                 onClick={(event) => event.stopPropagation()}
               >
-                <button
-                  onClick={() => setIsOpen(false)}
-                  className="absolute -top-10 right-0 z-[510] flex items-center gap-2.5 py-2 text-white transition-opacity hover:opacity-80"
-                >
-                  <X className="h-5 w-5 md:h-6 md:w-6" strokeWidth={3} />
-                  <span className="text-[14px] font-black tracking-tight md:text-[15px]">ปิดหน้าต่าง</span>
-                </button>
-
-                <div className="flex justify-center mb-4">
+                <div className="flex justify-start mb-4">
                   <button
                     type="button"
                     onClick={saveReceiptAsImage}
                     disabled={isSaving}
-                    className="inline-flex items-center gap-1.5 rounded-full bg-[#0051d5] px-4 py-2 text-sm font-bold text-white transition hover:bg-[#003d99] disabled:opacity-60"
+                    className="inline-flex items-center gap-1.5 rounded-full bg-[#0051d5] px-4 py-2 text-sm font-bold text-white transition hover:bg-[#003d99] disabled:opacity-60 shadow-md"
                   >
                     {isSaving ? (
                       <Loader2 className="h-4 w-4 animate-spin" />

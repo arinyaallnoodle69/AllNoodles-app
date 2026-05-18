@@ -51,7 +51,10 @@ export function IncomingOrderVehicleSelect({
     }
 
     return (
-      <span className="block min-w-0 max-w-full whitespace-nowrap text-base font-bold text-slate-950">
+      <span
+        className="block min-w-0 max-w-full truncate text-sm font-bold text-slate-950 xl:text-base"
+        title={currentVehicleName ?? "รถส่งของ"}
+      >
         {currentVehicleName ?? "รถส่งของ"}
       </span>
     );

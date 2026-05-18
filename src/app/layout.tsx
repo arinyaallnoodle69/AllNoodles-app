@@ -1,8 +1,11 @@
 import type { Metadata, Viewport } from "next";
+import { Suspense } from "react";
 import localFont from "next/font/local";
 import "./globals.css";
 import { PwaProvider } from "@/components/pwa-provider";
 import { getSiteUrl } from "@/lib/site-url";
+import { PullToRefresh } from "@/components/pull-to-refresh";
+import { RootAppLayoutShell } from "@/components/root-layout-shell";
 
 const sukhumvit = localFont({
   src: [
@@ -103,7 +106,13 @@ export default function RootLayout({
         className={`${sukhumvit.variable} ${sukhumvit.className} bg-background text-foreground antialiased`}
       >
         <PwaProvider />
-        <main>{children}</main>
+        <main>
+          <PullToRefresh>
+            <Suspense fallback={null}>
+              <RootAppLayoutShell>{children}</RootAppLayoutShell>
+            </Suspense>
+          </PullToRefresh>
+        </main>
       </body>
     </html>
   );

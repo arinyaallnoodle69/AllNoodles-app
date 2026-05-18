@@ -137,30 +137,30 @@ function ProductRowPrint({ row, globalRank }: { row: ProductSalesRow; globalRank
 
   return (
     <tr>
-      <td className="px-2 py-2 text-center text-[11px] font-bold text-slate-900 border-b border-slate-100">
+      <td className="text-center font-bold text-slate-900 border-b border-slate-100">
         {globalRank}
       </td>
-      <td className="px-2 py-2 text-center font-mono text-[10px] text-slate-400 border-b border-slate-100">{row.sku}</td>
-      <td className="px-2 py-2 border-b border-slate-100">
-        <div className={`flex min-w-0 items-center gap-3 ${styles.printProductCell}`}>
-          <p className={`${styles.printProductName} text-[12px] font-black text-slate-800`}>{row.name}</p>
+      <td className="text-center font-mono text-[9px] text-slate-400 border-b border-slate-100">{row.sku}</td>
+      <td className="border-b border-slate-100">
+        <div className={`flex min-w-0 items-center gap-2 ${styles.printProductCell}`}>
+          <p className={`${styles.printProductName} font-black text-slate-800`}>{row.name}</p>
         </div>
       </td>
-      <td className="px-2 py-2 text-center text-[11px] font-bold text-slate-800 tabular-nums whitespace-nowrap border-b border-slate-100">
+      <td className="text-center font-bold text-slate-800 tabular-nums whitespace-nowrap border-b border-slate-100">
         {fmt(row.totalQty)}
       </td>
-      <td className="px-2 py-2 text-center text-[11px] font-bold text-slate-500 whitespace-nowrap border-b border-slate-100">{row.unit}</td>
-      <td className="px-2 py-2 text-center text-[11px] font-bold text-slate-500 tabular-nums whitespace-nowrap border-b border-slate-100">
+      <td className="text-center font-bold text-slate-500 whitespace-nowrap border-b border-slate-100">{row.unit}</td>
+      <td className="text-center font-bold text-slate-500 tabular-nums whitespace-nowrap border-b border-slate-100">
         {fmtMoney(row.totalCost)}
       </td>
-      <td className="px-2 py-2 text-center tabular-nums whitespace-nowrap border-b border-slate-100" style={{ background: "rgba(0,6,102,0.03)" }}>
-        <span className="whitespace-nowrap text-[11px] font-bold text-[#003366]">{fmtMoney(row.totalRevenue)}</span>
+      <td className="text-center tabular-nums whitespace-nowrap border-b border-slate-100" style={{ background: "rgba(0,6,102,0.03)" }}>
+        <span className="whitespace-nowrap font-bold text-[#003366]">{fmtMoney(row.totalRevenue)}</span>
       </td>
-      <td className="px-2 py-2 text-center tabular-nums whitespace-nowrap border-b border-slate-100">
-        <span className={`inline-flex items-center justify-center whitespace-nowrap text-[11px] font-bold ${netProfit >= 0 ? "text-emerald-600" : "text-red-500"}`}>{fmtMoney(netProfit)}</span>
+      <td className="text-center tabular-nums whitespace-nowrap border-b border-slate-100">
+        <span className={`inline-flex items-center justify-center whitespace-nowrap font-bold ${netProfit >= 0 ? "text-emerald-600" : "text-red-500"}`}>{fmtMoney(netProfit)}</span>
       </td>
-      <td className="px-2 py-2 text-center tabular-nums whitespace-nowrap border-b border-slate-100">
-        <span className={`inline-flex items-center justify-center whitespace-nowrap text-[11px] font-bold ${netProfit >= 0 ? "text-emerald-600" : "text-red-500"}`}>{fmtPercent(margin)}</span>
+      <td className="text-center tabular-nums whitespace-nowrap border-b border-slate-100">
+        <span className={`inline-flex items-center justify-center whitespace-nowrap font-bold ${netProfit >= 0 ? "text-emerald-600" : "text-red-500"}`}>{fmtPercent(margin)}</span>
       </td>
     </tr>
   );
@@ -500,7 +500,7 @@ async function ProductSalesReportContent({ searchParams }: PageProps) {
         {/* ─── Print View (Invisible on Screen, block on Print) ─── */}
         <div id="report-print-area" className="fixed -left-[9999px] top-0 opacity-0 pointer-events-none print:static print:opacity-100 print:pointer-events-auto print:block">
           {(() => {
-            const PRINT_PAGE_SIZE = 30;
+            const PRINT_PAGE_SIZE = 35;
             const pages = [];
             for (let i = 0; i < allRows.length; i += PRINT_PAGE_SIZE) { pages.push(allRows.slice(i, i + PRINT_PAGE_SIZE)); }
             if (pages.length === 0) return null;

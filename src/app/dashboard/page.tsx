@@ -61,6 +61,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
         todayOrderCount: 0,
         todayOrderAmount: 0,
         todayNetProfit: 0,
+        todayCost: 0,
         submittedOrderCount: 0,
         pendingDeliveryCount: 0,
         pendingDeliveryAmount: 0,

@@ -1,5 +1,7 @@
 import "server-only";
 
+import { cacheLife, cacheTag } from "next/cache";
+
 import type { Json } from "@/types/database";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { normalizeSearch } from "@/lib/utils/search";
@@ -383,6 +385,10 @@ export async function getIncomingOrders(
     searchTerm?: string | null;
   },
 ): Promise<IncomingOrderListItem[]> {
+  "use cache";
+  cacheLife({ revalidate: 3 });
+  cacheTag(`orders-${organizationId}`);
+
   const admin = getSupabaseAdmin() as unknown as OrderDetailAdminClient;
   const normalizedSearch = normalizeSearch(searchTerm ?? "");
 
@@ -544,6 +550,10 @@ export async function getCustomerOrderCountsByDate(
   orderDate: string,
   endDate?: string,
 ): Promise<Record<string, number>> {
+  "use cache";
+  cacheLife({ revalidate: 3 });
+  cacheTag(`orders-${organizationId}`);
+
   const admin = getSupabaseAdmin() as unknown as OrderDetailAdminClient;
   let query = admin
     .from("orders")

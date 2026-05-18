@@ -180,6 +180,30 @@ export function PrintButton({
   async function downloadAll() {
     if (previewImages.length === 0) return;
 
+    // Check if iOS
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
+                  (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+    const files = previewImages.map(img => new File([img.blob], img.name, { type: "image/png" }));
+
+    if (isIOS && navigator.share && navigator.canShare && navigator.canShare({ files })) {
+      try {
+        await navigator.share({
+          files: files,
+          title: "รายงาน",
+        });
+        setShowPreview(false);
+        return;
+      } catch (err) {
+        console.error("[WebShare:Reports]", err);
+        if (err instanceof Error && err.name === "AbortError") {
+          return; // Stay on the page if cancelled!
+        }
+        // Fallback to normal download if failed
+      }
+    }
+
+    // Fallback or non-iOS behavior
     previewImages.forEach((img, idx) => {
       setTimeout(() => {
         const link = document.createElement("a");

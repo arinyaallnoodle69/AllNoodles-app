@@ -58,12 +58,23 @@ async function loadNoteCosts(noteIds: string[]) {
   if (noteIds.length === 0) return new Map<string, number>();
 
   const supabase = getSupabaseAdmin();
-  const { data: items } = await supabase
-    .from("delivery_note_items")
-    .select("delivery_note_id, quantity_delivered, product_sale_unit_id")
-    .in("delivery_note_id", noteIds);
+  const chunkSize = 50;
 
-  const typedItems = (items ?? []) as DeliveryNoteItemRow[];
+  // 1. Chunk delivery_note_items query
+  const typedItems: DeliveryNoteItemRow[] = [];
+  for (let i = 0; i < noteIds.length; i += chunkSize) {
+    const chunk = noteIds.slice(i, i + chunkSize);
+    const { data: items, error } = await supabase
+      .from("delivery_note_items")
+      .select("delivery_note_id, quantity_delivered, product_sale_unit_id")
+      .in("delivery_note_id", chunk);
+
+    if (error) throw new Error(error.message);
+    if (items) {
+      typedItems.push(...(items as DeliveryNoteItemRow[]));
+    }
+  }
+
   const saleUnitIds = [
     ...new Set(
       typedItems
@@ -72,24 +83,40 @@ async function loadNoteCosts(noteIds: string[]) {
     ),
   ];
 
-  const { data: saleUnits } =
-    saleUnitIds.length > 0
-      ? await supabase
-          .from("product_sale_units")
-          .select("id, product_id, base_unit_quantity, cost_mode, fixed_cost_price")
-          .in("id", saleUnitIds)
-      : { data: [] };
+  // 2. Chunk product_sale_units query
+  const typedSaleUnits: ProductSaleUnitRow[] = [];
+  for (let i = 0; i < saleUnitIds.length; i += chunkSize) {
+    const chunk = saleUnitIds.slice(i, i + chunkSize);
+    const { data: saleUnits, error } = await supabase
+      .from("product_sale_units")
+      .select("id, product_id, base_unit_quantity, cost_mode, fixed_cost_price")
+      .in("id", chunk);
 
-  const typedSaleUnits = (saleUnits ?? []) as ProductSaleUnitRow[];
+    if (error) throw new Error(error.message);
+    if (saleUnits) {
+      typedSaleUnits.push(...(saleUnits as ProductSaleUnitRow[]));
+    }
+  }
+
   const productIds = [...new Set(typedSaleUnits.map((unit) => unit.product_id))];
 
-  const { data: products } =
-    productIds.length > 0
-      ? await supabase.from("products").select("id, cost_price").in("id", productIds)
-      : { data: [] };
+  // 3. Chunk products query
+  const typedProducts: ProductRow[] = [];
+  for (let i = 0; i < productIds.length; i += chunkSize) {
+    const chunk = productIds.slice(i, i + chunkSize);
+    const { data: products, error } = await supabase
+      .from("products")
+      .select("id, cost_price")
+      .in("id", chunk);
+
+    if (error) throw new Error(error.message);
+    if (products) {
+      typedProducts.push(...(products as ProductRow[]));
+    }
+  }
 
   const productCostById = new Map(
-    ((products ?? []) as ProductRow[]).map((product) => [product.id, toNumber(product.cost_price)]),
+    typedProducts.map((product) => [product.id, toNumber(product.cost_price)]),
   );
 
   const saleUnitCostById = new Map(

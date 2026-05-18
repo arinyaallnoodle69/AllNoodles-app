@@ -11,6 +11,7 @@ export type DashboardKpi = {
   todayOrderCount: number;
   todayOrderAmount: number;
   todayNetProfit: number;
+  todayCost: number;
   submittedOrderCount: number;
   pendingDeliveryCount: number;
   pendingDeliveryAmount: number;
@@ -52,6 +53,7 @@ export type DashboardDailyPerformanceRow = {
   isoDate: string;
   monthLabel: string;
   revenue: number;
+  cost: number;
   profit: number;
   orderCount: number;
 };
@@ -121,7 +123,10 @@ function thaiDayShort(isoDate: string): string {
   return THAI_DAY_SHORT[new Date(y, m - 1, d).getDay()];
 }
 
-async function loadTodayNetProfit(organizationId: string, isoDate: string): Promise<number> {
+async function loadTodayNetProfit(
+  organizationId: string,
+  isoDate: string,
+): Promise<{ netProfit: number; totalCost: number }> {
   const supabase = getSupabaseAdmin();
   const { data: notes } = await supabase
     .from("delivery_notes")
@@ -132,7 +137,7 @@ async function loadTodayNetProfit(organizationId: string, isoDate: string): Prom
 
   const typedNotes = (notes ?? []) as DeliveryNoteRow[];
   if (typedNotes.length === 0) {
-    return 0;
+    return { netProfit: 0, totalCost: 0 };
   }
 
   const noteIds = typedNotes.map((note) => note.id);
@@ -192,7 +197,7 @@ async function loadTodayNetProfit(organizationId: string, isoDate: string): Prom
     return sum + unitCost * quantity;
   }, 0);
 
-  return totalRevenue - totalCost;
+  return { netProfit: totalRevenue - totalCost, totalCost };
 }
 
 // ─── Query ────────────────────────────────────────────────────────────────────
@@ -286,7 +291,7 @@ export async function getDashboardOverview(organizationId: string): Promise<Dash
     getRecentDailyPerformance(organizationId, 7, today),
   ]);
 
-  const todayNetProfit = await loadTodayNetProfit(organizationId, today);
+  const { netProfit: todayNetProfit, totalCost: todayCost } = await loadTodayNetProfit(organizationId, today);
 
   // ── Process core KPIs ──────────────────────────────────────────────────────
 
@@ -320,6 +325,7 @@ export async function getDashboardOverview(organizationId: string): Promise<Dash
     todayOrderCount: todayOrders.length,
     todayOrderAmount: todayOrders.reduce((s, r) => s + toNum(r.total_amount), 0),
     todayNetProfit,
+    todayCost,
     submittedOrderCount: toNum(submittedOrdersRes.count),
     pendingDeliveryCount: pendingDeliveries.length,
     pendingDeliveryAmount: pendingDeliveries.reduce((s, r) => s + toNum(r.total_amount), 0),
@@ -358,6 +364,7 @@ export async function getDashboardOverview(organizationId: string): Promise<Dash
     isoDate: row.isoDate,
     monthLabel: row.monthLabel,
     revenue: row.revenue,
+    cost: row.cost,
     profit: row.profit,
     orderCount: row.orderCount,
   }));

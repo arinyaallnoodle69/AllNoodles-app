@@ -310,12 +310,16 @@ const ProductRow = React.memo(({
 
   return (
     <div
-      className={`relative flex flex-col border-b-2 border-slate-200 transition-all ${
-        isSelected ? (isBelowCost ? "bg-rose-50" : "bg-[#003366]/5") : "bg-white"
-      }`}
+      className={`relative flex flex-col border-slate-200 transition-all ${
+        isSelected
+          ? isBelowCost
+            ? "bg-rose-50 border-[#FF0000]/60 ring-1 ring-[#FF0000]/10"
+            : "bg-[#003366]/5 border-[#003366]/40 ring-1 ring-[#003366]/5"
+          : "bg-white border-slate-200 hover:border-slate-300"
+      } border-b-2 md:border-2 md:rounded-[1.8rem] md:shadow-sm overflow-hidden`}
     >
       {/* Debug cost if needed, but let's focus on UI visibility */}
-      <div className="flex items-center gap-3 px-4 py-4 sm:px-6">
+      <div className="flex items-center gap-3 px-4 py-4 sm:px-6 md:px-4">
         <div className="flex h-6 w-6 shrink-0 items-center justify-center">
           <label className="relative flex cursor-pointer items-center justify-center">
             <input
@@ -390,8 +394,8 @@ const ProductRow = React.memo(({
       </div>
 
       {isSelected && selection && (
-        <div className="bg-[#003366]/5 px-4 pb-6 pt-2 sm:px-8">
-          <div className="grid grid-cols-2 gap-5">
+        <div className="bg-[#003366]/5 px-4 pb-6 pt-2 sm:px-8 md:px-4 md:pb-4 md:pt-1">
+          <div className="grid grid-cols-2 gap-5 md:gap-3">
             <div className="space-y-2">
               <label className="text-[14px] font-black text-slate-600 uppercase tracking-wider">จำนวน ({unit?.label})</label>
               <div className="flex items-center gap-2.5">
@@ -657,7 +661,7 @@ function ProductSelectModal({
   return (
     <div className="fixed inset-0 z-[10000] flex items-end justify-center bg-slate-950/60 p-0 sm:items-center sm:p-4">
       <div className="absolute inset-0" onClick={onClose} />
-      <div className="relative flex h-full w-full max-h-full flex-col overflow-hidden bg-white shadow-2xl sm:h-[90dvh] sm:max-h-[90dvh] sm:max-w-4xl sm:rounded-[2.5rem]">
+      <div className="relative flex h-full w-full max-h-full flex-col overflow-hidden bg-white shadow-2xl sm:h-[90dvh] sm:max-h-[90dvh] sm:max-w-6xl sm:rounded-[2.5rem]">
         <ActionPopup message={popupMessage} onClose={() => setPopupMessage(null)} />
         
         {/* Cost Warning Blocking Popup */}
@@ -757,7 +761,7 @@ function ProductSelectModal({
               <p className="text-lg font-black uppercase tracking-widest text-center px-6">ไม่พบสินค้าที่ตรงกับการค้นหา</p>
             </div>
           ) : (
-            <div className="flex flex-col">
+            <div className="flex flex-col md:grid md:grid-cols-2 lg:grid-cols-3 md:gap-4 md:p-5">
               {filteredProducts.map((p) => (
                 <ProductRow
                   key={p.id}

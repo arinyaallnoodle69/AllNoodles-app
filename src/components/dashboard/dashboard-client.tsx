@@ -18,6 +18,7 @@ import {
   Store,
   TrendingUp,
   Truck,
+  Wallet,
   X,
 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -67,7 +68,7 @@ function DashboardStatCard({
   title: string;
   value: string;
   unit: string;
-  accent: "blue" | "green" | "line" | "orange" | "teal";
+  accent: "blue" | "green" | "line" | "orange" | "teal" | "rose";
   icon: React.ReactNode;
   ghost: React.ReactNode;
   className?: string;
@@ -98,6 +99,11 @@ function DashboardStatCard({
       value: "text-[#0f766e]",
       badge: "bg-[#ecfdf5] text-[#0f766e]",
       ghost: "text-[#d6efe9]",
+    },
+    rose: {
+      value: "text-[#e11d48]",
+      badge: "bg-[#fff1f2] text-[#e11d48]",
+      ghost: "text-[#ffe4e6]",
     },
   }[accent];
 
@@ -140,7 +146,7 @@ function toThaiShortDate(isoDate: string) {
   return new Intl.DateTimeFormat("th-TH", {
     day: "numeric",
     month: "short",
-    year: "numeric",
+    year: "2-digit",
     timeZone: "Asia/Bangkok",
   }).format(new Date(`${isoDate}T00:00:00+07:00`));
 }
@@ -445,16 +451,7 @@ export function DashboardClient({
           </section>
         </div>
 
-        <section className="-mx-2 grid grid-cols-2 gap-2.5 px-2 md:mx-0 md:gap-5 md:px-0 lg:grid-cols-4">
-          <DashboardStatCard
-            title="รวมออเดอร์วันนี้"
-            value={fmtNumber(kpi.todayOrderCount)}
-            unit="รายการ"
-            accent="blue"
-            icon={<ClipboardList className="h-[1.15rem] w-[1.15rem]" strokeWidth={2.15} />}
-            ghost={<ClipboardList className="h-[4.2rem] w-[4.2rem] sm:h-[4.6rem] sm:w-[4.6rem]" strokeWidth={1.15} />}
-          />
-
+        <section className="-mx-2 grid grid-cols-2 gap-2.5 px-2 md:mx-0 md:gap-5 md:px-0 md:grid-cols-3 lg:grid-cols-3">
           <DashboardStatCard
             title="ยอดขายวันนี้"
             value={`฿${fmtMoney(kpi.todayOrderAmount)}`}
@@ -462,6 +459,33 @@ export function DashboardClient({
             accent="green"
             icon={<TrendingUp className="h-[1.15rem] w-[1.15rem]" strokeWidth={2.15} />}
             ghost={<BarChart3 className="h-[4.2rem] w-[4.2rem] sm:h-[4.6rem] sm:w-[4.6rem]" strokeWidth={1.15} />}
+          />
+
+          <DashboardStatCard
+            title="ต้นทุนวันนี้"
+            value={`฿${fmtMoney(kpi.todayCost)}`}
+            unit="บาท"
+            accent="rose"
+            icon={<Wallet className="h-[1.15rem] w-[1.15rem]" strokeWidth={2.15} />}
+            ghost={<Wallet className="h-[4.2rem] w-[4.2rem] sm:h-[4.6rem] sm:w-[4.6rem]" strokeWidth={1.15} />}
+          />
+
+          <DashboardStatCard
+            title="กำไรสุทธิวันนี้"
+            value={`฿${fmtMoney(kpi.todayNetProfit)}`}
+            unit="บาท"
+            accent="teal"
+            icon={<HandCoins className="h-[1.15rem] w-[1.15rem]" strokeWidth={2.15} />}
+            ghost={<HandCoins className="h-[4.2rem] w-[4.2rem] sm:h-[4.6rem] sm:w-[4.6rem]" strokeWidth={1.15} />}
+          />
+
+          <DashboardStatCard
+            title="รวมออเดอร์วันนี้"
+            value={fmtNumber(kpi.todayOrderCount)}
+            unit="รายการ"
+            accent="blue"
+            icon={<ClipboardList className="h-[1.15rem] w-[1.15rem]" strokeWidth={2.15} />}
+            ghost={<ClipboardList className="h-[4.2rem] w-[4.2rem] sm:h-[4.6rem] sm:w-[4.6rem]" strokeWidth={1.15} />}
           />
 
           <DashboardStatCard
@@ -491,17 +515,6 @@ export function DashboardClient({
               }
             />
           </Link>
-
-          <DashboardStatCard
-            title="กำไรสุทธิวันนี้"
-            value={`฿${fmtMoney(kpi.todayNetProfit)}`}
-            unit="บาท"
-            accent="teal"
-            className="col-span-2"
-            compact
-            icon={<HandCoins className="h-[1.15rem] w-[1.15rem]" strokeWidth={2.15} />}
-            ghost={<HandCoins className="h-[3.65rem] w-[3.65rem] sm:h-[4rem] sm:w-[4rem]" strokeWidth={1.15} />}
-          />
         </section>
 
         <div className="grid grid-cols-1 gap-8">
@@ -605,29 +618,35 @@ export function DashboardClient({
               </span>
             </div>
             {dailySummaryRows.length > 0 ? (
-              <div className="overflow-hidden">
+              <div className="-mx-5 overflow-x-auto sm:mx-0">
                 <table className="w-full text-sm">
-                  <thead className="border-b border-slate-100 bg-slate-50 text-slate-600">
+                  <thead className="border-b border-slate-100 bg-slate-50/50 text-slate-500">
                     <tr>
-                      <th className="px-4 py-3 text-left text-[13px] font-black">วัน</th>
-                      <th className="px-4 py-3 text-right text-[13px] font-black">ยอดขาย</th>
-                      <th className="px-4 py-3 text-right text-[13px] font-black">กำไรสุทธิ</th>
+                      <th className="pl-5 pr-1 py-3 text-left text-[12px] font-black sm:pl-4 sm:pr-4 sm:text-[13px]">วัน</th>
+                      <th className="px-1 py-3 text-right text-[12px] font-black sm:px-4 sm:text-[13px]">ยอดขาย</th>
+                      <th className="px-1 py-3 text-right text-[12px] font-black sm:px-4 sm:text-[13px]">ต้นทุน</th>
+                      <th className="pl-1 pr-5 py-3 text-right text-[12px] font-black sm:pl-4 sm:pr-4 sm:text-[13px]">กำไร</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 bg-white">
                     {dailySummaryRows.map((row, index) => (
-                      <tr key={row.isoDate}>
+                      <tr key={row.isoDate} className="hover:bg-slate-50/30 transition-colors">
                         <td
-                          className={`whitespace-nowrap px-4 py-3 text-[12px] font-bold ${index === 0 ? "text-slate-900" : "text-slate-700"}`}
+                          className={`whitespace-nowrap pl-5 pr-1 py-3.5 text-[12px] font-bold sm:pl-4 sm:pr-4 ${
+                            index === 0 ? "text-slate-900 font-extrabold" : "text-slate-700"
+                          }`}
                         >
                           {index === 0
                             ? `${toThaiShortDate(row.isoDate)} (วันนี้)`
                             : toThaiShortDate(row.isoDate)}
                         </td>
-                        <td className="whitespace-nowrap px-4 py-3 text-right text-[12px] font-black tabular-nums text-slate-800">
+                        <td className="whitespace-nowrap px-1 py-3.5 text-right text-[12px] font-black tabular-nums text-emerald-600 sm:px-4">
                           {fmtMoney(row.revenue)}
                         </td>
-                        <td className="whitespace-nowrap px-4 py-3 text-right text-[12px] font-black tabular-nums text-slate-800">
+                        <td className="whitespace-nowrap px-1 py-3.5 text-right text-[12px] font-semibold tabular-nums text-rose-600 sm:px-4">
+                          {fmtMoney(row.cost)}
+                        </td>
+                        <td className="whitespace-nowrap pl-1 pr-5 py-3.5 text-right text-[12px] font-black tabular-nums text-teal-600 sm:pl-4 sm:pr-4">
                           {fmtMoney(row.profit)}
                         </td>
                       </tr>

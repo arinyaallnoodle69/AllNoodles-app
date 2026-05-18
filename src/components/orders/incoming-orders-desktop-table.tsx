@@ -104,15 +104,15 @@ export const IncomingOrdersDesktopTable = memo(function IncomingOrdersDesktopTab
 
   return (
     <div className="rounded-[1.25rem] border border-slate-200 bg-white shadow-[0_18px_48px_rgba(15,23,42,0.05)] lg:block">
-      <div className="min-w-[1150px]">
-        <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
+      <div className="lg:min-w-0 xl:min-w-[1150px]">
+        <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3 xl:px-6 xl:py-4">
           <div>
-            <h3 className="text-xl font-bold text-slate-950">ตารางรายการคำสั่งซื้อล่าสุด</h3>
-            <p className="mt-1 text-base font-medium text-slate-950">
+            <h3 className="text-lg font-bold text-slate-950 xl:text-xl">ตารางรายการคำสั่งซื้อล่าสุด</h3>
+            <p className="mt-1 text-sm font-medium text-slate-950 xl:text-base">
               จัดการและติดตามสถานะออเดอร์ในวันที่เลือกจากจุดเดียว
             </p>
           </div>
-          <div className="flex items-center gap-2 text-base font-semibold text-slate-950">
+          <div className="flex items-center gap-2 text-sm font-semibold text-slate-950 xl:text-base">
             <span className="h-2.5 w-2.5 rounded-full bg-[#003366]" />
             รายการทั้งหมด
           </div>
@@ -122,13 +122,13 @@ export const IncomingOrdersDesktopTable = memo(function IncomingOrdersDesktopTab
           <table className="w-full table-fixed border-collapse text-left">
             <thead className="bg-slate-50 text-slate-950">
               <tr className="border-b border-slate-200">
-                <th className="w-[20%] px-3 py-4 text-sm font-bold tracking-[0.04em] text-slate-950">ร้านค้า</th>
-                <th className="w-[12%] px-3 py-4 text-center text-sm font-bold tracking-[0.04em] text-slate-950">วันที่</th>
-                <th className="w-[10%] px-3 py-4 text-center text-sm font-bold tracking-[0.04em] text-slate-950">สินค้า</th>
-                <th className="w-[12%] whitespace-nowrap px-3 py-4 text-center text-sm font-bold tracking-[0.04em] text-slate-950">ยอดรวม</th>
-                <th className="w-[16%] px-3 py-4 text-left text-sm font-bold tracking-[0.04em] text-slate-950">เลขจัดส่ง</th>
-                <th className="w-[18%] px-3 py-4 text-left text-sm font-bold tracking-[0.04em] text-slate-950">การจัดส่ง</th>
-                <th className="w-[12%] px-3 py-4 text-center text-sm font-bold tracking-[0.04em] text-slate-950">จัดการ</th>
+                <th className="w-[20%] px-2 py-2 text-xs font-bold tracking-[0.04em] text-slate-950 xl:px-3 xl:py-2.5 xl:text-sm">ร้านค้า</th>
+                <th className="w-[11%] px-2 py-2 text-center text-xs font-bold tracking-[0.04em] text-slate-950 xl:px-3 xl:py-2.5 xl:text-sm">วันที่</th>
+                <th className="w-[9%] px-2 py-2 text-center text-xs font-bold tracking-[0.04em] text-slate-950 xl:px-3 xl:py-2.5 xl:text-sm">สินค้า</th>
+                <th className="w-[11%] whitespace-nowrap px-2 py-2 text-center text-xs font-bold tracking-[0.04em] text-slate-950 xl:px-3 xl:py-2.5 xl:text-sm">ยอดรวม</th>
+                <th className="w-[13%] px-2 py-2 text-left text-xs font-bold tracking-[0.04em] text-slate-950 xl:px-3 xl:py-2.5 xl:text-sm">เลขจัดส่ง</th>
+                <th className="w-[18%] px-2 py-2 text-left text-xs font-bold tracking-[0.04em] text-slate-950 xl:px-3 xl:py-2.5 xl:text-sm">การจัดส่ง</th>
+                <th className="w-[18%] px-2 py-2 text-center text-xs font-bold tracking-[0.04em] text-slate-950 xl:px-3 xl:py-2.5 xl:text-sm">จัดการ</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200">
@@ -155,10 +155,10 @@ export const IncomingOrdersDesktopTable = memo(function IncomingOrdersDesktopTab
                   <Fragment key={order.id}>
                     {showDivider ? (
                       <tr className="bg-slate-50/50">
-                        <td colSpan={7} className="border-y border-slate-200 px-6 py-4">
+                        <td colSpan={7} className="border-y border-slate-200 px-3 py-3 xl:px-6 xl:py-4">
                           <div className="flex items-center gap-4">
                             <div className="h-px flex-1 bg-slate-300" />
-                            <span className="rounded-2xl border border-slate-200 bg-white px-5 py-2 text-xs font-black uppercase tracking-[0.2em] text-[#003366] shadow-sm">
+                            <span className="rounded-2xl border border-slate-200 bg-white px-3 py-1 text-[11px] font-black uppercase tracking-[0.2em] text-[#003366] shadow-sm xl:px-5 xl:py-2 xl:text-xs">
                               {formatOrderDate(order.orderDate)}
                             </span>
                             <div className="h-px flex-1 bg-slate-300" />
@@ -168,19 +168,18 @@ export const IncomingOrdersDesktopTable = memo(function IncomingOrdersDesktopTab
                     ) : null}
 
                     <tr className="align-middle transition-colors hover:bg-slate-50/80">
-                      <td className="px-3 py-5">
+                      <td className="px-2 py-2 xl:px-3 xl:py-3">
                         <div className="min-w-0">
                           <div className="flex min-w-0 items-center gap-2">
                             <Building2 className="h-4 w-4 shrink-0 text-[#003366]" strokeWidth={2.2} />
-                            <p className="min-w-0 break-words line-clamp-2 text-base font-bold leading-tight text-slate-950">
+                            <p className="min-w-0 break-words line-clamp-2 text-sm font-bold leading-tight text-slate-950 xl:text-base">
                               <span translate="no">{order.customerCode}</span> - {order.customerName}
                             </p>
-                            <span className="shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-xs font-bold text-slate-700 ring-1 ring-slate-200">
-                              {order.channelLabel}
-                            </span>
                           </div>
                           <div className="mt-1 flex items-center gap-2 pl-6">
-
+                            <span className="shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-700 ring-1 ring-slate-200">
+                              {order.channelLabel}
+                            </span>
                             {isBilled ? (
                               <span
                                 className="inline-flex size-5 shrink-0 items-center justify-center rounded-full bg-emerald-700 text-white"
@@ -193,31 +192,31 @@ export const IncomingOrdersDesktopTable = memo(function IncomingOrdersDesktopTab
                           </div>
                         </div>
                       </td>
-                      <td className="whitespace-nowrap px-3 py-5 text-center text-base font-semibold text-slate-950">
+                      <td className="whitespace-nowrap px-2 py-2 text-center text-sm font-semibold text-slate-950 xl:px-3 xl:py-3 xl:text-base">
                         {formatOrderDate(order.orderDate)}
                       </td>
-                      <td className="px-3 py-5 text-center">
-                        <p className="whitespace-nowrap text-base font-semibold text-slate-950">
+                      <td className="px-2 py-2 text-center xl:px-3 xl:py-3">
+                        <p className="whitespace-nowrap text-sm font-semibold text-slate-950 xl:text-base">
                           {order.productCount.toLocaleString("th-TH")} รายการ
                         </p>
                       </td>
-                      <td className="whitespace-nowrap px-3 py-5 text-center">
-                        <p className="font-mono text-base font-bold text-slate-950">฿{formatCurrency(order.totalAmount)}</p>
+                      <td className="whitespace-nowrap px-2 py-2 text-center xl:px-3 xl:py-3">
+                        <p className="font-mono text-sm font-bold text-slate-950 xl:text-base">฿{formatCurrency(order.totalAmount)}</p>
                       </td>
-                      <td className="min-w-0 px-3 py-5 text-left">
+                      <td className="min-w-0 px-2 py-2 text-left xl:px-3 xl:py-3">
                         {hasDisplayDelivery ? (
                           <div className="flex min-w-0 flex-col items-start gap-1">
                             {displayDeliveryNumbers.map((num) => (
-                              <span key={num} className="whitespace-nowrap font-mono text-base font-bold text-emerald-700">
+                              <span key={num} className="whitespace-nowrap font-mono text-sm font-bold text-emerald-700 xl:text-base">
                                 {num}
                               </span>
                             ))}
                           </div>
                         ) : (
-                          <span className="text-base font-medium text-slate-400">-</span>
+                          <span className="text-sm font-medium text-slate-400 xl:text-base">-</span>
                         )}
                       </td>
-                      <td className="min-w-0 px-3 py-5">
+                      <td className="min-w-0 px-2 py-2 xl:px-3 xl:py-3">
                         <div className="flex min-w-0 max-w-full justify-start">
                           <IncomingOrderVehicleSelect
                             customerId={order.customerId}
@@ -228,7 +227,7 @@ export const IncomingOrdersDesktopTable = memo(function IncomingOrdersDesktopTab
                           />
                         </div>
                       </td>
-                      <td className="px-3 py-5">
+                      <td className="px-2 py-2 xl:px-3 xl:py-3">
                         <div className="flex w-full items-center justify-center gap-2">
                           <IncomingOrderDateButton
                             currentListDate={orderDate}
@@ -257,10 +256,12 @@ export const IncomingOrdersDesktopTable = memo(function IncomingOrdersDesktopTab
                           </button>
                           {hasDelivery ? (
                             <OrderDeliveryActionButton
-                              date={order.orderDate}
                               customerId={order.customerId}
-                              label="พิมพ์ใบส่งของ"
+                              customerName={order.customerName}
+                              date={order.orderDate}
                               iconOnly
+                              label="ดูใบยืนยัน"
+                              orderId={order.id}
                             />
                           ) : null}
                         </div>
