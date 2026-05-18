@@ -4,15 +4,22 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import {
+  ArrowRight,
   BarChart2,
   Boxes,
   ClipboardList,
+  Clock3,
+  Factory,
   LayoutDashboard,
   LogOut,
+  MessageCircleMore,
   MoreHorizontal,
+  Package2,
   Plus,
   Receipt,
   Settings2,
+  Store,
+  Truck,
   X,
 } from "lucide-react";
 import { signOut } from "@/app/login/actions";
@@ -39,6 +46,7 @@ function isActive(href: string, pathname: string, activePrefix?: string) {
 export function SettingsMobileBottomNav() {
   const pathname = usePathname();
   const [moreOpen, setMoreOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const { open: openCreateOrder, isOpen: isCreateModalOpen } = useCreateOrder();
 
   const moreActive = moreItems.some((item) => pathname.startsWith(item.href));
@@ -74,7 +82,23 @@ export function SettingsMobileBottomNav() {
           {moreItems.map(({ href, icon: Icon, label }) => {
             const active = pathname.startsWith(href);
 
-            return (
+            return href === "/settings" ? (
+              <button
+                key={href}
+                onClick={() => {
+                  setMoreOpen(false);
+                  setSettingsOpen(true);
+                }}
+                className={`flex flex-col items-center gap-2.5 rounded-2xl px-3 py-5 text-sm font-semibold transition ${
+                  active
+                    ? "bg-[#003366]/10 text-[#003366]"
+                    : "bg-slate-50 text-slate-600 active:bg-slate-200"
+                }`}
+              >
+                <Icon className="h-7 w-7" strokeWidth={1.8} />
+                <span>{label}</span>
+              </button>
+            ) : (
               <Link
                 key={href}
                 href={href}
@@ -199,6 +223,79 @@ export function SettingsMobileBottomNav() {
           </button>
         </div>
       </nav>
+
+      {/* Settings Full Screen Modal */}
+      {settingsOpen && (
+        <div className="fixed inset-0 z-[200] bg-[#f6f7f8] animate-in fade-in duration-200 lg:hidden font-[family:var(--font-sarabun)]">
+          <div className="flex h-[68px] items-center justify-between border-b border-slate-200 bg-white px-4">
+            <span className="text-lg font-bold text-slate-950">ตั้งค่า</span>
+            <button
+              onClick={() => setSettingsOpen(false)}
+              className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-slate-500 transition active:scale-95"
+            >
+              <X className="h-5 w-5" strokeWidth={2.5} />
+            </button>
+          </div>
+          <div className="overflow-y-auto p-4 pb-20" style={{ maxHeight: "calc(100vh - 68px)" }}>
+            <div className="grid gap-4">
+              {[
+                {
+                  description: "เพิ่มสินค้าใหม่ อัปเดตรหัสสินค้า รูปสินค้า และต้นทุน",
+                  href: "/settings/products",
+                  icon: Package2,
+                  label: "จัดการสินค้า",
+                },
+                {
+                  description: "เพิ่มร้านค้า จัดการข้อมูลหน้าร้าน ที่อยู่ และเลือกรถประจำร้าน",
+                  href: "/settings/customers",
+                  icon: Store,
+                  label: "จัดการร้านค้า",
+                },
+                {
+                  description: "เพิ่มรายชื่อผู้ขายหรือโรงงานที่คุณสั่งซื้อสินค้า เพื่อใช้บันทึกรับเข้าสต็อก",
+                  href: "/settings/suppliers",
+                  icon: Factory,
+                  label: "จัดการผู้ขาย",
+                },
+                {
+                  description: "ดูชื่อ LINE รูปโปรไฟล์ สถานะการใช้งาน และจัดการสิทธิ์ลูกค้าที่เข้ามาผ่าน LINE",
+                  href: "/settings/customer-data",
+                  icon: MessageCircleMore,
+                  label: "ข้อมูลลูกค้า",
+                },
+                {
+                  description: "เพิ่มรถส่งของแบบง่าย เพื่อเอาไปผูกร้านค้าและใช้ต่อยอดกับงานจัดส่ง",
+                  href: "/settings/vehicles",
+                  icon: Truck,
+                  label: "จัดการรถ",
+                },
+                {
+                  description: "ตั้งเวลาเปิด-ปิดรับออเดอร์ และจัดการแจ้งเตือนออเดอร์ใหม่",
+                  href: "/settings/order-window",
+                  icon: Clock3,
+                  label: "เวลารับออเดอร์และแจ้งเตือน",
+                },
+              ].map((option) => (
+                <Link
+                  key={option.href}
+                  href={option.href}
+                  onClick={() => setSettingsOpen(false)}
+                  className="flex items-center gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition active:bg-slate-50"
+                >
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#003366]/10 text-[#003366]">
+                    <option.icon className="h-5 w-5" strokeWidth={2.2} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-base font-bold text-slate-950 truncate">{option.label}</h3>
+                    <p className="text-[11px] text-slate-500 mt-0.5 line-clamp-2 leading-relaxed">{option.description}</p>
+                  </div>
+                  <ArrowRight className="h-4 w-4 text-slate-400 shrink-0" />
+                </Link>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

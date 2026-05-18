@@ -79,6 +79,14 @@ export function IncomingOrderOpenCard({
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const hasDelivery = Boolean(deliveryNumbers && deliveryNumbers.length > 0);
+  const fallbackDeliveryNumber = orderNumber.startsWith("DN") ? orderNumber : null;
+  const displayDeliveryNumbers =
+    hasDelivery && deliveryNumbers && deliveryNumbers.length > 0
+      ? deliveryNumbers
+      : fallbackDeliveryNumber
+        ? [fallbackDeliveryNumber]
+        : [];
+  const hasDisplayDelivery = displayDeliveryNumbers.length > 0;
 
   function openDetail() {
     if (isPending) return;
@@ -167,9 +175,9 @@ export function IncomingOrderOpenCard({
         <div className="min-w-0 border-l border-slate-300 pl-4">
           <p className="text-[11px] font-black uppercase tracking-[0.12em] text-slate-950">เลขจัดส่ง</p>
           <div className="mt-1.5 min-w-0">
-            {hasDelivery && deliveryNumbers ? (
+            {hasDisplayDelivery ? (
               <div className="flex flex-col gap-0.5">
-                {deliveryNumbers.map((num) => (
+                {displayDeliveryNumbers.map((num) => (
                   <span
                     key={num}
                     className="truncate py-0.5 font-mono text-[1.05rem] font-bold leading-none text-emerald-700"

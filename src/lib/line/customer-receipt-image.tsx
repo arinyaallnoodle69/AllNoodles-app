@@ -147,10 +147,10 @@ function ReceiptImage({
           T&amp;Y Noodle - ใบยืนยันคำสั่งซื้อ
         </div>
         <div style={{ fontSize: 16, fontWeight: 800, lineHeight: 1.3, marginTop: 2 }}>
-          เลขที่ออเดอร์: {orderNumber}
+          {`เลขที่ออเดอร์: ${orderNumber}`}
         </div>
         <div style={{ fontSize: 13, lineHeight: 1.6, marginTop: 4 }}>
-          {formatDate(orderDate)} | {formatTime(orderDate)}
+          {`${formatDate(orderDate)} | ${formatTime(orderDate)}`}
         </div>
       </div>
 

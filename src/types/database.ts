@@ -532,6 +532,35 @@ export type Database = {
           },
         ]
       }
+      delivery_note_counters_monthly: {
+        Row: {
+          delivery_month: number
+          delivery_year: number
+          last_number: number
+          organization_id: string
+        }
+        Insert: {
+          delivery_month: number
+          delivery_year: number
+          last_number?: number
+          organization_id: string
+        }
+        Update: {
+          delivery_month?: number
+          delivery_year?: number
+          last_number?: number
+          organization_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "delivery_note_counters_monthly_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       delivery_note_counters_yearly: {
         Row: {
           delivery_year: number

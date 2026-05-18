@@ -318,6 +318,8 @@ export default function OrderClient({
   const [receiptOrder, setReceiptOrder] = useState<CustomerOrderRow | null>(null);
   const [isSavingImage, setIsSavingImage] = useState(false);
   const [receiptImageUrl, setReceiptImageUrl] = useState<string | null>(null);
+  const [isReceiptPopupOpen, setIsReceiptPopupOpen] = useState(false);
+  const [receiptPopupUrl, setReceiptPopupUrl] = useState<string | null>(null);
   const receiptCardRef = useRef<HTMLDivElement | null>(null);
   const receiptCaptureLockRef = useRef(false);
   const receiptPushStatusRef = useRef<Record<string, "sending" | "sent" | "failed">>({});
@@ -1922,6 +1924,7 @@ export default function OrderClient({
             totalAmount: Number(resData.total_amount) || 0,
             orderDate: resData.order_date ?? new Date().toISOString().slice(0, 10),
             capturedAt: resData.created_at ?? new Date().toISOString(),
+            receiptPushKey: resData.order_number ?? "-",
             receiptItems: (resData.order_items ?? []).map((item) => ({
               name: item.products?.name ?? "-",
               saleUnitLabel: formatDisplayUnit(item.sale_unit_label),
@@ -2939,6 +2942,41 @@ export default function OrderClient({
           shareMenuRef={shareMenuRef}
           totalItems={totalItems}
         />
+      )}
+
+      {/* iOS Receipt Image Popup */}
+      {isReceiptPopupOpen && receiptPopupUrl && (
+        <div className="fixed inset-0 bg-black/80 z-[100] flex flex-col items-center justify-center p-4">
+          <div className="bg-white rounded-xl w-full max-w-sm overflow-hidden flex flex-col">
+            <div className="p-4 border-b flex justify-between items-center">
+              <h3 className="text-lg font-bold text-gray-900">บันทึกรูปภาพ</h3>
+              <button 
+                onClick={() => setIsReceiptPopupOpen(false)}
+                className="p-2 hover:bg-gray-100 rounded-full"
+              >
+                <X className="w-6 h-6 text-gray-500" />
+              </button>
+            </div>
+            <div className="p-4 flex flex-col items-center gap-4">
+              <p className="text-sm text-gray-600 text-center">
+                กดค้างที่รูปภาพเพื่อบันทึกลงเครื่อง หรือแชร์ต่อ
+              </p>
+              <div className="border rounded-lg overflow-hidden max-h-[60vh] overflow-y-auto">
+                <img 
+                  src={receiptPopupUrl} 
+                  alt="Receipt" 
+                  className="w-full h-auto"
+                />
+              </div>
+              <button
+                onClick={() => setIsReceiptPopupOpen(false)}
+                className="w-full py-3 bg-[#00E000] text-white font-bold rounded-lg hover:bg-[#00c000] transition-colors"
+              >
+                เสร็จสิ้น
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
     </div>

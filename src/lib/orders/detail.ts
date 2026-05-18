@@ -1,5 +1,4 @@
 import "server-only";
-import { cacheLife, cacheTag } from "next/cache";
 
 import type { Json } from "@/types/database";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
@@ -32,6 +31,7 @@ type OrderDetailAdminClient = ReturnType<typeof getSupabaseAdmin> & {
     (table: "orders"): FlexibleTable<OrderRow>;
     (table: "customers"): FlexibleTable<CustomerRow>;
     (table: "order_items"): FlexibleTable<OrderItemRow>;
+    (table: "delivery_notes"): FlexibleTable<DeliveryNoteRow>;
     (table: "products"): FlexibleTable<ProductRow>;
     (table: "product_images"): FlexibleTable<ProductImageRow>;
     (table: "vehicles"): FlexibleTable<VehicleRow>;
@@ -93,6 +93,11 @@ type ProductImageRow = {
   sort_order: number | string;
 };
 
+type DeliveryNoteRow = {
+  delivery_number: string;
+  order_id?: string | null;
+};
+
 export type OrderDetailItem = {
   id: string;
   imageUrl: string | null;
@@ -122,6 +127,7 @@ export type OrderDetailData = {
   items: OrderDetailItem[];
   notes: string | null;
   orderDate: string;
+  deliveryNumber: string | null;
   orderNumber: string;
   status: "draft" | "submitted" | "confirmed" | "cancelled";
   subtotalAmount: number;
@@ -203,10 +209,6 @@ export async function getOrderDetailById(
   organizationId: string,
   orderId: string,
 ): Promise<OrderDetailData | null> {
-  "use cache";
-  cacheTag(`orders-${organizationId}`);
-  cacheTag(`stock-${organizationId}`);
-  cacheLife("max");
   const admin = getSupabaseAdmin() as unknown as OrderDetailAdminClient;
 
   const orderResult = await admin
@@ -227,7 +229,7 @@ export async function getOrderDetailById(
     return null;
   }
 
-  const [customerResult, orderItemsResult] = await Promise.all([
+  const [customerResult, orderItemsResult, deliveryNoteResult] = await Promise.all([
     admin
       .from("customers")
       .select("id, customer_code, name, address")
@@ -240,6 +242,12 @@ export async function getOrderDetailById(
       )
       .eq("order_id", order.id)
       .order("created_at", { ascending: true }),
+    admin
+      .from("delivery_notes")
+      .select("delivery_number")
+      .eq("organization_id", organizationId)
+      .eq("order_id", order.id)
+      .maybeSingle(),
   ]);
 
   if (customerResult.error) {
@@ -248,6 +256,36 @@ export async function getOrderDetailById(
 
   if (orderItemsResult.error) {
     throw new Error(orderItemsResult.error.message ?? "Failed to load order items.");
+  }
+  if (deliveryNoteResult.error) {
+    throw new Error(deliveryNoteResult.error.message ?? "Failed to load delivery note.");
+  }
+
+  const orderNumberDelivery =
+    typeof order.order_number === "string" && order.order_number.startsWith("DN")
+      ? order.order_number
+      : null;
+
+  let resolvedDeliveryNumber = deliveryNoteResult.data?.delivery_number ?? orderNumberDelivery;
+
+  if (!resolvedDeliveryNumber) {
+    const fallbackDeliveryNoteResult = await admin
+      .from("delivery_notes")
+      .select("delivery_number")
+      .eq("organization_id", organizationId)
+      .eq("customer_id", order.customer_id)
+      .eq("delivery_date", order.order_date)
+      .order("created_at", { ascending: true })
+      .limit(1)
+      .maybeSingle();
+
+    if (fallbackDeliveryNoteResult.error) {
+      throw new Error(
+        fallbackDeliveryNoteResult.error.message ?? "Failed to load fallback delivery note.",
+      );
+    }
+
+    resolvedDeliveryNumber = fallbackDeliveryNoteResult.data?.delivery_number ?? null;
   }
 
   const customer = customerResult.data;
@@ -324,6 +362,7 @@ export async function getOrderDetailById(
     items,
     notes: order.notes,
     orderDate: order.order_date,
+    deliveryNumber: resolvedDeliveryNumber,
     orderNumber: order.order_number,
     status: order.status,
     subtotalAmount: normalizeNumber(order.subtotal_amount),
@@ -344,10 +383,6 @@ export async function getIncomingOrders(
     searchTerm?: string | null;
   },
 ): Promise<IncomingOrderListItem[]> {
-  "use cache";
-  cacheTag(`orders-${organizationId}`);
-  cacheTag(`settings-${organizationId}`);
-  cacheLife("max");
   const admin = getSupabaseAdmin() as unknown as OrderDetailAdminClient;
   const normalizedSearch = normalizeSearch(searchTerm ?? "");
 
@@ -509,9 +544,6 @@ export async function getCustomerOrderCountsByDate(
   orderDate: string,
   endDate?: string,
 ): Promise<Record<string, number>> {
-  "use cache";
-  cacheTag(`orders-${organizationId}`);
-  cacheLife("max");
   const admin = getSupabaseAdmin() as unknown as OrderDetailAdminClient;
   let query = admin
     .from("orders")

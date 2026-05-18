@@ -98,39 +98,16 @@ export function OrderDeliveryActionButton({
     if (!receiptCardRef.current || isSaving) return;
 
     setIsSaving(true);
-    let tempContainer: HTMLDivElement | null = null;
     try {
-      const outerPadding = 24;
-      const target = receiptCardRef.current;
-
-      tempContainer = document.createElement("div");
-      tempContainer.style.position = "fixed";
-      tempContainer.style.left = "-10000px";
-      tempContainer.style.top = "0";
-      tempContainer.style.padding = `${outerPadding}px`;
-      tempContainer.style.background = "#ffffff";
-      tempContainer.style.zIndex = "-1000";
-      tempContainer.style.width = `${RECEIPT_EXPORT_WIDTH + outerPadding * 2}px`;
-
-      const clone = target.cloneNode(true) as HTMLDivElement;
-      clone.style.width = `${RECEIPT_EXPORT_WIDTH}px`;
-      clone.style.minWidth = `${RECEIPT_EXPORT_WIDTH}px`;
-      clone.style.maxWidth = "none";
-      clone.style.margin = "0";
-      clone.style.transform = "none";
-
-      tempContainer.appendChild(clone);
-      document.body.appendChild(tempContainer);
-
       await document.fonts.ready;
       const fontEmbedCSS = await htmlToImage.getFontEmbedCSS(document.body);
-      const dataUrl = await htmlToImage.toPng(tempContainer, {
+
+      // Capture DIRECTLY from the visible element!
+      const dataUrl = await htmlToImage.toPng(receiptCardRef.current, {
         backgroundColor: "#ffffff",
         cacheBust: true,
         fontEmbedCSS,
         pixelRatio: 2,
-        width: RECEIPT_EXPORT_WIDTH + outerPadding * 2,
-        height: tempContainer.scrollHeight,
       });
 
       const downloadLink = document.createElement("a");
@@ -144,9 +121,6 @@ export function OrderDeliveryActionButton({
       console.error("Save image error:", error);
       setErrorMessage("บันทึกรูปใบยืนยันไม่สำเร็จ");
     } finally {
-      if (tempContainer && document.body.contains(tempContainer)) {
-        document.body.removeChild(tempContainer);
-      }
       setIsSaving(false);
     }
   }
@@ -214,6 +188,22 @@ export function OrderDeliveryActionButton({
                   <span className="text-[14px] font-black tracking-tight md:text-[15px]">ปิดหน้าต่าง</span>
                 </button>
 
+                <div className="flex justify-center mb-4">
+                  <button
+                    type="button"
+                    onClick={saveReceiptAsImage}
+                    disabled={isSaving}
+                    className="inline-flex items-center gap-1.5 rounded-full bg-[#0051d5] px-4 py-2 text-sm font-bold text-white transition hover:bg-[#003d99] disabled:opacity-60"
+                  >
+                    {isSaving ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Download className="h-4 w-4" />
+                    )}
+                    บันทึกรูป
+                  </button>
+                </div>
+
                 <div className="scrollbar-hide max-h-[85vh] overflow-y-auto">
                   <div className="bg-white text-black shadow-2xl" ref={receiptCardRef}>
                     <div className="px-6 py-6">
@@ -246,7 +236,7 @@ export function OrderDeliveryActionButton({
                         <span className="text-[12px]"> {customerName}</span>
                       </div>
 
-                      <div className="grid grid-cols-[1fr_45px_40px_65px] gap-2 border-b border-[#cccccc] py-2">
+                      <div className="grid grid-cols-[1fr_75px_50px_65px] gap-2 border-b border-[#cccccc] py-2">
                         <span className="text-left text-[12px] font-black">สินค้า</span>
                         <span className="text-center text-[12px] font-black">จำนวน</span>
                         <span className="text-center text-[12px] font-black">หน่วย</span>
@@ -257,13 +247,15 @@ export function OrderDeliveryActionButton({
                         {receiptItems.map((item, index) => (
                           <div
                             key={index}
-                            className="grid grid-cols-[1fr_45px_40px_65px] items-center gap-2 py-3"
+                            className="grid grid-cols-[1fr_75px_50px_65px] items-center gap-2 py-3"
                           >
                             <div className="line-clamp-2 text-[11px] leading-[1.4]">{item.name}</div>
                             <div className="text-center text-[12px] font-medium">
-                              {formatQuantity(item.quantity)}
+                              {formatQuantity(item.quantity)} {item.saleUnitLabel}
                             </div>
-                            <div className="text-center text-[12px] text-slate-500">{item.saleUnitLabel}</div>
+                            <div className="text-center text-[12px] text-slate-500">
+                              {formatCurrency(item.unitPrice)}
+                            </div>
                             <div className="text-right text-[12px] font-bold">
                               {formatCurrency(item.lineTotal)}
                             </div>
@@ -280,21 +272,7 @@ export function OrderDeliveryActionButton({
                         </span>
                       </div>
 
-                      <div className="flex justify-center">
-                        <button
-                          type="button"
-                          onClick={saveReceiptAsImage}
-                          disabled={isSaving}
-                          className="inline-flex items-center gap-1.5 rounded-full bg-[#0051d5] px-4 py-2 text-sm font-bold text-white transition hover:bg-[#003d99] disabled:opacity-60"
-                        >
-                          {isSaving ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : (
-                            <Download className="h-4 w-4" />
-                          )}
-                          บันทึกรูป
-                        </button>
-                      </div>
+                      {/* Button moved to top */}
 
                       {errorMessage ? (
                         <div className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700">

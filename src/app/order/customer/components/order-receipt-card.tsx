@@ -38,9 +38,9 @@ export function OrderReceiptCard({
     }).format(new Date(iso));
 
   const FONT = "'Sarabun','Noto Sans Thai',sans-serif";
-  const COL = "minmax(0,1fr) 54px 48px";
-  const SIDE_PADDING = "clamp(16px, 4vw, 24px)";
-  const RULE_MARGIN = "0 clamp(14px, 4vw, 20px)";
+  const COL = "1fr 80px 60px 80px";
+  const SIDE_PADDING = "20px";
+  const RULE_MARGIN = "0 16px";
   const LINE: CSSProperties = { borderTop: "1px solid #cccccc", margin: RULE_MARGIN };
   const LINE_THICK: CSSProperties = { borderTop: "2px solid #000000", margin: RULE_MARGIN };
 
@@ -61,12 +61,11 @@ export function OrderReceiptCard({
       }}
     >
       <div style={{ textAlign: "right", padding: "4px 8px 0" }}>
-        <Image
+        <img
           src="/ty-noodles-logo.png"
           alt="T&Y Noodle"
           width={56}
           height={56}
-          sizes="56px"
           style={{ objectFit: "contain", display: "inline-block", width: "56px", height: "auto" }}
         />
       </div>
@@ -74,7 +73,7 @@ export function OrderReceiptCard({
       <div style={{ textAlign: "center", padding: `0 ${SIDE_PADDING} 10px` }}>
         <div style={{ fontSize: "12px", lineHeight: 1.6 }}>T&amp;Y Noodle - ใบยืนยันคำสั่งซื้อ</div>
         <div style={{ fontSize: "16px", fontWeight: 800, lineHeight: 1.3, marginTop: "2px" }}>
-          เลขที่ออเดอร์: {orderNumber}
+          เลขที่ใบจัดส่ง: {orderNumber}
         </div>
         <div style={{ fontSize: "13px", marginTop: "4px", lineHeight: 1.6 }}>
           {fmtDate(orderDate)} | {fmtTime(orderDate)}
@@ -89,13 +88,13 @@ export function OrderReceiptCard({
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: COL, padding: `6px ${SIDE_PADDING}`, gap: "0 8px" }}>
-        {(["สินค้า", "จำนวน", "หน่วย"] as const).map((label, index) => (
+        {(["สินค้า", "จำนวน", "หน่วย", "รวม"] as const).map((label, index) => (
           <span
             key={label}
             style={{
               fontSize: "14px",
               fontWeight: 800,
-              textAlign: index === 0 ? "left" : index === 1 ? "center" : "right",
+              textAlign: index === 0 ? "left" : index === 1 ? "center" : index === 2 ? "center" : "right",
             }}
           >
             {label}
@@ -116,19 +115,24 @@ export function OrderReceiptCard({
               alignItems: "center",
             }}
           >
-            <div style={{ fontSize: "13px", lineHeight: 1.5, whiteSpace: "nowrap" }}>{item.name}</div>
+            <div style={{ fontSize: "13px", lineHeight: 1.5, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{item.name}</div>
             <div style={{ fontSize: "14px", textAlign: "center" }}>
-              {item.quantity.toLocaleString("th-TH")}
+              {item.quantity.toLocaleString("th-TH")} {item.saleUnitLabel}
             </div>
-            <div style={{ fontSize: "14px", textAlign: "right" }}>{item.saleUnitLabel}</div>
+            <div style={{ fontSize: "14px", textAlign: "center" }}>
+              {(item.unitPrice || 0).toLocaleString("th-TH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </div>
+            <div style={{ fontSize: "14px", textAlign: "right", fontWeight: 700 }}>
+              {(item.lineTotal || 0).toLocaleString("th-TH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </div>
           </div>
           <div style={LINE} />
         </div>
       ))}
 
       <div style={{ padding: `36px ${SIDE_PADDING} 32px`, textAlign: "center" }}>
-        <div style={{ fontSize: "14px", fontWeight: 800, lineHeight: 1.6 }}>เส้นรังนก T&amp;Y Noodle</div>
-        <div style={{ fontSize: "13px", marginTop: "2px", lineHeight: 1.6 }}>ขอบคุณสำหรับการสนับสนุนครับ</div>
+        <div style={{ fontSize: "14px", fontWeight: 800, lineHeight: 1.6 }}>เส้นหมี่ T&amp;Y Noodle</div>
+        <div style={{ fontSize: "13px", marginTop: "2px", lineHeight: 1.6 }}>ขอบคุณสำหรับการสั่งซื้อครับ</div>
       </div>
     </div>
   );

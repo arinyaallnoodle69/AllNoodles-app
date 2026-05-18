@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { memo, useEffect, useState, useTransition } from "react";
 import dynamic from "next/dynamic";
@@ -51,11 +51,6 @@ function formatDisplayDate(value: string) {
   const [y, m, d] = value.split("-");
   if (!y || !m || !d) return value;
   return `${d}/${m}/${parseInt(y, 10) + 543}`;
-}
-
-function resolveDeliveryNumber(orderNumber: string) {
-  const normalized = orderNumber.trim();
-  return normalized.startsWith("DN") ? normalized : null;
 }
 
 type StockReductionMode = "return" | "lost";
@@ -147,9 +142,16 @@ const EditItemsPanel = memo(({
   const [quantityInputs, setQuantityInputs] = useState<Record<string, string>>(
     Object.fromEntries(detail.items.map((i) => [i.id, String(i.quantity)])),
   );
+  const [unitPrices, setUnitPrices] = useState<Record<string, number>>(
+    Object.fromEntries(detail.items.map((i) => [i.id, i.unitPrice])),
+  );
+  const [unitPriceInputs, setUnitPriceInputs] = useState<Record<string, string>>(
+    Object.fromEntries(detail.items.map((i) => [i.id, String(i.unitPrice)])),
+  );
   const [removed, setRemoved] = useState<Set<string>>(new Set());
   const [addedItems, setAddedItems] = useState<AddedOrderItemDraft[]>([]);
   const [addedQuantityInputs, setAddedQuantityInputs] = useState<Record<string, string>>({});
+  const [addedUnitPriceInputs, setAddedUnitPriceInputs] = useState<Record<string, string>>({});
   const [reductionModes, setReductionModes] = useState<Record<string, StockReductionMode>>(
     Object.fromEntries(detail.items.map((item) => [item.id, "return"])),
   );
@@ -161,9 +163,12 @@ const EditItemsPanel = memo(({
   useEffect(() => {
     setQuantities(Object.fromEntries(detail.items.map((i) => [i.id, i.quantity])));
     setQuantityInputs(Object.fromEntries(detail.items.map((i) => [i.id, String(i.quantity)])));
+    setUnitPrices(Object.fromEntries(detail.items.map((i) => [i.id, i.unitPrice])));
+    setUnitPriceInputs(Object.fromEntries(detail.items.map((i) => [i.id, String(i.unitPrice)])));
     setRemoved(new Set());
     setAddedItems([]);
     setAddedQuantityInputs({});
+    setAddedUnitPriceInputs({});
     setReductionModes(Object.fromEntries(detail.items.map((item) => [item.id, "return"])));
   }, [detail]);
 
@@ -216,6 +221,13 @@ const EditItemsPanel = memo(({
     return Number(value.toFixed(3));
   }
 
+  function sanitizeManualUnitPrice(value: number, fallback: number) {
+    if (!Number.isFinite(value) || value < 0) {
+      return Number(fallback.toFixed(2));
+    }
+    return Number(value.toFixed(2));
+  }
+
   function handleQuantityInput(itemId: string, raw: string) {
     setError(null);
     setQuantityInputs((prev) => ({ ...prev, [itemId]: raw }));
@@ -231,6 +243,23 @@ const EditItemsPanel = memo(({
     const nextValue = sanitizeManualQuantity(parsed, item.quantity);
     setQuantities((prev) => ({ ...prev, [itemId]: nextValue }));
     setQuantityInputs((prev) => ({ ...prev, [itemId]: String(nextValue) }));
+  }
+
+  function handleUnitPriceInput(itemId: string, raw: string) {
+    setError(null);
+    setUnitPriceInputs((prev) => ({ ...prev, [itemId]: raw }));
+    const parsed = Number(raw);
+    if (!Number.isFinite(parsed) || raw.trim() === "") return;
+    setUnitPrices((prev) => ({ ...prev, [itemId]: parsed }));
+  }
+
+  function commitUnitPriceInput(itemId: string) {
+    const item = detail.items.find((i) => i.id === itemId);
+    if (!item) return;
+    const parsed = Number(unitPriceInputs[itemId] ?? unitPrices[itemId] ?? item.unitPrice);
+    const nextValue = sanitizeManualUnitPrice(parsed, item.unitPrice);
+    setUnitPrices((prev) => ({ ...prev, [itemId]: nextValue }));
+    setUnitPriceInputs((prev) => ({ ...prev, [itemId]: String(nextValue) }));
   }
 
   function handleAddedQuantityInput(key: string, raw: string) {
@@ -254,6 +283,27 @@ const EditItemsPanel = memo(({
     setAddedQuantityInputs((prev) => ({ ...prev, [key]: String(normalized) }));
   }
 
+  function handleAddedUnitPriceInput(key: string, raw: string) {
+    setError(null);
+    setAddedUnitPriceInputs((prev) => ({ ...prev, [key]: raw }));
+    const parsed = Number(raw);
+    if (!Number.isFinite(parsed) || raw.trim() === "") return;
+    setAddedItems((prev) =>
+      prev.map((item) => (item.key === key ? { ...item, unitPrice: parsed } : item)),
+    );
+  }
+
+  function commitAddedUnitPriceInput(key: string) {
+    const item = addedItems.find((i) => i.key === key);
+    if (!item) return;
+    const parsed = Number(addedUnitPriceInputs[key] ?? item.unitPrice);
+    const normalized = sanitizeManualUnitPrice(parsed, item.unitPrice);
+    setAddedItems((prev) =>
+      prev.map((current) => (current.key === key ? { ...current, unitPrice: normalized } : current)),
+    );
+    setAddedUnitPriceInputs((prev) => ({ ...prev, [key]: String(normalized) }));
+  }
+
   async function handleSave() {
     setIsSaving(true);
     setError(null);
@@ -264,16 +314,25 @@ const EditItemsPanel = memo(({
           return [item.id, sanitizeManualQuantity(current, item.quantity)];
         }),
       );
+      const normalizedUnitPrices = Object.fromEntries(
+        activeItems.map((item) => {
+          const current = unitPrices[item.id] ?? item.unitPrice;
+          return [item.id, sanitizeManualUnitPrice(current, item.unitPrice)];
+        }),
+      );
       const normalizedAddedItems = addedItems.map((item) => ({
         ...item,
         quantity: sanitizeManualQuantity(item.quantity, item.quantity),
+        unitPrice: sanitizeManualUnitPrice(item.unitPrice, item.unitPrice),
       }));
 
       if (
         Object.values(normalizedQuantities).some((qty) => !Number.isFinite(qty) || qty <= 0) ||
+        Object.values(normalizedUnitPrices).some((price) => !Number.isFinite(price) || price < 0) ||
+        normalizedAddedItems.some((item) => !Number.isFinite(item.unitPrice) || item.unitPrice < 0) ||
         normalizedAddedItems.some((item) => !Number.isFinite(item.quantity) || item.quantity <= 0)
       ) {
-        throw new Error("จำนวนสินค้าต้องมากกว่า 0");
+        throw new Error("จำนวนสินค้าต้องมากกว่า 0 และราคาต้องไม่ติดลบ");
       }
 
       const result = await updateOrderItemsBatchAction({
@@ -282,7 +341,10 @@ const EditItemsPanel = memo(({
         updates: Object.entries(normalizedQuantities)
           .filter(([id, qty]) => {
             const original = detail.items.find((i) => i.id === id);
-            return original && Number(original.quantity) !== qty;
+            return (
+              original &&
+              (Number(original.quantity) !== qty || Number(original.unitPrice) !== Number(normalizedUnitPrices[id]))
+            );
           })
           .map(([itemId, quantity]) => {
             const original = detail.items.find((item) => item.id === itemId);
@@ -291,7 +353,7 @@ const EditItemsPanel = memo(({
                 ? (reductionModes[itemId] ?? "return")
                 : undefined;
 
-            return { itemId, quantity, reductionMode };
+            return { itemId, quantity, unitPrice: Number(normalizedUnitPrices[itemId]), reductionMode };
           }),
         additions: normalizedAddedItems.map((item) => ({
           productId: item.productId,
@@ -310,7 +372,7 @@ const EditItemsPanel = memo(({
     }
   }
 
-  const totalAmount = activeItems.reduce((s, i) => s + (quantities[i.id] ?? i.quantity) * i.unitPrice, 0) +
+  const totalAmount = activeItems.reduce((s, i) => s + (quantities[i.id] ?? i.quantity) * (unitPrices[i.id] ?? i.unitPrice), 0) +
                       addedItems.reduce((s, i) => s + i.quantity * i.unitPrice, 0);
 
   function getAddedItemStock(item: AddedOrderItemDraft) {
@@ -419,6 +481,7 @@ const EditItemsPanel = memo(({
                 <tbody className="divide-y divide-slate-300 bg-white">
                   {addedItems.map((item) => {
                     const stock = getAddedItemStock(item);
+                    const addedUnitPrice = sanitizeManualUnitPrice(item.unitPrice, item.unitPrice);
                     return (
                       <tr key={item.key} className="transition-colors hover:bg-emerald-50/30">
                         <td className="px-5 py-4 border-r border-slate-100">
@@ -439,8 +502,19 @@ const EditItemsPanel = memo(({
                             </div>
                           </div>
                         </td>
-                        <td className="px-5 py-4 text-center font-black text-slate-600 border-r border-slate-100">฿{formatTHB(item.unitPrice)}</td>
-                        <td className="px-5 py-4 text-center font-black text-slate-950 border-r border-slate-100">฿{formatTHB(item.quantity * item.unitPrice)}</td>
+                        <td className="px-5 py-4 border-r border-slate-100">
+                          <input
+                            type="number"
+                            inputMode="decimal"
+                            min={0}
+                            step="0.01"
+                            value={addedUnitPriceInputs[item.key] ?? String(addedUnitPrice)}
+                            onChange={(e) => handleAddedUnitPriceInput(item.key, e.target.value)}
+                            onBlur={() => commitAddedUnitPriceInput(item.key)}
+                            className="h-9 w-28 rounded-lg border border-slate-200 bg-white px-2 text-center font-black text-slate-950 outline-none transition focus:border-[#003366] focus:ring-2 focus:ring-[#003366]/10 mx-auto block"
+                          />
+                        </td>
+                        <td className="px-5 py-4 text-center font-black text-slate-950 border-r border-slate-100">฿{formatTHB(item.quantity * addedUnitPrice)}</td>
                         <td className="px-5 py-4 text-center border-r border-slate-100">
                           <span className={`inline-flex min-w-[60px] justify-center rounded-lg px-2 py-1 text-xs font-black shadow-sm ${stock < 0 ? "bg-[#FF0000] text-white" : "bg-[#003366] text-white"}`}>
                             {stock.toLocaleString("th-TH")}
@@ -472,6 +546,7 @@ const EditItemsPanel = memo(({
                   })}
                   {activeItems.map((item) => {
                     const qty = quantities[item.id] ?? item.quantity;
+                    const unitPrice = unitPrices[item.id] ?? item.unitPrice;
                     return (
                       <tr key={item.id} className="transition-colors hover:bg-slate-50">
                         <td className="px-5 py-4 border-r border-slate-100">
@@ -489,8 +564,19 @@ const EditItemsPanel = memo(({
                             </div>
                           </div>
                         </td>
-                        <td className="px-5 py-4 text-center font-black text-slate-600 border-r border-slate-100">฿{formatTHB(item.unitPrice)}</td>
-                        <td className="px-5 py-4 text-center font-black text-slate-950 border-r border-slate-100">฿{formatTHB(qty * item.unitPrice)}</td>
+                        <td className="px-5 py-4 border-r border-slate-100">
+                          <input
+                            type="number"
+                            inputMode="decimal"
+                            min={0}
+                            step="0.01"
+                            value={unitPriceInputs[item.id] ?? String(unitPrice)}
+                            onChange={(e) => handleUnitPriceInput(item.id, e.target.value)}
+                            onBlur={() => commitUnitPriceInput(item.id)}
+                            className="h-9 w-28 rounded-lg border border-slate-200 bg-white px-2 text-center font-black text-slate-950 outline-none transition focus:border-[#003366] focus:ring-2 focus:ring-[#003366]/10 mx-auto block"
+                          />
+                        </td>
+                        <td className="px-5 py-4 text-center font-black text-slate-950 border-r border-slate-100">฿{formatTHB(qty * unitPrice)}</td>
                         <td className="px-5 py-4 text-center border-r border-slate-100">
                           <span className={`inline-flex min-w-[60px] justify-center rounded-lg px-2 py-1 text-xs font-black shadow-sm ${item.stockQuantity < 0 ? "bg-[#FF0000] text-white" : "bg-[#003366] text-white"}`}>
                             {item.stockQuantity.toLocaleString("th-TH")}
@@ -556,6 +642,7 @@ const EditItemsPanel = memo(({
             <div className="divide-y divide-slate-300/80 bg-slate-50/30 md:hidden border-b border-slate-300">
               {addedItems.map((item) => {
                 const stock = getAddedItemStock(item);
+                const addedUnitPrice = sanitizeManualUnitPrice(item.unitPrice, item.unitPrice);
                 return (
                   <article key={item.key} className="bg-white p-5 transition-all active:bg-slate-50">
                     <div className="flex gap-4">
@@ -587,7 +674,16 @@ const EditItemsPanel = memo(({
                           </div>
                           <div className="border-l border-slate-300 pl-4">
                             <p className="text-[10px] font-black uppercase tracking-[0.12em] text-slate-400">ราคาต่อหน่วย</p>
-                            <p className="mt-1.5 text-[15px] font-black text-slate-950">฿{formatTHB(item.unitPrice)}</p>
+                            <input
+                              type="number"
+                              inputMode="decimal"
+                              min={0}
+                              step="0.01"
+                              value={addedUnitPriceInputs[item.key] ?? String(addedUnitPrice)}
+                              onChange={(e) => handleAddedUnitPriceInput(item.key, e.target.value)}
+                              onBlur={() => commitAddedUnitPriceInput(item.key)}
+                              className="mt-1 h-9 w-full rounded-lg border border-slate-200 bg-white px-2 text-right text-[15px] font-black text-slate-950 outline-none transition focus:border-[#003366] focus:ring-2 focus:ring-[#003366]/10"
+                            />
                           </div>
                         </div>
                       </div>
@@ -610,7 +706,7 @@ const EditItemsPanel = memo(({
                       <div className="h-10 border-l border-slate-200" />
                       <div className="text-right flex-1">
                         <p className="mb-1 text-[10px] font-black uppercase tracking-widest text-slate-400">ยอดรวมสินค้า</p>
-                        <p className="text-[1.3rem] font-black text-[#003366] tabular-nums leading-none">฿{formatTHB(item.quantity * item.unitPrice)}</p>
+                        <p className="text-[1.3rem] font-black text-[#003366] tabular-nums leading-none">฿{formatTHB(item.quantity * addedUnitPrice)}</p>
                       </div>
                     </div>
                   </article>
@@ -618,6 +714,7 @@ const EditItemsPanel = memo(({
               })}
               {activeItems.map((item) => {
                 const qty = quantities[item.id] ?? item.quantity;
+                const unitPrice = unitPrices[item.id] ?? item.unitPrice;
                 return (
                   <article key={item.id} className="bg-white p-5 transition-all active:bg-slate-50">
                     <div className="flex gap-4">
@@ -648,7 +745,16 @@ const EditItemsPanel = memo(({
                           </div>
                           <div className="border-l border-slate-300 pl-4">
                             <p className="text-[10px] font-black uppercase tracking-[0.12em] text-slate-400">ราคาต่อหน่วย</p>
-                            <p className="mt-1.5 text-[15px] font-black text-slate-950">฿{formatTHB(item.unitPrice)}</p>
+                            <input
+                              type="number"
+                              inputMode="decimal"
+                              min={0}
+                              step="0.01"
+                              value={unitPriceInputs[item.id] ?? String(unitPrice)}
+                              onChange={(e) => handleUnitPriceInput(item.id, e.target.value)}
+                              onBlur={() => commitUnitPriceInput(item.id)}
+                              className="mt-1 h-9 w-full rounded-lg border border-slate-200 bg-white px-2 text-right text-[15px] font-black text-slate-950 outline-none transition focus:border-[#003366] focus:ring-2 focus:ring-[#003366]/10"
+                            />
                           </div>
                         </div>
                       </div>
@@ -699,7 +805,7 @@ const EditItemsPanel = memo(({
                       <div className="h-10 border-l border-slate-200" />
                       <div className="text-right flex-1">
                         <p className="mb-1 text-[10px] font-black uppercase tracking-widest text-slate-400">ยอดรวมสินค้า</p>
-                        <p className="text-[1.3rem] font-black text-[#003366] tabular-nums leading-none">฿{formatTHB(qty * item.unitPrice)}</p>
+                        <p className="text-[1.3rem] font-black text-[#003366] tabular-nums leading-none">฿{formatTHB(qty * unitPrice)}</p>
                       </div>
                     </div>
                   </article>
@@ -866,7 +972,8 @@ export function IncomingOrderModal({ allOrders, detail, expandedId, products }: 
   }
 
   if (!detail) return null;
-  const deliveryNumber = resolveDeliveryNumber(detail.orderNumber);
+  const deliveryNumber =
+    detail.deliveryNumber || (detail.orderNumber.startsWith("DN") ? detail.orderNumber : null);
 
   return (
     <div className={`fixed inset-0 z-[250] flex flex-col items-center justify-end lg:justify-center overflow-hidden`}>
@@ -897,15 +1004,21 @@ export function IncomingOrderModal({ allOrders, detail, expandedId, products }: 
       {/* Main Container */}
       <div className={`${isClosing ? "m-anim-out" : "m-anim"} relative z-10 flex flex-col bg-white w-full h-full lg:h-[90vh] lg:max-w-4xl lg:rounded-[2.5rem] overflow-hidden shadow-2xl`}>
         {saveToast ? (
-          <div className="pointer-events-none absolute left-1/2 top-5 z-[70] w-[calc(100%-2.5rem)] max-w-md -translate-x-1/2 lg:top-6">
-            <div className="flex items-center gap-3 rounded-2xl border border-emerald-200 bg-white/96 px-4 py-3 text-sm font-black text-emerald-700 shadow-[0_22px_60px_rgba(16,185,129,0.18)] backdrop-blur-sm">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-50">
-                <CheckCircle2 className="h-5 w-5" strokeWidth={2.5} />
+          <div className="absolute inset-0 z-[100] flex items-center justify-center bg-slate-950/45 backdrop-blur-[2px]" onClick={() => setSaveToast(null)}>
+            <div className="m-anim flex w-[calc(100%-2.5rem)] max-w-sm flex-col items-center gap-4 rounded-3xl border border-emerald-200 bg-white p-6 text-center shadow-[0_22px_60px_rgba(16,185,129,0.18)] relative" onClick={(e) => e.stopPropagation()}>
+              <div className="flex h-16 w-16 items-center justify-center rounded-full bg-emerald-50">
+                <CheckCircle2 className="h-8 w-8 text-emerald-500" strokeWidth={2.5} />
               </div>
-              <div className="min-w-0">
-                <p className="text-[10px] uppercase tracking-[0.22em] text-emerald-500">บันทึกสำเร็จ</p>
-                <p className="mt-0.5 truncate text-sm font-black text-emerald-700">{saveToast}</p>
+              <div className="text-center">
+                <p className="text-[10px] uppercase tracking-[0.22em] text-emerald-500 font-black">บันทึกสำเร็จ</p>
+                <p className="mt-1 text-sm font-black text-emerald-700">{saveToast}</p>
               </div>
+              <button 
+                onClick={() => setSaveToast(null)}
+                className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 transition"
+              >
+                <X className="h-5 w-5" strokeWidth={2.5} />
+              </button>
             </div>
           </div>
         ) : null}

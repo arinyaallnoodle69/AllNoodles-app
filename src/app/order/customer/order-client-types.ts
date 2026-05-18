@@ -11,6 +11,7 @@ export type LastOrderMeta = {
   totalAmount: number;
   orderDate: string;
   capturedAt: string;
+  receiptPushKey: string;
   receiptItems: ReceiptItem[];
 };
 

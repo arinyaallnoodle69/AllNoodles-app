@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import {
   ChevronRight,
   FileText,
@@ -19,6 +20,7 @@ import { useMobileSearch } from "@/components/mobile-search/mobile-search-contex
 
 type Props = {
   issues: StockIssueRow[];
+  initialDate: string;
 };
 
 const LIMIT = 50;
@@ -94,7 +96,7 @@ function StockIssueDetailModal({
                 <span className="text-[12px]"> {issue.customerName}</span>
               </div>
 
-              <div className="grid grid-cols-[1fr_45px_40px_65px] gap-2 py-2 border-b border-[#cccccc]">
+              <div className="grid grid-cols-[1fr_75px_50px_65px] gap-2 py-2 border-b border-[#cccccc]">
                 <span className="text-[12px] font-black text-left">สินค้า</span>
                 <span className="text-[12px] font-black text-center">จำนวน</span>
                 <span className="text-[12px] font-black text-center">หน่วย</span>
@@ -103,10 +105,14 @@ function StockIssueDetailModal({
 
               <div className="divide-y divide-[#cccccc]">
                 {issue.items.map((item) => (
-                  <div key={item.id} className="grid grid-cols-[1fr_45px_40px_65px] gap-2 py-3 items-center">
+                  <div key={item.id} className="grid grid-cols-[1fr_75px_50px_65px] gap-2 py-3 items-center">
                     <div className="text-[11px] leading-[1.4] line-clamp-2">{item.productName}</div>
-                    <div className="text-[12px] text-center font-medium">{formatQuantity(item.quantity)}</div>
-                    <div className="text-[12px] text-center text-slate-500">{item.unit}</div>
+                    <div className="text-[12px] text-center font-medium">
+                      {formatQuantity(item.quantity)} {item.unit}
+                    </div>
+                    <div className="text-[12px] text-center text-slate-500">
+                      {formatCurrency(item.quantity > 0 ? item.lineTotal / item.quantity : 0)}
+                    </div>
                     <div className="text-[12px] text-right font-bold">{formatCurrency(item.lineTotal)}</div>
                   </div>
                 ))}
@@ -203,15 +209,23 @@ function StockIssueDetailModal({
   );
 }
 
-export function StockIssuesClient({ issues: initialIssues }: Props) {
+export function StockIssuesClient({ issues: initialIssues, initialDate }: Props) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
   const [allIssues, setAllIssues] = useState<StockIssueRow[]>(initialIssues);
   const [hasMore, setHasMore] = useState(initialIssues.length === LIMIT);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const [filterDate, setFilterDate] = useState("");
+  const [filterDate, setFilterDate] = useState(initialDate);
   const [selectedIssue, setSelectedIssue] = useState<StockIssueRow | null>(null);
   const { close: closeSearch } = useMobileSearch();
 
+  useEffect(() => {
+    setAllIssues(initialIssues);
+    setHasMore(initialIssues.length === LIMIT);
+  }, [initialIssues]);
 
   const filteredIssues = useMemo(() => {
     const query = searchTerm.trim().toLowerCase();
@@ -291,12 +305,26 @@ export function StockIssuesClient({ issues: initialIssues }: Props) {
                 id="m-filter-date"
                 name="m-filter-date"
                 defaultValue={filterDate}
-                onChange={setFilterDate}
+                onChange={(newDate) => {
+                  setFilterDate(newDate);
+                  const params = new URLSearchParams(searchParams.toString());
+                  if (newDate) {
+                    params.set("date", newDate);
+                  } else {
+                    params.delete("date");
+                  }
+                  router.push(`${pathname}?${params.toString()}`, { scroll: false });
+                }}
                 placeholder="ทุกวันที่"
               />
               {filterDate && (
                 <button 
-                  onClick={() => setFilterDate("")}
+                  onClick={() => {
+                    setFilterDate("");
+                    const params = new URLSearchParams(searchParams.toString());
+                    params.delete("date");
+                    router.push(`${pathname}?${params.toString()}`, { scroll: false });
+                  }}
                   className="absolute -right-1.5 -top-1.5 z-10 bg-slate-200 text-slate-600 rounded-full p-1 hover:bg-slate-300 shadow-sm transition-all"
                 >
                   <X className="h-3 w-3" strokeWidth={3} />
@@ -332,12 +360,26 @@ export function StockIssuesClient({ issues: initialIssues }: Props) {
               id="filter-date"
               name="filter-date"
               defaultValue={filterDate}
-              onChange={setFilterDate}
+              onChange={(newDate) => {
+                setFilterDate(newDate);
+                const params = new URLSearchParams(searchParams.toString());
+                if (newDate) {
+                  params.set("date", newDate);
+                } else {
+                  params.delete("date");
+                }
+                router.push(`${pathname}?${params.toString()}`, { scroll: false });
+              }}
               placeholder="เลือกวันที่"
             />
             {filterDate && (
               <button 
-                onClick={() => setFilterDate("")}
+                onClick={() => {
+                  setFilterDate("");
+                  const params = new URLSearchParams(searchParams.toString());
+                  params.delete("date");
+                  router.push(`${pathname}?${params.toString()}`, { scroll: false });
+                }}
                 className="absolute -right-1.5 -top-1.5 z-10 bg-slate-200 text-slate-600 rounded-full p-1 hover:bg-slate-300 shadow-sm transition-all"
               >
                 <X className="h-3 w-3" strokeWidth={3} />

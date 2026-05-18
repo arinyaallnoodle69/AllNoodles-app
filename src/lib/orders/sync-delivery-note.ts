@@ -12,13 +12,35 @@ type SyncResult =
   | { success: true; deliveryNumber: string }
   | { error: string };
 
+async function resolveActorUserId(
+  admin: Admin,
+  organizationId: string,
+  preferredUserId: string | null,
+) {
+  if (preferredUserId) {
+    return preferredUserId;
+  }
+
+  const { data } = await admin
+    .from("app_users")
+    .select("id")
+    .eq("organization_id", organizationId)
+    .eq("is_active", true)
+    .order("created_at", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+
+  return data?.id ?? null;
+}
+
 export async function syncDeliveryNoteForOrder(
   admin: Admin,
   input: {
     lossInBaseUnitByItemId?: Map<string, number>;
     orderId: string;
     organizationId: string;
-    userId: string;
+    userId: string | null;
+    skipRevalidate?: boolean;
   },
 ): Promise<SyncResult> {
   const { data: order, error: orderError } = await admin
@@ -73,6 +95,16 @@ export async function syncDeliveryNoteForOrder(
   }
 
   const items = orderItems ?? [];
+  const actorUserId = await resolveActorUserId(
+    admin,
+    input.organizationId,
+    input.userId,
+  );
+
+  if (!actorUserId) {
+    return { error: "ไม่พบผู้ใช้งานสำหรับซิงก์ใบส่งของ" };
+  }
+
   const mergedNotes = targetOrders.reduce<string | null>((acc, item) => {
     const current = acc?.trim() ?? "";
     const incoming = item.notes?.trim() ?? "";
@@ -83,16 +115,51 @@ export async function syncDeliveryNoteForOrder(
     return `${current} / ${incoming}`;
   }, null);
 
-  const { data: existingDn, error: existingDnError } = await admin
-    .from("delivery_notes")
-    .select("id, total_amount")
-    .eq("organization_id", input.organizationId)
-    .eq("customer_id", order.customer_id)
-    .eq("delivery_date", order.order_date)
-    .eq("status", "confirmed")
-    .order("created_at", { ascending: true })
-    .limit(1)
-    .maybeSingle();
+  const itemIds = (orderItems ?? []).map((item) => item.id);
+  let existingDn: { id: string; total_amount: number; delivery_date: string } | null = null;
+  let existingDnError = null;
+
+  if (itemIds.length > 0) {
+    const { data: linkedDnItem, error: linkedError } = await admin
+      .from("delivery_note_items")
+      .select("delivery_note_id")
+      .in("order_item_id", itemIds)
+      .limit(1)
+      .maybeSingle();
+
+    if (linkedError) {
+      existingDnError = linkedError;
+    } else if (linkedDnItem?.delivery_note_id) {
+      const { data: dn, error: dnError } = await admin
+        .from("delivery_notes")
+        .select("id, total_amount, delivery_date")
+        .eq("id", linkedDnItem.delivery_note_id)
+        .single();
+      
+      if (dnError) {
+        existingDnError = dnError;
+      } else {
+        existingDn = dn as unknown as { id: string; total_amount: number; delivery_date: string };
+      }
+    }
+  }
+
+  // Fallback to customer/date if not found by items
+  if (!existingDn && !existingDnError) {
+    const { data: dn, error: dnError } = await admin
+      .from("delivery_notes")
+      .select("id, total_amount, delivery_date")
+      .eq("organization_id", input.organizationId)
+      .eq("customer_id", order.customer_id)
+      .eq("delivery_date", order.order_date)
+      .eq("status", "confirmed")
+      .order("created_at", { ascending: true })
+      .limit(1)
+      .maybeSingle();
+    
+    if (dnError) existingDnError = dnError;
+    else existingDn = dn as unknown as { id: string; total_amount: number; delivery_date: string };
+  }
 
   if (existingDnError) {
     return { error: "โหลดข้อมูลใบส่งของเดิมไม่สำเร็จ" };
@@ -144,7 +211,7 @@ export async function syncDeliveryNoteForOrder(
 
           const stockAfter = stockBefore + qtyBase;
           inventoryMovements.push({
-            created_by: input.userId,
+            created_by: actorUserId,
             metadata: { source: "order_management_rebuild" },
             movement_type: "adjustment",
             notes: `คืนสต็อกจากการซิงก์ใบส่งของใหม่สำหรับออเดอร์ ${input.orderId}`,
@@ -199,9 +266,9 @@ export async function syncDeliveryNoteForOrder(
     p_order_ids: targetOrderIds,
     p_customer_id: order.customer_id,
     p_vehicle_id: vehicleId as unknown as string,
-    p_delivery_date: order.order_date,
+    p_delivery_date: existingDn ? existingDn.delivery_date : order.order_date,
     p_notes: mergedNotes as unknown as string,
-    p_created_by: input.userId,
+    p_created_by: actorUserId,
     p_items: payloadItems,
   });
 
@@ -213,13 +280,16 @@ export async function syncDeliveryNoteForOrder(
     organizationId: input.organizationId,
     customerId: order.customer_id,
     deliveryNumbers: [String(deliveryNumber)],
+    skipRevalidate: input.skipRevalidate,
   });
 
   if (!billingSyncResult.success) {
     return { error: billingSyncResult.error };
   }
 
-  revalidateReportPages();
-  revalidateDashboardPages();
+  if (!input.skipRevalidate) {
+    revalidateReportPages();
+    revalidateDashboardPages();
+  }
   return { success: true, deliveryNumber: String(deliveryNumber) };
 }

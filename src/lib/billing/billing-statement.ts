@@ -141,11 +141,123 @@ function sortByCustomerCode<T extends { customerCode: string; customerName: stri
   });
 }
 
+async function resolveBillingSyncActorUserId(organizationId: string) {
+  const supabase = getSupabaseAdmin();
+  const { data } = await supabase
+    .from("app_users")
+    .select("id")
+    .eq("organization_id", organizationId)
+    .eq("is_active", true)
+    .order("created_at", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+
+  return data?.id ?? null;
+}
+
+async function ensureConfirmedDeliveryNotesForRange(
+  organizationId: string,
+  fromDate: string,
+  toDate: string,
+) {
+  const supabase = getSupabaseAdmin();
+  const { data: orders, error: ordersError } = await supabase
+    .from("orders")
+    .select("id, customer_id, order_date, created_at")
+    .eq("organization_id", organizationId)
+    .gte("order_date", fromDate)
+    .lte("order_date", toDate)
+    .neq("status", "cancelled")
+    .not("customer_id", "is", null)
+    .order("order_date", { ascending: true })
+    .order("created_at", { ascending: true });
+
+  if (ordersError || !orders || orders.length === 0) {
+    if (ordersError) {
+      console.error("[billing] failed to load orders for delivery-note repair", ordersError);
+    }
+    return;
+  }
+
+  const customerIds = Array.from(
+    new Set(
+      orders
+        .map((order) => order.customer_id)
+        .filter((customerId): customerId is string => typeof customerId === "string" && customerId.length > 0),
+    ),
+  );
+
+  if (customerIds.length === 0) {
+    return;
+  }
+
+  const { data: notes, error: notesError } = await supabase
+    .from("delivery_notes")
+    .select("customer_id, delivery_date")
+    .eq("organization_id", organizationId)
+    .eq("status", "confirmed")
+    .gte("delivery_date", fromDate)
+    .lte("delivery_date", toDate)
+    .in("customer_id", customerIds);
+
+  if (notesError) {
+    console.error("[billing] failed to load delivery notes for delivery-note repair", notesError);
+    return;
+  }
+
+  const existingKeys = new Set(
+    (notes ?? []).map((note) => `${note.customer_id}::${note.delivery_date}`),
+  );
+  const ordersToSync = new Map<string, string>();
+
+  for (const order of orders) {
+    if (!order.customer_id) continue;
+    const key = `${order.customer_id}::${order.order_date}`;
+    if (existingKeys.has(key) || ordersToSync.has(key)) {
+      continue;
+    }
+    ordersToSync.set(key, order.id);
+  }
+
+  if (ordersToSync.size === 0) {
+    return;
+  }
+
+  const actorUserId = await resolveBillingSyncActorUserId(organizationId);
+  if (!actorUserId) {
+    console.error("[billing] no active app user found for delivery-note repair");
+    return;
+  }
+
+  const { syncDeliveryNoteForOrder } = await import("@/lib/orders/sync-delivery-note");
+
+  for (const [key, orderId] of ordersToSync) {
+    const syncResult = await syncDeliveryNoteForOrder(supabase as never, {
+      orderId,
+      organizationId,
+      userId: actorUserId,
+      skipRevalidate: true,
+    });
+
+    if ("error" in syncResult) {
+      console.error("[billing] failed to repair delivery note before billing", {
+        error: syncResult.error,
+        key,
+        orderId,
+      });
+      continue;
+    }
+
+    existingKeys.add(key);
+  }
+}
+
 export async function getBillingCandidates(
   organizationId: string,
   fromDate: string,
   toDate: string
 ): Promise<BillingCandidate[]> {
+  await ensureConfirmedDeliveryNotesForRange(organizationId, fromDate, toDate);
   const supabase = getSupabaseAdmin();
   
   const { data: notes, error: notesError } = await supabase
@@ -345,7 +457,7 @@ export async function getBillingHistory(
 
   if (error || !data) return [];
 
-  return (data as {
+  const records = data as unknown as {
     id: string;
     billing_number: string;
     customer_id: string;
@@ -356,19 +468,72 @@ export async function getBillingHistory(
     created_at: string;
     snapshot_rows: SnapshotRow[];
     customers: { name: string; customer_code: string } | null;
-  }[]).map((row) => ({
-    id: row.id,
-    billing_number: row.billing_number,
-    customer_id: row.customer_id,
-    customer_name: row.customers?.name ?? "ไม่ทราบชื่อร้าน",
-    customer_code: row.customers?.customer_code ?? "-",
-    billing_date: row.billing_date,
-    total_amount: toNum(row.total_amount),
-    from_date: row.from_date,
-    to_date: row.to_date,
-    created_at: row.created_at,
-    snapshot_rows: (row.snapshot_rows as SnapshotRow[]) || [],
-  }));
+  }[];
+
+  const result: BillingRecord[] = [];
+
+  for (const row of records) {
+    const originalSnapshot = (row.snapshot_rows as SnapshotRow[]) || [];
+    const originalNumbers = originalSnapshot.map((n) => n.deliveryNumber);
+
+    if (originalNumbers.length === 0) {
+      result.push({
+        id: row.id,
+        billing_number: row.billing_number,
+        customer_id: row.customer_id,
+        customer_name: row.customers?.name ?? "ไม่ทราบชื่อร้าน",
+        customer_code: row.customers?.customer_code ?? "-",
+        billing_date: row.billing_date,
+        total_amount: row.total_amount,
+        from_date: row.from_date,
+        to_date: row.to_date,
+        created_at: row.created_at,
+        snapshot_rows: originalSnapshot,
+      });
+      continue;
+    }
+
+    const { data: notes } = await supabase
+      .from("delivery_notes")
+      .select("id, delivery_number, delivery_date, total_amount, notes")
+      .eq("customer_id", row.customer_id)
+      .gte("delivery_date", row.from_date)
+      .lte("delivery_date", row.to_date)
+      .eq("status", "confirmed");
+
+    const activeNotes = notes ?? [];
+    if (activeNotes.length === 0) {
+      // Skip this record if all delivery notes are deleted/unconfirmed
+      continue;
+    }
+
+    // Calculate dynamic total
+    const totalAmount = activeNotes.reduce((sum, n) => sum + Number(n.total_amount || 0), 0);
+    
+    const snapshot_rows = activeNotes.map((n, idx) => ({
+      lineNumber: idx + 1,
+      deliveryNumber: n.delivery_number,
+      deliveryDate: n.delivery_date,
+      totalAmount: Number(n.total_amount || 0),
+      notes: n.notes,
+    }));
+
+    result.push({
+      id: row.id,
+      billing_number: row.billing_number,
+      customer_id: row.customer_id,
+      customer_name: row.customers?.name ?? "ไม่ทราบชื่อร้าน",
+      customer_code: row.customers?.customer_code ?? "-",
+      billing_date: row.billing_date,
+      total_amount: totalAmount,
+      from_date: row.from_date,
+      to_date: row.to_date,
+      created_at: row.created_at,
+      snapshot_rows,
+    });
+  }
+
+  return result;
 }
 
 export async function getBillingStatementData(
@@ -379,6 +544,7 @@ export async function getBillingStatementData(
   billingDate: string,
   deliveryNumbers?: string[],
 ): Promise<BillingStatementData | null> {
+  await ensureConfirmedDeliveryNotesForRange(organizationId, fromDate, toDate);
   const supabase = getSupabaseAdmin();
 
   let notesQuery = supabase
@@ -461,6 +627,7 @@ export async function getBatchBillingData(
   customerIds?: string[],
   deliveryNumbers?: string[],
 ): Promise<BillingStatementData[]> {
+  await ensureConfirmedDeliveryNotesForRange(organizationId, fromDate, toDate);
   const supabase = getSupabaseAdmin();
 
   let targetIds = customerIds;

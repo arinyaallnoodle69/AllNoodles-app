@@ -11,12 +11,13 @@ import { getOrderDetailById, type OrderDetailData } from "@/lib/orders/detail";
 import { syncBillingSnapshotsForDeliveryNumbers } from "@/lib/billing/actions";
 import { revalidateDashboardPages } from "@/lib/dashboard/revalidate-dashboard-pages";
 import { mergeItemsIntoOrder, type MergeableOrderItemInput } from "@/lib/orders/merge-order-items";
+import { notifyUpdatedCustomerReceiptForOrder } from "@/lib/orders/notify-customer-receipt";
 import { syncDeliveryNoteForOrder } from "@/lib/orders/sync-delivery-note";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/types/database";
 import type { ActionResult, CustomerLastOrderSnapshot, CustomerLastOrderItem } from "./types";
 
-// â”€â”€â”€ Internal Types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
 
 type OrderIdRow = { id: string };
 
@@ -50,9 +51,7 @@ export async function fetchIncomingOrderDetailAction(
   const session = await requireAppRole("admin");
   const id = orderId.trim();
 
-  if (!id) {
-    return { detail: null, error: "à¹„à¸¡à¹ˆà¸žà¸šà¸£à¸«à¸±à¸ªà¸­à¸­à¹€à¸”à¸­à¸£à¹Œ" };
-  }
+  if (!id) return { detail: null, error: "ไม่พบรหัสออเดอร์" };
 
   const admin = getSupabaseAdmin() as ActionsAdmin;
   const { data, error } = await admin
@@ -62,13 +61,8 @@ export async function fetchIncomingOrderDetailAction(
     .eq("organization_id", session.organizationId)
     .maybeSingle();
 
-  if (error) {
-    return { detail: null, error: error.message ?? "à¹‚à¸«à¸¥à¸”à¸£à¸²à¸¢à¸¥à¸°à¹€à¸­à¸µà¸¢à¸”à¸­à¸­à¹€à¸”à¸­à¸£à¹Œà¹„à¸¡à¹ˆà¸ªà¸³à¹€à¸£à¹‡à¸ˆ" };
-  }
-
-  if (!data) {
-    return { detail: null, error: "à¹„à¸¡à¹ˆà¸žà¸šà¸­à¸­à¹€à¸”à¸­à¸£à¹Œà¸™à¸µà¹‰à¹ƒà¸™à¸­à¸‡à¸„à¹Œà¸à¸£à¸‚à¸­à¸‡à¸„à¸¸à¸“" };
-  }
+  if (error) return { detail: null, error: error.message ?? "โหลดรายละเอียดออเดอร์ไม่สำเร็จ" };
+  if (!data) return { detail: null, error: "ไม่พบออเดอร์นี้ในองค์กรของคุณ" };
 
   const detail = await getOrderDetailById(session.organizationId, id);
   return { detail };
@@ -82,8 +76,6 @@ function getPreviousDate(isoDate: string) {
   return date.toISOString().slice(0, 10);
 }
 
-// â”€â”€â”€ Helper: restore stock on cancellation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-
 async function restoreItemStock(
   admin: ActionsAdmin,
   orgId: string,
@@ -92,25 +84,22 @@ async function restoreItemStock(
   qtyBase: number,
   note: string,
 ) {
-  if (qtyBase <= 0) return;
-
   const { data: product } = await admin
     .from("products")
-    .select("stock_quantity")
+    .select("id, stock_quantity")
     .eq("id", productId)
+    .eq("organization_id", orgId)
     .single();
 
   if (!product) return;
 
-  const stockBefore = Number(product.stock_quantity);
-  const stockAfter = stockBefore + qtyBase;
+  const stockBefore = Number(product.stock_quantity ?? 0);
+  const stockAfter = stockBefore + Number(qtyBase || 0);
 
   await Promise.all([
     admin.from("products").update({ stock_quantity: stockAfter }).eq("id", productId),
-
     admin.from("inventory_movements").insert({
       created_by: userId,
-      metadata: { source: "order_management" },
       movement_type: "adjustment",
       notes: note,
       organization_id: orgId,
@@ -122,14 +111,14 @@ async function restoreItemStock(
   ]);
 }
 
-// â”€â”€â”€ Cancel order â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
 
 export async function cancelOrderAction(formData: FormData): Promise<ActionResult> {
   const session = await requireAppRole("admin");
   const admin = getSupabaseAdmin() as unknown as ActionsAdmin;
   const orderId = String(formData.get("orderId") ?? "").trim();
 
-  if (!orderId) return { error: "à¹„à¸¡à¹ˆà¸žà¸šà¸£à¸«à¸±à¸ªà¸­à¸­à¹€à¸”à¸­à¸£à¹Œ" };
+  if (!orderId) return { error: "ไม่พบรหัสออเดอร์" };
 
   const { data: order } = await admin
     .from("orders")
@@ -138,8 +127,8 @@ export async function cancelOrderAction(formData: FormData): Promise<ActionResul
     .eq("organization_id", session.organizationId)
     .single();
 
-  if (!order) return { error: "à¹„à¸¡à¹ˆà¸žà¸šà¸­à¸­à¹€à¸”à¸­à¸£à¹Œà¸™à¸µà¹‰" };
-  if (order.status !== "submitted" && order.status !== "confirmed") return { error: "à¸¢à¸à¹€à¸¥à¸´à¸à¹„à¸”à¹‰à¹€à¸‰à¸žà¸²à¸°à¸­à¸­à¹€à¸”à¸­à¸£à¹Œà¸ªà¸–à¸²à¸™à¸° 'à¸£à¸±à¸šà¹à¸¥à¹‰à¸§' à¸«à¸£à¸·à¸­ 'à¸¢à¸·à¸™à¸¢à¸±à¸™à¹à¸¥à¹‰à¸§' à¹€à¸—à¹ˆà¸²à¸™à¸±à¹‰à¸™" };
+  if (!order) return { error: "ไม่พบออเดอร์นี้" };
+  if (order.status !== "submitted" && order.status !== "confirmed") return { error: "ยกเลิกได้เฉพาะออเดอร์สถานะ 'รับแล้ว' หรือ 'ยืนยันแล้ว' เท่านั้น" };
 
   // If confirmed, it might have delivery note items that deducted stock.
   // We need to clean them up.
@@ -162,7 +151,7 @@ export async function cancelOrderAction(formData: FormData): Promise<ActionResul
         session.userId,
         item.product_id,
         Number(item.quantity_in_base_unit),
-        `à¸¢à¸à¹€à¸¥à¸´à¸à¸­à¸­à¹€à¸”à¸­à¸£à¹Œ ${order.order_number}`,
+        `ยกเลิกออเดอร์ ${order.order_number}`,
       ),
     ),
   );
@@ -178,7 +167,7 @@ export async function cancelOrderAction(formData: FormData): Promise<ActionResul
   return { success: true };
 }
 
-// â”€â”€â”€ Update item quantity â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
 
 export async function updateOrderItemQtyAction(formData: FormData): Promise<ActionResult> {
   const session = await requireAppRole("admin");
@@ -186,7 +175,7 @@ export async function updateOrderItemQtyAction(formData: FormData): Promise<Acti
   const itemId = String(formData.get("itemId") ?? "").trim();
   const newQty = Number(formData.get("quantity"));
 
-  if (!itemId || !Number.isFinite(newQty) || newQty <= 0) return { error: "à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¹„à¸¡à¹ˆà¸–à¸¹à¸à¸•à¹‰à¸­à¸‡" };
+  if (!itemId || !Number.isFinite(newQty) || newQty <= 0) return { error: "ข้อมูลไม่ถูกต้อง" };
 
   const { data: item } = await admin
     .from("order_items")
@@ -194,7 +183,7 @@ export async function updateOrderItemQtyAction(formData: FormData): Promise<Acti
     .eq("id", itemId)
     .single();
 
-  if (!item) return { error: "à¹„à¸¡à¹ˆà¸žà¸šà¸£à¸²à¸¢à¸à¸²à¸£à¸ªà¸´à¸™à¸„à¹‰à¸²" };
+  if (!item) return { error: "ไม่พบรายการสินค้า" };
 
   const { data: order } = await admin
     .from("orders")
@@ -202,8 +191,8 @@ export async function updateOrderItemQtyAction(formData: FormData): Promise<Acti
     .eq("id", item.order_id)
     .single();
 
-  if (!order || order.organization_id !== session.organizationId) return { error: "à¹„à¸¡à¹ˆà¸žà¸šà¸­à¸­à¹€à¸”à¸­à¸£à¹Œ" };
-  if (!isEditableOrderStatus(order.status)) return { error: "à¸­à¸­à¹€à¸”à¸­à¸£à¹Œà¸—à¸µà¹ˆà¸¢à¸à¹€à¸¥à¸´à¸à¹à¸¥à¹‰à¸§à¹„à¸¡à¹ˆà¸ªà¸²à¸¡à¸²à¸£à¸–à¹à¸à¹‰à¹„à¸‚à¹„à¸”à¹‰" };
+  if (!order || order.organization_id !== session.organizationId) return { error: "ไม่พบออเดอร์" };
+  if (!isEditableOrderStatus(order.status)) return { error: "ออเดอร์ที่ยกเลิกแล้วไม่สามารถแก้ไขได้" };
 
   const oldQty = Number(item.quantity);
   const ratio = Number(item.sale_unit_ratio) || 1;
@@ -244,7 +233,7 @@ export async function updateOrderItemQtyAction(formData: FormData): Promise<Acti
           created_by: session.userId,
           metadata: { order_id: item.order_id, order_item_id: itemId, source: "order_management" },
           movement_type: qtyDelta > 0 ? "issue" : "adjustment",
-          notes: `à¹à¸à¹‰à¹„à¸‚à¸ˆà¸³à¸™à¸§à¸™ à¸­à¸­à¹€à¸”à¸­à¸£à¹Œ ${order.order_number}`,
+          notes: `แก้ไขจำนวน ออเดอร์ ${order.order_number}`,
           organization_id: session.organizationId,
           product_id: item.product_id,
           quantity_delta: -qtyDelta,
@@ -263,21 +252,27 @@ export async function updateOrderItemQtyAction(formData: FormData): Promise<Acti
     }
   }
 
+  const receiptWarning = await notifyUpdatedCustomerReceiptForOrder(admin, {
+    orderId: item.order_id,
+    organizationId: session.organizationId,
+  });
+
   revalidatePath("/orders/incoming");
   revalidatePath("/orders");
   revalidatePath("/billing");
+  revalidatePath("/settings/customers/pricing");
   revalidateDashboardPages();
-  return { success: true };
+  return receiptWarning ? { receiptWarning, success: true } : { success: true };
 }
 
-// â”€â”€â”€ Remove item â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
 
 export async function removeOrderItemAction(formData: FormData): Promise<ActionResult> {
   const session = await requireAppRole("admin");
   const admin = getSupabaseAdmin() as unknown as ActionsAdmin;
   const itemId = String(formData.get("itemId") ?? "").trim();
 
-  if (!itemId) return { error: "à¹„à¸¡à¹ˆà¸žà¸šà¸£à¸«à¸±à¸ªà¸£à¸²à¸¢à¸à¸²à¸£" };
+  if (!itemId) return { error: "ไม่พบรหัสรายการ" };
 
   const { data: item } = await admin
     .from("order_items")
@@ -285,7 +280,7 @@ export async function removeOrderItemAction(formData: FormData): Promise<ActionR
     .eq("id", itemId)
     .single();
 
-  if (!item) return { error: "à¹„à¸¡à¹ˆà¸žà¸šà¸£à¸²à¸¢à¸à¸²à¸£à¸ªà¸´à¸™à¸„à¹‰à¸²" };
+  if (!item) return { error: "ไม่พบรายการสินค้า" };
 
   const { data: order } = await admin
     .from("orders")
@@ -293,8 +288,8 @@ export async function removeOrderItemAction(formData: FormData): Promise<ActionR
     .eq("id", item.order_id)
     .single();
 
-  if (!order || order.organization_id !== session.organizationId) return { error: "à¹„à¸¡à¹ˆà¸žà¸šà¸­à¸­à¹€à¸”à¸­à¸£à¹Œ" };
-  if (!isEditableOrderStatus(order.status)) return { error: "à¸­à¸­à¹€à¸”à¸­à¸£à¹Œà¸—à¸µà¹ˆà¸¢à¸à¹€à¸¥à¸´à¸à¹à¸¥à¹‰à¸§à¹„à¸¡à¹ˆà¸ªà¸²à¸¡à¸²à¸£à¸–à¹à¸à¹‰à¹„à¸‚à¹„à¸”à¹‰" };
+  if (!order || order.organization_id !== session.organizationId) return { error: "ไม่พบออเดอร์" };
+  if (!isEditableOrderStatus(order.status)) return { error: "ออเดอร์ที่ยกเลิกแล้วไม่สามารถแก้ไขได้" };
 
   const qtyBase = Number(item.quantity_in_base_unit);
   const lineTotal = Number(item.line_total);
@@ -307,7 +302,7 @@ export async function removeOrderItemAction(formData: FormData): Promise<ActionR
       session.userId,
       item.product_id,
       qtyBase,
-      `à¸¥à¸šà¸£à¸²à¸¢à¸à¸²à¸£à¸ˆà¸²à¸à¸­à¸­à¹€à¸”à¸­à¸£à¹Œ ${order.order_number}`,
+      `ลบรายการจากออเดอร์ ${order.order_number}`,
     );
   }
 
@@ -335,14 +330,19 @@ export async function removeOrderItemAction(formData: FormData): Promise<ActionR
     }
   }
 
+  const receiptWarning = await notifyUpdatedCustomerReceiptForOrder(admin, {
+    orderId: item.order_id,
+    organizationId: session.organizationId,
+  });
+
   revalidatePath("/orders/incoming");
   revalidatePath("/orders");
   revalidatePath("/billing");
   revalidateDashboardPages();
-  return { success: true };
+  return receiptWarning ? { receiptWarning, success: true } : { success: true };
 }
 
-// â”€â”€â”€ Update customer vehicle from incoming order list â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
 
 export async function updateCustomerVehicleFromIncomingOrderAction(
   formData: FormData,
@@ -354,7 +354,7 @@ export async function updateCustomerVehicleFromIncomingOrderAction(
   const orderDate = String(formData.get("orderDate") ?? "").trim();
 
   if (!customerId || !vehicleId) {
-    return { error: "à¸à¸£à¸¸à¸“à¸²à¹€à¸¥à¸·à¸­à¸à¸£à¸–à¸ªà¹ˆà¸‡à¸‚à¸­à¸‡" };
+    return { error: "กรุณาเลือกรถส่งของ" };
   }
 
   const { data: vehicle, error: vehicleError } = await admin
@@ -366,7 +366,7 @@ export async function updateCustomerVehicleFromIncomingOrderAction(
     .maybeSingle();
 
   if (vehicleError || !vehicle) {
-    return { error: "à¹„à¸¡à¹ˆà¸žà¸šà¸£à¸–à¸ªà¹ˆà¸‡à¸‚à¸­à¸‡à¸—à¸µà¹ˆà¹€à¸¥à¸·à¸­à¸" };
+    return { error: "ไม่พบรถส่งของที่เลือก" };
   }
 
   // 1. Update customer's default vehicle
@@ -381,7 +381,7 @@ export async function updateCustomerVehicleFromIncomingOrderAction(
     .eq("is_active", true);
 
   if (error) {
-    return { error: error.message ?? "à¸šà¸±à¸™à¸—à¸¶à¸à¸£à¸–à¸ªà¹ˆà¸‡à¸‚à¸­à¸‡à¹„à¸¡à¹ˆà¸ªà¸³à¹€à¸£à¹‡à¸ˆ" };
+    return { error: error.message ?? "บันทึกรถส่งของไม่สำเร็จ" };
   }
 
   // 2. If orderDate is provided, also update existing delivery notes for this customer on that day
@@ -401,12 +401,12 @@ export async function updateCustomerVehicleFromIncomingOrderAction(
   return { success: true };
 }
 
-// â”€â”€â”€ Add item to existing order â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
 
 export async function updateOrderItemsBatchAction(input: {
   orderId: string;
   removedIds: string[];
-  updates: { itemId: string; quantity: number; reductionMode?: StockReductionMode }[];
+  updates: { itemId: string; quantity: number; unitPrice?: number; reductionMode?: StockReductionMode }[];
   additions: {
     productId: string;
     productSaleUnitId: string | null;
@@ -418,18 +418,18 @@ export async function updateOrderItemsBatchAction(input: {
   const admin = getSupabaseAdmin() as unknown as ActionsAdmin;
   const { orderId, removedIds, updates, additions } = input;
 
-  if (!orderId) return { error: "à¹„à¸¡à¹ˆà¸žà¸šà¹€à¸¥à¸‚à¸­à¸­à¹€à¸”à¸­à¸£à¹Œ" };
+  if (!orderId) return { error: "ไม่พบเลขออเดอร์" };
 
   // 1. Verify order
   const { data: order } = await admin
     .from("orders")
-    .select("id, status, organization_id, order_number, total_amount")
+    .select("id, status, organization_id, customer_id, order_number, total_amount")
     .eq("id", orderId)
     .single();
 
-  if (!order || order.organization_id !== session.organizationId) return { error: "à¹„à¸¡à¹ˆà¸žà¸šà¸­à¸­à¹€à¸”à¸­à¸£à¹Œ" };
+  if (!order || order.organization_id !== session.organizationId) return { error: "ไม่พบออเดอร์" };
   if (!isEditableOrderStatus(order.status)) {
-    return { error: "à¸­à¸­à¹€à¸”à¸­à¸£à¹Œà¸—à¸µà¹ˆà¸¢à¸à¹€à¸¥à¸´à¸à¹à¸¥à¹‰à¸§à¹„à¸¡à¹ˆà¸ªà¸²à¸¡à¸²à¸£à¸–à¹à¸à¹‰à¹„à¸‚à¹„à¸”à¹‰" };
+    return { error: "ออเดอร์ที่ยกเลิกแล้วไม่สามารถแก้ไขได้" };
   }
 
   // 2. Parallel Data Gathering
@@ -498,12 +498,20 @@ export async function updateOrderItemsBatchAction(input: {
   // Updates
   for (const update of updates) {
     const item = itemsMap.get(update.itemId);
-    if (item && Number(item.quantity) !== update.quantity) {
+    if (item) {
+      const nextUnitPrice = Number.isFinite(update.unitPrice)
+        ? Number(update.unitPrice)
+        : Number(item.unit_price);
+      const qtyChanged = Number(item.quantity) !== update.quantity;
+      const priceChanged = Number(item.unit_price) !== nextUnitPrice;
+      if (!qtyChanged && !priceChanged) {
+        continue;
+      }
       const ratio = Number(item.sale_unit_ratio) || 1;
       const newQtyBase = update.quantity * ratio;
       const oldQtyBase = Number(item.quantity_in_base_unit);
       const qtyDelta = newQtyBase - oldQtyBase;
-      const newLineTotal = update.quantity * Number(item.unit_price);
+      const newLineTotal = update.quantity * nextUnitPrice;
 
       itemsToUpdate.push({
         id: item.id,
@@ -511,7 +519,7 @@ export async function updateOrderItemsBatchAction(input: {
         organization_id: item.organization_id,
         product_id: item.product_id,
         sale_unit_label: item.sale_unit_label,
-        unit_price: Number(item.unit_price),
+        unit_price: nextUnitPrice,
         quantity: update.quantity,
         quantity_in_base_unit: newQtyBase,
         line_total: newLineTotal,
@@ -577,12 +585,70 @@ export async function updateOrderItemsBatchAction(input: {
   // Upsert updated and new items
   if (itemsToUpdate.length > 0) {
     const { error: upsertError } = await admin.from("order_items").upsert(itemsToUpdate);
-    if (upsertError) return { error: "à¹„à¸¡à¹ˆà¸ªà¸²à¸¡à¸²à¸£à¸–à¸›à¸£à¸±à¸šà¸›à¸£à¸¸à¸‡à¸£à¸²à¸¢à¸à¸²à¸£à¸ªà¸´à¸™à¸„à¹‰à¸²à¹„à¸”à¹‰: " + upsertError.message };
+    if (upsertError) return { error: "ไม่สามารถปรับปรุงรายการสินค้าได้: " + upsertError.message };
   }
 
   if (itemsToInsert.length > 0) {
     const { error: insertError } = await admin.from("order_items").insert(itemsToInsert);
     if (insertError) return { error: "ไม่สามารถเพิ่มรายการสินค้าได้: " + insertError.message };
+  }
+
+  const priceRowsByKey = new Map<
+    string,
+    {
+      customer_id: string;
+      organization_id: string;
+      product_id: string;
+      product_sale_unit_id: string;
+      sale_price: number;
+    }
+  >();
+
+  for (const update of updates) {
+    const item = itemsMap.get(update.itemId);
+    if (!item) continue;
+    const nextUnitPrice = Number.isFinite(update.unitPrice)
+      ? Number(update.unitPrice)
+      : Number(item.unit_price);
+    if (!Number.isFinite(nextUnitPrice) || nextUnitPrice < 0) continue;
+    const saleUnitId = item.product_sale_unit_id ? String(item.product_sale_unit_id) : null;
+    if (!saleUnitId) continue;
+    const key = `${item.product_id}:${saleUnitId}`;
+    priceRowsByKey.set(key, {
+      customer_id: order.customer_id,
+      organization_id: session.organizationId,
+      product_id: item.product_id,
+      product_sale_unit_id: saleUnitId,
+      sale_price: nextUnitPrice,
+    });
+  }
+
+  for (const add of additions) {
+    const saleUnit = add.productSaleUnitId
+      ? saleUnitsMap.get(add.productSaleUnitId)
+      : saleUnitsMap.get(`default-${add.productId}`);
+    const saleUnitId = saleUnit?.id ? String(saleUnit.id) : null;
+    if (!saleUnitId || !Number.isFinite(add.unitPrice) || add.unitPrice < 0) continue;
+    const key = `${add.productId}:${saleUnitId}`;
+    priceRowsByKey.set(key, {
+      customer_id: order.customer_id,
+      organization_id: session.organizationId,
+      product_id: add.productId,
+      product_sale_unit_id: saleUnitId,
+      sale_price: Number(add.unitPrice),
+    });
+  }
+
+  if (priceRowsByKey.size > 0) {
+    const { error: priceUpsertError } = await admin
+      .from("customer_product_prices")
+      .upsert(Array.from(priceRowsByKey.values()), {
+        onConflict: "organization_id,customer_id,product_sale_unit_id",
+      });
+
+    if (priceUpsertError) {
+      return { error: "อัปเดตราคาขายร้านค้าไม่สำเร็จ: " + priceUpsertError.message };
+    }
   }
 
   // Update stocks and movements if needed
@@ -600,7 +666,7 @@ export async function updateOrderItemsBatchAction(input: {
           created_by: session.userId,
           metadata: { order_id: orderId, source: "order_management_batch_optimized" },
           movement_type: delta > 0 ? "issue" : "adjustment",
-          notes: `à¸›à¸£à¸±à¸šà¸­à¸­à¹€à¸”à¸­à¸£à¹Œ ${order.order_number} (Batch Optimized)`,
+          notes: `ปรับออเดอร์ ${order.order_number} (Batch Optimized)`,
           organization_id: session.organizationId,
           product_id: productId,
           quantity_delta: -delta,
@@ -628,14 +694,19 @@ export async function updateOrderItemsBatchAction(input: {
     const syncRes = await syncOrderDeliveryNoteAction(orderId, {
       lossInBaseUnitByItemId,
     });
-    if ("error" in syncRes) return { error: "à¸›à¸£à¸±à¸šà¸›à¸£à¸¸à¸‡à¹ƒà¸šà¸ªà¹ˆà¸‡à¸‚à¸­à¸‡à¹„à¸¡à¹ˆà¸ªà¸³à¹€à¸£à¹‡à¸ˆ: " + syncRes.error };
+    if ("error" in syncRes) return { error: "ปรับปรุงใบส่งของไม่สำเร็จ: " + syncRes.error };
   }
+
+  const receiptWarning = await notifyUpdatedCustomerReceiptForOrder(admin, {
+    orderId,
+    organizationId: session.organizationId,
+  });
 
   revalidatePath("/orders/incoming");
   revalidatePath("/orders");
   revalidatePath("/billing");
   revalidateDashboardPages();
-  return { success: true };
+  return receiptWarning ? { receiptWarning, success: true } : { success: true };
 }
 
 export async function addOrderItemAction(formData: FormData): Promise<ActionResult> {
@@ -648,9 +719,9 @@ export async function addOrderItemAction(formData: FormData): Promise<ActionResu
   const quantity = Number(formData.get("quantity") ?? 0);
   const unitPrice = Number(formData.get("unitPrice") ?? 0);
 
-  if (!orderId || !productId) return { error: "à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸ªà¸´à¸™à¸„à¹‰à¸²à¹„à¸¡à¹ˆà¸„à¸£à¸šà¸–à¹‰à¸§à¸™" };
-  if (!Number.isFinite(quantity) || quantity <= 0) return { error: "à¸ˆà¸³à¸™à¸§à¸™à¸ªà¸´à¸™à¸„à¹‰à¸²à¸•à¹‰à¸­à¸‡à¸¡à¸²à¸à¸à¸§à¹ˆà¸² 0" };
-  if (!Number.isFinite(unitPrice) || unitPrice <= 0) return { error: "à¸£à¸²à¸„à¸²à¸ªà¸´à¸™à¸„à¹‰à¸²à¸•à¹‰à¸­à¸‡à¸¡à¸²à¸à¸à¸§à¹ˆà¸² 0" };
+  if (!orderId || !productId) return { error: "ข้อมูลสินค้าไม่ครบถ้วน" };
+  if (!Number.isFinite(quantity) || quantity <= 0) return { error: "จำนวนสินค้าต้องมากกว่า 0" };
+  if (!Number.isFinite(unitPrice) || unitPrice <= 0) return { error: "ราคาสินค้าต้องมากกว่า 0" };
 
   const { data: order } = await admin
     .from("orders")
@@ -658,8 +729,8 @@ export async function addOrderItemAction(formData: FormData): Promise<ActionResu
     .eq("id", orderId)
     .single();
 
-  if (!order || order.organization_id !== session.organizationId) return { error: "à¹„à¸¡à¹ˆà¸žà¸šà¸­à¸­à¹€à¸”à¸­à¸£à¹Œ" };
-  if (!isEditableOrderStatus(order.status)) return { error: "à¸­à¸­à¹€à¸”à¸­à¸£à¹Œà¸—à¸µà¹ˆà¸¢à¸à¹€à¸¥à¸´à¸à¹à¸¥à¹‰à¸§à¹„à¸¡à¹ˆà¸ªà¸²à¸¡à¸²à¸£à¸–à¹à¸à¹‰à¹„à¸‚à¹„à¸”à¹‰" };
+  if (!order || order.organization_id !== session.organizationId) return { error: "ไม่พบออเดอร์" };
+  if (!isEditableOrderStatus(order.status)) return { error: "ออเดอร์ที่ยกเลิกแล้วไม่สามารถแก้ไขได้" };
 
   const { data: saleUnit } = productSaleUnitId
     ? await admin
@@ -679,7 +750,7 @@ export async function addOrderItemAction(formData: FormData): Promise<ActionResu
         .single();
 
   if (!saleUnit || saleUnit.product_id !== productId) {
-    return { error: "à¹„à¸¡à¹ˆà¸žà¸šà¸«à¸™à¹ˆà¸§à¸¢à¸‚à¸²à¸¢à¸‚à¸­à¸‡à¸ªà¸´à¸™à¸„à¹‰à¸²à¸™à¸µà¹‰" };
+    return { error: "ไม่พบหน่วยขายของสินค้านี้" };
   }
 
   const { data: product } = await admin
@@ -689,7 +760,7 @@ export async function addOrderItemAction(formData: FormData): Promise<ActionResu
     .eq("id", productId)
     .single();
 
-  if (!product) return { error: "à¹„à¸¡à¹ˆà¸žà¸šà¸ªà¸´à¸™à¸„à¹‰à¸²" };
+  if (!product) return { error: "ไม่พบสินค้า" };
 
   const saleUnitRatio = Number(saleUnit.base_unit_quantity) || 1;
   const effectiveCost = getEffectiveSaleUnitCost({
@@ -703,7 +774,7 @@ export async function addOrderItemAction(formData: FormData): Promise<ActionResu
   });
 
   if (effectiveCost > 0 && unitPrice < effectiveCost) {
-    return { error: `à¸£à¸²à¸„à¸²à¸•à¹ˆà¸³à¸à¸§à¹ˆà¸²à¸•à¹‰à¸™à¸—à¸¸à¸™ à¸¿${effectiveCost.toLocaleString("th-TH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` };
+    return { error: `ราคาต่ำกว่าต้นทุน ฿${effectiveCost.toLocaleString("th-TH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` };
   }
 
   const quantityInBaseUnit = quantity * saleUnitRatio;
@@ -723,7 +794,7 @@ export async function addOrderItemAction(formData: FormData): Promise<ActionResu
   );
 
   if (priceError) {
-    return { error: priceError.message ?? "à¸šà¸±à¸™à¸—à¸¶à¸à¸£à¸²à¸„à¸²à¸ªà¸´à¸™à¸„à¹‰à¸²à¹„à¸¡à¹ˆà¸ªà¸³à¹€à¸£à¹‡à¸ˆ" };
+    return { error: priceError.message ?? "บันทึกราคาสินค้าไม่สำเร็จ" };
   }
 
   await admin.from("order_items").insert({
@@ -750,7 +821,7 @@ export async function addOrderItemAction(formData: FormData): Promise<ActionResu
         created_by: session.userId,
         metadata: { order_id: orderId, source: "order_management" },
         movement_type: "issue",
-        notes: `à¹€à¸žà¸´à¹ˆà¸¡à¸ªà¸´à¸™à¸„à¹‰à¸²à¹ƒà¸™à¸­à¸­à¹€à¸”à¸­à¸£à¹Œ ${order.order_number}`,
+        notes: `เพิ่มสินค้าในออเดอร์ ${order.order_number}`,
         organization_id: session.organizationId,
         product_id: productId,
         quantity_delta: -quantityInBaseUnit,
@@ -773,11 +844,16 @@ export async function addOrderItemAction(formData: FormData): Promise<ActionResu
     }
   }
 
+  const receiptWarning = await notifyUpdatedCustomerReceiptForOrder(admin, {
+    orderId,
+    organizationId: session.organizationId,
+  });
+
   revalidatePath("/orders/incoming");
   revalidatePath("/orders");
   revalidatePath("/billing");
   revalidateDashboardPages();
-  return { success: true };
+  return receiptWarning ? { receiptWarning, success: true } : { success: true };
 }
 
 export async function fetchCustomerPricesAction(
@@ -815,7 +891,7 @@ export async function upsertCustomerPriceFromOrderModalAction(input: {
   const salePrice = Number(input.salePrice);
 
   if (!customerId || !productId || !Number.isFinite(salePrice) || salePrice < 0) {
-    return { error: "à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸£à¸²à¸„à¸²à¹„à¸¡à¹ˆà¸–à¸¹à¸à¸•à¹‰à¸­à¸‡" };
+    return { error: "ข้อมูลราคาไม่ถูกต้อง" };
   }
 
   let productSaleUnitId = String(input.productSaleUnitId ?? "").trim();
@@ -831,7 +907,7 @@ export async function upsertCustomerPriceFromOrderModalAction(input: {
       .single();
 
     if (defaultUnitError || !defaultUnit?.id) {
-      return { error: "à¹„à¸¡à¹ˆà¸žà¸šà¸«à¸™à¹ˆà¸§à¸¢à¸‚à¸²à¸¢à¸«à¸¥à¸±à¸à¸‚à¸­à¸‡à¸ªà¸´à¸™à¸„à¹‰à¸²" };
+      return { error: "ไม่พบหน่วยขายหลักของสินค้า" };
     }
 
     productSaleUnitId = defaultUnit.id;
@@ -846,7 +922,7 @@ export async function upsertCustomerPriceFromOrderModalAction(input: {
     .single();
 
   if (saleUnitError || !saleUnit) {
-    return { error: "à¹„à¸¡à¹ˆà¸žà¸šà¸«à¸™à¹ˆà¸§à¸¢à¸‚à¸²à¸¢à¸—à¸µà¹ˆà¸•à¹‰à¸­à¸‡à¸à¸²à¸£à¸šà¸±à¸™à¸—à¸¶à¸à¸£à¸²à¸„à¸²" };
+    return { error: "ไม่พบหน่วยขายที่ต้องการบันทึกราคา" };
   }
 
   const { error } = await admin.from("customer_product_prices").upsert(
@@ -863,7 +939,7 @@ export async function upsertCustomerPriceFromOrderModalAction(input: {
   );
 
   if (error) {
-    return { error: error.message ?? "à¸šà¸±à¸™à¸—à¸¶à¸à¸£à¸²à¸„à¸²à¹„à¸¡à¹ˆà¸ªà¸³à¹€à¸£à¹‡à¸ˆ" };
+    return { error: error.message ?? "บันทึกราคาไม่สำเร็จ" };
   }
 
   revalidatePath("/orders/incoming");
@@ -871,7 +947,7 @@ export async function upsertCustomerPriceFromOrderModalAction(input: {
   return { success: true };
 }
 
-// â”€â”€â”€ Customer Order History (Updated: 2024-05-04 16:30) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
 export async function fetchCustomerLastOrderItemsAction(
   customerId: string,
   orderDate: string,
@@ -947,7 +1023,7 @@ export async function fetchCustomerLastOrderItemsAction(
   };
 }
 
-// â”€â”€â”€ Create manual order â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
 
 type ManualOrderItem = {
   productId: string;
@@ -1157,7 +1233,7 @@ export async function linkPendingLineOrderAction(formData: FormData): Promise<Ac
   });
 
   if ("error" in result) {
-    return { error: result.error ?? "à¸œà¸¹à¸à¸£à¹‰à¸²à¸™à¸„à¹‰à¸²à¹„à¸¡à¹ˆà¸ªà¸³à¹€à¸£à¹‡à¸ˆ" };
+    return { error: result.error ?? "ผูกร้านค้าไม่สำเร็จ" };
   }
 
   revalidatePath("/orders/incoming");
@@ -1167,7 +1243,7 @@ export async function linkPendingLineOrderAction(formData: FormData): Promise<Ac
 
   return {
     receiptWarning: result.receiptErrors.length > 0
-      ? `à¸ªà¸£à¹‰à¸²à¸‡à¸­à¸­à¹€à¸”à¸­à¸£à¹Œà¹à¸¥à¹‰à¸§ à¹à¸•à¹ˆà¸ªà¹ˆà¸‡à¹ƒà¸šà¸¢à¸·à¸™à¸¢à¸±à¸™à¹„à¸› LINE à¹„à¸¡à¹ˆà¸ªà¸³à¹€à¸£à¹‡à¸ˆ: ${result.receiptErrors.join(" | ")}`
+      ? `สร้างออเดอร์แล้ว แต่ส่งใบยืนยันไป LINE ไม่สำเร็จ: ${result.receiptErrors.join(" | ")}`
       : undefined,
     success: true,
     orderNumber: result.orderNumbers.join(", "),
@@ -1181,11 +1257,11 @@ export async function updateIncomingOrderDateAction(formData: FormData): Promise
   const nextOrderDate = String(formData.get("orderDate") ?? "").trim();
 
   if (!orderId) {
-    return { error: "à¹„à¸¡à¹ˆà¸žà¸šà¹€à¸¥à¸‚à¸­à¸­à¹€à¸”à¸­à¸£à¹Œà¸—à¸µà¹ˆà¸•à¹‰à¸­à¸‡à¸à¸²à¸£à¹à¸à¹‰à¹„à¸‚" };
+    return { error: "ไม่พบเลขออเดอร์ที่ต้องการแก้ไข" };
   }
 
   if (!/^\d{4}-\d{2}-\d{2}$/.test(nextOrderDate)) {
-    return { error: "à¸£à¸¹à¸›à¹à¸šà¸šà¸§à¸±à¸™à¸—à¸µà¹ˆà¸­à¸­à¹€à¸”à¸­à¸£à¹Œà¹„à¸¡à¹ˆà¸–à¸¹à¸à¸•à¹‰à¸­à¸‡" };
+    return { error: "รูปแบบวันที่ออเดอร์ไม่ถูกต้อง" };
   }
 
   const { data: order } = await admin
@@ -1195,11 +1271,11 @@ export async function updateIncomingOrderDateAction(formData: FormData): Promise
     .single();
 
   if (!order || order.organization_id !== session.organizationId) {
-    return { error: "à¹„à¸¡à¹ˆà¸žà¸šà¸­à¸­à¹€à¸”à¸­à¸£à¹Œà¸™à¸µà¹‰" };
+    return { error: "ไม่พบออเดอร์นี้" };
   }
 
   if (order.status === "cancelled") {
-    return { error: "à¸­à¸­à¹€à¸”à¸­à¸£à¹Œà¸—à¸µà¹ˆà¸¢à¸à¹€à¸¥à¸´à¸à¹à¸¥à¹‰à¸§à¹„à¸¡à¹ˆà¸ªà¸²à¸¡à¸²à¸£à¸–à¹à¸à¹‰à¹„à¸‚à¸§à¸±à¸™à¸—à¸µà¹ˆà¹„à¸”à¹‰" };
+    return { error: "ออเดอร์ที่ยกเลิกแล้วไม่สามารถแก้ไขวันที่ได้" };
   }
 
   if (order.order_date === nextOrderDate) {
@@ -1305,15 +1381,22 @@ export async function updateIncomingOrderDateAction(formData: FormData): Promise
       }
     }
 
-    revalidatePath("/orders/incoming");
-    revalidatePath("/orders");
-    revalidatePath("/delivery");
-    revalidatePath("/billing");
-    revalidatePath("/reports/billing");
-    revalidateDashboardPages();
+	    revalidatePath("/orders/incoming");
+	    revalidatePath("/orders");
+	    revalidatePath("/delivery");
+	    revalidatePath("/billing");
+	    revalidatePath("/reports/billing");
+	    revalidateDashboardPages();
 
-    return { success: true, orderDate: nextOrderDate, deliveryNumber };
-  } else {
+	    const receiptWarning = await notifyUpdatedCustomerReceiptForOrder(admin, {
+	      orderId: existingOrder.id,
+	      organizationId: session.organizationId,
+	    });
+
+	    return receiptWarning
+	      ? { receiptWarning, success: true, orderDate: nextOrderDate, deliveryNumber }
+	      : { success: true, orderDate: nextOrderDate, deliveryNumber };
+	  } else {
     // CASE 2: No order on next date -> Just update date!
     const year = nextOrderDate.substring(0, 4);
     const month = nextOrderDate.substring(5, 7);
@@ -1351,7 +1434,7 @@ export async function updateIncomingOrderDateAction(formData: FormData): Promise
     .eq("id", orderId);
 
   if (updateError) {
-    return { error: updateError.message ?? "à¸šà¸±à¸™à¸—à¸¶à¸à¸§à¸±à¸™à¸—à¸µà¹ˆà¸­à¸­à¹€à¸”à¸­à¸£à¹Œà¹„à¸¡à¹ˆà¸ªà¸³à¹€à¸£à¹‡à¸ˆ" };
+    return { error: updateError.message ?? "บันทึกวันที่ออเดอร์ไม่สำเร็จ" };
   }
 
   // Clean up the SOURCE delivery note (if any) on the old date
@@ -1395,17 +1478,30 @@ export async function updateIncomingOrderDateAction(formData: FormData): Promise
       }
     }
 
-  revalidatePath("/orders/incoming");
-  revalidatePath("/orders");
-  revalidatePath("/delivery");
-  revalidatePath("/billing");
-  revalidatePath("/reports/billing");
-  revalidateDashboardPages();
+	  revalidatePath("/orders/incoming");
+	  revalidatePath("/orders");
+	  revalidatePath("/delivery");
+	  revalidatePath("/billing");
+	  revalidatePath("/reports/billing");
+	  revalidateDashboardPages();
 
-    return { success: true, orderDate: nextOrderDate, orderNumber: String(nextOrderNumber), deliveryNumber };
-  }
+	    const receiptWarning = await notifyUpdatedCustomerReceiptForOrder(admin, {
+	      orderId,
+	      organizationId: session.organizationId,
+	    });
+
+	    return receiptWarning
+	      ? {
+	          receiptWarning,
+	          success: true,
+	          orderDate: nextOrderDate,
+	          orderNumber: String(nextOrderNumber),
+	          deliveryNumber,
+	        }
+	      : { success: true, orderDate: nextOrderDate, orderNumber: String(nextOrderNumber), deliveryNumber };
+	  }
 }
-// â”€â”€â”€ Fetch data for Global Create Order Modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
 export async function fetchOrderModalDataAction(): Promise<{
   customers: OrderCustomerOption[];
   products: OrderProductOption[];
@@ -1541,7 +1637,7 @@ export async function deleteOrderAction(formData: FormData): Promise<ActionResul
   const orderId = String(formData.get("orderId") ?? "").trim();
 
   if (!orderId) {
-    return { error: "à¹„à¸¡à¹ˆà¸žà¸šà¸£à¸«à¸±à¸ªà¸­à¸­à¹€à¸”à¸­à¸£à¹Œ" };
+    return { error: "ไม่พบรหัสออเดอร์" };
   }
 
   const { data: order } = await admin
@@ -1552,11 +1648,11 @@ export async function deleteOrderAction(formData: FormData): Promise<ActionResul
     .single();
 
   if (!order) {
-    return { error: "à¹„à¸¡à¹ˆà¸žà¸šà¸­à¸­à¹€à¸”à¸­à¸£à¹Œà¸™à¸µà¹‰" };
+    return { error: "ไม่พบออเดอร์นี้" };
   }
 
   if (!isEditableOrderStatus(order.status)) {
-    return { error: "à¸­à¸­à¹€à¸”à¸­à¸£à¹Œà¸—à¸µà¹ˆà¸¢à¸à¹€à¸¥à¸´à¸à¹à¸¥à¹‰à¸§à¹„à¸¡à¹ˆà¸ªà¸²à¸¡à¸²à¸£à¸–à¸¥à¸šà¹„à¸”à¹‰" };
+    return { error: "ออเดอร์ที่ยกเลิกแล้วไม่สามารถลบได้" };
   }
 
   const { data: deliveryItems } = await admin
@@ -1594,7 +1690,7 @@ export async function deleteOrderAction(formData: FormData): Promise<ActionResul
         session.userId,
         productId,
         quantityInBaseUnit,
-        `à¸¥à¸šà¸­à¸­à¹€à¸”à¸­à¸£à¹Œ ${order.order_number}`,
+        `ลบออเดอร์ ${order.order_number}`,
       ),
     ),
   );
@@ -1617,7 +1713,7 @@ export async function deleteOrderAction(formData: FormData): Promise<ActionResul
       .eq("order_id", orderId);
 
     if (deleteDeliveryItemsError) {
-      return { error: deleteDeliveryItemsError.message ?? "à¹„à¸¡à¹ˆà¸ªà¸²à¸¡à¸²à¸£à¸–à¸¥à¸šà¸£à¸²à¸¢à¸à¸²à¸£à¹ƒà¸šà¸ªà¹ˆà¸‡à¸‚à¸­à¸‡à¹„à¸”à¹‰" };
+      return { error: deleteDeliveryItemsError.message ?? "ไม่สามารถลบรายการใบส่งของได้" };
     }
   }
 
@@ -1628,7 +1724,7 @@ export async function deleteOrderAction(formData: FormData): Promise<ActionResul
       .in("id", deliveryNoteIds);
 
     if (deleteDeliveryNotesError) {
-      return { error: deleteDeliveryNotesError.message ?? "à¹„à¸¡à¹ˆà¸ªà¸²à¸¡à¸²à¸£à¸–à¸¥à¸šà¹ƒà¸šà¸ªà¹ˆà¸‡à¸‚à¸­à¸‡à¹„à¸”à¹‰" };
+      return { error: deleteDeliveryNotesError.message ?? "ไม่สามารถลบใบส่งของได้" };
     }
   }
 
@@ -1638,7 +1734,7 @@ export async function deleteOrderAction(formData: FormData): Promise<ActionResul
     .eq("order_id", orderId);
 
   if (deleteOrderItemsError) {
-    return { error: deleteOrderItemsError.message ?? "à¹„à¸¡à¹ˆà¸ªà¸²à¸¡à¸²à¸£à¸–à¸¥à¸šà¸£à¸²à¸¢à¸à¸²à¸£à¸ªà¸´à¸™à¸„à¹‰à¸²à¹ƒà¸™à¸­à¸­à¹€à¸”à¸­à¸£à¹Œà¹„à¸”à¹‰" };
+    return { error: deleteOrderItemsError.message ?? "ไม่สามารถลบรายการสินค้าในออเดอร์ได้" };
   }
 
   const { error: deleteOrderError } = await admin
@@ -1648,7 +1744,7 @@ export async function deleteOrderAction(formData: FormData): Promise<ActionResul
     .eq("organization_id", session.organizationId);
 
   if (deleteOrderError) {
-    return { error: deleteOrderError.message ?? "à¹„à¸¡à¹ˆà¸ªà¸²à¸¡à¸²à¸£à¸–à¸¥à¸šà¸­à¸­à¹€à¸”à¸­à¸£à¹Œà¹„à¸”à¹‰" };
+    return { error: deleteOrderError.message ?? "ไม่สามารถลบออเดอร์ได้" };
   }
 
   if (deliveryNumbers.length > 0) {
@@ -1676,7 +1772,7 @@ export async function deleteOrderCascadeAction(formData: FormData): Promise<Acti
   const orderId = String(formData.get("orderId") ?? "").trim();
 
   if (!orderId) {
-    return { error: "à¹„à¸¡à¹ˆà¸žà¸šà¸£à¸«à¸±à¸ªà¸­à¸­à¹€à¸”à¸­à¸£à¹Œ" };
+    return { error: "ไม่พบรหัสออเดอร์" };
   }
 
   const { data: order } = await admin
@@ -1687,11 +1783,11 @@ export async function deleteOrderCascadeAction(formData: FormData): Promise<Acti
     .single();
 
   if (!order) {
-    return { error: "à¹„à¸¡à¹ˆà¸žà¸šà¸­à¸­à¹€à¸”à¸­à¸£à¹Œà¸™à¸µà¹‰" };
+    return { error: "ไม่พบออเดอร์นี้" };
   }
 
   if (!isEditableOrderStatus(order.status)) {
-    return { error: "à¸­à¸­à¹€à¸”à¸­à¸£à¹Œà¸—à¸µà¹ˆà¸¢à¸à¹€à¸¥à¸´à¸à¹à¸¥à¹‰à¸§à¹„à¸¡à¹ˆà¸ªà¸²à¸¡à¸²à¸£à¸–à¸¥à¸šà¹„à¸”à¹‰" };
+    return { error: "ออเดอร์ที่ยกเลิกแล้วไม่สามารถลบได้" };
   }
 
   const { data: orderItems, error: orderItemsError } = await admin
@@ -1700,7 +1796,7 @@ export async function deleteOrderCascadeAction(formData: FormData): Promise<Acti
     .eq("order_id", orderId);
 
   if (orderItemsError) {
-    return { error: orderItemsError.message ?? "à¹„à¸¡à¹ˆà¸ªà¸²à¸¡à¸²à¸£à¸–à¹‚à¸«à¸¥à¸”à¸£à¸²à¸¢à¸à¸²à¸£à¸ªà¸´à¸™à¸„à¹‰à¸²à¹ƒà¸™à¸­à¸­à¹€à¸”à¸­à¸£à¹Œà¹„à¸”à¹‰" };
+    return { error: orderItemsError.message ?? "ไม่สามารถโหลดรายการสินค้าในออเดอร์ได้" };
   }
 
   const orderItemIds = (orderItems ?? []).map((item) => item.id);
@@ -1714,7 +1810,7 @@ export async function deleteOrderCascadeAction(formData: FormData): Promise<Acti
       : { data: [], error: null };
 
   if (deliveryItemsError) {
-    return { error: deliveryItemsError.message ?? "à¹„à¸¡à¹ˆà¸ªà¸²à¸¡à¸²à¸£à¸–à¹‚à¸«à¸¥à¸”à¸£à¸²à¸¢à¸à¸²à¸£à¹ƒà¸šà¸ªà¹ˆà¸‡à¸‚à¸­à¸‡à¸—à¸µà¹ˆà¹€à¸à¸µà¹ˆà¸¢à¸§à¸‚à¹‰à¸­à¸‡à¹„à¸”à¹‰" };
+    return { error: deliveryItemsError.message ?? "ไม่สามารถโหลดรายการใบส่งของที่เกี่ยวข้องได้" };
   }
 
   const restoreByProduct = new Map<string, number>();
@@ -1742,7 +1838,7 @@ export async function deleteOrderCascadeAction(formData: FormData): Promise<Acti
         session.userId,
         productId,
         quantityInBaseUnit,
-        `à¸¥à¸šà¸­à¸­à¹€à¸”à¸­à¸£à¹Œ ${order.order_number}`,
+        `ลบออเดอร์ ${order.order_number}`,
       ),
     ),
   );
@@ -1768,7 +1864,7 @@ export async function deleteOrderCascadeAction(formData: FormData): Promise<Acti
       );
 
     if (deleteDeliveryItemsError) {
-      return { error: deleteDeliveryItemsError.message ?? "à¹„à¸¡à¹ˆà¸ªà¸²à¸¡à¸²à¸£à¸–à¸¥à¸šà¸£à¸²à¸¢à¸à¸²à¸£à¹ƒà¸šà¸ªà¹ˆà¸‡à¸‚à¸­à¸‡à¹„à¸”à¹‰" };
+      return { error: deleteDeliveryItemsError.message ?? "ไม่สามารถลบรายการใบส่งของได้" };
     }
   }
 
@@ -1779,7 +1875,7 @@ export async function deleteOrderCascadeAction(formData: FormData): Promise<Acti
       .eq("delivery_note_id", deliveryNoteId);
 
     if (remainingDeliveryItemsError) {
-      return { error: remainingDeliveryItemsError.message ?? "à¹„à¸¡à¹ˆà¸ªà¸²à¸¡à¸²à¸£à¸–à¸•à¸£à¸§à¸ˆà¸ªà¸­à¸šà¸£à¸²à¸¢à¸à¸²à¸£à¹ƒà¸šà¸ªà¹ˆà¸‡à¸‚à¸­à¸‡à¸„à¸‡à¹€à¸«à¸¥à¸·à¸­à¹„à¸”à¹‰" };
+      return { error: remainingDeliveryItemsError.message ?? "ไม่สามารถตรวจสอบรายการใบส่งของคงเหลือได้" };
     }
 
     if (!remainingDeliveryItems || remainingDeliveryItems.length === 0) {
@@ -1789,7 +1885,7 @@ export async function deleteOrderCascadeAction(formData: FormData): Promise<Acti
         .eq("id", deliveryNoteId);
 
       if (deleteDeliveryNoteError) {
-        return { error: deleteDeliveryNoteError.message ?? "à¹„à¸¡à¹ˆà¸ªà¸²à¸¡à¸²à¸£à¸–à¸¥à¸šà¹ƒà¸šà¸ªà¹ˆà¸‡à¸‚à¸­à¸‡à¹„à¸”à¹‰" };
+        return { error: deleteDeliveryNoteError.message ?? "ไม่สามารถลบใบส่งของได้" };
       }
 
       continue;
@@ -1812,7 +1908,7 @@ export async function deleteOrderCascadeAction(formData: FormData): Promise<Acti
         .in("id", remainingOrderItemIds);
 
       if (remainingOrderItemsError) {
-        return { error: remainingOrderItemsError.message ?? "à¹„à¸¡à¹ˆà¸ªà¸²à¸¡à¸²à¸£à¸–à¸«à¸²à¸­à¸­à¹€à¸”à¸­à¸£à¹Œà¸­à¹‰à¸²à¸‡à¸­à¸´à¸‡à¹ƒà¸šà¸ªà¹ˆà¸‡à¸‚à¸­à¸‡à¹„à¸”à¹‰" };
+        return { error: remainingOrderItemsError.message ?? "ไม่สามารถหาออเดอร์อ้างอิงใบส่งของได้" };
       }
 
       replacementOrderId = remainingOrderItems?.[0]?.order_id ?? null;
@@ -1832,7 +1928,7 @@ export async function deleteOrderCascadeAction(formData: FormData): Promise<Acti
       .eq("id", deliveryNoteId);
 
     if (updateDeliveryNoteError) {
-      return { error: updateDeliveryNoteError.message ?? "à¹„à¸¡à¹ˆà¸ªà¸²à¸¡à¸²à¸£à¸–à¸­à¸±à¸›à¹€à¸”à¸•à¹ƒà¸šà¸ªà¹ˆà¸‡à¸‚à¸­à¸‡à¸«à¸¥à¸±à¸‡à¸¥à¸šà¸­à¸­à¹€à¸”à¸­à¸£à¹Œà¹„à¸”à¹‰" };
+      return { error: updateDeliveryNoteError.message ?? "ไม่สามารถอัปเดตใบส่งของหลังลบออเดอร์ได้" };
     }
   }
 
@@ -1842,7 +1938,7 @@ export async function deleteOrderCascadeAction(formData: FormData): Promise<Acti
     .eq("order_id", orderId);
 
   if (deleteOrderItemsError) {
-    return { error: deleteOrderItemsError.message ?? "à¹„à¸¡à¹ˆà¸ªà¸²à¸¡à¸²à¸£à¸–à¸¥à¸šà¸£à¸²à¸¢à¸à¸²à¸£à¸ªà¸´à¸™à¸„à¹‰à¸²à¹ƒà¸™à¸­à¸­à¹€à¸”à¸­à¸£à¹Œà¹„à¸”à¹‰" };
+    return { error: deleteOrderItemsError.message ?? "ไม่สามารถลบรายการสินค้าในออเดอร์ได้" };
   }
 
   const { error: deleteOrderError } = await admin
@@ -1852,7 +1948,7 @@ export async function deleteOrderCascadeAction(formData: FormData): Promise<Acti
     .eq("organization_id", session.organizationId);
 
   if (deleteOrderError) {
-    return { error: deleteOrderError.message ?? "à¹„à¸¡à¹ˆà¸ªà¸²à¸¡à¸²à¸£à¸–à¸¥à¸šà¸­à¸­à¹€à¸”à¸­à¸£à¹Œà¹„à¸”à¹‰" };
+    return { error: deleteOrderError.message ?? "ไม่สามารถลบออเดอร์ได้" };
   }
 
   if (deliveryNumbers.length > 0) {
@@ -1879,7 +1975,7 @@ export async function deleteOrderCascadeActionV2(formData: FormData): Promise<Ac
   const orderId = String(formData.get("orderId") ?? "").trim();
 
   if (!orderId) {
-    return { error: "à¹„à¸¡à¹ˆà¸žà¸šà¸£à¸«à¸±à¸ªà¸­à¸­à¹€à¸”à¸­à¸£à¹Œ" };
+    return { error: "ไม่พบรหัสออเดอร์" };
   }
 
   const { data: order, error: orderError } = await admin
@@ -1890,11 +1986,11 @@ export async function deleteOrderCascadeActionV2(formData: FormData): Promise<Ac
     .single();
 
   if (orderError || !order) {
-    return { error: orderError?.message ?? "à¹„à¸¡à¹ˆà¸žà¸šà¸­à¸­à¹€à¸”à¸­à¸£à¹Œà¸™à¸µà¹‰" };
+    return { error: orderError?.message ?? "ไม่พบออเดอร์นี้" };
   }
 
   if (!isEditableOrderStatus(order.status)) {
-    return { error: "à¸­à¸­à¹€à¸”à¸­à¸£à¹Œà¸—à¸µà¹ˆà¸¢à¸à¹€à¸¥à¸´à¸à¹à¸¥à¹‰à¸§à¹„à¸¡à¹ˆà¸ªà¸²à¸¡à¸²à¸£à¸–à¸¥à¸šà¹„à¸”à¹‰" };
+    return { error: "ออเดอร์ที่ยกเลิกแล้วไม่สามารถลบได้" };
   }
 
   const { data: orderItems, error: orderItemsError } = await admin
@@ -1903,7 +1999,7 @@ export async function deleteOrderCascadeActionV2(formData: FormData): Promise<Ac
     .eq("order_id", orderId);
 
   if (orderItemsError) {
-    return { error: orderItemsError.message ?? "à¹„à¸¡à¹ˆà¸ªà¸²à¸¡à¸²à¸£à¸–à¹‚à¸«à¸¥à¸”à¸£à¸²à¸¢à¸à¸²à¸£à¸ªà¸´à¸™à¸„à¹‰à¸²à¹ƒà¸™à¸­à¸­à¹€à¸”à¸­à¸£à¹Œà¹„à¸”à¹‰" };
+    return { error: orderItemsError.message ?? "ไม่สามารถโหลดรายการสินค้าในออเดอร์ได้" };
   }
 
   const orderItemIds = (orderItems ?? []).map((item) => item.id);
@@ -1945,7 +2041,7 @@ export async function deleteOrderCascadeActionV2(formData: FormData): Promise<Ac
         session.userId,
         productId,
         quantityInBaseUnit,
-        `à¸¥à¸šà¸­à¸­à¹€à¸”à¸­à¸£à¹Œ ${order.order_number}`,
+        `ลบออเดอร์ ${order.order_number}`,
       ),
     ),
   );
@@ -1960,7 +2056,7 @@ export async function deleteOrderCascadeActionV2(formData: FormData): Promise<Ac
       .in("id", deliveryNoteIds);
 
     if (deliveryNotesError) {
-      return { error: deliveryNotesError.message ?? "à¹„à¸¡à¹ˆà¸ªà¸²à¸¡à¸²à¸£à¸–à¹‚à¸«à¸¥à¸”à¹ƒà¸šà¸ˆà¸±à¸”à¸ªà¹ˆà¸‡à¸—à¸µà¹ˆà¹€à¸à¸µà¹ˆà¸¢à¸§à¸‚à¹‰à¸­à¸‡à¹„à¸”à¹‰" };
+      return { error: deliveryNotesError.message ?? "ไม่สามารถโหลดใบจัดส่งที่เกี่ยวข้องได้" };
     }
 
     deliveryNumbers = Array.from(new Set((deliveryNotes ?? []).map((note) => String(note.delivery_number))));
@@ -1976,7 +2072,7 @@ export async function deleteOrderCascadeActionV2(formData: FormData): Promise<Ac
       );
 
     if (deleteDeliveryItemsError) {
-      return { error: deleteDeliveryItemsError.message ?? "à¹„à¸¡à¹ˆà¸ªà¸²à¸¡à¸²à¸£à¸–à¸¥à¸šà¸£à¸²à¸¢à¸à¸²à¸£à¹ƒà¸šà¸ˆà¸±à¸”à¸ªà¹ˆà¸‡à¹„à¸”à¹‰" };
+      return { error: deleteDeliveryItemsError.message ?? "ไม่สามารถลบรายการใบจัดส่งได้" };
     }
   }
 
@@ -1987,7 +2083,7 @@ export async function deleteOrderCascadeActionV2(formData: FormData): Promise<Ac
       .eq("delivery_note_id", deliveryNoteId);
 
     if (remainingDeliveryItemsError) {
-      return { error: remainingDeliveryItemsError.message ?? "à¹„à¸¡à¹ˆà¸ªà¸²à¸¡à¸²à¸£à¸–à¸•à¸£à¸§à¸ˆà¸ªà¸­à¸šà¸£à¸²à¸¢à¸à¸²à¸£à¹ƒà¸šà¸ˆà¸±à¸”à¸ªà¹ˆà¸‡à¸„à¸‡à¹€à¸«à¸¥à¸·à¸­à¹„à¸”à¹‰" };
+      return { error: remainingDeliveryItemsError.message ?? "ไม่สามารถตรวจสอบรายการใบจัดส่งคงเหลือได้" };
     }
 
     if (!remainingDeliveryItems || remainingDeliveryItems.length === 0) {
@@ -1997,7 +2093,7 @@ export async function deleteOrderCascadeActionV2(formData: FormData): Promise<Ac
         .eq("id", deliveryNoteId);
 
       if (deleteDeliveryNoteError) {
-        return { error: deleteDeliveryNoteError.message ?? "à¹„à¸¡à¹ˆà¸ªà¸²à¸¡à¸²à¸£à¸–à¸¥à¸šà¹ƒà¸šà¸ˆà¸±à¸”à¸ªà¹ˆà¸‡à¹„à¸”à¹‰" };
+        return { error: deleteDeliveryNoteError.message ?? "ไม่สามารถลบใบจัดส่งได้" };
       }
 
       continue;
@@ -2017,7 +2113,7 @@ export async function deleteOrderCascadeActionV2(formData: FormData): Promise<Ac
         .in("id", remainingOrderItemIds);
 
       if (remainingOrderItemsError) {
-        return { error: remainingOrderItemsError.message ?? "à¹„à¸¡à¹ˆà¸ªà¸²à¸¡à¸²à¸£à¸–à¸«à¸²à¸­à¸­à¹€à¸”à¸­à¸£à¹Œà¸­à¹‰à¸²à¸‡à¸­à¸´à¸‡à¸‚à¸­à¸‡à¹ƒà¸šà¸ˆà¸±à¸”à¸ªà¹ˆà¸‡à¹„à¸”à¹‰" };
+        return { error: remainingOrderItemsError.message ?? "ไม่สามารถหาออเดอร์อ้างอิงของใบจัดส่งได้" };
       }
 
       replacementOrderId = remainingOrderItems?.[0]?.order_id ?? null;
@@ -2037,7 +2133,7 @@ export async function deleteOrderCascadeActionV2(formData: FormData): Promise<Ac
       .eq("id", deliveryNoteId);
 
     if (updateDeliveryNoteError) {
-      return { error: updateDeliveryNoteError.message ?? "à¹„à¸¡à¹ˆà¸ªà¸²à¸¡à¸²à¸£à¸–à¸­à¸±à¸›à¹€à¸”à¸•à¹ƒà¸šà¸ˆà¸±à¸”à¸ªà¹ˆà¸‡à¸«à¸¥à¸±à¸‡à¸¥à¸šà¸­à¸­à¹€à¸”à¸­à¸£à¹Œà¹„à¸”à¹‰" };
+      return { error: updateDeliveryNoteError.message ?? "ไม่สามารถอัปเดตใบจัดส่งหลังลบออเดอร์ได้" };
     }
   }
 
@@ -2047,7 +2143,7 @@ export async function deleteOrderCascadeActionV2(formData: FormData): Promise<Ac
     .eq("order_id", orderId);
 
   if (deleteOrderItemsError) {
-    return { error: deleteOrderItemsError.message ?? "à¹„à¸¡à¹ˆà¸ªà¸²à¸¡à¸²à¸£à¸–à¸¥à¸šà¸£à¸²à¸¢à¸à¸²à¸£à¸ªà¸´à¸™à¸„à¹‰à¸²à¹ƒà¸™à¸­à¸­à¹€à¸”à¸­à¸£à¹Œà¹„à¸”à¹‰" };
+    return { error: deleteOrderItemsError.message ?? "ไม่สามารถลบรายการสินค้าในออเดอร์ได้" };
   }
 
   const { error: deleteOrderError } = await admin
@@ -2057,7 +2153,7 @@ export async function deleteOrderCascadeActionV2(formData: FormData): Promise<Ac
     .eq("organization_id", session.organizationId);
 
   if (deleteOrderError) {
-    return { error: deleteOrderError.message ?? "à¹„à¸¡à¹ˆà¸ªà¸²à¸¡à¸²à¸£à¸–à¸¥à¸šà¸­à¸­à¹€à¸”à¸­à¸£à¹Œà¹„à¸”à¹‰" };
+    return { error: deleteOrderError.message ?? "ไม่สามารถลบออเดอร์ได้" };
   }
 
   if (deliveryNumbers.length > 0) {
@@ -2084,7 +2180,7 @@ export async function deleteOrderCascadeActionV3(formData: FormData): Promise<Ac
   const orderId = String(formData.get("orderId") ?? "").trim();
 
   if (!orderId) {
-    return { error: "à¹„à¸¡à¹ˆà¸žà¸šà¸£à¸«à¸±à¸ªà¸­à¸­à¹€à¸”à¸­à¸£à¹Œ" };
+    return { error: "ไม่พบรหัสออเดอร์" };
   }
 
   const { data: order, error: orderError } = await admin
@@ -2095,11 +2191,11 @@ export async function deleteOrderCascadeActionV3(formData: FormData): Promise<Ac
     .single();
 
   if (orderError || !order) {
-    return { error: orderError?.message ?? "à¹„à¸¡à¹ˆà¸žà¸šà¸­à¸­à¹€à¸”à¸­à¸£à¹Œà¸™à¸µà¹‰" };
+    return { error: orderError?.message ?? "ไม่พบออเดอร์นี้" };
   }
 
   if (!isEditableOrderStatus(order.status)) {
-    return { error: "à¸­à¸­à¹€à¸”à¸­à¸£à¹Œà¸—à¸µà¹ˆà¸¢à¸à¹€à¸¥à¸´à¸à¹à¸¥à¹‰à¸§à¹„à¸¡à¹ˆà¸ªà¸²à¸¡à¸²à¸£à¸–à¸¥à¸šà¹„à¸”à¹‰" };
+    return { error: "ออเดอร์ที่ยกเลิกแล้วไม่สามารถลบได้" };
   }
 
   const { data: orderItems, error: orderItemsError } = await admin
@@ -2108,7 +2204,7 @@ export async function deleteOrderCascadeActionV3(formData: FormData): Promise<Ac
     .eq("order_id", orderId);
 
   if (orderItemsError) {
-    return { error: orderItemsError.message ?? "à¹„à¸¡à¹ˆà¸ªà¸²à¸¡à¸²à¸£à¸–à¹‚à¸«à¸¥à¸”à¸£à¸²à¸¢à¸à¸²à¸£à¸ªà¸´à¸™à¸„à¹‰à¸²à¹ƒà¸™à¸­à¸­à¹€à¸”à¸­à¸£à¹Œà¹„à¸”à¹‰" };
+    return { error: orderItemsError.message ?? "ไม่สามารถโหลดรายการสินค้าในออเดอร์ได้" };
   }
 
   const orderItemIds = (orderItems ?? []).map((item) => item.id);
@@ -2122,7 +2218,7 @@ export async function deleteOrderCascadeActionV3(formData: FormData): Promise<Ac
       : { data: [], error: null };
 
   if (deliveryItemsError) {
-    return { error: deliveryItemsError.message ?? "à¹„à¸¡à¹ˆà¸ªà¸²à¸¡à¸²à¸£à¸–à¹‚à¸«à¸¥à¸”à¸£à¸²à¸¢à¸à¸²à¸£à¹ƒà¸šà¸ˆà¸±à¸”à¸ªà¹ˆà¸‡à¸—à¸µà¹ˆà¹€à¸à¸µà¹ˆà¸¢à¸§à¸‚à¹‰à¸­à¸‡à¹„à¸”à¹‰" };
+    return { error: deliveryItemsError.message ?? "ไม่สามารถโหลดรายการใบจัดส่งที่เกี่ยวข้องได้" };
   }
 
   const { data: primaryDeliveryNotes, error: primaryDeliveryNotesError } = await admin
@@ -2348,4 +2444,5 @@ export async function deleteOrderCascadeActionV3(formData: FormData): Promise<Ac
   revalidatePath("/billing");
   return { success: true };
 }
+
 

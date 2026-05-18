@@ -1,6 +1,6 @@
-﻿import "server-only";
+import "server-only";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag, updateTag } from "next/cache";
 import { getEffectiveSaleUnitCost, normalizeSaleUnitCostMode } from "@/lib/products/sale-unit-cost";
 import { generateUploadAndNotifyCustomerReceiptImage } from "@/lib/line/customer-receipt-image";
 import { mergeItemsIntoOrder, type MergeableOrderItemInput } from "@/lib/orders/merge-order-items";
@@ -80,6 +80,15 @@ type PendingOrderRow = {
   order_date: string;
   status: "pending_link" | "converted" | "cancelled";
 };
+
+function invalidateOrderCaches(organizationId: string) {
+  revalidateTag(`orders-${organizationId}`, "max");
+  revalidateTag(`settings-${organizationId}`, "max");
+  revalidateTag(`stock-${organizationId}`, "max");
+  updateTag(`orders-${organizationId}`);
+  updateTag(`settings-${organizationId}`);
+  updateTag(`stock-${organizationId}`);
+}
 
 type PendingItemRow = {
   id: string;
@@ -327,7 +336,7 @@ export async function createPendingLineOrder(input: {
   for (const item of input.items) {
     const saleUnit = saleUnitById.get(item.productSaleUnitId);
     if (!saleUnit || saleUnit.product_id !== item.productId) {
-      throw new Error("à¸žà¸šà¸£à¸²à¸¢à¸à¸²à¸£à¸ªà¸´à¸™à¸„à¹‰à¸²à¸—à¸µà¹ˆà¹„à¸¡à¹ˆà¸–à¸¹à¸à¸•à¹‰à¸­à¸‡");
+      throw new Error("รายการสินค้าที่ส่งมาไม่ถูกต้อง");
     }
   }
 
@@ -377,6 +386,7 @@ export async function createPendingLineOrder(input: {
   }
 
   revalidatePath("/orders/incoming");
+  invalidateOrderCaches(input.organizationId);
 
   return {
     linkedCustomer: null,
@@ -457,7 +467,7 @@ export async function getPendingLineOrders(
       createdAt: row.created_at,
       id: row.id,
       items: itemsByPendingId.get(row.id) ?? [],
-      lineDisplayName: row.line_display_name || "à¸¥à¸¹à¸à¸„à¹‰à¸² LINE",
+      lineDisplayName: row.line_display_name || "ลูกค้า LINE",
       linePictureUrl: row.line_picture_url,
       lineUserId: row.line_user_id,
       orderDate: row.order_date,
@@ -551,7 +561,6 @@ async function convertSinglePendingOrder(input: {
   const { data: existingOrderRows, error: existingOrderError } = await input.admin
     .from<NewOrderRow & { status: string; subtotal_amount: number | string | null; total_amount: number | string | null }>("orders")
     .select("id, order_number, order_date, created_at, status, subtotal_amount, total_amount")
-    .eq("organization_id", input.organizationId)
     .eq("customer_id", input.customer.id)
     .eq("order_date", input.order.order_date)
     .order("created_at", { ascending: true });
@@ -633,8 +642,9 @@ async function convertSinglePendingOrder(input: {
 
   const { data: finalItems, error: finalItemsError } = await input.admin
     .from("order_items")
-    .select("line_total")
-    .eq("order_id", targetOrder.id);
+    .select("product_id, sale_unit_label, quantity, line_total")
+    .eq("order_id", targetOrder.id)
+    .order("created_at", { ascending: true });
 
   if (finalItemsError) {
     throw new Error(finalItemsError.message ?? "ไม่สามารถคำนวณยอดรวมออเดอร์ได้");
@@ -642,6 +652,9 @@ async function convertSinglePendingOrder(input: {
 
   const finalTotal = (
     (finalItems ?? []) as {
+      product_id: string;
+      sale_unit_label: string;
+      quantity: number | string | null;
       line_total: number | string | null;
     }[]
   ).reduce((sum, item) => sum + Number(item.line_total ?? 0), 0);
@@ -666,6 +679,29 @@ async function convertSinglePendingOrder(input: {
   if ("error" in syncResult) {
     throw new Error(syncResult.error);
   }
+  const syncedDeliveryNumber = String(syncResult.deliveryNumber);
+  const { error: updateOrderNumberError } = await input.admin
+    .from<NewOrderRow>("orders")
+    .update({ order_number: syncedDeliveryNumber })
+    .eq("id", targetOrder.id);
+  if (updateOrderNumberError) {
+    throw new Error(updateOrderNumberError.message ?? "ไม่สามารถอัปเดตเลขใบจัดส่งในออเดอร์ได้");
+  }
+  targetOrder = {
+    ...targetOrder,
+    order_number: syncedDeliveryNumber,
+  };
+
+  const finalReceiptItems = ((finalItems ?? []) as {
+    product_id: string;
+    sale_unit_label: string;
+    quantity: number | string | null;
+    line_total: number | string | null;
+  }[]).map((item) => ({
+    name: productById.get(item.product_id)?.name ?? "-",
+    quantity: Number(item.quantity) || 0,
+    saleUnitLabel: item.sale_unit_label,
+  }));
 
   await input.admin
     .from<PendingOrderRow>("line_pending_orders")
@@ -680,16 +716,12 @@ async function convertSinglePendingOrder(input: {
   try {
     const receiptResult = await generateUploadAndNotifyCustomerReceiptImage({
       customerName: input.customer.name,
-      items: orderItems.map((item) => ({
-        name: productById.get(item.productId)?.name ?? "-",
-        quantity: Number(item.quantity) || 0,
-        saleUnitLabel: productById.get(item.productId)?.unit ?? item.saleUnitLabel,
-      })),
+      items: finalReceiptItems,
       lineUserId: input.lineUserId,
-      orderDate: targetOrder.created_at ?? input.order.created_at,
+      orderDate: new Date().toISOString(),
       orderNumber: targetOrder.order_number,
       organizationId: input.organizationId,
-      totalAmount,
+      totalAmount: finalTotal,
     });
     if ("error" in receiptResult) {
       receiptError = receiptResult.error;
@@ -730,7 +762,7 @@ export async function linkLineCustomerAndConvertPendingOrders(input: {
     .maybeSingle();
 
   if (!pendingOrder) {
-    return { error: "à¹„à¸¡à¹ˆà¸žà¸šà¸£à¸²à¸¢à¸à¸²à¸£à¸—à¸µà¹ˆà¸£à¸­à¸œà¸¹à¸à¸£à¹‰à¸²à¸™à¸„à¹‰à¸²" };
+    return { error: "ไม่พบรายการที่รอผูกลูกค้า" };
   }
 
   const [{ data: customer }, { data: existingLinkedCustomer }] = await Promise.all([
@@ -751,11 +783,11 @@ export async function linkLineCustomerAndConvertPendingOrders(input: {
   ]);
 
   if (!customer) {
-    return { error: "à¹„à¸¡à¹ˆà¸žà¸šà¸£à¹‰à¸²à¸™à¸„à¹‰à¸²à¸—à¸µà¹ˆà¸•à¹‰à¸­à¸‡à¸à¸²à¸£à¸œà¸¹à¸" };
+    return { error: "ไม่พบร้านค้าที่ต้องการผูก" };
   }
 
   if (existingLinkedCustomer && existingLinkedCustomer.id !== customer.id) {
-    return { error: `LINE à¸™à¸µà¹‰à¸–à¸¹à¸à¸œà¸¹à¸à¸à¸±à¸šà¸£à¹‰à¸²à¸™ ${existingLinkedCustomer.name} à¹à¸¥à¹‰à¸§` };
+    return { error: `LINE นี้ถูกผูกกับร้าน ${existingLinkedCustomer.name} แล้ว` };
   }
 
   const nextMetadata = mergeLineProfileMetadata(customer.metadata, {
@@ -828,6 +860,7 @@ export async function linkLineCustomerAndConvertPendingOrders(input: {
   revalidatePath("/orders");
   revalidatePath("/settings/customers");
   revalidatePath("/settings/customer-data");
+  invalidateOrderCaches(input.organizationId);
 
   return {
     customerName: customer.name,

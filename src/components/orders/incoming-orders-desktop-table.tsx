@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, memo, useMemo, useState, useTransition } from "react";
+import { Fragment, memo, useEffect, useMemo, useState, useTransition } from "react";
 import { Building2, Check, ChevronDown, ChevronUp, Loader2 } from "lucide-react";
 import { fetchIncomingOrderDetailAction } from "@/app/orders/incoming/actions";
 import { DesktopOrderDetail } from "@/components/orders/desktop-order-detail";
@@ -54,6 +54,24 @@ export const IncomingOrdersDesktopTable = memo(function IncomingOrdersDesktopTab
   const [isPending, startTransition] = useTransition();
 
   const visibleOrderIds = useMemo(() => new Set(orders.map((order) => order.id)), [orders]);
+
+  useEffect(() => {
+    setExpandedOrderId(initialExpandedOrderId);
+  }, [initialExpandedOrderId]);
+
+  useEffect(() => {
+    setDetailByOrderId((current) => {
+      const next = Object.fromEntries(
+        Object.entries(current).filter(([orderId]) => visibleOrderIds.has(orderId)),
+      );
+
+      if (initialExpandedOrderId && initialExpandedDetail) {
+        next[initialExpandedOrderId] = initialExpandedDetail;
+      }
+
+      return next;
+    });
+  }, [initialExpandedDetail, initialExpandedOrderId, visibleOrderIds]);
 
   async function toggleOrder(orderId: string) {
     setDetailError(null);
@@ -120,6 +138,15 @@ export const IncomingOrdersDesktopTable = memo(function IncomingOrdersDesktopTab
                 const detail = detailByOrderId[order.id] ?? null;
                 const deliveryNumbers = deliveryByCustomerId[orderKey];
                 const hasDelivery = Boolean(deliveryNumbers && deliveryNumbers.length > 0);
+                const fallbackDeliveryNumber =
+                  order.orderNumber.startsWith("DN") ? order.orderNumber : null;
+                const displayDeliveryNumbers =
+                  hasDelivery && deliveryNumbers && deliveryNumbers.length > 0
+                    ? deliveryNumbers
+                    : fallbackDeliveryNumber
+                      ? [fallbackDeliveryNumber]
+                      : [];
+                const hasDisplayDelivery = displayDeliveryNumbers.length > 0;
                 const isBilled = billedByCustomerDate[orderKey] ?? false;
                 const isLoading = loadingOrderId === order.id || (isPending && isExpanded && !detail);
                 const showDivider = index === 0 || order.orderDate !== orders[index - 1].orderDate;
@@ -178,9 +205,9 @@ export const IncomingOrdersDesktopTable = memo(function IncomingOrdersDesktopTab
                         <p className="font-mono text-base font-bold text-slate-950">฿{formatCurrency(order.totalAmount)}</p>
                       </td>
                       <td className="min-w-0 px-3 py-5 text-left">
-                        {hasDelivery && deliveryNumbers ? (
+                        {hasDisplayDelivery ? (
                           <div className="flex min-w-0 flex-col items-start gap-1">
-                            {deliveryNumbers.map((num) => (
+                            {displayDeliveryNumbers.map((num) => (
                               <span key={num} className="whitespace-nowrap font-mono text-base font-bold text-emerald-700">
                                 {num}
                               </span>

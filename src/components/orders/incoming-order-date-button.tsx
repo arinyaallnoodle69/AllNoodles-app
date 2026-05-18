@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { Loader2, Settings, X } from "lucide-react";
 import { updateIncomingOrderDateAction } from "@/app/orders/incoming/actions";
@@ -85,8 +86,8 @@ export function IncomingOrderDateButton({
         <Settings className="h-4.5 w-4.5" strokeWidth={2.2} />
       </button>
 
-      {isOpen ? (
-        <div className="fixed inset-0 z-[95] flex items-center justify-center bg-slate-950/45 px-4">
+      {isOpen ? createPortal(
+        <div className="fixed inset-0 z-[500] flex items-center justify-center bg-slate-950/45 px-4 font-[family:var(--font-sarabun)]">
           <div className="w-full max-w-sm rounded-[1.6rem] bg-white p-5 shadow-[0_24px_54px_rgba(15,23,42,0.24)]">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
@@ -150,7 +151,8 @@ export function IncomingOrderDateButton({
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       ) : null}
     </>
   );

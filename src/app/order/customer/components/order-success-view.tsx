@@ -28,10 +28,16 @@ export function OrderSuccessView({
 }: OrderSuccessViewProps) {
   return (
     <>
-      <section className="mt-8 mb-6 flex flex-col items-center text-center">
+      <section className="mb-6 mt-8 flex flex-col items-center text-center">
         <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
           <div className="flex h-11 w-11 items-center justify-center rounded-full bg-green-500">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-6 w-6 text-white"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
             </svg>
           </div>
@@ -39,7 +45,7 @@ export function OrderSuccessView({
         <h2 className="mb-1 whitespace-nowrap text-[17px] font-bold tracking-tight text-slate-900 sm:text-xl">
           เราได้รับคำสั่งซื้อของคุณเรียบร้อยแล้ว
         </h2>
-        <p className="text-sm text-slate-500">สามารถบันทึกใบสั่งซื้อไว้อ้างอิงได้</p>
+        <p className="text-sm text-slate-500">สามารถบันทึกใบยืนยันคำสั่งซื้อไว้ใช้อ้างอิงได้</p>
       </section>
 
       {lastOrderMeta && (
@@ -62,7 +68,7 @@ export function OrderSuccessView({
                   {isSavingImage ? "กำลังบันทึกรูป..." : "บันทึกรูป"}
                 </div>
                 <div className="mt-0.5 text-xs font-medium text-white/80">
-                  เก็บใบสั่งซื้อไว้ในเครื่องของคุณ
+                  เก็บใบยืนยันคำสั่งซื้อไว้ในเครื่องของคุณ
                 </div>
               </div>
             </div>
@@ -101,7 +107,12 @@ export function OrderSuccessView({
         className="mb-8 flex w-full items-center justify-center gap-2 rounded-2xl border border-[#003366]/15 bg-[#eef4fa] px-6 py-4 text-base font-semibold text-[#003366] transition-all hover:bg-[#e4eef8] active:scale-[0.98]"
       >
         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"
+          />
         </svg>
         กลับไปหน้าหลัก
       </button>

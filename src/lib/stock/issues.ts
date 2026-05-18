@@ -78,20 +78,31 @@ function firstProduct(product: ProductRow | ProductRow[] | null | undefined) {
   return product ?? null;
 }
 
-export const getStockIssueHistoryData = cache(async (organizationId: string, limit = 50, offset = 0): Promise<StockIssueRow[]> => {
+export const getStockIssueHistoryData = cache(async (organizationId: string, limit = 50, offset = 0, date?: string): Promise<StockIssueRow[]> => {
   const admin = getSupabaseAdmin();
 
-  const { data: ordersData, error: ordersError } = await admin
+  let query = admin
     .from("orders")
     .select(`
       id, customer_id, order_number, order_date, status, total_amount, created_at,
       delivery_notes(delivery_number)
     `)
     .eq("organization_id", organizationId)
-    .in("status", ["submitted", "confirmed"])
+    .in("status", ["submitted", "confirmed"]);
+
+  if (date) {
+    query = query.eq("order_date", date);
+  }
+
+  query = query
     .order("order_date", { ascending: false })
-    .order("created_at", { ascending: false })
-    .range(offset, offset + limit - 1);
+    .order("created_at", { ascending: false });
+
+  if (!date) {
+    query = query.range(offset, offset + limit - 1);
+  }
+
+  const { data: ordersData, error: ordersError } = await query;
 
   if (ordersError || !ordersData) {
     return [];

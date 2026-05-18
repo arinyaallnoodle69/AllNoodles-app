@@ -2,12 +2,16 @@
 
 import { revalidateTag } from "next/cache";
 import { revalidatePath } from "next/cache";
+import { updateTag } from "next/cache";
 import { isCustomerOrderEditableAtTime, isOrderOpenAtMinutes } from "@/lib/order-window";
 import { getOrderWindowSettings } from "@/lib/order-window-server";
+import { revalidateDashboardPages } from "@/lib/dashboard/revalidate-dashboard-pages";
 import { getEffectiveSaleUnitCost, normalizeSaleUnitCostMode } from "@/lib/products/sale-unit-cost";
 import { notifyNewCustomerInquiry, notifyNewOrder } from "@/lib/line/notify";
 import { uploadAndNotifyCustomerReceiptImage } from "@/lib/line/customer-receipt-image";
+import { syncDeliveryNoteForOrder } from "@/lib/orders/sync-delivery-note";
 import { sendNewCustomerInquiryPushNotification, sendNewOrderPushNotification } from "@/lib/push/web-push";
+import { revalidateReportPages } from "@/lib/reports/revalidate-report-pages";
 import { createCustomerInquiry } from "@/lib/customer-inquiries";
 import { getOrderCustomerSession } from "@/lib/auth/order-session";
 import {
@@ -20,7 +24,7 @@ import {
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import type { Database } from "@/types/database";
 
-// ─── Types ───────────────────────────────────────────────────────────────────
+// ---------------------- Types ----------------------
 
 type Customer = Database["public"]["Tables"]["customers"]["Row"];
 
@@ -134,6 +138,37 @@ function getBangkokNowParts() {
     minute: Number(parts.minute ?? "0"),
     minutes: Number(parts.hour ?? "0") * 60 + Number(parts.minute ?? "0"),
   };
+}
+
+function invalidateOrderCaches(organizationId: string) {
+  revalidateTag(`orders-${organizationId}`, "max");
+  revalidateTag(`settings-${organizationId}`, "max");
+  revalidateTag(`stock-${organizationId}`, "max");
+  updateTag(`orders-${organizationId}`);
+  updateTag(`settings-${organizationId}`);
+  updateTag(`stock-${organizationId}`);
+  revalidatePath("/order");
+  revalidatePath("/orders");
+  revalidatePath("/orders/incoming");
+  revalidatePath("/billing");
+  revalidateDashboardPages();
+  revalidateReportPages();
+}
+
+async function getFallbackAppUserId(
+  supabase: ReturnType<typeof getSupabaseAdmin>,
+  organizationId: string,
+) {
+  const { data } = await supabase
+    .from("app_users")
+    .select("id")
+    .eq("organization_id", organizationId)
+    .eq("is_active", true)
+    .order("created_at", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+
+  return data?.id ?? null;
 }
 
 async function isCustomerOrderEditable(
@@ -274,7 +309,7 @@ async function buildOrderItemData(
   };
 }
 
-// ─── Actions ─────────────────────────────────────────────────────────────────
+// ---------------------- Actions ----------------------
 
 /** Find the customer linked to a LINE user ID. */
 export async function getCustomerByLineId(
@@ -368,7 +403,7 @@ export async function registerLineCustomer(
     .maybeSingle();
 
   if (existing) {
-    return { success: false, error: "บัญชี LINE นี้ลงทะเบียนไว้แล้ว" };
+    return { success: false, error: "บัญชี LINE นี้ถูกผูกกับร้านค้าแล้ว" };
   }
 
   // Generate next customer code via DB counter (race-condition safe)
@@ -476,7 +511,7 @@ export async function continueExistingLineCustomer(input: {
     ) {
       return {
         success: false,
-        error: "ฐานข้อมูลยังไม่ได้อัปเดตตารางรอผูกร้านค้า กรุณา apply migration ก่อนทดสอบ",
+        error: "ฐานข้อมูลยังไม่รองรับรายการรอผูกลูกค้า กรุณา apply migration ก่อนใช้งาน",
       };
     }
     return { success: false, error: "ยังไม่สามารถเริ่มสั่งซื้อได้ กรุณาลองใหม่" };
@@ -549,7 +584,7 @@ export async function createPendingLineOrderAction(input: {
     });
 
     if (result.linkedCustomer) {
-      return { success: false, error: "บัญชีนี้ผูกร้านค้าแล้ว กรุณาลองสั่งซื้ออีกครั้ง" };
+      return { success: false, error: "บัญชีนี้ถูกผูกลูกค้าแล้ว กรุณาลองสั่งซื้ออีกครั้ง" };
     }
 
     return {
@@ -783,7 +818,7 @@ export async function getCustomerDeliveredSummary(
 
   if (error) {
     console.error("[getCustomerDeliveredSummary]", error);
-    return { success: false, error: "ไม่สามารถโหลดสรุปสินค้าได้" };
+    return { success: false, error: "ไม่สามารถโหลดสรุปสินค้าที่ส่งได้" };
   }
 
   type Row = {
@@ -852,19 +887,20 @@ export async function createOrder(
   }
 
   const supabase = getSupabaseAdmin();
+  const orderDate = bangkokNow.date;
 
-  // 1. Check for existing order on the same day to merge
-  const orderDate = new Date().toISOString().slice(0, 10);
-  
-  const { data: existingOrder } = await supabase
+  console.log(`[createOrder] Searching for orders for customer: ${customerId}, date: ${orderDate}`);
+  const { data: existingOrderRows } = await supabase
     .from("orders")
-    .select("id, order_number, status")
+    .select("id, order_number, status, created_at")
     .eq("customer_id", customerId)
     .eq("order_date", orderDate)
-    .eq("organization_id", organizationId)
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+    .neq("status", "cancelled")
+    .order("created_at", { ascending: true });
+
+  console.log(`[createOrder] Found ${existingOrderRows?.length ?? 0} existing orders`);
+
+  const existingOrder = (existingOrderRows ?? [])[0] ?? null;
 
   let isUpdating = false;
   let orderIdToUse = "";
@@ -872,42 +908,38 @@ export async function createOrder(
   let itemsToProcess = items;
 
   if (existingOrder) {
-    const isEditable = await isCustomerOrderEditable(organizationId, orderDate, existingOrder.status);
-    if (isEditable) {
-      isUpdating = true;
-      orderIdToUse = existingOrder.id;
-      orderNumberToUse = existingOrder.order_number;
+    isUpdating = true;
+    orderIdToUse = existingOrder.id;
+    orderNumberToUse = existingOrder.order_number ?? "";
 
-      // Fetch existing items to merge
-      const { data: existingItems } = await supabase
-        .from("order_items")
-        .select("product_id, product_sale_unit_id, quantity")
-        .eq("order_id", existingOrder.id);
+    const { data: existingItems } = await supabase
+      .from("order_items")
+      .select("product_id, product_sale_unit_id, quantity")
+      .eq("order_id", existingOrder.id);
 
-      if (existingItems) {
-        const mergedMap = new Map<string, OrderMutationItemInput>();
-        
-        existingItems.forEach(item => {
-          const key = `${item.product_id}:${item.product_sale_unit_id}`;
-          mergedMap.set(key, {
-            productId: item.product_id as string,
-            productSaleUnitId: item.product_sale_unit_id as string,
-            quantity: Number(item.quantity)
-          });
+    if (existingItems) {
+      const mergedMap = new Map<string, OrderMutationItemInput>();
+
+      existingItems.forEach((item) => {
+        const key = `${item.product_id}:${item.product_sale_unit_id}`;
+        mergedMap.set(key, {
+          productId: item.product_id as string,
+          productSaleUnitId: item.product_sale_unit_id as string,
+          quantity: Number(item.quantity),
         });
+      });
 
-        items.forEach(item => {
-          const key = `${item.productId}:${item.productSaleUnitId}`;
-          const existing = mergedMap.get(key);
-          if (existing) {
-            existing.quantity += item.quantity;
-          } else {
-            mergedMap.set(key, item);
-          }
-        });
+      items.forEach((item) => {
+        const key = `${item.productId}:${item.productSaleUnitId}`;
+        const existing = mergedMap.get(key);
+        if (existing) {
+          existing.quantity += item.quantity;
+        } else {
+          mergedMap.set(key, item);
+        }
+      });
 
-        itemsToProcess = Array.from(mergedMap.values());
-      }
+      itemsToProcess = Array.from(mergedMap.values());
     }
   }
 
@@ -916,7 +948,7 @@ export async function createOrder(
     const year = orderDate.substring(0, 4);
     const month = orderDate.substring(5, 7);
     const startDateStr = `${year}-${month}-01`;
-    
+
     let nextYear = Number(year);
     let nextMonth = Number(month) + 1;
     if (nextMonth > 12) {
@@ -941,7 +973,6 @@ export async function createOrder(
     orderNumber = `DN${year}${month}${String(nextNum).padStart(4, "0")}`;
   }
 
-  // 2. Validate and build item data
   const builtItems = await buildOrderItemData(supabase, organizationId, customerId, itemsToProcess);
   if (!builtItems.success) {
     return { success: false, error: builtItems.error };
@@ -952,8 +983,7 @@ export async function createOrder(
 
   let order: Database["public"]["Tables"]["orders"]["Row"];
   if (isUpdating) {
-    // Update the existing order's total amount
-    const { data: updatedOrder, error: uError } = await supabase
+    const { data: updatedOrder, error: updateOrderError } = await supabase
       .from("orders")
       .update({
         total_amount: totalAmount,
@@ -963,13 +993,12 @@ export async function createOrder(
       .select()
       .single();
 
-    if (uError || !updatedOrder) {
-      console.error("[createOrder:updateOrder]", uError);
+    if (updateOrderError || !updatedOrder) {
+      console.error("[createOrder:updateOrder]", updateOrderError);
       return { success: false, error: "ไม่สามารถอัปเดตคำสั่งซื้อได้" };
     }
     order = updatedOrder;
 
-    // Delete old items
     const { error: deleteError } = await supabase
       .from("order_items")
       .delete()
@@ -980,39 +1009,67 @@ export async function createOrder(
       return { success: false, error: "ไม่สามารถอัปเดตรายการสินค้าได้" };
     }
   } else {
-    // Create new order
-    const { data: newOrder, error: oError } = await supabase.from("orders").insert({
-      organization_id: organizationId,
-      customer_id: customerId,
-      order_number: orderNumber,
-      status: "submitted",
-      total_amount: totalAmount,
-      subtotal_amount: totalAmount,
-      order_date: orderDate,
-    }).select().single();
+    const { data: newOrder, error: insertOrderError } = await supabase
+      .from("orders")
+      .insert({
+        organization_id: organizationId,
+        customer_id: customerId,
+        order_number: orderNumber,
+        status: "submitted",
+        total_amount: totalAmount,
+        subtotal_amount: totalAmount,
+        order_date: orderDate,
+      })
+      .select()
+      .single();
 
-    if (oError || !newOrder) {
-      console.error("[createOrder:insertOrder]", oError);
+    if (insertOrderError || !newOrder) {
+      console.error("[createOrder:insertOrder]", insertOrderError);
       return { success: false, error: "ไม่สามารถสร้างคำสั่งซื้อได้" };
     }
     order = newOrder;
   }
 
-  // 4. Create order items
   const orderItemsPayload = orderItemsData.map((item) => ({
     ...item,
     order_id: order.id,
   }));
 
   const { error: itemsError } = await supabase.from("order_items").insert(orderItemsPayload);
-
   if (itemsError) {
     console.error("[createOrder:insertItems]", itemsError);
     return { success: false, error: "ไม่สามารถบันทึกรายการสินค้าได้" };
   }
 
-  const clientOrderItems = buildClientOrderItems(orderItemsData, productMap);
+  const actorUserId = await getFallbackAppUserId(supabase, organizationId);
+  const syncResult = await syncDeliveryNoteForOrder(supabase as never, {
+    orderId: order.id,
+    organizationId,
+    userId: actorUserId,
+  });
 
+  if ("error" in syncResult) {
+    console.error("[createOrder:syncDeliveryNote]", syncResult.error);
+    return { success: false, error: syncResult.error };
+  }
+
+  const { error: orderNumberUpdateError } = await supabase
+    .from("orders")
+    .update({ order_number: syncResult.deliveryNumber })
+    .eq("id", order.id)
+    .eq("organization_id", organizationId);
+
+  if (orderNumberUpdateError) {
+    console.error("[createOrder:updateDeliveryNumber]", orderNumberUpdateError);
+    return { success: false, error: "ไม่สามารถอัปเดตเลขใบจัดส่งได้" };
+  }
+
+  order = {
+    ...order,
+    order_number: syncResult.deliveryNumber,
+  };
+
+  const clientOrderItems = buildClientOrderItems(orderItemsData, productMap);
   const receiptItems = orderItemsData.map((item) => ({
     name: productMap.get(item.product_id)?.name ?? "-",
     saleUnitLabel: item.sale_unit_label,
@@ -1021,7 +1078,8 @@ export async function createOrder(
     lineTotal: item.line_total,
   }));
 
-  // 5. Fire LINE notifications (fire-and-forget — never block the order response)
+  invalidateOrderCaches(organizationId);
+
   void (async () => {
     try {
       const { data: customer } = await supabase
@@ -1032,7 +1090,7 @@ export async function createOrder(
 
       const notifyPayload = {
         customerName: customer?.name ?? customerId,
-        orderNumber: order.order_number,
+        orderNumber: syncResult.deliveryNumber,
         totalAmount,
         items: receiptItems.map((item) => ({
           productName: item.name,
@@ -1045,9 +1103,8 @@ export async function createOrder(
       await sendNewOrderPushNotification({
         organizationId,
         customerName: customer?.name ?? customerId,
-        orderNumber: order.order_number,
+        orderNumber: syncResult.deliveryNumber,
       });
-
     } catch (err) {
       console.error("[createOrder:notify]", err);
     }
@@ -1172,7 +1229,7 @@ export async function updateCustomerOrder(
 
   if (deleteItemsError) {
     console.error("[updateCustomerOrder:deleteItems]", deleteItemsError);
-    return { success: false, error: "ไม่สามารถอัปเดตรายการสินค้าได้" };
+    return { success: false, error: "ไม่สามารถอัปเดตรายการสินค้าเดิมได้" };
   }
 
   const { error: insertItemsError } = await supabase
@@ -1222,15 +1279,31 @@ export async function updateCustomerOrder(
     return { success: false, error: "ไม่สามารถบันทึกคำสั่งซื้อที่แก้ไขได้" };
   }
 
-  revalidatePath("/order");
-  revalidatePath("/orders");
-  revalidatePath("/dashboard");
-  revalidatePath("/delivery");
+  const actorUserId = await getFallbackAppUserId(supabase, organizationId);
+  const syncResult = await syncDeliveryNoteForOrder(supabase as never, {
+    orderId,
+    organizationId,
+    userId: actorUserId,
+  });
+
+  if ("error" in syncResult) {
+    console.error("[updateCustomerOrder:syncDeliveryNote]", syncResult.error);
+    return { success: false, error: syncResult.error };
+  }
+
+  const syncedDeliveryNumber = String(syncResult.deliveryNumber);
+  const normalizedUpdatedOrder = normalizeOrderForClient({
+    ...updatedOrder,
+    order_number: syncedDeliveryNumber,
+  });
+
+  invalidateOrderCaches(organizationId);
+  revalidatePath("/settings/customers/pricing");
 
   return {
     success: true,
     data: {
-      ...normalizeOrderForClient(updatedOrder),
+      ...normalizedUpdatedOrder,
       receiptItems: orderItemsData.map((item) => ({
         name: productMap.get(item.product_id)?.name ?? "-",
         saleUnitLabel: item.sale_unit_label,

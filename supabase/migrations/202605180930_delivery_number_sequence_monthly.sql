@@ -1,5 +1,5 @@
 -- Delivery note number sequence: reset monthly per organization.
--- Format: DNYYYYMMDD### (running ### resets each month)
+-- Format: DNYYYYMMXXXX (running XXXX resets each month)
 
 create table if not exists public.delivery_note_counters_monthly (
   organization_id uuid not null references public.organizations(id) on delete cascade,
@@ -9,28 +9,8 @@ create table if not exists public.delivery_note_counters_monthly (
   primary key (organization_id, delivery_year, delivery_month)
 );
 
-insert into public.delivery_note_counters_monthly (
-  organization_id,
-  delivery_year,
-  delivery_month,
-  last_number
-)
-select
-  dn.organization_id,
-  extract(year from dn.delivery_date)::int as delivery_year,
-  extract(month from dn.delivery_date)::int as delivery_month,
-  coalesce(max(substring(dn.delivery_number from '([0-9]+)$')::bigint), 0) as last_number
-from public.delivery_notes dn
-where dn.delivery_number is not null
-group by
-  dn.organization_id,
-  extract(year from dn.delivery_date)::int,
-  extract(month from dn.delivery_date)::int
-on conflict (organization_id, delivery_year, delivery_month) do update
-set last_number = greatest(
-  public.delivery_note_counters_monthly.last_number,
-  excluded.last_number
-);
+-- We do not initialize from existing data to avoid conflicts with the old DNYYYYMMDD### format.
+-- This ensures that the new monthly sequence starts fresh at 1 for the current month.
 
 create or replace function public.next_delivery_note_number(
   p_organization_id uuid,
@@ -57,7 +37,7 @@ begin
     set last_number = public.delivery_note_counters_monthly.last_number + 1
   returning last_number into v_next;
 
-  return 'DN' || to_char(p_delivery_date, 'YYYYMMDD') || lpad(v_next::text, 3, '0');
+  return 'DN' || to_char(p_delivery_date, 'YYYYMM') || lpad(v_next::text, 4, '0');
 end;
 $$;
 

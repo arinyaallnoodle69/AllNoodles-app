@@ -121,6 +121,46 @@ async function getDeliveryRowsForBillingRecord(
   });
 }
 
+async function getDeliveryRowsByDeliveryNumbers(
+  supabase: ReturnType<typeof getSupabaseAdmin>,
+  organizationId: string,
+  customerId: string,
+  deliveryNumbers: string[],
+) {
+  const uniqueNumbers = Array.from(new Set(deliveryNumbers.filter(Boolean)));
+  if (uniqueNumbers.length === 0) return [] as SnapshotRow[];
+
+  const { data: deliveryNotes, error } = await supabase
+    .from("delivery_notes")
+    .select("id, delivery_number, delivery_date, total_amount, notes")
+    .eq("organization_id", organizationId)
+    .eq("customer_id", customerId)
+    .in("delivery_number", uniqueNumbers)
+    .eq("status", "confirmed")
+    .order("delivery_date", { ascending: true })
+    .order("delivery_number", { ascending: true });
+
+  if (error || !deliveryNotes || deliveryNotes.length === 0) {
+    return [] as SnapshotRow[];
+  }
+
+  const totalsByDeliveryNumber = await getDeliveryNumberActualTotals(
+    supabase,
+    deliveryNotes.map((note) => String(note.delivery_number)),
+  );
+
+  return deliveryNotes.map((note, index) => {
+    const live = totalsByDeliveryNumber.get(String(note.delivery_number));
+    return {
+      lineNumber: index + 1,
+      deliveryNumber: String(note.delivery_number),
+      deliveryDate: live?.deliveryDate ?? String(note.delivery_date),
+      totalAmount: Number(live?.totalAmount ?? note.total_amount ?? 0),
+      notes: live?.notes ?? note.notes ?? null,
+    } satisfies SnapshotRow;
+  });
+}
+
 export async function recordBillingHistoryAction(params: {
   organizationId: string;
   items: BillingItem[];
@@ -192,6 +232,7 @@ export async function syncBillingSnapshotsForDeliveryNumbers(params: {
   organizationId: string;
   customerId: string;
   deliveryNumbers: string[];
+  skipRevalidate?: boolean;
 }) {
   const deliveryNumbers = Array.from(new Set(params.deliveryNumbers.filter(Boolean)));
 
@@ -223,20 +264,40 @@ export async function syncBillingSnapshotsForDeliveryNumbers(params: {
       if (!touched) continue;
     }
 
-    const normalizedRows = await getDeliveryRowsForBillingRecord(
+    const candidateDeliveryNumbers = Array.from(
+      new Set([
+        ...snapshotRows.map((row) => String(row.deliveryNumber)).filter(Boolean),
+        ...deliveryNumbers,
+      ]),
+    );
+
+    // Rebuild snapshot from the union of old+new delivery numbers.
+    // This keeps billing record number intact and updates rows in place.
+    let normalizedRows = await getDeliveryRowsByDeliveryNumbers(
       supabase,
       params.organizationId,
       params.customerId,
-      String(record.from_date),
-      String(record.to_date),
+      candidateDeliveryNumbers,
     );
 
+    // Fallback for legacy records that had incomplete snapshot numbers.
+    if (normalizedRows.length === 0) {
+      normalizedRows = await getDeliveryRowsForBillingRecord(
+        supabase,
+        params.organizationId,
+        params.customerId,
+        String(record.from_date),
+        String(record.to_date),
+      );
+    }
+
+    // Delete billing record when rows become empty (all referenced orders were deleted)
     if (normalizedRows.length === 0) {
       const { error: deleteError } = await supabase
         .from("billing_records")
         .delete()
         .eq("id", record.id);
-
+        
       if (!deleteError) {
         updated += 1;
       }
@@ -245,11 +306,22 @@ export async function syncBillingSnapshotsForDeliveryNumbers(params: {
 
     const nextTotal = normalizedRows.reduce((sum, row) => sum + Number(row.totalAmount), 0);
 
+    // Calculate new from_date and to_date from normalizedRows
+    const dates = normalizedRows.map(row => row.deliveryDate).filter(Boolean).sort();
+    const newFromDate = dates[0] || record.from_date;
+    const newToDate = dates[dates.length - 1] || record.to_date;
+    
+    // Also update billing_date to the newToDate to match the orders!
+    const newBillingDate = newToDate;
+
     const { error: updateError } = await supabase
       .from("billing_records")
       .update({
         snapshot_rows: normalizedRows,
         total_amount: nextTotal,
+        from_date: newFromDate,
+        to_date: newToDate,
+        billing_date: newBillingDate,
       })
       .eq("id", record.id);
 
@@ -258,10 +330,12 @@ export async function syncBillingSnapshotsForDeliveryNumbers(params: {
     }
   }
 
-  if (updated > 0) {
-    revalidatePath("/billing");
+  if (!params.skipRevalidate) {
+    if (updated > 0) {
+      revalidatePath("/billing");
+    }
+    revalidateReportPages();
   }
-  revalidateReportPages();
 
   return { success: true as const, updated };
 }

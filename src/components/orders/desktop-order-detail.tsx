@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { Building2, ClipboardList, Package2, Plus, XCircle } from "lucide-react";
+import { Building2, Package2, Plus, XCircle } from "lucide-react";
 import type { OrderDetailData } from "@/lib/orders/detail";
 
 function formatCurrency(value: number) {
@@ -21,7 +21,10 @@ export function DesktopOrderDetail({ detail, deliveryNumbers }: Props) {
   const router = useRouter();
   const canEdit = detail.status !== "cancelled";
   const canDelete = detail.status !== "cancelled";
-  const deliveryNumberText = Array.from(new Set(deliveryNumbers ?? [])).join(", ");
+  const deliveryNumberText =
+    Array.from(new Set((deliveryNumbers ?? []).filter(Boolean))).join(", ") ||
+    detail.deliveryNumber ||
+    "";
 
   function handleEditInModal() {
     const params = new URLSearchParams(window.location.search);
