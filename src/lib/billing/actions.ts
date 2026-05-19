@@ -16,6 +16,14 @@ type BillingItem = {
   snapshotRows: SnapshotRow[];
 };
 
+function chunkArray<T>(array: T[], size: number): T[][] {
+  const chunks: T[][] = [];
+  for (let i = 0; i < array.length; i += size) {
+    chunks.push(array.slice(i, i + size));
+  }
+  return chunks;
+}
+
 async function getDeliveryNumberActualTotals(
   supabase: ReturnType<typeof getSupabaseAdmin>,
   deliveryNumbers: string[],
@@ -24,33 +32,67 @@ async function getDeliveryNumberActualTotals(
     return new Map<string, { deliveryDate: string; totalAmount: number; notes: string | null }>();
   }
 
-  const { data: deliveryNotes } = await supabase
-    .from("delivery_notes")
-    .select("id, delivery_number, delivery_date, total_amount, notes")
-    .in("delivery_number", deliveryNumbers);
+  const deliveryNumberChunks = chunkArray(deliveryNumbers, 100);
+  const deliveryNotes: { id: string; delivery_number: string; delivery_date: string; total_amount: number; notes: string | null }[] = [];
+  for (const chunk of deliveryNumberChunks) {
+    const { data, error } = await supabase
+      .from("delivery_notes")
+      .select("id, delivery_number, delivery_date, total_amount, notes")
+      .in("delivery_number", chunk);
+    if (error) {
+      console.error("Error fetching delivery_notes chunk:", error.message);
+      continue;
+    }
+    if (data) {
+      deliveryNotes.push(...(data as { id: string; delivery_number: string; delivery_date: string; total_amount: number; notes: string | null }[]));
+    }
+  }
 
-  if (!deliveryNotes || deliveryNotes.length === 0) {
+  if (deliveryNotes.length === 0) {
     return new Map<string, { deliveryDate: string; totalAmount: number; notes: string | null }>();
   }
 
   const noteIds = deliveryNotes.map((note) => note.id);
-  const { data: dnItems } = await supabase
-    .from("delivery_note_items")
-    .select("delivery_note_id, order_item_id")
-    .in("delivery_note_id", noteIds);
+  const noteIdChunks = chunkArray(noteIds, 100);
+  const dnItems: { delivery_note_id: string; order_item_id: string | null }[] = [];
+  for (const chunk of noteIdChunks) {
+    const { data, error } = await supabase
+      .from("delivery_note_items")
+      .select("delivery_note_id, order_item_id")
+      .in("delivery_note_id", chunk);
+    if (error) {
+      console.error("Error fetching delivery_note_items chunk:", error.message);
+      continue;
+    }
+    if (data) {
+      dnItems.push(...(data as { delivery_note_id: string; order_item_id: string | null }[]));
+    }
+  }
 
   const orderItemIds = Array.from(
-    new Set((dnItems ?? []).map((item) => item.order_item_id).filter(Boolean) as string[]),
+    new Set(dnItems.map((item) => item.order_item_id).filter((id): id is string => Boolean(id))),
   );
-  const { data: orderItems } = orderItemIds.length
-    ? await supabase
+
+  const orderItems: { id: string; line_total: number | null }[] = [];
+  if (orderItemIds.length > 0) {
+    const orderItemIdChunks = chunkArray(orderItemIds, 100);
+    for (const chunk of orderItemIdChunks) {
+      const { data, error } = await supabase
         .from("order_items")
         .select("id, line_total")
-        .in("id", orderItemIds)
-    : { data: [] as { id: string; line_total: number | null }[] };
+        .in("id", chunk);
+      if (error) {
+        console.error("Error fetching order_items chunk:", error.message);
+        continue;
+      }
+      if (data) {
+        orderItems.push(...(data as { id: string; line_total: number | null }[]));
+      }
+    }
+  }
 
   const orderItemTotalMap = new Map(
-    (orderItems ?? []).map((item) => [item.id, Number(item.line_total ?? 0)]),
+    orderItems.map((item) => [item.id, Number(item.line_total ?? 0)]),
   );
   const totalsByNoteId = new Map<string, number>();
 
@@ -59,7 +101,7 @@ async function getDeliveryNumberActualTotals(
   }
 
   const seenPairs = new Set<string>();
-  for (const item of dnItems ?? []) {
+  for (const item of dnItems) {
     if (!item.order_item_id) continue;
     const dedupeKey = `${item.delivery_note_id}:${item.order_item_id}`;
     if (seenPairs.has(dedupeKey)) continue;

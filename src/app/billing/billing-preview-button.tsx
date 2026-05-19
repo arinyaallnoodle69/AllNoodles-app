@@ -16,6 +16,8 @@ import {
   formatDateShort,
 } from "@/components/print/print-shared";
 
+let cachedFontEmbedCSS: string | null = null;
+
 type DeliveryItem = {
   number: string;
   date: string;
@@ -147,8 +149,24 @@ export function BillingPreviewButton({
       const captureWidth = target.offsetWidth + outerPadding * 2;
       const captureHeight = target.offsetHeight + outerPadding * 2;
 
-      await document.fonts.ready;
-      const fontEmbedCSS = await htmlToImage.getFontEmbedCSS(document.body);
+      let fontEmbedCSS: string | undefined = undefined;
+      if (cachedFontEmbedCSS) {
+        fontEmbedCSS = cachedFontEmbedCSS;
+      } else {
+        try {
+          await Promise.race([
+            document.fonts.ready,
+            new Promise((_, reject) => setTimeout(() => reject(new Error("Font load timeout")), 2000))
+          ]);
+          fontEmbedCSS = await Promise.race([
+            htmlToImage.getFontEmbedCSS(document.body),
+            new Promise<string>((_, reject) => setTimeout(() => reject(new Error("Font CSS embed timeout")), 2000))
+          ]);
+          cachedFontEmbedCSS = fontEmbedCSS;
+        } catch (e) {
+          console.warn("Failed to embed fonts (timed out or error), proceeding without embedded fonts:", e);
+        }
+      }
 
       const dataUrl = await htmlToImage.toPng(cloneHost, {
         backgroundColor: "#ffffff",

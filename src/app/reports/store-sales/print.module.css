@@ -2,7 +2,7 @@
 
 @page {
   size: A4 portrait;
-  margin: 5mm;
+  margin: 0 !important;
 }
 
 .printArea {

@@ -12,6 +12,8 @@ import { PrintStoreDeliveryButton } from "@/components/orders/print-store-delive
 import type { OrderDetailData } from "@/lib/orders/detail";
 import { fmtDateTH } from "@/lib/utils/date";
 
+let cachedFontEmbedCSS: string | null = null;
+
 function formatCurrency(value: number) {
   return value.toLocaleString("th-TH", {
     minimumFractionDigits: 2,
@@ -99,8 +101,24 @@ export function OrderDeliveryActionButton({
 
     setIsSaving(true);
     try {
-      await document.fonts.ready;
-      const fontEmbedCSS = await htmlToImage.getFontEmbedCSS(document.body);
+      let fontEmbedCSS: string | undefined = undefined;
+      if (cachedFontEmbedCSS) {
+        fontEmbedCSS = cachedFontEmbedCSS;
+      } else {
+        try {
+          await Promise.race([
+            document.fonts.ready,
+            new Promise((_, reject) => setTimeout(() => reject(new Error("Font load timeout")), 2000))
+          ]);
+          fontEmbedCSS = await Promise.race([
+            htmlToImage.getFontEmbedCSS(document.body),
+            new Promise<string>((_, reject) => setTimeout(() => reject(new Error("Font CSS embed timeout")), 2000))
+          ]);
+          cachedFontEmbedCSS = fontEmbedCSS;
+        } catch (e) {
+          console.warn("Failed to embed fonts (timed out or error), proceeding without embedded fonts:", e);
+        }
+      }
 
       // Capture DIRECTLY from the visible element!
       const dataUrl = await htmlToImage.toPng(receiptCardRef.current, {

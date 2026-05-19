@@ -404,8 +404,9 @@ async function ProductSalesReportContent({ searchParams }: PageProps) {
             </form>
           </MobileSearchDrawer>
 
-          <section className="overflow-hidden rounded-2xl bg-white shadow-[0_4px_20px_rgba(27,27,33,0.05)]">
-            <div className="hidden border-b border-slate-100 px-5 py-4 md:block sm:px-6 sm:py-5">
+          {/* Desktop Filter Card */}
+          <section className="hidden md:block bg-white shadow-[0_4px_20px_rgba(27,27,33,0.05)] rounded-2xl mb-6">
+            <div className="px-5 py-4 sm:px-6 sm:py-5">
               <form method="GET" action="/reports/product-sales" className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-end lg:flex-nowrap">
                 <div className="w-full sm:min-w-[200px] sm:flex-1 lg:min-w-[260px] lg:max-w-[340px] lg:flex-[1.05]">
                   <label className="mb-1.5 block text-xs font-bold uppercase tracking-widest text-slate-400">สินค้า</label>
@@ -429,6 +430,10 @@ async function ProductSalesReportContent({ searchParams }: PageProps) {
                 </div>
               </form>
             </div>
+          </section>
+
+          {/* Main Table Card */}
+          <section className="overflow-hidden rounded-2xl bg-white shadow-[0_4px_20px_rgba(27,27,33,0.05)]">
 
             <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4 sm:px-6 sm:py-5">
               <div>

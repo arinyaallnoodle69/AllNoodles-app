@@ -20,7 +20,7 @@ export function PrintButton() {
     };
 
     window.addEventListener("afterprint", done, { once: true });
-    fallbackTimerRef.current = window.setTimeout(done, 10000);
+    fallbackTimerRef.current = window.setTimeout(done, 1000);
     window.print();
   }
 

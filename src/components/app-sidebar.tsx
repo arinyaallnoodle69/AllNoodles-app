@@ -48,6 +48,7 @@ const PAGE_TITLES: [string, string][] = [
   ["/stock/movements", "ความเคลื่อนไหวสต็อก"],
   ["/stock", "สต็อก"],
   ["/reports/product-sales", "ยอดขายสินค้า"],
+  ["/reports/profit-sales-detailed", "กำไรขายแบบละเอียด"],
   ["/reports/profit-sales", "รายงานกำไรขาย"],
   ["/reports/billing", "รายงานใบวางบิล"],
   ["/settings/products", "จัดการสินค้า"],
@@ -149,6 +150,7 @@ const mainNavItems = [
 
 const reportsNavItems = [
   { href: "/reports/profit-sales", icon: CircleDollarSign, label: "รายงานกำไรขาย" },
+  { href: "/reports/profit-sales-detailed", icon: BarChart2, label: "กำไรขายแบบละเอียด" },
   { href: "/reports/product-sales", icon: TrendingUp, label: "ยอดขายสินค้า" },
   { href: "/reports/billing", icon: Receipt, label: "รายงานใบวางบิล" },
 ] as const;

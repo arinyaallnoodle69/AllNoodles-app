@@ -1,6 +1,6 @@
 @page {
   size: A4 portrait;
-  margin: 5mm;
+  margin: 0 !important;
 }
 
 .printArea {
@@ -20,24 +20,20 @@
 }
 
 @media print {
+  :global(header), :global(aside), :global(nav), :global(footer), 
+  :global(button), :global(form), :global(.no-print) {
+    display: none !important;
+  }
+
   :global(body), :global(html) {
     margin: 0 !important;
     padding: 0 !important;
     background: #ffffff !important;
   }
 
-  :global(body *) {
-    visibility: hidden !important;
-  }
-
-  :global(#profit-sales-print-area),
-  :global(#profit-sales-print-area *) {
-    visibility: visible !important;
-  }
-
   :global(#profit-sales-print-area) {
     display: block !important;
-    position: fixed !important;
+    position: absolute !important;
     left: 0 !important;
     top: 0 !important;
     width: 100% !important;

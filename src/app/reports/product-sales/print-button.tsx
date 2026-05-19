@@ -11,6 +11,8 @@ type PreviewImage = {
   name: string;
 };
 
+let cachedFontEmbedCSS: string | null = null;
+
 export function PrintButton({
   targetId = "report-print-area",
   fileName = "report",
@@ -40,7 +42,7 @@ export function PrintButton({
     };
 
     window.addEventListener("afterprint", done, { once: true });
-    fallbackTimerRef.current = window.setTimeout(done, 10000);
+    fallbackTimerRef.current = window.setTimeout(done, 1000);
     window.print();
   }
 
@@ -82,8 +84,24 @@ export function PrintButton({
       const captured: PreviewImage[] = [];
 
       // Pre-embed fonts once for the whole session
-      await document.fonts.ready;
-      const fontEmbedCSS = await htmlToImage.getFontEmbedCSS(document.body);
+      let fontEmbedCSS: string | undefined = undefined;
+      if (cachedFontEmbedCSS) {
+        fontEmbedCSS = cachedFontEmbedCSS;
+      } else {
+        try {
+          await Promise.race([
+            document.fonts.ready,
+            new Promise((_, reject) => setTimeout(() => reject(new Error("Font load timeout")), 2000))
+          ]);
+          fontEmbedCSS = await Promise.race([
+            htmlToImage.getFontEmbedCSS(document.body),
+            new Promise<string>((_, reject) => setTimeout(() => reject(new Error("Font CSS embed timeout")), 2000))
+          ]);
+          cachedFontEmbedCSS = fontEmbedCSS;
+        } catch (e) {
+          console.warn("Failed to embed fonts (timed out or error), proceeding without embedded fonts:", e);
+        }
+      }
 
       for (let i = 0; i < pageCount; i++) {
         // Create an ISOLATED container

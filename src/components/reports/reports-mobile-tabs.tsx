@@ -2,10 +2,11 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { CircleDollarSign, Receipt, TrendingUp } from "lucide-react";
+import { CircleDollarSign, Receipt, TrendingUp, BarChart2 } from "lucide-react";
 
 const reportTabs = [
   { href: "/reports/profit-sales", icon: CircleDollarSign, label: "กำไร" },
+  { href: "/reports/profit-sales-detailed", icon: BarChart2, label: "ละเอียด" },
   { href: "/reports/product-sales", icon: TrendingUp, label: "สินค้า" },
   { href: "/reports/billing", icon: Receipt, label: "ใบวางบิล" },
 ];
