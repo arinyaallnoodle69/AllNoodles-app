@@ -367,7 +367,7 @@ export function OrderAddProductPicker({
                 </div>
               ) : null}
 
-              <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+              <div className="grid grid-cols-2 gap-3 md:grid-cols-2 lg:grid-cols-3">
                 {filteredProducts.map((product) => {
                   const draft = selections[product.id];
                   const units = getUnits(product);
@@ -389,48 +389,60 @@ export function OrderAddProductPicker({
                   return (
                     <div
                       key={product.id}
-                      className={`min-w-0 rounded-[1.8rem] border transition-all ${
+                      className={`relative min-w-0 overflow-hidden rounded-[1.4rem] border transition-all md:rounded-[1.8rem] md:border-2 md:shadow-sm ${
                         draft
-                          ? isBelowCost ? "border-[#FF0000] bg-rose-50 shadow-lg" : "border-[#003366]/40 bg-[#003366]/5 shadow-md"
-                          : "border-slate-200 bg-white shadow-sm"
-                      } p-4`}
+                          ? isBelowCost
+                            ? "border-[#FF0000]/60 bg-rose-50 ring-1 ring-[#FF0000]/10"
+                            : "border-[#003366]/40 bg-[#003366]/5 ring-1 ring-[#003366]/5"
+                          : "border-slate-200 bg-white hover:border-slate-300"
+                      }`}
                     >
                       <button
                         type="button"
                         onClick={() => toggleProduct(product)}
-                        className="flex w-full min-w-0 items-start gap-4 text-left"
+                        className="relative flex w-full min-w-0 flex-col items-center gap-2.5 px-3 py-3 text-left md:flex-row md:items-center md:gap-3 md:px-4 md:py-4"
                       >
                         <span
-                          className={`mt-1.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border-2 transition-all ${
-                            draft
-                              ? isBelowCost ? "border-[#FF0000] bg-[#FF0000] text-white" : "border-[#003366] bg-[#003366] text-white"
-                              : "border-slate-300 bg-white text-transparent"
-                          }`}
+                          className="absolute right-3 top-3 flex h-6 w-6 shrink-0 items-center justify-center md:right-4 md:top-4"
                           aria-hidden="true"
                         >
-                          <Check className="h-4.5 w-4.5" strokeWidth={5} />
+                          <span
+                            className={`flex h-5 w-5 items-center justify-center rounded border-2 transition-all ${
+                              draft ? "border-[#003366] bg-[#003366]" : "border-slate-300 bg-white"
+                            }`}
+                          >
+                            <Check
+                              className={`h-3.5 w-3.5 text-white transition-transform ${draft ? "scale-100" : "scale-0"}`}
+                              strokeWidth={5}
+                            />
+                          </span>
                         </span>
-                        <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-2xl bg-slate-50 border border-slate-100">
+                        <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-xl md:h-24 md:w-24">
                           {product.imageUrl ? (
                             <Image
                               src={product.imageUrl}
                               alt={product.name}
                               fill
-                              sizes="80px"
+                              sizes="(max-width: 768px) 80px, 96px"
                               className="object-contain"
                             />
                           ) : (
-                            <div className="flex h-full w-full items-center justify-center">
-                              <Package2 className="h-8 w-8 text-slate-300" strokeWidth={1.5} />
+                            <div className="flex h-full w-full items-center justify-center text-slate-100">
+                              <Package2 className="h-12 w-12" strokeWidth={1} />
                             </div>
                           )}
                         </div>
-                        <div className="min-w-0 flex-1">
-                          <p className="line-clamp-2 text-lg font-black leading-tight text-slate-950">
-                            <span className="mr-2 text-slate-950 font-bold uppercase tracking-tighter">{product.sku}</span>
+                        <div className="w-full min-w-0 text-center md:flex-1 md:text-left">
+                          <p className="text-[11px] font-black uppercase tracking-tight text-slate-500 md:hidden">
+                            {product.sku}
+                          </p>
+                          <p className="mt-1 break-words text-[13px] font-black leading-tight text-slate-950 md:mt-0 md:text-[19px]">
+                            <span className="mr-2 hidden font-bold uppercase tracking-tighter text-slate-950 md:inline">
+                              {product.sku}
+                            </span>
                             {product.name}
                           </p>
-                          <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                          <div className="mt-2 flex flex-wrap items-center justify-center gap-2 md:justify-start">
                             <span className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-[13.5px] font-black shadow-sm ${
                               product.stockQuantity < 0 
                                 ? "bg-[#FF0000] text-white" 
@@ -450,9 +462,9 @@ export function OrderAddProductPicker({
                       </button>
 
                       {draft && selectedUnit ? (
-                        <div className="mt-4 space-y-4 rounded-[1.3rem] bg-white/60 p-4 border border-white/40 shadow-inner">
+                        <div className="bg-[#003366]/5 px-3 pb-4 pt-2 md:px-4 md:pb-4 md:pt-1">
                           {units.length > 1 ? (
-                            <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
+                            <div className="mb-3 flex gap-2 overflow-x-auto pb-1 no-scrollbar md:mb-4">
                               {units.map((unit) => (
                                 <button
                                   key={unit.id ?? "__base__"}
@@ -470,92 +482,119 @@ export function OrderAddProductPicker({
                             </div>
                           ) : null}
 
-                          <div className="grid min-w-0 gap-3">
-                            <div className="min-w-0 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
-                              <div className="flex items-center justify-between gap-3">
-                                <p className="text-[12px] font-black text-slate-500 uppercase tracking-widest">จำนวน ({selectedUnit.label})</p>
-                                <div className="flex min-w-0 items-center gap-2 rounded-2xl bg-slate-50 px-2 py-1.5 ring-1 ring-slate-200">
-                                  <button
-                                    type="button"
-                                    onClick={() => stepQuantity(product, -1)}
-                                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white text-slate-900 shadow-sm ring-1 ring-slate-200 transition active:scale-95"
-                                  >
-                                    <Minus className="h-4.5 w-4.5" strokeWidth={3} />
-                                  </button>
-                                  <input
-                                    type="number"
-                                    min={selectedUnit.minOrderQty}
-                                    step={getEffectiveStep(selectedUnit.stepOrderQty)}
-                                    value={draft.quantity}
-                                    onChange={(e) => {
-                                      const val = Number(e.target.value);
-                                      updateSelection(product.id, (curr) => ({
-                                        ...curr,
-                                        quantity: isNaN(val) ? selectedUnit.minOrderQty : val,
-                                      }));
-                                    }}
-                                    onBlur={() => {
-                                      updateSelection(product.id, (curr) => ({
-                                        ...curr,
-                                        quantity: normalizeQuantity(curr.quantity, selectedUnit.minOrderQty, selectedUnit.stepOrderQty),
-                                      }));
-                                    }}
-                                    className="h-9 w-20 min-w-0 bg-transparent text-center text-2xl font-black tabular-nums text-slate-950 outline-none"
-                                  />
-                                  <button
-                                    type="button"
-                                    onClick={() => stepQuantity(product, 1)}
-                                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white text-slate-900 shadow-sm ring-1 ring-slate-200 transition active:scale-95"
-                                  >
-                                    <Plus className="h-4.5 w-4.5" strokeWidth={3} />
-                                  </button>
-                                </div>
+                          <div className="space-y-3 md:grid md:grid-cols-2 md:gap-3 md:space-y-0">
+                            <div className="space-y-1.5 md:space-y-2">
+                              <label className="text-[12px] font-black uppercase tracking-wide text-slate-600 md:text-[14px] md:tracking-wider">
+                                จำนวน ({selectedUnit.label})
+                              </label>
+                              <div className="flex items-center gap-1.5 md:gap-2.5">
+                                <button
+                                  type="button"
+                                  onClick={() => stepQuantity(product, -1)}
+                                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-100 bg-white text-slate-700 shadow-md active:scale-90 md:h-10 md:w-10 md:rounded-2xl"
+                                >
+                                  <Minus className="h-5 w-5 md:h-6 md:w-6" strokeWidth={3} />
+                                </button>
+                                <input
+                                  type="number"
+                                  min={selectedUnit.minOrderQty}
+                                  step={getEffectiveStep(selectedUnit.stepOrderQty)}
+                                  value={draft.quantity}
+                                  onChange={(e) => {
+                                    const val = Number(e.target.value);
+                                    updateSelection(product.id, (curr) => ({
+                                      ...curr,
+                                      quantity: isNaN(val) ? selectedUnit.minOrderQty : val,
+                                    }));
+                                  }}
+                                  onBlur={() => {
+                                    updateSelection(product.id, (curr) => ({
+                                      ...curr,
+                                      quantity: normalizeQuantity(
+                                        curr.quantity,
+                                        selectedUnit.minOrderQty,
+                                        selectedUnit.stepOrderQty,
+                                      ),
+                                    }));
+                                  }}
+                                  className="h-9 w-full min-w-0 rounded-xl border-2 border-transparent bg-white px-1.5 text-center text-lg font-black text-slate-950 shadow-md outline-none focus:border-[#003366]/30 md:h-10 md:rounded-2xl md:px-2 md:text-xl"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => stepQuantity(product, 1)}
+                                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-100 bg-white text-slate-700 shadow-md active:scale-90 md:h-10 md:w-10 md:rounded-2xl"
+                                >
+                                  <Plus className="h-5 w-5 md:h-6 md:w-6" strokeWidth={3} />
+                                </button>
                               </div>
                             </div>
 
-                            <div className={`min-w-0 rounded-2xl border p-3 shadow-sm transition-all ${
-                              isBelowCost ? "border-[#FF0000] bg-rose-50" : "border-slate-200 bg-white"
-                            }`}>
-                              <div className="flex min-w-0 items-center justify-between gap-3">
-                                <div className="min-w-0">
-                                  <p className={`text-[12px] font-black uppercase tracking-widest ${isBelowCost ? "text-[#FF0000]" : "text-slate-500"}`}>ราคา</p>
-                                  {cost > 0 && (
-                                    <p className={`mt-1 text-[11px] font-bold ${isBelowCost ? "text-[#FF0000]" : "text-slate-400"}`}>ทุน ฿{formatTHB(cost)}</p>
-                                  )}
-                                </div>
-                                <div className="flex min-w-0 items-center gap-2 rounded-2xl bg-slate-50 px-3 py-2 ring-1 ring-slate-200">
-                                  <input
-                                    type="number"
-                                    min="0"
-                                    step="0.01"
-                                    value={draft.price}
-                                    onFocus={(e) => e.target.select()}
-                                    placeholder="0.00"
-                                    onChange={(event) =>
-                                      updateSelection(product.id, (current) => ({
-                                        ...current,
-                                        price: event.target.value,
-                                      }))
-                                    }
-                                    className={`h-9 w-24 min-w-0 bg-transparent text-right text-2xl font-black tabular-nums outline-none placeholder:text-slate-300 ${
-                                      isBelowCost ? "text-[#FF0000]" : "text-slate-950"
+                            <div className="space-y-1.5 md:space-y-2">
+                              <div className="flex items-center justify-between">
+                                <label
+                                  className={`text-[12px] font-black uppercase tracking-wide md:text-[14px] md:tracking-wider ${
+                                    isBelowCost ? "text-[#FF0000]" : "text-slate-600"
+                                  }`}
+                                >
+                                  ราคาต่อ{selectedUnit.label}
+                                </label>
+                                {cost > 0 && (
+                                  <span
+                                    className={`rounded-full border px-1.5 py-0.5 text-[10px] font-black md:px-2 md:text-[11px] ${
+                                      isBelowCost
+                                        ? "animate-pulse border-[#FF0000] bg-white text-[#FF0000] shadow-sm"
+                                        : "border-slate-200 text-slate-400"
                                     }`}
-                                  />
-                                  <span className={`shrink-0 text-xs font-black ${isBelowCost ? "text-[#FF0000]" : "text-slate-500"}`}>บาท</span>
-                                </div>
+                                  >
+                                    ทุน ฿{formatTHB(cost)}
+                                  </span>
+                                )}
+                              </div>
+                              <div className="relative">
+                                <input
+                                  type="number"
+                                  min="0"
+                                  step="0.01"
+                                  value={draft.price}
+                                  onFocus={(e) => e.target.select()}
+                                  placeholder="0.00"
+                                  onChange={(event) =>
+                                    updateSelection(product.id, (current) => ({
+                                      ...current,
+                                      price: event.target.value,
+                                    }))
+                                  }
+                                  className={`h-9 w-full rounded-xl border-2 pl-3 pr-12 text-lg font-black shadow-md outline-none transition-all md:h-10 md:rounded-2xl md:pl-4 md:pr-16 md:text-xl ${
+                                    isBelowCost
+                                      ? "!border-[#FF0000] !bg-rose-50 !text-[#FF0000]"
+                                      : "border-transparent bg-white text-slate-950 focus:border-[#003366]/30"
+                                  }`}
+                                />
+                                <span
+                                  className={`absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-black md:right-4 md:text-xs ${
+                                    isBelowCost ? "text-[#FF0000]" : "text-slate-500"
+                                  }`}
+                                >
+                                  บาท
+                                </span>
                               </div>
                             </div>
                           </div>
 
                           {isBelowCost && (
-                            <div className="flex items-center gap-3 rounded-2xl bg-[#FF0000] px-4 py-3 text-[14px] font-black text-white shadow-lg shadow-rose-500/30 border border-white/20 animate-in slide-in-from-top-2 duration-200">
-                              <AlertTriangle className="h-5 w-5 shrink-0 text-yellow-300" strokeWidth={3} />
-                              <p>ราคาต่ำกว่าทุน! (ต้นทุนของหน่วยนี้คือ ฿{formatTHB(cost)})</p>
+                            <div className="mt-3 flex items-center gap-3 rounded-2xl border border-white/20 bg-[#FF0000] px-4 py-3 text-[13px] font-black text-white shadow-xl shadow-rose-500/30 animate-in zoom-in-95 duration-200 md:mt-4 md:border-2 md:px-5 md:py-4 md:text-[16px] md:shadow-rose-500/40">
+                              <AlertTriangle className="h-6 w-6 shrink-0 text-yellow-300" strokeWidth={3} />
+                              <div className="min-w-0 flex-1">
+                                <p className="leading-tight">ราคาต่ำกว่าทุน!</p>
+                                <p className="mt-1 text-[13px] font-bold uppercase tracking-tight opacity-90">
+                                  ต้นทุนของ {selectedUnit.label} นี้คือ ฿{formatTHB(cost)}
+                                </p>
+                              </div>
                             </div>
                           )}
 
                           {issue ? (
-                            <div className="flex items-start gap-2 rounded-xl border-2 border-rose-200 bg-rose-50 px-3 py-2 text-sm font-black text-rose-700">
+                            <div className="mt-3 flex items-start gap-2 rounded-xl border-2 border-rose-200 bg-rose-50 px-3 py-2 text-sm font-black text-rose-700">
                               <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" strokeWidth={2.2} />
                               <p>{issue}</p>
                             </div>

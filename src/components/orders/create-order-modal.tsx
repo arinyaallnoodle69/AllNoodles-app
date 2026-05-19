@@ -293,116 +293,124 @@ const ProductRow = React.memo(({
   noCustomer: boolean;
 }) => {
   const units = getUnits(product);
-  const unit = units.find((u) => u.id === selection?.unitId) ?? units.find(u => u.isDefault) ?? units[0] ?? null;
-
-  // RE-CALCULATE EFFECTIVE COST EVERY RENDER
+  const unit = units.find((u) => u.id === selection?.unitId) ?? units.find((u) => u.isDefault) ?? units[0] ?? null;
   const effectiveCost = unit ? getEffectiveSaleUnitCost({
     baseCostPrice: product.baseCostPrice,
     baseUnitQuantity: unit.baseUnitQuantity,
     costMode: unit.costMode,
     fixedCostPrice: unit.fixedCostPrice,
   }) : 0;
-  
   const currentPriceNum = selection?.unitPrice ? Number.parseFloat(selection.unitPrice) : 0;
-  
-  // LOGIC: must have cost > 0, price > 0, and price < cost
   const isBelowCost = Boolean(selection && effectiveCost > 0 && currentPriceNum > 0 && currentPriceNum < (effectiveCost - 0.001));
+  const customerPrice = priceMap[unit?.id ?? product.id] ?? priceMap[product.id] ?? 0;
 
   return (
     <div
-      className={`relative flex flex-col border-slate-200 transition-all ${
+      className={`relative flex flex-col overflow-hidden rounded-[1.4rem] border transition-all md:rounded-[1.8rem] md:border-2 md:shadow-sm ${
         isSelected
           ? isBelowCost
-            ? "bg-rose-50 border-[#FF0000]/60 ring-1 ring-[#FF0000]/10"
-            : "bg-[#003366]/5 border-[#003366]/40 ring-1 ring-[#003366]/5"
-          : "bg-white border-slate-200 hover:border-slate-300"
-      } border-b-2 md:border-2 md:rounded-[1.8rem] md:shadow-sm overflow-hidden`}
+            ? "border-[#FF0000]/60 bg-rose-50 ring-1 ring-[#FF0000]/10"
+            : "border-[#003366]/40 bg-[#003366]/5 ring-1 ring-[#003366]/5"
+          : "border-slate-200 bg-white hover:border-slate-300"
+      } col-span-1`}
     >
-      {/* Debug cost if needed, but let's focus on UI visibility */}
-      <div className="flex items-center gap-3 px-4 py-4 sm:px-6 md:px-4">
-        <div className="flex h-6 w-6 shrink-0 items-center justify-center">
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={() => onSelect(product.id, !isSelected)}
+        onKeyDown={(event) => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            onSelect(product.id, !isSelected);
+          }
+        }}
+        className="relative cursor-pointer px-3 py-3 md:px-4 md:py-4"
+      >
+        <div className="absolute right-3 top-3 flex h-6 w-6 shrink-0 items-center justify-center md:right-4 md:top-4">
           <label className="relative flex cursor-pointer items-center justify-center">
             <input
               type="checkbox"
-              className="peer h-5 w-5 cursor-pointer appearance-none rounded border-2 border-slate-300 transition-all checked:border-[#003366] checked:bg-[#003366]"
+              readOnly
+              tabIndex={-1}
               checked={isSelected}
-              onChange={(e) => onSelect(product.id, e.target.checked)}
+              className="peer pointer-events-none h-5 w-5 appearance-none rounded border-2 border-slate-300 transition-all checked:border-[#003366] checked:bg-[#003366]"
             />
             <Check className="pointer-events-none absolute h-3.5 w-3.5 scale-0 text-white transition-transform peer-checked:scale-100" strokeWidth={5} />
           </label>
         </div>
 
-        <div className="relative h-24 w-24 shrink-0 overflow-hidden rounded-xl">
-          {product.imageUrl ? (
-            <Image
-              src={product.imageUrl}
-              alt={product.name}
-              fill
-              className="object-contain"
-              sizes="96px"
-            />
-          ) : (
-            <div className="flex h-full w-full items-center justify-center text-slate-100">
-              <Package2 className="h-12 w-12" strokeWidth={1} />
-            </div>
-          )}
-        </div>
-
-        <div className="min-w-0 flex-1">
-          <p className="line-clamp-2 text-[19px] font-black leading-tight text-slate-950">
-            <span className="mr-2 text-slate-950 font-bold uppercase tracking-tighter">{product.sku}</span>
-            {product.name}
-          </p>
-
-          <div className="mt-1.5 flex flex-wrap items-center gap-2">
-            <span className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-[13.5px] font-black shadow-sm ${
-              product.stockQuantity < 0 
-                ? "bg-[#FF0000] text-white" 
-                : "bg-[#003366] text-white"
-            }`}>
-              <Boxes className="h-4 w-4" strokeWidth={2.5} />
-              สต็อก: {product.stockQuantity.toLocaleString("th-TH")} {product.unit}
-            </span>
-          </div>
-          
-          <div className="mt-2.5 flex flex-wrap items-center gap-3">
-            {/* Customer Specific Price Badge */}
-            {(() => {
-              const custPrice = priceMap[unit?.id ?? product.id] ?? priceMap[product.id] ?? 0;
-              if (noCustomer) return null;
-              if (custPrice > 0) {
-                return (
-                  <span className="inline-flex items-center rounded-lg bg-emerald-50 px-2.5 py-1 text-[13px] font-black text-emerald-700 ring-1 ring-inset ring-emerald-600/20">
-                    ราคา {formatTHB(custPrice)} บ.
-                  </span>
-                );
-              }
-              return (
-                <span className="inline-flex items-center rounded-lg bg-[#FF0000] px-2.5 py-1 text-[13px] font-black text-white shadow-sm">
-                  ยังไม่มีราคา
-                </span>
-              );
-            })()}
-
-            {addedCount > 0 && (
-              <span className="rounded-lg bg-[#003366] px-2.5 py-1 text-[12px] font-black text-white shadow-sm">
-                ในตะกร้า {addedCount} {unit?.label}
-              </span>
+        <div className="flex flex-col items-center gap-2.5 md:flex-row md:items-center md:gap-3">
+          <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-xl md:h-24 md:w-24">
+            {product.imageUrl ? (
+              <Image
+                src={product.imageUrl}
+                alt={product.name}
+                fill
+                className="object-contain"
+                sizes="(max-width: 768px) 80px, 96px"
+              />
+            ) : (
+              <div className="flex h-full w-full items-center justify-center text-slate-100">
+                <Package2 className="h-12 w-12" strokeWidth={1} />
+              </div>
             )}
+          </div>
+
+          <div className="w-full min-w-0 text-center md:flex-1 md:text-left">
+            <p className="text-[11px] font-black uppercase tracking-tight text-slate-500 md:hidden">
+              {product.sku}
+            </p>
+            <p className="mt-1 break-words text-[13px] font-black leading-tight text-slate-950 md:mt-0 md:text-[19px]">
+              <span className="mr-2 hidden font-bold uppercase tracking-tighter text-slate-950 md:inline">
+                {product.sku}
+              </span>
+              {product.name}
+            </p>
+
+            <div className="mt-2 flex flex-wrap items-center justify-center gap-2 md:justify-start">
+              <span className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-[13.5px] font-black shadow-sm ${
+                product.stockQuantity < 0 ? "bg-[#FF0000] text-white" : "bg-[#003366] text-white"
+              }`}>
+                <Boxes className="h-3.5 w-3.5 md:h-4 md:w-4" strokeWidth={2.5} />
+                สต็อก: {product.stockQuantity.toLocaleString("th-TH")} {product.unit}
+              </span>
+            </div>
+
+            <div className="mt-2.5 flex flex-wrap items-center justify-center gap-2 md:justify-start md:gap-3">
+              {!noCustomer && (
+                customerPrice > 0 ? (
+                  <span className="inline-flex items-center rounded-lg bg-emerald-50 px-2 py-1 text-[11px] font-black text-emerald-700 ring-1 ring-inset ring-emerald-600/20 md:px-2.5 md:text-[13px]">
+                    ราคา {formatTHB(customerPrice)} บ.
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center rounded-lg bg-[#FF0000] px-2 py-1 text-[11px] font-black text-white shadow-sm md:px-2.5 md:text-[13px]">
+                    ยังไม่มีราคา
+                  </span>
+                )
+              )}
+
+              {addedCount > 0 && (
+                <span className="rounded-lg bg-[#003366] px-2 py-1 text-[11px] font-black text-white shadow-sm md:px-2.5 md:text-[12px]">
+                  ในตะกร้า {addedCount} {unit?.label}
+                </span>
+              )}
+            </div>
           </div>
         </div>
       </div>
 
       {isSelected && selection && (
-        <div className="bg-[#003366]/5 px-4 pb-6 pt-2 sm:px-8 md:px-4 md:pb-4 md:pt-1">
-          <div className="grid grid-cols-2 gap-5 md:gap-3">
+        <div className="bg-[#003366]/5 px-3 pb-4 pt-2 md:px-4 md:pb-4 md:pt-1">
+          <div className="space-y-3 md:grid md:grid-cols-2 md:gap-3 md:space-y-0">
             <div className="space-y-2">
-              <label className="text-[14px] font-black text-slate-600 uppercase tracking-wider">จำนวน ({unit?.label})</label>
+              <label className="text-[14px] font-black uppercase tracking-wider text-slate-600">
+                จำนวน ({unit?.label})
+              </label>
               <div className="flex items-center gap-2.5">
-                <button 
+                <button
                   type="button"
                   onClick={() => onUpdateSelection(product.id, "quantity", String(stepByRule(Number(selection.quantity), -1, unit?.minOrderQty ?? 1, unit?.stepOrderQty ?? null)))}
-                  className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-slate-700 shadow-md active:scale-90 border border-slate-100"
+                  className="flex h-10 w-10 items-center justify-center rounded-2xl border border-slate-100 bg-white text-slate-700 shadow-md active:scale-90"
                 >
                   <Minus className="h-6 w-6" strokeWidth={3} />
                 </button>
@@ -410,12 +418,12 @@ const ProductRow = React.memo(({
                   type="number"
                   value={selection.quantity}
                   onChange={(e) => onUpdateSelection(product.id, "quantity", e.target.value)}
-                  className="h-12 w-full min-w-0 rounded-2xl border-2 border-transparent bg-white text-center text-2xl font-black text-slate-950 shadow-md focus:border-[#003366]/30 outline-none"
+                  className="h-10 w-full min-w-0 rounded-2xl border-2 border-transparent bg-white px-2 text-center text-xl font-black text-slate-950 shadow-md outline-none focus:border-[#003366]/30"
                 />
-                <button 
+                <button
                   type="button"
                   onClick={() => onUpdateSelection(product.id, "quantity", String(stepByRule(Number(selection.quantity), 1, unit?.minOrderQty ?? 1, unit?.stepOrderQty ?? null)))}
-                  className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-slate-700 shadow-md active:scale-90 border border-slate-100"
+                  className="flex h-10 w-10 items-center justify-center rounded-2xl border border-slate-100 bg-white text-slate-700 shadow-md active:scale-90"
                 >
                   <Plus className="h-6 w-6" strokeWidth={3} />
                 </button>
@@ -428,7 +436,11 @@ const ProductRow = React.memo(({
                   ราคาต่อ{unit?.label}
                 </label>
                 {effectiveCost > 0 && (
-                  <span className={`text-[11px] font-black px-2 py-0.5 rounded-full border ${isBelowCost ? "text-[#FF0000] border-[#FF0000] animate-pulse bg-white shadow-sm" : "text-slate-400 border-slate-200"}`}>
+                  <span className={`rounded-full border px-2 py-0.5 text-[11px] font-black ${
+                    isBelowCost
+                      ? "animate-pulse border-[#FF0000] bg-white text-[#FF0000] shadow-sm"
+                      : "border-slate-200 text-slate-400"
+                  }`}>
                     ทุน ฿{formatTHB(effectiveCost)}
                   </span>
                 )}
@@ -439,17 +451,21 @@ const ProductRow = React.memo(({
                   value={selection.unitPrice}
                   disabled={selection.isPriceLocked}
                   onChange={(e) => onUpdateSelection(product.id, "unitPrice", e.target.value)}
-                  className={`h-12 w-full rounded-2xl pl-5 pr-12 text-2xl font-black shadow-md outline-none transition-all border-2 ${
-                    selection.isPriceLocked 
-                      ? "bg-slate-100 text-slate-400 border-transparent shadow-none" 
-                      : "bg-white text-slate-950 border-transparent focus:border-[#003366]/30"
+                  className={`h-10 w-full rounded-2xl border-2 pl-4 pr-12 text-xl font-black shadow-md outline-none transition-all ${
+                    selection.isPriceLocked
+                      ? "border-transparent bg-slate-100 text-slate-400 shadow-none"
+                      : "border-transparent bg-white text-slate-950 focus:border-[#003366]/30"
                   } ${isBelowCost ? "!border-[#FF0000] !bg-rose-50 !text-[#FF0000]" : ""}`}
                 />
                 <button
                   type="button"
                   onClick={() => onUpdateSelection(product.id, "isPriceLocked", !selection.isPriceLocked)}
-                  className={`absolute right-1.5 top-1/2 -translate-y-1/2 flex h-10 w-10 items-center justify-center rounded-xl transition-all active:scale-90 ${
-                    selection.isPriceLocked ? "text-slate-400" : (isBelowCost ? "bg-[#FF0000] text-white" : "bg-[#003366] text-white")
+                  className={`absolute right-1.5 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-xl transition-all active:scale-90 ${
+                    selection.isPriceLocked
+                      ? "text-slate-400"
+                      : isBelowCost
+                        ? "bg-[#FF0000] text-white"
+                        : "bg-[#003366] text-white"
                   }`}
                 >
                   {selection.isPriceLocked ? <Lock className="h-5 w-5" /> : <Unlock className="h-5 w-5" />}
@@ -457,13 +473,15 @@ const ProductRow = React.memo(({
               </div>
             </div>
           </div>
-          
+
           {isBelowCost && (
-            <div className="mt-4 flex items-center gap-3 rounded-2xl bg-[#FF0000] px-5 py-4 text-[16px] font-black text-white shadow-xl shadow-rose-500/40 border-2 border-white/20 animate-in zoom-in-95 duration-200">
+            <div className="mt-3 flex items-center gap-3 rounded-2xl border border-white/20 bg-[#FF0000] px-4 py-3 text-[13px] font-black text-white shadow-xl shadow-rose-500/30 animate-in zoom-in-95 duration-200 md:mt-4 md:border-2 md:px-5 md:py-4 md:text-[16px] md:shadow-rose-500/40">
               <AlertTriangle className="h-6 w-6 shrink-0 text-yellow-300" strokeWidth={3} />
               <div className="min-w-0 flex-1">
-                <p className="leading-tight">ราคาต่ำกว่าต้นทุน!</p>
-                <p className="mt-1 text-[13px] opacity-90 font-bold uppercase tracking-tight">ต้นทุนของ {unit?.label} นี้คือ ฿{formatTHB(effectiveCost)}</p>
+                <p className="leading-tight">ราคาต่ำกว่าทุน!</p>
+                <p className="mt-1 text-[13px] font-bold uppercase tracking-tight opacity-90">
+                  ต้นทุนของ {unit?.label} นี้คือ ฿{formatTHB(effectiveCost)}
+                </p>
               </div>
             </div>
           )}
@@ -761,20 +779,22 @@ function ProductSelectModal({
               <p className="text-lg font-black uppercase tracking-widest text-center px-6">ไม่พบสินค้าที่ตรงกับการค้นหา</p>
             </div>
           ) : (
-            <div className="flex flex-col md:grid md:grid-cols-2 lg:grid-cols-3 md:gap-4 md:p-5">
-              {filteredProducts.map((p) => (
-                <ProductRow
-                  key={p.id}
-                  product={p}
-                  isSelected={selectedIds.has(p.id)}
-                  onSelect={handleSelectProduct}
-                  selection={selections[p.id]}
-                  onUpdateSelection={handleUpdateSelection}
-                  addedCount={cart.filter(item => item.productId === p.id).reduce((s, i) => s + i.quantity, 0)}
-                  priceMap={priceMap}
-                  noCustomer={noCustomer}
-                />
-              ))}
+            <div className="space-y-4 p-3 md:space-y-0 md:p-5">
+              <div className="grid grid-cols-2 gap-3 md:grid-cols-2 md:gap-4 lg:grid-cols-3">
+                {filteredProducts.map((p) => (
+                  <ProductRow
+                    key={p.id}
+                    product={p}
+                    isSelected={selectedIds.has(p.id)}
+                    onSelect={handleSelectProduct}
+                    selection={selections[p.id]}
+                    onUpdateSelection={handleUpdateSelection}
+                    addedCount={cart.filter(item => item.productId === p.id).reduce((s, i) => s + i.quantity, 0)}
+                    priceMap={priceMap}
+                    noCustomer={noCustomer}
+                  />
+                ))}
+              </div>
             </div>
           )}
         </div>
@@ -855,7 +875,7 @@ function ProductSelectModal({
   );
 }
 
-// ─── Manual Order Creation ───────────────────────────────────────────────────
+// Manual Order Creation
 export function CreateOrderModal({
   autoOpen,
   customerOrderCountsToday = {},
