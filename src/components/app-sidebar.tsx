@@ -79,7 +79,7 @@ function MobileTopBar() {
     <header className="fixed inset-x-0 top-0 z-[60] h-[68px] border-b border-slate-200 bg-white text-slate-950 lg:hidden">
       <div className="flex h-full items-center gap-3 px-4">
         {/* Logo */}
-        <Link href="/dashboard" className="block shrink-0">
+        <Link href="/dashboard" prefetch={false} className="block shrink-0">
           <Image
             src="/ty-noodles-logo-cropped.png"
             alt="T&Y Noodles"
@@ -101,6 +101,7 @@ function MobileTopBar() {
             <div className="flex items-center gap-1.5">
               <Link
                 href="/stock?receive=1"
+                prefetch={false}
                 className="flex items-center gap-1 rounded-full bg-[#003366] px-2.5 py-1.5 text-[12px] font-bold text-white shadow-lg shadow-[#003366]/20 transition active:scale-95"
               >
                 <Plus className="h-3.5 w-3.5" strokeWidth={3} />
@@ -108,6 +109,7 @@ function MobileTopBar() {
               </Link>
               <Link
                 href="/stock?adjust=1"
+                prefetch={false}
                 className="flex items-center gap-1 rounded-full bg-indigo-600 px-2.5 py-1.5 text-[12px] font-bold text-white shadow-lg shadow-indigo-600/20 transition active:scale-95"
               >
                 <ClipboardEdit className="h-3.5 w-3.5" strokeWidth={3} />
@@ -202,6 +204,7 @@ function SidebarLink({
   return (
     <Link
       href={item.href}
+      prefetch={false}
       title={collapsed ? item.label : undefined}
       className={`flex items-center gap-3 rounded-xl px-2.5 py-2.5 text-sm font-medium transition-colors ${active ? "bg-[#003366]/10 text-[#003366]" : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
         } ${collapsed ? "justify-center" : ""} ${indent && !collapsed ? "pl-9" : ""}`}
@@ -299,7 +302,7 @@ export function AppSidebarLayout({
               }`}
           >
             {!collapsed && (
-              <Link href="/dashboard" className="flex min-w-0 shrink items-center gap-2.5">
+              <Link href="/dashboard" prefetch={false} className="flex min-w-0 shrink items-center gap-2.5">
                 <Image
                   src="/ty-noodles-logo-cropped.png"
                   alt="T&Y Noodles"
@@ -344,6 +347,7 @@ export function AppSidebarLayout({
               {collapsed ? (
                 <Link
                   href="/reports/profit-sales"
+                  prefetch={false}
                   title="Reports"
                   className={`flex items-center justify-center rounded-xl px-2.5 py-2.5 text-sm font-medium transition-colors ${anyReportsActive
                       ? "bg-[#003366]/10 text-[#003366]"
@@ -403,6 +407,7 @@ export function AppSidebarLayout({
               {collapsed ? (
                 <Link
                   href="/settings/products"
+                  prefetch={false}
                   title="Settings"
                   className={`flex items-center justify-center rounded-xl px-2.5 py-2.5 text-sm font-medium transition-colors ${anySettingsActive
                       ? "bg-[#003366]/10 text-[#003366]"

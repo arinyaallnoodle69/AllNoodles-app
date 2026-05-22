@@ -109,9 +109,8 @@ export function PackingListPrintButton({
     setPreviewImages([]);
 
     try {
-      const isMobileViewport = window.matchMedia("(max-width: 767px)").matches;
       const targets = Array.from(
-        document.querySelectorAll<HTMLElement>(isMobileViewport ? ".packing-sheet-shell" : ".packing-sheet"),
+        document.querySelectorAll<HTMLElement>(".packing-sheet")
       );
 
       if (targets.length === 0) {
@@ -141,19 +140,16 @@ export function PackingListPrintButton({
 
       for (let i = 0; i < targets.length; i += 1) {
         const target = targets[i];
-        const rect = target.getBoundingClientRect();
-        const captureWidth = Math.max(1, Math.round(rect.width || FALLBACK_CAPTURE_WIDTH));
-        const captureHeight = Math.max(1, Math.round(rect.height || FALLBACK_CAPTURE_HEIGHT));
+        const captureWidth = FALLBACK_CAPTURE_WIDTH; // 1346px
+        const captureHeight = FALLBACK_CAPTURE_HEIGHT; // 816px
 
         const dataUrl = await htmlToImage.toPng(target, {
           backgroundColor: "#ffffff",
           cacheBust: true,
           fontEmbedCSS,
-          pixelRatio: isMobileViewport ? 3 : 2,
+          pixelRatio: 2, // Standard safe high-res pixelRatio 2 (reduces memory consumption on mobile and prevents crashes)
           width: captureWidth,
           height: captureHeight,
-          canvasWidth: captureWidth,
-          canvasHeight: captureHeight,
           style: {
             width: `${captureWidth}px`,
             height: `${captureHeight}px`,
@@ -162,7 +158,7 @@ export function PackingListPrintButton({
             margin: "0",
             boxShadow: "none",
             display: "block",
-            transform: isMobileViewport ? undefined : "none",
+            transform: "none", // Force removal of scale transform for correct capture resolution
             transformOrigin: "top left",
           },
         });
@@ -205,6 +201,18 @@ export function PackingListPrintButton({
         if (error instanceof Error && error.name === "AbortError") return;
         console.error("Web share failed:", error);
       }
+    }
+
+    const isMobileOrLine =
+      typeof navigator !== "undefined" &&
+      (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+        /Line/i.test(navigator.userAgent));
+
+    if (isMobileOrLine) {
+      alert(
+        `บันทึกใบจัดของ:\nเนื่องจากข้อจำกัดการดาวน์โหลดบนมือถือและแอป LINE\n\nกรุณากดค้าง (Tap & Hold) ที่รูปภาพแต่ละใบที่แสดงอยู่ด้านบน แล้วเลือก 'บันทึกรูปภาพ' (Save Image) หรือ 'แชร์' เพื่อบันทึกลงในเครื่องหรือส่งต่อได้โดยตรงครับ`
+      );
+      return;
     }
 
     previewImages.forEach((image, index) => {

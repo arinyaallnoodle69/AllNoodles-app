@@ -1,4 +1,4 @@
-const CACHE_NAME = "T&Y Noodle-v3";
+const CACHE_NAME = "T&Y Noodle-v4";
 const APP_SHELL = [
   "/",
   "/login",
@@ -8,12 +8,7 @@ const APP_SHELL = [
   "/brand/512x512.png",
   "/brand/1200x630.png",
 ];
-const NAVIGATION_TIMEOUT_MS = 2500;
 const DEFAULT_NOTIFICATION_URL = "/orders/incoming";
-
-function delay(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
 
 function parsePushPayload(event) {
   if (!event.data) {
@@ -84,28 +79,50 @@ self.addEventListener("fetch", (event) => {
   const url = new URL(request.url);
 
   if (request.mode === "navigate") {
+    // Determine the best cache key to look up (either the exact request, or "/" or "/login")
+    let cacheKey = request;
+    const path = url.pathname;
+    
+    if (path === "/" || path === "/login" || path.startsWith("/login")) {
+      // These are core shells, we want to look them up by their clean paths
+      cacheKey = path === "/" ? "/" : "/login";
+    }
+
     event.respondWith(
-      Promise.race([fetch(request), delay(NAVIGATION_TIMEOUT_MS).then(() => null)])
-        .then(async (networkResponse) => {
+      caches.match(cacheKey, { ignoreSearch: true }).then((cachedResponse) => {
+        // Prepare network fetch promise to run in background or foreground
+        const fetchPromise = fetch(request)
+          .then(async (networkResponse) => {
+            if (networkResponse && networkResponse.ok) {
+              const cache = await caches.open(CACHE_NAME);
+              cache.put(request, networkResponse.clone());
+            }
+            return networkResponse;
+          })
+          .catch(() => null);
+
+        if (cachedResponse) {
+          // Stale-While-Revalidate: Return cache immediately, update cache in background
+          event.waitUntil(fetchPromise);
+          return cachedResponse;
+        }
+
+        // Network-First with quick fallback:
+        // If there's no cache match, try network first.
+        return fetchPromise.then(async (networkResponse) => {
           if (networkResponse) {
             return networkResponse;
           }
 
+          // Fallback if offline / network failed
           const cachedLogin = await caches.match("/login");
           if (cachedLogin) {
             return cachedLogin;
           }
 
           return caches.match("/offline");
-        })
-        .catch(async () => {
-          const cachedLogin = await caches.match("/login");
-          if (cachedLogin) {
-            return cachedLogin;
-          }
-
-          return caches.match("/offline");
-        }),
+        });
+      })
     );
     return;
   }
