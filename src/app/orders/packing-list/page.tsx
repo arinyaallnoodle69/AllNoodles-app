@@ -1,11 +1,18 @@
 import { Suspense } from "react";
 import { PageLoader } from "@/components/page-loader";
-import { PackingListLayout, type PackingListData, type PackingListStore, type PackingListVehicle } from "@/components/print/packing-list-layout";
+import { PrintPackingListButton } from "@/components/orders/print-packing-list-button";
 import {
   PackingListSummaryButton,
   type PackingListSummaryProduct,
   type PackingListSummaryStore,
 } from "@/components/orders/packing-list-summary-button";
+import {
+  PackingListLayout,
+  type PackingListData,
+  type PackingListLayoutMode,
+  type PackingListStore,
+  type PackingListVehicle,
+} from "@/components/print/packing-list-layout";
 import { requireAnyRole } from "@/lib/auth/authorization";
 import { sortProductsByCategory } from "@/lib/products/sort-by-category";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
@@ -13,7 +20,14 @@ import { AutoPrint, PackingListPrintButton } from "./preview/print-button";
 
 export const metadata = { title: "ใบจัดของ" };
 
-type Props = { searchParams: Promise<{ date?: string; endDate?: string; autoprint?: string }> };
+type Props = {
+  searchParams: Promise<{
+    date?: string;
+    endDate?: string;
+    autoprint?: string;
+    layout?: string;
+  }>;
+};
 
 type OrderWithRelations = {
   id: string;
@@ -82,7 +96,6 @@ function getPackingListProductName(name: string, metadata: unknown) {
       return packingListName.trim();
     }
   }
-
   return name;
 }
 
@@ -98,6 +111,7 @@ async function PackingListPage({ searchParams }: Props) {
   const session = await requireAnyRole(["admin", "warehouse"]);
   const params = await searchParams;
   const autoprint = params.autoprint === "1";
+  const layout: PackingListLayoutMode = params.layout === "transposed" ? "transposed" : "standard";
   const date = params.date ?? new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Bangkok" });
   const endDate = params.endDate || date;
 
@@ -120,14 +134,22 @@ async function PackingListPage({ searchParams }: Props) {
     endDate && endDate !== date ? ordersQueryBase.gte("order_date", date).lte("order_date", endDate) : ordersQueryBase.eq("order_date", date);
 
   const [vehicleRows, ordersResult, productsDb, categoriesDb, categoryItemsDb] = await Promise.all([
-    admin.from("vehicles").select("id, name").eq("organization_id", session.organizationId).order("sort_order", { ascending: true }).order("created_at", { ascending: true }),
+    admin
+      .from("vehicles")
+      .select("id, name")
+      .eq("organization_id", session.organizationId)
+      .order("sort_order", { ascending: true })
+      .order("created_at", { ascending: true }),
     filteredQuery.order("order_date", { ascending: true }).order("created_at", { ascending: true }),
     admin.from("products").select("id, name, display_order, sku, metadata").eq("organization_id", session.organizationId),
     admin.from("product_categories").select("id, name, sort_order").eq("organization_id", session.organizationId).eq("is_active", true),
     admin.from("product_category_items").select("product_category_id, product_id").eq("organization_id", session.organizationId),
   ]);
 
-  const vehicles: PackingListVehicle[] = (vehicleRows.data ?? []).map((v: { id: string; name: string }) => ({ id: v.id, name: v.name }));
+  const vehicles: PackingListVehicle[] = (vehicleRows.data ?? []).map((vehicle: { id: string; name: string }) => ({
+    id: vehicle.id,
+    name: vehicle.name,
+  }));
 
   const categoryIdsByProductId = new Map<string, string[]>();
   for (const item of categoryItemsDb.data ?? []) {
@@ -137,14 +159,12 @@ async function PackingListPage({ searchParams }: Props) {
   }
 
   const dbProductsList = (productsDb.data ?? []).filter((product: DbProduct) => {
-    const meta = product.metadata && typeof product.metadata === "object" ? (product.metadata as Record<string, unknown>) : null;
-    return !meta?.deleted;
+    const metadata = product.metadata && typeof product.metadata === "object" ? (product.metadata as Record<string, unknown>) : null;
+    return !metadata?.deleted;
   });
+
   const packingListNameByProductId = new Map(
-    dbProductsList.map((product: DbProduct) => [
-      product.id,
-      getPackingListProductName(product.name, product.metadata),
-    ]),
+    dbProductsList.map((product: DbProduct) => [product.id, getPackingListProductName(product.name, product.metadata)]),
   );
 
   const sortedMasterProducts = sortProductsByCategory(
@@ -154,7 +174,10 @@ async function PackingListPage({ searchParams }: Props) {
       display_order: product.display_order !== null && product.display_order !== undefined ? Number(product.display_order) : undefined,
       categoryIds: categoryIdsByProductId.get(product.id) ?? [],
     })),
-    (categoriesDb.data ?? []).map((category: DbCategory) => ({ id: category.id, sortOrder: Number(category.sort_order ?? 0) })),
+    (categoriesDb.data ?? []).map((category: DbCategory) => ({
+      id: category.id,
+      sortOrder: Number(category.sort_order ?? 0),
+    })),
   );
 
   const productSortIndexMap = new Map<string, number>();
@@ -168,7 +191,7 @@ async function PackingListPage({ searchParams }: Props) {
   for (const order of rawOrders) {
     const orderDate = order.order_date;
     if (!ordersByDate.has(orderDate)) ordersByDate.set(orderDate, []);
-    ordersByDate.get(orderDate)!.push(order);
+    ordersByDate.get(orderDate)?.push(order);
   }
 
   const overallProductMap = new Map<string, SummaryAggregate>();
@@ -189,7 +212,7 @@ async function PackingListPage({ searchParams }: Props) {
         console.error("Invalid date for packing list:", currentDate);
       }
 
-      const groupMap = new Map<
+      const groupedStores = new Map<
         string,
         {
           customer: { id: string; name: string; customer_code: string; default_vehicle_id: string | null; vehicles: unknown };
@@ -201,59 +224,60 @@ async function PackingListPage({ searchParams }: Props) {
 
       for (const order of dateOrders) {
         const customer = order.customers;
-        const dnArray = Array.isArray(order.delivery_notes) ? order.delivery_notes : order.delivery_notes ? [order.delivery_notes] : [];
-        const activeDeliveryNotes = dnArray.filter((deliveryNote: { status: string }) => deliveryNote.status !== "cancelled");
-        const deliveryNote = activeDeliveryNotes.length > 0 ? activeDeliveryNotes[0] : null;
+        const deliveryNotes = Array.isArray(order.delivery_notes) ? order.delivery_notes : order.delivery_notes ? [order.delivery_notes] : [];
+        const activeDeliveryNote = deliveryNotes.find((note: { status: string }) => note.status !== "cancelled") as
+          | { vehicle_id: string | null; vehicles: unknown }
+          | undefined;
 
-        const vehicleId =
-          deliveryNote && (deliveryNote as { vehicle_id: string | null }).vehicle_id
-            ? (deliveryNote as { vehicle_id: string }).vehicle_id
-            : customer.default_vehicle_id;
+        const vehicleId = activeDeliveryNote?.vehicle_id ?? customer.default_vehicle_id;
         const vehicleName =
-          deliveryNote && (deliveryNote as { vehicle_id: string | null }).vehicle_id
-            ? getVehicleName((deliveryNote as { vehicles: unknown }).vehicles)
+          activeDeliveryNote?.vehicle_id
+            ? getVehicleName(activeDeliveryNote.vehicles)
             : getVehicleName(customer.vehicles);
-        const finalVehicleName = vehicleName || (vehicleId ? vehicles.find((vehicle) => vehicle.id === vehicleId)?.name : null) || null;
-        const groupKey = `${customer.id}_${vehicleId ?? "none"}`;
+        const resolvedVehicleName = vehicleName || (vehicleId ? vehicles.find((vehicle) => vehicle.id === vehicleId)?.name : null) || null;
+        const storeGroupKey = `${customer.id}_${vehicleId ?? "none"}`;
 
-        if (!groupMap.has(groupKey)) {
-          groupMap.set(groupKey, {
+        if (!groupedStores.has(storeGroupKey)) {
+          groupedStores.set(storeGroupKey, {
             customer,
             vehicleId,
-            vehicleName: finalVehicleName,
+            vehicleName: resolvedVehicleName,
             items: new Map(),
           });
         }
 
-        const group = groupMap.get(groupKey)!;
+        const groupedStore = groupedStores.get(storeGroupKey);
+        if (!groupedStore) continue;
+
         for (const item of order.order_items ?? []) {
           const key = `${item.products.sku.trim().toLowerCase()}||${item.sale_unit_label.trim().toLowerCase()}`;
           const quantity = Number(item.quantity ?? 0);
-          group.items.set(key, (group.items.get(key) ?? 0) + quantity);
+          groupedStore.items.set(key, (groupedStore.items.get(key) ?? 0) + quantity);
 
-          const overallProductKey = `${vehicleId ?? "unassigned"}||${key}`;
-          const existingOverallProduct = overallProductMap.get(overallProductKey);
-          if (existingOverallProduct) {
-            existingOverallProduct.quantity += quantity;
+          const productVehicleKey = `${vehicleId ?? "unassigned"}||${key}`;
+          const existingSummaryProduct = overallProductMap.get(productVehicleKey);
+          if (existingSummaryProduct) {
+            existingSummaryProduct.quantity += quantity;
           } else {
-            overallProductMap.set(overallProductKey, {
+            overallProductMap.set(productVehicleKey, {
               productId: item.product_id,
               sku: item.products.sku,
               name: packingListNameByProductId.get(item.product_id) ?? item.products.name,
               unit: item.sale_unit_label,
               quantity,
               vehicleId,
-              vehicleName: finalVehicleName,
+              vehicleName: resolvedVehicleName,
             });
           }
         }
       }
 
-      const stores = Array.from(groupMap.values())
+      const stores = Array.from(groupedStores.values())
         .sort((a, b) => {
-          const idxA = a.vehicleId ? vehicles.map((vehicle) => vehicle.id).indexOf(a.vehicleId) : 999;
-          const idxB = b.vehicleId ? vehicles.map((vehicle) => vehicle.id).indexOf(b.vehicleId) : 999;
-          const vehicleSort = (idxA === -1 ? 998 : idxA) - (idxB === -1 ? 998 : idxB);
+          const vehicleIds = vehicles.map((vehicle) => vehicle.id);
+          const indexA = a.vehicleId ? vehicleIds.indexOf(a.vehicleId) : 999;
+          const indexB = b.vehicleId ? vehicleIds.indexOf(b.vehicleId) : 999;
+          const vehicleSort = (indexA === -1 ? 998 : indexA) - (indexB === -1 ? 998 : indexB);
           if (vehicleSort !== 0) return vehicleSort;
           return a.customer.customer_code.localeCompare(b.customer.customer_code);
         })
@@ -277,27 +301,20 @@ async function PackingListPage({ searchParams }: Props) {
 
       for (const store of stores) {
         for (const key of store.consolidatedItems.keys()) {
-          if (!productMap.has(key)) {
-            const orderItem = dateOrders
-              .flatMap(
-                (order) =>
-                  (order.order_items as Array<{
-                    product_id: string;
-                    products: { sku: string; name: string };
-                    sale_unit_label: string;
-                  }>) ?? [],
-              )
-              .find((item) => `${item.products.sku.trim().toLowerCase()}||${item.sale_unit_label.trim().toLowerCase()}` === key);
+          if (productMap.has(key)) continue;
 
-            if (orderItem) {
-              productMap.set(key, {
-                productId: orderItem.product_id,
-                sku: orderItem.products.sku,
-                name: packingListNameByProductId.get(orderItem.product_id) ?? orderItem.products.name,
-                unit: orderItem.sale_unit_label,
-              });
-            }
-          }
+          const orderItem = dateOrders
+            .flatMap((order) => order.order_items ?? [])
+            .find((item) => `${item.products.sku.trim().toLowerCase()}||${item.sale_unit_label.trim().toLowerCase()}` === key);
+
+          if (!orderItem) continue;
+
+          productMap.set(key, {
+            productId: orderItem.product_id,
+            sku: orderItem.products.sku,
+            name: packingListNameByProductId.get(orderItem.product_id) ?? orderItem.products.name,
+            unit: orderItem.sale_unit_label,
+          });
         }
       }
 
@@ -310,9 +327,9 @@ async function PackingListPage({ searchParams }: Props) {
           unit: product.unit,
         }))
         .sort((a, b) => {
-          const idxA = a.productId ? productSortIndexMap.get(a.productId) ?? 999999 : 999999;
-          const idxB = b.productId ? productSortIndexMap.get(b.productId) ?? 999999 : 999999;
-          if (idxA !== idxB) return idxA - idxB;
+          const indexA = a.productId ? productSortIndexMap.get(a.productId) ?? 999999 : 999999;
+          const indexB = b.productId ? productSortIndexMap.get(b.productId) ?? 999999 : 999999;
+          if (indexA !== indexB) return indexA - indexB;
           return a.sku.localeCompare(b.sku) || a.name.localeCompare(b.name);
         });
 
@@ -322,7 +339,6 @@ async function PackingListPage({ searchParams }: Props) {
         const items = products
           .map((product) => ({
             key: product.key,
-            productId: product.productId,
             sku: product.sku,
             name: product.name,
             unit: product.unit,
@@ -330,9 +346,9 @@ async function PackingListPage({ searchParams }: Props) {
           }))
           .filter((item) => item.quantity > 0);
 
-        const storeKey = `${currentDate}:${store.id}:${store.vehicleId ?? "unassigned"}`;
-        overallStoreMap.set(storeKey, {
-          id: storeKey,
+        const summaryStoreKey = `${currentDate}:${store.id}:${store.vehicleId ?? "unassigned"}`;
+        overallStoreMap.set(summaryStoreKey, {
+          id: summaryStoreKey,
           customerCode: store.id,
           customerName: store.name,
           date: currentDate,
@@ -355,8 +371,18 @@ async function PackingListPage({ searchParams }: Props) {
         date: currentDate,
         dateLabel,
         organizationName: "T&Y Noodle",
-        stores,
-        products,
+        stores: stores.map((store) => ({
+          id: store.id,
+          name: store.name,
+          vehicleId: store.vehicleId,
+          vehicleName: store.vehicleName,
+        })),
+        products: products.map((product) => ({
+          key: product.key,
+          sku: product.sku,
+          name: product.name,
+          unit: product.unit,
+        })),
         qty,
         vehicles,
       };
@@ -364,12 +390,12 @@ async function PackingListPage({ searchParams }: Props) {
 
   const summaryProducts: PackingListSummaryProduct[] = Array.from(overallProductMap.values())
     .sort((a, b) => {
-      const idxA = productSortIndexMap.get(a.productId) ?? 999999;
-      const idxB = productSortIndexMap.get(b.productId) ?? 999999;
-      if (idxA !== idxB) return idxA - idxB;
+      const indexA = productSortIndexMap.get(a.productId) ?? 999999;
+      const indexB = productSortIndexMap.get(b.productId) ?? 999999;
+      if (indexA !== indexB) return indexA - indexB;
       return a.sku.localeCompare(b.sku) || a.name.localeCompare(b.name);
     })
-      .map((product) => ({
+    .map((product) => ({
       key: `${product.vehicleId ?? "unassigned"}||${product.sku.toLowerCase()}||${product.unit.toLowerCase()}`,
       sku: product.sku,
       name: product.name,
@@ -388,7 +414,9 @@ async function PackingListPage({ searchParams }: Props) {
 
   const totalStores = allPackingData.reduce((sum, packingData) => sum + packingData.stores.length, 0);
   const mainDateLabel =
-    allPackingData.length > 1 ? `${allPackingData[0].dateLabel} - ${allPackingData[allPackingData.length - 1].dateLabel}` : (allPackingData[0]?.dateLabel ?? "");
+    allPackingData.length > 1
+      ? `${allPackingData[0]?.dateLabel ?? ""} - ${allPackingData[allPackingData.length - 1]?.dateLabel ?? ""}`
+      : (allPackingData[0]?.dateLabel ?? "");
   const unassignedStores = allPackingData.flatMap((packingData) =>
     packingData.stores.filter((store: PackingListStore) => store.vehicleId === null).map((store: PackingListStore) => store.name),
   );
@@ -418,7 +446,9 @@ async function PackingListPage({ searchParams }: Props) {
           border: "1px solid rgba(15,23,42,0.06)",
         }}
       >
-        <span style={{ fontSize: "14px", fontWeight: 800, color: "#003366" }}>ใบจัดของ</span>
+        <span style={{ fontSize: "14px", fontWeight: 800, color: "#003366" }}>
+          {layout === "transposed" ? "ใบจัดของ (สลับตาราง)" : "ใบจัดของ"}
+        </span>
         <span className="hidden sm:inline" style={{ fontSize: "12px", color: "#64748b", fontWeight: 600 }}>
           {mainDateLabel} · {totalStores} ร้าน
         </span>
@@ -431,17 +461,17 @@ async function PackingListPage({ searchParams }: Props) {
           }}
         >
           <div className="hidden md:block">
-            <PackingListSummaryButton
-              dateLabel={mainDateLabel}
-              products={summaryProducts}
-              stores={summaryStores}
+            <PackingListSummaryButton dateLabel={mainDateLabel} products={summaryProducts} stores={summaryStores} />
+          </div>
+          <div className="hidden md:block">
+            <PrintPackingListButton
+              date={date}
+              endDate={endDate}
+              layout={layout === "standard" ? "transposed" : "standard"}
+              label={layout === "standard" ? "ใบจัดของ (สลับตาราง)" : "ใบจัดของ (ตารางเดิม)"}
             />
           </div>
-          <PackingListPrintButton
-            unassignedStores={unassignedStores}
-            dateLabel={mainDateLabel}
-            hidePrintOnMobile
-          />
+          <PackingListPrintButton unassignedStores={unassignedStores} dateLabel={mainDateLabel} hidePrintOnMobile />
         </div>
         <a
           href="/orders/incoming"
@@ -479,7 +509,7 @@ async function PackingListPage({ searchParams }: Props) {
       ) : (
         <div className="packing-print-container">
           {allPackingData.map((packingData) => (
-            <PackingListLayout key={packingData.date} data={packingData} />
+            <PackingListLayout key={`${layout}-${packingData.date}`} data={packingData} layout={layout} />
           ))}
         </div>
       )}

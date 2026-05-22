@@ -964,6 +964,112 @@ export async function upsertCustomerPriceFromOrderModalAction(input: {
   return { success: true };
 }
 
+export async function upsertCustomerPricesBatchFromOrderModalAction(input: {
+  customerId: string;
+  items: Array<{
+    productId: string;
+    productSaleUnitId: string | null;
+    salePrice: number;
+  }>;
+}): Promise<{ success: true } | { error: string }> {
+  const session = await requireAppRole("admin");
+  const admin = getSupabaseAdmin() as unknown as ActionsAdmin;
+
+  const customerId = String(input.customerId ?? "").trim();
+  if (!customerId) {
+    return { error: "ข้อมูลลูกค้าไม่ถูกต้อง" };
+  }
+
+  const items = input.items || [];
+  if (items.length === 0) {
+    return { success: true };
+  }
+
+  const resolvedItems = await Promise.all(
+    items.map(async (item) => {
+      const productId = String(item.productId ?? "").trim();
+      const salePrice = Number(item.salePrice);
+
+      if (!productId || !Number.isFinite(salePrice) || salePrice < 0) {
+        return null;
+      }
+
+      let productSaleUnitId = String(item.productSaleUnitId ?? "").trim();
+
+      if (!productSaleUnitId) {
+        const { data: defaultUnit, error: defaultUnitError } = await admin
+          .from("product_sale_units")
+          .select("id, product_id, unit_label, base_unit_quantity, is_default")
+          .eq("organization_id", session.organizationId)
+          .eq("product_id", productId)
+          .eq("is_active", true)
+          .eq("is_default", true)
+          .single();
+
+        if (defaultUnitError || !defaultUnit?.id) {
+          const { data: firstUnit } = await admin
+            .from("product_sale_units")
+            .select("id")
+            .eq("organization_id", session.organizationId)
+            .eq("product_id", productId)
+            .eq("is_active", true)
+            .limit(1)
+            .maybeSingle();
+
+          if (!firstUnit?.id) {
+            return null;
+          }
+          productSaleUnitId = firstUnit.id;
+        } else {
+          productSaleUnitId = defaultUnit.id;
+        }
+      }
+
+      const { data: saleUnit, error: saleUnitError } = await admin
+        .from("product_sale_units")
+        .select("id, product_id")
+        .eq("organization_id", session.organizationId)
+        .eq("id", productSaleUnitId)
+        .eq("is_active", true)
+        .single();
+
+      if (saleUnitError || !saleUnit) {
+        return null;
+      }
+
+      return {
+        customer_id: customerId,
+        organization_id: session.organizationId,
+        product_id: saleUnit.product_id,
+        product_sale_unit_id: saleUnit.id,
+        sale_price: salePrice,
+      };
+    })
+  );
+
+  const upsertRows = resolvedItems.filter((row): row is Exclude<typeof row, null> => row !== null);
+
+  if (upsertRows.length === 0) {
+    return { success: true };
+  }
+
+  const { error } = await admin.from("customer_product_prices").upsert(
+    upsertRows,
+    {
+      onConflict: "organization_id,customer_id,product_sale_unit_id",
+    },
+  );
+
+  if (error) {
+    return { error: error.message ?? "บันทึกราคาไม่สำเร็จ" };
+  }
+
+  revalidatePath("/orders/incoming");
+  revalidatePath("/settings/customers/pricing");
+  return { success: true };
+}
+
+
 
 export async function fetchCustomerLastOrderItemsAction(
   customerId: string,

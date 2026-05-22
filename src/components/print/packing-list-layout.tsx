@@ -27,70 +27,93 @@ export type PackingListData = {
   vehicles: PackingListVehicle[];
 };
 
+export type PackingListLayoutMode = "standard" | "transposed";
+
 const SHEET_W = "356mm";
 const SHEET_H = "216mm";
 const SCREEN_SHEET_W = "1346px";
 const SCREEN_SHEET_H = "816px";
-const PRODUCTS_PER_PAGE = 40;
-const STORES_PER_PAGE = 30;
+const STANDARD_PRODUCTS_PER_PAGE = 40;
+const STANDARD_STORES_PER_PAGE = 30;
+const TRANSPOSED_PRODUCTS_PER_PAGE = 9999;
+const TRANSPOSED_STORES_PER_PAGE = 35;
 
 const VEHICLE_COLORS = ["#123c73", "#0f766e", "#9a3412", "#5b21b6", "#1d4ed8"];
 const UNASSIGNED_COLOR = "#64748b";
 
 const COLUMN_COLOR_GROUPS = [
-  { headerA: "#c8def4", headerB: "#dcedfb", cellA: "#edf5fd", cellB: "#f7fbff" },
-  { headerA: "#d7ebd3", headerB: "#e8f5e3", cellA: "#eef8eb", cellB: "#f7fcf4" },
-  { headerA: "#f2e6bd", headerB: "#faf2d7", cellA: "#fbf5e6", cellB: "#fefbf1" },
-  { headerA: "#efc9cc", headerB: "#f7dcdf", cellA: "#faeaeb", cellB: "#fdf2f3" },
-  { headerA: "#dacbf0", headerB: "#ebe0fa", cellA: "#f0eafb", cellB: "#f8f4fe" },
-  { headerA: "#d0ece5", headerB: "#e2f6f1", cellA: "#ebf8f5", cellB: "#f5fcfa" },
-  { headerA: "#efdccd", headerB: "#faece0", cellA: "#fbf1ea", cellB: "#fdf7f2" },
-  { headerA: "#e4e4e4", headerB: "#f0f0f0", cellA: "#f5f5f5", cellB: "#fafafa" },
+  { header: "#c8def4", rowA: "#edf5fd", rowB: "#f7fbff" },
+  { header: "#d7ebd3", rowA: "#eef8eb", rowB: "#f7fcf4" },
+  { header: "#f2e6bd", rowA: "#fbf5e6", rowB: "#fefbf1" },
+  { header: "#efc9cc", rowA: "#faeaeb", rowB: "#fdf2f3" },
+  { header: "#dacbf0", rowA: "#f0eafb", rowB: "#f8f4fe" },
+  { header: "#d0ece5", rowA: "#ebf8f5", rowB: "#f5fcfa" },
+  { header: "#efdccd", rowA: "#fbf1ea", rowB: "#fdf7f2" },
+  { header: "#e4e4e4", rowA: "#f5f5f5", rowB: "#fafafa" },
 ] as const;
 
-function calcColWidth(count: number): string {
-  const raw = Math.floor(300 / count);
-  return `${Math.min(18, Math.max(6, raw))}mm`;
-}
+type BasePageDef = {
+  vehicleId: string | null;
+  vehicleName: string | null;
+  accentColor: string;
+  vehicleStoreCount: number;
+  globalPage: number;
+  totalPages: number;
+  storeChunk: number;
+  storeTotalChunks: number;
+  productChunk: number;
+  productTotalChunks: number;
+  dateLabel: string;
+  organizationName: string;
+};
 
-function chunk<T>(arr: T[], size: number): T[][] {
-  const out: T[][] = [];
-  for (let i = 0; i < arr.length; i += size) {
-    out.push(arr.slice(i, i + size));
+type StandardPageDef = BasePageDef & {
+  pageStores: PackingListStore[];
+  pageStoreIndices: number[];
+  vehicleStoreIndices: number[];
+  pageProducts: PackingListProduct[];
+  pageProductIndices: number[];
+};
+
+type TransposedPageDef = BasePageDef & {
+  pageStores: PackingListStore[];
+  pageStoreIndices: number[];
+  vehicleStoreIndices: number[];
+  pageProducts: PackingListProduct[];
+  pageProductIndices: number[];
+};
+
+function chunk<T>(items: T[], size: number): T[][] {
+  const groups: T[][] = [];
+  for (let i = 0; i < items.length; i += size) {
+    groups.push(items.slice(i, i + size));
   }
-  return out;
+  return groups;
 }
 
 function vehicleColor(vehicleId: string | null, vehicles: PackingListVehicle[]): string {
   if (!vehicleId) return UNASSIGNED_COLOR;
-  const idx = vehicles.findIndex((vehicle) => vehicle.id === vehicleId);
-  return VEHICLE_COLORS[idx % VEHICLE_COLORS.length] ?? VEHICLE_COLORS[0];
+  const index = vehicles.findIndex((vehicle) => vehicle.id === vehicleId);
+  return VEHICLE_COLORS[index % VEHICLE_COLORS.length] ?? VEHICLE_COLORS[0];
 }
 
 function getColumnPalette(columnIndex: number) {
-  const groupIndex = Math.floor(columnIndex / 5) % COLUMN_COLOR_GROUPS.length;
-  const palette = COLUMN_COLOR_GROUPS[groupIndex] ?? COLUMN_COLOR_GROUPS[0];
-  return {
-    header: palette.headerA,
-    cellA: palette.cellA,
-    cellB: palette.cellB,
-  };
+  return COLUMN_COLOR_GROUPS[Math.floor(columnIndex / 5) % COLUMN_COLOR_GROUPS.length] ?? COLUMN_COLOR_GROUPS[0];
 }
 
-const COMBINING_CHARS = /[\u0E31\u0E34-\u0E3A\u0E47-\u0E4E]/g;
+const THAI_COMBINING = /[\u0E31\u0E34-\u0E3A\u0E47-\u0E4E]/g;
 
-function getHorizontalLength(str: string): number {
-  return str.replace(COMBINING_CHARS, "").length;
+function horizontalLength(value: string) {
+  return value.replace(THAI_COMBINING, "").length;
 }
 
-function splitToThaiClusters(str: string): string[] {
+function splitThaiClusters(value: string): string[] {
   const clusters: string[] = [];
-  const chars = Array.from(str);
-  const combiningReg = /[\u0E31\u0E34-\u0E3A\u0E47-\u0E4E]/;
+  const chars = Array.from(value);
+  const combining = /[\u0E31\u0E34-\u0E3A\u0E47-\u0E4E]/;
 
-  for (let i = 0; i < chars.length; i += 1) {
-    const char = chars[i];
-    if (i > 0 && combiningReg.test(char)) {
+  for (const char of chars) {
+    if (clusters.length > 0 && combining.test(char)) {
       clusters[clusters.length - 1] += char;
     } else {
       clusters.push(char);
@@ -100,271 +123,297 @@ function splitToThaiClusters(str: string): string[] {
   return clusters;
 }
 
-function splitLongPart(part: string, maxLen = 5): string[] {
-  const clusters = splitToThaiClusters(part);
-  const chunks: string[] = [];
-  let currentChunk = "";
-  let currentLen = 0;
+function splitLongToken(token: string, maxLength: number) {
+  const clusters = splitThaiClusters(token);
+  const lines: string[] = [];
+  let current = "";
+  let currentLength = 0;
 
   for (const cluster of clusters) {
-    const clusterLen = getHorizontalLength(cluster);
-    if (currentLen + clusterLen > maxLen) {
-      if (currentChunk) chunks.push(currentChunk);
-      currentChunk = cluster;
-      currentLen = clusterLen;
-    } else {
-      currentChunk += cluster;
-      currentLen += clusterLen;
-    }
-  }
-
-  if (currentChunk) chunks.push(currentChunk);
-  return chunks;
-}
-
-function tokenizeThaiProductName(name: string): string[] {
-  const temp = name.trim().replace(/\s+/g, " ");
-  const keywords = [
-    "เส้นเล็ก",
-    "เส้นหมี่",
-    "วุ้นเส้น",
-    "บะหมี่",
-    "ก๋วยจั๊บ",
-    "ก๋วยเตี๋ยว",
-    "เกี๊ยมอี๋",
-    "มังกรคู่",
-    "มังกรแดง",
-    "มังกร",
-    "เกลียว",
-    "แผ่น",
-    "แบน",
-    "อบแห้ง",
-    "แห้ง",
-    "สด",
-    "ตรา",
-    "ใหญ่",
-    "กลาง",
-    "เล็ก",
-  ];
-
-  keywords.sort((a, b) => b.length - a.length);
-
-  let prepared = temp;
-  for (const keyword of keywords) {
-    const regex = new RegExp(`(?<!\\s)${keyword}(?!\\s)`, "g");
-    prepared = prepared.replace(regex, ` ${keyword} `);
-  }
-
-  prepared = prepared
-    .replace(/(\d+)/g, " $1 ")
-    .replace(/([\(\[\{].*?[\)\]\}])/g, " $1 ")
-    .replace(/\s+/g, " ")
-    .trim();
-
-  return prepared.split(" ").filter(Boolean);
-}
-
-function splitProductNameToLines(name: string): string[] {
-  const cleanName = name.trim();
-  if (!cleanName) return [];
-
-  let parts = tokenizeThaiProductName(cleanName);
-  const subParts: string[] = [];
-
-  for (const part of parts) {
-    if (getHorizontalLength(part) > 6) {
-      subParts.push(...splitLongPart(part, 5));
-    } else {
-      subParts.push(part);
-    }
-  }
-
-  parts = subParts;
-
-  while (parts.length > 4) {
-    let minIndex = 0;
-    let minLength = Number.POSITIVE_INFINITY;
-
-    for (let i = 0; i < parts.length - 1; i += 1) {
-      const combinedLen = getHorizontalLength(parts[i]) + getHorizontalLength(parts[i + 1]);
-      if (combinedLen < minLength) {
-        minLength = combinedLen;
-        minIndex = i;
-      }
+    const clusterLength = horizontalLength(cluster);
+    if (current && currentLength + clusterLength > maxLength) {
+      lines.push(current);
+      current = cluster;
+      currentLength = clusterLength;
+      continue;
     }
 
-    parts[minIndex] = `${parts[minIndex]}${parts[minIndex + 1]}`;
-    parts.splice(minIndex + 1, 1);
+    current += cluster;
+    currentLength += clusterLength;
   }
 
-  const finalParts = parts.slice(0, 4);
-  if (parts.length >= 4) {
-    const last = finalParts[3] ?? "";
-    const base = getHorizontalLength(last) > 5 ? splitLongPart(last, 4)[0] ?? last : last;
-    finalParts[3] = `${base}...`;
-  }
-
-  return finalParts;
+  if (current) lines.push(current);
+  return lines;
 }
 
-type PageDef = {
-  vehicleId: string | null;
-  vehicleName: string | null;
-  accentColor: string;
-  pageStores: PackingListStore[];
-  pageStoreIndices: number[];
-  pageProducts: PackingListProduct[];
-  pageProductIndices: number[];
-  vehicleStoreCount: number;
-  globalPage: number;
-  totalPages: number;
-  storeChunk: number;
-  productChunk: number;
-  productTotalChunks: number;
-  dateLabel: string;
-  orgName: string;
-};
+function splitProductNameToLines(name: string, maxLines = 4, maxTokenLength = 7): string[] {
+  const trimmed = name.trim();
+  if (!trimmed) return [];
 
-function buildPages(data: PackingListData): PageDef[] {
+  const rawTokens = trimmed.replace(/\s+/g, " ").split(" ").filter(Boolean);
+  const tokens = rawTokens.flatMap((token) => (horizontalLength(token) > maxTokenLength ? splitLongToken(token, maxTokenLength - 1) : [token]));
+  const lines: string[] = [];
+  let current = "";
+
+  for (const token of tokens) {
+    const next = current ? `${current} ${token}` : token;
+    if (horizontalLength(next) <= maxTokenLength) {
+      current = next;
+      continue;
+    }
+
+    if (current) lines.push(current);
+    current = token;
+  }
+
+  if (current) lines.push(current);
+
+  if (lines.length <= maxLines) return lines;
+
+  const limited = lines.slice(0, maxLines);
+  const last = limited[maxLines - 1] ?? "";
+  limited[maxLines - 1] = `${last.slice(0, Math.max(0, last.length - 1))}...`;
+  return limited;
+}
+
+function buildVehicleGroups(data: PackingListData) {
   type Group = { vehicleId: string | null; vehicleName: string | null; storeIndices: number[] };
-  const groupMap = new Map<string, Group>();
+  const groups = new Map<string, Group>();
 
   for (const vehicle of data.vehicles) {
-    groupMap.set(vehicle.id, { vehicleId: vehicle.id, vehicleName: vehicle.name, storeIndices: [] });
+    groups.set(vehicle.id, { vehicleId: vehicle.id, vehicleName: vehicle.name, storeIndices: [] });
   }
-  groupMap.set("__unassigned__", { vehicleId: null, vehicleName: null, storeIndices: [] });
+
+  groups.set("__unassigned__", { vehicleId: null, vehicleName: null, storeIndices: [] });
 
   data.stores.forEach((store, index) => {
     const key = store.vehicleId ?? "__unassigned__";
-    if (!groupMap.has(key)) {
-      groupMap.set(key, { vehicleId: store.vehicleId, vehicleName: store.vehicleName, storeIndices: [] });
+    if (!groups.has(key)) {
+      groups.set(key, { vehicleId: store.vehicleId, vehicleName: store.vehicleName, storeIndices: [] });
     }
-    groupMap.get(key)!.storeIndices.push(index);
+    groups.get(key)?.storeIndices.push(index);
   });
 
-  const groups = Array.from(groupMap.values()).filter((group) => group.storeIndices.length > 0);
-  const defs: Omit<PageDef, "globalPage" | "totalPages">[] = [];
+  return Array.from(groups.values()).filter((group) => group.storeIndices.length > 0);
+}
 
-  for (const group of groups) {
-    const { vehicleId, vehicleName, storeIndices } = group;
-    const accentColor = vehicleColor(vehicleId, data.vehicles);
+function buildStandardPages(data: PackingListData): StandardPageDef[] {
+  const rawDefs: Omit<StandardPageDef, "globalPage" | "totalPages">[] = [];
+
+  for (const group of buildVehicleGroups(data)) {
     const activeProductIndices = data.products
-      .map((_, index) => index)
-      .filter((productIndex) => storeIndices.some((storeIndex) => data.qty[productIndex][storeIndex] > 0));
+      .map((_, productIndex) => productIndex)
+      .filter((productIndex) => group.storeIndices.some((storeIndex) => data.qty[productIndex]?.[storeIndex] > 0));
 
-    const storeChunks = chunk(storeIndices, STORES_PER_PAGE);
-    const productChunks = chunk(activeProductIndices, PRODUCTS_PER_PAGE);
+    const storeChunks = chunk(group.storeIndices, STANDARD_STORES_PER_PAGE);
+    const productChunks = chunk(activeProductIndices, STANDARD_PRODUCTS_PER_PAGE);
 
     for (let storeChunkIndex = 0; storeChunkIndex < storeChunks.length; storeChunkIndex += 1) {
       for (let productChunkIndex = 0; productChunkIndex < productChunks.length; productChunkIndex += 1) {
         const pageStoreIndices = storeChunks[storeChunkIndex];
         const pageProductIndices = productChunks[productChunkIndex];
 
-        defs.push({
-          vehicleId,
-          vehicleName,
-          accentColor,
+        rawDefs.push({
+          vehicleId: group.vehicleId,
+          vehicleName: group.vehicleName,
+          accentColor: vehicleColor(group.vehicleId, data.vehicles),
           pageStores: pageStoreIndices.map((storeIndex) => data.stores[storeIndex]),
           pageStoreIndices,
+          vehicleStoreIndices: group.storeIndices,
           pageProducts: pageProductIndices.map((productIndex) => data.products[productIndex]),
           pageProductIndices,
-          vehicleStoreCount: storeIndices.length,
+          vehicleStoreCount: group.storeIndices.length,
           storeChunk: storeChunkIndex + 1,
+          storeTotalChunks: storeChunks.length,
           productChunk: productChunkIndex + 1,
           productTotalChunks: productChunks.length,
           dateLabel: data.dateLabel,
-          orgName: data.organizationName,
+          organizationName: data.organizationName,
         });
       }
     }
   }
 
-  const totalPages = defs.length;
-  return defs.map((def, index) => ({ ...def, globalPage: index + 1, totalPages }));
+  return rawDefs.map((page, index, pages) => ({
+    ...page,
+    globalPage: index + 1,
+    totalPages: pages.length,
+  }));
 }
 
-function PackingListPage({ p, data }: { p: PageDef; data: PackingListData }) {
-  const colW = calcColWidth(Math.max(p.pageProducts.length, 1));
-  const pageColTotals = p.pageProductIndices.map((productIndex) =>
-    p.pageStoreIndices.reduce((sum, storeIndex) => sum + data.qty[productIndex][storeIndex], 0),
+function buildTransposedPages(data: PackingListData): TransposedPageDef[] {
+  const rawDefs: Omit<TransposedPageDef, "globalPage" | "totalPages">[] = [];
+
+  for (const group of buildVehicleGroups(data)) {
+    const activeProductIndices = data.products
+      .map((_, productIndex) => productIndex)
+      .filter((productIndex) => group.storeIndices.some((storeIndex) => data.qty[productIndex]?.[storeIndex] > 0));
+
+    const storeChunks = chunk(group.storeIndices, TRANSPOSED_STORES_PER_PAGE);
+    const productChunks = chunk(activeProductIndices, TRANSPOSED_PRODUCTS_PER_PAGE);
+
+    for (let storeChunkIndex = 0; storeChunkIndex < storeChunks.length; storeChunkIndex += 1) {
+      for (let productChunkIndex = 0; productChunkIndex < productChunks.length; productChunkIndex += 1) {
+        const pageStoreIndices = storeChunks[storeChunkIndex];
+        const pageProductIndices = productChunks[productChunkIndex];
+
+        rawDefs.push({
+          vehicleId: group.vehicleId,
+          vehicleName: group.vehicleName,
+          accentColor: vehicleColor(group.vehicleId, data.vehicles),
+          pageStores: pageStoreIndices.map((storeIndex) => data.stores[storeIndex]),
+          pageStoreIndices,
+          vehicleStoreIndices: group.storeIndices,
+          pageProducts: pageProductIndices.map((productIndex) => data.products[productIndex]),
+          pageProductIndices,
+          vehicleStoreCount: group.storeIndices.length,
+          storeChunk: storeChunkIndex + 1,
+          storeTotalChunks: storeChunks.length,
+          productChunk: productChunkIndex + 1,
+          productTotalChunks: productChunks.length,
+          dateLabel: data.dateLabel,
+          organizationName: data.organizationName,
+        });
+      }
+    }
+  }
+
+  return rawDefs.map((page, index, pages) => ({
+    ...page,
+    globalPage: index + 1,
+    totalPages: pages.length,
+  }));
+}
+
+function PackingHeader({
+  accentColor,
+  organizationName,
+  dateLabel,
+  vehicleName,
+  storeCount,
+  globalPage,
+  totalPages,
+  productChunk,
+  productTotalChunks,
+}: {
+  accentColor: string;
+  organizationName: string;
+  dateLabel: string;
+  vehicleName: string | null;
+  storeCount: number;
+  globalPage: number;
+  totalPages: number;
+  productChunk: number;
+  productTotalChunks: number;
+}) {
+  return (
+    <header className="packing-header" style={{ borderColor: accentColor }}>
+      <div className="packing-header__title-block">
+        <div className="packing-header__org">{organizationName}</div>
+        <h1 className="packing-header__title">ตารางเช็กออเดอร์ลูกค้า</h1>
+        <div className="packing-header__subtitle">
+          <span>{vehicleName ?? "ยังไม่ได้กำหนดรถจัดส่ง"}</span>
+          <span>วันที่ {dateLabel}</span>
+        </div>
+      </div>
+
+      <div className="packing-header__meta">
+        <div className="packing-header__meta-cell">
+          <span>ร้านค้า</span>
+          <strong>{storeCount.toLocaleString("th-TH")}</strong>
+        </div>
+        <div className="packing-header__meta-cell">
+          <span>หน้า</span>
+          <strong>
+            {globalPage}/{totalPages}
+          </strong>
+        </div>
+        <div className="packing-header__meta-cell">
+          <span>กลุ่มสินค้า</span>
+          <strong>
+            {productChunk}/{productTotalChunks}
+          </strong>
+        </div>
+      </div>
+    </header>
   );
+}
+
+function calcDataColWidth(count: number, availableMm: number) {
+  const raw = Math.floor(availableMm / Math.max(count, 1));
+  return `${Math.max(6, raw)}mm`;
+}
+
+function StandardPackingListPage({ page, data }: { page: StandardPageDef; data: PackingListData }) {
+  const columnWidth = calcDataColWidth(Math.max(page.pageProducts.length, 1), 319);
+  const isLastStorePage = page.storeChunk === page.storeTotalChunks;
+  const productTotals = isLastStorePage
+    ? page.pageProductIndices.map((productIndex) =>
+        page.vehicleStoreIndices.reduce((sum, storeIndex) => sum + (data.qty[productIndex]?.[storeIndex] ?? 0), 0),
+      )
+    : [];
 
   return (
     <section className="packing-sheet">
       <div className="packing-sheet__inner">
-        <header className="packing-header" style={{ borderColor: p.accentColor }}>
-          <div className="packing-header__title-block">
-            <div className="packing-header__org">{p.orgName}</div>
-            <h1 className="packing-header__title">ตารางเช็คออเดอร์ลูกค้า</h1>
-            <div className="packing-header__subtitle">
-              <span>{p.vehicleName ?? "ยังไม่ได้กำหนดรถจัดส่ง"}</span>
-              <span>วันที่ {p.dateLabel}</span>
-            </div>
-          </div>
-
-          <div className="packing-header__meta">
-            <div className="packing-header__meta-cell">
-              <span>ร้านค้า</span>
-              <strong>{p.vehicleStoreCount.toLocaleString("th-TH")}</strong>
-            </div>
-            <div className="packing-header__meta-cell">
-              <span>หน้า</span>
-              <strong>
-                {p.globalPage}/{p.totalPages}
-              </strong>
-            </div>
-            <div className="packing-header__meta-cell">
-              <span>กลุ่มสินค้า</span>
-              <strong>
-                {p.productChunk}/{p.productTotalChunks}
-              </strong>
-            </div>
-          </div>
-        </header>
+        <PackingHeader
+          accentColor={page.accentColor}
+          organizationName={page.organizationName}
+          dateLabel={page.dateLabel}
+          vehicleName={page.vehicleName}
+          storeCount={page.vehicleStoreCount}
+          globalPage={page.globalPage}
+          totalPages={page.totalPages}
+          productChunk={page.productChunk}
+          productTotalChunks={page.productTotalChunks}
+        />
 
         <div className="packing-table-wrap">
           <table className="packing-table">
             <thead>
               <tr>
                 <th className="packing-col packing-col--store">ข้อมูลลูกค้า / ร้านค้า</th>
-                {p.pageProducts.map((product, columnIndex) => {
-                  const palette = getColumnPalette(columnIndex);
-                  return (
-                    <th
-                      key={product.key}
-                      className="packing-col packing-col--product"
-                      style={{ width: colW, backgroundColor: palette.header }}
-                    >
-                      <div className="packing-product-header">
-                        <div className="packing-product-header__name">
-                          {splitProductNameToLines(product.name).map((line, index) => (
-                            <span key={`${product.key}-${index}`}>{line}</span>
-                          ))}
+                {(() => {
+                  const colCount = Math.max(page.pageProducts.length, 1);
+                  const maxTokenLength = colCount > 30 ? 4 : colCount > 20 ? 5 : 7;
+                  return page.pageProducts.map((product, columnIndex) => {
+                    const palette = getColumnPalette(columnIndex);
+                    return (
+                      <th
+                        key={product.key}
+                        className="packing-col packing-col--product"
+                        style={{ width: columnWidth, backgroundColor: palette.header }}
+                      >
+                        <div className="packing-product-header">
+                          <div className="packing-product-header__name">
+                            {splitProductNameToLines(product.name, 4, maxTokenLength).map((line, index) => (
+                              <span key={`${product.key}-${index}`}>{line}</span>
+                            ))}
+                          </div>
+                          <span className="packing-product-header__unit">{product.unit}</span>
                         </div>
-                        <span className="packing-product-header__unit">{product.unit}</span>
-                      </div>
-                    </th>
-                  );
-                })}
+                      </th>
+                    );
+                  });
+                })()}
               </tr>
             </thead>
 
             <tbody>
-              {p.pageStores.map((store, rowIndex) => {
-                const storeIndex = p.pageStoreIndices[rowIndex];
-                const cells = p.pageProductIndices.map((productIndex) => data.qty[productIndex][storeIndex]);
+              {page.pageStores.map((store, rowIndex) => {
+                const storeIndex = page.pageStoreIndices[rowIndex];
 
                 return (
                   <tr key={store.id} className="packing-table__row">
                     <td className="packing-cell packing-cell--store">{store.name}</td>
-                    {cells.map((value, cellIndex) => {
+                    {page.pageProductIndices.map((productIndex, cellIndex) => {
+                      const value = data.qty[productIndex]?.[storeIndex] ?? 0;
                       const palette = getColumnPalette(cellIndex);
-                      const rowShade = rowIndex % 2 === 0 ? palette.cellA : palette.cellB;
                       return (
                         <td
-                          key={`${store.id}-${cellIndex}`}
+                          key={`${store.id}-${productIndex}`}
                           className={value > 0 ? "packing-cell packing-cell--qty" : "packing-cell packing-cell--empty"}
-                          style={{ backgroundColor: rowShade }}
+                          style={{ backgroundColor: rowIndex % 2 === 0 ? palette.rowA : palette.rowB }}
                         >
                           {value > 0 ? value.toLocaleString("th-TH") : ""}
                         </td>
@@ -374,14 +423,110 @@ function PackingListPage({ p, data }: { p: PageDef; data: PackingListData }) {
                 );
               })}
 
+              {isLastStorePage && (
+                <tr className="packing-table__total-row">
+                  <td className="packing-cell packing-cell--total-label">รวมยอด</td>
+                  {productTotals.map((total, index) => (
+                    <td key={`standard-total-${index}`} className="packing-cell packing-cell--total">
+                      {total > 0 ? total.toLocaleString("th-TH") : ""}
+                    </td>
+                  ))}
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        <footer className="packing-footer">
+          <span>ร้านค้าในหน้านี้ {page.pageStores.length.toLocaleString("th-TH")} ร้าน</span>
+          <span>
+            ตารางเช็กออเดอร์ลูกค้า · กลุ่มร้าน {page.storeChunk} · กลุ่มสินค้า {page.productChunk}
+          </span>
+        </footer>
+      </div>
+    </section>
+  );
+}
+
+function TransposedPackingListPage({ page, data }: { page: TransposedPageDef; data: PackingListData }) {
+  const storeColumnWidth = calcDataColWidth(Math.max(page.pageStores.length, 1), 292);
+  const productTotals = page.pageProductIndices.map((productIndex) =>
+    page.pageStoreIndices.reduce((sum, storeIndex) => sum + (data.qty[productIndex]?.[storeIndex] ?? 0), 0),
+  );
+  const storeTotals = page.pageStoreIndices.map((storeIndex) =>
+    page.pageProductIndices.reduce((sum, productIndex) => sum + (data.qty[productIndex]?.[storeIndex] ?? 0), 0),
+  );
+
+  return (
+    <section className="packing-sheet">
+      <div className="packing-sheet__inner">
+        <PackingHeader
+          accentColor={page.accentColor}
+          organizationName={page.organizationName}
+          dateLabel={page.dateLabel}
+          vehicleName={page.vehicleName}
+          storeCount={page.vehicleStoreCount}
+          globalPage={page.globalPage}
+          totalPages={page.totalPages}
+          productChunk={page.productChunk}
+          productTotalChunks={page.productTotalChunks}
+        />
+
+        <div className="packing-table-wrap">
+          <table className="packing-table packing-table--transposed">
+            <thead>
+              <tr>
+                <th className="packing-col packing-col--transpose-product">สินค้า / หน่วย</th>
+                {page.pageStores.map((store, columnIndex) => {
+                  const palette = getColumnPalette(columnIndex);
+                  return (
+                    <th
+                      key={store.id}
+                      className="packing-col packing-col--transpose-store"
+                      style={{ width: storeColumnWidth, backgroundColor: palette.header }}
+                    >
+                      <div className="packing-transpose-header">
+                        <span className="packing-transpose-header__name">{store.name}</span>
+                      </div>
+                    </th>
+                  );
+                })}
+                <th className="packing-col packing-col--transpose-total">รวมยอด</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {page.pageProducts.map((product, rowIndex) => (
+                <tr key={product.key} className="packing-table__row">
+                  <td className="packing-cell packing-cell--transpose-product">
+                    <div className="packing-transpose-product">
+                      <span className="packing-transpose-product__name">{product.name}</span>
+                      <span className="packing-transpose-product__unit">{product.unit}</span>
+                    </div>
+                  </td>
+                  {page.pageStoreIndices.map((storeIndex, cellIndex) => {
+                    const value = data.qty[page.pageProductIndices[rowIndex]]?.[storeIndex] ?? 0;
+                    const palette = getColumnPalette(cellIndex);
+                    return (
+                      <td
+                        key={`${product.key}-${storeIndex}`}
+                        className={value > 0 ? "packing-cell packing-cell--qty" : "packing-cell packing-cell--empty"}
+                        style={{ backgroundColor: rowIndex % 2 === 0 ? palette.rowA : palette.rowB }}
+                      >
+                        {value > 0 ? value.toLocaleString("th-TH") : ""}
+                      </td>
+                    );
+                  })}
+                  <td className="packing-cell packing-cell--transpose-total-value">
+                    {productTotals[rowIndex] > 0 ? productTotals[rowIndex].toLocaleString("th-TH") : ""}
+                  </td>
+                </tr>
+              ))}
+
               <tr className="packing-table__total-row">
                 <td className="packing-cell packing-cell--total-label">รวมยอด</td>
-                {pageColTotals.map((total, index) => (
-                  <td
-                    key={`total-${index}`}
-                    className="packing-cell packing-cell--total"
-                    style={{ backgroundColor: "#ffd400" }}
-                  >
+                {storeTotals.map((total, index) => (
+                  <td key={`transposed-total-${index}`} className="packing-cell packing-cell--total">
                     {total > 0 ? total.toLocaleString("th-TH") : ""}
                   </td>
                 ))}
@@ -391,364 +536,489 @@ function PackingListPage({ p, data }: { p: PageDef; data: PackingListData }) {
         </div>
 
         <footer className="packing-footer">
-          <span>ร้านค้าในหน้านี้ {p.pageStores.length.toLocaleString("th-TH")} ร้าน</span>
-          <span>ตารางเช็คออเดอร์ลูกค้า - กลุ่ม{p.storeChunk}_แผ่น{p.productChunk}</span>
+          <span>ร้านค้าในหน้านี้ {page.pageStores.length.toLocaleString("th-TH")} ร้าน</span>
+          <span>
+            ตารางเช็กออเดอร์ลูกค้า · กลุ่มร้าน {page.storeChunk} · กลุ่มสินค้า {page.productChunk}
+          </span>
         </footer>
       </div>
     </section>
   );
 }
 
-export function PackingListLayout({ data }: { data: PackingListData }) {
-  const pages = buildPages(data);
-
+function PackingListStyles() {
   return (
-    <>
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;700;800&display=swap');
+    <style>{`
+      @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;700;800&display=swap');
 
-        @page { size: 356mm 216mm; margin: 0; }
+      @page { size: 356mm 216mm; margin: 0; }
 
-        @media print {
-          html, body {
-            width: 356mm !important;
-            margin: 0 !important;
-            padding: 0 !important;
-            overflow: visible !important;
-            background: #ffffff !important;
-          }
-
-          body {
-            print-color-adjust: exact;
-            -webkit-print-color-adjust: exact;
-          }
-
-          main,
-          div[class*="pull-to-refresh"],
-          div[class*="RootAppLayoutShell"] {
-            margin: 0 !important;
-            padding: 0 !important;
-            display: block !important;
-            width: auto !important;
-            background: transparent !important;
-            box-shadow: none !important;
-          }
-
-          .no-print {
-            display: none !important;
-          }
-
-          .packing-print-container {
-            margin: 0 !important;
-            padding: 0 !important;
-          }
-
-          .packing-sheet {
-            width: 356mm !important;
-            height: 216mm !important;
-            margin: 0 !important;
-            border: none !important;
-            box-shadow: none !important;
-            page-break-after: always;
-            break-after: page;
-          }
-
-          .packing-sheet:last-child {
-            page-break-after: auto;
-            break-after: auto;
-          }
+      @media print {
+        html, body {
+          width: 356mm !important;
+          margin: 0 !important;
+          padding: 0 !important;
+          overflow: visible !important;
+          background: #ffffff !important;
         }
 
-        @media screen {
-          body {
-            background: #e2e8f0 !important;
-          }
-
-          .packing-print-container {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 20px;
-            padding: 78px 12px 36px;
-            overflow-x: hidden;
-          }
-
-          .packing-sheet-shell {
-            width: ${SCREEN_SHEET_W};
-            height: ${SCREEN_SHEET_H};
-            display: flex;
-            justify-content: center;
-            align-items: flex-start;
-          }
-
-          .packing-sheet {
-            width: ${SCREEN_SHEET_W};
-            height: ${SCREEN_SHEET_H};
-            box-shadow: 0 16px 34px rgba(15, 23, 42, 0.16);
-          }
+        body {
+          print-color-adjust: exact;
+          -webkit-print-color-adjust: exact;
         }
 
-        @media screen and (max-width: 767px) {
-          .packing-print-container {
-            gap: 10px;
-            width: 100vw;
-            padding: 66px 0 20px;
-          }
+        main,
+        div[class*="pull-to-refresh"],
+        div[class*="RootAppLayoutShell"] {
+          width: auto !important;
+          margin: 0 !important;
+          padding: 0 !important;
+          display: block !important;
+          background: transparent !important;
+          box-shadow: none !important;
+        }
 
-          .packing-sheet-shell {
-            --packing-mobile-available: calc(100vw - 8px);
-            --packing-mobile-scale: min(1, calc(var(--packing-mobile-available) / 1346px));
-            width: var(--packing-mobile-available);
-            height: calc(816px * var(--packing-mobile-scale));
-            max-width: 100vw;
-            overflow: hidden;
-          }
+        .no-print {
+          display: none !important;
+        }
 
-          .packing-sheet {
-            width: 1346px !important;
-            height: 816px !important;
-            max-width: none !important;
-            flex: none;
-            transform: scale(var(--packing-mobile-scale));
-            transform-origin: top center;
-            box-shadow: 0 8px 20px rgba(15, 23, 42, 0.14);
-          }
+        .packing-print-container {
+          margin: 0 !important;
+          padding: 0 !important;
         }
 
         .packing-sheet {
-          width: ${SHEET_W};
-          height: ${SHEET_H};
-          overflow: hidden;
-          background: #ffffff;
-          border: 1px solid #cbd5e1;
-          font-family: "Sarabun", sans-serif;
-          color: #0f172a;
-          box-sizing: border-box;
+          width: 356mm !important;
+          height: 216mm !important;
+          margin: 0 !important;
+          border: none !important;
+          box-shadow: none !important;
+          page-break-after: always;
+          break-after: page;
         }
 
-        .packing-sheet__inner {
+        .packing-sheet:last-child {
+          page-break-after: auto;
+          break-after: auto;
+        }
+      }
+
+      @media screen {
+        body {
+          background: #e2e8f0 !important;
+        }
+
+        .packing-print-container {
           display: flex;
           flex-direction: column;
-          height: 100%;
-          padding: 5mm 5mm 4mm;
-          gap: 3mm;
-          box-sizing: border-box;
+          align-items: center;
+          gap: 20px;
+          padding: 78px 12px 36px;
+          overflow-x: hidden;
         }
 
-        .packing-header {
+        .packing-sheet-shell {
+          width: ${SCREEN_SHEET_W};
+          height: ${SCREEN_SHEET_H};
           display: flex;
-          justify-content: space-between;
+          justify-content: center;
           align-items: flex-start;
-          gap: 8mm;
-          padding-bottom: 2.2mm;
-          border-bottom: 1.4px solid #123c73;
         }
 
-        .packing-header__title-block {
-          min-width: 0;
-          flex: 1;
+        .packing-sheet {
+          width: ${SCREEN_SHEET_W};
+          height: ${SCREEN_SHEET_H};
+          box-shadow: 0 16px 34px rgba(15, 23, 42, 0.16);
+        }
+      }
+
+      @media screen and (max-width: 767px) {
+        .packing-print-container {
+          gap: 10px;
+          width: 100vw;
+          padding: 66px 0 20px;
         }
 
-        .packing-header__org {
-          font-size: 8.2pt;
-          font-weight: 800;
-          letter-spacing: 0.04em;
-          text-transform: uppercase;
-          color: #123c73;
-        }
-
-        .packing-header__title {
-          margin: 0.8mm 0 0.5mm;
-          font-size: 15pt;
-          line-height: 1;
-          font-weight: 800;
-          color: #0f172a;
-        }
-
-        .packing-header__subtitle {
-          display: flex;
-          gap: 6mm;
-          flex-wrap: wrap;
-          font-size: 8.2pt;
-          font-weight: 600;
-          color: #475569;
-        }
-
-        .packing-header__meta {
-          display: grid;
-          grid-template-columns: repeat(3, minmax(18mm, auto));
-          gap: 1px;
-          border: 1px solid #cbd5e1;
-          background: #cbd5e1;
-          flex-shrink: 0;
-        }
-
-        .packing-header__meta-cell {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          gap: 0.4mm;
-          min-height: 12mm;
-          padding: 1.4mm 2mm;
-          background: #ffffff;
-        }
-
-        .packing-header__meta-cell span {
-          font-size: 7pt;
-          font-weight: 700;
-          color: #64748b;
-        }
-
-        .packing-header__meta-cell strong {
-          font-size: 9pt;
-          font-weight: 800;
-          color: #0f172a;
-        }
-
-        .packing-table-wrap {
-          flex: 1;
-          min-height: 0;
-          border: 1.4px solid #111827;
-        }
-
-        .packing-table {
-          width: 100%;
-          height: 100%;
-          border-collapse: collapse;
-          table-layout: fixed;
-        }
-
-        .packing-col,
-        .packing-cell {
-          border-right: 1px solid #111827;
-          border-bottom: 1px solid #111827;
-          box-sizing: border-box;
-        }
-
-        .packing-col:last-child,
-        .packing-cell:last-child {
-          border-right: none;
-        }
-
-        .packing-col {
-          padding: 0;
-          text-align: center;
-          vertical-align: middle;
-        }
-
-        .packing-col--store {
-          width: 38mm;
-          min-width: 38mm;
-          padding: 2mm 2.2mm;
-          background: #ffffff;
-          color: #0f172a;
-          font-size: 8.2pt;
-          font-weight: 800;
-          text-align: left;
-        }
-
-        .packing-product-header {
-          display: flex;
-          flex-direction: column;
-          justify-content: space-between;
-          gap: 0.5mm;
-          min-height: 17mm;
-          padding: 1mm 0.7mm;
-        }
-
-        .packing-product-header__name {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          gap: 0.2mm;
-          flex: 1;
-          font-size: 6.2pt;
-          line-height: 0.94;
-          font-weight: 700;
-          color: #0f172a;
-        }
-
-        .packing-product-header__name span {
-          display: block;
-          max-width: 100%;
+        .packing-sheet-shell {
+          --packing-mobile-available: calc(100vw - 8px);
+          --packing-mobile-scale: min(1, calc(var(--packing-mobile-available) / 1346px));
+          width: var(--packing-mobile-available);
+          height: calc(816px * var(--packing-mobile-scale));
+          max-width: 100vw;
           overflow: hidden;
-          white-space: nowrap;
-          text-overflow: ellipsis;
         }
 
-        .packing-product-header__unit {
-          font-size: 6pt;
-          font-weight: 700;
-          color: #475569;
+        .packing-sheet {
+          width: 1346px !important;
+          height: 816px !important;
+          max-width: none !important;
+          flex: none;
+          transform: scale(var(--packing-mobile-scale));
+          transform-origin: top center;
+          box-shadow: 0 8px 20px rgba(15, 23, 42, 0.14);
         }
+      }
 
-        .packing-table__row {
-          background: #ffffff;
-        }
+      .packing-sheet {
+        width: ${SHEET_W};
+        height: ${SHEET_H};
+        overflow: hidden;
+        background: #ffffff;
+        border: 1px solid #cbd5e1;
+        font-family: "Sarabun", sans-serif;
+        color: #0f172a;
+        box-sizing: border-box;
+      }
 
-        .packing-cell {
-          padding: 0;
-          text-align: center;
-          vertical-align: middle;
-        }
+      .packing-sheet__inner {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        padding: 4mm 4.5mm 3mm;
+        gap: 2mm;
+        box-sizing: border-box;
+      }
 
-        .packing-cell--store {
-          padding: 0 2mm;
-          text-align: left;
-          font-size: 8.8pt;
-          font-weight: 700;
-          line-height: 1.05;
-          color: #0f172a;
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
-        }
+      .packing-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 6mm;
+        padding-bottom: 1.2mm;
+        border-bottom: 1.3px solid #123c73;
+      }
 
-        .packing-cell--qty,
-        .packing-cell--total {
-          font-size: 11pt;
-          font-weight: 800;
-          color: #0f172a;
-        }
+      .packing-header__title-block {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5mm;
+        min-width: 0;
+        flex: 1;
+      }
 
-        .packing-cell--empty {
-          font-size: 8pt;
-          font-weight: 600;
-          color: transparent;
-        }
+      .packing-header__org {
+        font-size: 7.2pt;
+        font-weight: 800;
+        line-height: 1;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: #123c73;
+        white-space: nowrap;
+      }
 
-        .packing-table__total-row .packing-cell {
-          border-top: 1.2px solid #111827;
-        }
+      .packing-header__title {
+        margin: 0;
+        font-size: 12.8pt;
+        line-height: 1;
+        font-weight: 800;
+        color: #0f172a;
+        white-space: nowrap;
+      }
 
-        .packing-cell--total-label {
-          padding: 0 2mm;
-          text-align: left;
-          font-size: 8.8pt;
-          font-weight: 800;
-          color: #111827;
-          background: #ffd400;
-        }
+      .packing-header__subtitle {
+        display: flex;
+        gap: 5mm;
+        align-items: center;
+        font-size: 7.5pt;
+        font-weight: 700;
+        line-height: 1;
+        color: #475569;
+        white-space: nowrap;
+      }
 
-        .packing-footer {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          gap: 6mm;
-          font-size: 7.2pt;
-          font-weight: 600;
-          color: #64748b;
-        }
-      `}</style>
+      .packing-header__meta {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(19mm, auto));
+        gap: 1px;
+        border: 1px solid #cbd5e1;
+        background: #cbd5e1;
+        flex-shrink: 0;
+      }
 
+      .packing-header__meta-cell {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 1.2mm;
+        min-height: 8mm;
+        padding: 1mm 1.6mm;
+        background: #ffffff;
+        white-space: nowrap;
+      }
+
+      .packing-header__meta-cell span {
+        font-size: 6.8pt;
+        font-weight: 700;
+        color: #64748b;
+      }
+
+      .packing-header__meta-cell strong {
+        font-size: 8.5pt;
+        font-weight: 800;
+        color: #0f172a;
+      }
+
+      .packing-table-wrap {
+        flex: 1;
+        min-height: 0;
+        border: 1.35px solid #111827;
+      }
+
+      .packing-table {
+        width: 100%;
+        height: 100%;
+        border-collapse: collapse;
+        table-layout: fixed;
+      }
+
+      .packing-col,
+      .packing-cell {
+        border-right: 1px solid #111827;
+        border-bottom: 1px solid #111827;
+        box-sizing: border-box;
+      }
+
+      .packing-col:last-child,
+      .packing-cell:last-child {
+        border-right: none;
+      }
+
+      .packing-col {
+        padding: 0;
+        text-align: center;
+        vertical-align: middle;
+      }
+
+      .packing-col--store {
+        width: 38mm;
+        min-width: 38mm;
+        padding: 1.2mm 1.5mm;
+        background: #ffffff;
+        color: #0f172a;
+        font-size: 8.2pt;
+        font-weight: 800;
+        text-align: left;
+        white-space: nowrap;
+      }
+
+      .packing-col--transpose-product {
+        width: 35mm;
+        min-width: 35mm;
+        padding: 1.2mm 1.5mm;
+        background: #ffffff;
+        color: #0f172a;
+        font-size: 7.2pt;
+        font-weight: 800;
+        text-align: left;
+        white-space: nowrap;
+      }
+
+      .packing-col--transpose-total {
+        width: 14mm;
+        min-width: 14mm;
+        padding: 1.2mm 0.8mm;
+        background: #ffd400;
+        color: #0f172a;
+        font-size: 7.2pt;
+        font-weight: 800;
+        text-align: center;
+        white-space: nowrap;
+      }
+
+      .packing-product-header {
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        gap: 0.2mm;
+        min-height: 14mm;
+        padding: 0.8mm 0.55mm;
+        width: 100%;
+        min-width: 0;
+        overflow: hidden;
+      }
+
+      .packing-product-header__name {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 0.4mm;
+        flex: 1;
+        font-size: 5.7pt;
+        line-height: 1.05;
+        font-weight: 700;
+        color: #0f172a;
+        width: 100%;
+        min-width: 0;
+        overflow: hidden;
+      }
+
+      .packing-product-header__name span {
+        display: block;
+        max-width: 100%;
+        overflow: hidden;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+      }
+
+      .packing-product-header__unit {
+        font-size: 5.6pt;
+        font-weight: 700;
+        line-height: 1;
+        color: #475569;
+      }
+
+      .packing-transpose-header {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 14mm;
+        padding: 0.8mm 0.55mm;
+      }
+
+      .packing-transpose-header__name {
+        display: -webkit-box;
+        max-width: 100%;
+        overflow: hidden;
+        white-space: normal;
+        word-break: break-word;
+        text-overflow: ellipsis;
+        font-size: 5pt;
+        line-height: 0.86;
+        font-weight: 700;
+        color: #0f172a;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 4;
+      }
+
+      .packing-cell {
+        padding: 0;
+        text-align: center;
+        vertical-align: middle;
+      }
+
+      .packing-cell--store {
+        padding: 0 1.6mm;
+        text-align: left;
+        font-size: 8.8pt;
+        font-weight: 700;
+        line-height: 1.05;
+        color: #0f172a;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .packing-cell--transpose-product {
+        padding: 0 1.4mm;
+        text-align: left;
+        background: #ffffff;
+      }
+
+      .packing-transpose-product {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1mm;
+      }
+
+      .packing-transpose-product__name {
+        display: -webkit-box;
+        overflow: hidden;
+        font-size: 6.1pt;
+        font-weight: 700;
+        line-height: 0.92;
+        color: #0f172a;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 2;
+      }
+
+      .packing-transpose-product__unit {
+        flex-shrink: 0;
+        font-size: 5.4pt;
+        font-weight: 700;
+        color: #475569;
+        white-space: nowrap;
+      }
+
+      .packing-cell--qty,
+      .packing-cell--total {
+        font-size: 10.4pt;
+        font-weight: 800;
+        color: #0f172a;
+      }
+
+      .packing-cell--transpose-total-value {
+        background: #ffd400;
+        font-size: 10.6pt;
+        font-weight: 800;
+        color: #0f172a;
+      }
+
+      .packing-cell--empty {
+        font-size: 7pt;
+        font-weight: 600;
+        color: transparent;
+      }
+
+      .packing-table__total-row .packing-cell {
+        border-top: 1.2px solid #111827;
+      }
+
+      .packing-table--transposed .packing-table__total-row {
+        display: none;
+      }
+
+      .packing-cell--total-label {
+        padding: 0 1.6mm;
+        text-align: left;
+        font-size: 7.9pt;
+        font-weight: 800;
+        color: #111827;
+        background: #ffd400;
+      }
+
+      .packing-cell--total {
+        background: #ffd400;
+      }
+
+      .packing-footer {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 4mm;
+        font-size: 6.6pt;
+        font-weight: 600;
+        line-height: 1;
+        color: #64748b;
+        white-space: nowrap;
+      }
+    `}</style>
+  );
+}
+
+export function PackingListLayout({
+  data,
+  layout = "standard",
+}: {
+  data: PackingListData;
+  layout?: PackingListLayoutMode;
+}) {
+  const pages = layout === "transposed" ? buildTransposedPages(data) : buildStandardPages(data);
+
+  return (
+    <>
+      <PackingListStyles />
       {pages.map((page) => (
         <div
-          key={`${page.vehicleId ?? "unassigned"}-s${page.storeChunk}-p${page.productChunk}`}
+          key={`${layout}-${page.vehicleId ?? "unassigned"}-stores-${page.storeChunk}-products-${page.productChunk}`}
           className="packing-sheet-shell"
         >
-          <PackingListPage p={page} data={data} />
+          {layout === "transposed" ? (
+            <TransposedPackingListPage page={page} data={data} />
+          ) : (
+            <StandardPackingListPage page={page} data={data} />
+          )}
         </div>
       ))}
     </>

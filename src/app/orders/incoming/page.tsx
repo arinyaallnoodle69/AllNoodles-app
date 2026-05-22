@@ -451,6 +451,12 @@ export default async function IncomingOrdersPage({ searchParams }: IncomingOrder
                   stores={summaryStores}
                 />
                 <PrintPackingListButton date={orderDate} endDate={endDate} />
+                <PrintPackingListButton
+                  date={orderDate}
+                  endDate={endDate}
+                  layout="transposed"
+                  label="พิมพ์ใบจัดของ (สลับตาราง)"
+                />
                 <IncomingOrdersDeliveryActions date={orderDate} endDate={endDate} stores={visibleOrderStores} />
               </div>
             </div>

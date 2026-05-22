@@ -34,7 +34,7 @@ import {
   fetchCustomerOrderCountsForDateAction,
   fetchCustomerLastOrderItemsAction,
   fetchCustomerPricesAction,
-  upsertCustomerPriceFromOrderModalAction,
+  upsertCustomerPricesBatchFromOrderModalAction,
 } from "@/app/orders/incoming/actions";
 import type { CustomerLastOrderSnapshot } from "@/app/orders/incoming/types";
 
@@ -1108,7 +1108,7 @@ export function CreateOrderModal({
     }
   }
 
-  async function addManyToCart(
+  function addManyToCart(
     selections: {
       product: OrderProductOption;
       unitId: string | null;
@@ -1159,21 +1159,18 @@ export function CreateOrderModal({
 
     if (!targetCustomerId) return;
 
-    // Update price mappings in parallel
-    const priceUpdates = selections.map((sel) =>
-      upsertCustomerPriceFromOrderModalAction({
-        customerId: targetCustomerId,
-        productId: sel.product.id,
-        productSaleUnitId: sel.unitId,
-        salePrice: sel.unitPrice,
-      }),
-    );
+        const priceItems = selections.map((sel) => ({
+      productId: sel.product.id,
+      productSaleUnitId: sel.unitId,
+      salePrice: sel.unitPrice,
+    }));
 
-    const results = await Promise.all(priceUpdates);
-    const hasErrors = results.some((r) => "error" in r);
-    if (hasErrors) {
-      setError("เพิ่มสินค้าแล้ว แต่บางรายการบันทึกราคาไม่สำเร็จ");
-    }
+    void upsertCustomerPricesBatchFromOrderModalAction({
+      customerId: targetCustomerId,
+      items: priceItems,
+    }).catch((err) => {
+      console.error("Background price upsert error:", err);
+    });
 
     setPriceMap((prev) => {
       const next = { ...prev };

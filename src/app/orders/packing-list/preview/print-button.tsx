@@ -11,8 +11,8 @@ type PreviewImage = {
   name: string;
 };
 
-const SCREEN_CAPTURE_WIDTH = 1346;
-const SCREEN_CAPTURE_HEIGHT = 816;
+const FALLBACK_CAPTURE_WIDTH = 1346;
+const FALLBACK_CAPTURE_HEIGHT = 816;
 
 let cachedFontEmbedCSS: string | null = null;
 
@@ -20,11 +20,13 @@ function dataUrlToBlob(dataUrl: string): Blob {
   const parts = dataUrl.split(",");
   const mime = parts[0]?.match(/:(.*?);/)?.[1] ?? "image/png";
   const binary = atob(parts[1] ?? "");
-  const array = new Uint8Array(binary.length);
+  const bytes = new Uint8Array(binary.length);
+
   for (let i = 0; i < binary.length; i += 1) {
-    array[i] = binary.charCodeAt(i);
+    bytes[i] = binary.charCodeAt(i);
   }
-  return new Blob([array], { type: mime });
+
+  return new Blob([bytes], { type: mime });
 }
 
 function createFileName(base: string, page: number) {
@@ -50,6 +52,7 @@ export function PackingListPrintButton({
 
   useEffect(() => {
     if (!showPreview) return;
+
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     return () => {
@@ -59,6 +62,7 @@ export function PackingListPrintButton({
 
   function confirmUnassigned(actionLabel: string) {
     if (unassignedStores.length === 0) return true;
+
     const storeList = unassignedStores.map((store) => `• ${store}`).join("\n");
     return window.confirm(
       `ร้านค้าต่อไปนี้ยังไม่ได้ผูกรถ (${unassignedStores.length} ร้าน)\n\n${storeList}\n\nต้องการ${actionLabel}ต่อหรือไม่?`,
@@ -70,11 +74,13 @@ export function PackingListPrintButton({
       window.clearTimeout(fallbackTimerRef.current);
       fallbackTimerRef.current = null;
     }
+
     setIsPrinting(false);
   }
 
   function handlePrintFromPreview() {
     if (isPrinting || isCapturing) return;
+
     setShowPreview(false);
     setIsPrinting(true);
 
@@ -93,6 +99,7 @@ export function PackingListPrintButton({
 
   async function handleOpenPreview(mode: "print" | "share") {
     if (isPrinting || isCapturing) return;
+
     const actionLabel = mode === "print" ? "เปิดตัวอย่างก่อนพิมพ์" : "บันทึกรูป / แชร์ไลน์";
     if (!confirmUnassigned(actionLabel)) return;
 
@@ -102,8 +109,12 @@ export function PackingListPrintButton({
     setPreviewImages([]);
 
     try {
-      const sheets = Array.from(document.querySelectorAll<HTMLElement>(".packing-sheet"));
-      if (sheets.length === 0) {
+      const isMobileViewport = window.matchMedia("(max-width: 767px)").matches;
+      const targets = Array.from(
+        document.querySelectorAll<HTMLElement>(isMobileViewport ? ".packing-sheet-shell" : ".packing-sheet"),
+      );
+
+      if (targets.length === 0) {
         throw new Error("ไม่พบหน้าสำหรับสร้างตัวอย่างใบจัดของ");
       }
 
@@ -127,27 +138,32 @@ export function PackingListPrintButton({
       }
 
       const captured: PreviewImage[] = [];
-      for (let i = 0; i < sheets.length; i += 1) {
-        const sheet = sheets[i];
-        const dataUrl = await htmlToImage.toPng(sheet, {
+
+      for (let i = 0; i < targets.length; i += 1) {
+        const target = targets[i];
+        const rect = target.getBoundingClientRect();
+        const captureWidth = Math.max(1, Math.round(rect.width || FALLBACK_CAPTURE_WIDTH));
+        const captureHeight = Math.max(1, Math.round(rect.height || FALLBACK_CAPTURE_HEIGHT));
+
+        const dataUrl = await htmlToImage.toPng(target, {
           backgroundColor: "#ffffff",
           cacheBust: true,
           fontEmbedCSS,
-          pixelRatio: 2,
-          width: SCREEN_CAPTURE_WIDTH,
-          height: SCREEN_CAPTURE_HEIGHT,
-          canvasWidth: SCREEN_CAPTURE_WIDTH,
-          canvasHeight: SCREEN_CAPTURE_HEIGHT,
+          pixelRatio: isMobileViewport ? 3 : 2,
+          width: captureWidth,
+          height: captureHeight,
+          canvasWidth: captureWidth,
+          canvasHeight: captureHeight,
           style: {
-            transform: "none",
-            transformOrigin: "top left",
-            width: `${SCREEN_CAPTURE_WIDTH}px`,
-            height: `${SCREEN_CAPTURE_HEIGHT}px`,
+            width: `${captureWidth}px`,
+            height: `${captureHeight}px`,
             maxWidth: "none",
             maxHeight: "none",
             margin: "0",
             boxShadow: "none",
             display: "block",
+            transform: isMobileViewport ? undefined : "none",
+            transformOrigin: "top left",
           },
         });
 
@@ -156,6 +172,7 @@ export function PackingListPrintButton({
           blob: dataUrlToBlob(dataUrl),
           name: createFileName(`packing-list-${dateLabel || "export"}`, i + 1),
         });
+
         setPreviewImages([...captured]);
       }
     } catch (error) {
@@ -185,9 +202,7 @@ export function PackingListPrintButton({
         });
         return;
       } catch (error) {
-        if (error instanceof Error && error.name === "AbortError") {
-          return;
-        }
+        if (error instanceof Error && error.name === "AbortError") return;
         console.error("Web share failed:", error);
       }
     }
@@ -246,9 +261,7 @@ export function PackingListPrintButton({
                 <div className="min-w-0">
                   <h3 className="text-base font-black tracking-tight text-white sm:text-xl">ตัวอย่างใบจัดของ</h3>
                   <p className="truncate text-[10px] font-bold uppercase tracking-[0.15em] text-slate-400 sm:text-xs">
-                    {isCapturing
-                      ? `กำลังประมวลผล (${previewImages.length} หน้า)...`
-                      : `${previewImages.length} หน้า พร้อมพิมพ์หรือบันทึก`}
+                    {isCapturing ? `กำลังประมวลผล (${previewImages.length} หน้า)...` : `${previewImages.length} หน้า พร้อมพิมพ์หรือบันทึก`}
                   </p>
                 </div>
               </div>
@@ -286,7 +299,7 @@ export function PackingListPrintButton({
             </div>
 
             <div className="flex-1 overflow-y-auto bg-[radial-gradient(circle_at_center,rgba(0,51,102,0.05)_0%,transparent_70%)] p-4 sm:p-12">
-              <div className="mx-auto flex flex-col items-center gap-10 sm:gap-20">
+              <div className="mx-auto flex w-full max-w-[960px] flex-col items-center gap-10 sm:gap-20">
                 {isCapturing && previewImages.length === 0 ? (
                   <div className="flex flex-col items-center justify-center gap-8 py-20 text-slate-500">
                     <div className="relative">
@@ -301,7 +314,7 @@ export function PackingListPrintButton({
                 ) : null}
 
                 {previewImages.map((image, index) => (
-                  <div key={image.name} className="group relative flex w-full max-w-[960px] flex-col items-center">
+                  <div key={image.name} className="group relative flex w-full flex-col items-center">
                     <div className="mb-4 flex items-center gap-3 self-start sm:absolute sm:-left-20 sm:mb-0 sm:flex-col sm:self-auto">
                       <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#1a1f26] text-sm font-black text-white ring-1 ring-white/10 shadow-2xl transition group-hover:bg-[#003366] group-hover:ring-[#003366]/50">
                         {index + 1}
@@ -311,11 +324,7 @@ export function PackingListPrintButton({
 
                     <div className="relative w-full overflow-hidden rounded-sm bg-white shadow-[0_40px_100px_rgba(0,0,0,0.6)] ring-1 ring-white/5 transition duration-500 group-hover:scale-[1.02] group-hover:shadow-[0_50px_120px_rgba(0,0,0,0.8)]">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={image.dataUrl}
-                        alt={`ใบจัดของหน้า ${index + 1}`}
-                        className="block h-auto w-full bg-white"
-                      />
+                      <img src={image.dataUrl} alt={`ใบจัดของหน้า ${index + 1}`} className="block h-auto w-full bg-white" />
                       <div className="pointer-events-none absolute inset-0 bg-gradient-to-tr from-transparent via-white/5 to-transparent opacity-0 transition-opacity duration-700 group-hover:opacity-100" />
                     </div>
                   </div>

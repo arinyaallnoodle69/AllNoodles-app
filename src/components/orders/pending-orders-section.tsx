@@ -1195,7 +1195,7 @@ export function StoreDeliveryButton({
         type="button"
         onClick={handleOpen}
         disabled={loading}
-        className="shrink-0 inline-flex items-center gap-1.5 rounded-xl bg-[#003366] px-3.5 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-[#002244] disabled:opacity-60"
+        className="hidden sm:inline-flex shrink-0 items-center gap-1.5 rounded-xl bg-[#003366] px-3.5 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-[#002244] disabled:opacity-60"
       >
         {loading ? (
           <Loader2 className="h-3.5 w-3.5 animate-spin" strokeWidth={2} />
