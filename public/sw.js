@@ -1,4 +1,4 @@
-const CACHE_NAME = "T&Y Noodle-v4";
+const CACHE_NAME = "T&Y Noodle-v5";
 const APP_SHELL = [
   "/",
   "/login",
@@ -9,6 +9,32 @@ const APP_SHELL = [
   "/brand/1200x630.png",
 ];
 const DEFAULT_NOTIFICATION_URL = "/orders/incoming";
+
+/**
+ * Strip the `redirected` flag from a Response.
+ *
+ * iOS Safari in standalone (PWA home-screen) mode refuses to accept a
+ * Response with `response.redirected === true` from the Service Worker,
+ * throwing "response served by service worker has redirections".
+ *
+ * This happens when the Next.js middleware / server performs a redirect
+ * (e.g. "/" → "/login", "/login" → "/dashboard") and the resulting
+ * Response object carries the internal `redirected` flag.
+ *
+ * Reconstructing a brand-new Response with the same body & headers
+ * produces a clean, non-redirected Response that Safari accepts.
+ */
+function cleanResponse(response) {
+  if (!response || !response.redirected) {
+    return response;
+  }
+
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers: response.headers,
+  });
+}
 
 function parsePushPayload(event) {
   if (!event.data) {
@@ -93,18 +119,21 @@ self.addEventListener("fetch", (event) => {
         // Prepare network fetch promise to run in background or foreground
         const fetchPromise = fetch(request)
           .then(async (networkResponse) => {
-            if (networkResponse && networkResponse.ok) {
+            // Clean the response to strip any redirect flag before caching
+            const cleaned = cleanResponse(networkResponse);
+            if (cleaned && cleaned.ok) {
               const cache = await caches.open(CACHE_NAME);
-              cache.put(request, networkResponse.clone());
+              cache.put(request, cleaned.clone());
             }
-            return networkResponse;
+            return cleaned;
           })
           .catch(() => null);
 
         if (cachedResponse) {
           // Stale-While-Revalidate: Return cache immediately, update cache in background
           event.waitUntil(fetchPromise);
-          return cachedResponse;
+          // Also clean the cached response in case it was stored before this fix
+          return cleanResponse(cachedResponse);
         }
 
         // Network-First with quick fallback:
@@ -117,10 +146,11 @@ self.addEventListener("fetch", (event) => {
           // Fallback if offline / network failed
           const cachedLogin = await caches.match("/login");
           if (cachedLogin) {
-            return cachedLogin;
+            return cleanResponse(cachedLogin);
           }
 
-          return caches.match("/offline");
+          const offlinePage = await caches.match("/offline");
+          return cleanResponse(offlinePage);
         });
       })
     );
@@ -135,8 +165,9 @@ self.addEventListener("fetch", (event) => {
     event.respondWith(
       fetch(request).catch(async () => {
         const cached = await caches.match(request);
-        if (cached) return cached;
-        return caches.match("/offline");
+        if (cached) return cleanResponse(cached);
+        const offlinePage = await caches.match("/offline");
+        return cleanResponse(offlinePage);
       }),
     );
     return;
@@ -144,14 +175,15 @@ self.addEventListener("fetch", (event) => {
 
   event.respondWith(
     caches.match(request).then(async (cached) => {
-      if (cached) return cached;
+      if (cached) return cleanResponse(cached);
 
       const response = await fetch(request);
-      if (response && response.ok) {
+      const cleaned = cleanResponse(response);
+      if (cleaned && cleaned.ok) {
         const cache = await caches.open(CACHE_NAME);
-        cache.put(request, response.clone());
+        cache.put(request, cleaned.clone());
       }
-      return response;
+      return cleaned;
     }),
   );
 });
