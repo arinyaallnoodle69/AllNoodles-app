@@ -16,8 +16,14 @@ import { getBilledDeliveryNumbersForRange } from "@/lib/billing/billing-statemen
 import { getPendingLineOrders } from "@/lib/orders/line-pending";
 import { getCustomersForOrder, getProductsForOrder, getVehiclesForOrder } from "@/lib/orders/manage";
 import { getDeliveryList } from "@/lib/delivery/delivery-list";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { IncomingOrdersDeliveryActions } from "@/components/orders/incoming-orders-delivery-actions";
 import { PrintPackingListButton } from "@/components/orders/print-packing-list-button";
+import {
+  PackingListSummaryButton,
+  type PackingListSummaryProduct,
+  type PackingListSummaryStore,
+} from "@/components/orders/packing-list-summary-button";
 
 export const metadata = { title: "รายการออเดอร์" };
 
@@ -32,6 +38,17 @@ type IncomingOrdersPageProps = {
   }>;
 };
 
+type IncomingOrderSummaryItemRow = {
+  order_id: string;
+  product_id: string;
+  quantity: number | string;
+  sale_unit_label: string;
+  products: {
+    name: string;
+    sku: string;
+  } | null;
+};
+
 function formatCurrency(value: number) {
   return value.toLocaleString("th-TH", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
@@ -44,6 +61,7 @@ function formatDisplayDate(value: string) {
 
 export default async function IncomingOrdersPage({ searchParams }: IncomingOrdersPageProps) {
   const session = await requireAppRole("admin");
+  const admin = getSupabaseAdmin();
   const params = await searchParams;
   const orderDate = normalizeOrderDate(params.date);
   const endDate = params.endDate ? normalizeOrderDate(params.endDate) : orderDate;
@@ -86,6 +104,7 @@ export default async function IncomingOrdersPage({ searchParams }: IncomingOrder
     code: customer.code,
     name: customer.name,
   }));
+  const productImageById = new Map(products.map((product) => [product.id, product.imageUrl ?? null]));
 
   const activeOrders = orders.filter((order) => order.status !== "cancelled");
 
@@ -100,6 +119,117 @@ export default async function IncomingOrdersPage({ searchParams }: IncomingOrder
     (selectedCustomerIds.length === 0 || selectedCustomerIds.includes(expandedDetail.customer.id))
       ? expandedDetail
       : null;
+
+  const activeOrderIds = activeOrders.map((order) => order.id);
+  const orderSummaryItemsResult =
+    activeOrderIds.length > 0
+      ? await admin
+          .from("order_items")
+          .select(
+            `
+              order_id,
+              product_id,
+              quantity,
+              sale_unit_label,
+              products!inner(name, sku)
+            `,
+          )
+          .in("order_id", activeOrderIds)
+      : { data: [], error: null };
+
+  if (orderSummaryItemsResult.error) {
+    throw new Error(orderSummaryItemsResult.error.message ?? "Failed to load order summary items.");
+  }
+
+  const itemsByOrderId = new Map<string, IncomingOrderSummaryItemRow[]>();
+  for (const row of (orderSummaryItemsResult.data ?? []) as IncomingOrderSummaryItemRow[]) {
+    const current = itemsByOrderId.get(row.order_id) ?? [];
+    current.push(row);
+    itemsByOrderId.set(row.order_id, current);
+  }
+
+  const summaryProductMap = new Map<string, PackingListSummaryProduct>();
+  const summaryStoreMap = new Map<string, PackingListSummaryStore>();
+
+  for (const order of filteredOrders) {
+    const orderItems = itemsByOrderId.get(order.id) ?? [];
+    const storeKey = `${order.customerId}_${order.orderDate}_${order.vehicleId ?? "unassigned"}`;
+    const existingStore = summaryStoreMap.get(storeKey) ?? {
+      id: storeKey,
+      customerCode: order.customerCode,
+      customerName: order.customerName,
+      date: order.orderDate,
+      dateLabel: formatDisplayDate(order.orderDate),
+      itemCount: 0,
+      totalQuantity: 0,
+      vehicleId: order.vehicleId,
+      vehicleName: order.vehicleName,
+      items: [],
+    };
+    const storeItemMap = new Map(existingStore.items.map((item) => [item.key, item]));
+
+    for (const item of orderItems) {
+      if (!item.products) continue;
+      const unit = item.sale_unit_label?.trim() || "-";
+      const quantity = Number(item.quantity ?? 0);
+      const key = `${String(item.products.sku).trim().toLowerCase()}||${unit.toLowerCase()}`;
+      const vehicleProductKey = `${order.vehicleId ?? "unassigned"}||${key}`;
+
+      const existingProduct = summaryProductMap.get(vehicleProductKey);
+      if (existingProduct) {
+        existingProduct.quantity += quantity;
+      } else {
+        summaryProductMap.set(vehicleProductKey, {
+          key: vehicleProductKey,
+          sku: item.products.sku,
+          name: item.products.name,
+          unit,
+          quantity,
+          imageUrl: productImageById.get(item.product_id) ?? null,
+          vehicleId: order.vehicleId,
+          vehicleName: order.vehicleName,
+        });
+      }
+
+      const existingStoreItem = storeItemMap.get(key);
+      if (existingStoreItem) {
+        existingStoreItem.quantity += quantity;
+      } else {
+        storeItemMap.set(key, {
+          key,
+          sku: item.products.sku,
+          name: item.products.name,
+          unit,
+          quantity,
+        });
+      }
+    }
+
+    const storeItems = Array.from(storeItemMap.values()).sort((a, b) => {
+      const skuCompare = a.sku.localeCompare(b.sku, "th");
+      if (skuCompare !== 0) return skuCompare;
+      return a.name.localeCompare(b.name, "th");
+    });
+
+    existingStore.items = storeItems;
+    existingStore.itemCount = storeItems.length;
+    existingStore.totalQuantity = storeItems.reduce((sum, item) => sum + item.quantity, 0);
+    summaryStoreMap.set(storeKey, existingStore);
+  }
+
+  const summaryProducts = Array.from(summaryProductMap.values()).sort((a, b) => {
+    const skuCompare = a.sku.localeCompare(b.sku, "th");
+    if (skuCompare !== 0) return skuCompare;
+    return a.name.localeCompare(b.name, "th");
+  });
+
+  const summaryStores = Array.from(summaryStoreMap.values()).sort((a, b) => {
+    const dateCompare = a.date.localeCompare(b.date);
+    if (dateCompare !== 0) return dateCompare;
+    const vehicleCompare = (a.vehicleName ?? "").localeCompare(b.vehicleName ?? "", "th");
+    if (vehicleCompare !== 0) return vehicleCompare;
+    return `${a.customerCode} ${a.customerName}`.localeCompare(`${b.customerCode} ${b.customerName}`, "th");
+  });
 
   function buildExpandedHref(nextExpandedId: string | null) {
     const query = new URLSearchParams();
@@ -315,6 +445,11 @@ export default async function IncomingOrdersPage({ searchParams }: IncomingOrder
 
             <div className="no-scrollbar -mx-1 flex items-center gap-2 overflow-x-auto px-1 pb-1 sm:mx-0 sm:overflow-visible sm:px-0 sm:pb-0">
               <div className="flex min-w-max flex-nowrap items-center gap-1.5">
+                <PackingListSummaryButton
+                  dateLabel={orderDate === endDate ? formatDisplayDate(orderDate) : `${formatDisplayDate(orderDate)} - ${formatDisplayDate(endDate)}`}
+                  products={summaryProducts}
+                  stores={summaryStores}
+                />
                 <PrintPackingListButton date={orderDate} endDate={endDate} />
                 <IncomingOrdersDeliveryActions date={orderDate} endDate={endDate} stores={visibleOrderStores} />
               </div>

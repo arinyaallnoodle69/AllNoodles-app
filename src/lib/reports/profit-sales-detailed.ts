@@ -99,6 +99,8 @@ type ProductRow = {
   cost_price: number | string | null;
 };
 
+const QUERY_CHUNK_SIZE = 50;
+
 function toNumber(value: unknown) {
   const parsed = Number(value ?? 0);
   return Number.isFinite(parsed) ? parsed : 0;
@@ -154,28 +156,34 @@ export async function getDetailedProfitSalesReport(params: {
   const noteIds = notes.map((n) => n.id);
   const noteById = new Map<string, DeliveryNoteRow>(notes.map((n) => [n.id, n]));
 
-  // 2. Fetch delivery note items
-  const { data: items, error: itemsError } = await supabase
-    .from("delivery_note_items")
-    .select(`
-      id,
-      delivery_note_id,
-      quantity_delivered,
-      product_sale_unit_id,
-      line_total,
-      sale_unit_label,
-      products(
+  // 2. Fetch delivery note items in chunks to avoid oversized request URLs / fetch failures
+  const typedItems: DeliveryNoteItemRow[] = [];
+  for (let i = 0; i < noteIds.length; i += QUERY_CHUNK_SIZE) {
+    const chunk = noteIds.slice(i, i + QUERY_CHUNK_SIZE);
+    const { data: items, error: itemsError } = await supabase
+      .from("delivery_note_items")
+      .select(`
         id,
-        name,
-        sku,
-        unit,
-        cost_price
-      )
-    `)
-    .in("delivery_note_id", noteIds);
+        delivery_note_id,
+        quantity_delivered,
+        product_sale_unit_id,
+        line_total,
+        sale_unit_label,
+        products(
+          id,
+          name,
+          sku,
+          unit,
+          cost_price
+        )
+      `)
+      .in("delivery_note_id", chunk);
 
-  if (itemsError) throw new Error(itemsError.message);
-  const typedItems = (items ?? []) as unknown as DeliveryNoteItemRow[];
+    if (itemsError) throw new Error(itemsError.message);
+    if (items) {
+      typedItems.push(...((items ?? []) as unknown as DeliveryNoteItemRow[]));
+    }
+  }
 
   // 3. Resolve cost structures for sale units and products
   const saleUnitIds = [
@@ -186,15 +194,20 @@ export async function getDetailedProfitSalesReport(params: {
     ),
   ];
 
-  let typedSaleUnits: ProductSaleUnitRow[] = [];
+  const typedSaleUnits: ProductSaleUnitRow[] = [];
   if (saleUnitIds.length > 0) {
-    const { data: saleUnits, error: suError } = await supabase
-      .from("product_sale_units")
-      .select("id, product_id, base_unit_quantity, cost_mode, fixed_cost_price")
-      .in("id", saleUnitIds);
+    for (let i = 0; i < saleUnitIds.length; i += QUERY_CHUNK_SIZE) {
+      const chunk = saleUnitIds.slice(i, i + QUERY_CHUNK_SIZE);
+      const { data: saleUnits, error: suError } = await supabase
+        .from("product_sale_units")
+        .select("id, product_id, base_unit_quantity, cost_mode, fixed_cost_price")
+        .in("id", chunk);
 
-    if (suError) throw new Error(suError.message);
-    typedSaleUnits = (saleUnits ?? []) as ProductSaleUnitRow[];
+      if (suError) throw new Error(suError.message);
+      if (saleUnits) {
+        typedSaleUnits.push(...(saleUnits as ProductSaleUnitRow[]));
+      }
+    }
   }
 
   const productIds = [
@@ -209,15 +222,20 @@ export async function getDetailedProfitSalesReport(params: {
     ),
   ];
 
-  let typedProducts: ProductRow[] = [];
+  const typedProducts: ProductRow[] = [];
   if (productIds.length > 0) {
-    const { data: products, error: pError } = await supabase
-      .from("products")
-      .select("id, cost_price")
-      .in("id", productIds);
+    for (let i = 0; i < productIds.length; i += QUERY_CHUNK_SIZE) {
+      const chunk = productIds.slice(i, i + QUERY_CHUNK_SIZE);
+      const { data: products, error: pError } = await supabase
+        .from("products")
+        .select("id, cost_price")
+        .in("id", chunk);
 
-    if (pError) throw new Error(pError.message);
-    typedProducts = (products ?? []) as ProductRow[];
+      if (pError) throw new Error(pError.message);
+      if (products) {
+        typedProducts.push(...(products as ProductRow[]));
+      }
+    }
   }
 
   const productCostById = new Map(
@@ -342,7 +360,7 @@ export async function getDetailedProfitSalesReport(params: {
   let totalQuantity = 0;
   const uniqueSkus = new Set<string>();
 
-  for (const [_, noteData] of deliveryNoteMap.entries()) {
+  for (const noteData of deliveryNoteMap.values()) {
     const items: DetailedProfitProductItem[] = [];
     let storeSales = 0;
     let storeCost = 0;
@@ -412,7 +430,7 @@ export async function getDetailedProfitSalesReport(params: {
   let lowestProfitMarginItem: { name: string; marginPercent: number } | null = null;
   let worstMargin = 999999;
 
-  for (const [_, glob] of productGlobalMap.entries()) {
+  for (const glob of productGlobalMap.values()) {
     if (glob.sales > bestSales) {
       bestSales = glob.sales;
       topPerformingItem = { name: glob.name, sales: glob.sales };
@@ -429,7 +447,7 @@ export async function getDetailedProfitSalesReport(params: {
   let topStore: { name: string; contributionPercent: number } | null = null;
   let highestStoreSales = 0;
 
-  for (const [_, st] of storeSalesMap.entries()) {
+  for (const st of storeSalesMap.values()) {
     if (st.sales > highestStoreSales) {
       highestStoreSales = st.sales;
       topStore = {

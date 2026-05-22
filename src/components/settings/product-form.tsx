@@ -185,6 +185,7 @@ function ProductFormBody({
     editingProduct?.categoryIds[0] ?? "",
   );
   const [description, setDescription] = useState(editingProduct?.description ?? "");
+  const [packingListName, setPackingListName] = useState(editingProduct?.packingListName ?? "");
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const filePickerRef = useRef<HTMLInputElement | null>(null);
@@ -673,7 +674,8 @@ function ProductFormBody({
       getParsedNumber(basicFormValues.stockQuantity || "0") === Number(editingProduct.stockQuantity ?? 0) &&
       brand === (editingProduct.brand ?? "") &&
       selectedCategoryId === (editingProduct.categoryIds[0] ?? "") &&
-      description === (editingProduct.description ?? "");
+      description === (editingProduct.description ?? "") &&
+      packingListName === (editingProduct.packingListName ?? "");
 
     const sameSaleUnits = JSON.stringify(initialSaleUnits) === JSON.stringify(currentSaleUnits);
     const sameImages =
@@ -692,6 +694,7 @@ function ProductFormBody({
     brand,
     selectedCategoryId,
     description,
+    packingListName,
     saleUnits,
     keptExistingUrls,
     files.length,
@@ -837,7 +840,28 @@ function ProductFormBody({
                 <label className={settingsFieldLabelClass} htmlFor="product-stock-quantity">สต็อกเริ่มต้น</label>
                 <div className="relative">
                   <Warehouse className="absolute left-3 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-slate-400" strokeWidth={2} />
-                  <input id="product-stock-quantity" name="stockQuantity" type="number" min="0" step="1" required defaultValue={editingProduct?.stockQuantity ?? 0} className={`${settingsInputClass} pl-10`} placeholder="0" />
+                  <input id="product-stock-quantity" name="stockQuantity" type="number" step="1" required defaultValue={editingProduct?.stockQuantity ?? 0} className={`${settingsInputClass} pl-10`} placeholder="0" />
+                </div>
+              </div>
+              <div className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
+                <div className="space-y-1">
+                  <label className={settingsFieldLabelClass} htmlFor="product-packing-list-name">ชื่อย่อสำหรับใบจัดของ</label>
+                  <input
+                    id="product-packing-list-name"
+                    value={packingListName}
+                    onChange={(e) => setPackingListName(e.target.value)}
+                    className={settingsInputClass}
+                    placeholder="เช่น หมี่มังกรขาว"
+                  />
+                  <p className="text-xs text-slate-500">
+                    ใช้เฉพาะตอนพิมพ์ใบจัดของ หากไม่กรอก ระบบจะใช้ชื่อสินค้าหลักแทน
+                  </p>
+                </div>
+                <div className="rounded-xl border border-dashed border-slate-300 bg-white px-4 py-3">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">ตัวอย่างในใบจัดของ</p>
+                  <p className="mt-2 text-sm font-semibold leading-snug text-slate-900">
+                    {(packingListName || basicFormValues.name || editingProduct?.name || "ชื่อสินค้าจะแสดงตรงนี้").trim()}
+                  </p>
                 </div>
               </div>
             </section>
@@ -849,6 +873,7 @@ function ProductFormBody({
               {/* Hidden inputs to pass metadata via FormData */}
               <input type="hidden" name="brand" value={brand} />
               <input type="hidden" name="description" value={description} />
+              <input type="hidden" name="packingListName" value={packingListName} />
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="sm:col-span-1">
                   <label className={settingsFieldLabelClass} htmlFor="product-brand">แบรนด์</label>
@@ -1464,6 +1489,7 @@ export function ProductForm({
       currentProduct.costPrice,
       currentProduct.brand,
       currentProduct.description,
+      currentProduct.packingListName,
       currentProduct.categoryIds.join(","),
       currentProduct.stockQuantity,
       currentProduct.imageUrls.join(","),

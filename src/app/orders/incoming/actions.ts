@@ -1113,7 +1113,9 @@ export async function createManualOrderAction(formData: FormData): Promise<Actio
       p_organization_id: session.organizationId,
     });
 
-    if (!nextOrderNumber) return { error: "ไม่สามารถสร้างเลขออเดอร์ได้" };
+    if (!nextOrderNumber) {
+      return { error: "ไม่สามารถสร้างเลขออเดอร์ได้" };
+    }
 
     const { data: newOrder, error: insertError } = await admin
       .from("orders")
@@ -1177,33 +1179,11 @@ export async function createManualOrderAction(formData: FormData): Promise<Actio
     return { error: mergeResult.error ?? "ไม่สามารถรวมรายการสินค้าในออเดอร์ได้" };
   }
 
-  const { data: finalItems, error: finalItemsError } = await admin
-    .from("order_items")
-    .select("line_total")
-    .eq("order_id", orderId);
-
-  if (finalItemsError) {
-    console.error("[createManualOrderAction] Final Items Error:", finalItemsError);
-    return { error: "ไม่สามารถคำนวณยอดรวมออเดอร์ได้" };
-  }
-
-  const finalTotal = (finalItems ?? []).reduce((sum, item) => sum + Number(item.line_total ?? 0), 0);
-  const { error: finalTotalUpdateError } = await admin
-    .from("orders")
-    .update({
-      subtotal_amount: finalTotal,
-      total_amount: finalTotal,
-    })
-    .eq("id", orderId);
-
-  if (finalTotalUpdateError) {
-    console.error("[createManualOrderAction] Final Total Update Error:", finalTotalUpdateError);
-    return { error: "ไม่สามารถอัปเดตยอดรวมออเดอร์ได้" };
-  }
-
   const syncResult = await syncDeliveryNoteForOrder(admin, {
     orderId,
     organizationId: session.organizationId,
+    skipBillingSync: true,
+    skipRevalidate: true,
     userId: session.userId,
   });
 
@@ -1218,21 +1198,36 @@ export async function createManualOrderAction(formData: FormData): Promise<Actio
 
   const syncedDeliveryNumber = String(syncResult.deliveryNumber);
   effectiveOrderNumber = syncedDeliveryNumber;
-  await admin
-    .from("orders")
-    .update({ order_number: syncedDeliveryNumber })
-    .eq("id", orderId);
+  await admin.from("orders").update({ order_number: syncedDeliveryNumber }).eq("id", orderId);
+
+  after(() => {
+    syncBillingSnapshotsForDeliveryNumbers({
+      organizationId: session.organizationId,
+      customerId,
+      deliveryNumbers: [syncedDeliveryNumber],
+    }).catch((err) => {
+      console.error("Background billing sync error:", err);
+    });
+
+    notifyUpdatedCustomerReceiptForOrder(admin, {
+      orderId,
+      organizationId: session.organizationId,
+    }).catch((err) => {
+      console.error("Background notify error:", err);
+    });
+
+    revalidateDashboardPages();
+  });
 
   revalidatePath("/orders/incoming");
   revalidatePath("/orders");
-  revalidateDashboardPages();
+
   return {
     success: true,
     orderNumber: String(effectiveOrderNumber),
-    deliveryNumber: String(syncResult.deliveryNumber),
+    deliveryNumber: syncedDeliveryNumber,
   };
 }
-
 export async function linkPendingLineOrderAction(formData: FormData): Promise<ActionResult> {
   const session = await requireAppRole("admin");
   const pendingOrderId = String(formData.get("pendingOrderId") ?? "").trim();

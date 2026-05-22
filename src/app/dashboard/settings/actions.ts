@@ -419,6 +419,7 @@ export async function createProduct(formData: FormData): Promise<boolean> {
   const brand = safeText(formData.get("brand")) ?? "";
   const requestedCategoryIds = parseCategoryIds(formData);
   const description = safeText(formData.get("description")) ?? "";
+  const packingListName = safeText(formData.get("packingListName")) ?? "";
 
   if (
     !name ||
@@ -458,6 +459,7 @@ export async function createProduct(formData: FormData): Promise<boolean> {
   if (brand) metadata.brand = brand;
   if (categoryNames.length > 0) metadata.category = categoryNames.join(", ");
   if (description) metadata.description = description;
+  if (packingListName) metadata.packing_list_name = packingListName;
 
   const storage = admin.storage;
   const { data: product, error: productError } = await admin
@@ -594,6 +596,7 @@ export async function updateProduct(formData: FormData): Promise<boolean> {
   const brand = safeText(formData.get("brand")) ?? "";
   const requestedCategoryIds = parseCategoryIds(formData);
   const description = safeText(formData.get("description")) ?? "";
+  const packingListName = safeText(formData.get("packingListName")) ?? "";
 
   if (
     !productId ||
@@ -651,6 +654,7 @@ export async function updateProduct(formData: FormData): Promise<boolean> {
   if (brand) metadata.brand = brand;
   if (categoryNames.length > 0) metadata.category = categoryNames.join(", ");
   if (description) metadata.description = description;
+  if (packingListName) metadata.packing_list_name = packingListName;
 
   const storage = admin.storage;
   const submittedIds = new Set(
@@ -1145,4 +1149,3 @@ export async function updateProductOrder(productIds: string[]) {
   revalidateSettingsSurfaces(session.organizationId);
   return { success: true };
 }
-

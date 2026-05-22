@@ -98,7 +98,6 @@ const saveReceiptAsImageReplacement = `const saveReceiptAsImage = async () => {
 content = content.replace(saveReceiptAsImageRegex, saveReceiptAsImageReplacement);
 
 // 3. Add JSX for popup
-const endOfJsxRegex = /<\/div>\s*\);\s*}/;
 const endOfJsxReplacement = `
       {/* iOS Receipt Image Popup */}
       {isReceiptPopupOpen && receiptPopupUrl && (

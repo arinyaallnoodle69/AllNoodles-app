@@ -1,10 +1,30 @@
 import "server-only";
 
-import { randomBytes, scryptSync, timingSafeEqual, createHmac, createHash } from "node:crypto";
+import {
+  randomBytes,
+  scrypt,
+  scryptSync,
+  timingSafeEqual,
+  createHmac,
+  createHash,
+} from "node:crypto";
 
 const SCRYPT_KEY_LENGTH = 64;
 const SCRYPT_N = 4096;
 const SCRYPT_N_LEGACY = 16384;
+
+function scryptAsync(password: string, salt: string, keyLength: number, N: number) {
+  return new Promise<Buffer>((resolve, reject) => {
+    scrypt(password, salt, keyLength, { N }, (error, derivedKey) => {
+      if (error) {
+        reject(error);
+        return;
+      }
+
+      resolve(derivedKey as Buffer);
+    });
+  });
+}
 
 function getPinPepper() {
   const pepper = process.env.LOGIN_PIN_PEPPER?.trim();
@@ -26,7 +46,7 @@ export function hashPin(pin: string) {
   return `scrypt:${SCRYPT_N}:${salt}:${derivedKey.toString("hex")}`;
 }
 
-export function verifyPinHash(pin: string, storedHash: string) {
+export async function verifyPinHash(pin: string, storedHash: string) {
   const parts = storedHash.split(":");
 
   let N: number;
@@ -52,7 +72,7 @@ export function verifyPinHash(pin: string, storedHash: string) {
   }
 
   const expected = Buffer.from(expectedHex, "hex");
-  const actual = scryptSync(`${pin}:${getPinPepper()}`, salt, expected.length, { N });
+  const actual = await scryptAsync(`${pin}:${getPinPepper()}`, salt, expected.length, N);
 
   if (expected.length !== actual.length) {
     return false;

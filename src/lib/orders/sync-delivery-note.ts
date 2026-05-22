@@ -39,6 +39,7 @@ export async function syncDeliveryNoteForOrder(
     lossInBaseUnitByItemId?: Map<string, number>;
     orderId: string;
     organizationId: string;
+    skipBillingSync?: boolean;
     userId: string | null;
     skipRevalidate?: boolean;
   },
@@ -276,15 +277,17 @@ export async function syncDeliveryNoteForOrder(
     return { error: "ปรับปรุงใบส่งของไม่สำเร็จ: " + deliveryError.message };
   }
 
-  const billingSyncResult = await syncBillingSnapshotsForDeliveryNumbers({
-    organizationId: input.organizationId,
-    customerId: order.customer_id,
-    deliveryNumbers: [String(deliveryNumber)],
-    skipRevalidate: input.skipRevalidate,
-  });
+  if (!input.skipBillingSync) {
+    const billingSyncResult = await syncBillingSnapshotsForDeliveryNumbers({
+      organizationId: input.organizationId,
+      customerId: order.customer_id,
+      deliveryNumbers: [String(deliveryNumber)],
+      skipRevalidate: input.skipRevalidate,
+    });
 
-  if (!billingSyncResult.success) {
-    return { error: billingSyncResult.error };
+    if (!billingSyncResult.success) {
+      return { error: billingSyncResult.error };
+    }
   }
 
   if (!input.skipRevalidate) {

@@ -85,6 +85,14 @@ function toNum(v: number | string | null | undefined) {
   return Number.isFinite(n) ? n : 0;
 }
 
+function chunkIds<T>(items: T[], size: number): T[][] {
+  const chunks: T[][] = [];
+  for (let index = 0; index < items.length; index += size) {
+    chunks.push(items.slice(index, index + size));
+  }
+  return chunks;
+}
+
 async function getDeliveryNoteActualTotals(
   supabase: ReturnType<typeof getSupabaseAdmin>,
   noteIds: string[],
@@ -93,32 +101,50 @@ async function getDeliveryNoteActualTotals(
     return new Map<string, number>();
   }
 
-  const { data: dnItems } = await supabase
-    .from("delivery_note_items")
-    .select("delivery_note_id, order_item_id")
-    .in("delivery_note_id", noteIds);
+  const deliveryNoteItems: Array<{ delivery_note_id: string; order_item_id: string | null }> = [];
+  for (const noteIdChunk of chunkIds(noteIds, 100)) {
+    const { data, error } = await supabase
+      .from("delivery_note_items")
+      .select("delivery_note_id, order_item_id")
+      .in("delivery_note_id", noteIdChunk);
+
+    if (error) {
+      console.error("[billing] failed to load delivery note items", error);
+      return new Map<string, number>();
+    }
+
+    deliveryNoteItems.push(
+      ...((data ?? []) as Array<{ delivery_note_id: string; order_item_id: string | null }>),
+    );
+  }
 
   const orderItemIds = Array.from(
-    new Set((dnItems ?? []).map((item) => item.order_item_id).filter(Boolean) as string[]),
+    new Set(deliveryNoteItems.map((item) => item.order_item_id).filter(Boolean) as string[]),
   );
-  const { data: orderItems } = orderItemIds.length
-    ? await supabase
+  const orderItems: Array<{ id: string; line_total: number | null }> = [];
+  if (orderItemIds.length > 0) {
+    for (const orderItemIdChunk of chunkIds(orderItemIds, 100)) {
+      const { data, error } = await supabase
         .from("order_items")
         .select("id, line_total")
-        .in("id", orderItemIds)
-    : { data: [] as { id: string; line_total: number | null }[] };
+        .in("id", orderItemIdChunk);
+
+      if (error) {
+        console.error("[billing] failed to load order item totals", error);
+        return new Map<string, number>();
+      }
+
+      orderItems.push(...((data ?? []) as Array<{ id: string; line_total: number | null }>));
+    }
+  }
 
   const orderItemTotalMap = new Map(
-    (orderItems ?? []).map((item) => [item.id, toNum(item.line_total)]),
+    orderItems.map((item) => [item.id, toNum(item.line_total)]),
   );
   const deliveryTotals = new Map<string, number>();
 
-  for (const noteId of noteIds) {
-    deliveryTotals.set(noteId, 0);
-  }
-
   const seenPairs = new Set<string>();
-  for (const item of dnItems ?? []) {
+  for (const item of deliveryNoteItems) {
     if (!item.order_item_id) continue;
     const dedupeKey = `${item.delivery_note_id}:${item.order_item_id}`;
     if (seenPairs.has(dedupeKey)) continue;

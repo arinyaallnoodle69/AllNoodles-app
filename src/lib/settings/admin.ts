@@ -32,6 +32,7 @@ export type SettingsProduct = {
   imageUrls: string[];
   isActive: boolean;
   name: string;
+  packingListName: string;
   pricingCount: number;
   saleUnits: {
     baseUnitQuantity: number;
@@ -640,6 +641,7 @@ async function fetchSettingsData(organizationId: string): Promise<SettingsData> 
           imageUrls: imageMap.get(product.id) ?? [],
           isActive: product.is_active,
           name: product.name,
+          packingListName: meta.packing_list_name ?? "",
           pricingCount: productPricingCount.get(product.id) ?? 0,
           saleUnits:
             saleUnitMap.get(product.id)?.toSorted((left, right) => {
@@ -896,6 +898,7 @@ async function fetchSettingsProductsData(organizationId: string): Promise<Settin
           imageUrls: imageMap.get(product.id) ?? [],
           isActive: product.is_active,
           name: product.name,
+          packingListName: meta.packing_list_name ?? "",
           pricingCount: 0,
           saleUnits:
             saleUnitMap.get(product.id)?.toSorted((left, right) => {

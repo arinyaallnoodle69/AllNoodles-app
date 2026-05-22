@@ -6,7 +6,6 @@ import Image from "next/image";
 import { createPortal } from "react-dom";
 import * as htmlToImage from "html-to-image";
 import { fetchIncomingOrderDetailAction } from "@/app/orders/incoming/actions";
-import { RECEIPT_EXPORT_WIDTH } from "@/app/order/customer/components/order-receipt-constants";
 import { formatDisplayUnit } from "@/app/order/customer/unit-label";
 import { PrintStoreDeliveryButton } from "@/components/orders/print-store-delivery-button";
 import type { OrderDetailData } from "@/lib/orders/detail";

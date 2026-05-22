@@ -9,9 +9,19 @@ export function PrintPackingListButton({ date, endDate }: { date: string; endDat
   function handlePrint() {
     if (loading) return;
 
-    setLoading(true);
-    const printUrl = `/orders/packing-list?date=${date}${endDate ? `&endDate=${endDate}` : ""}&autoprint=1`;
+    const basePageUrl = `/orders/packing-list?date=${date}${endDate ? `&endDate=${endDate}` : ""}`;
+    const isMobile =
+      typeof window !== "undefined" &&
+      (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+        window.matchMedia("(pointer: coarse)").matches);
 
+    if (isMobile) {
+      window.location.href = basePageUrl;
+      return;
+    }
+
+    setLoading(true);
+    const printUrl = `${basePageUrl}&autoprint=1`;
     const iframe = document.createElement("iframe");
     iframe.style.cssText = "position:fixed;top:-9999px;left:-9999px;width:1px;height:1px;";
     iframe.src = printUrl;
@@ -30,6 +40,7 @@ export function PrintPackingListButton({ date, endDate }: { date: string; endDat
       }
       win.addEventListener("afterprint", done, { once: true });
     };
+
     iframe.onerror = done;
     setTimeout(done, 120000);
   }

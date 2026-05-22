@@ -219,6 +219,7 @@ export async function getDashboardOverview(organizationId: string): Promise<Dash
     monthOrdersRes,
     stockDashboardRes,
     recentDailyPerformance,
+    todayProfitSnapshot,
   ] = await Promise.all([
     // 1. Today's submitted/confirmed orders
     supabase.from("orders")
@@ -289,9 +290,11 @@ export async function getDashboardOverview(organizationId: string): Promise<Dash
 
     // 9. Recent daily performance for dashboard report section
     getRecentDailyPerformance(organizationId, 7, today),
-  ]);
 
-  const { netProfit: todayNetProfit, totalCost: todayCost } = await loadTodayNetProfit(organizationId, today);
+    // 10. Today's profit snapshot
+    loadTodayNetProfit(organizationId, today),
+  ]);
+  const { netProfit: todayNetProfit, totalCost: todayCost } = todayProfitSnapshot;
 
   // ── Process core KPIs ──────────────────────────────────────────────────────
 

@@ -62,7 +62,6 @@ import {
   getFrequentlyOrderedProducts,
   getCustomerOrders,
   createOrder,
-  sendCustomerReceiptImage,
   updateCustomerOrder,
 } from "./actions";
 import {
@@ -327,11 +326,9 @@ export default function OrderClient({
   const [receiptFileName, setReceiptFileName] = useState<string>("");
   const receiptCardRef = useRef<HTMLDivElement | null>(null);
   const receiptCaptureLockRef = useRef(false);
-  const receiptPushStatusRef = useRef<Record<string, "sending" | "sent" | "failed">>({});
   const checkoutInFlightRef = useRef(false);
   const [showAddProductSheet, setShowAddProductSheet] = useState(false);
   const [addProductSearch, setAddProductSearch] = useState("");
-  const [pendingEditReceiptPush, setPendingEditReceiptPush] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedProductCategory, setSelectedProductCategory] = useState<"all" | string>("all");
 
@@ -1545,15 +1542,6 @@ export default function OrderClient({
 
   // Receipt
 
-  const blobToDataUrl = useCallback((blob: Blob) => {
-    return new Promise<string>((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(String(reader.result ?? ""));
-      reader.onerror = () => reject(reader.error ?? new Error("Failed to read blob"));
-      reader.readAsDataURL(blob);
-    });
-  }, []);
-
   const captureReceiptImage = useCallback(async (): Promise<{ blob: Blob; fileName: string } | null> => {
     if (!receiptCardRef.current || receiptCaptureLockRef.current) return null;
 
@@ -1688,121 +1676,7 @@ export default function OrderClient({
     closeReceiptPopup();
   };
 
-  useEffect(() => {
-    if (currentView !== "success" || !lastOrderMeta || !linkedCustomer) return;
 
-    const orderNumber = lastOrderMeta.orderNumber;
-    const currentStatus = receiptPushStatusRef.current[orderNumber];
-    if (currentStatus === "sending" || currentStatus === "sent" || currentStatus === "failed") return;
-
-    const lineUserId = profile?.userId ?? sessionLineUserId;
-    if (!lineUserId) return;
-
-    let cancelled = false;
-    const timeoutId = window.setTimeout(async () => {
-      if (cancelled) return;
-
-      receiptPushStatusRef.current[orderNumber] = "sending";
-      try {
-        let captured: { blob: Blob; fileName: string } | null = null;
-        for (let attempt = 0; attempt < 3 && !captured && !cancelled; attempt += 1) {
-          captured = await captureReceiptImage();
-          if (!captured && attempt < 2) {
-            await new Promise((resolve) => window.setTimeout(resolve, 140));
-          }
-        }
-
-        if (!captured || cancelled) {
-          receiptPushStatusRef.current[orderNumber] = "failed";
-          return;
-        }
-
-        const imageDataUrl = await blobToDataUrl(captured.blob);
-        if (!imageDataUrl) {
-          receiptPushStatusRef.current[orderNumber] = "failed";
-          return;
-        }
-
-        const result = await sendCustomerReceiptImage(
-          organizationId,
-          linkedCustomer.id,
-          orderNumber,
-          imageDataUrl,
-          lineUserId,
-        );
-
-        receiptPushStatusRef.current[orderNumber] = result.success ? "sent" : "failed";
-      } catch (error) {
-        console.error("[sendCustomerReceiptImage:auto]", error);
-        receiptPushStatusRef.current[orderNumber] = "failed";
-      }
-    }, 120);
-
-    return () => {
-      cancelled = true;
-      window.clearTimeout(timeoutId);
-    };
-  }, [
-    blobToDataUrl,
-    captureReceiptImage,
-    currentView,
-    lastOrderMeta,
-    linkedCustomer,
-    organizationId,
-    profile?.userId,
-    sessionLineUserId,
-  ]);
-
-  // Auto-send receipt image to LINE after editing an order
-  useEffect(() => {
-    if (!pendingEditReceiptPush || !linkedCustomer) return;
-    const lineUserId = profile?.userId ?? sessionLineUserId;
-    if (!lineUserId) {
-      setPendingEditReceiptPush(null);
-      return;
-    }
-
-    let cancelled = false;
-    const timeoutId = window.setTimeout(async () => {
-      if (cancelled) return;
-      try {
-        let captured: { blob: Blob; fileName: string } | null = null;
-        for (let attempt = 0; attempt < 3 && !captured && !cancelled; attempt += 1) {
-          captured = await captureReceiptImage();
-          if (!captured && attempt < 2) {
-            await new Promise((resolve) => window.setTimeout(resolve, 140));
-          }
-        }
-        if (!captured || cancelled) return;
-        const imageDataUrl = await blobToDataUrl(captured.blob);
-        if (!imageDataUrl) return;
-        await sendCustomerReceiptImage(
-          organizationId,
-          linkedCustomer.id,
-          pendingEditReceiptPush,
-          imageDataUrl,
-          lineUserId,
-        );
-      } catch (err) {
-        console.error("[editOrder:sendReceipt]", err);
-      } finally {
-        if (!cancelled) setPendingEditReceiptPush(null);
-      }
-    }, 200);
-
-    return () => {
-      cancelled = true;
-      window.clearTimeout(timeoutId);
-    };
-  }, [
-    blobToDataUrl,
-    captureReceiptImage,
-    linkedCustomer,
-    organizationId,
-    pendingEditReceiptPush,
-    profile?.userId,
-    sessionLineUserId,
-  ]);
 
   // Handlers
 
@@ -2072,9 +1946,6 @@ export default function OrderClient({
       setReceiptImageUrl(null);
       setReceiptOrder(resData);
       setCurrentView("history");
-      if (resData.order_number) {
-        setPendingEditReceiptPush(resData.order_number);
-      }
     });
   };
 
@@ -3034,7 +2905,14 @@ export default function OrderClient({
               <div className="group relative flex flex-col items-center">
                 {/* Document Container */}
                 <div className="relative overflow-hidden rounded-sm bg-white shadow-[0_40px_100px_rgba(0,0,0,0.6)] ring-1 ring-white/5 transition duration-500 group-hover:scale-[1.02] group-hover:shadow-[0_50px_120px_rgba(0,0,0,0.8)]">
-                  <img src={receiptPopupUrl} alt="Receipt" className="h-auto w-full max-w-[210mm] bg-white sm:w-[500px]" />
+                  <Image
+                    src={receiptPopupUrl}
+                    alt="Receipt"
+                    width={794}
+                    height={1123}
+                    unoptimized
+                    className="h-auto w-full max-w-[210mm] bg-white sm:w-[500px]"
+                  />
                   <div className="pointer-events-none absolute inset-0 bg-gradient-to-tr from-transparent via-white/5 to-transparent opacity-0 transition-opacity duration-700 group-hover:opacity-100" />
                 </div>
               </div>

@@ -61,7 +61,7 @@ export function OrderReceiptCard({
       }}
     >
       <div style={{ textAlign: "right", padding: "4px 8px 0" }}>
-        <img
+        <Image
           src="/ty-noodles-logo.png"
           alt="T&Y Noodle"
           width={56}

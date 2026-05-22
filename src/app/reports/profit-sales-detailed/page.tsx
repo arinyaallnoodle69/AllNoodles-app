@@ -1,5 +1,6 @@
 ﻿import { Suspense } from "react";
 import { Filter, FileSpreadsheet, Store } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import { AppSidebarLayout } from "@/components/app-sidebar";
 import { MobileSearchDrawer } from "@/components/mobile-search/mobile-search-drawer";
@@ -445,7 +446,7 @@ async function DetailedProfitContent({ searchParams }: PageProps) {
                 <div className={styles.printHeader}>
                   <div className="mb-1 flex items-start justify-between gap-3">
                     <div className="flex items-center gap-2">
-                      <img src="/ty-noodles-logo-cropped.png" alt="T&Y Noodle" width={40} height={40} className="h-10 w-10 object-contain" />
+                      <Image src="/ty-noodles-logo-cropped.png" alt="T&Y Noodle" width={40} height={40} className="h-10 w-10 object-contain" />
                       <div>
                         <p className="text-sm font-black leading-tight text-[#003366]">T&Y Noodle</p>
                         <p className="text-[10px] font-semibold text-slate-500">ระบบรายงานผลกำไรจากการขายสินค้า</p>
@@ -482,7 +483,7 @@ async function DetailedProfitContent({ searchParams }: PageProps) {
                   <div className={styles.printHeader}>
                     <div className="mb-1 flex items-start justify-between gap-3">
                       <div className="flex items-center gap-2">
-                        <img src="/ty-noodles-logo-cropped.png" alt="T&Y Noodle" width={40} height={40} className="h-10 w-10 object-contain" />
+                        <Image src="/ty-noodles-logo-cropped.png" alt="T&Y Noodle" width={40} height={40} className="h-10 w-10 object-contain" />
                         <div>
                           <p className="text-sm font-black leading-tight text-[#003366]">T&Y Noodle</p>
                           <p className="text-[10px] font-semibold text-slate-500">ระบบรายงานผลกำไรจากการขายสินค้า</p>

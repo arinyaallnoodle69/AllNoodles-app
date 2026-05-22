@@ -3,6 +3,7 @@
 import { revalidateTag } from "next/cache";
 import { revalidatePath } from "next/cache";
 import { updateTag } from "next/cache";
+import { after } from "next/server";
 import { isCustomerOrderEditableAtTime, isOrderOpenAtMinutes } from "@/lib/order-window";
 import { getOrderWindowSettings } from "@/lib/order-window-server";
 import { revalidateDashboardPages } from "@/lib/dashboard/revalidate-dashboard-pages";
@@ -10,6 +11,7 @@ import { getEffectiveSaleUnitCost, normalizeSaleUnitCostMode } from "@/lib/produ
 import { notifyNewCustomerInquiry, notifyNewOrder } from "@/lib/line/notify";
 import { uploadAndNotifyCustomerReceiptImage } from "@/lib/line/customer-receipt-image";
 import { syncDeliveryNoteForOrder } from "@/lib/orders/sync-delivery-note";
+import { notifyUpdatedCustomerReceiptForOrder } from "@/lib/orders/notify-customer-receipt";
 import { sendNewCustomerInquiryPushNotification, sendNewOrderPushNotification } from "@/lib/push/web-push";
 import { revalidateReportPages } from "@/lib/reports/revalidate-report-pages";
 import { createCustomerInquiry } from "@/lib/customer-inquiries";
@@ -945,32 +947,17 @@ export async function createOrder(
 
   let orderNumber = orderNumberToUse;
   if (!isUpdating) {
-    const year = orderDate.substring(0, 4);
-    const month = orderDate.substring(5, 7);
-    const startDateStr = `${year}-${month}-01`;
+    const { data: nextOrderNumber, error: rpcError } = await supabase.rpc("next_order_number", {
+      p_order_date: orderDate,
+      p_organization_id: organizationId,
+    });
 
-    let nextYear = Number(year);
-    let nextMonth = Number(month) + 1;
-    if (nextMonth > 12) {
-      nextMonth = 1;
-      nextYear += 1;
-    }
-    const nextMonthStr = `${nextYear}-${String(nextMonth).padStart(2, "0")}-01`;
-
-    const { count, error: countError } = await supabase
-      .from("orders")
-      .select("*", { count: "exact", head: true })
-      .eq("organization_id", organizationId)
-      .gte("order_date", startDateStr)
-      .lt("order_date", nextMonthStr);
-
-    if (countError) {
-      console.error("[createOrder:countError]", countError);
+    if (rpcError || !nextOrderNumber) {
+      console.error("[createOrder:rpcError]", rpcError);
       return { success: false, error: "ไม่สามารถสร้างเลขออเดอร์ได้" };
     }
 
-    const nextNum = (count ?? 0) + 1;
-    orderNumber = `DN${year}${month}${String(nextNum).padStart(4, "0")}`;
+    orderNumber = String(nextOrderNumber);
   }
 
   const builtItems = await buildOrderItemData(supabase, organizationId, customerId, itemsToProcess);
@@ -1080,7 +1067,7 @@ export async function createOrder(
 
   invalidateOrderCaches(organizationId);
 
-  void (async () => {
+  after(async () => {
     try {
       const { data: customer } = await supabase
         .from("customers")
@@ -1105,10 +1092,20 @@ export async function createOrder(
         customerName: customer?.name ?? customerId,
         orderNumber: syncResult.deliveryNumber,
       });
+
+      if (customer?.line_user_id?.trim()) {
+        const receiptError = await notifyUpdatedCustomerReceiptForOrder(supabase, {
+          orderId: order.id,
+          organizationId,
+        });
+        if (receiptError) {
+          console.error("[createOrder:receiptError]", receiptError);
+        }
+      }
     } catch (err) {
       console.error("[createOrder:notify]", err);
     }
-  })();
+  });
 
   return {
     success: true,
@@ -1299,6 +1296,20 @@ export async function updateCustomerOrder(
 
   invalidateOrderCaches(organizationId);
   revalidatePath("/settings/customers/pricing");
+
+  after(async () => {
+    try {
+      const receiptError = await notifyUpdatedCustomerReceiptForOrder(supabase, {
+        orderId,
+        organizationId,
+      });
+      if (receiptError) {
+        console.error("[updateCustomerOrder:receiptError]", receiptError);
+      }
+    } catch (err) {
+      console.error("[updateCustomerOrder:notify]", err);
+    }
+  });
 
   return {
     success: true,

@@ -3,7 +3,6 @@
 import { useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { CalendarDays, Check, ChevronRight, Loader2, Package2, Truck } from "lucide-react";
-import { OrderDeliveryActionButton } from "@/components/orders/order-delivery-action-button";
 import { IncomingOrderDateButton } from "@/components/orders/incoming-order-date-button";
 import { IncomingOrderVehicleSelect } from "@/components/orders/incoming-order-vehicle-select";
 import type { OrderVehicleOption } from "@/lib/orders/manage";
@@ -207,16 +206,6 @@ export function IncomingOrderOpenCard({
             <ChevronRight className="h-4 w-4 text-slate-400" strokeWidth={2.6} />
           )}
         </button>
-        {hasDelivery ? (
-          <OrderDeliveryActionButton
-            customerId={customerId}
-            customerName={customerName}
-            date={orderDate}
-            iconOnly
-            label="ดูใบยืนยัน"
-            orderId={orderId}
-          />
-        ) : null}
       </div>
     </article>
   );

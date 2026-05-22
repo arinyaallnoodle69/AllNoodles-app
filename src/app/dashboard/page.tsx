@@ -1,8 +1,10 @@
 import "server-only";
 
+import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { AppSidebarLayout } from "@/components/app-sidebar";
 import { DashboardClient } from "@/components/dashboard/dashboard-client";
+import { DashboardLoadingShell } from "@/components/dashboard/dashboard-loading-shell";
 import { requireAppSession, roleHomePage } from "@/lib/auth/authorization";
 import { getDashboardOverview } from "@/lib/dashboard/overview";
 import { getIncomingOrders, getOrderDetailById } from "@/lib/orders/detail";
@@ -21,17 +23,19 @@ type DashboardPageProps = {
   searchParams: Promise<{ date?: string; expanded?: string; q?: string }>;
 };
 
-export default async function DashboardPage({ searchParams }: DashboardPageProps) {
-  const session = await requireAppSession();
-  if (session.role === "warehouse") {
-    redirect(roleHomePage("warehouse"));
-  }
+type DashboardDataContentProps = {
+  expandedOrderId: string;
+  orderDate: string;
+  organizationId: string;
+  today: string;
+};
 
-  const params = await searchParams;
-  const today = getTodayInBangkok();
-  const orderDate = params.date || today;
-  const expandedOrderId = params.expanded?.trim() ?? "";
-
+async function DashboardDataContent({
+  expandedOrderId,
+  orderDate,
+  organizationId,
+  today,
+}: DashboardDataContentProps) {
   let overview: DashboardOverview | null = null;
   let storeStatusSummary: OrderStoreStatusSummary | null = null;
   let expandedDetail: OrderDetailData | null = null;
@@ -40,13 +44,13 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
 
   try {
     const results = await Promise.all([
-      getDashboardOverview(session.organizationId),
-      getOrderStoreStatusSummary(session.organizationId, orderDate),
+      getDashboardOverview(organizationId),
+      getOrderStoreStatusSummary(organizationId, orderDate),
       expandedOrderId
-        ? getOrderDetailById(session.organizationId, expandedOrderId)
+        ? getOrderDetailById(organizationId, expandedOrderId)
         : Promise.resolve(null),
-      expandedOrderId ? getIncomingOrders(session.organizationId, { orderDate }) : Promise.resolve([]),
-      expandedOrderId ? getProductsForOrder(session.organizationId) : Promise.resolve([]),
+      expandedOrderId ? getIncomingOrders(organizationId, { orderDate }) : Promise.resolve([]),
+      expandedOrderId ? getProductsForOrder(organizationId) : Promise.resolve([]),
     ]);
 
     overview = results[0];
@@ -87,19 +91,43 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   }
 
   return (
+    <DashboardClient
+      overview={overview}
+      storeStatusSummary={storeStatusSummary}
+      stockProducts={overview.stockProducts}
+      stockSuppliers={overview.stockSuppliers}
+      today={today}
+      orderDate={orderDate}
+      expandedDetail={expandedDetail}
+      expandedOrderId={expandedOrderId}
+      allOrders={orders}
+      products={products}
+    />
+  );
+}
+
+export default async function DashboardPage({ searchParams }: DashboardPageProps) {
+  const session = await requireAppSession();
+  if (session.role === "warehouse") {
+    redirect(roleHomePage("warehouse"));
+  }
+
+  const params = await searchParams;
+  const today = getTodayInBangkok();
+  const orderDate = params.date || today;
+  const expandedOrderId = params.expanded?.trim() ?? "";
+  const suspenseKey = `${session.organizationId}:${orderDate}:${expandedOrderId}`;
+
+  return (
     <AppSidebarLayout>
-      <DashboardClient
-        overview={overview}
-        storeStatusSummary={storeStatusSummary}
-        stockProducts={overview.stockProducts}
-        stockSuppliers={overview.stockSuppliers}
-        today={today}
-        orderDate={orderDate}
-        expandedDetail={expandedDetail}
-        expandedOrderId={expandedOrderId}
-        allOrders={orders}
-        products={products}
-      />
+      <Suspense key={suspenseKey} fallback={<DashboardLoadingShell />}>
+        <DashboardDataContent
+          expandedOrderId={expandedOrderId}
+          orderDate={orderDate}
+          organizationId={session.organizationId}
+          today={today}
+        />
+      </Suspense>
     </AppSidebarLayout>
   );
 }

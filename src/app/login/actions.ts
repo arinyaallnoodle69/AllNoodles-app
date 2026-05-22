@@ -185,7 +185,7 @@ export async function verifyPin(formData: FormData) {
     redirect("/login?error=pin-locked");
   }
 
-  const isValidPin = verifyPinHash(token, user.pin_hash);
+  const isValidPin = await verifyPinHash(token, user.pin_hash);
 
   if (!isValidPin) {
     const { data: failureState } = await admin.rpc("record_pin_auth_result", {
