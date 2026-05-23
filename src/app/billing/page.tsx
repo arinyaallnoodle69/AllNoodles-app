@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import Link from "next/link";
 import { Receipt, History, Search } from "lucide-react";
 import { AppSidebarLayout } from "@/components/app-sidebar";
 import { requireAppRole } from "@/lib/auth/authorization";
@@ -107,7 +108,7 @@ async function BillingPageContent({ searchParams }: BillingPageProps) {
 
         {/* Tab Navigation */}
         <div className="mb-8 flex border-b border-slate-200 md:px-0">
-          <a
+          <Link
             href="/billing"
             className={`flex-1 text-center px-2 md:px-8 py-4 text-sm md:text-base font-bold transition-all border-b-4 ${
               currentTab === "create"
@@ -116,8 +117,8 @@ async function BillingPageContent({ searchParams }: BillingPageProps) {
             }`}
           >
             ออกใบวางบิลใหม่
-          </a>
-          <a
+          </Link>
+          <Link
             href="/billing?h_show=1"
             className={`flex-1 text-center px-2 md:px-8 py-4 text-sm md:text-base font-bold transition-all border-b-4 ${
               currentTab === "history"
@@ -126,7 +127,7 @@ async function BillingPageContent({ searchParams }: BillingPageProps) {
             }`}
           >
             ประวัติการวางบิล
-          </a>
+          </Link>
         </div>
 
         <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">

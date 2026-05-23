@@ -1,7 +1,5 @@
-const CACHE_NAME = "T&Y Noodle-v5";
+const CACHE_NAME = "T&Y Noodle-v6";
 const APP_SHELL = [
-  "/",
-  "/login",
   "/offline",
   "/manifest.webmanifest",
   "/brand/192x192.png",
@@ -105,54 +103,20 @@ self.addEventListener("fetch", (event) => {
   const url = new URL(request.url);
 
   if (request.mode === "navigate") {
-    // Determine the best cache key to look up (either the exact request, or "/" or "/login")
-    let cacheKey = request;
-    const path = url.pathname;
-    
-    if (path === "/" || path === "/login" || path.startsWith("/login")) {
-      // These are core shells, we want to look them up by their clean paths
-      cacheKey = path === "/" ? "/" : "/login";
-    }
-
     event.respondWith(
-      caches.match(cacheKey, { ignoreSearch: true }).then((cachedResponse) => {
-        // Prepare network fetch promise to run in background or foreground
-        const fetchPromise = fetch(request)
-          .then(async (networkResponse) => {
-            // Clean the response to strip any redirect flag before caching
-            const cleaned = cleanResponse(networkResponse);
-            if (cleaned && cleaned.ok) {
-              const cache = await caches.open(CACHE_NAME);
-              cache.put(request, cleaned.clone());
-            }
-            return cleaned;
-          })
-          .catch(() => null);
-
-        if (cachedResponse) {
-          // Stale-While-Revalidate: Return cache immediately, update cache in background
-          event.waitUntil(fetchPromise);
-          // Also clean the cached response in case it was stored before this fix
-          return cleanResponse(cachedResponse);
-        }
-
-        // Network-First with quick fallback:
-        // If there's no cache match, try network first.
-        return fetchPromise.then(async (networkResponse) => {
-          if (networkResponse) {
-            return networkResponse;
-          }
-
-          // Fallback if offline / network failed
-          const cachedLogin = await caches.match("/login");
-          if (cachedLogin) {
-            return cleanResponse(cachedLogin);
-          }
-
+      fetch(request)
+        .then(cleanResponse)
+        .catch(async () => {
           const offlinePage = await caches.match("/offline");
-          return cleanResponse(offlinePage);
-        });
-      })
+          if (offlinePage) {
+            return cleanResponse(offlinePage);
+          }
+
+          return new Response("Offline", {
+            status: 503,
+            headers: { "Content-Type": "text/plain; charset=utf-8" },
+          });
+        }),
     );
     return;
   }

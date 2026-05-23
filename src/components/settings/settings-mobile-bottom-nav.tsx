@@ -102,7 +102,6 @@ export function SettingsMobileBottomNav() {
               <Link
                 key={href}
                 href={href}
-                prefetch={false}
                 onClick={() => setMoreOpen(false)}
                 className={`flex flex-col items-center gap-2.5 rounded-2xl px-3 py-5 text-sm font-semibold transition ${
                   active
@@ -158,7 +157,6 @@ export function SettingsMobileBottomNav() {
                   <Link
                     key={href}
                     href={href}
-                    prefetch={false}
                     className={`flex flex-col items-center justify-center gap-1 rounded-2xl px-1 py-2 text-[10px] font-medium transition ${
                       active
                         ? "text-[#003366]"
@@ -182,7 +180,6 @@ export function SettingsMobileBottomNav() {
                   <Link
                     key={href}
                     href={href}
-                    prefetch={false}
                     className={`flex flex-col items-center justify-center gap-1 rounded-2xl px-1 py-2 text-[10px] font-medium transition ${
                       active
                         ? "text-[#003366]"
@@ -282,7 +279,6 @@ export function SettingsMobileBottomNav() {
                 <Link
                   key={option.href}
                   href={option.href}
-                  prefetch={false}
                   onClick={() => setSettingsOpen(false)}
                   className="flex items-center gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition active:bg-slate-50"
                 >

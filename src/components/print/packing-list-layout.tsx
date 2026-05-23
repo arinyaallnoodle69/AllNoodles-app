@@ -33,10 +33,10 @@ const SHEET_W = "356mm";
 const SHEET_H = "216mm";
 const SCREEN_SHEET_W = "1346px";
 const SCREEN_SHEET_H = "816px";
-const STANDARD_PRODUCTS_PER_PAGE = 40;
-const STANDARD_STORES_PER_PAGE = 30;
-const TRANSPOSED_PRODUCTS_PER_PAGE = 9999;
-const TRANSPOSED_STORES_PER_PAGE = 35;
+const STANDARD_PRODUCTS_PER_PAGE = 30;
+const STANDARD_STORES_PER_PAGE = 45;
+const TRANSPOSED_PRODUCTS_PER_PAGE = 45;
+const TRANSPOSED_STORES_PER_PAGE = 37;
 
 const VEHICLE_COLORS = ["#123c73", "#0f766e", "#9a3412", "#5b21b6", "#1d4ed8"];
 const UNASSIGNED_COLOR = "#64748b";
@@ -285,7 +285,7 @@ function buildTransposedPages(data: PackingListData): TransposedPageDef[] {
   }));
 }
 
-function PackingHeader({
+function StandardPackingHeader({
   accentColor,
   organizationName,
   dateLabel,
@@ -307,15 +307,14 @@ function PackingHeader({
   productTotalChunks: number;
 }) {
   return (
-    <header className="packing-header" style={{ borderColor: accentColor }}>
-      <div className="packing-header__title-block">
-        <div className="packing-header__org">{organizationName}</div>
-        <h1 className="packing-header__title">ตารางเช็กออเดอร์ลูกค้า</h1>
-        <div className="packing-header__subtitle">
-          <span>{vehicleName ?? "ยังไม่ได้กำหนดรถจัดส่ง"}</span>
-          <span>วันที่ {dateLabel}</span>
-        </div>
+    <header className="packing-header packing-header--standard" style={{ borderColor: accentColor }}>
+      <div className="packing-header__summary-line">
+        <span className="packing-header__org packing-header__org--inline">{organizationName}</span>
+        <h1 className="packing-header__title packing-header__title--standard">ตารางเช็คออเดอร์ลูกค้า</h1>
+        <span className="packing-header__date">วันที่ {dateLabel}</span>
       </div>
+
+      <div className="packing-header__vehicle-main">{vehicleName ?? "ยังไม่ได้กำหนดรถจัดส่ง"}</div>
 
       <div className="packing-header__meta">
         <div className="packing-header__meta-cell">
@@ -356,7 +355,7 @@ function StandardPackingListPage({ page, data }: { page: StandardPageDef; data: 
   return (
     <section className="packing-sheet">
       <div className="packing-sheet__inner">
-        <PackingHeader
+        <StandardPackingHeader
           accentColor={page.accentColor}
           organizationName={page.organizationName}
           dateLabel={page.dateLabel}
@@ -375,7 +374,7 @@ function StandardPackingListPage({ page, data }: { page: StandardPageDef; data: 
                 <th className="packing-col packing-col--store">ข้อมูลลูกค้า / ร้านค้า</th>
                 {(() => {
                   const colCount = Math.max(page.pageProducts.length, 1);
-                  const maxTokenLength = colCount > 30 ? 4 : colCount > 20 ? 5 : 7;
+                  const maxTokenLength = colCount > 30 ? 5 : colCount > 20 ? 6 : 7;
                   return page.pageProducts.map((product, columnIndex) => {
                     const palette = getColumnPalette(columnIndex);
                     return (
@@ -437,30 +436,21 @@ function StandardPackingListPage({ page, data }: { page: StandardPageDef; data: 
           </table>
         </div>
 
-        <footer className="packing-footer">
-          <span>ร้านค้าในหน้านี้ {page.pageStores.length.toLocaleString("th-TH")} ร้าน</span>
-          <span>
-            ตารางเช็กออเดอร์ลูกค้า · กลุ่มร้าน {page.storeChunk} · กลุ่มสินค้า {page.productChunk}
-          </span>
-        </footer>
       </div>
     </section>
   );
 }
 
 function TransposedPackingListPage({ page, data }: { page: TransposedPageDef; data: PackingListData }) {
-  const storeColumnWidth = calcDataColWidth(Math.max(page.pageStores.length, 1), 292);
+  const storeColumnWidth = calcDataColWidth(Math.max(page.pageStores.length, 1), 311);
   const productTotals = page.pageProductIndices.map((productIndex) =>
     page.pageStoreIndices.reduce((sum, storeIndex) => sum + (data.qty[productIndex]?.[storeIndex] ?? 0), 0),
-  );
-  const storeTotals = page.pageStoreIndices.map((storeIndex) =>
-    page.pageProductIndices.reduce((sum, productIndex) => sum + (data.qty[productIndex]?.[storeIndex] ?? 0), 0),
   );
 
   return (
     <section className="packing-sheet">
       <div className="packing-sheet__inner">
-        <PackingHeader
+        <StandardPackingHeader
           accentColor={page.accentColor}
           organizationName={page.organizationName}
           dateLabel={page.dateLabel}
@@ -522,25 +512,9 @@ function TransposedPackingListPage({ page, data }: { page: TransposedPageDef; da
                   </td>
                 </tr>
               ))}
-
-              <tr className="packing-table__total-row">
-                <td className="packing-cell packing-cell--total-label">รวมยอด</td>
-                {storeTotals.map((total, index) => (
-                  <td key={`transposed-total-${index}`} className="packing-cell packing-cell--total">
-                    {total > 0 ? total.toLocaleString("th-TH") : ""}
-                  </td>
-                ))}
-              </tr>
             </tbody>
           </table>
         </div>
-
-        <footer className="packing-footer">
-          <span>ร้านค้าในหน้านี้ {page.pageStores.length.toLocaleString("th-TH")} ร้าน</span>
-          <span>
-            ตารางเช็กออเดอร์ลูกค้า · กลุ่มร้าน {page.storeChunk} · กลุ่มสินค้า {page.productChunk}
-          </span>
-        </footer>
       </div>
     </section>
   );
@@ -583,8 +557,20 @@ function PackingListStyles() {
         }
 
         .packing-print-container {
+          display: block !important;
           margin: 0 !important;
           padding: 0 !important;
+          line-height: 1 !important;
+        }
+
+        .packing-sheet-shell {
+          width: 356mm !important;
+          height: 216mm !important;
+          margin: 0 !important;
+          padding: 0 !important;
+          display: block !important;
+          overflow: hidden !important;
+          line-height: 1 !important;
         }
 
         .packing-sheet {
@@ -593,8 +579,16 @@ function PackingListStyles() {
           margin: 0 !important;
           border: none !important;
           box-shadow: none !important;
+          transform: none !important;
+          transform-origin: top left !important;
           page-break-after: always;
           break-after: page;
+        }
+
+        .packing-sheet__inner {
+          padding-top: 0.6mm !important;
+          padding-bottom: 1mm !important;
+          gap: 0.7mm !important;
         }
 
         .packing-sheet:last-child {
@@ -674,8 +668,8 @@ function PackingListStyles() {
         display: flex;
         flex-direction: column;
         height: 100%;
-        padding: 4mm 4.5mm 3mm;
-        gap: 2mm;
+        padding: 3mm 4mm 2.2mm;
+        gap: 1.2mm;
         box-sizing: border-box;
       }
 
@@ -696,6 +690,22 @@ function PackingListStyles() {
         flex: 1;
       }
 
+      .packing-header--standard {
+        display: grid;
+        grid-template-columns: minmax(72mm, auto) minmax(0, 1fr) auto;
+        align-items: end;
+        gap: 1.8mm;
+        padding-bottom: 0.35mm;
+      }
+
+      .packing-header__summary-line {
+        display: flex;
+        align-items: baseline;
+        gap: 1.2mm;
+        min-width: 0;
+        white-space: nowrap;
+      }
+
       .packing-header__org {
         font-size: 7.2pt;
         font-weight: 800;
@@ -706,6 +716,10 @@ function PackingListStyles() {
         white-space: nowrap;
       }
 
+      .packing-header__org--inline {
+        font-size: 6.7pt;
+      }
+
       .packing-header__title {
         margin: 0;
         font-size: 12.8pt;
@@ -713,6 +727,30 @@ function PackingListStyles() {
         font-weight: 800;
         color: #0f172a;
         white-space: nowrap;
+      }
+
+      .packing-header__title--standard {
+        font-size: 9.3pt;
+      }
+
+      .packing-header__date {
+        font-size: 6.8pt;
+        font-weight: 700;
+        line-height: 1;
+        color: #475569;
+        white-space: nowrap;
+      }
+
+      .packing-header__vehicle-main {
+        min-width: 0;
+        text-align: center;
+        font-size: 13.8pt;
+        font-weight: 800;
+        line-height: 1;
+        color: #0f172a;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
       }
 
       .packing-header__subtitle {
@@ -740,20 +778,34 @@ function PackingListStyles() {
         align-items: center;
         justify-content: center;
         gap: 1.2mm;
-        min-height: 8mm;
-        padding: 1mm 1.6mm;
+        min-height: 4.8mm;
+        padding: 0.35mm 1mm;
         background: #ffffff;
         white-space: nowrap;
       }
 
+      .packing-table:not(.packing-table--transposed) .packing-table__row {
+        height: 3.42mm;
+      }
+
+      .packing-table:not(.packing-table--transposed) .packing-cell--store {
+        font-size: 7.4pt;
+        line-height: 0.98;
+      }
+
+      .packing-table:not(.packing-table--transposed) .packing-cell--qty,
+      .packing-table:not(.packing-table--transposed) .packing-cell--total {
+        font-size: 9.2pt;
+      }
+
       .packing-header__meta-cell span {
-        font-size: 6.8pt;
+        font-size: 6.3pt;
         font-weight: 700;
         color: #64748b;
       }
 
       .packing-header__meta-cell strong {
-        font-size: 8.5pt;
+        font-size: 7.9pt;
         font-weight: 800;
         color: #0f172a;
       }
@@ -762,11 +814,13 @@ function PackingListStyles() {
         flex: 1;
         min-height: 0;
         border: 1.35px solid #111827;
+        display: flex;
+        align-items: flex-start;
+        overflow: hidden;
       }
 
       .packing-table {
         width: 100%;
-        height: 100%;
         border-collapse: collapse;
         table-layout: fixed;
       }
@@ -802,9 +856,9 @@ function PackingListStyles() {
       }
 
       .packing-col--transpose-product {
-        width: 35mm;
-        min-width: 35mm;
-        padding: 1.2mm 1.5mm;
+        width: 27mm;
+        min-width: 27mm;
+        padding: 1.2mm 0.7mm;
         background: #ffffff;
         color: #0f172a;
         font-size: 7.2pt;
@@ -814,12 +868,12 @@ function PackingListStyles() {
       }
 
       .packing-col--transpose-total {
-        width: 14mm;
-        min-width: 14mm;
-        padding: 1.2mm 0.8mm;
+        width: 8mm;
+        min-width: 8mm;
+        padding: 1.2mm 0.2mm;
         background: #ffd400;
         color: #0f172a;
-        font-size: 7.2pt;
+        font-size: 6.7pt;
         font-weight: 800;
         text-align: center;
         white-space: nowrap;
@@ -831,7 +885,7 @@ function PackingListStyles() {
         justify-content: space-between;
         gap: 0.2mm;
         min-height: 14mm;
-        padding: 0.8mm 0.55mm;
+        padding: 0.55mm 0.05mm;
         width: 100%;
         min-width: 0;
         overflow: hidden;
@@ -842,10 +896,10 @@ function PackingListStyles() {
         flex-direction: column;
         align-items: center;
         justify-content: center;
-        gap: 0.4mm;
+        gap: 0.18mm;
         flex: 1;
         font-size: 5.7pt;
-        line-height: 1.05;
+        line-height: 1.14;
         font-weight: 700;
         color: #0f172a;
         width: 100%;
@@ -855,10 +909,12 @@ function PackingListStyles() {
 
       .packing-product-header__name span {
         display: block;
+        width: 100%;
         max-width: 100%;
         overflow: hidden;
         white-space: nowrap;
         text-overflow: ellipsis;
+        text-align: center;
       }
 
       .packing-product-header__unit {
@@ -873,7 +929,7 @@ function PackingListStyles() {
         align-items: center;
         justify-content: center;
         min-height: 14mm;
-        padding: 0.8mm 0.55mm;
+        padding: 1.15mm 0.9mm;
       }
 
       .packing-transpose-header__name {
@@ -883,12 +939,21 @@ function PackingListStyles() {
         white-space: normal;
         word-break: break-word;
         text-overflow: ellipsis;
-        font-size: 5pt;
-        line-height: 0.86;
+        font-size: 4.6pt;
+        line-height: 1.24;
         font-weight: 700;
         color: #0f172a;
         -webkit-box-orient: vertical;
         -webkit-line-clamp: 4;
+      }
+
+      .packing-table--transposed .packing-table__row {
+        height: 3.85mm;
+      }
+
+      .packing-table--transposed .packing-cell--qty,
+      .packing-table--transposed .packing-cell--empty {
+        font-size: 8.9pt;
       }
 
       .packing-cell {
@@ -910,24 +975,24 @@ function PackingListStyles() {
       }
 
       .packing-cell--transpose-product {
-        padding: 0 1.4mm;
+        padding: 0 0.45mm;
         text-align: left;
         background: #ffffff;
       }
 
       .packing-transpose-product {
-        display: flex;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
         align-items: center;
-        justify-content: space-between;
-        gap: 1mm;
+        gap: 0.35mm;
       }
 
       .packing-transpose-product__name {
         display: -webkit-box;
         overflow: hidden;
-        font-size: 6.1pt;
+        font-size: 5.8pt;
         font-weight: 700;
-        line-height: 0.92;
+        line-height: 1.02;
         color: #0f172a;
         -webkit-box-orient: vertical;
         -webkit-line-clamp: 2;
@@ -935,10 +1000,11 @@ function PackingListStyles() {
 
       .packing-transpose-product__unit {
         flex-shrink: 0;
-        font-size: 5.4pt;
+        font-size: 5.2pt;
         font-weight: 700;
         color: #475569;
         white-space: nowrap;
+        text-align: right;
       }
 
       .packing-cell--qty,
@@ -950,7 +1016,7 @@ function PackingListStyles() {
 
       .packing-cell--transpose-total-value {
         background: #ffd400;
-        font-size: 10.6pt;
+        font-size: 8.9pt;
         font-weight: 800;
         color: #0f172a;
       }
@@ -980,18 +1046,6 @@ function PackingListStyles() {
 
       .packing-cell--total {
         background: #ffd400;
-      }
-
-      .packing-footer {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        gap: 4mm;
-        font-size: 6.6pt;
-        font-weight: 600;
-        line-height: 1;
-        color: #64748b;
-        white-space: nowrap;
       }
     `}</style>
   );

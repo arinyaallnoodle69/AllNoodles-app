@@ -1,7 +1,7 @@
 "use client";
 
 import * as htmlToImage from "html-to-image";
-import { AlertTriangle, Download, Image as ImageIcon, Loader2, Printer, Share2, X } from "lucide-react";
+import { AlertTriangle, Download, Image as ImageIcon, Loader2, Printer, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
@@ -38,10 +38,16 @@ export function PackingListPrintButton({
   unassignedStores = [],
   dateLabel = "",
   hidePrintOnMobile = false,
+  hideSaveOnDesktop = false,
+  documentTitle = "ใบจัดของ",
+  printButtonText = "พิมพ์ใบจัดของ",
 }: {
   unassignedStores?: string[];
   dateLabel?: string;
   hidePrintOnMobile?: boolean;
+  hideSaveOnDesktop?: boolean;
+  documentTitle?: string;
+  printButtonText?: string;
 }) {
   const [isPrinting, setIsPrinting] = useState(false);
   const [isCapturing, setIsCapturing] = useState(false);
@@ -97,10 +103,10 @@ export function PackingListPrintButton({
     }, 180);
   }
 
-  async function handleOpenPreview(mode: "print" | "share") {
+  async function handleOpenPreview(mode: "print" | "save") {
     if (isPrinting || isCapturing) return;
 
-    const actionLabel = mode === "print" ? "เปิดตัวอย่างก่อนพิมพ์" : "บันทึกรูป / แชร์ไลน์";
+    const actionLabel = mode === "print" ? "เปิดตัวอย่างก่อนพิมพ์" : "บันทึกรูป";
     if (!confirmUnassigned(actionLabel)) return;
 
     setIsCapturing(true);
@@ -109,12 +115,10 @@ export function PackingListPrintButton({
     setPreviewImages([]);
 
     try {
-      const targets = Array.from(
-        document.querySelectorAll<HTMLElement>(".packing-sheet")
-      );
+      const targets = Array.from(document.querySelectorAll<HTMLElement>(".packing-sheet"));
 
       if (targets.length === 0) {
-        throw new Error("ไม่พบหน้าสำหรับสร้างตัวอย่างใบจัดของ");
+        throw new Error("ไม่พบหน้าสำหรับสร้างตัวอย่างเอกสาร");
       }
 
       let fontEmbedCSS: string | undefined;
@@ -140,14 +144,16 @@ export function PackingListPrintButton({
 
       for (let i = 0; i < targets.length; i += 1) {
         const target = targets[i];
-        const captureWidth = FALLBACK_CAPTURE_WIDTH; // 1346px
-        const captureHeight = FALLBACK_CAPTURE_HEIGHT; // 816px
+        const datasetWidth = Number(target.dataset.captureWidth ?? "");
+        const datasetHeight = Number(target.dataset.captureHeight ?? "");
+        const captureWidth = datasetWidth || target.offsetWidth || FALLBACK_CAPTURE_WIDTH;
+        const captureHeight = datasetHeight || target.offsetHeight || FALLBACK_CAPTURE_HEIGHT;
 
         const dataUrl = await htmlToImage.toPng(target, {
           backgroundColor: "#ffffff",
           cacheBust: true,
           fontEmbedCSS,
-          pixelRatio: 2, // Standard safe high-res pixelRatio 2 (reduces memory consumption on mobile and prevents crashes)
+          pixelRatio: 2,
           width: captureWidth,
           height: captureHeight,
           style: {
@@ -158,7 +164,7 @@ export function PackingListPrintButton({
             margin: "0",
             boxShadow: "none",
             display: "block",
-            transform: "none", // Force removal of scale transform for correct capture resolution
+            transform: "none",
             transformOrigin: "top left",
           },
         });
@@ -166,51 +172,30 @@ export function PackingListPrintButton({
         captured.push({
           dataUrl,
           blob: dataUrlToBlob(dataUrl),
-          name: createFileName(`packing-list-${dateLabel || "export"}`, i + 1),
+          name: createFileName(`${documentTitle}-${dateLabel || "export"}`, i + 1),
         });
 
         setPreviewImages([...captured]);
       }
     } catch (error) {
-      console.error("Packing list image capture failed:", error);
-      setErrorMessage(error instanceof Error ? error.message : "สร้างตัวอย่างใบจัดของไม่สำเร็จ");
+      console.error("Document image capture failed:", error);
+      setErrorMessage(error instanceof Error ? error.message : "สร้างตัวอย่างเอกสารไม่สำเร็จ");
       setShowPreview(false);
     } finally {
       setIsCapturing(false);
     }
   }
 
-  async function handleShareOrDownload() {
+  async function downloadAll() {
     if (previewImages.length === 0) return;
 
-    const files = previewImages.map((image) => new File([image.blob], image.name, { type: "image/png" }));
-    const canShareFiles =
+    const isMobileDevice =
       typeof navigator !== "undefined" &&
-      typeof navigator.share === "function" &&
-      typeof navigator.canShare === "function" &&
-      navigator.canShare({ files });
+      /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
-    if (canShareFiles) {
-      try {
-        await navigator.share({
-          files,
-          title: `ใบจัดของ ${dateLabel}`.trim(),
-        });
-        return;
-      } catch (error) {
-        if (error instanceof Error && error.name === "AbortError") return;
-        console.error("Web share failed:", error);
-      }
-    }
-
-    const isMobileOrLine =
-      typeof navigator !== "undefined" &&
-      (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
-        /Line/i.test(navigator.userAgent));
-
-    if (isMobileOrLine) {
+    if (isMobileDevice) {
       alert(
-        `บันทึกใบจัดของ:\nเนื่องจากข้อจำกัดการดาวน์โหลดบนมือถือและแอป LINE\n\nกรุณากดค้าง (Tap & Hold) ที่รูปภาพแต่ละใบที่แสดงอยู่ด้านบน แล้วเลือก 'บันทึกรูปภาพ' (Save Image) หรือ 'แชร์' เพื่อบันทึกลงในเครื่องหรือส่งต่อได้โดยตรงครับ`
+        `บันทึกรูปเอกสาร:\nบนมือถือบางเบราว์เซอร์จะไม่ดาวน์โหลดหลายไฟล์อัตโนมัติ\n\nกรุณากดค้างที่รูปแต่ละหน้าแล้วเลือก "บันทึกรูปภาพ" เพื่อบันทึกลงเครื่อง`,
       );
       return;
     }
@@ -220,10 +205,11 @@ export function PackingListPrintButton({
         const link = document.createElement("a");
         link.href = image.dataUrl;
         link.download = image.name;
+        link.rel = "noopener";
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
-      }, index * 300);
+      }, index * 220);
     });
   }
 
@@ -241,21 +227,21 @@ export function PackingListPrintButton({
         onClick={() => handleOpenPreview("print")}
         disabled={isPrinting || isCapturing}
         className={`${hidePrintOnMobile ? "hidden md:flex" : "flex"} items-center gap-1.5 rounded-lg bg-[#1e3a5f] px-3.5 py-1.5 text-[13px] font-bold text-white shadow-sm transition hover:bg-[#152943] disabled:cursor-not-allowed disabled:opacity-70`}
-        style={{ fontFamily: "Sarabun, sans-serif" }}
+        style={{ fontFamily: 'var(--font-sukhumvit), "Sukhumvit Set", "Noto Sans Thai", sans-serif' }}
       >
         {isCapturing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Printer className="h-4 w-4" />}
-        {isCapturing ? "กำลังสร้างตัวอย่าง..." : "พิมพ์ใบจัดของ"}
+        {isCapturing ? "กำลังสร้างตัวอย่าง..." : printButtonText}
       </button>
 
       <button
         type="button"
-        onClick={() => handleOpenPreview("share")}
+        onClick={() => handleOpenPreview("save")}
         disabled={isPrinting || isCapturing}
-        className="flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3.5 py-1.5 text-[13px] font-bold text-white shadow-sm transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-70"
-        style={{ fontFamily: "Sarabun, sans-serif" }}
+        className={`${hideSaveOnDesktop ? "flex md:hidden" : "flex"} items-center gap-1.5 rounded-lg bg-emerald-600 px-3.5 py-1.5 text-[13px] font-bold text-white shadow-sm transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-70`}
+        style={{ fontFamily: 'var(--font-sukhumvit), "Sukhumvit Set", "Noto Sans Thai", sans-serif' }}
       >
-        {isCapturing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Share2 className="h-4 w-4" />}
-        {isCapturing ? "กำลังสร้างภาพ..." : "เซฟ PDF / แชร์ไลน์"}
+        {isCapturing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+        {isCapturing ? "กำลังสร้างภาพ..." : "บันทึกรูป"}
       </button>
 
       {showPreview &&
@@ -267,9 +253,9 @@ export function PackingListPrintButton({
                   <ImageIcon className="h-5 w-5 sm:h-6 sm:w-6" strokeWidth={2.5} />
                 </div>
                 <div className="min-w-0">
-                  <h3 className="text-base font-black tracking-tight text-white sm:text-xl">ตัวอย่างใบจัดของ</h3>
+                  <h3 className="text-base font-black tracking-tight text-white sm:text-xl">{`ตัวอย่าง${documentTitle}`}</h3>
                   <p className="truncate text-[10px] font-bold uppercase tracking-[0.15em] text-slate-400 sm:text-xs">
-                    {isCapturing ? `กำลังประมวลผล (${previewImages.length} หน้า)...` : `${previewImages.length} หน้า พร้อมพิมพ์หรือบันทึก`}
+                    {isCapturing ? `กำลังประมวลผล (${previewImages.length} หน้า)...` : `${previewImages.length} หน้า พร้อมพิมพ์หรือบันทึกรูป`}
                   </p>
                 </div>
               </div>
@@ -287,8 +273,8 @@ export function PackingListPrintButton({
                     </button>
                     <button
                       type="button"
-                      onClick={handleShareOrDownload}
-                      className="hidden items-center gap-2.5 rounded-xl bg-white px-5 py-2.5 text-sm font-black text-[#0a0c10] shadow-[0_8px_20px_rgba(255,255,255,0.15)] transition hover:bg-slate-100 active:scale-95 sm:flex"
+                      onClick={downloadAll}
+                      className={`${hideSaveOnDesktop ? "hidden" : "hidden items-center gap-2.5 rounded-xl bg-white px-5 py-2.5 text-sm font-black text-[#0a0c10] shadow-[0_8px_20px_rgba(255,255,255,0.15)] transition hover:bg-slate-100 active:scale-95 sm:flex"}`}
                     >
                       <Download className="h-4.5 w-4.5" strokeWidth={3} />
                       บันทึกทั้งหมด
@@ -315,8 +301,8 @@ export function PackingListPrintButton({
                       <Loader2 className="absolute inset-0 m-auto h-10 w-10 animate-spin text-[#003366]" strokeWidth={3} />
                     </div>
                     <div className="text-center">
-                      <p className="text-xl font-black text-white">กำลังสร้างไฟล์ภาพใบจัดของ</p>
-                      <p className="mt-2 text-sm font-bold text-slate-500">ระบบกำลังแปลงแต่ละหน้าให้พร้อมพิมพ์หรือบันทึก</p>
+                      <p className="text-xl font-black text-white">{`กำลังสร้างไฟล์ภาพ${documentTitle}`}</p>
+                      <p className="mt-2 text-sm font-bold text-slate-500">ระบบกำลังแปลงแต่ละหน้าให้พร้อมพิมพ์หรือบันทึกรูป</p>
                     </div>
                   </div>
                 ) : null}
@@ -332,7 +318,7 @@ export function PackingListPrintButton({
 
                     <div className="relative w-full overflow-hidden rounded-sm bg-white shadow-[0_40px_100px_rgba(0,0,0,0.6)] ring-1 ring-white/5 transition duration-500 group-hover:scale-[1.02] group-hover:shadow-[0_50px_120px_rgba(0,0,0,0.8)]">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={image.dataUrl} alt={`ใบจัดของหน้า ${index + 1}`} className="block h-auto w-full bg-white" />
+                      <img src={image.dataUrl} alt={`${documentTitle} หน้า ${index + 1}`} className="block h-auto w-full bg-white" />
                       <div className="pointer-events-none absolute inset-0 bg-gradient-to-tr from-transparent via-white/5 to-transparent opacity-0 transition-opacity duration-700 group-hover:opacity-100" />
                     </div>
                   </div>
@@ -344,11 +330,11 @@ export function PackingListPrintButton({
               <div className="border-t border-white/5 bg-[#12151c]/90 p-4 pb-safe-offset-4 backdrop-blur-xl sm:hidden">
                 <button
                   type="button"
-                  onClick={handleShareOrDownload}
+                  onClick={downloadAll}
                   className="flex w-full items-center justify-center gap-3 rounded-2xl bg-emerald-600 py-4 text-lg font-black text-white shadow-[0_15px_30px_rgba(255,255,255,0.1)] transition active:scale-95"
                 >
                   <Download className="h-6 w-6 text-white" strokeWidth={3} />
-                  บันทึกรูป / แชร์ไลน์
+                  บันทึกรูป
                 </button>
               </div>
             ) : null}

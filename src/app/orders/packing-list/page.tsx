@@ -2,11 +2,6 @@ import { Suspense } from "react";
 import { PageLoader } from "@/components/page-loader";
 import { PrintPackingListButton } from "@/components/orders/print-packing-list-button";
 import {
-  PackingListSummaryButton,
-  type PackingListSummaryProduct,
-  type PackingListSummaryStore,
-} from "@/components/orders/packing-list-summary-button";
-import {
   PackingListLayout,
   type PackingListData,
   type PackingListLayoutMode,
@@ -71,16 +66,6 @@ type DbCategory = {
   id: string;
   name: string;
   sort_order: number | string | null;
-};
-
-type SummaryAggregate = {
-  productId: string;
-  sku: string;
-  name: string;
-  unit: string;
-  quantity: number;
-  vehicleId: string | null;
-  vehicleName: string | null;
 };
 
 function getVehicleName(value: unknown) {
@@ -194,9 +179,6 @@ async function PackingListPage({ searchParams }: Props) {
     ordersByDate.get(orderDate)?.push(order);
   }
 
-  const overallProductMap = new Map<string, SummaryAggregate>();
-  const overallStoreMap = new Map<string, PackingListSummaryStore>();
-
   const allPackingData: PackingListData[] = Array.from(ordersByDate.entries())
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([currentDate, dateOrders]) => {
@@ -254,21 +236,6 @@ async function PackingListPage({ searchParams }: Props) {
           const quantity = Number(item.quantity ?? 0);
           groupedStore.items.set(key, (groupedStore.items.get(key) ?? 0) + quantity);
 
-          const productVehicleKey = `${vehicleId ?? "unassigned"}||${key}`;
-          const existingSummaryProduct = overallProductMap.get(productVehicleKey);
-          if (existingSummaryProduct) {
-            existingSummaryProduct.quantity += quantity;
-          } else {
-            overallProductMap.set(productVehicleKey, {
-              productId: item.product_id,
-              sku: item.products.sku,
-              name: packingListNameByProductId.get(item.product_id) ?? item.products.name,
-              unit: item.sale_unit_label,
-              quantity,
-              vehicleId,
-              vehicleName: resolvedVehicleName,
-            });
-          }
         }
       }
 
@@ -335,38 +302,6 @@ async function PackingListPage({ searchParams }: Props) {
 
       const qty = products.map((product) => stores.map((store) => store.consolidatedItems.get(product.key) ?? 0));
 
-      for (const store of stores) {
-        const items = products
-          .map((product) => ({
-            key: product.key,
-            sku: product.sku,
-            name: product.name,
-            unit: product.unit,
-            quantity: store.consolidatedItems.get(product.key) ?? 0,
-          }))
-          .filter((item) => item.quantity > 0);
-
-        const summaryStoreKey = `${currentDate}:${store.id}:${store.vehicleId ?? "unassigned"}`;
-        overallStoreMap.set(summaryStoreKey, {
-          id: summaryStoreKey,
-          customerCode: store.id,
-          customerName: store.name,
-          date: currentDate,
-          dateLabel,
-          itemCount: items.length,
-          totalQuantity: items.reduce((sum, item) => sum + item.quantity, 0),
-          vehicleId: store.vehicleId,
-          vehicleName: store.vehicleName,
-          items: items.map((item) => ({
-            key: item.key,
-            sku: item.sku,
-            name: item.name,
-            unit: item.unit,
-            quantity: item.quantity,
-          })),
-        });
-      }
-
       return {
         date: currentDate,
         dateLabel,
@@ -387,30 +322,6 @@ async function PackingListPage({ searchParams }: Props) {
         vehicles,
       };
     });
-
-  const summaryProducts: PackingListSummaryProduct[] = Array.from(overallProductMap.values())
-    .sort((a, b) => {
-      const indexA = productSortIndexMap.get(a.productId) ?? 999999;
-      const indexB = productSortIndexMap.get(b.productId) ?? 999999;
-      if (indexA !== indexB) return indexA - indexB;
-      return a.sku.localeCompare(b.sku) || a.name.localeCompare(b.name);
-    })
-    .map((product) => ({
-      key: `${product.vehicleId ?? "unassigned"}||${product.sku.toLowerCase()}||${product.unit.toLowerCase()}`,
-      sku: product.sku,
-      name: product.name,
-      unit: product.unit,
-      quantity: product.quantity,
-      vehicleId: product.vehicleId,
-      vehicleName: product.vehicleName,
-    }));
-
-  const summaryStores = Array.from(overallStoreMap.values()).sort(
-    (a, b) =>
-      (a.vehicleName ?? "").localeCompare(b.vehicleName ?? "", "th") ||
-      a.customerCode.localeCompare(b.customerCode) ||
-      a.customerName.localeCompare(b.customerName),
-  );
 
   const totalStores = allPackingData.reduce((sum, packingData) => sum + packingData.stores.length, 0);
   const mainDateLabel =
@@ -461,9 +372,6 @@ async function PackingListPage({ searchParams }: Props) {
           }}
         >
           <div className="hidden md:block">
-            <PackingListSummaryButton dateLabel={mainDateLabel} products={summaryProducts} stores={summaryStores} />
-          </div>
-          <div className="hidden md:block">
             <PrintPackingListButton
               date={date}
               endDate={endDate}
@@ -471,7 +379,11 @@ async function PackingListPage({ searchParams }: Props) {
               label={layout === "standard" ? "ใบจัดของ (สลับตาราง)" : "ใบจัดของ (ตารางเดิม)"}
             />
           </div>
-          <PackingListPrintButton unassignedStores={unassignedStores} dateLabel={mainDateLabel} hidePrintOnMobile />
+          <PackingListPrintButton
+            unassignedStores={unassignedStores}
+            dateLabel={mainDateLabel}
+            hidePrintOnMobile
+          />
         </div>
         <a
           href="/orders/incoming"

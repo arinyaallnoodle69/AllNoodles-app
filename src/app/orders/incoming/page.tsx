@@ -1,12 +1,9 @@
 import { Search } from "lucide-react";
+import dynamic from "next/dynamic";
 import { Fragment } from "react";
 import { SettingsShell } from "@/components/settings/settings-shell";
-import { IncomingOrderModal } from "@/components/orders/incoming-order-modal";
-import { CreateOrderModal } from "@/components/orders/create-order-modal";
-import { IncomingOrdersDesktopTable } from "@/components/orders/incoming-orders-desktop-table";
 import { IncomingOrderOpenCard } from "@/components/orders/incoming-order-open-card";
 import { IncomingOrderDateFilter } from "@/components/orders/incoming-order-date-filter";
-import { PendingLineOrdersSection } from "@/components/orders/pending-line-orders-section";
 import { MobileSearchDrawer } from "@/components/mobile-search/mobile-search-drawer";
 import { OrderCustomerFilter } from "@/components/orders/order-customer-filter";
 import { requireAppRole } from "@/lib/auth/authorization";
@@ -18,12 +15,32 @@ import { getCustomersForOrder, getProductsForOrder, getVehiclesForOrder } from "
 import { getDeliveryList } from "@/lib/delivery/delivery-list";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { IncomingOrdersDeliveryActions } from "@/components/orders/incoming-orders-delivery-actions";
-import { PrintPackingListButton } from "@/components/orders/print-packing-list-button";
-import {
-  PackingListSummaryButton,
-  type PackingListSummaryProduct,
-  type PackingListSummaryStore,
+import type {
+  PackingListSummaryProduct,
+  PackingListSummaryStore,
 } from "@/components/orders/packing-list-summary-button";
+
+const CreateOrderModal = dynamic(() =>
+  import("@/components/orders/create-order-modal").then((mod) => mod.CreateOrderModal),
+);
+const IncomingOrdersDesktopTable = dynamic(() =>
+  import("@/components/orders/incoming-orders-desktop-table").then((mod) => mod.IncomingOrdersDesktopTable),
+);
+const IncomingOrderModal = dynamic(() =>
+  import("@/components/orders/incoming-order-modal").then((mod) => mod.IncomingOrderModal),
+);
+const PackingListSummaryButton = dynamic(() =>
+  import("@/components/orders/packing-list-summary-button").then((mod) => mod.PackingListSummaryButton),
+);
+const PendingLineOrdersSection = dynamic(() =>
+  import("@/components/orders/pending-line-orders-section").then((mod) => mod.PendingLineOrdersSection),
+);
+const PrintPackingListButton = dynamic(() =>
+  import("@/components/orders/print-packing-list-button").then((mod) => mod.PrintPackingListButton),
+);
+const PrintVehicleProductSummaryButton = dynamic(() =>
+  import("@/components/orders/print-vehicle-product-summary-button").then((mod) => mod.PrintVehicleProductSummaryButton),
+);
 
 export const metadata = { title: "รายการออเดอร์" };
 
@@ -451,6 +468,7 @@ export default async function IncomingOrdersPage({ searchParams }: IncomingOrder
                   stores={summaryStores}
                 />
                 <PrintPackingListButton date={orderDate} endDate={endDate} />
+                <PrintVehicleProductSummaryButton date={orderDate} endDate={endDate} />
                 <PrintPackingListButton
                   date={orderDate}
                   endDate={endDate}
