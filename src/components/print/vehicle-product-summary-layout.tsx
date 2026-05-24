@@ -1,4 +1,5 @@
 import type { VehicleProductSummaryData } from "@/lib/orders/vehicle-product-summary";
+import type { CSSProperties } from "react";
 
 const SHEET_W = "210mm";
 const SHEET_H = "297mm";
@@ -21,6 +22,9 @@ function getVehiclePalette(columnIndex: number) {
 }
 
 function VehicleSummarySheet({ data }: { data: VehicleProductSummaryData }) {
+  const productCount = Math.max(data.products.length, 1);
+  const rowHeightMm = Math.max(4.8, Math.min(8.4, 270 / productCount));
+
   return (
     <section className="packing-sheet vehicle-summary-sheet">
       <div className="vehicle-summary-sheet__inner">
@@ -37,7 +41,10 @@ function VehicleSummarySheet({ data }: { data: VehicleProductSummaryData }) {
         </header>
 
         <div className="vehicle-summary-table-wrap">
-          <table className="vehicle-summary-table">
+          <table
+            className="vehicle-summary-table"
+            style={{ "--summary-row-height": `${rowHeightMm}mm` } as CSSProperties}
+          >
             <thead>
               <tr>
                 <th className="vehicle-summary-table__index-col">ลำดับ</th>
@@ -136,7 +143,7 @@ function VehicleSummaryStyles() {
           display: flex;
           flex-direction: column;
           align-items: center;
-          gap: 20px;
+          gap: 32px;
           padding: 78px 12px 36px;
           overflow-x: hidden;
         }
@@ -158,7 +165,7 @@ function VehicleSummaryStyles() {
 
       @media screen and (max-width: 767px) {
         .packing-print-container {
-          gap: 10px;
+          gap: 16px;
           width: 100vw;
           padding: 66px 0 20px;
         }
@@ -198,8 +205,8 @@ function VehicleSummaryStyles() {
         display: flex;
         flex-direction: column;
         height: 100%;
-        padding: 2.2mm 3.2mm 2mm;
-        gap: 0.35mm;
+        padding: 1.4mm 2.2mm 1.4mm;
+        gap: 0.9mm;
         box-sizing: border-box;
       }
 
@@ -250,14 +257,24 @@ function VehicleSummaryStyles() {
         min-height: 0;
         border: 1.2px solid #000000;
         display: flex;
-        align-items: flex-start;
+        align-items: stretch;
         overflow: hidden;
       }
 
       .vehicle-summary-table {
         width: 100%;
+        height: 100%;
         border-collapse: collapse;
         table-layout: fixed;
+      }
+
+      .vehicle-summary-table thead tr {
+        height: 9mm;
+      }
+
+      .vehicle-summary-table tbody tr,
+      .vehicle-summary-table tbody td {
+        height: var(--summary-row-height);
       }
 
       .vehicle-summary-table th,
@@ -332,7 +349,7 @@ function VehicleSummaryStyles() {
         align-items: center;
         justify-content: center;
         gap: 0.15mm;
-        min-height: 3.4mm;
+        min-height: 100%;
       }
 
       .vehicle-summary-table__product-name {

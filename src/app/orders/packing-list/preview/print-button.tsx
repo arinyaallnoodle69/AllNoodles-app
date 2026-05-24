@@ -11,8 +11,8 @@ type PreviewImage = {
   name: string;
 };
 
-const FALLBACK_CAPTURE_WIDTH = 1346;
-const FALLBACK_CAPTURE_HEIGHT = 816;
+const FALLBACK_CAPTURE_WIDTH = 1123;
+const FALLBACK_CAPTURE_HEIGHT = 794;
 
 let cachedFontEmbedCSS: string | null = null;
 
@@ -189,15 +189,25 @@ export function PackingListPrintButton({
   async function downloadAll() {
     if (previewImages.length === 0) return;
 
-    const isMobileDevice =
-      typeof navigator !== "undefined" &&
-      /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    const isIOS =
+      /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+      (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+    const files = previewImages.map((image) => new File([image.blob], image.name, { type: "image/png" }));
 
-    if (isMobileDevice) {
-      alert(
-        `บันทึกรูปเอกสาร:\nบนมือถือบางเบราว์เซอร์จะไม่ดาวน์โหลดหลายไฟล์อัตโนมัติ\n\nกรุณากดค้างที่รูปแต่ละหน้าแล้วเลือก "บันทึกรูปภาพ" เพื่อบันทึกลงเครื่อง`,
-      );
-      return;
+    if (isIOS && navigator.share && navigator.canShare && navigator.canShare({ files })) {
+      try {
+        await navigator.share({
+          files,
+          title: documentTitle,
+        });
+        setShowPreview(false);
+        return;
+      } catch (error) {
+        console.error("[WebShare:PackingList]", error);
+        if (error instanceof Error && error.name === "AbortError") {
+          return;
+        }
+      }
     }
 
     previewImages.forEach((image, index) => {
@@ -209,8 +219,10 @@ export function PackingListPrintButton({
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
-      }, index * 220);
+      }, index * 600);
     });
+
+    setShowPreview(false);
   }
 
   return (

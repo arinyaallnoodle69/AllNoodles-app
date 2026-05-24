@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import Link from "next/link";
 import { Receipt, History, Search } from "lucide-react";
 import { AppSidebarLayout } from "@/components/app-sidebar";
+import { PageLoader } from "@/components/page-loader";
 import { requireAppRole } from "@/lib/auth/authorization";
 import {
   getBillingCandidates,
@@ -200,7 +201,7 @@ async function BillingPageContent({ searchParams }: BillingPageProps) {
 
 export default function BillingPage(props: BillingPageProps) {
   return (
-    <Suspense fallback={null}>
+    <Suspense fallback={<PageLoader />}>
       <BillingPageContent {...props} />
     </Suspense>
   );

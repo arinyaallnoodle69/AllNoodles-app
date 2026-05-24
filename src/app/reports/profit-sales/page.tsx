@@ -229,17 +229,17 @@ async function ProfitSalesContent({ searchParams }: PageProps) {
           </section>
 
           {/* Switcher & Action Buttons */}
-          <div className="lg:mx-auto lg:max-w-[210mm] flex justify-between items-center mb-4 no-print px-4 sm:px-0">
-            <div className="flex w-full sm:w-auto border border-[#003366] rounded-md overflow-hidden text-xs font-bold bg-white shadow-sm">
+          <div className="lg:mx-auto lg:max-w-[210mm] flex justify-between items-center mb-4 no-print px-0 sm:px-0">
+            <div className="flex w-full border-y border-[#003366] bg-white text-base font-bold shadow-sm sm:w-auto sm:overflow-hidden sm:rounded-md sm:border sm:text-xs">
               <Link 
                 href={`/reports/profit-sales?from=${fromDate}&to=${toDate}&view=daily`} 
-                className={`flex-1 sm:flex-initial text-center px-4 py-2 ${view === 'daily' ? 'bg-[#003366] text-white' : 'text-[#003366] hover:bg-slate-50'}`}
+                className={`flex min-h-11 flex-1 items-center justify-center px-4 py-2.5 text-center sm:min-h-0 sm:flex-initial sm:py-2 ${view === 'daily' ? 'bg-[#003366] text-white' : 'text-[#003366] hover:bg-slate-50'}`}
               >
                 รายวัน
               </Link>
               <Link 
                 href={`/reports/profit-sales?from=${fromDate}&to=${toDate}&view=monthly`} 
-                className={`flex-1 sm:flex-initial text-center px-4 py-2 border-l border-[#003366] ${view === 'monthly' ? 'bg-[#003366] text-white' : 'text-[#003366] hover:bg-slate-50'}`}
+                className={`flex min-h-11 flex-1 items-center justify-center border-l border-[#003366] px-4 py-2.5 text-center sm:min-h-0 sm:flex-initial sm:py-2 ${view === 'monthly' ? 'bg-[#003366] text-white' : 'text-[#003366] hover:bg-slate-50'}`}
               >
                 รายเดือน
               </Link>

@@ -1,3 +1,5 @@
+import type { CSSProperties } from "react";
+
 export type PackingListStore = {
   id: string;
   name: string;
@@ -29,13 +31,13 @@ export type PackingListData = {
 
 export type PackingListLayoutMode = "standard" | "transposed";
 
-const SHEET_W = "356mm";
-const SHEET_H = "216mm";
-const SCREEN_SHEET_W = "1346px";
-const SCREEN_SHEET_H = "816px";
+const SHEET_W = "297mm";
+const SHEET_H = "210mm";
+const SCREEN_SHEET_W = "1123px";
+const SCREEN_SHEET_H = "794px";
 const STANDARD_PRODUCTS_PER_PAGE = 30;
-const STANDARD_STORES_PER_PAGE = 45;
-const TRANSPOSED_PRODUCTS_PER_PAGE = 45;
+const STANDARD_STORES_PER_PAGE = 25;
+const TRANSPOSED_PRODUCTS_PER_PAGE = 25;
 const TRANSPOSED_STORES_PER_PAGE = 37;
 
 const VEHICLE_COLORS = ["#123c73", "#0f766e", "#9a3412", "#5b21b6", "#1d4ed8"];
@@ -344,8 +346,10 @@ function calcDataColWidth(count: number, availableMm: number) {
 }
 
 function StandardPackingListPage({ page, data }: { page: StandardPageDef; data: PackingListData }) {
-  const columnWidth = calcDataColWidth(Math.max(page.pageProducts.length, 1), 319);
+  const columnWidth = calcDataColWidth(Math.max(page.pageProducts.length, 1), 251);
   const isLastStorePage = page.storeChunk === page.storeTotalChunks;
+  const rowCount = page.pageStores.length + (isLastStorePage ? 1 : 0);
+  const rowHeightMm = Math.max(6.8, Math.min(7.8, 188 / Math.max(rowCount, 1)));
   const productTotals = isLastStorePage
     ? page.pageProductIndices.map((productIndex) =>
         page.vehicleStoreIndices.reduce((sum, storeIndex) => sum + (data.qty[productIndex]?.[storeIndex] ?? 0), 0),
@@ -368,7 +372,7 @@ function StandardPackingListPage({ page, data }: { page: StandardPageDef; data: 
         />
 
         <div className="packing-table-wrap">
-          <table className="packing-table">
+          <table className="packing-table" style={{ "--standard-row-height": `${rowHeightMm}mm` } as CSSProperties}>
             <thead>
               <tr>
                 <th className="packing-col packing-col--store">ข้อมูลลูกค้า / ร้านค้า</th>
@@ -442,10 +446,11 @@ function StandardPackingListPage({ page, data }: { page: StandardPageDef; data: 
 }
 
 function TransposedPackingListPage({ page, data }: { page: TransposedPageDef; data: PackingListData }) {
-  const storeColumnWidth = calcDataColWidth(Math.max(page.pageStores.length, 1), 311);
+  const storeColumnWidth = calcDataColWidth(Math.max(page.pageStores.length, 1), 252);
   const productTotals = page.pageProductIndices.map((productIndex) =>
     page.pageStoreIndices.reduce((sum, storeIndex) => sum + (data.qty[productIndex]?.[storeIndex] ?? 0), 0),
   );
+  const transposedRowHeightMm = Math.max(6.8, Math.min(7.8, 188 / Math.max(page.pageProducts.length, 1)));
 
   return (
     <section className="packing-sheet">
@@ -463,7 +468,10 @@ function TransposedPackingListPage({ page, data }: { page: TransposedPageDef; da
         />
 
         <div className="packing-table-wrap">
-          <table className="packing-table packing-table--transposed">
+          <table
+            className="packing-table packing-table--transposed"
+            style={{ "--transposed-row-height": `${transposedRowHeightMm}mm` } as CSSProperties}
+          >
             <thead>
               <tr>
                 <th className="packing-col packing-col--transpose-product">สินค้า / หน่วย</th>
@@ -525,11 +533,12 @@ function PackingListStyles() {
     <style>{`
       @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;700;800&display=swap');
 
-      @page { size: 356mm 216mm; margin: 0; }
+      @page { size: A4 landscape; margin: 0; }
 
       @media print {
         html, body {
-          width: 356mm !important;
+          width: 297mm !important;
+          height: 210mm !important;
           margin: 0 !important;
           padding: 0 !important;
           overflow: visible !important;
@@ -564,8 +573,8 @@ function PackingListStyles() {
         }
 
         .packing-sheet-shell {
-          width: 356mm !important;
-          height: 216mm !important;
+          width: 297mm !important;
+          height: 210mm !important;
           margin: 0 !important;
           padding: 0 !important;
           display: block !important;
@@ -574,8 +583,8 @@ function PackingListStyles() {
         }
 
         .packing-sheet {
-          width: 356mm !important;
-          height: 216mm !important;
+          width: 297mm !important;
+          height: 210mm !important;
           margin: 0 !important;
           border: none !important;
           box-shadow: none !important;
@@ -587,8 +596,10 @@ function PackingListStyles() {
 
         .packing-sheet__inner {
           padding-top: 0.6mm !important;
-          padding-bottom: 1mm !important;
-          gap: 0.7mm !important;
+          padding-right: 1.2mm !important;
+          padding-bottom: 0.8mm !important;
+          padding-left: 1.2mm !important;
+          gap: 0.55mm !important;
         }
 
         .packing-sheet:last-child {
@@ -635,16 +646,16 @@ function PackingListStyles() {
 
         .packing-sheet-shell {
           --packing-mobile-available: calc(100vw - 8px);
-          --packing-mobile-scale: min(1, calc(var(--packing-mobile-available) / 1346px));
+          --packing-mobile-scale: min(1, calc(var(--packing-mobile-available) / 1123px));
           width: var(--packing-mobile-available);
-          height: calc(816px * var(--packing-mobile-scale));
+          height: calc(794px * var(--packing-mobile-scale));
           max-width: 100vw;
           overflow: hidden;
         }
 
         .packing-sheet {
-          width: 1346px !important;
-          height: 816px !important;
+          width: 1123px !important;
+          height: 794px !important;
           max-width: none !important;
           flex: none;
           transform: scale(var(--packing-mobile-scale));
@@ -668,7 +679,7 @@ function PackingListStyles() {
         display: flex;
         flex-direction: column;
         height: 100%;
-        padding: 3mm 4mm 2.2mm;
+        padding: 1.2mm 1.6mm 1mm;
         gap: 1.2mm;
         box-sizing: border-box;
       }
@@ -785,11 +796,15 @@ function PackingListStyles() {
       }
 
       .packing-table:not(.packing-table--transposed) .packing-table__row {
-        height: 3.42mm;
+        height: var(--standard-row-height);
+      }
+
+      .packing-table:not(.packing-table--transposed) .packing-table__total-row {
+        height: var(--standard-row-height);
       }
 
       .packing-table:not(.packing-table--transposed) .packing-cell--store {
-        font-size: 7.4pt;
+        font-size: 8.4pt;
         line-height: 0.98;
       }
 
@@ -899,21 +914,20 @@ function PackingListStyles() {
         gap: 0.18mm;
         flex: 1;
         font-size: 5.7pt;
-        line-height: 1.14;
+        line-height: 1.34;
         font-weight: 700;
         color: #0f172a;
         width: 100%;
         min-width: 0;
-        overflow: hidden;
+        overflow: visible;
       }
 
       .packing-product-header__name span {
         display: block;
         width: 100%;
         max-width: 100%;
-        overflow: hidden;
+        overflow: visible;
         white-space: nowrap;
-        text-overflow: ellipsis;
         text-align: center;
       }
 
@@ -948,12 +962,12 @@ function PackingListStyles() {
       }
 
       .packing-table--transposed .packing-table__row {
-        height: 3.85mm;
+        height: var(--transposed-row-height);
       }
 
       .packing-table--transposed .packing-cell--qty,
       .packing-table--transposed .packing-cell--empty {
-        font-size: 8.9pt;
+        font-size: 9.2pt;
       }
 
       .packing-cell {
@@ -990,9 +1004,9 @@ function PackingListStyles() {
       .packing-transpose-product__name {
         display: -webkit-box;
         overflow: hidden;
-        font-size: 5.8pt;
+        font-size: 8.4pt;
         font-weight: 700;
-        line-height: 1.02;
+        line-height: 1;
         color: #0f172a;
         -webkit-box-orient: vertical;
         -webkit-line-clamp: 2;
@@ -1000,7 +1014,7 @@ function PackingListStyles() {
 
       .packing-transpose-product__unit {
         flex-shrink: 0;
-        font-size: 5.2pt;
+        font-size: 6.2pt;
         font-weight: 700;
         color: #475569;
         white-space: nowrap;

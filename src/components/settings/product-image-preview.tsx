@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 type ProductImagePreviewProps = {
   alt: string;
@@ -80,34 +81,34 @@ export function ProductImagePreview({ alt, src, thumbnailSizes }: ProductImagePr
         />
       </button>
 
-      {isOpen ? (
+      {isOpen ? createPortal(
         <div
           role="dialog"
           aria-modal="true"
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/55 p-4 backdrop-blur-md"
+          className="fixed inset-0 z-[9999] flex items-center justify-center bg-black p-0"
           onClick={() => setIsOpen(false)}
         >
           <button
             type="button"
             onClick={() => setIsOpen(false)}
-            className="absolute right-4 top-4 inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/95 text-slate-900 shadow-lg transition hover:bg-white"
+            className="absolute right-4 top-[max(1rem,env(safe-area-inset-top))] z-[10000] inline-flex h-12 w-12 items-center justify-center rounded-full bg-white/95 text-slate-900 shadow-xl transition hover:bg-white"
             aria-label="Close image preview"
           >
-            <X className="h-5 w-5" strokeWidth={2.4} />
+            <X className="h-6 w-6" strokeWidth={2.6} />
           </button>
 
           <div
-            className="relative h-[min(78vh,760px)] w-[min(92vw,980px)]"
+            className="relative h-[100dvh] w-screen"
             onClick={(event) => event.stopPropagation()}
           >
             {!isPreviewLoaded ? (
-              <div className="absolute inset-0 animate-pulse rounded-md bg-white/12" />
+              <div className="absolute inset-0 animate-pulse bg-white/10" />
             ) : null}
             <Image
               src={src}
               alt={alt}
               fill
-              sizes="(max-width: 768px) 92vw, 980px"
+              sizes="100vw"
               quality={75}
               loading="eager"
               fetchPriority="high"
@@ -115,7 +116,8 @@ export function ProductImagePreview({ alt, src, thumbnailSizes }: ProductImagePr
               onLoad={() => setIsPreviewLoaded(true)}
             />
           </div>
-        </div>
+        </div>,
+        document.body,
       ) : null}
     </>
   );
