@@ -82,6 +82,11 @@ export type SettingsCustomerAddress = {
 };
 
 export type SettingsVehicle = {
+  customers: {
+    code: string;
+    id: string;
+    name: string;
+  }[];
   driverName: string | null;
   id: string;
   isActive: boolean;
@@ -568,6 +573,21 @@ async function fetchSettingsData(organizationId: string): Promise<SettingsData> 
   );
   const customerMap = new Map(customers.map((customer) => [customer.id, customer.name]));
   const vehicleMap = new Map(vehicles.map((vehicle) => [vehicle.id, vehicle.name]));
+  const customersByVehicleId = new Map<string, { code: string; id: string; name: string }[]>();
+
+  for (const customer of customers) {
+    if (!customer.default_vehicle_id) {
+      continue;
+    }
+
+    const current = customersByVehicleId.get(customer.default_vehicle_id) ?? [];
+    current.push({
+      code: customer.customer_code,
+      id: customer.id,
+      name: customer.name,
+    });
+    customersByVehicleId.set(customer.default_vehicle_id, current);
+  }
 
   return {
     customers: customers.map((customer) => ({
@@ -691,6 +711,7 @@ async function fetchSettingsData(organizationId: string): Promise<SettingsData> 
         ? "ระบบหมวดหมู่สินค้ายังไม่พร้อมใช้งาน"
         : null,
     vehicles: vehicles.map((vehicle) => ({
+      customers: customersByVehicleId.get(vehicle.id) ?? [],
       driverName: vehicle.driver_name,
       id: vehicle.id,
       isActive: vehicle.is_active,

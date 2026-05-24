@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, Clock3, MessageCircleMore, Package2, Store, Truck, Factory } from "lucide-react";
+import { ArrowRight, Clock3, KeyRound, MessageCircleMore, Package2, Store, Truck, Factory } from "lucide-react";
 import { SettingsShell } from "@/components/settings/settings-shell";
 import { requireAppRole } from "@/lib/auth/authorization";
 
@@ -39,6 +39,12 @@ const options = [
     href: "/settings/order-window",
     icon: Clock3,
     label: "เวลารับออเดอร์และแจ้งเตือน",
+  },
+  {
+    description: "เปลี่ยนรหัสเข้าใช้งานและดูประวัติการเข้าใช้งานล่าสุด",
+    href: "/settings/login-pin",
+    icon: KeyRound,
+    label: "ตั้งค่า PIN",
   },
 ] as const;
 

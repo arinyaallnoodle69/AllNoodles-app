@@ -24,29 +24,25 @@ export type ProfitSalesReportData = {
   summary: ProfitSalesSummary;
 };
 
-type DeliveryNoteRow = {
-  id: string;
-  delivery_date: string;
-  total_amount: number | string | null;
+type ProfitSalesRpcRow = {
+  iso_date: string;
+  order_count: number | string | null;
+  sales: number | string | null;
+  cost: number | string | null;
+  net_profit: number | string | null;
+  margin_percent: number | string | null;
 };
 
-type DeliveryNoteItemRow = {
-  delivery_note_id: string;
-  quantity_delivered: number | string | null;
-  product_sale_unit_id: string | null;
-};
-
-type ProductSaleUnitRow = {
-  id: string;
-  product_id: string;
-  base_unit_quantity: number | string | null;
-  cost_mode: string | null;
-  fixed_cost_price: number | string | null;
-};
-
-type ProductRow = {
-  id: string;
-  cost_price: number | string | null;
+type RpcClient = {
+  rpc: (
+    fn: "get_profit_sales_report",
+    args: {
+      p_organization_id: string;
+      p_from_date: string;
+      p_to_date: string;
+      p_customer_ids: string[] | null;
+    },
+  ) => Promise<{ data: ProfitSalesRpcRow[] | null; error: { message: string } | null }>;
 };
 
 function toNumber(value: unknown) {
@@ -54,96 +50,17 @@ function toNumber(value: unknown) {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
-async function loadNoteCosts(noteIds: string[]) {
-  if (noteIds.length === 0) return new Map<string, number>();
+function eachDate(fromDate: string, toDate: string) {
+  const dates: string[] = [];
+  const currentDate = new Date(`${fromDate}T00:00:00Z`);
+  const lastDate = new Date(`${toDate}T00:00:00Z`);
 
-  const supabase = getSupabaseAdmin();
-  const chunkSize = 50;
-
-  // 1. Chunk delivery_note_items query
-  const typedItems: DeliveryNoteItemRow[] = [];
-  for (let i = 0; i < noteIds.length; i += chunkSize) {
-    const chunk = noteIds.slice(i, i + chunkSize);
-    const { data: items, error } = await supabase
-      .from("delivery_note_items")
-      .select("delivery_note_id, quantity_delivered, product_sale_unit_id")
-      .in("delivery_note_id", chunk);
-
-    if (error) throw new Error(error.message);
-    if (items) {
-      typedItems.push(...(items as DeliveryNoteItemRow[]));
-    }
+  while (currentDate <= lastDate) {
+    dates.push(currentDate.toISOString().slice(0, 10));
+    currentDate.setUTCDate(currentDate.getUTCDate() + 1);
   }
 
-  const saleUnitIds = [
-    ...new Set(
-      typedItems
-        .map((item) => item.product_sale_unit_id)
-        .filter((value): value is string => Boolean(value)),
-    ),
-  ];
-
-  // 2. Chunk product_sale_units query
-  const typedSaleUnits: ProductSaleUnitRow[] = [];
-  for (let i = 0; i < saleUnitIds.length; i += chunkSize) {
-    const chunk = saleUnitIds.slice(i, i + chunkSize);
-    const { data: saleUnits, error } = await supabase
-      .from("product_sale_units")
-      .select("id, product_id, base_unit_quantity, cost_mode, fixed_cost_price")
-      .in("id", chunk);
-
-    if (error) throw new Error(error.message);
-    if (saleUnits) {
-      typedSaleUnits.push(...(saleUnits as ProductSaleUnitRow[]));
-    }
-  }
-
-  const productIds = [...new Set(typedSaleUnits.map((unit) => unit.product_id))];
-
-  // 3. Chunk products query
-  const typedProducts: ProductRow[] = [];
-  for (let i = 0; i < productIds.length; i += chunkSize) {
-    const chunk = productIds.slice(i, i + chunkSize);
-    const { data: products, error } = await supabase
-      .from("products")
-      .select("id, cost_price")
-      .in("id", chunk);
-
-    if (error) throw new Error(error.message);
-    if (products) {
-      typedProducts.push(...(products as ProductRow[]));
-    }
-  }
-
-  const productCostById = new Map(
-    typedProducts.map((product) => [product.id, toNumber(product.cost_price)]),
-  );
-
-  const saleUnitCostById = new Map(
-    typedSaleUnits.map((unit) => {
-      const productCost = productCostById.get(unit.product_id) ?? 0;
-      const baseQuantity = toNumber(unit.base_unit_quantity);
-      const effectiveCost =
-        unit.cost_mode === "fixed" && unit.fixed_cost_price != null
-          ? toNumber(unit.fixed_cost_price)
-          : productCost * baseQuantity;
-      return [unit.id, effectiveCost];
-    }),
-  );
-
-  const noteCostById = new Map<string, number>();
-  for (const item of typedItems) {
-    const quantity = toNumber(item.quantity_delivered);
-    const unitCost = item.product_sale_unit_id
-      ? (saleUnitCostById.get(item.product_sale_unit_id) ?? 0)
-      : 0;
-    noteCostById.set(
-      item.delivery_note_id,
-      (noteCostById.get(item.delivery_note_id) ?? 0) + unitCost * quantity,
-    );
-  }
-
-  return noteCostById;
+  return dates;
 }
 
 export async function getProfitSalesReport(params: {
@@ -153,54 +70,42 @@ export async function getProfitSalesReport(params: {
   customerIds?: string[];
 }): Promise<ProfitSalesReportData> {
   const { organizationId, fromDate, toDate, customerIds = [] } = params;
-  const supabase = getSupabaseAdmin();
+  const supabase = getSupabaseAdmin() as unknown as RpcClient;
 
-  let query = supabase
-    .from("delivery_notes")
-    .select("id, delivery_date, total_amount")
-    .eq("organization_id", organizationId)
-    .eq("status", "confirmed")
-    .gte("delivery_date", fromDate)
-    .lte("delivery_date", toDate)
-    .order("delivery_date", { ascending: true });
+  const { data, error } = await supabase.rpc("get_profit_sales_report", {
+    p_organization_id: organizationId,
+    p_from_date: fromDate,
+    p_to_date: toDate,
+    p_customer_ids: customerIds.length > 0 ? customerIds : null,
+  });
 
-  if (customerIds.length > 0) {
-    query = query.in("customer_id", customerIds);
-  }
-
-  const { data, error } = await query;
   if (error) throw new Error(error.message);
 
-  const notes = (data ?? []) as DeliveryNoteRow[];
-  const noteCostById = notes.length > 0 ? await loadNoteCosts(notes.map((note) => note.id)) : new Map<string, number>();
-  const buckets = new Map<string, { sales: number; cost: number; orderCount: number }>();
-
-  for (const note of notes) {
-    const bucket = buckets.get(note.delivery_date) ?? { sales: 0, cost: 0, orderCount: 0 };
-    bucket.sales += toNumber(note.total_amount);
-    bucket.cost += noteCostById.get(note.id) ?? 0;
-    bucket.orderCount += 1;
-    buckets.set(note.delivery_date, bucket);
-  }
-
-  const rows: ProfitSalesRow[] = [];
-  const currentDate = new Date(fromDate + "T00:00:00Z");
-  const lastDate = new Date(toDate + "T00:00:00Z");
-
-  while (currentDate <= lastDate) {
-    const isoDate = currentDate.toISOString().slice(0, 10);
-    const bucket = buckets.get(isoDate) ?? { sales: 0, cost: 0, orderCount: 0 };
-    const netProfit = bucket.sales - bucket.cost;
-    rows.push({
-      isoDate,
-      orderCount: bucket.orderCount,
-      sales: bucket.sales,
-      cost: bucket.cost,
+  const rowsByDate = new Map<string, ProfitSalesRow>();
+  for (const row of data ?? []) {
+    const sales = toNumber(row.sales);
+    const cost = toNumber(row.cost);
+    const netProfit = toNumber(row.net_profit);
+    rowsByDate.set(String(row.iso_date), {
+      isoDate: String(row.iso_date),
+      orderCount: toNumber(row.order_count),
+      sales,
+      cost,
       netProfit,
-      marginPercent: bucket.sales > 0 ? (netProfit / bucket.sales) * 100 : 0,
+      marginPercent: sales > 0 ? toNumber(row.margin_percent) : 0,
     });
-    currentDate.setUTCDate(currentDate.getUTCDate() + 1);
   }
+
+  const rows = eachDate(fromDate, toDate).map((isoDate) => {
+    return rowsByDate.get(isoDate) ?? {
+      isoDate,
+      orderCount: 0,
+      sales: 0,
+      cost: 0,
+      netProfit: 0,
+      marginPercent: 0,
+    };
+  });
 
   const summary = rows.reduce<ProfitSalesSummary>(
     (acc, row) => {
@@ -218,6 +123,7 @@ export async function getProfitSalesReport(params: {
       avgMarginPercent: 0,
     },
   );
+
   summary.avgMarginPercent =
     summary.totalSales > 0 ? (summary.totalNetProfit / summary.totalSales) * 100 : 0;
 

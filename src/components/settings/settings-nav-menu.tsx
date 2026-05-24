@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ChevronDown, Package2, Settings2, Store, Truck } from "lucide-react";
+import { ChevronDown, KeyRound, Package2, Settings2, Store, Truck } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { LineAppIcon } from "@/components/icons/line-app-icon";
@@ -30,6 +30,12 @@ const items = [
     href: "/settings/vehicles",
     icon: Truck,
     label: "จัดการรถ",
+  },
+  {
+    description: "เปลี่ยนรหัสเข้าใช้งานและดูประวัติล่าสุด",
+    href: "/settings/login-pin",
+    icon: KeyRound,
+    label: "ตั้งค่า PIN",
   },
 ] as const;
 

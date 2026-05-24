@@ -24,6 +24,7 @@ import {
   Truck,
   X,
   Factory,
+  KeyRound,
   Plus,
   ClipboardEdit,
 } from "lucide-react";
@@ -56,6 +57,7 @@ const PAGE_TITLES: [string, string][] = [
   ["/settings/customer-data", "ข้อมูลลูกค้า"],
   ["/settings/vehicles", "จัดการรถ"],
   ["/settings/order-window", "เวลารับออเดอร์"],
+  ["/settings/login-pin", "ตั้งค่า PIN"],
   ["/settings/stock", "รับสินค้า"],
   ["/settings", "ตั้งค่า"],
   ["/dashboard", "แดชบอร์ด"],
@@ -162,6 +164,7 @@ const settingsNavItems = [
   { href: "/settings/customer-data", icon: LineAppIcon, label: "ข้อมูลลูกค้า" },
   { href: "/settings/vehicles", icon: Truck, label: "จัดการรถ" },
   { href: "/settings/order-window", icon: Clock, label: "เวลารับออเดอร์" },
+  { href: "/settings/login-pin", icon: KeyRound, label: "ตั้งค่า PIN" },
 ] as const;
 
 function isActive(href: string, pathname: string): boolean {
@@ -203,7 +206,7 @@ function SidebarLink({
     <Link
       href={item.href}
       title={collapsed ? item.label : undefined}
-      className={`flex items-center gap-3 rounded-xl px-2.5 py-2.5 text-sm font-medium transition-colors ${active ? "bg-[#003366]/10 text-[#003366]" : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+      className={`flex items-center gap-3 rounded-xl px-2.5 py-2.5 text-sm font-black transition-colors ${active ? "bg-[#003366]/10 text-[#003366]" : "text-slate-700 hover:bg-slate-100 hover:text-slate-950"
         } ${collapsed ? "justify-center" : ""} ${indent && !collapsed ? "pl-9" : ""}`}
     >
       <Icon className="h-4.5 w-4.5 shrink-0" strokeWidth={2.2} />
@@ -345,9 +348,9 @@ export function AppSidebarLayout({
                 <Link
                   href="/reports/profit-sales"
                   title="Reports"
-                  className={`flex items-center justify-center rounded-xl px-2.5 py-2.5 text-sm font-medium transition-colors ${anyReportsActive
+                  className={`flex items-center justify-center rounded-xl px-2.5 py-2.5 text-sm font-black transition-colors ${anyReportsActive
                       ? "bg-[#003366]/10 text-[#003366]"
-                      : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                      : "text-slate-700 hover:bg-slate-100 hover:text-slate-950"
                     }`}
                 >
                   <BarChart2 className="h-4.5 w-4.5 shrink-0" strokeWidth={2.2} />
@@ -360,9 +363,9 @@ export function AppSidebarLayout({
                       setReportsOpenInternal(!reportsOpen);
                       setReportsUserToggled(true);
                     }}
-                    className={`flex w-full items-center justify-between rounded-xl px-2.5 py-2.5 text-sm font-medium transition-colors ${anyReportsActive
+                    className={`flex w-full items-center justify-between rounded-xl px-2.5 py-2.5 text-sm font-black transition-colors ${anyReportsActive
                         ? "text-[#003366]"
-                        : "text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+                        : "text-slate-700 hover:bg-slate-100 hover:text-slate-950"
                       }`}
                   >
                     <span className="flex items-center gap-3">
@@ -404,9 +407,9 @@ export function AppSidebarLayout({
                 <Link
                   href="/settings/products"
                   title="Settings"
-                  className={`flex items-center justify-center rounded-xl px-2.5 py-2.5 text-sm font-medium transition-colors ${anySettingsActive
+                  className={`flex items-center justify-center rounded-xl px-2.5 py-2.5 text-sm font-black transition-colors ${anySettingsActive
                       ? "bg-[#003366]/10 text-[#003366]"
-                      : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                      : "text-slate-700 hover:bg-slate-100 hover:text-slate-950"
                     }`}
                 >
                   <Settings2 className="h-4.5 w-4.5 shrink-0" strokeWidth={2.2} />
@@ -419,9 +422,9 @@ export function AppSidebarLayout({
                       setSettingsOpenInternal(!settingsOpen);
                       setSettingsUserToggled(true);
                     }}
-                    className={`flex w-full items-center justify-between rounded-xl px-2.5 py-2.5 text-sm font-medium transition-colors ${anySettingsActive
+                    className={`flex w-full items-center justify-between rounded-xl px-2.5 py-2.5 text-sm font-black transition-colors ${anySettingsActive
                         ? "text-[#003366]"
-                        : "text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+                        : "text-slate-700 hover:bg-slate-100 hover:text-slate-950"
                       }`}
                   >
                     <span className="flex items-center gap-3">
@@ -436,7 +439,7 @@ export function AppSidebarLayout({
                   </button>
 
                   <div
-                    className={`overflow-hidden transition-all duration-200 ${settingsOpen ? "max-h-64 opacity-100" : "max-h-0 opacity-0"
+                    className={`overflow-hidden transition-all duration-200 ${settingsOpen ? "max-h-[28rem] opacity-100" : "max-h-0 opacity-0"
                       }`}
                   >
                     <div className="mt-0.5 space-y-0.5">
@@ -462,7 +465,7 @@ export function AppSidebarLayout({
               <button
                 type="submit"
                 title={collapsed ? "ออกจากระบบ" : undefined}
-                className={`flex w-full items-center gap-3 rounded-xl px-2.5 py-2.5 text-sm font-medium text-slate-500 transition-colors hover:bg-rose-50 hover:text-rose-600 ${collapsed ? "justify-center" : ""}`}
+                className={`flex w-full items-center gap-3 rounded-xl px-2.5 py-2.5 text-sm font-black text-slate-700 transition-colors hover:bg-rose-50 hover:text-rose-600 ${collapsed ? "justify-center" : ""}`}
               >
                 <LogOut className="h-4.5 w-4.5 shrink-0" strokeWidth={2.2} />
                 {!collapsed && <span>ออกจากระบบ</span>}

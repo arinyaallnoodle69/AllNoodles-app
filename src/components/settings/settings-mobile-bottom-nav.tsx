@@ -10,6 +10,7 @@ import {
   ClipboardList,
   Clock3,
   Factory,
+  KeyRound,
   LayoutDashboard,
   LogOut,
   MessageCircleMore,
@@ -274,6 +275,12 @@ export function SettingsMobileBottomNav() {
                   href: "/settings/order-window",
                   icon: Clock3,
                   label: "เวลารับออเดอร์และแจ้งเตือน",
+                },
+                {
+                  description: "เปลี่ยนรหัสเข้าใช้งานสำหรับผู้ดูแลระบบ",
+                  href: "/settings/login-pin",
+                  icon: KeyRound,
+                  label: "ตั้งค่า PIN",
                 },
               ].map((option) => (
                 <Link
