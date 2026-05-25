@@ -1,7 +1,7 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { Building2, Package2, Plus, XCircle } from "lucide-react";
 import type { OrderDetailData } from "@/lib/orders/detail";
 
@@ -16,6 +16,16 @@ type Props = {
   detail: OrderDetailData;
   deliveryNumbers?: string[];
 };
+
+const TABLE_COLUMNS = [
+  "รหัสสินค้า",
+  "รายการสินค้า",
+  "จำนวน",
+  "หน่วย",
+  "สต็อก",
+  "ราคา/หน่วย",
+  "รวม",
+] as const;
 
 export function DesktopOrderDetail({ detail, deliveryNumbers }: Props) {
   const router = useRouter();
@@ -45,40 +55,57 @@ export function DesktopOrderDetail({ detail, deliveryNumbers }: Props) {
   return (
     <div className="overflow-hidden border-y border-slate-300 bg-white [&_*]:font-bold">
       <div className="border-b border-slate-200 bg-white px-6 py-5">
-        <div className="flex flex-wrap items-center justify-between gap-4">
+        <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#003366]/5 text-[#003366]">
                 <Building2 className="h-5 w-5" strokeWidth={2.4} />
               </div>
               <div>
-                <h3 className="text-2xl font-bold tracking-tight text-slate-950">{detail.customer.name}</h3>
-                <p className="mt-0.5 font-mono text-base font-bold text-[#003366]">{detail.customer.code}</p>
+                <h3 className="text-2xl font-bold tracking-tight text-slate-950">
+                  {detail.customer.name}
+                </h3>
+                <p className="mt-0.5 font-mono text-base font-bold text-[#003366]">
+                  {detail.customer.code}
+                </p>
               </div>
             </div>
 
             <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 text-base font-semibold text-slate-700">
               {deliveryNumberText ? (
                 <span>
-                  ใบส่งของ: <span className="font-mono text-slate-900" translate="no">{deliveryNumberText}</span>
+                  ใบส่งของ:{" "}
+                  <span className="font-mono text-slate-900" translate="no">
+                    {deliveryNumberText}
+                  </span>
                 </span>
               ) : null}
-              {deliveryNumberText ? <span className="h-4 w-px bg-slate-200" aria-hidden="true" /> : null}
+              {deliveryNumberText ? (
+                <span className="h-4 w-px bg-slate-200" aria-hidden="true" />
+              ) : null}
               <span>
                 ช่องทาง: <span className="text-slate-900">{detail.channelLabel}</span>
               </span>
               <span className="h-4 w-px bg-slate-200" aria-hidden="true" />
               <span>
-                รวม: <span className="text-slate-900">{detail.totalQuantity.toLocaleString("th-TH")} หน่วย</span>
+                รวม:{" "}
+                <span className="text-slate-900">
+                  {detail.totalQuantity.toLocaleString("th-TH")} หน่วย
+                </span>
               </span>
-              {detail.notes ? (
-                <>
-                  <span className="h-4 w-px bg-slate-200" aria-hidden="true" />
-                  <span className="flex-1">
-                    หมายเหตุ: <span className="text-slate-900 italic">&ldquo;{detail.notes}&rdquo;</span>
-                  </span>
-                </>
-              ) : null}
+            </div>
+
+            <div className="mt-3 border-t border-slate-200 pt-3 text-sm font-semibold text-slate-700">
+              <div className="flex items-start gap-3">
+                <span className="shrink-0 font-bold text-slate-950">หมายเหตุ</span>
+                <span className="min-w-0 flex-1 leading-6 text-slate-700">
+                  {detail.notes?.trim() ? (
+                    <span className="italic text-slate-900">&ldquo;{detail.notes}&rdquo;</span>
+                  ) : (
+                    <span className="text-slate-500">-</span>
+                  )}
+                </span>
+              </div>
             </div>
           </div>
 
@@ -110,16 +137,14 @@ export function DesktopOrderDetail({ detail, deliveryNumbers }: Props) {
       <table className="min-w-full border-collapse text-left">
         <thead>
           <tr className="border-b border-slate-300 bg-slate-50">
-            {(["รหัสสินค้า", "รายการสินค้า", "จำนวน", "หน่วย", "สต็อก", "ราคา/หน่วย", "รวม"] as const).map(
-              (column) => (
-                <th
-                  key={column}
-                  className="px-6 py-3.5 text-center text-sm font-bold uppercase tracking-widest text-slate-700"
-                >
-                  {column}
-                </th>
-              ),
-            )}
+            {TABLE_COLUMNS.map((column) => (
+              <th
+                key={column}
+                className="px-6 py-3.5 text-center text-sm font-bold uppercase tracking-widest text-slate-700"
+              >
+                {column}
+              </th>
+            ))}
           </tr>
         </thead>
         <tbody className="divide-y divide-slate-200 bg-white">

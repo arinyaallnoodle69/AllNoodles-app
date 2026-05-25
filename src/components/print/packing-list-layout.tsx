@@ -346,10 +346,10 @@ function calcDataColWidth(count: number, availableMm: number) {
 }
 
 function StandardPackingListPage({ page, data }: { page: StandardPageDef; data: PackingListData }) {
-  const columnWidth = calcDataColWidth(Math.max(page.pageProducts.length, 1), 251);
+  const columnWidth = calcDataColWidth(Math.max(page.pageProducts.length, 1), 247);
   const isLastStorePage = page.storeChunk === page.storeTotalChunks;
   const rowCount = page.pageStores.length + (isLastStorePage ? 1 : 0);
-  const rowHeightMm = Math.max(6.8, Math.min(7.8, 188 / Math.max(rowCount, 1)));
+  const rowHeightMm = Math.max(6.35, Math.min(7.35, 181.5 / Math.max(rowCount, 1)));
   const productTotals = isLastStorePage
     ? page.pageProductIndices.map((productIndex) =>
         page.vehicleStoreIndices.reduce((sum, storeIndex) => sum + (data.qty[productIndex]?.[storeIndex] ?? 0), 0),
@@ -446,11 +446,11 @@ function StandardPackingListPage({ page, data }: { page: StandardPageDef; data: 
 }
 
 function TransposedPackingListPage({ page, data }: { page: TransposedPageDef; data: PackingListData }) {
-  const storeColumnWidth = calcDataColWidth(Math.max(page.pageStores.length, 1), 252);
+  const storeColumnWidth = calcDataColWidth(Math.max(page.pageStores.length, 1), 248);
   const productTotals = page.pageProductIndices.map((productIndex) =>
     page.pageStoreIndices.reduce((sum, storeIndex) => sum + (data.qty[productIndex]?.[storeIndex] ?? 0), 0),
   );
-  const transposedRowHeightMm = Math.max(6.8, Math.min(7.8, 188 / Math.max(page.pageProducts.length, 1)));
+  const transposedRowHeightMm = Math.max(6.35, Math.min(7.35, 181.5 / Math.max(page.pageProducts.length, 1)));
 
   return (
     <section className="packing-sheet">
@@ -596,9 +596,9 @@ function PackingListStyles() {
 
         .packing-sheet__inner {
           padding-top: 0.6mm !important;
-          padding-right: 1.2mm !important;
-          padding-bottom: 0.8mm !important;
-          padding-left: 1.2mm !important;
+          padding-right: 3mm !important;
+          padding-bottom: 2.2mm !important;
+          padding-left: 3mm !important;
           gap: 0.55mm !important;
         }
 
@@ -679,7 +679,7 @@ function PackingListStyles() {
         display: flex;
         flex-direction: column;
         height: 100%;
-        padding: 1.2mm 1.6mm 1mm;
+        padding: 1.2mm 3.2mm 2.4mm;
         gap: 1.2mm;
         box-sizing: border-box;
       }

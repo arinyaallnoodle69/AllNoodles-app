@@ -17,6 +17,7 @@ import {
 } from "@/components/print/print-shared";
 
 let cachedFontEmbedCSS: string | null = null;
+const DOTTED_LINE = "2px dotted black";
 
 type DeliveryItem = {
   number: string;
@@ -265,6 +266,8 @@ export function BillingPreviewButton({
                         orgPhone="-"
                         title="ใบวางบิล"
                         docDate={today}
+                        dividerStyle="none"
+                        docMetaFontSize="11.8pt"
                       />
 
                       <PrintCustomerRow customer={{ code: customerCode, name: customerName, address: "-" }} />
@@ -274,7 +277,7 @@ export function BillingPreviewButton({
                           width: "100%",
                           tableLayout: "fixed",
                           borderCollapse: "collapse",
-                          fontSize: "8.5pt",
+                          fontSize: "11.8pt",
                           marginBottom: "1mm",
                         }}
                       >
@@ -284,8 +287,8 @@ export function BillingPreviewButton({
                               style={{
                                 padding: "1mm 2mm",
                                 color: "black",
-                                borderTop: "1.5px solid black",
-                                borderBottom: "1.5px solid black",
+                                borderTop: DOTTED_LINE,
+                                borderBottom: DOTTED_LINE,
                                 width: "6%",
                                 textAlign: "center",
                               }}
@@ -296,8 +299,8 @@ export function BillingPreviewButton({
                               style={{
                                 padding: "1mm 2mm",
                                 color: "black",
-                                borderTop: "1.5px solid black",
-                                borderBottom: "1.5px solid black",
+                                borderTop: DOTTED_LINE,
+                                borderBottom: DOTTED_LINE,
                                 width: "40%",
                                 textAlign: "center",
                               }}
@@ -308,8 +311,8 @@ export function BillingPreviewButton({
                               style={{
                                 padding: "1mm 2mm",
                                 color: "black",
-                                borderTop: "1.5px solid black",
-                                borderBottom: "1.5px solid black",
+                                borderTop: DOTTED_LINE,
+                                borderBottom: DOTTED_LINE,
                                 width: "21%",
                                 textAlign: "center",
                               }}
@@ -320,8 +323,8 @@ export function BillingPreviewButton({
                               style={{
                                 padding: "1mm 2mm",
                                 color: "black",
-                                borderTop: "1.5px solid black",
-                                borderBottom: "1.5px solid black",
+                                borderTop: DOTTED_LINE,
+                                borderBottom: DOTTED_LINE,
                                 width: "18%",
                                 textAlign: "right",
                               }}
@@ -332,8 +335,8 @@ export function BillingPreviewButton({
                               style={{
                                 padding: "1mm 3mm",
                                 color: "black",
-                                borderTop: "1.5px solid black",
-                                borderBottom: "1.5px solid black",
+                                borderTop: DOTTED_LINE,
+                                borderBottom: DOTTED_LINE,
                                 width: "15%",
                                 textAlign: "left",
                               }}
@@ -351,7 +354,7 @@ export function BillingPreviewButton({
                                   padding: "0.8mm 2mm",
                                   textAlign: "center",
                                   fontFamily: "monospace",
-                                  fontSize: "8pt",
+                                  fontSize: "11.8pt",
                                   fontWeight: 700,
                                   color: "#003366",
                                 }}
@@ -364,15 +367,15 @@ export function BillingPreviewButton({
                               <td style={{ padding: "0.8mm 2mm", textAlign: "right", fontWeight: 700, color: "black" }}>
                                 {fmt(item.amount)}
                               </td>
-                              <td style={{ padding: "0.8mm 3mm", fontSize: "7.5pt", color: "#475569" }}>-</td>
+	                              <td style={{ padding: "0.8mm 3mm", fontSize: "11.8pt", color: "#475569" }}>-</td>
                             </tr>
                           ))}
                         </tbody>
                       </table>
 
                       <div style={{ flex: 1 }} />
-                      <PrintTotalRow totalAmount={totalAmount} />
-                      <PrintSignatureBlock leftLabel="ผู้รับวางบิล" rightLabel="ผู้วางบิล" />
+	                      <PrintTotalRow totalAmount={totalAmount} dividerStyle="dotted" showBottomBorder={false} />
+	                      <PrintSignatureBlock leftLabel="ผู้รับวางบิล" rightLabel="ผู้วางบิล" lineStyle="dotted" />
                     </div>
                   </div>
                 </div>

@@ -40,6 +40,7 @@ type StoreSummaryForBatch = {
   orderDate: string;
   orderIds?: string[];
   orderNumbers?: string[];
+  deliveryNoteIds?: string[];
   orderRounds: number;
   totalAmount: number;
   hasDelivery?: boolean;
@@ -899,11 +900,12 @@ function AllStoresDeliveryModal({
     setPrintSelectedIds(new Set());
   }
 
-  function triggerPrintJob(customerIds: string[]) {
+  function triggerPrintJob(deliveryNoteIds: string[]) {
     if (isPrintingSelected) return;
+    if (deliveryNoteIds.length === 0) return;
     
     setIsPrintingSelected(true);
-    const printUrl = `/delivery/print?date=${date}${endDate ? `&endDate=${endDate}` : ""}&customers=${encodeURIComponent(customerIds.join(","))}&autoprint=1`;
+    const printUrl = `/delivery/print?note_ids=${encodeURIComponent(deliveryNoteIds.join(","))}&date=${date}${endDate ? `&endDate=${endDate}` : ""}&autoprint=1`;
 
     const iframe = document.createElement("iframe");
     iframe.style.cssText = "position:fixed;top:-9999px;left:-9999px;width:1px;height:1px;";
@@ -947,16 +949,11 @@ function AllStoresDeliveryModal({
 
   function handlePrintSelected() {
     if (printSelectedIds.size === 0) return;
-    
-    // Optimization: If all stores are selected, pass "all" instead of a long list of IDs
-    if (printSelectedIds.size === stores.length) {
-      triggerPrintJob(["all"]);
-      return;
-    }
 
-    // Get unique customer IDs from selected composite keys
-    const customerIds = Array.from(new Set(Array.from(printSelectedIds).map(k => k.split("_")[0])));
-    triggerPrintJob(customerIds);
+    const deliveryNoteIds = Array.from(
+      new Set(selectedStores.flatMap((store) => store.deliveryNoteIds ?? [])),
+    );
+    triggerPrintJob(deliveryNoteIds);
   }
 
   return (

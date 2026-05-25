@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { memo, useEffect, useState, useTransition } from "react";
 import dynamic from "next/dynamic";
@@ -55,7 +55,7 @@ function formatDisplayDate(value: string) {
 
 type StockReductionMode = "return" | "lost";
 
-// â”€â”€â”€ Sub-components â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// Sub-components
 
 const ItemsViewList = memo(({ detail }: { detail: OrderDetailData }) => {
   return (
@@ -136,6 +136,7 @@ const EditItemsPanel = memo(({
   onDone: (message?: string) => void;
   products: OrderProductOption[];
 }) => {
+  const [notes, setNotes] = useState(detail.notes ?? "");
   const [quantities, setQuantities] = useState<Record<string, number>>(
     Object.fromEntries(detail.items.map((i) => [i.id, i.quantity])),
   );
@@ -161,6 +162,7 @@ const EditItemsPanel = memo(({
   const activeItems = detail.items.filter((i) => !removed.has(i.id));
 
   useEffect(() => {
+    setNotes(detail.notes ?? "");
     setQuantities(Object.fromEntries(detail.items.map((i) => [i.id, i.quantity])));
     setQuantityInputs(Object.fromEntries(detail.items.map((i) => [i.id, String(i.quantity)])));
     setUnitPrices(Object.fromEntries(detail.items.map((i) => [i.id, i.unitPrice])));
@@ -337,6 +339,7 @@ const EditItemsPanel = memo(({
 
       const result = await updateOrderItemsBatchAction({
         orderId: detail.id,
+        notes,
         removedIds: Array.from(removed),
         updates: Object.entries(normalizedQuantities)
           .filter(([id, qty]) => {
@@ -389,7 +392,7 @@ const EditItemsPanel = memo(({
   }
 
   return (
-    <div className="relative flex h-full flex-col bg-white">
+    <div className="relative flex h-full min-w-0 max-w-full flex-col overflow-x-hidden bg-white">
       {isSaving ? (
         <div className="absolute inset-0 z-50 flex items-center justify-center bg-white/78 backdrop-blur-[1px]">
           <div className="flex flex-col items-center gap-4 rounded-3xl border border-slate-100 bg-white/95 px-8 py-7 shadow-[0_24px_80px_rgba(15,23,42,0.18)]">
@@ -405,7 +408,21 @@ const EditItemsPanel = memo(({
         </div>
       ) : null}
 
-      <div className="flex-1 overflow-y-auto px-5 py-4 custom-scrollbar">
+      <div className="flex-1 min-w-0 overflow-x-hidden overflow-y-auto px-4 py-4 custom-scrollbar sm:px-5">
+        <div className="mb-4 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+          <label htmlFor="edit-order-notes" className="mb-2 block text-sm font-bold text-slate-700">
+            หมายเหตุ
+          </label>
+          <textarea
+            id="edit-order-notes"
+            rows={3}
+            value={notes}
+            onChange={(event) => setNotes(event.target.value)}
+            placeholder="ใส่หมายเหตุสำหรับออเดอร์นี้"
+            className="min-h-[88px] w-full resize-none rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-[#003366]/40 focus:ring-2 focus:ring-[#003366]/10"
+          />
+        </div>
+
         <div className="mb-4">
           <OrderAddProductPicker
             addedItems={addedItems}
@@ -838,7 +855,7 @@ const EditItemsPanel = memo(({
 });
 EditItemsPanel.displayName = "EditItemsPanel";
 
-// â”€â”€â”€ Main modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// Main modal
 
 type Props = {
   allOrders: IncomingOrderListItem[];
@@ -980,7 +997,7 @@ export function IncomingOrderModal({ allOrders, detail, expandedId, products }: 
     detail.deliveryNumber || (detail.orderNumber.startsWith("DN") ? detail.orderNumber : null);
 
   return (
-    <div className={`fixed inset-0 z-[250] flex flex-col items-center justify-end lg:justify-center overflow-hidden`}>
+    <div className={`fixed inset-0 z-[250] flex flex-col items-center justify-end overflow-x-hidden overflow-y-hidden lg:justify-center`}>
       <style>{`
         @keyframes slideInL { from { transform: translateX(20px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
         @keyframes slideInR { from { transform: translateX(-20px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
@@ -1028,7 +1045,7 @@ export function IncomingOrderModal({ allOrders, detail, expandedId, products }: 
       <div className={`absolute inset-0 bg-slate-950/45 backdrop-blur-[2px] ${isClosing ? "backdrop-out" : "animate-fade-in"}`} onClick={close} />
 
       {/* Main Container */}
-      <div className={`${isClosing ? "m-anim-out" : "m-anim"} relative z-10 flex flex-col bg-white w-full h-full lg:h-[90vh] lg:max-w-4xl lg:rounded-[2.5rem] overflow-hidden shadow-2xl`}>
+      <div className={`${isClosing ? "m-anim-out" : "m-anim"} relative z-10 flex h-full w-full max-w-[100vw] min-w-0 flex-col overflow-x-hidden overflow-y-hidden bg-white shadow-2xl lg:h-[90vh] lg:max-w-4xl lg:rounded-[2.5rem]`}>
         {saveToast ? (
           <div className="absolute inset-0 z-[100] flex items-center justify-center bg-slate-950/45 backdrop-blur-[2px]" onClick={() => setSaveToast(null)}>
             <div className="m-anim flex w-[calc(100%-2.5rem)] max-w-sm flex-col items-center gap-4 rounded-3xl border border-emerald-200 bg-white p-6 text-center shadow-[0_22px_60px_rgba(16,185,129,0.18)] relative" onClick={(e) => e.stopPropagation()}>
@@ -1112,7 +1129,7 @@ export function IncomingOrderModal({ allOrders, detail, expandedId, products }: 
         </div>
 
         {/* Content Body */}
-        <div className={`flex-1 overflow-hidden relative bg-white ${slideAnim ? (slideAnim === "slide-left" ? "c-slide-l" : "c-slide-r") : ""}`}>
+        <div className={`relative flex-1 min-w-0 overflow-x-hidden overflow-y-hidden bg-white ${slideAnim ? (slideAnim === "slide-left" ? "c-slide-l" : "c-slide-r") : ""}`}>
           {navPending && (
             <div className="absolute inset-0 z-50 flex items-center justify-center bg-white/70 backdrop-blur-[1px]">
               <div className="flex flex-col items-center gap-4">

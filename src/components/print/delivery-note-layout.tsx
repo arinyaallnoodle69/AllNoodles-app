@@ -1,19 +1,20 @@
-import type { DeliveryNotePrintData } from "@/lib/delivery/print";
+﻿import type { DeliveryNotePrintData } from "@/lib/delivery/print";
 import {
-  PRINT_ORGANIZATION_NAME,
-  SHEET_WIDTH_MM,
   HALF_SHEET_HEIGHT_MM,
   NOTE_PADDING,
-  chunkItems,
-  fmtQty,
-  fmt,
-  PrintDocHeader,
+  PRINT_ORGANIZATION_NAME,
   PrintCustomerRow,
-  PrintTotalRow,
+  PrintDocHeader,
   PrintSignatureBlock,
+  PrintTotalRow,
+  SHEET_WIDTH_MM,
+  chunkItems,
+  fmt,
+  fmtQty,
 } from "@/components/print/print-shared";
 
 const ITEMS_PER_NOTE_PAGE = 10;
+const DOTTED_LINE = "4px dotted black";
 
 type DeliveryNotePage = {
   key: string;
@@ -53,9 +54,36 @@ function DeliveryNotePageView({
   showIntermediateFooter?: boolean;
 }) {
   const { dn, items, pageIndex, totalPages, isLastPage } = notePage;
+  const headerCellBase = {
+    color: "black",
+    whiteSpace: "nowrap" as const,
+  };
+
+  function renderHeaderLabel(label: string) {
+    return (
+      <span
+        style={{
+          display: "inline-block",
+          paddingBottom: "0.2mm",
+          borderBottom: DOTTED_LINE,
+          lineHeight: 1.1,
+        }}
+      >
+        {label}
+      </span>
+    );
+  }
 
   return (
-    <div className="note-slot__content" style={{ fontFamily: "'Sarabun', sans-serif", display: "flex", flexDirection: "column", height: "100%" }}>
+    <div
+      className="note-slot__content"
+      style={{
+        fontFamily: "'Sarabun', sans-serif",
+        display: "flex",
+        flexDirection: "column",
+        height: "100%",
+      }}
+    >
       <PrintDocHeader
         orgName={PRINT_ORGANIZATION_NAME}
         orgAddress={dn.organization.address}
@@ -64,32 +92,85 @@ function DeliveryNotePageView({
         docNumber={dn.deliveryNumber}
         docDate={dn.deliveryDate}
         pageLabel={totalPages > 1 ? `หน้า ${pageIndex + 1}/${totalPages}` : undefined}
+        dividerStyle="none"
+        docMetaFontSize="11.8pt"
       />
 
       <PrintCustomerRow customer={dn.customer} />
 
-      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "11.8pt", marginBottom: "1mm" }}>
+      <table
+        style={{
+          width: "100%",
+          borderCollapse: "collapse",
+          fontSize: "11.8pt",
+          marginBottom: "1mm",
+        }}
+      >
         <thead>
           <tr>
-            <th style={{ padding: "1mm 2mm", textAlign: "center", width: "6mm", color: "black", borderTop: "1.5px solid black", borderBottom: "1.5px solid black", whiteSpace: "nowrap" }}>ลำดับ</th>
-            <th style={{ padding: "1mm 2mm", textAlign: "center", width: "20mm", color: "black", borderTop: "1.5px solid black", borderBottom: "1.5px solid black", whiteSpace: "nowrap" }}>รหัสสินค้า</th>
-            <th style={{ padding: "1mm 1mm", textAlign: "left", color: "black", borderTop: "1.5px solid black", borderBottom: "1.5px solid black", whiteSpace: "nowrap" }}>รายการสินค้า</th>
-            <th style={{ padding: "1mm 2mm", textAlign: "center", width: "12mm", color: "black", borderTop: "1.5px solid black", borderBottom: "1.5px solid black", whiteSpace: "nowrap" }}>จำนวน</th>
-            <th style={{ padding: "1mm 2mm", textAlign: "center", width: "10mm", color: "black", borderTop: "1.5px solid black", borderBottom: "1.5px solid black", whiteSpace: "nowrap" }}>หน่วย</th>
-            <th style={{ padding: "1mm 2mm", textAlign: "right", width: "22mm", color: "black", borderTop: "1.5px solid black", borderBottom: "1.5px solid black", whiteSpace: "nowrap" }}>ราคา/หน่วย</th>
-            <th style={{ padding: "1mm 3mm", textAlign: "right", width: "28mm", color: "black", borderTop: "1.5px solid black", borderBottom: "1.5px solid black", whiteSpace: "nowrap" }}>จำนวนเงิน</th>
+            <th style={{ ...headerCellBase, borderTop: DOTTED_LINE, padding: "1mm 2mm", textAlign: "center", width: "6mm" }}>
+              {renderHeaderLabel("ลำดับ")}
+            </th>
+            <th style={{ ...headerCellBase, borderTop: DOTTED_LINE, padding: "1mm 2mm", textAlign: "center", width: "20mm" }}>
+              {renderHeaderLabel("รหัสสินค้า")}
+            </th>
+            <th style={{ ...headerCellBase, borderTop: DOTTED_LINE, padding: "1mm 1mm", textAlign: "left" }}>
+              {renderHeaderLabel("รายการสินค้า")}
+            </th>
+            <th style={{ ...headerCellBase, borderTop: DOTTED_LINE, padding: "1mm 2mm", textAlign: "center", width: "12mm" }}>
+              {renderHeaderLabel("จำนวน")}
+            </th>
+            <th style={{ ...headerCellBase, borderTop: DOTTED_LINE, padding: "1mm 2mm", textAlign: "center", width: "10mm" }}>
+              {renderHeaderLabel("หน่วย")}
+            </th>
+            <th style={{ ...headerCellBase, borderTop: DOTTED_LINE, padding: "1mm 2mm", textAlign: "right", width: "22mm" }}>
+              {renderHeaderLabel("ราคา/หน่วย")}
+            </th>
+            <th style={{ ...headerCellBase, borderTop: DOTTED_LINE, padding: "1mm 3mm", textAlign: "right", width: "28mm" }}>
+              {renderHeaderLabel("จำนวนเงิน")}
+            </th>
           </tr>
         </thead>
         <tbody>
           {items.map((item) => (
             <tr key={item.id}>
-              <td style={{ padding: "0.8mm 2mm", textAlign: "center", color: "black", fontSize: "11.8pt" }}>{item.lineNumber}</td>
-              <td style={{ padding: "0.8mm 2mm", textAlign: "center", fontFamily: "monospace", color: "black", fontSize: "11.8pt" }}>{item.productSku}</td>
-              <td style={{ padding: "0.8mm 1mm", fontWeight: 600, color: "black", fontSize: "11.8pt" }}>{item.productName}</td>
-              <td style={{ padding: "0.8mm 2mm", textAlign: "center", fontWeight: 700, color: "black" }}>{fmtQty(item.quantityDelivered)}</td>
-              <td style={{ padding: "0.8mm 2mm", textAlign: "center", color: "black" }}>{item.saleUnitLabel}</td>
-              <td style={{ padding: "0.8mm 2mm", textAlign: "right", color: "black" }}>{fmt(item.unitPrice)}</td>
-              <td style={{ padding: "0.8mm 3mm", textAlign: "right", fontWeight: 700, color: "black", whiteSpace: "nowrap" }}>{fmt(item.lineTotal)}</td>
+              <td style={{ padding: "0.8mm 2mm", textAlign: "center", color: "black", fontSize: "11.8pt" }}>
+                {item.lineNumber}
+              </td>
+              <td
+                style={{
+                  padding: "0.8mm 2mm",
+                  textAlign: "center",
+                  fontFamily: "monospace",
+                  color: "black",
+                  fontSize: "11.8pt",
+                }}
+              >
+                {item.productSku}
+              </td>
+              <td style={{ padding: "0.8mm 1mm", fontWeight: 600, color: "black", fontSize: "11.8pt" }}>
+                {item.productName}
+              </td>
+              <td style={{ padding: "0.8mm 2mm", textAlign: "center", fontWeight: 700, color: "black" }}>
+                {fmtQty(item.quantityDelivered)}
+              </td>
+              <td style={{ padding: "0.8mm 2mm", textAlign: "center", color: "black" }}>
+                {item.saleUnitLabel}
+              </td>
+              <td style={{ padding: "0.8mm 2mm", textAlign: "right", color: "black" }}>
+                {fmt(item.unitPrice)}
+              </td>
+              <td
+                style={{
+                  padding: "0.8mm 3mm",
+                  textAlign: "right",
+                  fontWeight: 700,
+                  color: "black",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {fmt(item.lineTotal)}
+              </td>
             </tr>
           ))}
         </tbody>
@@ -97,40 +178,54 @@ function DeliveryNotePageView({
 
       <div style={{ flex: 1 }} />
 
-      {isLastPage && (
+      {isLastPage ? (
         <>
-          <PrintTotalRow totalAmount={dn.totalAmount} />
+          <PrintTotalRow totalAmount={dn.totalAmount} dividerStyle="dotted" showBottomBorder={false} />
           <PrintSignatureBlock
             notes={dn.notes}
             leftLabel="ผู้รับสินค้า"
             rightLabel="ผู้จัดสินค้า"
+            lineStyle="dotted"
           />
         </>
-      )}
+      ) : null}
 
-      {!isLastPage && showIntermediateFooter && (
-        <div style={{ borderTop: "1.5px solid black", paddingTop: "2.5mm" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", gap: "6mm" }}>
+      {!isLastPage && showIntermediateFooter ? (
+        <div style={{ borderTop: DOTTED_LINE, paddingTop: "2.5mm" }}>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "flex-end",
+              gap: "6mm",
+            }}
+          >
             <div style={{ flex: 1 }}>
-              <p style={{ fontSize: "8.8pt", fontWeight: 700, color: "#1e3a5f" }}>มีรายการต่อหน้าถัดไป</p>
+              <p style={{ fontSize: "8.8pt", fontWeight: 700, color: "#1e3a5f" }}>
+                มีรายการต่อหน้าถัดไป
+              </p>
               <p style={{ marginTop: "1mm", fontSize: "7.8pt", color: "#64748b" }}>
                 หน้านี้เป็นหน้ารายการต่อเนื่อง ยังไม่มีสรุปยอดรวม
               </p>
             </div>
             <div style={{ width: "48%", display: "flex", gap: "4mm" }}>
               <div style={{ flex: 1, textAlign: "center" }}>
-                <p style={{ fontSize: "8.8pt", fontWeight: 700, color: "#1e3a5f", marginBottom: "6mm" }}>ผู้รับสินค้า</p>
-                <div style={{ borderTop: "1px solid #334155" }} />
+                <p style={{ fontSize: "8.8pt", fontWeight: 700, color: "#1e3a5f", marginBottom: "6mm" }}>
+                  ผู้รับสินค้า
+                </p>
+                <div style={{ borderTop: "4px dotted #334155" }} />
               </div>
               <div style={{ width: "1px", background: "#e2e8f0" }} />
               <div style={{ flex: 1, textAlign: "center" }}>
-                <p style={{ fontSize: "8.8pt", fontWeight: 700, color: "#1e3a5f", marginBottom: "6mm" }}>ผู้จัดสินค้า</p>
-                <div style={{ borderTop: "1px solid #334155" }} />
+                <p style={{ fontSize: "8.8pt", fontWeight: 700, color: "#1e3a5f", marginBottom: "6mm" }}>
+                  ผู้จัดสินค้า
+                </p>
+                <div style={{ borderTop: "4px dotted #334155" }} />
               </div>
             </div>
           </div>
         </div>
-      )}
+      ) : null}
     </div>
   );
 }
@@ -202,7 +297,10 @@ export function DeliveryNoteLayout({ dns, showIntermediateFooter = false }: Prop
       {notePages.map((notePage) => (
         <div key={notePage.key} className="note-page">
           <div className="note-page__content">
-              <DeliveryNotePageView notePage={notePage} showIntermediateFooter={showIntermediateFooter} />
+            <DeliveryNotePageView
+              notePage={notePage}
+              showIntermediateFooter={showIntermediateFooter}
+            />
           </div>
         </div>
       ))}

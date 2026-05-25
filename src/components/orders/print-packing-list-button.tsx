@@ -1,7 +1,7 @@
 "use client";
 
+import { useMemo, useState } from "react";
 import { LayoutList } from "lucide-react";
-import { useState } from "react";
 
 type PrintPackingListButtonProps = {
   date: string;
@@ -17,13 +17,18 @@ export function PrintPackingListButton({
   label = "พิมพ์ใบจัดของ",
 }: PrintPackingListButtonProps) {
   const [loading, setLoading] = useState(false);
+  const basePageUrl = useMemo(
+    () =>
+      `/orders/packing-list?date=${date}${endDate ? `&endDate=${endDate}` : ""}${
+        layout !== "standard" ? `&layout=${layout}` : ""
+      }`,
+    [date, endDate, layout],
+  );
 
   function handlePrint() {
     if (loading) return;
-
-    const basePageUrl = `/orders/packing-list?date=${date}${endDate ? `&endDate=${endDate}` : ""}${layout !== "standard" ? `&layout=${layout}` : ""}`;
     setLoading(true);
-    window.location.href = basePageUrl;
+    window.location.assign(basePageUrl);
   }
 
   return (

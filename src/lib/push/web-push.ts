@@ -41,6 +41,7 @@ type PushPayload = {
   badgeCount?: number;
   icon?: string;
   badge?: string;
+  tag?: string;
   url?: string;
 };
 
@@ -234,6 +235,7 @@ export async function sendNewOrderPushNotification({
       badgeCount: 1,
       icon: "/brand/192x192.png",
       badge: "/brand/192x192.png",
+      tag: "new-order",
       url: `${getSiteUrl()}/orders/incoming`,
     },
     ttl: 60 * 60,
@@ -260,6 +262,7 @@ export async function sendNewCustomerInquiryPushNotification({
       badgeCount: 1,
       icon: "/brand/192x192.png",
       badge: "/brand/192x192.png",
+      tag: "new-customer-inquiry",
       url: `${getSiteUrl()}/settings/customer-data?open=inquiry-call&inquiryId=${encodeURIComponent(inquiryId)}`,
     },
     ttl: 60 * 60 * 24,
@@ -301,6 +304,7 @@ export async function sendLoginSuccessPushNotification({
       badgeCount: 1,
       icon: "/brand/192x192.png",
       badge: "/brand/192x192.png",
+      tag: "login-success",
       url: `${getSiteUrl()}/dashboard`,
     },
     ttl: 60 * 10,

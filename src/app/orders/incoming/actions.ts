@@ -414,6 +414,7 @@ export async function updateCustomerVehicleFromIncomingOrderAction(
 
 export async function updateOrderItemsBatchAction(input: {
   orderId: string;
+  notes?: string | null;
   removedIds: string[];
   updates: { itemId: string; quantity: number; unitPrice?: number; reductionMode?: StockReductionMode }[];
   additions: {
@@ -425,7 +426,7 @@ export async function updateOrderItemsBatchAction(input: {
 }): Promise<ActionResult> {
   const session = await requireAppRole("admin");
   const admin = getSupabaseAdmin() as unknown as ActionsAdmin;
-  const { orderId, removedIds, updates, additions } = input;
+  const { orderId, notes, removedIds, updates, additions } = input;
 
   if (!orderId) return { error: "ไม่พบเลขออเดอร์" };
 
@@ -694,12 +695,13 @@ export async function updateOrderItemsBatchAction(input: {
   const finalTotal = (finalItems ?? []).reduce((sum, i) => sum + Number(i.line_total), 0);
 
   await admin.from("orders").update({
+    notes: notes?.trim() ? notes.trim() : null,
     subtotal_amount: finalTotal,
     total_amount: finalTotal,
   }).eq("id", orderId);
 
   // 6. Sync Delivery Note if needed
-  if (order.status === "confirmed") {
+  if (order.status === "confirmed" || order.status === "submitted") {
     const syncRes = await syncOrderDeliveryNoteAction(orderId, {
       lossInBaseUnitByItemId,
     });

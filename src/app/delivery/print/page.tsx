@@ -1,14 +1,175 @@
 import { requireAppRole } from "@/lib/auth/authorization";
-import {
-  type DeliveryNotePrintData,
-} from "@/lib/delivery/print";
+import type { DeliveryNotePrintData } from "@/lib/delivery/print";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { DeliveryNoteLayout } from "@/components/print/delivery-note-layout";
 import { AutoPrint, PrintButton } from "./print-button";
 
 export const metadata = { title: "ปริ้นใบส่งของ" };
 
-type Props = { searchParams: Promise<{ date?: string; endDate?: string; customer?: string; customers?: string; autoprint?: string }> };
+type Props = {
+  searchParams: Promise<{
+    date?: string;
+    endDate?: string;
+    customer?: string;
+    customers?: string;
+    note_ids?: string;
+    autoprint?: string;
+  }>;
+};
+
+type RawDeliveryPrintRow = {
+  id: string;
+  delivery_number: string;
+  delivery_date: string;
+  total_amount: number | string | null;
+  notes: string | null;
+  customer_id: string;
+  customers: {
+    id: string;
+    name: string;
+    customer_code: string;
+    address: string | null;
+    default_vehicle_id: string | null;
+    vehicles: { id: string; name: string } | { id: string; name: string }[] | null;
+  };
+  organizations: {
+    name: string | null;
+    metadata: Record<string, unknown> | null;
+  };
+  orders: { order_number: string | null } | { order_number: string | null }[] | null;
+  delivery_note_items: {
+    id: string;
+    quantity_delivered: number | string | null;
+    unit_price: number | string | null;
+    line_total: number | string | null;
+    products: {
+      name: string;
+      sku: string;
+      unit: string;
+    };
+  }[];
+};
+
+function toNumber(value: number | string | null | undefined) {
+  const numeric = Number(value ?? 0);
+  return Number.isFinite(numeric) ? numeric : 0;
+}
+
+function formatDateSafe(value: string | undefined | null, formatType: "long" | "short" = "long") {
+  if (!value || value === "null") return "";
+  try {
+    return new Intl.DateTimeFormat("th-TH", {
+      day: "numeric",
+      month: formatType === "long" ? "long" : "short",
+      year: formatType === "long" ? "numeric" : "2-digit",
+      timeZone: "Asia/Bangkok",
+    }).format(new Date(`${value}T00:00:00`));
+  } catch {
+    return value;
+  }
+}
+
+function getVehicleName(vehicle: RawDeliveryPrintRow["customers"]["vehicles"]) {
+  if (!vehicle) return null;
+  if (Array.isArray(vehicle)) return vehicle[0]?.name ?? null;
+  return vehicle.name ?? null;
+}
+
+function getOrderNumber(order: RawDeliveryPrintRow["orders"]) {
+  if (!order) return null;
+  if (Array.isArray(order)) return order[0]?.order_number ?? null;
+  return order.order_number ?? null;
+}
+
+function buildPrintData(rows: RawDeliveryPrintRow[]): DeliveryNotePrintData[] {
+  const groupMap = new Map<string, RawDeliveryPrintRow[]>();
+
+  for (const row of rows) {
+    const key = `${row.customer_id}_${row.delivery_date}`;
+    const bucket = groupMap.get(key) ?? [];
+    bucket.push(row);
+    groupMap.set(key, bucket);
+  }
+
+  return Array.from(groupMap.values()).map((groupRows) => {
+    const base = groupRows[0];
+    const organizationMetadata = base.organizations.metadata ?? {};
+    const itemMap = new Map<
+      string,
+      {
+        id: string;
+        lineNumber: number;
+        productSku: string;
+        productName: string;
+        quantityDelivered: number;
+        saleUnitLabel: string;
+        unitPrice: number;
+        lineTotal: number;
+      }
+    >();
+
+    for (const row of groupRows) {
+      for (const item of row.delivery_note_items ?? []) {
+        const sku = item.products.sku.trim();
+        const name = item.products.name.trim();
+        const unitLabel = item.products.unit.trim();
+        const key = `${sku.toLowerCase() || name.toLowerCase()}||${unitLabel.toLowerCase()}`;
+
+        if (itemMap.has(key)) {
+          const existing = itemMap.get(key)!;
+          existing.quantityDelivered += toNumber(item.quantity_delivered);
+          existing.lineTotal += toNumber(item.line_total);
+          continue;
+        }
+
+        itemMap.set(key, {
+          id: item.id,
+          lineNumber: 0,
+          productSku: sku,
+          productName: name,
+          quantityDelivered: toNumber(item.quantity_delivered),
+          saleUnitLabel: unitLabel,
+          unitPrice: toNumber(item.unit_price),
+          lineTotal: toNumber(item.line_total),
+        });
+      }
+    }
+
+    const items = Array.from(itemMap.values());
+    items.forEach((item, index) => {
+      item.lineNumber = index + 1;
+    });
+
+    const totalAmount = groupRows.reduce((sum, row) => sum + toNumber(row.total_amount), 0);
+    const deliveryNumber =
+      groupRows.length > 1
+        ? `${base.delivery_number} +${groupRows.length - 1}`
+        : base.delivery_number;
+    const notes = groupRows.map((row) => row.notes).filter(Boolean).join(" / ") || null;
+
+    return {
+      deliveryNumber,
+      deliveryDate: base.delivery_date,
+      orderNumber: getOrderNumber(base.orders),
+      totalAmount,
+      notes,
+      organization: {
+        name: base.organizations.name || "T&Y Noodle",
+        logoUrl: (organizationMetadata.logo_url as string) || null,
+        address: (organizationMetadata.address as string) || null,
+        phone: (organizationMetadata.phone as string) || null,
+      },
+      customer: {
+        name: base.customers.name || "Unknown",
+        code: base.customers.customer_code || "Unknown",
+        address: base.customers.address || "Unknown",
+        vehicleId: base.customers.default_vehicle_id || null,
+        vehicleName: getVehicleName(base.customers.vehicles),
+      },
+      items,
+    } satisfies DeliveryNotePrintData;
+  });
+}
 
 export default async function DeliveryBatchPrintPage({ searchParams }: Props) {
   const session = await requireAppRole("admin");
@@ -20,31 +181,19 @@ export default async function DeliveryBatchPrintPage({ searchParams }: Props) {
     .split(",")
     .map((id) => id.trim())
     .filter(Boolean);
+  const noteIds = (params.note_ids ?? "")
+    .split(",")
+    .map((id) => id.trim())
+    .filter(Boolean);
   const autoprint = params.autoprint === "1";
 
-  const formatDateSafe = (d: string | undefined | null, formatType: "long" | "short" = "long") => {
-    if (!d || d === "null") return "";
-    try {
-      return new Intl.DateTimeFormat("th-TH", {
-        day: "numeric",
-        month: formatType === "long" ? "long" : "short",
-        year: formatType === "long" ? "numeric" : "2-digit",
-        timeZone: "Asia/Bangkok"
-      }).format(new Date(d + "T00:00:00"));
-    } catch {
-      return d;
-    }
-  };
+  const dateLabel =
+    date === endDate
+      ? formatDateSafe(date)
+      : `${formatDateSafe(date, "short")} - ${formatDateSafe(endDate, "short")}`;
 
-  const dateLabel = date === endDate
-    ? formatDateSafe(date)
-    : `${formatDateSafe(date, "short")} - ${formatDateSafe(endDate, "short")}`;
-
-  let dns: DeliveryNotePrintData[] = [];
   const supabase = getSupabaseAdmin();
-
-  // Optimized batch query based on src/lib/delivery/print.ts
-  const query = supabase
+  let query = supabase
     .from("delivery_notes")
     .select(`
       id, delivery_number, delivery_date, total_amount, notes, customer_id,
@@ -57,118 +206,27 @@ export default async function DeliveryBatchPrintPage({ searchParams }: Props) {
       )
     `)
     .eq("organization_id", session.organizationId)
-    .gte("delivery_date", date)
-    .lte("delivery_date", endDate)
-    .in("status", ["confirmed", "submitted"])
+    .in("status", ["confirmed", "submitted"]);
+
+  if (noteIds.length > 0) {
+    query = query.in("id", noteIds);
+  } else {
+    query = query.gte("delivery_date", date).lte("delivery_date", endDate);
+    const isAllCustomers = customerIds.length === 1 && customerIds[0].toLowerCase() === "all";
+    if (isAllCustomers) {
+      // Keep legacy behavior for the explicit all mode.
+    } else if (customerIds.length > 0) {
+      query = query.in("customer_id", customerIds);
+    } else if (customerId) {
+      query = query.eq("customer_id", customerId);
+    }
+  }
+
+  const { data: rows } = await query
     .order("delivery_date", { ascending: true })
     .order("created_at", { ascending: true });
 
-  const isAllCustomers = customerIds.length === 1 && customerIds[0].toLowerCase() === "all";
-
-  if (isAllCustomers) {
-    // No filter on customer_id, fetch all in range
-  } else if (customerIds.length > 0) {
-    query.in("customer_id", customerIds);
-  } else if (customerId) {
-    query.eq("customer_id", customerId);
-  }
-
-  const { data: allRows } = await query;
-
-  if (allRows && allRows.length > 0) {
-    const groupMap = new Map<string, unknown[]>();
-    for (const row of allRows) {
-      const cId = row.customer_id;
-      const key = `${cId}_${row.delivery_date}`;
-      if (!groupMap.has(key)) groupMap.set(key, []);
-      (groupMap.get(key) as unknown[]).push(row);
-    }
-
-    dns = Array.from(groupMap.values()).map((rowsRaw) => {
-      const rows = rowsRaw as unknown[]; 
-      const base = rows[0] as Record<string, unknown>;
-      const org = base.organizations as Record<string, unknown> | null;
-      const organizationMetadata = (org?.metadata as Record<string, unknown>) || {};
-      const cust = base.customers as Record<string, unknown> | null;
-      const ord = Array.isArray(base.orders) ? base.orders[0] : base.orders;
-      
-      const itemMap = new Map<string, {
-        id: string;
-        lineNumber: number;
-        productSku: string;
-        productName: string;
-        quantityDelivered: number;
-        saleUnitLabel: string;
-        unitPrice: number;
-        lineTotal: number;
-      }>();
-
-      for (const row of rows) {
-        const rowData = row as Record<string, unknown>;
-        const items = Array.isArray(rowData.delivery_note_items) ? rowData.delivery_note_items as unknown[] : [];
-        for (const item of items) {
-          const itemData = item as Record<string, unknown>;
-          const prod = itemData.products as Record<string, unknown> | null;
-          const sku = String(prod?.sku || "").trim();
-          const name = String(prod?.name || "").trim();
-          const unitLabel = String(prod?.unit || "").trim();
-          const key = `${sku.toLowerCase() || name.toLowerCase()}||${unitLabel.toLowerCase()}`;
-          
-          if (itemMap.has(key)) {
-            const existing = itemMap.get(key)!;
-            existing.quantityDelivered += (Number(itemData.quantity_delivered) || 0);
-            existing.lineTotal += (Number(itemData.line_total) || 0);
-          } else {
-            itemMap.set(key, {
-              id: String(itemData.id),
-              lineNumber: 0,
-              productSku: sku,
-              productName: name,
-              quantityDelivered: Number(itemData.quantity_delivered) || 0,
-              saleUnitLabel: unitLabel,
-              unitPrice: Number(itemData.unit_price) || 0,
-              lineTotal: Number(itemData.line_total) || 0,
-            });
-          }
-        }
-      }
-
-      const mergedItems = Array.from(itemMap.values());
-      mergedItems.forEach((it, i) => { it.lineNumber = i + 1; });
-
-      const totalAmount = rows.reduce((s: number, r) => s + (Number((r as Record<string, unknown>).total_amount) || 0), 0);
-      const deliveryNumber = rows.length > 1 ? `${String((base as Record<string, unknown>).delivery_number)} +${rows.length - 1}` : String((base as Record<string, unknown>).delivery_number);
-      const mergedNotes = rows.map(r => (r as Record<string, unknown>).notes).filter(Boolean).join(" / ") || null;
-
-      const getVehName = (v: unknown): string | null => {
-        if (!v) return null;
-        if (Array.isArray(v)) return (v[0] as { name: string }).name ?? null;
-        return (v as { name: string }).name ?? null;
-      };
-
-      return {
-        deliveryNumber,
-        deliveryDate: String((base as Record<string, unknown>).delivery_date),
-        orderNumber: (ord as Record<string, unknown> | null)?.order_number ? String((ord as Record<string, unknown>).order_number) : null,
-        totalAmount,
-        notes: mergedNotes,
-        organization: {
-          name: (org?.name as string) || "T&Y Noodle",
-          logoUrl: (organizationMetadata?.logo_url as string) || null,
-          address: (organizationMetadata?.address as string) || null,
-          phone: (organizationMetadata?.phone as string) || null,
-        },
-        customer: {
-          name: (cust?.name as string) || "Unknown",
-          code: (cust?.customer_code as string) || "Unknown",
-          address: (cust?.address as string) || "Unknown",
-          vehicleId: (cust?.default_vehicle_id as string) || null,
-          vehicleName: getVehName(cust?.vehicles),
-        },
-        items: mergedItems,
-      } as DeliveryNotePrintData;
-    });
-  }
+  const dns = rows && rows.length > 0 ? buildPrintData(rows as unknown as RawDeliveryPrintRow[]) : [];
 
   return (
     <>
@@ -182,7 +240,7 @@ export default async function DeliveryBatchPrintPage({ searchParams }: Props) {
       <div className="no-print mb-6 flex items-center gap-3 px-4 pt-4">
         <PrintButton />
         <span className="text-sm font-semibold text-slate-700">
-          {dns.length} {customerId ? "ใบ" : "ร้าน"} · {dateLabel}
+          {dns.length} {customerId || noteIds.length > 0 ? "ใบ" : "ร้าน"} · {dateLabel}
         </span>
         <a
           href="/delivery"
@@ -194,7 +252,7 @@ export default async function DeliveryBatchPrintPage({ searchParams }: Props) {
 
       {dns.length === 0 ? (
         <div className="no-print flex flex-col items-center gap-3 py-24 text-center">
-          <p className="text-lg font-semibold text-slate-500">ไม่มีใบส่งของในวันที่เลือก</p>
+          <p className="text-lg font-semibold text-slate-500">ไม่มีใบส่งของในรายการที่เลือก</p>
           <p className="text-sm text-slate-400">{dateLabel}</p>
         </div>
       ) : (

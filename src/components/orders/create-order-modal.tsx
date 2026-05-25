@@ -401,7 +401,7 @@ const ProductRow = React.memo(({
 
       {isSelected && selection && (
         <div className="bg-[#003366]/5 px-3 pb-4 pt-2 md:px-4 md:pb-4 md:pt-1">
-          <div className="space-y-3 md:grid md:grid-cols-2 md:gap-3 md:space-y-0">
+          <div className="space-y-3">
             <div className="space-y-2">
               <label className="text-[14px] font-black uppercase tracking-wider text-slate-600">
                 จำนวน ({unit?.label})
@@ -901,6 +901,7 @@ export function CreateOrderModal({
   const [historyNotice, setHistoryNotice] = useState<string | null>(null);
   const [customerId, setCustomerId] = useState("");
   const [orderDate, setOrderDate] = useState(today);
+  const [notes, setNotes] = useState("");
   const [customerOrderCountsByDate, setCustomerOrderCountsByDate] =
     useState<Record<string, number>>(customerOrderCountsToday);
 
@@ -1214,6 +1215,7 @@ export function CreateOrderModal({
     setCustomerPickerOpen(false);
     setCustomerPickerQuery("");
     setOrderDate(today);
+    setNotes("");
     setError(null);
     setSuccess(null);
     setHistoryNotice(null);
@@ -1276,6 +1278,7 @@ export function CreateOrderModal({
       formData.set("customerId", customerId);
       formData.set("channel", "created");
       formData.set("orderDate", orderDate);
+      formData.set("notes", notes.trim());
       formData.set("items", JSON.stringify(cart));
       const result = await createManualOrderAction(formData);
       if ("error" in result) {
@@ -1499,6 +1502,24 @@ export function CreateOrderModal({
                           if (!customerId) return;
                           void loadLastOrderSnapshot(customerId, nextOrderDate);
                         }}
+                      />
+                    </div>
+
+                    <div>
+                      <label
+                        htmlFor="create-order-notes"
+                        className="mb-2 block text-sm font-semibold text-slate-700"
+                      >
+                        หมายเหตุ
+                      </label>
+                      <textarea
+                        id="create-order-notes"
+                        name="notes"
+                        rows={3}
+                        value={notes}
+                        onChange={(event) => setNotes(event.target.value)}
+                        placeholder="ใส่หมายเหตุสำหรับออเดอร์นี้"
+                        className="min-h-[88px] w-full resize-none rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-[#003366]/40 focus:ring-2 focus:ring-[#003366]/10"
                       />
                     </div>
 

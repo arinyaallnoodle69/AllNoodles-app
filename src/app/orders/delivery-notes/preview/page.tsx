@@ -10,6 +10,7 @@ type Props = {
   searchParams: Promise<{
     date?: string;
     customer_ids?: string;
+    note_ids?: string;
   }>;
 };
 
@@ -17,59 +18,68 @@ export default async function DeliveryNotePreviewPage({ searchParams }: Props) {
   const session = await requireAnyRole(["admin", "warehouse"]);
   const params = await searchParams;
   const date = params.date;
-  const customerIdsStr = params.customer_ids;
+  const customerIds = (params.customer_ids ?? "")
+    .split(",")
+    .map((id) => id.trim())
+    .filter(Boolean);
+  const noteIds = (params.note_ids ?? "")
+    .split(",")
+    .map((id) => id.trim())
+    .filter(Boolean);
 
-  if (!date || !customerIdsStr) {
+  if (noteIds.length === 0 && (!date || customerIds.length === 0)) {
     return (
       <div className="p-10 text-center">
         <p className="text-lg font-bold text-slate-900">ไม่มีข้อมูลสำหรับพิมพ์</p>
-        <a href="/orders/incoming" className="mt-4 inline-block text-[#003366] font-bold">กลับหน้าออเดอร์</a>
+        <a href="/orders/incoming" className="mt-4 inline-block font-bold text-[#003366]">กลับหน้าออเดอร์</a>
       </div>
     );
   }
 
-  const customerIds = customerIdsStr.split(",");
   const supabase = getSupabaseAdmin();
+  let selectedNoteIds = noteIds;
 
-  // Fetch all delivery notes for these customers on this date
-  const { data: dns, error } = await supabase
-    .from("delivery_notes")
-    .select("id")
-    .eq("organization_id", session.organizationId)
-    .eq("delivery_date", date)
-    .in("customer_id", customerIds)
-    .neq("status", "cancelled")
-    .order("customer_id", { ascending: true });
+  if (selectedNoteIds.length === 0 && date) {
+    const { data: dns, error } = await supabase
+      .from("delivery_notes")
+      .select("id")
+      .eq("organization_id", session.organizationId)
+      .eq("delivery_date", date)
+      .in("customer_id", customerIds)
+      .neq("status", "cancelled")
+      .order("customer_id", { ascending: true });
 
-  if (error || !dns || dns.length === 0) {
-    return (
-      <div className="p-10 text-center">
-        <p className="text-lg font-bold text-slate-900">ไม่พบใบส่งของสำหรับร้านที่เลือกในวันที่ {date}</p>
-        <p className="mt-2 text-sm text-slate-500">โปรดยืนยันออเดอร์เพื่อสร้างใบส่งของก่อนพิมพ์</p>
-        <a href="/orders/incoming" className="mt-4 inline-block text-[#003366] font-bold">กลับหน้าออเดอร์</a>
-      </div>
-    );
+    if (error || !dns || dns.length === 0) {
+      return (
+        <div className="p-10 text-center">
+          <p className="text-lg font-bold text-slate-900">ไม่พบใบส่งของสำหรับร้านที่เลือกในวันที่ {date}</p>
+          <p className="mt-2 text-sm text-slate-500">โปรดยืนยันออเดอร์เพื่อสร้างใบส่งของก่อนพิมพ์</p>
+          <a href="/orders/incoming" className="mt-4 inline-block font-bold text-[#003366]">กลับหน้าออเดอร์</a>
+        </div>
+      );
+    }
+
+    selectedNoteIds = dns.map((dn) => dn.id);
   }
 
-  // Fetch full print data for each DN
   const printDataResults = await Promise.all(
-    dns.map((dn) => getDeliveryNotePrintData(session.organizationId, dn.id))
+    selectedNoteIds.map((id) => getDeliveryNotePrintData(session.organizationId, id)),
   );
 
-  const validPrintData = printDataResults.filter((d): d is DeliveryNotePrintData => d !== null);
+  const validPrintData = printDataResults.filter((data): data is DeliveryNotePrintData => data !== null);
 
   if (validPrintData.length === 0) {
     return (
       <div className="p-10 text-center">
         <p className="text-lg font-bold text-slate-900">ไม่สามารถโหลดข้อมูลการพิมพ์ได้</p>
-        <a href="/orders/incoming" className="mt-4 inline-block text-[#003366] font-bold">กลับหน้าออเดอร์</a>
+        <a href="/orders/incoming" className="mt-4 inline-block font-bold text-[#003366]">กลับหน้าออเดอร์</a>
       </div>
     );
   }
 
   return (
     <>
-      <div className="no-print flex items-center gap-3 p-4 bg-white border-b sticky top-0 z-50">
+      <div className="no-print sticky top-0 z-50 flex items-center gap-3 border-b bg-white p-4">
         <div className="rounded-xl bg-[#003366]/10 px-4 py-2 text-sm font-bold text-[#003366]">
           พิมพ์ใบส่งของ - {validPrintData.length} ร้านค้า
         </div>
@@ -79,7 +89,7 @@ export default async function DeliveryNotePreviewPage({ searchParams }: Props) {
         </a>
       </div>
 
-      <div className="bg-slate-50 min-h-screen py-10 print:py-0 print:bg-white">
+      <div className="min-h-screen bg-slate-50 py-10 print:bg-white print:py-0">
         <DeliveryNoteLayout dns={validPrintData} showIntermediateFooter />
       </div>
     </>

@@ -1,4 +1,4 @@
-import type { CSSProperties } from "react";
+﻿import type { CSSProperties } from "react";
 import type { BillingStatementData } from "@/lib/billing/billing-statement";
 import {
   HALF_SHEET_HEIGHT_MM,
@@ -16,6 +16,7 @@ import {
 } from "@/components/print/print-shared";
 
 const ROWS_PER_BILL_PAGE = 10;
+const DOTTED_LINE = "4px dotted black";
 
 type BillPage = {
   key: string;
@@ -55,6 +56,14 @@ function buildAllBillSlots(dataList: BillingStatementData[]): BillSlot[] {
   );
 }
 
+function headerCellStyle(style: CSSProperties): CSSProperties {
+  return {
+    padding: "1mm 2mm",
+    color: "black",
+    ...style,
+  };
+}
+
 function BillPageView({
   page,
   data,
@@ -65,6 +74,21 @@ function BillPageView({
   showIntermediateFooter?: boolean;
 }) {
   const { rows, pageIndex, totalPages, isLastPage } = page;
+
+  function renderHeaderLabel(label: string) {
+    return (
+      <span
+        style={{
+          display: "inline-block",
+          paddingBottom: "0.2mm",
+          borderBottom: DOTTED_LINE,
+          lineHeight: 1.1,
+        }}
+      >
+        {label}
+      </span>
+    );
+  }
 
   return (
     <div
@@ -84,6 +108,8 @@ function BillPageView({
         docDate={data.billingDate}
         docNumber={data.billingNumber ?? undefined}
         pageLabel={totalPages > 1 ? `หน้า ${pageIndex + 1}/${totalPages}` : undefined}
+        dividerStyle="none"
+        docMetaFontSize="11.8pt"
       />
 
       <PrintCustomerRow customer={{ ...data.customer, address: data.customer.address ?? "-" }} />
@@ -93,17 +119,34 @@ function BillPageView({
           width: "100%",
           tableLayout: "fixed",
           borderCollapse: "collapse",
-          fontSize: "8.5pt",
+          fontSize: "11.8pt",
           marginBottom: "1mm",
         }}
       >
         <thead>
           <tr>
-            <th style={headerCellStyle({ width: "6%", textAlign: "center" })}>ลำดับ</th>
-            <th style={headerCellStyle({ width: "40%", textAlign: "center" })}>เลขที่ใบจัดส่ง</th>
-            <th style={headerCellStyle({ width: "21%", textAlign: "center" })}>วันที่</th>
-            <th style={headerCellStyle({ width: "18%", textAlign: "right" })}>ยอดรวม</th>
-            <th style={headerCellStyle({ width: "15%", textAlign: "left", padding: "1mm 3mm" })}>หมายเหตุ</th>
+            <th style={headerCellStyle({ borderTop: DOTTED_LINE, width: "6%", textAlign: "center" })}>
+              {renderHeaderLabel("ลำดับ")}
+            </th>
+            <th style={headerCellStyle({ borderTop: DOTTED_LINE, width: "40%", textAlign: "center" })}>
+              {renderHeaderLabel("เลขที่ใบจัดส่ง")}
+            </th>
+            <th style={headerCellStyle({ borderTop: DOTTED_LINE, width: "21%", textAlign: "center" })}>
+              {renderHeaderLabel("วันที่")}
+            </th>
+            <th style={headerCellStyle({ borderTop: DOTTED_LINE, width: "18%", textAlign: "right" })}>
+              {renderHeaderLabel("ยอดรวม")}
+            </th>
+            <th
+              style={headerCellStyle({
+                borderTop: DOTTED_LINE,
+                width: "15%",
+                textAlign: "left",
+                padding: "1mm 3mm",
+              })}
+            >
+              {renderHeaderLabel("หมายเหตุ")}
+            </th>
           </tr>
         </thead>
         <tbody>
@@ -117,7 +160,7 @@ function BillPageView({
                   padding: "0.8mm 2mm",
                   textAlign: "center",
                   fontFamily: "monospace",
-                  fontSize: "8pt",
+                  fontSize: "11.8pt",
                   fontWeight: 700,
                   color: "#003366",
                 }}
@@ -137,8 +180,8 @@ function BillPageView({
               >
                 {fmt(row.totalAmount)}
               </td>
-              <td style={{ padding: "0.8mm 3mm", fontSize: "7.5pt", color: "#475569" }}>
-                {row.notes ?? ""}
+              <td style={{ padding: "0.8mm 3mm", fontSize: "11.8pt", color: "#475569" }}>
+                {row.notes?.trim() || "-"}
               </td>
             </tr>
           ))}
@@ -149,33 +192,42 @@ function BillPageView({
 
       {isLastPage ? (
         <>
-          <PrintTotalRow totalAmount={data.grandTotal} />
-          <PrintSignatureBlock leftLabel="ผู้รับวางบิล" rightLabel="ผู้วางบิล" />
+          <PrintTotalRow totalAmount={data.grandTotal} dividerStyle="dotted" showBottomBorder={false} />
+          <PrintSignatureBlock leftLabel="ผู้รับวางบิล" rightLabel="ผู้วางบิล" lineStyle="dotted" />
         </>
       ) : null}
 
       {!isLastPage && showIntermediateFooter ? (
-        <div style={{ borderTop: "1.5px solid black", paddingTop: "2.5mm" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", gap: "6mm" }}>
+        <div style={{ borderTop: DOTTED_LINE, paddingTop: "2.5mm" }}>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "flex-end",
+              gap: "6mm",
+            }}
+          >
             <div style={{ flex: 1 }}>
-              <p style={{ fontSize: "8pt", fontWeight: 700, color: "#1e3a5f" }}>มีรายการต่อหน้าถัดไป</p>
-              <p style={{ marginTop: "1mm", fontSize: "7pt", color: "#64748b" }}>
+              <p style={{ fontSize: "8.8pt", fontWeight: 700, color: "#1e3a5f" }}>
+                มีรายการต่อหน้าถัดไป
+              </p>
+              <p style={{ marginTop: "1mm", fontSize: "7.8pt", color: "#64748b" }}>
                 หน้านี้เป็นหน้ารายการต่อเนื่อง ยังไม่มีสรุปยอดรวม
               </p>
             </div>
             <div style={{ width: "48%", display: "flex", gap: "4mm" }}>
               <div style={{ flex: 1, textAlign: "center" }}>
-                <p style={{ fontSize: "8pt", fontWeight: 700, color: "#1e3a5f", marginBottom: "6mm" }}>
+                <p style={{ fontSize: "8.8pt", fontWeight: 700, color: "#1e3a5f", marginBottom: "6mm" }}>
                   ผู้รับวางบิล
                 </p>
-                <div style={{ borderTop: "1px solid #334155" }} />
+                <div style={{ borderTop: "4px dotted #334155" }} />
               </div>
               <div style={{ width: "1px", background: "#e2e8f0" }} />
               <div style={{ flex: 1, textAlign: "center" }}>
-                <p style={{ fontSize: "8pt", fontWeight: 700, color: "#1e3a5f", marginBottom: "6mm" }}>
+                <p style={{ fontSize: "8.8pt", fontWeight: 700, color: "#1e3a5f", marginBottom: "6mm" }}>
                   ผู้วางบิล
                 </p>
-                <div style={{ borderTop: "1px solid #334155" }} />
+                <div style={{ borderTop: "4px dotted #334155" }} />
               </div>
             </div>
           </div>
@@ -183,16 +235,6 @@ function BillPageView({
       ) : null}
     </div>
   );
-}
-
-function headerCellStyle(style: CSSProperties): CSSProperties {
-  return {
-    padding: "1mm 2mm",
-    color: "black",
-    borderTop: "1.5px solid black",
-    borderBottom: "1.5px solid black",
-    ...style,
-  };
 }
 
 export function BillingStatementLayout({
@@ -260,11 +302,13 @@ export function BillingStatementLayout({
           height: ${HALF_SHEET_HEIGHT_MM}mm;
           padding: ${NOTE_PADDING};
           overflow: hidden;
+        }
+        .note-slot__content {
+          width: 100%;
+          height: 100%;
+          overflow: hidden;
           display: flex;
           flex-direction: column;
-        }
-        .note-slot--empty {
-          visibility: hidden;
         }
       `}</style>
 
@@ -275,7 +319,7 @@ export function BillingStatementLayout({
               <BillPageView page={slot.page} data={slot.data} showIntermediateFooter={showIntermediateFooter} />
             </div>
           ))}
-          {sheet.length < 2 ? <div className="note-slot note-slot--empty" aria-hidden="true" /> : null}
+          {sheet.length < 2 ? <div className="note-slot" /> : null}
         </div>
       ))}
     </>

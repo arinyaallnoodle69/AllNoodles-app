@@ -2,15 +2,14 @@
 
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { after } from "next/server";
 import {
   APP_SESSION_COOKIE,
   createSessionValue,
   getAppSession,
 } from "@/lib/auth/session";
+import { LOGIN_PUSH_PENDING_COOKIE } from "@/lib/auth/login-push";
 import { roleHomePage } from "@/lib/auth/authorization";
 import { createPinLookup, hashRequestIp, verifyPinHash } from "@/lib/auth/pin";
-import { sendLoginSuccessPushNotification } from "@/lib/push/web-push";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import {
   hasPinPepper,
@@ -241,18 +240,12 @@ export async function verifyPin(formData: FormData) {
       expires: new Date(session.expires_at),
     },
   );
-
-  after(async () => {
-    try {
-      await sendLoginSuccessPushNotification({
-        organizationId: session.organization_id,
-        displayName: user.display_name,
-        role: session.role,
-        userAgent,
-      });
-    } catch (error) {
-      console.error("[login:push]", error);
-    }
+  cookieStore.set(LOGIN_PUSH_PENDING_COOKIE, "1", {
+    httpOnly: false,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+    maxAge: 120,
   });
 
   redirect(nextPath ?? roleHomePage(session.role));

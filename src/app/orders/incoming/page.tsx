@@ -288,11 +288,16 @@ export default async function IncomingOrdersPage({ searchParams }: IncomingOrder
   }
 
   const deliveryMap = new Map<string, string[]>();
+  const deliveryIdMap = new Map<string, string[]>();
   for (const item of deliveryData) {
     const key = `${item.customerId}_${item.deliveryDate}`;
     deliveryMap.set(
       key,
       item.deliveryNotes.map((note) => note.deliveryNumber),
+    );
+    deliveryIdMap.set(
+      key,
+      item.deliveryNotes.map((note) => note.id),
     );
   }
 
@@ -304,6 +309,7 @@ export default async function IncomingOrdersPage({ searchParams }: IncomingOrder
     orderDate: string;
     orderIds: string[];
     orderNumbers: string[];
+    deliveryNoteIds: string[];
     orderRounds: number;
     totalAmount: number;
   };
@@ -321,6 +327,7 @@ export default async function IncomingOrdersPage({ searchParams }: IncomingOrder
           orderDate: order.orderDate,
           orderIds: [] as string[],
           orderNumbers: [] as string[],
+          deliveryNoteIds: [] as string[],
           orderRounds: 0,
           totalAmount: 0,
         };
@@ -336,6 +343,7 @@ export default async function IncomingOrdersPage({ searchParams }: IncomingOrder
   ).map((store) => ({
     ...store,
     hasDelivery: Boolean(deliveryMap.get(`${store.customerId}_${store.orderDate}`)?.length),
+    deliveryNoteIds: deliveryIdMap.get(`${store.customerId}_${store.orderDate}`) ?? [],
   }));
 
   const deliveryByCustomerId = Object.fromEntries(deliveryMap.entries());
@@ -542,6 +550,7 @@ export default async function IncomingOrdersPage({ searchParams }: IncomingOrder
                           deliveryNumbers={deliveryMap.get(`${order.customerId}_${order.orderDate}`)}
                           displayDate={formatDisplayDate(order.orderDate)}
                           isBilled={billedDeliveryByCustomerDate[`${order.customerId}_${order.orderDate}`] ?? false}
+                          notes={order.notes}
                           orderDate={order.orderDate}
                           productCount={order.productCount}
                           searchTerm={searchTerm}

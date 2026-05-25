@@ -30,6 +30,7 @@ import {
 } from "lucide-react";
 import { signOut } from "@/app/login/actions";
 import { LineAppIcon } from "@/components/icons/line-app-icon";
+import { LOGIN_PUSH_PENDING_COOKIE } from "@/lib/auth/login-push";
 import { SettingsMobileBottomNav } from "@/components/settings/settings-mobile-bottom-nav";
 import { OrdersMobileTabs } from "@/components/orders/orders-mobile-tabs";
 import { ReportsMobileTabs } from "@/components/reports/reports-mobile-tabs";
@@ -184,6 +185,31 @@ function shouldShowScrollTopButton(pathname: string) {
   );
 }
 
+function hasCookie(name: string) {
+  if (typeof document === "undefined") {
+    return false;
+  }
+
+  return document.cookie
+    .split(";")
+    .some((item) => item.trim().startsWith(`${name}=`));
+}
+
+function LoginSuccessPushReporter() {
+  useEffect(() => {
+    if (!hasCookie(LOGIN_PUSH_PENDING_COOKIE)) {
+      return;
+    }
+
+    void fetch("/api/push/login-success", {
+      method: "POST",
+      keepalive: true,
+    });
+  }, []);
+
+  return null;
+}
+
 // ─── Sidebar nav link ─────────────────────────────────────────────────────────
 
 type NavItem = { href: string; icon: React.ComponentType<{ className?: string; strokeWidth?: number }>; label: string };
@@ -289,6 +315,7 @@ export function AppSidebarLayout({
 
   return (
     <CreateOrderProvider>
+      <LoginSuccessPushReporter />
       <GlobalCreateOrderModal />
       <MobileSearchProvider>
         {/* ── Desktop sidebar (fixed) ───────────────────────────────────────── */}

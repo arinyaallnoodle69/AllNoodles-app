@@ -144,6 +144,7 @@ export type IncomingOrderListItem = {
   customerId: string;
   customerName: string;
   id: string;
+  notes: string | null;
   orderDate: string;
   orderNumber: string;
   productCount: number;
@@ -394,7 +395,7 @@ export async function getIncomingOrders(
 
   let query = admin
     .from("orders")
-    .select("id, customer_id, order_number, order_date, status, fulfillment_status, total_amount, metadata, created_at")
+    .select("id, customer_id, order_number, order_date, status, fulfillment_status, total_amount, metadata, created_at, notes")
     .eq("organization_id", organizationId);
 
   // If searchTerm is provided, we search across all dates (Global Search)
@@ -438,7 +439,7 @@ export async function getIncomingOrders(
       if (missingOrderIds.length > 0) {
         const { data: additionalOrders } = await admin
           .from("orders")
-          .select("id, customer_id, order_number, order_date, status, fulfillment_status, total_amount, metadata, created_at")
+          .select("id, customer_id, order_number, order_date, status, fulfillment_status, total_amount, metadata, created_at, notes")
           .in("id", missingOrderIds);
           
         if (additionalOrders) {
@@ -519,6 +520,7 @@ export async function getIncomingOrders(
         customerId: order.customer_id,
         customerName: customer?.name ?? "ร้านค้าไม่ทราบชื่อ",
         id: order.id,
+        notes: order.notes,
         orderDate: order.order_date,
         orderNumber: order.order_number,
         productCount: orderProductSets.get(order.id)?.size ?? 0,

@@ -308,14 +308,14 @@ export function OrderAddProductPicker({
       </div>
 
       {open ? (
-        <div className="fixed inset-0 z-[80] flex items-end justify-center bg-slate-950/55 sm:items-center sm:p-4">
+        <div className="fixed inset-0 z-[80] flex items-end justify-center overflow-x-hidden bg-slate-950/55 sm:items-center sm:p-4">
           <button
             type="button"
             className="absolute inset-0"
             onClick={() => setOpen(false)}
             aria-label="ปิดหน้าต่างเพิ่มสินค้า"
           />
-          <div className="relative flex h-[92dvh] w-full max-w-5xl flex-col overflow-hidden rounded-t-[2rem] bg-white shadow-2xl sm:h-[86dvh] sm:max-w-[calc(100vw-2rem)] sm:rounded-[2rem]">
+          <div className="relative flex h-[92dvh] w-full max-w-[100vw] min-w-0 flex-col overflow-x-hidden overflow-y-hidden rounded-t-[2rem] bg-white shadow-2xl sm:h-[86dvh] sm:max-w-[calc(100vw-2rem)] sm:rounded-[2rem]">
             <div className="flex shrink-0 items-center gap-3 border-b border-slate-200 bg-white px-4 py-4 sm:px-5">
               <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#003366]/8 text-[#003366]">
                 <ShoppingBag className="h-5 w-5" strokeWidth={2.3} />
@@ -482,7 +482,7 @@ export function OrderAddProductPicker({
                             </div>
                           ) : null}
 
-                          <div className="space-y-3 md:grid md:grid-cols-2 md:gap-3 md:space-y-0">
+                          <div className="space-y-3">
                             <div className="space-y-1.5 md:space-y-2">
                               <label className="text-[12px] font-black uppercase tracking-wide text-slate-600 md:text-[14px] md:tracking-wider">
                                 จำนวน ({selectedUnit.label})

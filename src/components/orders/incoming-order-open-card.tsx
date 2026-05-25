@@ -16,6 +16,7 @@ type IncomingOrderOpenCardProps = {
   customerCode: string;
   channelLabel: string;
   displayDate: string;
+  notes: string | null;
   totalAmountText: string;
   vehicleId: string | null;
   vehicleName: string | null;
@@ -63,6 +64,7 @@ export function IncomingOrderOpenCard({
   customerCode,
   channelLabel,
   displayDate,
+  notes,
   totalAmountText,
   vehicleId,
   vehicleName,
@@ -102,7 +104,6 @@ export function IncomingOrderOpenCard({
             <span translate="no">{customerCode}</span> - {customerName}
           </p>
           <div className="mt-1.5 flex items-center gap-2">
-
             {isBilled ? (
               <span
                 className="inline-flex size-5 shrink-0 items-center justify-center rounded-full bg-emerald-700 text-white"
@@ -149,7 +150,9 @@ export function IncomingOrderOpenCard({
         />
         <div className="min-w-0 border-l border-slate-300 pl-4">
           <p className="text-[11px] font-black uppercase tracking-[0.12em] text-slate-950">ยอดรวม</p>
-          <p className="mt-1.5 text-[1.05rem] font-bold leading-none text-slate-950">{totalAmountText}</p>
+          <p className="mt-1.5 text-[1.05rem] font-bold leading-none text-slate-950">
+            {totalAmountText}
+          </p>
         </div>
       </div>
 
@@ -190,6 +193,15 @@ export function IncomingOrderOpenCard({
             )}
           </div>
         </div>
+      </div>
+
+      <div className="mt-4 border-t border-slate-200 pt-3">
+        <p className="text-sm font-semibold leading-6 text-slate-700">
+          <span className="mr-2 text-[11px] font-black uppercase tracking-[0.12em] text-slate-950">
+            หมายเหตุ:
+          </span>
+          {notes?.trim() || "-"}
+        </p>
       </div>
 
       <div className="mt-4 flex items-center gap-2">

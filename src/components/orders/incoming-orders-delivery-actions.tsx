@@ -12,6 +12,7 @@ type IncomingOrdersDeliveryActionsProps = {
     orderDate: string;
     orderIds?: string[];
     orderNumbers?: string[];
+    deliveryNoteIds?: string[];
     orderRounds: number;
     totalAmount: number;
   }[];
