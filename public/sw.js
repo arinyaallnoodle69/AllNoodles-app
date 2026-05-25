@@ -1,4 +1,4 @@
-const CACHE_NAME = "T&Y Noodle-v6";
+const CACHE_NAME = "T&Y Noodle-v7";
 const APP_SHELL = [
   "/offline",
   "/manifest.webmanifest",
@@ -11,16 +11,8 @@ const DEFAULT_NOTIFICATION_URL = "/orders/incoming";
 /**
  * Strip the `redirected` flag from a Response.
  *
- * iOS Safari in standalone (PWA home-screen) mode refuses to accept a
- * Response with `response.redirected === true` from the Service Worker,
- * throwing "response served by service worker has redirections".
- *
- * This happens when the Next.js middleware / server performs a redirect
- * (e.g. "/" → "/login", "/login" → "/dashboard") and the resulting
- * Response object carries the internal `redirected` flag.
- *
- * Reconstructing a brand-new Response with the same body & headers
- * produces a clean, non-redirected Response that Safari accepts.
+ * iOS Safari in standalone PWA mode refuses a Response with
+ * `response.redirected === true` from the Service Worker.
  */
 function cleanResponse(response) {
   if (!response || !response.redirected) {
@@ -34,40 +26,37 @@ function cleanResponse(response) {
   });
 }
 
+function getDefaultPushPayload() {
+  return {
+    title: "มีออเดอร์ใหม่",
+    body: "มีคำสั่งซื้อใหม่เข้ามาในระบบ",
+    icon: "/brand/192x192.png",
+    badge: "/brand/192x192.png",
+    url: DEFAULT_NOTIFICATION_URL,
+    tag: "new-order",
+  };
+}
+
 function parsePushPayload(event) {
   if (!event.data) {
-    return {
-      title: "มีออเดอร์ใหม่",
-      body: "มีคำสั่งซื้อใหม่เข้ามาในระบบ",
-      icon: "/brand/192x192.png",
-      badge: "/brand/192x192.png",
-      url: DEFAULT_NOTIFICATION_URL,
-      tag: "new-order",
-    };
+    return getDefaultPushPayload();
   }
 
   try {
     const payload = event.data.json();
+    const fallback = getDefaultPushPayload();
 
     return {
-      title: payload?.title || "มีออเดอร์ใหม่",
-      body: payload?.body || "มีคำสั่งซื้อใหม่เข้ามาในระบบ",
-      icon: payload?.icon || "/brand/192x192.png",
-      badge: payload?.badge || "/brand/192x192.png",
-      url: payload?.url || DEFAULT_NOTIFICATION_URL,
-      tag: payload?.tag || payload?.topic || "new-order",
+      title: payload?.title || fallback.title,
+      body: payload?.body || fallback.body,
+      icon: payload?.icon || fallback.icon,
+      badge: payload?.badge || fallback.badge,
+      url: payload?.url || fallback.url,
+      tag: payload?.tag || payload?.topic || fallback.tag,
     };
   } catch (error) {
     console.warn("[sw] Unable to parse push payload:", error);
-
-    return {
-      title: "มีออเดอร์ใหม่",
-      body: "มีคำสั่งซื้อใหม่เข้ามาในระบบ",
-      icon: "/brand/192x192.png",
-      badge: "/brand/192x192.png",
-      url: DEFAULT_NOTIFICATION_URL,
-      tag: "new-order",
-    };
+    return getDefaultPushPayload();
   }
 }
 

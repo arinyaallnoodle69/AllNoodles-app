@@ -2,6 +2,7 @@
 
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { after } from "next/server";
 import {
   APP_SESSION_COOKIE,
   createSessionValue,
@@ -9,6 +10,7 @@ import {
 } from "@/lib/auth/session";
 import { roleHomePage } from "@/lib/auth/authorization";
 import { createPinLookup, hashRequestIp, verifyPinHash } from "@/lib/auth/pin";
+import { sendLoginSuccessPushNotification } from "@/lib/push/web-push";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import {
   hasPinPepper,
@@ -239,6 +241,19 @@ export async function verifyPin(formData: FormData) {
       expires: new Date(session.expires_at),
     },
   );
+
+  after(async () => {
+    try {
+      await sendLoginSuccessPushNotification({
+        organizationId: session.organization_id,
+        displayName: user.display_name,
+        role: session.role,
+        userAgent,
+      });
+    } catch (error) {
+      console.error("[login:push]", error);
+    }
+  });
 
   redirect(nextPath ?? roleHomePage(session.role));
 }

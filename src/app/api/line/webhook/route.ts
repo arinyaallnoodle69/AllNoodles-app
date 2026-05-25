@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-/** LINE Messaging API webhook — used to capture the Group ID when OA joins a group. */
+
 export async function POST(req: NextRequest): Promise<NextResponse> {
   try {
     const body = await req.json();
@@ -16,6 +16,5 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     console.error("[line/webhook] Error parsing body:", err);
   }
 
-  // LINE requires 200 OK
   return NextResponse.json({ ok: true });
 }

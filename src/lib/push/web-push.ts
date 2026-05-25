@@ -44,6 +44,13 @@ type PushPayload = {
   url?: string;
 };
 
+type PushSendOptions = {
+  payload: PushPayload;
+  topic: string;
+  ttl: number;
+  warningLabel: string;
+};
+
 export function getPushSubscriptionPublicKey() {
   return hasWebPushConfig() ? getWebPushPublicKey() : "";
 }
@@ -125,6 +132,71 @@ async function deactivatePushSubscriptionsByEndpoint(endpoints: string[]) {
   }
 }
 
+async function sendOrganizationPushNotification(
+  organizationId: string,
+  options: PushSendOptions,
+) {
+  if (!ensureWebPushConfigured()) {
+    return;
+  }
+
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase
+    .from("push_subscriptions")
+    .select("id, endpoint, p256dh, auth, is_active, organization_id, user_id, platform, user_agent, created_at, updated_at, last_seen_at")
+    .eq("organization_id", organizationId)
+    .eq("is_active", true);
+
+  if (error) {
+    console.warn(`[push] Failed to load subscriptions for ${options.warningLabel}:`, error.message);
+    return;
+  }
+
+  const subscriptions = (data ?? []) as StoredPushSubscriptionRow[];
+  if (subscriptions.length === 0) {
+    return;
+  }
+
+  const invalidEndpoints: string[] = [];
+
+  await Promise.all(
+    subscriptions.map(async (subscription) => {
+      try {
+        await webpush.sendNotification(
+          {
+            endpoint: subscription.endpoint,
+            keys: {
+              p256dh: subscription.p256dh,
+              auth: subscription.auth,
+            },
+          },
+          JSON.stringify(options.payload),
+          {
+            TTL: options.ttl,
+            urgency: "high",
+            topic: options.topic.slice(0, 32),
+          },
+        );
+      } catch (error) {
+        const statusCode =
+          typeof error === "object" && error !== null && "statusCode" in error
+            ? Number((error as { statusCode?: number }).statusCode)
+            : 0;
+
+        console.warn(`[push] Failed to send ${options.warningLabel} notification:`, statusCode || error);
+
+        if (statusCode === 400 || statusCode === 404 || statusCode === 410) {
+          invalidEndpoints.push(subscription.endpoint);
+        }
+      }
+    }),
+  );
+
+  if (invalidEndpoints.length > 0) {
+    await deactivatePushSubscriptionsByEndpoint(invalidEndpoints);
+  }
+}
+
 export async function deactivateUserPushSubscription(
   organizationId: string,
   userId: string,
@@ -155,74 +227,19 @@ export async function sendNewOrderPushNotification({
   customerName: string;
   orderNumber: string;
 }) {
-  if (!ensureWebPushConfigured()) {
-    return;
-  }
-
-  const supabase = getSupabaseAdmin();
-  const { data, error } = await supabase
-    .from("push_subscriptions")
-    .select("id, endpoint, p256dh, auth, is_active, organization_id, user_id, platform, user_agent, created_at, updated_at, last_seen_at")
-    .eq("organization_id", organizationId)
-    .eq("is_active", true);
-
-  if (error) {
-    console.warn("[push] Failed to load subscriptions:", error.message);
-    return;
-  }
-
-  const subscriptions = (data ?? []) as StoredPushSubscriptionRow[];
-  if (subscriptions.length === 0) {
-    return;
-  }
-
-  const payload: PushPayload = {
-    title: "มีออเดอร์ใหม่",
-    body: `${customerName} - ${orderNumber}`,
-    badgeCount: 1,
-    icon: "/brand/192x192.png",
-    badge: "/brand/192x192.png",
-    url: `${getSiteUrl()}/orders/incoming`,
-  };
-
-  const invalidEndpoints: string[] = [];
-
-  await Promise.all(
-    subscriptions.map(async (subscription) => {
-      try {
-        await webpush.sendNotification(
-          {
-            endpoint: subscription.endpoint,
-            keys: {
-              p256dh: subscription.p256dh,
-              auth: subscription.auth,
-            },
-          },
-          JSON.stringify(payload),
-          {
-            TTL: 60 * 60,
-            urgency: "high",
-            topic: orderNumber.slice(0, 32),
-          },
-        );
-      } catch (error) {
-        const statusCode =
-          typeof error === "object" && error !== null && "statusCode" in error
-            ? Number((error as { statusCode?: number }).statusCode)
-            : 0;
-
-        console.warn("[push] Failed to send notification:", statusCode || error);
-
-        if (statusCode === 400 || statusCode === 404 || statusCode === 410) {
-          invalidEndpoints.push(subscription.endpoint);
-        }
-      }
-    }),
-  );
-
-  if (invalidEndpoints.length > 0) {
-    await deactivatePushSubscriptionsByEndpoint(invalidEndpoints);
-  }
+  await sendOrganizationPushNotification(organizationId, {
+    payload: {
+      title: "มีออเดอร์ใหม่",
+      body: `${customerName} - ${orderNumber}`,
+      badgeCount: 1,
+      icon: "/brand/192x192.png",
+      badge: "/brand/192x192.png",
+      url: `${getSiteUrl()}/orders/incoming`,
+    },
+    ttl: 60 * 60,
+    topic: orderNumber,
+    warningLabel: "new order",
+  });
 }
 
 export async function sendNewCustomerInquiryPushNotification({
@@ -236,72 +253,58 @@ export async function sendNewCustomerInquiryPushNotification({
   customerName: string;
   customerPhone: string;
 }) {
-  if (!ensureWebPushConfigured()) {
-    return;
-  }
+  await sendOrganizationPushNotification(organizationId, {
+    payload: {
+      title: "ลูกค้าใหม่ขอสั่งสินค้า",
+      body: `${customerName} - ${customerPhone} - แตะเพื่อเปิดข้อมูลลูกค้า`,
+      badgeCount: 1,
+      icon: "/brand/192x192.png",
+      badge: "/brand/192x192.png",
+      url: `${getSiteUrl()}/settings/customer-data?open=inquiry-call&inquiryId=${encodeURIComponent(inquiryId)}`,
+    },
+    ttl: 60 * 60 * 24,
+    topic: "new-customer-inquiry",
+    warningLabel: "new customer inquiry",
+  });
+}
 
-  const supabase = getSupabaseAdmin();
-  const { data, error } = await supabase
-    .from("push_subscriptions")
-    .select("id, endpoint, p256dh, auth, is_active, organization_id, user_id, platform, user_agent, created_at, updated_at, last_seen_at")
-    .eq("organization_id", organizationId)
-    .eq("is_active", true);
+function getLoginDeviceLabel(userAgent: string | null) {
+  const value = userAgent?.toLowerCase() ?? "";
 
-  if (error) {
-    console.warn("[push] Failed to load subscriptions:", error.message);
-    return;
-  }
+  if (!value) return "ไม่ทราบอุปกรณ์";
+  if (value.includes("iphone")) return "iPhone";
+  if (value.includes("ipad")) return "iPad";
+  if (value.includes("android")) return "Android";
+  if (value.includes("windows")) return "Windows";
+  if (value.includes("macintosh") || value.includes("mac os")) return "Mac";
 
-  const subscriptions = (data ?? []) as StoredPushSubscriptionRow[];
-  if (subscriptions.length === 0) {
-    return;
-  }
+  return "อุปกรณ์อื่น";
+}
 
-  const payload: PushPayload = {
-    title: "🆕 ลูกค้าใหม่ขอสั่งสินค้า",
-    body: `${customerName} · ${customerPhone} — แตะเพื่อเปิดข้อมูลลูกค้า`,
-    badgeCount: 1,
-    icon: "/brand/192x192.png",
-    badge: "/brand/192x192.png",
-    url: `${getSiteUrl()}/settings/customer-data?open=inquiry-call&inquiryId=${encodeURIComponent(inquiryId)}`,
-  };
+export async function sendLoginSuccessPushNotification({
+  organizationId,
+  displayName,
+  role,
+  userAgent,
+}: {
+  organizationId: string;
+  displayName: string;
+  role: string;
+  userAgent: string | null;
+}) {
+  const device = getLoginDeviceLabel(userAgent);
 
-  const invalidEndpoints: string[] = [];
-
-  await Promise.all(
-    subscriptions.map(async (subscription) => {
-      try {
-        await webpush.sendNotification(
-          {
-            endpoint: subscription.endpoint,
-            keys: {
-              p256dh: subscription.p256dh,
-              auth: subscription.auth,
-            },
-          },
-          JSON.stringify(payload),
-          {
-            TTL: 60 * 60 * 24,
-            urgency: "high",
-            topic: "new-customer-inquiry",
-          },
-        );
-      } catch (error) {
-        const statusCode =
-          typeof error === "object" && error !== null && "statusCode" in error
-            ? Number((error as { statusCode?: number }).statusCode)
-            : 0;
-
-        console.warn("[push] Failed to send inquiry notification:", statusCode || error);
-
-        if (statusCode === 400 || statusCode === 404 || statusCode === 410) {
-          invalidEndpoints.push(subscription.endpoint);
-        }
-      }
-    }),
-  );
-
-  if (invalidEndpoints.length > 0) {
-    await deactivatePushSubscriptionsByEndpoint(invalidEndpoints);
-  }
+  await sendOrganizationPushNotification(organizationId, {
+    payload: {
+      title: "มีการเข้าสู่ระบบ",
+      body: `${displayName || "ผู้ใช้"} เข้าสู่ระบบด้วย ${device}`,
+      badgeCount: 1,
+      icon: "/brand/192x192.png",
+      badge: "/brand/192x192.png",
+      url: `${getSiteUrl()}/dashboard`,
+    },
+    ttl: 60 * 10,
+    topic: `login-${role}`,
+    warningLabel: "login success",
+  });
 }

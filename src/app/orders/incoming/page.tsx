@@ -66,6 +66,49 @@ type IncomingOrderSummaryItemRow = {
   } | null;
 };
 
+const ORDER_SUMMARY_ITEM_CHUNK_SIZE = 50;
+
+async function getOrderSummaryItems(
+  admin: ReturnType<typeof getSupabaseAdmin>,
+  orderIds: string[],
+) {
+  if (orderIds.length === 0) {
+    return { data: [] as IncomingOrderSummaryItemRow[], error: null };
+  }
+
+  const chunks: string[][] = [];
+  for (let index = 0; index < orderIds.length; index += ORDER_SUMMARY_ITEM_CHUNK_SIZE) {
+    chunks.push(orderIds.slice(index, index + ORDER_SUMMARY_ITEM_CHUNK_SIZE));
+  }
+
+  const results = await Promise.all(
+    chunks.map((chunk) =>
+      admin
+        .from("order_items")
+        .select(
+          `
+            order_id,
+            product_id,
+            quantity,
+            sale_unit_label,
+            products!inner(name, sku)
+          `,
+        )
+        .in("order_id", chunk),
+    ),
+  );
+
+  const error = results.find((result) => result.error)?.error ?? null;
+  if (error) {
+    return { data: [] as IncomingOrderSummaryItemRow[], error };
+  }
+
+  return {
+    data: results.flatMap((result) => (result.data ?? []) as IncomingOrderSummaryItemRow[]),
+    error: null,
+  };
+}
+
 function formatCurrency(value: number) {
   return value.toLocaleString("th-TH", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
@@ -138,21 +181,7 @@ export default async function IncomingOrdersPage({ searchParams }: IncomingOrder
       : null;
 
   const activeOrderIds = activeOrders.map((order) => order.id);
-  const orderSummaryItemsResult =
-    activeOrderIds.length > 0
-      ? await admin
-          .from("order_items")
-          .select(
-            `
-              order_id,
-              product_id,
-              quantity,
-              sale_unit_label,
-              products!inner(name, sku)
-            `,
-          )
-          .in("order_id", activeOrderIds)
-      : { data: [], error: null };
+  const orderSummaryItemsResult = await getOrderSummaryItems(admin, activeOrderIds);
 
   if (orderSummaryItemsResult.error) {
     throw new Error(orderSummaryItemsResult.error.message ?? "Failed to load order summary items.");
