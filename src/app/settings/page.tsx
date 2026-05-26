@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, Clock3, KeyRound, MessageCircleMore, Package2, Store, Truck, Factory } from "lucide-react";
+import { ArrowRight, Clock3, KeyRound, MessageCircleMore, Package2, Store, Truck, Factory, Gauge } from "lucide-react";
 import { SettingsShell } from "@/components/settings/settings-shell";
 import { requireAppRole } from "@/lib/auth/authorization";
 
@@ -45,6 +45,12 @@ const options = [
     href: "/settings/login-pin",
     icon: KeyRound,
     label: "ตั้งค่า PIN",
+  },
+  {
+    description: "ตรวจสอบสุขภาพระบบ ความเร็วในการตอบสนอง และสถิติการใช้งานตารางฐานข้อมูล",
+    href: "/settings/performance",
+    icon: Gauge,
+    label: "ประสิทธิภาพระบบ",
   },
 ] as const;
 

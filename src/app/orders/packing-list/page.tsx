@@ -374,52 +374,33 @@ async function PackingListPage({ searchParams }: Props) {
       {autoprint ? <AutoPrint /> : null}
 
       <div
-        className="no-print"
+        className="no-print flex flex-col md:flex-row items-center gap-2 md:gap-3 bg-white py-2.5 px-4 rounded-[16px] shadow-lg fixed top-3 left-1/2 -translate-x-1/2 z-[100] border border-slate-100/80 w-max max-w-[calc(100vw-24px)]"
         style={{
-          display: "flex",
-          gap: "12px",
-          alignItems: "center",
-          background: "white",
-          padding: "10px 14px",
-          borderRadius: "14px",
-          boxShadow: "0 10px 26px rgba(0,0,0,0.12)",
-          position: "fixed",
-          top: "12px",
-          left: "50%",
-          transform: "translateX(-50%)",
-          zIndex: 100,
           fontFamily: "Sarabun, sans-serif",
-          width: "max-content",
-          maxWidth: "calc(100vw - 24px)",
-          border: "1px solid rgba(15,23,42,0.06)",
         }}
       >
-        <span style={{ fontSize: "14px", fontWeight: 800, color: "#003366" }}>
-          {layout === "transposed" ? "ใบจัดของ (สลับตาราง)" : "ใบจัดของ"}
-        </span>
-        <span
-          className="hidden sm:inline"
-          style={{ fontSize: "12px", color: "#64748b", fontWeight: 600 }}
-        >
-          {mainDateLabel} · {totalStores} ร้าน
-        </span>
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "8px",
-            flexWrap: "nowrap",
-          }}
-        >
-          <div className="hidden md:block">
+        <div className="flex items-center gap-2">
+          <span style={{ fontSize: "14px", fontWeight: 800, color: "#003366" }}>
+            {layout === "transposed" ? "ใบจัดของ (สลับตาราง)" : "ใบจัดของ"}
+          </span>
+          <span
+            className="hidden sm:inline"
+            style={{ fontSize: "12px", color: "#64748b", fontWeight: 600 }}
+          >
+            {mainDateLabel} · {totalStores} ร้าน
+          </span>
+        </div>
+
+        <div className="flex items-center gap-2 flex-nowrap">
+          <div>
             <PrintPackingListButton
               date={date}
               endDate={endDate}
               layout={layout === "standard" ? "transposed" : "standard"}
               label={
                 layout === "standard"
-                  ? "ใบจัดของ (สลับตาราง)"
-                  : "ใบจัดของ (ตารางเดิม)"
+                  ? "สลับตาราง"
+                  : "ตารางเดิม"
               }
             />
           </div>
@@ -428,22 +409,21 @@ async function PackingListPage({ searchParams }: Props) {
             dateLabel={mainDateLabel}
             hidePrintOnMobile
           />
+          <a
+            href="/orders/incoming"
+            style={{
+              fontSize: "13px",
+              fontWeight: 700,
+              color: "#ef4444",
+              textDecoration: "none",
+              padding: "6px 12px",
+              borderRadius: "8px",
+              background: "#fef2f2",
+            }}
+          >
+            กลับ
+          </a>
         </div>
-        <a
-          href="/orders/incoming"
-          style={{
-            fontSize: "13px",
-            fontWeight: 700,
-            color: "#ef4444",
-            textDecoration: "none",
-            marginLeft: "4px",
-            padding: "6px 12px",
-            borderRadius: "8px",
-            background: "#fef2f2",
-          }}
-        >
-          กลับ
-        </a>
       </div>
 
       {allPackingData.length === 0 ? (

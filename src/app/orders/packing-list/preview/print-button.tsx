@@ -57,6 +57,24 @@ export function PackingListPrintButton({
   const fallbackTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
+    // Preload web fonts in the background to make PDF/image generation instant
+    if (typeof window !== "undefined" && !cachedFontEmbedCSS) {
+      const preloadFonts = async () => {
+        try {
+          await document.fonts.ready;
+          const css = await htmlToImage.getFontEmbedCSS(document.body);
+          cachedFontEmbedCSS = css;
+          console.log("[FontPreloader:PrintButton] Web fonts pre-loaded and cached successfully.");
+        } catch (e) {
+          console.warn("[FontPreloader:PrintButton] Failed to background-preload fonts:", e);
+        }
+      };
+      const timer = setTimeout(preloadFonts, 1200);
+      return () => clearTimeout(timer);
+    }
+  }, []);
+
+  useEffect(() => {
     if (!showPreview) return;
 
     const previousOverflow = document.body.style.overflow;

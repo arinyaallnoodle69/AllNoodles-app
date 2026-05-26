@@ -1,4 +1,4 @@
-import { Search } from "lucide-react";
+import { ClipboardList, Search } from "lucide-react";
 import dynamic from "next/dynamic";
 import { Fragment } from "react";
 import { SettingsShell } from "@/components/settings/settings-shell";
@@ -35,11 +35,17 @@ const PackingListSummaryButton = dynamic(() =>
 const PendingLineOrdersSection = dynamic(() =>
   import("@/components/orders/pending-line-orders-section").then((mod) => mod.PendingLineOrdersSection),
 );
-const PrintPackingListButton = dynamic(() =>
-  import("@/components/orders/print-packing-list-button").then((mod) => mod.PrintPackingListButton),
+const PrintPackingListCombinedButton = dynamic(() =>
+  import("@/components/orders/print-packing-list-combined-button").then((mod) => mod.PrintPackingListCombinedButton),
 );
 const PrintVehicleProductSummaryButton = dynamic(() =>
   import("@/components/orders/print-vehicle-product-summary-button").then((mod) => mod.PrintVehicleProductSummaryButton),
+);
+const PrintFactoryOrderSheetButton = dynamic(() =>
+  import("@/components/orders/print-factory-order-sheet-button").then((mod) => mod.PrintFactoryOrderSheetButton),
+);
+const MobilePrintActions = dynamic(() =>
+  import("@/components/orders/mobile-print-actions").then((mod) => mod.MobilePrintActions),
 );
 
 export const metadata = { title: "รายการออเดอร์" };
@@ -312,6 +318,8 @@ export default async function IncomingOrdersPage({ searchParams }: IncomingOrder
     deliveryNoteIds: string[];
     orderRounds: number;
     totalAmount: number;
+    vehicleId?: string | null;
+    vehicleName?: string | null;
   };
 
   const visibleOrderStores = Array.from(
@@ -330,6 +338,8 @@ export default async function IncomingOrdersPage({ searchParams }: IncomingOrder
           deliveryNoteIds: [] as string[],
           orderRounds: 0,
           totalAmount: 0,
+          vehicleId: order.vehicleId,
+          vehicleName: order.vehicleName,
         };
 
         current.orderIds.push(order.id);
@@ -487,8 +497,9 @@ export default async function IncomingOrdersPage({ searchParams }: IncomingOrder
         <PendingLineOrdersSection customers={customers} pendingOrders={pendingLineOrders} />
 
         <section className="relative mt-0 w-full bg-transparent">
-          <div className="flex flex-col gap-1.5 px-1 py-1 sm:flex-row sm:items-center sm:justify-between sm:py-3">
-            <div className="flex items-center gap-2">
+          <div className="flex flex-col gap-3 px-1 py-1 sm:py-3">
+            <div className="flex items-center justify-center gap-2 w-full">
+              <ClipboardList className="h-5 w-5 text-[#003366] sm:h-6 sm:w-6" strokeWidth={2.5} />
               <h2 className="text-base font-bold text-slate-950 sm:text-xl">รายการออเดอร์เข้า</h2>
               {filteredOrders.length > 0 ? (
                 <span className="rounded-md bg-slate-100 px-1 py-0.5 text-[9px] font-bold text-slate-950 ring-1 ring-slate-200 sm:text-xs">
@@ -497,21 +508,29 @@ export default async function IncomingOrdersPage({ searchParams }: IncomingOrder
               ) : null}
             </div>
 
-            <div className="no-scrollbar -mx-1 flex items-center gap-2 overflow-x-auto px-1 pb-1 sm:mx-0 sm:overflow-visible sm:px-0 sm:pb-0">
-              <div className="flex min-w-max flex-nowrap items-center gap-1.5">
+            {/* Mobile View: Premium Actions Bottom Sheet */}
+            <div className="block sm:hidden w-full">
+              <MobilePrintActions
+                date={orderDate}
+                endDate={endDate}
+                dateLabel={orderDate === endDate ? formatDisplayDate(orderDate) : `${formatDisplayDate(orderDate)} - ${formatDisplayDate(endDate)}`}
+                summaryProducts={summaryProducts}
+                summaryStores={summaryStores}
+                visibleOrderStores={visibleOrderStores}
+              />
+            </div>
+
+            {/* Desktop & Tablet View: 5 Equal Width Action Cards Grid */}
+            <div className="hidden sm:block w-full">
+              <div className="grid grid-cols-5 gap-3 w-full [&_button]:w-full [&_button]:h-full [&_button]:justify-center [&_button]:py-3.5 [&_button]:px-5 [&_button]:rounded-2xl">
                 <PackingListSummaryButton
                   dateLabel={orderDate === endDate ? formatDisplayDate(orderDate) : `${formatDisplayDate(orderDate)} - ${formatDisplayDate(endDate)}`}
                   products={summaryProducts}
                   stores={summaryStores}
                 />
-                <PrintPackingListButton date={orderDate} endDate={endDate} />
+                <PrintPackingListCombinedButton date={orderDate} endDate={endDate} />
                 <PrintVehicleProductSummaryButton date={orderDate} endDate={endDate} />
-                <PrintPackingListButton
-                  date={orderDate}
-                  endDate={endDate}
-                  layout="transposed"
-                  label="พิมพ์ใบจัดของ (สลับตาราง)"
-                />
+                <PrintFactoryOrderSheetButton date={orderDate} endDate={endDate} />
                 <IncomingOrdersDeliveryActions date={orderDate} endDate={endDate} stores={visibleOrderStores} />
               </div>
             </div>

@@ -19,6 +19,19 @@ import {
 let cachedFontEmbedCSS: string | null = null;
 const DOTTED_LINE = "2px dotted black";
 
+function dataUrlToBlob(dataUrl: string): Blob {
+  const parts = dataUrl.split(",");
+  const mime = parts[0]?.match(/:(.*?);/)?.[1] ?? "image/png";
+  const binary = atob(parts[1] ?? "");
+  const bytes = new Uint8Array(binary.length);
+
+  for (let i = 0; i < binary.length; i += 1) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+
+  return new Blob([bytes], { type: mime });
+}
+
 type DeliveryItem = {
   number: string;
   date: string;
@@ -55,6 +68,22 @@ export function BillingPreviewButton({
 
   useEffect(() => {
     setMounted(true);
+
+    // Preload web fonts in the background to make PDF/image generation instant
+    if (typeof window !== "undefined" && !cachedFontEmbedCSS) {
+      const preloadFonts = async () => {
+        try {
+          await document.fonts.ready;
+          const css = await htmlToImage.getFontEmbedCSS(document.body);
+          cachedFontEmbedCSS = css;
+          console.log("[FontPreloader:Billing] Web fonts pre-loaded and cached successfully.");
+        } catch (e) {
+          console.warn("[FontPreloader:Billing] Failed to background-preload fonts:", e);
+        }
+      };
+      const timer = setTimeout(preloadFonts, 1000);
+      return () => clearTimeout(timer);
+    }
   }, []);
 
   useEffect(() => {
@@ -121,34 +150,10 @@ export function BillingPreviewButton({
     if (!cardRef.current || isSaving) return;
 
     setIsSaving(true);
-    let cloneHost: HTMLDivElement | null = null;
     try {
       const target = cardRef.current;
-      const outerPadding = 24;
-
-      cloneHost = document.createElement("div");
-      cloneHost.style.cssText = [
-        "position:fixed",
-        "left:-10000px",
-        "top:0",
-        `padding:${outerPadding}px`,
-        "margin:0",
-        "background:#ffffff",
-        "z-index:-1",
-        "overflow:visible",
-        "box-sizing:border-box",
-      ].join(";");
-
-      const clone = target.cloneNode(true) as HTMLDivElement;
-      clone.style.margin = "0";
-      clone.style.boxShadow = "none";
-      clone.style.transform = "none";
-
-      cloneHost.appendChild(clone);
-      document.body.appendChild(cloneHost);
-
-      const captureWidth = target.offsetWidth + outerPadding * 2;
-      const captureHeight = target.offsetHeight + outerPadding * 2;
+      const captureWidth = target.offsetWidth;
+      const captureHeight = target.offsetHeight;
 
       let fontEmbedCSS: string | undefined = undefined;
       if (cachedFontEmbedCSS) {
@@ -169,27 +174,61 @@ export function BillingPreviewButton({
         }
       }
 
-      const dataUrl = await htmlToImage.toPng(cloneHost, {
+      const dataUrl = await htmlToImage.toPng(target, {
         backgroundColor: "#ffffff",
         cacheBust: true,
         fontEmbedCSS,
         pixelRatio: 2,
         width: captureWidth,
         height: captureHeight,
+        style: {
+          width: `${captureWidth}px`,
+          height: `${captureHeight}px`,
+          maxWidth: "none",
+          maxHeight: "none",
+          margin: "0",
+          boxShadow: "none",
+          transform: "none",
+          transformOrigin: "top left",
+        },
       });
+
+      const isIOS =
+        /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+        (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+
+      const fileName = `billing-${customerCode}-${fromDate}-to-${toDate}.png`;
+
+      if (isIOS && navigator.share && navigator.canShare) {
+        const blob = dataUrlToBlob(dataUrl);
+        const files = [new File([blob], fileName, { type: "image/png" })];
+
+        if (navigator.canShare({ files })) {
+          try {
+            await navigator.share({
+              files,
+              title: "ใบวางบิล",
+            });
+            setIsOpen(false);
+            return;
+          } catch (error) {
+            console.error("[WebShare:Billing]", error);
+            if (error instanceof Error && error.name === "AbortError") {
+              return;
+            }
+          }
+        }
+      }
 
       const a = document.createElement("a");
       a.href = dataUrl;
-      a.download = `billing-${customerCode}-${fromDate}-to-${toDate}.png`;
+      a.download = fileName;
       a.click();
     } catch (err) {
       console.error("Save image error:", err);
       setErrorMessage("ไม่สามารถบันทึกรูปภาพได้ กรุณาลองใหม่อีกครั้ง");
     } finally {
       setIsSaving(false);
-      if (cloneHost && cloneHost.parentNode) {
-        cloneHost.parentNode.removeChild(cloneHost);
-      }
     }
   };
 

@@ -641,7 +641,7 @@ function PackingListStyles() {
         .packing-print-container {
           gap: 10px;
           width: 100vw;
-          padding: 66px 0 20px;
+          padding: 116px 0 20px;
         }
 
         .packing-sheet-shell {

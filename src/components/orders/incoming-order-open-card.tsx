@@ -1,6 +1,6 @@
 "use client";
 
-import { useTransition } from "react";
+import { memo, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { CalendarDays, Check, ChevronRight, Loader2, Package2, Truck } from "lucide-react";
 import { IncomingOrderDateButton } from "@/components/orders/incoming-order-date-button";
@@ -55,7 +55,7 @@ function InfoBlock({
   );
 }
 
-export function IncomingOrderOpenCard({
+export const IncomingOrderOpenCard = memo(function IncomingOrderOpenCard({
   href,
   orderId,
   orderNumber,
@@ -221,4 +221,4 @@ export function IncomingOrderOpenCard({
       </div>
     </article>
   );
-}
+});

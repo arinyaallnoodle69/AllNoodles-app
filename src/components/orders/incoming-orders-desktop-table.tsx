@@ -32,6 +32,191 @@ function formatOrderDate(value: string) {
   return `${d}/${m}/${parseInt(y, 10) + 543}`;
 }
 
+type IncomingOrderRowProps = {
+  order: IncomingOrderListItem;
+  index: number;
+  orders: IncomingOrderListItem[];
+  isExpanded: boolean;
+  isLoading: boolean;
+  detail: OrderDetailData | null;
+  detailError: string | null;
+  deliveryNumbers: string[] | undefined;
+  isBilled: boolean;
+  vehicles: OrderVehicleOption[];
+  orderDate: string;
+  searchTerm: string;
+  selectedCustomerIds: string[];
+  toggleOrder: (orderId: string) => void;
+};
+
+const IncomingOrderRow = memo(function IncomingOrderRow({
+  order,
+  index,
+  orders,
+  isExpanded,
+  isLoading,
+  detail,
+  detailError,
+  deliveryNumbers,
+  isBilled,
+  vehicles,
+  orderDate,
+  searchTerm,
+  selectedCustomerIds,
+  toggleOrder,
+}: IncomingOrderRowProps) {
+  const hasDelivery = Boolean(deliveryNumbers && deliveryNumbers.length > 0);
+  const fallbackDeliveryNumber =
+    order.orderNumber.startsWith("DN") ? order.orderNumber : null;
+  const displayDeliveryNumbers =
+    hasDelivery && deliveryNumbers && deliveryNumbers.length > 0
+      ? deliveryNumbers
+      : fallbackDeliveryNumber
+        ? [fallbackDeliveryNumber]
+        : [];
+  const hasDisplayDelivery = displayDeliveryNumbers.length > 0;
+  const showDivider = index === 0 || order.orderDate !== orders[index - 1].orderDate;
+
+  return (
+    <Fragment key={order.id}>
+      {showDivider ? (
+        <tr className="bg-slate-50/50">
+          <td colSpan={7} className="border-y border-slate-200 px-3 py-3 xl:px-6 xl:py-4">
+            <div className="flex items-center gap-4">
+              <div className="h-px flex-1 bg-slate-300" />
+              <span className="rounded-2xl border border-slate-200 bg-white px-3 py-1 text-[11px] font-black uppercase tracking-[0.2em] text-[#003366] shadow-sm xl:px-5 xl:py-2 xl:text-xs">
+                {formatOrderDate(order.orderDate)}
+              </span>
+              <div className="h-px flex-1 bg-slate-300" />
+            </div>
+          </td>
+        </tr>
+      ) : null}
+
+      <tr className="align-middle transition-colors hover:bg-slate-50/80">
+        <td className="px-2 py-2 xl:px-3 xl:py-3">
+          <div className="min-w-0">
+            <div className="flex min-w-0 items-center gap-2">
+              <Building2 className="h-4 w-4 shrink-0 text-[#003366]" strokeWidth={2.2} />
+              <p className="min-w-0 break-words line-clamp-2 text-sm font-bold leading-tight text-slate-950 xl:text-base">
+                <span translate="no">{order.customerCode}</span> - {order.customerName}
+              </p>
+            </div>
+            <div className="mt-1 flex items-center gap-2 pl-6">
+              <span className="shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-700 ring-1 ring-slate-200">
+                {order.channelLabel}
+              </span>
+              {isBilled ? (
+                <span
+                  className="inline-flex size-5 shrink-0 items-center justify-center rounded-full bg-emerald-700 text-white"
+                  title="วางบิลแล้ว"
+                  aria-label="วางบิลแล้ว"
+                >
+                  <Check className="h-3 w-3" strokeWidth={3} />
+                </span>
+              ) : null}
+            </div>
+          </div>
+        </td>
+        <td className="whitespace-nowrap px-2 py-2 text-center text-sm font-semibold text-slate-950 xl:px-3 xl:py-3 xl:text-base">
+          {formatOrderDate(order.orderDate)}
+        </td>
+        <td className="px-2 py-2 text-center xl:px-3 xl:py-3">
+          <p className="whitespace-nowrap text-sm font-semibold text-slate-950 xl:text-base">
+            {order.productCount.toLocaleString("th-TH")} รายการ
+          </p>
+        </td>
+        <td className="whitespace-nowrap px-2 py-2 text-center xl:px-3 xl:py-3">
+          <p className="font-mono text-sm font-bold text-slate-950 xl:text-base">฿{formatCurrency(order.totalAmount)}</p>
+        </td>
+        <td className="min-w-0 px-2 py-2 text-left xl:px-3 xl:py-3">
+          {hasDisplayDelivery ? (
+            <div className="flex min-w-0 flex-col items-start gap-1">
+              {displayDeliveryNumbers.map((num) => (
+                <span key={num} className="whitespace-nowrap font-mono text-sm font-bold text-emerald-700 xl:text-base">
+                  {num}
+                </span>
+              ))}
+            </div>
+          ) : (
+            <span className="text-sm font-medium text-slate-400 xl:text-base">-</span>
+          )}
+        </td>
+        <td className="min-w-0 px-2 py-2 xl:px-3 xl:py-3">
+          <div className="flex min-w-0 max-w-full justify-start">
+            <IncomingOrderVehicleSelect
+              customerId={order.customerId}
+              currentVehicleId={order.vehicleId}
+              currentVehicleName={order.vehicleName}
+              vehicles={vehicles}
+              orderDate={orderDate}
+            />
+          </div>
+        </td>
+        <td className="px-2 py-2 xl:px-3 xl:py-3">
+          <div className="flex w-full items-center justify-center gap-2">
+            <IncomingOrderDateButton
+              currentListDate={orderDate}
+              orderDate={order.orderDate}
+              orderId={order.id}
+              orderNumber={order.orderNumber}
+              searchTerm={searchTerm}
+              selectedCustomerIds={selectedCustomerIds}
+            />
+            <button
+              type="button"
+              onClick={() => void toggleOrder(order.id)}
+              disabled={isLoading}
+              aria-busy={isLoading}
+              aria-label={isExpanded ? "ซ่อนรายละเอียดออเดอร์" : "แสดงรายละเอียดออเดอร์"}
+              title={isExpanded ? "ซ่อนรายละเอียดออเดอร์" : "แสดงรายละเอียดออเดอร์"}
+              className="inline-flex size-10 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white p-0 leading-none text-slate-950 shadow-sm transition hover:border-[#003366]/30 hover:bg-slate-50 hover:text-[#003366] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#003366]/20 disabled:opacity-85"
+            >
+              {isLoading ? (
+                <Loader2 className="h-4.5 w-4.5 animate-spin" strokeWidth={2.2} />
+              ) : isExpanded ? (
+                <ChevronUp className="h-4.5 w-4.5" strokeWidth={2.2} />
+              ) : (
+                <ChevronDown className="h-4.5 w-4.5" strokeWidth={2.2} />
+              )}
+            </button>
+            {hasDelivery ? (
+              <OrderDeliveryActionButton
+                customerId={order.customerId}
+                customerName={order.customerName}
+                date={order.orderDate}
+                iconOnly
+                label="ดูใบยืนยัน"
+                orderId={order.id}
+              />
+            ) : null}
+          </div>
+        </td>
+      </tr>
+
+      {isExpanded ? (
+        <tr className="bg-white">
+          <td colSpan={7} className="p-0">
+            {detail ? (
+              <DesktopOrderDetail detail={detail} deliveryNumbers={deliveryNumbers} />
+            ) : (
+              <div className="flex items-center justify-center gap-3 border-y border-slate-300 bg-white px-6 py-8 text-base font-semibold text-slate-700">
+                <Loader2 className="h-5 w-5 animate-spin text-[#003366]" strokeWidth={2.4} />
+                กำลังโหลดรายละเอียดออเดอร์
+              </div>
+            )}
+            {detailError && isLoading === false ? (
+              <div className="border-t border-rose-100 bg-rose-50 px-6 py-3 text-sm font-semibold text-rose-700">
+                {detailError}
+              </div>
+            ) : null}
+          </td>
+        </tr>
+      ) : null}
+    </Fragment>
+  );
+});
+
 export const IncomingOrdersDesktopTable = memo(function IncomingOrdersDesktopTable({
   billedByCustomerDate,
   deliveryByCustomerId,
@@ -137,157 +322,27 @@ export const IncomingOrdersDesktopTable = memo(function IncomingOrdersDesktopTab
                 const isExpanded = expandedOrderId === order.id && visibleOrderIds.has(order.id);
                 const detail = detailByOrderId[order.id] ?? null;
                 const deliveryNumbers = deliveryByCustomerId[orderKey];
-                const hasDelivery = Boolean(deliveryNumbers && deliveryNumbers.length > 0);
-                const fallbackDeliveryNumber =
-                  order.orderNumber.startsWith("DN") ? order.orderNumber : null;
-                const displayDeliveryNumbers =
-                  hasDelivery && deliveryNumbers && deliveryNumbers.length > 0
-                    ? deliveryNumbers
-                    : fallbackDeliveryNumber
-                      ? [fallbackDeliveryNumber]
-                      : [];
-                const hasDisplayDelivery = displayDeliveryNumbers.length > 0;
                 const isBilled = billedByCustomerDate[orderKey] ?? false;
                 const isLoading = loadingOrderId === order.id || (isPending && isExpanded && !detail);
-                const showDivider = index === 0 || order.orderDate !== orders[index - 1].orderDate;
 
                 return (
-                  <Fragment key={order.id}>
-                    {showDivider ? (
-                      <tr className="bg-slate-50/50">
-                        <td colSpan={7} className="border-y border-slate-200 px-3 py-3 xl:px-6 xl:py-4">
-                          <div className="flex items-center gap-4">
-                            <div className="h-px flex-1 bg-slate-300" />
-                            <span className="rounded-2xl border border-slate-200 bg-white px-3 py-1 text-[11px] font-black uppercase tracking-[0.2em] text-[#003366] shadow-sm xl:px-5 xl:py-2 xl:text-xs">
-                              {formatOrderDate(order.orderDate)}
-                            </span>
-                            <div className="h-px flex-1 bg-slate-300" />
-                          </div>
-                        </td>
-                      </tr>
-                    ) : null}
-
-                    <tr className="align-middle transition-colors hover:bg-slate-50/80">
-                      <td className="px-2 py-2 xl:px-3 xl:py-3">
-                        <div className="min-w-0">
-                          <div className="flex min-w-0 items-center gap-2">
-                            <Building2 className="h-4 w-4 shrink-0 text-[#003366]" strokeWidth={2.2} />
-                            <p className="min-w-0 break-words line-clamp-2 text-sm font-bold leading-tight text-slate-950 xl:text-base">
-                              <span translate="no">{order.customerCode}</span> - {order.customerName}
-                            </p>
-                          </div>
-                          <div className="mt-1 flex items-center gap-2 pl-6">
-                            <span className="shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-700 ring-1 ring-slate-200">
-                              {order.channelLabel}
-                            </span>
-                            {isBilled ? (
-                              <span
-                                className="inline-flex size-5 shrink-0 items-center justify-center rounded-full bg-emerald-700 text-white"
-                                title="วางบิลแล้ว"
-                                aria-label="วางบิลแล้ว"
-                              >
-                                <Check className="h-3 w-3" strokeWidth={3} />
-                              </span>
-                            ) : null}
-                          </div>
-                        </div>
-                      </td>
-                      <td className="whitespace-nowrap px-2 py-2 text-center text-sm font-semibold text-slate-950 xl:px-3 xl:py-3 xl:text-base">
-                        {formatOrderDate(order.orderDate)}
-                      </td>
-                      <td className="px-2 py-2 text-center xl:px-3 xl:py-3">
-                        <p className="whitespace-nowrap text-sm font-semibold text-slate-950 xl:text-base">
-                          {order.productCount.toLocaleString("th-TH")} รายการ
-                        </p>
-                      </td>
-                      <td className="whitespace-nowrap px-2 py-2 text-center xl:px-3 xl:py-3">
-                        <p className="font-mono text-sm font-bold text-slate-950 xl:text-base">฿{formatCurrency(order.totalAmount)}</p>
-                      </td>
-                      <td className="min-w-0 px-2 py-2 text-left xl:px-3 xl:py-3">
-                        {hasDisplayDelivery ? (
-                          <div className="flex min-w-0 flex-col items-start gap-1">
-                            {displayDeliveryNumbers.map((num) => (
-                              <span key={num} className="whitespace-nowrap font-mono text-sm font-bold text-emerald-700 xl:text-base">
-                                {num}
-                              </span>
-                            ))}
-                          </div>
-                        ) : (
-                          <span className="text-sm font-medium text-slate-400 xl:text-base">-</span>
-                        )}
-                      </td>
-                      <td className="min-w-0 px-2 py-2 xl:px-3 xl:py-3">
-                        <div className="flex min-w-0 max-w-full justify-start">
-                          <IncomingOrderVehicleSelect
-                            customerId={order.customerId}
-                            currentVehicleId={order.vehicleId}
-                            currentVehicleName={order.vehicleName}
-                            vehicles={vehicles}
-                            orderDate={orderDate}
-                          />
-                        </div>
-                      </td>
-                      <td className="px-2 py-2 xl:px-3 xl:py-3">
-                        <div className="flex w-full items-center justify-center gap-2">
-                          <IncomingOrderDateButton
-                            currentListDate={orderDate}
-                            orderDate={order.orderDate}
-                            orderId={order.id}
-                            orderNumber={order.orderNumber}
-                            searchTerm={searchTerm}
-                            selectedCustomerIds={selectedCustomerIds}
-                          />
-                          <button
-                            type="button"
-                            onClick={() => void toggleOrder(order.id)}
-                            disabled={isLoading}
-                            aria-busy={isLoading}
-                            aria-label={isExpanded ? "ซ่อนรายละเอียดออเดอร์" : "แสดงรายละเอียดออเดอร์"}
-                            title={isExpanded ? "ซ่อนรายละเอียดออเดอร์" : "แสดงรายละเอียดออเดอร์"}
-                            className="inline-flex size-10 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white p-0 leading-none text-slate-900 shadow-sm transition hover:border-[#003366]/30 hover:bg-slate-50 hover:text-[#003366] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#003366]/20 disabled:opacity-85"
-                          >
-                            {isLoading ? (
-                              <Loader2 className="h-4.5 w-4.5 animate-spin" strokeWidth={2.2} />
-                            ) : isExpanded ? (
-                              <ChevronUp className="h-4.5 w-4.5" strokeWidth={2.2} />
-                            ) : (
-                              <ChevronDown className="h-4.5 w-4.5" strokeWidth={2.2} />
-                            )}
-                          </button>
-                          {hasDelivery ? (
-                            <OrderDeliveryActionButton
-                              customerId={order.customerId}
-                              customerName={order.customerName}
-                              date={order.orderDate}
-                              iconOnly
-                              label="ดูใบยืนยัน"
-                              orderId={order.id}
-                            />
-                          ) : null}
-                        </div>
-                      </td>
-                    </tr>
-
-                    {isExpanded ? (
-                      <tr className="bg-white">
-                        <td colSpan={7} className="p-0">
-                          {detail ? (
-                            <DesktopOrderDetail detail={detail} deliveryNumbers={deliveryNumbers} />
-                          ) : (
-                            <div className="flex items-center justify-center gap-3 border-y border-slate-300 bg-white px-6 py-8 text-base font-semibold text-slate-700">
-                              <Loader2 className="h-5 w-5 animate-spin text-[#003366]" strokeWidth={2.4} />
-                              กำลังโหลดรายละเอียดออเดอร์
-                            </div>
-                          )}
-                          {detailError && loadingOrderId === null ? (
-                            <div className="border-t border-rose-100 bg-rose-50 px-6 py-3 text-sm font-semibold text-rose-700">
-                              {detailError}
-                            </div>
-                          ) : null}
-                        </td>
-                      </tr>
-                    ) : null}
-                  </Fragment>
+                  <IncomingOrderRow
+                    key={order.id}
+                    order={order}
+                    index={index}
+                    orders={orders}
+                    isExpanded={isExpanded}
+                    isLoading={isLoading}
+                    detail={detail}
+                    detailError={detailError}
+                    deliveryNumbers={deliveryNumbers}
+                    isBilled={isBilled}
+                    vehicles={vehicles}
+                    orderDate={orderDate}
+                    searchTerm={searchTerm}
+                    selectedCustomerIds={selectedCustomerIds}
+                    toggleOrder={toggleOrder}
+                  />
                 );
               })}
             </tbody>
