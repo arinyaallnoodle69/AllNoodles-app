@@ -1,4 +1,4 @@
-﻿import type { CSSProperties } from "react";
+import type { CSSProperties } from "react";
 import { bahtText } from "@/lib/format/baht-text";
 
 export const PRINT_ORGANIZATION_NAME = "เส้นรังนก (T&Y Noodle)";
@@ -202,17 +202,17 @@ export function PrintCustomerRow({
   return (
     <div style={{ marginBottom: "1.5mm", padding: "0" }}>
       <div style={{ display: "flex", gap: "8px", alignItems: "baseline" }}>
-        <span style={{ fontSize: "11.8pt", color: "#64748b", flexShrink: 0 }}>ลูกค้า</span>
+        <span style={{ fontSize: "13.5pt", color: "black", flexShrink: 0 }}>ลูกค้า</span>
         <span
-          style={{ fontFamily: "monospace", fontSize: "11.8pt", color: "#003366", fontWeight: 700 }}
+          style={{ fontFamily: "monospace", fontSize: "13.5pt", color: "black", fontWeight: 700 }}
         >
           {customer.code}
         </span>
-        <span style={{ fontWeight: 700, fontSize: "11.8pt", color: "#0f172a" }}>{customer.name}</span>
+        <span style={{ fontWeight: 700, fontSize: "13.5pt", color: "black" }}>{customer.name}</span>
       </div>
       <div style={{ display: "flex", gap: "8px", alignItems: "baseline", marginTop: "1px" }}>
-        <span style={{ fontSize: "8.2pt", color: "#64748b", flexShrink: 0 }}>ที่อยู่</span>
-        <span style={{ fontSize: "8.8pt", color: "#334155" }}>{customer.address}</span>
+        <span style={{ fontSize: "10.5pt", color: "black", flexShrink: 0 }}>ที่อยู่</span>
+        <span style={{ fontSize: "10.5pt", color: "black" }}>{customer.address}</span>
       </div>
     </div>
   );
@@ -284,7 +284,7 @@ export function PrintSignatureBlock({
   return (
     <div style={{ display: "flex", gap: "6mm", alignItems: "flex-start" }}>
       <div style={{ flex: 1, minHeight: "14mm", paddingTop: "1mm" }}>
-        <p style={{ fontSize: "8.8pt", lineHeight: 1.5, color: "#334155", fontWeight: 600 }}>
+        <p style={{ fontSize: "10.5pt", lineHeight: 1.5, color: "black", fontWeight: 600 }}>
           <span style={{ fontWeight: 700 }}>หมายเหตุ: </span>
           {notes?.trim() ? notes : "-"}
         </p>
