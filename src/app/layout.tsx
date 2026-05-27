@@ -107,7 +107,9 @@ export default function RootLayout({
         className={`${sukhumvit.variable} ${sukhumvit.className} bg-background text-foreground antialiased`}
       >
         <PwaProvider />
-        <PerformanceReporter />
+        <Suspense fallback={null}>
+          <PerformanceReporter />
+        </Suspense>
         <main>
           <PullToRefresh>
             <Suspense fallback={null}>

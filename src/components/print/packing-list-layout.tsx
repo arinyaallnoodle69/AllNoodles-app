@@ -103,51 +103,26 @@ function getColumnPalette(columnIndex: number) {
   return COLUMN_COLOR_GROUPS[Math.floor(columnIndex / 5) % COLUMN_COLOR_GROUPS.length] ?? COLUMN_COLOR_GROUPS[0];
 }
 
-const THAI_COMBINING = /[\u0E31\u0E34-\u0E3A\u0E47-\u0E4E]/g;
-
-function horizontalLength(value: string) {
-  return value.replace(THAI_COMBINING, "").length;
-}
-
-function splitThaiClusters(value: string): string[] {
-  const clusters: string[] = [];
-  const chars = Array.from(value);
-  const combining = /[\u0E31\u0E34-\u0E3A\u0E47-\u0E4E]/;
-
-  for (const char of chars) {
-    if (clusters.length > 0 && combining.test(char)) {
-      clusters[clusters.length - 1] += char;
-    } else {
-      clusters.push(char);
-    }
+function insertZeroWidthSpaces(text: string): string {
+  if (!text) return "";
+  if (typeof Intl === "undefined" || !Intl.Segmenter) {
+    return text;
   }
-
-  return clusters;
-}
-
-function splitLongToken(token: string, maxLength: number) {
-  const clusters = splitThaiClusters(token);
-  const lines: string[] = [];
-  let current = "";
-  let currentLength = 0;
-
-  for (const cluster of clusters) {
-    const clusterLength = horizontalLength(cluster);
-    if (current && currentLength + clusterLength > maxLength) {
-      lines.push(current);
-      current = cluster;
-      currentLength = clusterLength;
-      continue;
-    }
-
-    current += cluster;
-    currentLength += clusterLength;
+  try {
+    const segmenter = new Intl.Segmenter("th", { granularity: "word" });
+    const segments = segmenter.segment(text);
+    return Array.from(segments)
+      .map((s) => s.segment)
+      .join("\u200B");
+  } catch {
+    return text;
   }
-
-  if (current) lines.push(current);
-  return lines;
 }
 
+
+
+
+/* Unused
 function splitProductNameToLines(name: string, maxLines = 4, maxTokenLength = 7): string[] {
   const trimmed = name.trim();
   if (!trimmed) return [];
@@ -177,6 +152,7 @@ function splitProductNameToLines(name: string, maxLines = 4, maxTokenLength = 7)
   limited[maxLines - 1] = `${last.slice(0, Math.max(0, last.length - 1))}...`;
   return limited;
 }
+*/
 
 function buildVehicleGroups(data: PackingListData) {
   type Group = { vehicleId: string | null; vehicleName: string | null; storeIndices: number[] };
@@ -377,8 +353,6 @@ function StandardPackingListPage({ page, data }: { page: StandardPageDef; data: 
               <tr>
                 <th className="packing-col packing-col--store">ข้อมูลลูกค้า / ร้านค้า</th>
                 {(() => {
-                  const colCount = Math.max(page.pageProducts.length, 1);
-                  const maxTokenLength = colCount > 30 ? 5 : colCount > 20 ? 6 : 7;
                   return page.pageProducts.map((product, columnIndex) => {
                     const palette = getColumnPalette(columnIndex);
                     return (
@@ -387,11 +361,9 @@ function StandardPackingListPage({ page, data }: { page: StandardPageDef; data: 
                         className="packing-col packing-col--product"
                         style={{ width: columnWidth, backgroundColor: palette.header }}
                       >
-                        <div className="packing-product-header">
+                                                <div className="packing-product-header">
                           <div className="packing-product-header__name">
-                            {splitProductNameToLines(product.name, 4, maxTokenLength).map((line, index) => (
-                              <span key={`${product.key}-${index}`}>{line}</span>
-                            ))}
+                            {insertZeroWidthSpaces(product.name)}
                           </div>
                           <span className="packing-product-header__unit">{product.unit}</span>
                         </div>
@@ -484,7 +456,9 @@ function TransposedPackingListPage({ page, data }: { page: TransposedPageDef; da
                       style={{ width: storeColumnWidth, backgroundColor: palette.header }}
                     >
                       <div className="packing-transpose-header">
-                        <span className="packing-transpose-header__name">{store.name}</span>
+                        <span className="packing-transpose-header__name">
+                          {insertZeroWidthSpaces(store.name)}
+                        </span>
                       </div>
                     </th>
                   );
@@ -803,8 +777,8 @@ function PackingListStyles() {
         height: var(--standard-row-height);
       }
 
-      .packing-table:not(.packing-table--transposed) .packing-cell--store {
-        font-size: 8.4pt;
+            .packing-table:not(.packing-table--transposed) .packing-cell--store {
+        font-size: 9.8pt;
         line-height: 0.98;
       }
 
@@ -906,59 +880,69 @@ function PackingListStyles() {
         overflow: hidden;
       }
 
-      .packing-product-header__name {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        gap: 0.18mm;
+                        .packing-product-header__name {
+        display: block;
         flex: 1;
-        font-size: 5.7pt;
-        line-height: 1.34;
+        font-size: 7pt;
+        line-height: 1.2;
         font-weight: 700;
         color: #0f172a;
         width: 100%;
         min-width: 0;
-        overflow: visible;
-      }
-
-      .packing-product-header__name span {
-        display: block;
-        width: 100%;
-        max-width: 100%;
-        overflow: visible;
-        white-space: nowrap;
-        text-align: center;
+        overflow: hidden;
+        white-space: normal;
+        word-break: normal;
+        overflow-wrap: break-word;
+        text-align: left;
+        padding-left: 0.8mm;
+        padding-right: 0.8mm;
+        padding-top: 0.5mm;
+        box-sizing: border-box;
       }
 
       .packing-product-header__unit {
-        font-size: 5.6pt;
+        font-size: 6pt;
         font-weight: 700;
         line-height: 1;
         color: #475569;
+        text-align: left;
+        padding-left: 0.8mm;
+        width: 100%;
+        box-sizing: border-box;
       }
 
       .packing-transpose-header {
         display: flex;
-        align-items: center;
-        justify-content: center;
+        flex-direction: column;
+        justify-content: flex-start;
         min-height: 14mm;
-        padding: 1.15mm 0.9mm;
+        padding: 0.55mm 0.05mm;
+        width: 100%;
+        min-width: 0;
+        overflow: hidden;
+        box-sizing: border-box;
       }
 
       .packing-transpose-header__name {
         display: -webkit-box;
-        max-width: 100%;
+        -webkit-line-clamp: 4;
+        -webkit-box-orient: vertical;
+        flex: 1;
+        font-size: 7.2pt;
+        line-height: 1.2;
+        font-weight: 800;
+        color: #0f172a;
+        width: 100%;
+        min-width: 0;
         overflow: hidden;
         white-space: normal;
-        word-break: break-word;
-        text-overflow: ellipsis;
-        font-size: 4.6pt;
-        line-height: 1.24;
-        font-weight: 700;
-        color: #0f172a;
-        -webkit-box-orient: vertical;
-        -webkit-line-clamp: 4;
+        word-break: normal;
+        overflow-wrap: break-word;
+        text-align: left;
+        padding-left: 0.8mm;
+        padding-right: 0.8mm;
+        padding-top: 0.5mm;
+        box-sizing: border-box;
       }
 
       .packing-table--transposed .packing-table__row {
@@ -1026,6 +1010,12 @@ function PackingListStyles() {
         font-size: 10.4pt;
         font-weight: 800;
         color: #0f172a;
+      }
+
+      .packing-table:not(.packing-table--transposed) .packing-cell--qty {
+        font-size: 11.8pt;
+        font-weight: 900;
+        line-height: 1;
       }
 
       .packing-cell--transpose-total-value {

@@ -353,9 +353,6 @@ export async function syncBillingSnapshotsForDeliveryNumbers(params: {
     const newFromDate = dates[0] || record.from_date;
     const newToDate = dates[dates.length - 1] || record.to_date;
     
-    // Also update billing_date to the newToDate to match the orders!
-    const newBillingDate = newToDate;
-
     const { error: updateError } = await supabase
       .from("billing_records")
       .update({
@@ -363,7 +360,6 @@ export async function syncBillingSnapshotsForDeliveryNumbers(params: {
         total_amount: nextTotal,
         from_date: newFromDate,
         to_date: newToDate,
-        billing_date: newBillingDate,
       })
       .eq("id", record.id);
 
@@ -419,4 +415,23 @@ export async function confirmAndSaveBillingBatchAction(params: {
   });
 
   return result;
+}
+
+export async function getBillingHistoryAction(options: {
+  from?: string;
+  to?: string;
+  query?: string;
+  customerIds?: string[];
+}) {
+  const { requireAppRole } = await import("@/lib/auth/authorization");
+  const { getBillingHistory } = await import("@/lib/billing/billing-statement");
+  const session = await requireAppRole("admin");
+
+  try {
+    const history = await getBillingHistory(session.organizationId, options);
+    return { success: true, history };
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : "Failed to fetch history";
+    return { success: false, error: msg };
+  }
 }

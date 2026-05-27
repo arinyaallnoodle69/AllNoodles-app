@@ -9,9 +9,9 @@ import {
   PRINT_ORGANIZATION_NAME,
   PrintCustomerRow,
   PrintDocHeader,
-  PrintSignatureBlock,
   PrintTotalRow,
   SHEET_WIDTH_MM,
+  chunkItems,
   fmt,
   formatDateShort,
 } from "@/components/print/print-shared";
@@ -64,26 +64,29 @@ export function BillingPreviewButton({
   const [touchStartDist, setTouchStartDist] = useState(0);
 
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const cardRef = useRef<HTMLDivElement | null>(null);
+
+  const chunks = chunkItems(deliveries, 10);
+  const pages = chunks.length > 0 ? chunks : [[]];
+  const totalPages = pages.length;
 
   useEffect(() => {
     setMounted(true);
 
-    // Preload web fonts in the background to make PDF/image generation instant
     if (typeof window !== "undefined" && !cachedFontEmbedCSS) {
       const preloadFonts = async () => {
         try {
           await document.fonts.ready;
           const css = await htmlToImage.getFontEmbedCSS(document.body);
           cachedFontEmbedCSS = css;
-          console.log("[FontPreloader:Billing] Web fonts pre-loaded and cached successfully.");
-        } catch (e) {
-          console.warn("[FontPreloader:Billing] Failed to background-preload fonts:", e);
+        } catch (error) {
+          console.warn("[FontPreloader:Billing] Failed to preload fonts:", error);
         }
       };
       const timer = setTimeout(preloadFonts, 1000);
       return () => clearTimeout(timer);
     }
+
+    return undefined;
   }, []);
 
   useEffect(() => {
@@ -102,11 +105,7 @@ export function BillingPreviewButton({
       const sheetWidth = dummy.offsetWidth;
       document.body.removeChild(dummy);
 
-      if (containerWidth < sheetWidth && sheetWidth > 0) {
-        setScale(containerWidth / sheetWidth);
-      } else {
-        setScale(1);
-      }
+      setScale(containerWidth < sheetWidth && sheetWidth > 0 ? containerWidth / sheetWidth : 1);
     };
 
     const timer = setTimeout(updateScale, 100);
@@ -118,28 +117,25 @@ export function BillingPreviewButton({
     };
   }, [isOpen]);
 
-  const handleTouchStart = (e: React.TouchEvent) => {
-    if (e.touches.length === 2) {
+  const handleTouchStart = (event: React.TouchEvent) => {
+    if (event.touches.length === 2) {
       const dist = Math.hypot(
-        e.touches[0].pageX - e.touches[1].pageX,
-        e.touches[0].pageY - e.touches[1].pageY,
+        event.touches[0].pageX - event.touches[1].pageX,
+        event.touches[0].pageY - event.touches[1].pageY,
       );
       setTouchStartDist(dist);
     }
   };
 
-  const handleTouchMove = (e: React.TouchEvent) => {
-    if (e.touches.length === 2 && touchStartDist > 0) {
+  const handleTouchMove = (event: React.TouchEvent) => {
+    if (event.touches.length === 2 && touchStartDist > 0) {
       const dist = Math.hypot(
-        e.touches[0].pageX - e.touches[1].pageX,
-        e.touches[0].pageY - e.touches[1].pageY,
+        event.touches[0].pageX - event.touches[1].pageX,
+        event.touches[0].pageY - event.touches[1].pageY,
       );
       const factor = dist / touchStartDist;
 
-      setZoom((prev) => {
-        const next = prev * factor;
-        return Math.min(Math.max(next, 1), 3);
-      });
+      setZoom((prev) => Math.min(Math.max(prev * factor, 1), 3));
       setTouchStartDist(dist);
     }
   };
@@ -147,62 +143,71 @@ export function BillingPreviewButton({
   const handleTouchEnd = () => setTouchStartDist(0);
 
   const saveAsImage = async () => {
-    if (!cardRef.current || isSaving) return;
+    const targets = document.querySelectorAll(".billing-preview-card-element");
+    if (targets.length === 0 || isSaving) return;
 
     setIsSaving(true);
     try {
-      const target = cardRef.current;
-      const captureWidth = target.offsetWidth;
-      const captureHeight = target.offsetHeight;
-
-      let fontEmbedCSS: string | undefined = undefined;
+      let fontEmbedCSS: string | undefined;
       if (cachedFontEmbedCSS) {
         fontEmbedCSS = cachedFontEmbedCSS;
       } else {
         try {
           await Promise.race([
             document.fonts.ready,
-            new Promise((_, reject) => setTimeout(() => reject(new Error("Font load timeout")), 2000))
+            new Promise((_, reject) => setTimeout(() => reject(new Error("Font load timeout")), 2000)),
           ]);
           fontEmbedCSS = await Promise.race([
             htmlToImage.getFontEmbedCSS(document.body),
-            new Promise<string>((_, reject) => setTimeout(() => reject(new Error("Font CSS embed timeout")), 2000))
+            new Promise<string>((_, reject) => setTimeout(() => reject(new Error("Font CSS embed timeout")), 2000)),
           ]);
           cachedFontEmbedCSS = fontEmbedCSS;
-        } catch (e) {
-          console.warn("Failed to embed fonts (timed out or error), proceeding without embedded fonts:", e);
+        } catch (error) {
+          console.warn("Failed to embed fonts, proceeding without embedded fonts:", error);
         }
       }
 
-      const dataUrl = await htmlToImage.toPng(target, {
-        backgroundColor: "#ffffff",
-        cacheBust: true,
-        fontEmbedCSS,
-        pixelRatio: 2,
-        width: captureWidth,
-        height: captureHeight,
-        style: {
-          width: `${captureWidth}px`,
-          height: `${captureHeight}px`,
-          maxWidth: "none",
-          maxHeight: "none",
-          margin: "0",
-          boxShadow: "none",
-          transform: "none",
-          transformOrigin: "top left",
-        },
-      });
+      const captured: { dataUrl: string; blob: Blob; name: string }[] = [];
+
+      for (let i = 0; i < targets.length; i += 1) {
+        const target = targets[i] as HTMLElement;
+        const captureWidth = target.offsetWidth;
+        const captureHeight = target.offsetHeight;
+
+        const dataUrl = await htmlToImage.toPng(target, {
+          backgroundColor: "#ffffff",
+          cacheBust: true,
+          fontEmbedCSS,
+          pixelRatio: 2,
+          width: captureWidth,
+          height: captureHeight,
+          style: {
+            width: `${captureWidth}px`,
+            height: `${captureHeight}px`,
+            maxWidth: "none",
+            maxHeight: "none",
+            margin: "0",
+            boxShadow: "none",
+            transform: "none",
+            transformOrigin: "top left",
+          },
+        });
+
+        const blob = dataUrlToBlob(dataUrl);
+        const fileName =
+          targets.length > 1
+            ? `billing-${customerCode}-${fromDate}-to-${toDate}-page-${i + 1}.png`
+            : `billing-${customerCode}-${fromDate}-to-${toDate}.png`;
+
+        captured.push({ dataUrl, blob, name: fileName });
+      }
 
       const isIOS =
         /iPad|iPhone|iPod/.test(navigator.userAgent) ||
         (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
 
-      const fileName = `billing-${customerCode}-${fromDate}-to-${toDate}.png`;
-
       if (isIOS && navigator.share && navigator.canShare) {
-        const blob = dataUrlToBlob(dataUrl);
-        const files = [new File([blob], fileName, { type: "image/png" })];
-
+        const files = captured.map((item) => new File([item.blob], item.name, { type: "image/png" }));
         if (navigator.canShare({ files })) {
           try {
             await navigator.share({
@@ -213,19 +218,23 @@ export function BillingPreviewButton({
             return;
           } catch (error) {
             console.error("[WebShare:Billing]", error);
-            if (error instanceof Error && error.name === "AbortError") {
-              return;
-            }
+            if (error instanceof Error && error.name === "AbortError") return;
           }
         }
       }
 
-      const a = document.createElement("a");
-      a.href = dataUrl;
-      a.download = fileName;
-      a.click();
-    } catch (err) {
-      console.error("Save image error:", err);
+      captured.forEach((item, index) => {
+        setTimeout(() => {
+          const link = document.createElement("a");
+          link.href = item.dataUrl;
+          link.download = item.name;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+        }, index * 600);
+      });
+    } catch (error) {
+      console.error("Save image error:", error);
       setErrorMessage("ไม่สามารถบันทึกรูปภาพได้ กรุณาลองใหม่อีกครั้ง");
     } finally {
       setIsSaving(false);
@@ -276,146 +285,166 @@ export function BillingPreviewButton({
                   onTouchMove={handleTouchMove}
                   onTouchEnd={handleTouchEnd}
                 >
-                  <div
-                    style={{
-                      width: `${SHEET_WIDTH_MM * finalScale}mm`,
-                      height: `${HALF_SHEET_HEIGHT_MM * finalScale}mm`,
-                      overflow: "hidden",
-                    }}
-                  >
-                    <div
-                      ref={cardRef}
-                      style={{
-                        boxSizing: "border-box",
-                        width: `${SHEET_WIDTH_MM}mm`,
-                        height: `${HALF_SHEET_HEIGHT_MM}mm`,
-                        padding: "6mm 8mm",
-                        overflow: "hidden",
-                        display: "flex",
-                        flexDirection: "column",
-                        background: "white",
-                        transform: `scale(${finalScale})`,
-                        transformOrigin: "top left",
-                        boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)",
-                      }}
-                    >
-                      <PrintDocHeader
-                        orgName={PRINT_ORGANIZATION_NAME}
-                        orgAddress="-"
-                        orgPhone="-"
-                        title="ใบวางบิล"
-                        docDate={today}
-                        dividerStyle="none"
-                        docMetaFontSize="11.8pt"
-                      />
+                  <div className="flex flex-col items-center gap-6 py-4">
+                    {pages.map((pageDeliveries, pageIdx) => {
+                      const isLastPage = pageIdx === totalPages - 1;
+                      return (
+                        <div
+                          key={`page-${pageIdx}`}
+                          style={{
+                            width: `${SHEET_WIDTH_MM * finalScale}mm`,
+                            height: `${HALF_SHEET_HEIGHT_MM * finalScale}mm`,
+                            overflow: "hidden",
+                          }}
+                        >
+                          <div
+                            style={{
+                              boxSizing: "border-box",
+                              width: `${SHEET_WIDTH_MM}mm`,
+                              height: `${HALF_SHEET_HEIGHT_MM}mm`,
+                              padding: "6mm 8mm",
+                              overflow: "hidden",
+                              display: "flex",
+                              flexDirection: "column",
+                              background: "white",
+                              transform: `scale(${finalScale})`,
+                              transformOrigin: "top left",
+                              boxShadow: "0 4px 10px rgba(0,0,0,0.15)",
+                            }}
+                            className="billing-preview-card-element"
+                          >
+                            <PrintDocHeader
+                              orgName={PRINT_ORGANIZATION_NAME}
+                              orgAddress="-"
+                              orgPhone="-"
+                              title="ใบวางบิล"
+                              docDate={today}
+                              pageLabel={totalPages > 1 ? `หน้า ${pageIdx + 1}/${totalPages}` : undefined}
+                              dividerStyle="none"
+                              docMetaFontSize="11.8pt"
+                            />
 
-                      <PrintCustomerRow customer={{ code: customerCode, name: customerName, address: "-" }} />
+                            <PrintCustomerRow customer={{ code: customerCode, name: customerName, address: "-" }} />
 
-                      <table
-                        style={{
-                          width: "100%",
-                          tableLayout: "fixed",
-                          borderCollapse: "collapse",
-                          fontSize: "11.8pt",
-                          marginBottom: "1mm",
-                        }}
-                      >
-                        <thead>
-                          <tr>
-                            <th
+                            <table
                               style={{
-                                padding: "1mm 2mm",
-                                color: "black",
-                                borderTop: DOTTED_LINE,
-                                borderBottom: DOTTED_LINE,
-                                width: "6%",
-                                textAlign: "center",
+                                width: "100%",
+                                tableLayout: "fixed",
+                                borderCollapse: "collapse",
+                                fontSize: "11.8pt",
+                                marginBottom: "1mm",
                               }}
                             >
-                              ลำดับ
-                            </th>
-                            <th
-                              style={{
-                                padding: "1mm 2mm",
-                                color: "black",
-                                borderTop: DOTTED_LINE,
-                                borderBottom: DOTTED_LINE,
-                                width: "40%",
-                                textAlign: "center",
-                              }}
-                            >
-                              เลขที่ใบจัดส่ง
-                            </th>
-                            <th
-                              style={{
-                                padding: "1mm 2mm",
-                                color: "black",
-                                borderTop: DOTTED_LINE,
-                                borderBottom: DOTTED_LINE,
-                                width: "21%",
-                                textAlign: "center",
-                              }}
-                            >
-                              วันที่
-                            </th>
-                            <th
-                              style={{
-                                padding: "1mm 2mm",
-                                color: "black",
-                                borderTop: DOTTED_LINE,
-                                borderBottom: DOTTED_LINE,
-                                width: "18%",
-                                textAlign: "right",
-                              }}
-                            >
-                              ยอดรวม
-                            </th>
-                            <th
-                              style={{
-                                padding: "1mm 3mm",
-                                color: "black",
-                                borderTop: DOTTED_LINE,
-                                borderBottom: DOTTED_LINE,
-                                width: "15%",
-                                textAlign: "left",
-                              }}
-                            >
-                              หมายเหตุ
-                            </th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {deliveries.map((item, index) => (
-                            <tr key={item.number}>
-                              <td style={{ padding: "0.8mm 2mm", textAlign: "center", color: "black" }}>{index + 1}</td>
-                              <td
-                                style={{
-                                  padding: "0.8mm 2mm",
-                                  textAlign: "center",
-                                  fontFamily: "monospace",
-                                  fontSize: "11.8pt",
-                                  fontWeight: 700,
-                                  color: "#003366",
-                                }}
-                              >
-                                {item.number}
-                              </td>
-                              <td style={{ padding: "0.8mm 2mm", textAlign: "center", color: "black" }}>
-                                {formatDateShort(item.date)}
-                              </td>
-                              <td style={{ padding: "0.8mm 2mm", textAlign: "right", fontWeight: 700, color: "black" }}>
-                                {fmt(item.amount)}
-                              </td>
-	                              <td style={{ padding: "0.8mm 3mm", fontSize: "11.8pt", color: "#475569" }}>-</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                              <thead>
+                                <tr>
+                                  <th
+                                    style={{
+                                      padding: "1mm 2mm",
+                                      color: "black",
+                                      borderTop: DOTTED_LINE,
+                                      borderBottom: DOTTED_LINE,
+                                      width: "6%",
+                                      textAlign: "center",
+                                    }}
+                                  >
+                                    ลำดับ
+                                  </th>
+                                  <th
+                                    style={{
+                                      padding: "1mm 2mm",
+                                      color: "black",
+                                      borderTop: DOTTED_LINE,
+                                      borderBottom: DOTTED_LINE,
+                                      width: "40%",
+                                      textAlign: "center",
+                                    }}
+                                  >
+                                    เลขที่ใบจัดส่ง
+                                  </th>
+                                  <th
+                                    style={{
+                                      padding: "1mm 2mm",
+                                      color: "black",
+                                      borderTop: DOTTED_LINE,
+                                      borderBottom: DOTTED_LINE,
+                                      width: "21%",
+                                      textAlign: "center",
+                                    }}
+                                  >
+                                    วันที่
+                                  </th>
+                                  <th
+                                    style={{
+                                      padding: "1mm 2mm",
+                                      color: "black",
+                                      borderTop: DOTTED_LINE,
+                                      borderBottom: DOTTED_LINE,
+                                      width: "18%",
+                                      textAlign: "right",
+                                    }}
+                                  >
+                                    ยอดรวม
+                                  </th>
+                                  <th
+                                    style={{
+                                      padding: "1mm 3mm",
+                                      color: "black",
+                                      borderTop: DOTTED_LINE,
+                                      borderBottom: DOTTED_LINE,
+                                      width: "15%",
+                                      textAlign: "left",
+                                    }}
+                                  >
+                                    หมายเหตุ
+                                  </th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {pageDeliveries.map((item, index) => (
+                                  <tr key={item.number}>
+                                    <td style={{ padding: "0.8mm 2mm", textAlign: "center", color: "black" }}>
+                                      {pageIdx * 10 + index + 1}
+                                    </td>
+                                    <td
+                                      style={{
+                                        padding: "0.8mm 2mm",
+                                        textAlign: "center",
+                                        fontFamily: "monospace",
+                                        fontSize: "11.8pt",
+                                        fontWeight: 700,
+                                        color: "#003366",
+                                      }}
+                                    >
+                                      {item.number}
+                                    </td>
+                                    <td style={{ padding: "0.8mm 2mm", textAlign: "center", color: "black" }}>
+                                      {formatDateShort(item.date)}
+                                    </td>
+                                    <td
+                                      style={{
+                                        padding: "0.8mm 2mm",
+                                        textAlign: "right",
+                                        fontWeight: 700,
+                                        color: "black",
+                                      }}
+                                    >
+                                      {fmt(item.amount)}
+                                    </td>
+                                    <td style={{ padding: "0.8mm 3mm", fontSize: "11.8pt", color: "#475569" }}>-</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
 
-                      <div style={{ flex: 1 }} />
-	                      <PrintTotalRow totalAmount={totalAmount} dividerStyle="dotted" showBottomBorder={false} />
-	                      <PrintSignatureBlock leftLabel="ผู้รับวางบิล" rightLabel="ผู้วางบิล" lineStyle="dotted" />
-                    </div>
+                            <div style={{ flex: 1 }} />
+
+                            {isLastPage ? (
+                              <PrintTotalRow totalAmount={totalAmount} dividerStyle="dotted" showBottomBorder={false} />
+                            ) : null}
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
 
@@ -428,7 +457,7 @@ export function BillingPreviewButton({
                       className="inline-flex items-center gap-1.5 rounded-full bg-[#0051d5] px-6 py-2.5 text-sm font-bold text-white shadow-lg transition hover:bg-[#003d99] disabled:opacity-60"
                     >
                       {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-                      บันทึกรูป
+                      {isSaving ? "กำลังบันทึก..." : totalPages > 1 ? "บันทึกรูปทั้งหมด" : "บันทึกรูป"}
                     </button>
                   </div>
                   <span className="text-xs text-white/60">สามารถใช้นิ้วซูมเข้า-ออกได้</span>

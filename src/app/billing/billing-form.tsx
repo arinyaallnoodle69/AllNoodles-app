@@ -110,20 +110,20 @@ export function BillingForm({
   const handlePrint = () => {
     if (isPending || isPrinting || visibleCandidates.length === 0) return;
 
-    const unbilledByCustomer = visibleCandidates.map(c => ({
+    const selectedByCustomer = visibleCandidates.map(c => ({
       customerId: c.customerId,
-      deliveryNumbers: c.deliveries.filter(d => !d.isAlreadyBilled).map(d => d.number)
+      deliveryNumbers: c.deliveries.map(d => d.number)
     })).filter(c => c.deliveryNumbers.length > 0);
-    const deliveryNumbers = unbilledByCustomer.flatMap((customer) => customer.deliveryNumbers);
+    const deliveryNumbers = selectedByCustomer.flatMap((customer) => customer.deliveryNumbers);
 
     if (deliveryNumbers.length === 0) {
-      alert("รายการที่เลือกถูกวางบิลไปทั้งหมดแล้ว");
+      alert("ไม่พบรายการที่เลือกสำหรับพิมพ์");
       return;
     }
 
     setIsPrinting(true);
     const params = new URLSearchParams({
-      customers: unbilledByCustomer.map(c => c.customerId).join(","),
+      customers: selectedByCustomer.map(c => c.customerId).join(","),
       deliveries: deliveryNumbers.join(","),
       from: fromDate,
       to: toDate,

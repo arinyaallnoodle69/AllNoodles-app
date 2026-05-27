@@ -477,9 +477,12 @@ export async function getBillingHistory(
     queryBuilder = queryBuilder.in("customer_id", options.customerIds);
   }
 
-  const { data, error } = await queryBuilder
-    .order("created_at", { ascending: false })
-    .limit(options.limit ?? 50);
+  queryBuilder = queryBuilder.order("created_at", { ascending: false });
+  if (options.limit) {
+    queryBuilder = queryBuilder.limit(options.limit);
+  }
+
+  const { data, error } = await queryBuilder;
 
   if (error || !data) return [];
 
@@ -497,6 +500,38 @@ export async function getBillingHistory(
   }[];
 
   const result: BillingRecord[] = [];
+  if (records.length === 0) return result;
+
+  // Gather all unique customer IDs and boundary dates for bulk querying
+  const customerIds = Array.from(new Set(records.map((r) => r.customer_id)));
+  const fromDates = records.map((r) => r.from_date).filter(Boolean);
+  const toDates = records.map((r) => r.to_date).filter(Boolean);
+
+  let activeNotes: Array<{
+    id: string;
+    customer_id: string;
+    delivery_number: string;
+    delivery_date: string;
+    total_amount: number;
+    notes: string | null;
+  }> = [];
+
+  if (customerIds.length > 0 && fromDates.length > 0 && toDates.length > 0) {
+    const minFromDate = fromDates.sort()[0];
+    const maxToDate = toDates.sort().reverse()[0];
+
+    const { data: notes, error: notesError } = await supabase
+      .from("delivery_notes")
+      .select("id, customer_id, delivery_number, delivery_date, total_amount, notes")
+      .in("customer_id", customerIds)
+      .gte("delivery_date", minFromDate)
+      .lte("delivery_date", maxToDate)
+      .eq("status", "confirmed");
+
+    if (!notesError && notes) {
+      activeNotes = notes as typeof activeNotes;
+    }
+  }
 
   for (const row of records) {
     const originalSnapshot = (row.snapshot_rows as SnapshotRow[]) || [];
@@ -519,24 +554,22 @@ export async function getBillingHistory(
       continue;
     }
 
-    const { data: notes } = await supabase
-      .from("delivery_notes")
-      .select("id, delivery_number, delivery_date, total_amount, notes")
-      .eq("customer_id", row.customer_id)
-      .gte("delivery_date", row.from_date)
-      .lte("delivery_date", row.to_date)
-      .eq("status", "confirmed");
+    // Filter notes matching customer and date range in-memory (0 database hits!)
+    const matchingNotes = activeNotes.filter(
+      (n) =>
+        n.customer_id === row.customer_id &&
+        n.delivery_date >= row.from_date &&
+        n.delivery_date <= row.to_date
+    );
 
-    const activeNotes = notes ?? [];
-    if (activeNotes.length === 0) {
-      // Skip this record if all delivery notes are deleted/unconfirmed
+    if (matchingNotes.length === 0) {
+      // Skip this record if all delivery notes are deleted/unconfirmed to match original logic
       continue;
     }
 
-    // Calculate dynamic total
-    const totalAmount = activeNotes.reduce((sum, n) => sum + Number(n.total_amount || 0), 0);
-    
-    const snapshot_rows = activeNotes.map((n, idx) => ({
+    const totalAmount = matchingNotes.reduce((sum, n) => sum + Number(n.total_amount || 0), 0);
+
+    const snapshot_rows = matchingNotes.map((n, idx) => ({
       lineNumber: idx + 1,
       deliveryNumber: n.delivery_number,
       deliveryDate: n.delivery_date,
@@ -569,8 +602,11 @@ export async function getBillingStatementData(
   toDate: string,
   billingDate: string,
   deliveryNumbers?: string[],
+  skipRepair?: boolean,
 ): Promise<BillingStatementData | null> {
-  await ensureConfirmedDeliveryNotesForRange(organizationId, fromDate, toDate);
+  if (!skipRepair) {
+    await ensureConfirmedDeliveryNotesForRange(organizationId, fromDate, toDate);
+  }
   const supabase = getSupabaseAdmin();
 
   let notesQuery = supabase
@@ -679,13 +715,14 @@ export async function getBatchBillingData(
   const results = await Promise.all(
     targetIds.map((id) => {
       const customerDeliveryNumbers = deliveryNumbers;
-      return getBillingStatementData(
+            return getBillingStatementData(
         organizationId,
         id,
         fromDate,
         toDate,
         billingDate,
         customerDeliveryNumbers,
+        true,
       );
     }),
   );

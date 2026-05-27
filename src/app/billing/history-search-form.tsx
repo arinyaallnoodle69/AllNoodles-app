@@ -13,6 +13,8 @@ type Props = {
   initialQuery: string;
   initialCustomers: string[];
   allCustomers: { id: string; name: string; customer_code: string }[];
+  onSearch?: (filters: { from: string; to: string; query: string; customerIds: string[] }) => void;
+  isPending?: boolean;
 };
 
 export function HistorySearchForm({
@@ -21,10 +23,13 @@ export function HistorySearchForm({
   initialQuery,
   initialCustomers,
   allCustomers,
+  onSearch,
+  isPending,
 }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [isPending, startTransition] = useTransition();
+  const [isPendingTransition, startTransition] = useTransition();
+  const activePending = isPending !== undefined ? isPending : isPendingTransition;
 
   const [from, setFrom] = useState(initialFrom);
   const [to, setTo] = useState(initialTo);
@@ -51,7 +56,11 @@ export function HistorySearchForm({
     );
   };
 
-  const handleSearch = () => {
+    const handleSearch = () => {
+    if (onSearch) {
+      onSearch({ from, to, query, customerIds: selectedIds });
+      return;
+    }
     startTransition(() => {
       const params = new URLSearchParams(searchParams.toString());
       if (from) params.set("h_from", from); else params.delete("h_from");
@@ -203,10 +212,10 @@ export function HistorySearchForm({
       <div className="mt-8 hidden lg:flex justify-end">
         <button
           onClick={handleSearch}
-          disabled={isPending}
+          disabled={activePending}
           className="flex h-14 w-full items-center justify-center gap-3 bg-[#003366] px-10 text-base font-black text-white shadow-lg shadow-[#003366]/20 transition-all hover:bg-[#002244] disabled:opacity-50 active:scale-95 md:w-auto"
         >
-          {isPending ? <Loader2 className="h-5 w-5 animate-spin" /> : <Search className="h-5 w-5" />}
+          {activePending ? <Loader2 className="h-5 w-5 animate-spin" /> : <Search className="h-5 w-5" />}
           ค้นหาประวัติ
         </button>
       </div>
