@@ -113,18 +113,33 @@ async function BillingContent({ searchParams }: PageProps) {
             </div>
 
             <div className="flex items-center gap-2 self-end sm:self-auto">
-              <MobileSearchDrawer>
-                <button className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 shadow-sm active:bg-slate-50 md:hidden">
-                  <Filter className="h-5 w-5" />
-                </button>
-              </MobileSearchDrawer>
-
               <PrintButton
                 targetId="report-print-area"
                 fileName={`รายงานใบวางบิล_${fromDate}_ถึง_${toDate}`}
               />
             </div>
           </div>
+
+          <MobileSearchDrawer title="ค้นหารายงานใบวางบิล">
+            <form method="GET" action="/reports/billing" className="flex flex-col gap-4 pb-32">
+              <div>
+                <label className="mb-1.5 block text-xs font-bold uppercase tracking-widest text-slate-500">ช่วงวันที่</label>
+                <div className="flex items-center gap-2">
+                  <div className="min-w-0 flex-1">
+                    <ThaiDatePicker id="m-billing-from" name="from" defaultValue={fromDate} placeholder="วันเริ่มต้น" compact matchFieldHeight />
+                  </div>
+                  <span className="shrink-0 text-slate-300">—</span>
+                  <div className="min-w-0 flex-1">
+                    <ThaiDatePicker id="m-billing-to" name="to" defaultValue={toDate} placeholder="วันสิ้นสุด" compact matchFieldHeight />
+                  </div>
+                </div>
+              </div>
+              <button type="submit" className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#003366] py-3.5 text-base font-bold text-white transition hover:bg-[#002244]">
+                <Filter className="h-4 w-4" strokeWidth={2} />
+                ค้นหา
+              </button>
+            </form>
+          </MobileSearchDrawer>
 
           <div className="hidden border border-slate-100 bg-white p-5 shadow-2xl sm:rounded-sm md:block">
             <form action="/reports/billing" method="get">
