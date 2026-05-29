@@ -28,6 +28,7 @@ type LiffContextType = {
   logout: () => void;
   closeWindow: () => void;
   refreshProfile: () => Promise<void>;
+  sendMessages: (messages: { type: "text"; text: string }[]) => Promise<void>;
 };
 
 const LiffContext = createContext<LiffContextType>({
@@ -40,6 +41,7 @@ const LiffContext = createContext<LiffContextType>({
   logout: () => {},
   closeWindow: () => {},
   refreshProfile: async () => {},
+  sendMessages: async () => {},
 });
 
 export const useLiff = () => useContext(LiffContext);
@@ -166,6 +168,17 @@ export function LiffProvider({
     }
   };
 
+  const sendMessages = async (messages: { type: "text"; text: string }[]) => {
+    const liff = liffRef.current;
+    if (!liff) throw new Error("LIFF not initialized");
+    if (liff.isInClient() && liff.isApiAvailable("sendMessages")) {
+      await liff.sendMessages(messages);
+    } else {
+      console.warn("sendMessages API is only available inside the LINE app. Logging message instead:", messages);
+      throw new Error("sendMessages API is only available inside the LINE app");
+    }
+  };
+
   return (
     <LiffContext.Provider
       value={{
@@ -178,6 +191,7 @@ export function LiffProvider({
         logout,
         closeWindow,
         refreshProfile,
+        sendMessages,
       }}
     >
       {children}

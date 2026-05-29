@@ -201,31 +201,44 @@ export async function syncDeliveryNoteForOrder(
         (productsToRestore ?? []).map((product) => [product.id, Number(product.stock_quantity)]),
       );
       const inventoryMovements: Database["public"]["Tables"]["inventory_movements"]["Insert"][] = [];
+      const productsToUpsert: { id: string; stock_quantity: number }[] = [];
 
-      await Promise.all(
-        productIdsToRestore.map(async (productId) => {
-          const qtyBase = restoreByProduct.get(productId) ?? 0;
-          if (qtyBase <= 0) return;
+      for (const productId of productIdsToRestore) {
+        const qtyBase = restoreByProduct.get(productId) ?? 0;
+        if (qtyBase <= 0) continue;
 
-          const stockBefore = productMap.get(productId);
-          if (stockBefore === undefined) return;
+        const stockBefore = productMap.get(productId);
+        if (stockBefore === undefined) continue;
 
-          const stockAfter = stockBefore + qtyBase;
-          inventoryMovements.push({
-            created_by: actorUserId,
-            metadata: { source: "order_management_rebuild" },
-            movement_type: "adjustment",
-            notes: `คืนสต็อกจากการซิงก์ใบส่งของใหม่สำหรับออเดอร์ ${input.orderId}`,
-            organization_id: input.organizationId,
-            product_id: productId,
-            quantity_delta: qtyBase,
-            stock_after: stockAfter,
-            stock_before: stockBefore,
-          });
+        const stockAfter = stockBefore + qtyBase;
+        inventoryMovements.push({
+          created_by: actorUserId,
+          metadata: { source: "order_management_rebuild" },
+          movement_type: "adjustment",
+          notes: `คืนสต็อกจากการซิงก์ใบส่งของใหม่สำหรับออเดอร์ ${input.orderId}`,
+          organization_id: input.organizationId,
+          product_id: productId,
+          quantity_delta: qtyBase,
+          stock_after: stockAfter,
+          stock_before: stockBefore,
+        });
 
-          await admin.from("products").update({ stock_quantity: stockAfter }).eq("id", productId);
-        }),
-      );
+        productsToUpsert.push({
+          id: productId,
+          stock_quantity: stockAfter,
+        });
+      }
+
+      if (productsToUpsert.length > 0) {
+        const { error: upsertError } = await admin
+          .from("products")
+          .upsert(productsToUpsert as unknown as Database["public"]["Tables"]["products"]["Insert"][], { onConflict: "id" });
+        
+        if (upsertError) {
+          console.error("[syncDeliveryNoteForOrder:upsertProducts]", upsertError);
+          return { error: "ปรับปรุงสต็อกสินค้าในคลังไม่สำเร็จ: " + upsertError.message };
+        }
+      }
 
       if (inventoryMovements.length > 0) {
         await admin.from("inventory_movements").insert(inventoryMovements);

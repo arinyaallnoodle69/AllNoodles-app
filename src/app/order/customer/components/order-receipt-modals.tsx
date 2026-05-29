@@ -32,7 +32,7 @@ export function OrderReceiptModals({
     <>
       {receiptOrder && (
         <div
-          className="fixed inset-0 z-50 flex flex-col bg-black/70 backdrop-blur-sm"
+          className="fixed inset-0 z-[150] flex flex-col bg-black/70 backdrop-blur-sm"
           onClick={(e) => {
             if (e.target === e.currentTarget) {
               onCloseReceipt();
@@ -77,7 +77,7 @@ export function OrderReceiptModals({
 
       {receiptImageUrl && (
         <div
-          className="fixed inset-0 z-[60] flex flex-col bg-black/80 backdrop-blur-sm"
+          className="fixed inset-0 z-[160] flex flex-col bg-black/80 backdrop-blur-sm"
           onClick={(e) => {
             if (e.target === e.currentTarget) onCloseReceiptImage();
           }}

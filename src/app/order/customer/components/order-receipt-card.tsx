@@ -38,7 +38,7 @@ export function OrderReceiptCard({
     }).format(new Date(iso));
 
   const FONT = "'Sarabun','Noto Sans Thai',sans-serif";
-  const COL = "1fr 80px 60px 80px";
+  const COL = "1fr 90px 90px";
   const SIDE_PADDING = "20px";
   const RULE_MARGIN = "0 16px";
   const LINE: CSSProperties = { borderTop: "1px solid #cccccc", margin: RULE_MARGIN };
@@ -88,13 +88,13 @@ export function OrderReceiptCard({
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: COL, padding: `6px ${SIDE_PADDING}`, gap: "0 8px" }}>
-        {(["สินค้า", "จำนวน", "หน่วย", "รวม"] as const).map((label, index) => (
+        {(["สินค้า", "จำนวน", "หน่วย"] as const).map((label, index) => (
           <span
             key={label}
             style={{
               fontSize: "14px",
               fontWeight: 800,
-              textAlign: index === 0 ? "left" : index === 1 ? "center" : index === 2 ? "center" : "right",
+              textAlign: index === 0 ? "left" : "center",
             }}
           >
             {label}
@@ -117,13 +117,10 @@ export function OrderReceiptCard({
           >
             <div style={{ fontSize: "13px", lineHeight: 1.5, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{item.name}</div>
             <div style={{ fontSize: "14px", textAlign: "center" }}>
-              {item.quantity.toLocaleString("th-TH")} {item.saleUnitLabel}
+              {item.quantity.toLocaleString("th-TH")}
             </div>
             <div style={{ fontSize: "14px", textAlign: "center" }}>
-              {(item.unitPrice || 0).toLocaleString("th-TH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-            </div>
-            <div style={{ fontSize: "14px", textAlign: "right", fontWeight: 700 }}>
-              {(item.lineTotal || 0).toLocaleString("th-TH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              {item.saleUnitLabel}
             </div>
           </div>
           <div style={LINE} />

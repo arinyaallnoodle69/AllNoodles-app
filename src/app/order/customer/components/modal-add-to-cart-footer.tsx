@@ -1,7 +1,8 @@
 "use client";
 
 import { memo, useCallback, useState, type MutableRefObject } from "react";
-import { Lock, Minus, Plus, ShoppingCart } from "lucide-react";
+import { Check, Loader2, Lock, Minus, Plus, ShoppingCart } from "lucide-react";
+import { useLiff } from "@/components/liff-provider";
 
 const ModalQuantityStepper = memo(function ModalQuantityStepper({
   quantity,
@@ -55,6 +56,7 @@ export const ModalAddToCartFooter = memo(function ModalAddToCartFooter({
   onAddToCart,
   onCloseModal,
   productId,
+  productName,
   minOrderQty,
   primaryImageUrl,
   stepOrderQty,
@@ -68,6 +70,7 @@ export const ModalAddToCartFooter = memo(function ModalAddToCartFooter({
   onAddToCart: (productId: string, quantity: number) => void;
   onCloseModal: () => void;
   productId: string;
+  productName: string;
   minOrderQty: number;
   primaryImageUrl: string;
   stepOrderQty: number | null;
@@ -75,7 +78,33 @@ export const ModalAddToCartFooter = memo(function ModalAddToCartFooter({
   closedLabel: string;
   openLabel: string;
 }) {
+  const { sendMessages, isInClient } = useLiff();
   const [pendingQty, setPendingQty] = useState(0);
+  const [isInquiring, setIsInquiring] = useState(false);
+  const [inquirySuccess, setInquirySuccess] = useState(false);
+
+  const handleInquirePrice = async () => {
+    if (isInquiring) return;
+    setIsInquiring(true);
+    setInquirySuccess(false);
+    try {
+      const msgText = `สอบถามราคา: ${productName} ราคาเท่าไหร่?`;
+      if (isInClient) {
+        await sendMessages([{ type: "text", text: msgText }]);
+        setInquirySuccess(true);
+        setTimeout(() => setInquirySuccess(false), 3000);
+      } else {
+        const encodedText = encodeURIComponent(msgText);
+        window.open(`https://line.me/R/share?text=${encodedText}`, "_blank");
+        setInquirySuccess(true);
+        setTimeout(() => setInquirySuccess(false), 3000);
+      }
+    } catch (err) {
+      console.error("Failed to send LINE OA price inquiry:", err);
+    } finally {
+      setIsInquiring(false);
+    }
+  };
 
   const handleDecrease = useCallback(() => {
     const minQty = minOrderQty ?? 1;
@@ -166,7 +195,7 @@ export const ModalAddToCartFooter = memo(function ModalAddToCartFooter({
 
   return (
     <div className="z-30 border-t border-slate-200/95 bg-[#f8fafc] px-4 pb-[max(2rem,env(safe-area-inset-bottom))] pt-4 shadow-[0_-8px_30px_rgba(15,23,42,0.08)] backdrop-blur-md">
-      <div className="mx-auto max-w-lg">
+      <div className="mx-auto max-w-lg flex flex-col gap-2.5">
         <div className="flex items-center gap-3">
           <div ref={modalStepperRef} className="shrink-0">
             <ModalQuantityStepper
@@ -200,6 +229,27 @@ export const ModalAddToCartFooter = memo(function ModalAddToCartFooter({
             </div>
           </button>
         </div>
+
+        {/* LINE OA chat price inquiry button */}
+        <button
+          onClick={handleInquirePrice}
+          disabled={isInquiring}
+          className="flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-[#06C755] text-[13.5px] font-black text-white shadow-md shadow-emerald-950/15 transition-all hover:bg-[#05b04b] active:scale-[0.98] disabled:opacity-80"
+        >
+          {isInquiring ? (
+            <Loader2 className="h-4.5 w-4.5 animate-spin" strokeWidth={3} />
+          ) : inquirySuccess ? (
+            <>
+              <Check className="h-4.5 w-4.5" strokeWidth={3} />
+              <span>ส่งคำถามไป LINE สำเร็จ!</span>
+            </>
+          ) : (
+            <>
+              <span className="text-[15px] leading-none">💬</span>
+              <span>สอบถามราคา {productName}</span>
+            </>
+          )}
+        </button>
       </div>
     </div>
   );

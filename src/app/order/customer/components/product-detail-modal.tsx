@@ -439,6 +439,7 @@ export function ProductDetailModal({
         onAddToCart={onAddToCart}
         onCloseModal={onCloseModal}
         productId={selectedProduct.id}
+        productName={selectedProduct.name}
         minOrderQty={selectedProduct.min_order_qty ?? 1}
         stepOrderQty={selectedProduct.step_order_qty ?? null}
         primaryImageUrl={
