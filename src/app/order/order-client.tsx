@@ -2861,6 +2861,7 @@ export default function OrderClient({
           onTouchEnd={onTouchEnd}
           onTouchMove={onTouchMove}
           onTouchStart={onTouchStart}
+          organizationId={organizationId}
           selectedProduct={selectedProduct}
           selectedProductImageIndex={selectedProductImageIndex}
           selectedProductImageSlides={selectedProductImageSlides}

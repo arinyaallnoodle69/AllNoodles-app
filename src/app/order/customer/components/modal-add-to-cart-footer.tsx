@@ -2,6 +2,7 @@
 
 import { memo, useCallback, useState, type MutableRefObject } from "react";
 import { Check, Loader2, Lock, MessageCircle, Minus, Plus, ShoppingCart } from "lucide-react";
+import { sendPriceInquiry } from "@/app/order/actions";
 import { useLiff } from "@/components/liff-provider";
 
 const LINE_OA_ID = process.env.NEXT_PUBLIC_LINE_OA_ID?.trim() ?? "";
@@ -73,6 +74,7 @@ export const ModalAddToCartFooter = memo(function ModalAddToCartFooter({
   modalStepperRef,
   onAddToCart,
   onCloseModal,
+  organizationId,
   productId,
   productName,
   minOrderQty,
@@ -87,6 +89,7 @@ export const ModalAddToCartFooter = memo(function ModalAddToCartFooter({
   modalStepperRef: MutableRefObject<HTMLDivElement | null>;
   onAddToCart: (productId: string, quantity: number) => void;
   onCloseModal: () => void;
+  organizationId: string;
   productId: string;
   productName: string;
   minOrderQty: number;
@@ -96,7 +99,7 @@ export const ModalAddToCartFooter = memo(function ModalAddToCartFooter({
   closedLabel: string;
   openLabel: string;
 }) {
-  const { sendMessages, isInClient } = useLiff();
+  const { profile } = useLiff();
   const [pendingQty, setPendingQty] = useState(0);
   const [isInquiring, setIsInquiring] = useState(false);
   const [inquirySuccess, setInquirySuccess] = useState(false);
@@ -119,16 +122,17 @@ export const ModalAddToCartFooter = memo(function ModalAddToCartFooter({
     }
 
     try {
-      if (isInClient) {
-        try {
-          await sendMessages([{ type: "text", text: msgText }]);
-          setInquirySuccess(true);
-          setTimeout(() => setInquirySuccess(false), 3000);
-          return;
-        } catch (err) {
-          console.warn("sendMessages failed inside LINE app, opening OA chat fallback...", err);
-          // Fall through to opening the OA chat with prefilled text.
-        }
+      const result = await sendPriceInquiry({
+        lineDisplayName: profile?.displayName ?? null,
+        lineUserId: profile?.userId ?? null,
+        organizationId,
+        productName,
+      });
+
+      if (result.success) {
+        setInquirySuccess(true);
+        setTimeout(() => setInquirySuccess(false), 3000);
+        return;
       }
 
       if (!oaMessageUrl) {
@@ -136,6 +140,7 @@ export const ModalAddToCartFooter = memo(function ModalAddToCartFooter({
         return;
       }
 
+      console.warn("[price-inquiry] Server push failed, opening OA chat fallback:", result.error);
       window.location.href = oaMessageUrl;
       
       setInquirySuccess(true);

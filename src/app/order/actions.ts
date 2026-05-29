@@ -8,7 +8,7 @@ import { isCustomerOrderEditableAtTime, isOrderOpenAtMinutes } from "@/lib/order
 import { getOrderWindowSettings } from "@/lib/order-window-server";
 import { revalidateDashboardPages } from "@/lib/dashboard/revalidate-dashboard-pages";
 import { getEffectiveSaleUnitCost, normalizeSaleUnitCostMode } from "@/lib/products/sale-unit-cost";
-import { notifyNewCustomerInquiry, notifyNewOrder } from "@/lib/line/notify";
+import { notifyNewCustomerInquiry, notifyNewOrder, notifyPriceInquiry } from "@/lib/line/notify";
 import { uploadAndNotifyCustomerReceiptImage } from "@/lib/line/customer-receipt-image";
 import { syncDeliveryNoteForOrder } from "@/lib/orders/sync-delivery-note";
 import { notifyUpdatedCustomerReceiptForOrder } from "@/lib/orders/notify-customer-receipt";
@@ -643,6 +643,65 @@ export async function submitNewCustomerInquiry(
     customerPhone: phone.trim(),
   });
   return { success: true, data: null };
+}
+
+export async function sendPriceInquiry(input: {
+  lineDisplayName?: string | null;
+  lineUserId?: string | null;
+  organizationId: string;
+  productName: string;
+}): Promise<ActionResult<{ sent: true }>> {
+  const organizationId = input.organizationId.trim();
+  const productName = input.productName.trim();
+
+  if (!organizationId || !productName) {
+    return { success: false, error: "ข้อมูลสอบถามราคาไม่ครบถ้วน" };
+  }
+
+  const session = await getOrderCustomerSession();
+  if (session?.organizationId && session.organizationId !== organizationId) {
+    return { success: false, error: "ไม่สามารถส่งคำถามข้ามองค์กรได้" };
+  }
+
+  const supabase = getSupabaseAdmin();
+  const sessionCustomerId = session?.customerId?.trim() ?? "";
+  let customerName =
+    session?.displayName?.trim() ||
+    input.lineDisplayName?.trim() ||
+    "ลูกค้า LINE";
+
+  if (sessionCustomerId) {
+    const { data: customer, error } = await supabase
+      .from("customers")
+      .select("name")
+      .eq("id", sessionCustomerId)
+      .eq("organization_id", organizationId)
+      .maybeSingle();
+
+    if (error) {
+      console.error("[sendPriceInquiry:customer]", error);
+    }
+
+    if (customer?.name?.trim()) {
+      customerName = customer.name.trim();
+    }
+  }
+
+  const sent = await notifyPriceInquiry({
+    customerName,
+    lineDisplayName: getOptionalTrimmedText(input.lineDisplayName) ?? getOptionalTrimmedText(session?.displayName),
+    lineUserId: getOptionalTrimmedText(input.lineUserId) ?? getOptionalTrimmedText(session?.lineUserId),
+    productName,
+  });
+
+  if (!sent) {
+    return {
+      success: false,
+      error: "ยังไม่สามารถส่งข้อความอัตโนมัติได้ กรุณาตรวจสอบ LINE_CHANNEL_ACCESS_TOKEN และ LINE_GROUP_ID",
+    };
+  }
+
+  return { success: true, data: { sent: true } };
 }
 
 /** Unlink the current LINE user ID from a customer before logging out/switching store. */

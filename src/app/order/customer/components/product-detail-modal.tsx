@@ -59,6 +59,7 @@ type ProductDetailModalProps = {
   onTouchEnd: TouchEventHandler<HTMLDivElement>;
   onTouchMove: TouchEventHandler<HTMLDivElement>;
   onTouchStart: TouchEventHandler<HTMLDivElement>;
+  organizationId: string;
   selectedProduct: ProductWithImage;
   selectedProductImageIndex: number;
   selectedProductImageSlides: ProductImageSlide[];
@@ -98,6 +99,7 @@ export function ProductDetailModal({
   onTouchEnd,
   onTouchMove,
   onTouchStart,
+  organizationId,
   selectedProduct,
   selectedProductImageIndex,
   selectedProductImageSlides,
@@ -438,6 +440,7 @@ export function ProductDetailModal({
         modalCartBtnRef={modalCartBtnRef}
         onAddToCart={onAddToCart}
         onCloseModal={onCloseModal}
+        organizationId={organizationId}
         productId={selectedProduct.id}
         productName={selectedProduct.name}
         minOrderQty={selectedProduct.min_order_qty ?? 1}

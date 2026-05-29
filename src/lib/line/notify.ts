@@ -50,6 +50,13 @@ interface NewOrderPayload {
   items: LineOrderItem[];
 }
 
+interface PriceInquiryPayload {
+  customerName: string;
+  lineDisplayName?: string | null;
+  lineUserId?: string | null;
+  productName: string;
+}
+
 function buildFlexMessage(payload: NewOrderPayload): object {
   const { customerName, orderNumber, totalAmount, items } = payload;
 
@@ -254,6 +261,159 @@ export async function notifyNewOrder(payload: NewOrderPayload): Promise<boolean>
   }
 
   return linePush(groupId, token, buildFlexMessage(payload));
+}
+
+function buildPriceInquiryFlex(payload: PriceInquiryPayload): object {
+  const now = new Date();
+  const dateStr = new Intl.DateTimeFormat("th-TH", {
+    day: "numeric",
+    hour: "2-digit",
+    hour12: false,
+    minute: "2-digit",
+    month: "short",
+    timeZone: "Asia/Bangkok",
+    year: "numeric",
+  }).format(now);
+
+  const lineDisplayName = payload.lineDisplayName?.trim();
+  const lineUserId = payload.lineUserId?.trim();
+
+  return {
+    type: "flex",
+    altText: `สอบถามราคาสินค้า: ${payload.productName}`,
+    contents: {
+      type: "bubble",
+      size: "kilo",
+      header: {
+        type: "box",
+        layout: "vertical",
+        backgroundColor: "#003366",
+        paddingAll: "16px",
+        contents: [
+          {
+            type: "text",
+            text: "สอบถามราคาสินค้า",
+            color: "#ffffff",
+            weight: "bold",
+            size: "md",
+            wrap: true,
+          },
+          {
+            type: "text",
+            text: dateStr,
+            color: "#bfdbfe",
+            size: "xs",
+            margin: "sm",
+          },
+        ],
+      },
+      body: {
+        type: "box",
+        layout: "vertical",
+        spacing: "md",
+        paddingAll: "16px",
+        contents: [
+          {
+            type: "box",
+            layout: "vertical",
+            spacing: "xs",
+            contents: [
+              { type: "text", text: "สินค้า", size: "xs", color: "#64748b" },
+              {
+                type: "text",
+                text: payload.productName,
+                size: "sm",
+                color: "#0f172a",
+                weight: "bold",
+                wrap: true,
+              },
+            ],
+          },
+          {
+            type: "separator",
+            margin: "sm",
+          },
+          {
+            type: "box",
+            layout: "vertical",
+            spacing: "xs",
+            contents: [
+              { type: "text", text: "ลูกค้า", size: "xs", color: "#64748b" },
+              {
+                type: "text",
+                text: payload.customerName,
+                size: "sm",
+                color: "#0f172a",
+                weight: "bold",
+                wrap: true,
+              },
+            ],
+          },
+          ...(lineDisplayName
+            ? [
+                {
+                  type: "box",
+                  layout: "horizontal",
+                  spacing: "sm",
+                  contents: [
+                    { type: "text", text: "ชื่อ LINE", size: "xs", color: "#94a3b8", flex: 2 },
+                    {
+                      type: "text",
+                      text: lineDisplayName,
+                      size: "xs",
+                      color: "#334155",
+                      flex: 5,
+                      wrap: true,
+                    },
+                  ],
+                },
+              ]
+            : []),
+          ...(lineUserId
+            ? [
+                {
+                  type: "box",
+                  layout: "horizontal",
+                  spacing: "sm",
+                  contents: [
+                    { type: "text", text: "LINE user", size: "xs", color: "#94a3b8", flex: 2 },
+                    {
+                      type: "text",
+                      text: lineUserId,
+                      size: "xs",
+                      color: "#64748b",
+                      flex: 5,
+                      wrap: true,
+                    },
+                  ],
+                },
+              ]
+            : []),
+          {
+            type: "text",
+            text: "กรุณาตรวจสอบและแจ้งราคากลับลูกค้า",
+            size: "sm",
+            color: "#003366",
+            weight: "bold",
+            wrap: true,
+            margin: "sm",
+          },
+        ],
+      },
+    },
+  };
+}
+
+export async function notifyPriceInquiry(payload: PriceInquiryPayload): Promise<boolean> {
+  const token = process.env.LINE_CHANNEL_ACCESS_TOKEN;
+  const groupId = process.env.LINE_GROUP_ID;
+
+  if (!token || !isValidLinePushTarget(groupId)) {
+    console.warn("[line/price-inquiry] LINE_CHANNEL_ACCESS_TOKEN or LINE_GROUP_ID not set - skipping notification");
+    return false;
+  }
+
+  return linePush(groupId, token, buildPriceInquiryFlex(payload));
 }
 
 function buildCustomerReceiptFlex(payload: NewOrderPayload): object {
