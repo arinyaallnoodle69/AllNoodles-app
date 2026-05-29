@@ -87,20 +87,44 @@ export const ModalAddToCartFooter = memo(function ModalAddToCartFooter({
     if (isInquiring) return;
     setIsInquiring(true);
     setInquirySuccess(false);
+    
+    const msgText = `สอบถามราคา: ${productName} ราคาเท่าไหร่?`;
+    const encodedText = encodeURIComponent(msgText);
+    const shareUrl = `https://line.me/R/share?text=${encodedText}`;
+
+    // Try to copy to clipboard as a resilient fallback
     try {
-      const msgText = `สอบถามราคา: ${productName} ราคาเท่าไหร่?`;
-      if (isInClient) {
-        await sendMessages([{ type: "text", text: msgText }]);
-        setInquirySuccess(true);
-        setTimeout(() => setInquirySuccess(false), 3000);
-      } else {
-        const encodedText = encodeURIComponent(msgText);
-        window.open(`https://line.me/R/share?text=${encodedText}`, "_blank");
-        setInquirySuccess(true);
-        setTimeout(() => setInquirySuccess(false), 3000);
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(msgText);
       }
+    } catch (clipErr) {
+      console.warn("Clipboard copy fallback failed:", clipErr);
+    }
+
+    try {
+      if (isInClient) {
+        try {
+          await sendMessages([{ type: "text", text: msgText }]);
+          setInquirySuccess(true);
+          setTimeout(() => setInquirySuccess(false), 3000);
+          return;
+        } catch (err) {
+          console.warn("sendMessages failed inside LINE app, trying fallback...", err);
+          // Fall through to opening share link
+        }
+      }
+
+      if (isInClient) {
+        window.location.href = shareUrl;
+      } else {
+        window.open(shareUrl, "_blank");
+      }
+      
+      setInquirySuccess(true);
+      setTimeout(() => setInquirySuccess(false), 3000);
     } catch (err) {
       console.error("Failed to send LINE OA price inquiry:", err);
+      alert("คัดลอกข้อความสอบถามราคาลงในคลิปบอร์ดแล้ว คุณสามารถกดวางเพื่อส่งในแชท LINE OA ได้เลย");
     } finally {
       setIsInquiring(false);
     }

@@ -58,6 +58,16 @@ export type DashboardDailyPerformanceRow = {
   orderCount: number;
 };
 
+export type LineOrderOverviewItem = {
+  id: string;
+  orderNumber?: string | null;
+  lineDisplayName: string | null;
+  linePictureUrl: string | null;
+  customerName: string | null;
+  createdAt: string;
+  status: "pending_link" | "converted";
+};
+
 export type DashboardOverview = {
   kpi: DashboardKpi;
   recentOrders: RecentOrder[];
@@ -69,6 +79,7 @@ export type DashboardOverview = {
   topProducts: TopProduct[];
   stockProducts: StockProductOption[];
   stockSuppliers: StockSupplierOption[];
+  lineOrders: LineOrderOverviewItem[];
 };
 
 type DeliveryNoteRow = {
@@ -93,6 +104,16 @@ type ProductSaleUnitRow = {
 type ProductRow = {
   id: string;
   cost_price: number | string | null;
+};
+
+type LinePendingOrderDashboardRow = {
+  id: string;
+  converted_customer_id: string | null;
+  converted_order_id: string | null;
+  created_at: string;
+  line_display_name: string | null;
+  line_picture_url: string | null;
+  status: "pending_link" | "converted" | "cancelled";
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -210,7 +231,6 @@ export async function getDashboardOverview(organizationId: string): Promise<Dash
 
   const [
     todayOrdersRes,
-    submittedOrdersRes,
     pendingDeliveryRes,
     monthDeliveredRes,
     activeCustomerRes,
@@ -220,6 +240,7 @@ export async function getDashboardOverview(organizationId: string): Promise<Dash
     stockDashboardRes,
     recentDailyPerformance,
     todayProfitSnapshot,
+    pendingLineOrdersRes,
   ] = await Promise.all([
     // 1. Today's submitted/confirmed orders
     supabase.from("orders")
@@ -227,12 +248,6 @@ export async function getDashboardOverview(organizationId: string): Promise<Dash
       .eq("organization_id", organizationId)
       .eq("order_date", today)
       .in("status", ["submitted", "confirmed"]),
-
-    // 2. All unconfirmed (submitted) orders — need admin action
-    supabase.from("orders")
-      .select("id", { count: "exact", head: true })
-      .eq("organization_id", organizationId)
-      .eq("status", "submitted"),
 
     // 3. Pending delivery notes
     supabase.from("delivery_notes")
@@ -293,6 +308,13 @@ export async function getDashboardOverview(organizationId: string): Promise<Dash
 
     // 10. Today's profit snapshot
     loadTodayNetProfit(organizationId, today),
+
+    // 11. Today's LINE orders, both pending and already linked to a store
+    supabase.from("line_pending_orders")
+      .select("id, converted_customer_id, converted_order_id, line_display_name, line_picture_url, created_at, status")
+      .eq("organization_id", organizationId)
+      .eq("order_date", today)
+      .in("status", ["pending_link", "converted"]),
   ]);
   const { netProfit: todayNetProfit, totalCost: todayCost } = todayProfitSnapshot;
 
@@ -323,13 +345,14 @@ export async function getDashboardOverview(organizationId: string): Promise<Dash
       products: { name: string; product_images?: Array<{ public_url: string; sort_order: number }> | null } | null;
     }>;
   }[];
+  const lineOrderRows = (pendingLineOrdersRes.data ?? []) as LinePendingOrderDashboardRow[];
 
   const kpi: DashboardKpi = {
     todayOrderCount: todayOrders.length,
     todayOrderAmount: todayOrders.reduce((s, r) => s + toNum(r.total_amount), 0),
     todayNetProfit,
     todayCost,
-    submittedOrderCount: toNum(submittedOrdersRes.count),
+    submittedOrderCount: lineOrderRows.length,
     pendingDeliveryCount: pendingDeliveries.length,
     pendingDeliveryAmount: pendingDeliveries.reduce((s, r) => s + toNum(r.total_amount), 0),
     monthDeliveredAmount: monthDelivered.reduce((s, r) => s + toNum(r.total_amount), 0),
@@ -421,6 +444,63 @@ export async function getDashboardOverview(organizationId: string): Promise<Dash
     .sort((a, b) => b.totalAmount - a.totalAmount)
     .slice(0, 5);
 
+  const convertedCustomerIds = [
+    ...new Set(
+      lineOrderRows
+        .map((row) => row.converted_customer_id)
+        .filter((value): value is string => Boolean(value)),
+    ),
+  ];
+  const convertedOrderIds = [
+    ...new Set(
+      lineOrderRows
+        .map((row) => row.converted_order_id)
+        .filter((value): value is string => Boolean(value)),
+    ),
+  ];
+
+  const [{ data: convertedCustomers }, { data: convertedOrders }] = await Promise.all([
+    convertedCustomerIds.length > 0
+      ? supabase
+          .from("customers")
+          .select("id, name")
+          .eq("organization_id", organizationId)
+          .in("id", convertedCustomerIds)
+      : Promise.resolve({ data: [] }),
+    convertedOrderIds.length > 0
+      ? supabase
+          .from("orders")
+          .select("id, order_number")
+          .eq("organization_id", organizationId)
+          .in("id", convertedOrderIds)
+      : Promise.resolve({ data: [] }),
+  ]);
+
+  const customerNameById = new Map(
+    ((convertedCustomers ?? []) as Array<{ id: string; name: string | null }>).map((customer) => [
+      customer.id,
+      customer.name,
+    ]),
+  );
+  const orderNumberById = new Map(
+    ((convertedOrders ?? []) as Array<{ id: string; order_number: string | null }>).map((order) => [
+      order.id,
+      order.order_number,
+    ]),
+  );
+
+  const lineOrders = lineOrderRows.map((row) => ({
+    id: row.id,
+    orderNumber: row.converted_order_id ? (orderNumberById.get(row.converted_order_id) ?? null) : null,
+    lineDisplayName: row.line_display_name,
+    linePictureUrl: row.line_picture_url,
+    customerName: row.converted_customer_id ? (customerNameById.get(row.converted_customer_id) ?? null) : null,
+    createdAt: row.created_at,
+    status: row.status === "converted" ? ("converted" as const) : ("pending_link" as const),
+  })).sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  );
+
   return {
     kpi,
     recentOrders,
@@ -432,5 +512,6 @@ export async function getDashboardOverview(organizationId: string): Promise<Dash
     topProducts,
     stockProducts: stockDashboardRes.products,
     stockSuppliers: stockDashboardRes.suppliers,
+    lineOrders,
   };
 }

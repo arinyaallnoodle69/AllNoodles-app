@@ -82,6 +82,7 @@ async function DashboardDataContent({
       topProducts: [],
       stockProducts: [],
       stockSuppliers: [],
+      lineOrders: [],
     };
     storeStatusSummary = {
       allStores: [],

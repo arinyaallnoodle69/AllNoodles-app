@@ -18,6 +18,7 @@ import {
   Store,
   TrendingUp,
   Truck,
+  UserRound,
   Wallet,
   X,
 } from "lucide-react";
@@ -175,6 +176,23 @@ function formatRange(startIso: string | null, endIso: string | null) {
   return `${start} - ${end}`;
 }
 
+function formatThaiDateTime(value: string) {
+  const date = new Date(value);
+  const datePart = new Intl.DateTimeFormat("th-TH", {
+    day: "2-digit",
+    month: "short",
+    timeZone: "Asia/Bangkok",
+  }).format(date);
+  const timePart = new Intl.DateTimeFormat("th-TH", {
+    hour: "2-digit",
+    hour12: false,
+    minute: "2-digit",
+    timeZone: "Asia/Bangkok",
+  }).format(date);
+
+  return `${datePart} ${timePart}`;
+}
+
 function formatYAxis(value: number) {
   const rounded = Math.round(value / 500) * 500;
   return rounded.toLocaleString("th-TH", { maximumFractionDigits: 0 });
@@ -226,6 +244,7 @@ export function DashboardClient({
   const [isNavigating, startTransition] = useTransition();
   const { open: openCreateOrder } = useCreateOrder();
   const [isStockModalOpen, setIsStockModalOpen] = useState(false);
+  const [isLineOrdersDrawerOpen, setIsLineOrdersDrawerOpen] = useState(false);
   const [viewingStores, setViewingStores] = useState<StoreListModalState | null>(null);
 
   const [now, setNow] = useState(new Date());
@@ -249,6 +268,7 @@ export function DashboardClient({
     dailyPerformanceRows,
     dailyPerformanceRangeStartDate,
     dailyPerformanceRangeEndDate,
+    lineOrders,
     topCustomers,
     topProducts,
   } = overview;
@@ -488,14 +508,20 @@ export function DashboardClient({
             ghost={<ClipboardList className="h-[4.2rem] w-[4.2rem] sm:h-[4.6rem] sm:w-[4.6rem]" strokeWidth={1.15} />}
           />
 
-          <DashboardStatCard
-            title="ออเดอร์จากLINE"
-            value={fmtNumber(kpi.submittedOrderCount)}
-            unit="รายการ"
-            accent="line"
-            icon={<LineAppIcon className="h-[1.2rem] w-[1.2rem]" />}
-            ghost={<MessageCircle className="h-[4.2rem] w-[4.2rem] sm:h-[4.6rem] sm:w-[4.6rem]" strokeWidth={1.15} />}
-          />
+          <button
+            type="button"
+            onClick={() => setIsLineOrdersDrawerOpen(true)}
+            className="block text-left transition-transform active:scale-[0.98]"
+          >
+            <DashboardStatCard
+              title="ออเดอร์จากLINE"
+              value={fmtNumber(kpi.submittedOrderCount)}
+              unit="รายการ"
+              accent="line"
+              icon={<LineAppIcon className="h-[1.2rem] w-[1.2rem]" />}
+              ghost={<MessageCircle className="h-[4.2rem] w-[4.2rem] sm:h-[4.6rem] sm:w-[4.6rem]" strokeWidth={1.15} />}
+            />
+          </button>
 
           <Link href="/stock" className="block transition-transform active:scale-[0.98]">
             <DashboardStatCard
@@ -822,6 +848,125 @@ export function DashboardClient({
               )}
             </div>
           </div>
+        </div>
+      ) : null}
+
+      {isLineOrdersDrawerOpen ? (
+        <div className="fixed inset-0 z-[310] flex items-end justify-end bg-slate-950/55 backdrop-blur-[4px]">
+          <button
+            type="button"
+            aria-label="ปิดรายการออเดอร์จาก LINE"
+            className="absolute inset-0 cursor-default"
+            onClick={() => setIsLineOrdersDrawerOpen(false)}
+          />
+          <aside className="relative flex h-[86dvh] w-full max-w-lg flex-col overflow-hidden rounded-t-[2rem] bg-white shadow-[0_-24px_70px_rgba(15,23,42,0.24)] sm:h-full sm:rounded-l-[2rem] sm:rounded-tr-none">
+            <div className="flex shrink-0 items-start justify-between gap-4 border-b border-slate-100 px-5 py-5 pt-[max(1.25rem,env(safe-area-inset-top))] sm:px-6">
+              <div className="flex min-w-0 items-center gap-3">
+                <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#06c755]/10">
+                  <LineAppIcon className="h-7 w-7" />
+                </span>
+                <div className="min-w-0">
+                  <h3 className="text-xl font-black leading-tight text-slate-950">
+                    ออเดอร์จาก LINE
+                  </h3>
+                  <p className="mt-1 text-sm font-semibold text-slate-500">
+                    {fmtNumber(lineOrders.length)} รายการวันนี้
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsLineOrdersDrawerOpen(false)}
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-slate-100 text-slate-500 transition hover:bg-slate-200 active:scale-95"
+                aria-label="ปิด"
+              >
+                <X className="h-5 w-5" strokeWidth={2.6} />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-5">
+              {lineOrders.length === 0 ? (
+                <div className="flex min-h-80 flex-col items-center justify-center text-center">
+                  <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-3xl bg-slate-50 text-slate-300">
+                    <MessageCircle className="h-9 w-9" strokeWidth={1.8} />
+                  </div>
+                  <p className="text-lg font-black text-slate-400">ยังไม่มีออเดอร์จาก LINE วันนี้</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {lineOrders.map((order) => {
+                    const displayName = order.customerName || order.lineDisplayName || "ลูกค้า LINE";
+                    const isLinked = order.status === "converted" && Boolean(order.customerName);
+
+                    return (
+                      <article
+                        key={order.id}
+                        className="rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_10px_24px_rgba(15,23,42,0.05)]"
+                      >
+                        <div className="flex items-start gap-3">
+                          <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-2xl bg-slate-100 ring-1 ring-slate-200">
+                            {order.linePictureUrl ? (
+                              <Image
+                                src={order.linePictureUrl}
+                                alt={order.lineDisplayName || displayName}
+                                fill
+                                sizes="48px"
+                                className="object-cover"
+                              />
+                            ) : (
+                              <div className="flex h-full w-full items-center justify-center text-[#06c755]">
+                                <UserRound className="h-6 w-6" strokeWidth={2.1} />
+                              </div>
+                            )}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-start gap-2">
+                              <h4 className="min-w-0 flex-1 truncate text-base font-black leading-tight text-slate-950">
+                                {displayName}
+                              </h4>
+                              <span
+                                className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-black ${
+                                  isLinked
+                                    ? "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100"
+                                    : "bg-amber-50 text-amber-700 ring-1 ring-amber-100"
+                                }`}
+                              >
+                                {isLinked ? "ผูกแล้ว" : "รอผูก"}
+                              </span>
+                            </div>
+                            {order.customerName && order.lineDisplayName ? (
+                              <p className="mt-1 truncate text-xs font-semibold text-slate-400">
+                                LINE: {order.lineDisplayName}
+                              </p>
+                            ) : null}
+                            <div className="mt-2 flex flex-wrap items-center gap-2 text-xs font-bold text-slate-500">
+                              <span>{formatThaiDateTime(order.createdAt)}</span>
+                              {order.orderNumber ? (
+                                <>
+                                  <span className="text-slate-300">•</span>
+                                  <span className="text-[#003366]">{order.orderNumber}</span>
+                                </>
+                              ) : null}
+                            </div>
+                          </div>
+                        </div>
+                      </article>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            <div className="shrink-0 border-t border-slate-100 px-5 py-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+              <Link
+                href="/orders/incoming"
+                className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[#003366] px-4 py-3 text-sm font-bold text-white shadow-[0_14px_28px_rgba(0,51,102,0.22)] transition hover:bg-[#00264d] active:scale-[0.98]"
+              >
+                ไปหน้ารายการออเดอร์
+                <ChevronRight className="h-4 w-4" strokeWidth={2.5} />
+              </Link>
+            </div>
+          </aside>
         </div>
       ) : null}
 

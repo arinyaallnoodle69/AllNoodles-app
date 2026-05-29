@@ -201,7 +201,6 @@ export async function syncDeliveryNoteForOrder(
         (productsToRestore ?? []).map((product) => [product.id, Number(product.stock_quantity)]),
       );
       const inventoryMovements: Database["public"]["Tables"]["inventory_movements"]["Insert"][] = [];
-      const productsToUpsert: { id: string; stock_quantity: number }[] = [];
 
       for (const productId of productIdsToRestore) {
         const qtyBase = restoreByProduct.get(productId) ?? 0;
@@ -223,20 +222,14 @@ export async function syncDeliveryNoteForOrder(
           stock_before: stockBefore,
         });
 
-        productsToUpsert.push({
-          id: productId,
-          stock_quantity: stockAfter,
-        });
-      }
-
-      if (productsToUpsert.length > 0) {
-        const { error: upsertError } = await admin
+        const { error: updateError } = await admin
           .from("products")
-          .upsert(productsToUpsert as unknown as Database["public"]["Tables"]["products"]["Insert"][], { onConflict: "id" });
-        
-        if (upsertError) {
-          console.error("[syncDeliveryNoteForOrder:upsertProducts]", upsertError);
-          return { error: "ปรับปรุงสต็อกสินค้าในคลังไม่สำเร็จ: " + upsertError.message };
+          .update({ stock_quantity: stockAfter })
+          .eq("id", productId);
+
+        if (updateError) {
+          console.error(`[syncDeliveryNoteForOrder:updateProduct:${productId}]`, updateError);
+          return { error: "ปรับปรุงสต็อกสินค้าในคลังไม่สำเร็จ: " + updateError.message };
         }
       }
 

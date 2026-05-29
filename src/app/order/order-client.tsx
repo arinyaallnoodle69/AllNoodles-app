@@ -150,7 +150,7 @@ function normalizeLinkedCustomer(value: unknown): Customer | null {
 // ─── Order window: 00:00 – 16:59 Bangkok time ────────────────────────────────
 
 function getBangkokTimeParts() {
-  const parts = new Intl.DateTimeFormat("sv-SE", {
+  const parts = new Intl.DateTimeFormat("en-US", {
     timeZone: "Asia/Bangkok",
     year: "numeric",
     month: "2-digit",
@@ -158,39 +158,36 @@ function getBangkokTimeParts() {
     hour: "2-digit",
     minute: "2-digit",
     hour12: false,
-  })
-    .formatToParts(new Date())
-    .reduce<Record<string, string>>((acc, part) => {
-      if (part.type !== "literal") acc[part.type] = part.value;
-      return acc;
-    }, {});
+  }).formatToParts(new Date());
 
-  const hour = Number(parts.hour ?? "0");
-  const minute = Number(parts.minute ?? "0");
+  const year = parts.find(p => p.type === "year")?.value ?? "";
+  const month = parts.find(p => p.type === "month")?.value ?? "";
+  const day = parts.find(p => p.type === "day")?.value ?? "";
+  const hour = parts.find(p => p.type === "hour")?.value ?? "0";
+  const minute = parts.find(p => p.type === "minute")?.value ?? "0";
 
   return {
-    date: `${parts.year}-${parts.month}-${parts.day}`,
-    hour,
-    minute,
-    minutes: hour * 60 + minute,
+    date: `${year}-${month}-${day}`,
+    hour: Number(hour),
+    minute: Number(minute),
+    minutes: Number(hour) * 60 + Number(minute),
   };
 }
 
 function getBangkokDateKey(offsetDays = 0) {
   const date = new Date(Date.now() + offsetDays * 24 * 60 * 60 * 1000);
-  const parts = new Intl.DateTimeFormat("sv-SE", {
-    day: "2-digit",
-    month: "2-digit",
+  const parts = new Intl.DateTimeFormat("en-US", {
     timeZone: "Asia/Bangkok",
     year: "numeric",
-  })
-    .formatToParts(date)
-    .reduce<Record<string, string>>((acc, part) => {
-      if (part.type !== "literal") acc[part.type] = part.value;
-      return acc;
-    }, {});
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(date);
 
-  return `${parts.year}-${parts.month}-${parts.day}`;
+  const year = parts.find(p => p.type === "year")?.value ?? "";
+  const month = parts.find(p => p.type === "month")?.value ?? "";
+  const day = parts.find(p => p.type === "day")?.value ?? "";
+
+  return `${year}-${month}-${day}`;
 }
 
 function calcIsOrderOpen({
@@ -228,10 +225,12 @@ function getBangkokOrderEditMeta({
   allowOrderAfterCutoff,
   closeTime,
   orderDate,
+  status,
 }: {
   allowOrderAfterCutoff: boolean;
   closeTime: string;
   orderDate: string;
+  status: string | null | undefined;
 }) {
   const bangkokTime = getBangkokTimeParts();
   const isEditable = isCustomerOrderEditableAtTime({
@@ -240,7 +239,7 @@ function getBangkokOrderEditMeta({
     currentDate: bangkokTime.date,
     currentMinutes: bangkokTime.minutes,
     orderDate,
-    status: "submitted",
+    status,
   });
 
   return {
@@ -248,6 +247,28 @@ function getBangkokOrderEditMeta({
     isEditable,
   };
 }
+
+const ERROR_TRANSLATIONS: Record<string, string> = {
+  "EDIT_TIMEOUT": "คำสั่งซื้อนี้หมดเวลาแก้ไขแล้ว",
+  "ORDER_NOT_FOUND": "ไม่พบคำสั่งซื้อที่ต้องการแก้ไข",
+  "INCOMPLETE_DATA": "ข้อมูลไม่ครบถ้วน หรือไม่มีสินค้าในคำสั่งซื้อ",
+  "DELETE_ITEMS_FAILED": "ไม่สามารถลบรายการสินค้าเดิมได้",
+  "INSERT_ITEMS_FAILED": "ไม่สามารถบันทึกรายการที่แก้ไขได้",
+  "UPDATE_ORDER_FAILED": "ไม่สามารถบันทึกคำสั่งซื้อที่แก้ไขได้",
+  "ORDER_CLOSED": "ขณะนี้ปิดรับออเดอร์แล้ว",
+  "ORDER_NUMBER_FAILED": "ไม่สามารถสร้างเลขออเดอร์ได้",
+  "CREATE_ORDER_FAILED": "ไม่สามารถสร้างคำสั่งซื้อได้",
+};
+
+function translateError(errorMsg: string | null | undefined): string {
+  if (!errorMsg) return "เกิดข้อผิดพลาดที่ไม่รู้จัก";
+  const trimmed = errorMsg.trim();
+  if (ERROR_TRANSLATIONS[trimmed]) {
+    return ERROR_TRANSLATIONS[trimmed];
+  }
+  return errorMsg;
+}
+
 
 // Component
 
@@ -778,6 +799,7 @@ export default function OrderClient({
       allowOrderAfterCutoff,
       closeTime: orderCloseTime,
       orderDate: order.order_date ?? "",
+      status: order.status,
     });
     if (!editMeta.isEditable) {
       alert("หมดเวลาแก้ไขแล้ว");
@@ -1807,7 +1829,7 @@ export default function OrderClient({
             setCart({});
             setCurrentView("pending_success");
           } else {
-            alert(result.error);
+            alert(translateError(result.error));
           }
         } finally {
           checkoutInFlightRef.current = false;
@@ -1849,7 +1871,7 @@ export default function OrderClient({
           setEditCart({});
           setCurrentView("success");
         } else {
-          alert(result.error);
+          alert(translateError(result.error));
         }
       } finally {
         checkoutInFlightRef.current = false;
@@ -1917,7 +1939,7 @@ export default function OrderClient({
       );
 
       if (!result.success) {
-        alert(result.error);
+        alert(translateError(result.error));
         return;
       }
 
@@ -2707,11 +2729,12 @@ export default function OrderClient({
           <OrderHistoryView
             customerId={linkedCustomer?.id ?? ""}
             formatOrderTimestamp={formatOrderTimestamp}
-            getOrderEditMeta={(orderDate) =>
+            getOrderEditMeta={(orderDate, status) =>
               getBangkokOrderEditMeta({
                 allowOrderAfterCutoff,
                 closeTime: orderCloseTime,
                 orderDate,
+                status,
               })
             }
             highlightedHistoryOrderId={highlightedHistoryOrderId}

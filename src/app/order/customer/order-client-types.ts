@@ -54,6 +54,7 @@ export type CustomerOrderRow = {
   id?: string;
   order_number?: string | null;
   order_date?: string | null;
+  status?: string | null;
   created_at?: string | null;
   total_amount?: number | string | null;
   order_items?: CustomerOrderItem[] | null;

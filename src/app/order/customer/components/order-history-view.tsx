@@ -13,7 +13,7 @@ type Tab = "history" | "summary";
 type OrderHistoryViewProps = {
   customerId: string;
   formatOrderTimestamp: (value: string) => string;
-  getOrderEditMeta: (orderDate: string) => { cutoffLabel: string; isEditable: boolean };
+  getOrderEditMeta: (orderDate: string, status: string | null | undefined) => { cutoffLabel: string; isEditable: boolean };
   highlightedHistoryOrderId: string | null;
   isOrderOpen: boolean;
   isPending: boolean;
@@ -91,7 +91,7 @@ export function OrderHistoryView({
           </div>
         ) : (
           orderHistory.map((order) => {
-            const editMeta = getOrderEditMeta(order.order_date ?? "");
+            const editMeta = getOrderEditMeta(order.order_date ?? "", order.status);
             const isHighlighted = highlightedHistoryOrderId === order.id;
 
             return (

@@ -119,7 +119,7 @@ function normalizeOrderForClient<T extends { order_items?: unknown }>(order: T) 
 
 function getBangkokNowParts() {
   const now = new Date();
-  const parts = new Intl.DateTimeFormat("sv-SE", {
+  const parts = new Intl.DateTimeFormat("en-US", {
     timeZone: "Asia/Bangkok",
     year: "numeric",
     month: "2-digit",
@@ -127,18 +127,19 @@ function getBangkokNowParts() {
     hour: "2-digit",
     minute: "2-digit",
     hour12: false,
-  })
-    .formatToParts(now)
-    .reduce<Record<string, string>>((acc, part) => {
-      if (part.type !== "literal") acc[part.type] = part.value;
-      return acc;
-    }, {});
+  }).formatToParts(now);
+
+  const year = parts.find(p => p.type === "year")?.value ?? "";
+  const month = parts.find(p => p.type === "month")?.value ?? "";
+  const day = parts.find(p => p.type === "day")?.value ?? "";
+  const hour = parts.find(p => p.type === "hour")?.value ?? "0";
+  const minute = parts.find(p => p.type === "minute")?.value ?? "0";
 
   return {
-    date: `${parts.year}-${parts.month}-${parts.day}`,
-    hour: Number(parts.hour ?? "0"),
-    minute: Number(parts.minute ?? "0"),
-    minutes: Number(parts.hour ?? "0") * 60 + Number(parts.minute ?? "0"),
+    date: `${year}-${month}-${day}`,
+    hour: Number(hour),
+    minute: Number(minute),
+    minutes: Number(hour) * 60 + Number(minute),
   };
 }
 
@@ -1189,7 +1190,7 @@ export async function updateCustomerOrder(
   items: OrderMutationItemInput[],
 ): Promise<ActionResult<unknown>> {
   if (!organizationId?.trim() || !customerId?.trim() || !orderId?.trim() || items.length === 0) {
-    return { success: false, error: "ข้อมูลไม่ครบถ้วน หรือไม่มีสินค้าในคำสั่งซื้อ" };
+    return { success: false, error: "INCOMPLETE_DATA" };
   }
 
   const supabase = getSupabaseAdmin();
@@ -1203,11 +1204,11 @@ export async function updateCustomerOrder(
 
   if (orderError || !order) {
     console.error("[updateCustomerOrder:loadOrder]", orderError);
-    return { success: false, error: "ไม่พบคำสั่งซื้อที่ต้องการแก้ไข" };
+    return { success: false, error: "ORDER_NOT_FOUND" };
   }
 
   if (!(await isCustomerOrderEditable(organizationId, order.order_date, order.status))) {
-    return { success: false, error: "คำสั่งซื้อนี้หมดเวลาแก้ไขแล้ว" };
+    return { success: false, error: "EDIT_TIMEOUT" };
   }
 
   const builtItems = await buildOrderItemData(supabase, organizationId, customerId, items);
@@ -1226,7 +1227,7 @@ export async function updateCustomerOrder(
 
   if (deleteItemsError) {
     console.error("[updateCustomerOrder:deleteItems]", deleteItemsError);
-    return { success: false, error: "ไม่สามารถอัปเดตรายการสินค้าเดิมได้" };
+    return { success: false, error: "DELETE_ITEMS_FAILED" };
   }
 
   const { error: insertItemsError } = await supabase
@@ -1240,7 +1241,7 @@ export async function updateCustomerOrder(
 
   if (insertItemsError) {
     console.error("[updateCustomerOrder:insertItems]", insertItemsError);
-    return { success: false, error: "ไม่สามารถบันทึกรายการที่แก้ไขได้" };
+    return { success: false, error: "INSERT_ITEMS_FAILED" };
   }
 
   const { data: updatedOrder, error: updateOrderError } = await supabase
@@ -1273,7 +1274,7 @@ export async function updateCustomerOrder(
 
   if (updateOrderError || !updatedOrder) {
     console.error("[updateCustomerOrder:updateOrder]", updateOrderError);
-    return { success: false, error: "ไม่สามารถบันทึกคำสั่งซื้อที่แก้ไขได้" };
+    return { success: false, error: "UPDATE_ORDER_FAILED" };
   }
 
   const actorUserId = await getFallbackAppUserId(supabase, organizationId);

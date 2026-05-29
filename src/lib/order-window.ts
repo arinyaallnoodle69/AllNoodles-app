@@ -95,6 +95,12 @@ export function isOrderOpenAtMinutes({
   return currentMinutes >= openMinutes && (allowOrderAfterCutoff || currentMinutes < closeMinutes);
 }
 
+function normalizeDate(d: string): string {
+  if (!d) return "";
+  const part = d.includes("T") ? d.split("T")[0] : d.includes(" ") ? d.split(" ")[0] : d;
+  return part.trim();
+}
+
 export function isCustomerOrderEditableAtTime({
   allowOrderAfterCutoff,
   closeTime,
@@ -111,6 +117,7 @@ export function isCustomerOrderEditableAtTime({
   status: string | null | undefined;
 }) {
   if (status !== "submitted") return false;
-  if (orderDate !== currentDate) return false;
+  if (normalizeDate(orderDate) !== normalizeDate(currentDate)) return false;
   return allowOrderAfterCutoff || currentMinutes < timeStringToMinutes(closeTime);
 }
+
