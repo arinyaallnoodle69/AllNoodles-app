@@ -8,7 +8,7 @@ import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { getTodayInBangkok } from "@/lib/orders/date";
 import { getEffectiveSaleUnitCost } from "@/lib/products/sale-unit-cost";
 import { getCustomersForOrder, getProductsForOrder, type OrderCustomerOption, type OrderProductOption } from "@/lib/orders/manage";
-import { getOrderDetailById, type OrderDetailData } from "@/lib/orders/detail";
+import { getIncomingOrders, getOrderDetailById, type IncomingOrderListItem, type OrderDetailData } from "@/lib/orders/detail";
 import { syncBillingSnapshotsForDeliveryNumbers } from "@/lib/billing/actions";
 import { revalidateDashboardPages } from "@/lib/dashboard/revalidate-dashboard-pages";
 import { mergeItemsIntoOrder, type MergeableOrderItemInput } from "@/lib/orders/merge-order-items";
@@ -67,6 +67,64 @@ export async function fetchIncomingOrderDetailAction(
 
   const detail = await getOrderDetailById(session.organizationId, id);
   return { detail };
+}
+
+export async function fetchIncomingOrderModalDataAction(
+  orderId: string,
+  orderDate: string,
+): Promise<{
+  allOrders: IncomingOrderListItem[];
+  detail: OrderDetailData | null;
+  error?: string;
+  products: OrderProductOption[];
+}> {
+  const session = await requireAppRole("admin");
+  const id = orderId.trim();
+
+  if (!id) {
+    return {
+      allOrders: [],
+      detail: null,
+      error: "ไม่พบรหัสออเดอร์",
+      products: [],
+    };
+  }
+
+  const safeOrderDate = /^\d{4}-\d{2}-\d{2}$/.test(orderDate) ? orderDate : getTodayInBangkok();
+
+  const admin = getSupabaseAdmin() as ActionsAdmin;
+  const { data, error } = await admin
+    .from("orders")
+    .select("id")
+    .eq("id", id)
+    .eq("organization_id", session.organizationId)
+    .maybeSingle();
+
+  if (error) {
+    return {
+      allOrders: [],
+      detail: null,
+      error: error.message ?? "โหลดรายละเอียดออเดอร์ไม่สำเร็จ",
+      products: [],
+    };
+  }
+
+  if (!data) {
+    return {
+      allOrders: [],
+      detail: null,
+      error: "ไม่พบออเดอร์นี้ในองค์กรของคุณ",
+      products: [],
+    };
+  }
+
+  const [detail, allOrders, products] = await Promise.all([
+    getOrderDetailById(session.organizationId, id),
+    getIncomingOrders(session.organizationId, { orderDate: safeOrderDate }),
+    getProductsForOrder(session.organizationId),
+  ]);
+
+  return { allOrders, detail, products };
 }
 
 function getPreviousDate(isoDate: string) {

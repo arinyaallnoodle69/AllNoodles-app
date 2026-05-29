@@ -862,11 +862,12 @@ type Props = {
   date: string;
   detail: OrderDetailData | null;
   expandedId: string;
+  onAfterClose?: () => void;
   products: OrderProductOption[];
   searchTerm: string;
 };
 
-export function IncomingOrderModal({ allOrders, detail, expandedId, products }: Props) {
+export function IncomingOrderModal({ allOrders, detail, expandedId, onAfterClose, products }: Props) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -945,6 +946,7 @@ export function IncomingOrderModal({ allOrders, detail, expandedId, products }: 
       const p = new URLSearchParams(searchParams.toString());
       p.delete("expanded"); p.delete("edit"); p.delete("delete");
       router.replace(`${pathname}?${p.toString()}`, { scroll: false });
+      onAfterClose?.();
     }, 350);
   }
 

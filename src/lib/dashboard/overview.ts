@@ -62,6 +62,7 @@ export type DashboardDailyPerformanceRow = {
 export type LineOrderOverviewItem = {
   id: string;
   orderNumber?: string | null;
+  orderId: string | null;
   lineDisplayName: string | null;
   linePictureUrl: string | null;
   customerName: string | null;
@@ -124,6 +125,13 @@ type LineSourceOrderDashboardRow = {
   customer_id: string;
   customers: { line_user_id: string | null; name: string | null } | null;
   metadata: Json | null;
+};
+
+type LineCustomerProfileDashboardRow = {
+  customer_id: string | null;
+  line_display_name: string | null;
+  line_picture_url: string | null;
+  line_user_id: string;
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -489,8 +497,23 @@ export async function getDashboardOverview(organizationId: string): Promise<Dash
         .filter((value): value is string => Boolean(value)),
     ),
   ];
+  const linkedCustomerIds = [
+    ...new Set(lineSourceOrderRows.map((row) => row.customer_id).filter(Boolean)),
+  ];
+  const linkedLineUserIds = [
+    ...new Set(
+      lineSourceOrderRows
+        .map((row) => row.customers?.line_user_id?.trim() ?? "")
+        .filter(Boolean),
+    ),
+  ];
 
-  const [{ data: convertedCustomers }, { data: convertedOrders }] = await Promise.all([
+  const [
+    { data: convertedCustomers },
+    { data: convertedOrders },
+    { data: lineProfilesByCustomer },
+    { data: lineProfilesByUser },
+  ] = await Promise.all([
     convertedCustomerIds.length > 0
       ? supabase
           .from("customers")
@@ -504,6 +527,20 @@ export async function getDashboardOverview(organizationId: string): Promise<Dash
           .select("id, order_number")
           .eq("organization_id", organizationId)
           .in("id", convertedOrderIds)
+      : Promise.resolve({ data: [] }),
+    linkedCustomerIds.length > 0
+      ? supabase
+          .from("line_order_customers")
+          .select("customer_id, line_user_id, line_display_name, line_picture_url")
+          .eq("organization_id", organizationId)
+          .in("customer_id", linkedCustomerIds)
+      : Promise.resolve({ data: [] }),
+    linkedLineUserIds.length > 0
+      ? supabase
+          .from("line_order_customers")
+          .select("customer_id, line_user_id, line_display_name, line_picture_url")
+          .eq("organization_id", organizationId)
+          .in("line_user_id", linkedLineUserIds)
       : Promise.resolve({ data: [] }),
   ]);
 
@@ -519,10 +556,24 @@ export async function getDashboardOverview(organizationId: string): Promise<Dash
       order.order_number,
     ]),
   );
+  const lineProfileByCustomerId = new Map<string, LineCustomerProfileDashboardRow>();
+  const lineProfileByUserId = new Map<string, LineCustomerProfileDashboardRow>();
+  for (const profile of [
+    ...((lineProfilesByCustomer ?? []) as LineCustomerProfileDashboardRow[]),
+    ...((lineProfilesByUser ?? []) as LineCustomerProfileDashboardRow[]),
+  ]) {
+    if (profile.customer_id) {
+      lineProfileByCustomerId.set(profile.customer_id, profile);
+    }
+    if (profile.line_user_id?.trim()) {
+      lineProfileByUserId.set(profile.line_user_id.trim(), profile);
+    }
+  }
 
   const pendingLineOrders = lineOrderRows.map((row) => ({
     id: row.id,
     orderNumber: row.converted_order_id ? (orderNumberById.get(row.converted_order_id) ?? null) : null,
+    orderId: row.converted_order_id,
     lineDisplayName: row.line_display_name,
     linePictureUrl: row.line_picture_url,
     customerName: row.converted_customer_id ? (customerNameById.get(row.converted_customer_id) ?? null) : null,
@@ -530,15 +581,22 @@ export async function getDashboardOverview(organizationId: string): Promise<Dash
     status: "pending_link" as const,
   }));
 
-  const linkedLineOrders = lineSourceOrderRows.map((row) => ({
-    id: row.id,
-    orderNumber: row.order_number,
-    lineDisplayName: null,
-    linePictureUrl: null,
-    customerName: row.customers?.name ?? null,
-    createdAt: row.created_at,
-    status: "converted" as const,
-  }));
+  const linkedLineOrders = lineSourceOrderRows.map((row) => {
+    const lineProfile =
+      lineProfileByCustomerId.get(row.customer_id) ??
+      lineProfileByUserId.get(row.customers?.line_user_id?.trim() ?? "");
+
+    return {
+      id: row.id,
+      orderNumber: row.order_number,
+      orderId: row.id,
+      lineDisplayName: lineProfile?.line_display_name ?? null,
+      linePictureUrl: lineProfile?.line_picture_url ?? null,
+      customerName: row.customers?.name ?? null,
+      createdAt: row.created_at,
+      status: "converted" as const,
+    };
+  });
 
   const lineOrders = [...pendingLineOrders, ...linkedLineOrders].sort(
     (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()

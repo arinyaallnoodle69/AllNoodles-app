@@ -23,6 +23,7 @@ import {
   X,
 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { fetchIncomingOrderModalDataAction } from "@/app/orders/incoming/actions";
 import { LineAppIcon } from "@/components/icons/line-app-icon";
 import { useCreateOrder } from "@/components/orders/create-order-context";
 import { IncomingOrderModal } from "@/components/orders/incoming-order-modal";
@@ -54,6 +55,13 @@ type StoreListModalState = {
     code?: string;
     latestOrderId?: string | null;
   }>;
+};
+
+type LineOrderModalState = {
+  allOrders: IncomingOrderListItem[];
+  detail: OrderDetailData;
+  expandedId: string;
+  products: OrderProductOption[];
 };
 
 function DashboardStatCard({
@@ -245,6 +253,8 @@ export function DashboardClient({
   const { open: openCreateOrder } = useCreateOrder();
   const [isStockModalOpen, setIsStockModalOpen] = useState(false);
   const [isLineOrdersDrawerOpen, setIsLineOrdersDrawerOpen] = useState(false);
+  const [openingLineOrderId, setOpeningLineOrderId] = useState<string | null>(null);
+  const [lineOrderModal, setLineOrderModal] = useState<LineOrderModalState | null>(null);
   const [viewingStores, setViewingStores] = useState<StoreListModalState | null>(null);
 
   const [now, setNow] = useState(new Date());
@@ -279,6 +289,39 @@ export function DashboardClient({
       minimumFractionDigits: 0,
       maximumFractionDigits: 2,
     });
+
+  async function openLineOrderDetail(orderId: string | null) {
+    if (!orderId) {
+      alert("รายการนี้ยังไม่ได้ผูกร้านค้า จึงยังไม่มีหน้ารายละเอียดออเดอร์");
+      return;
+    }
+
+    if (openingLineOrderId === orderId) return;
+
+    setIsLineOrdersDrawerOpen(false);
+    setLineOrderModal(null);
+    setOpeningLineOrderId(orderId);
+
+    try {
+      const result = await fetchIncomingOrderModalDataAction(orderId, orderDate);
+      if (result.error || !result.detail) {
+        alert(result.error ?? "โหลดรายละเอียดออเดอร์ไม่สำเร็จ");
+        return;
+      }
+
+      setLineOrderModal({
+        allOrders: result.allOrders,
+        detail: result.detail,
+        expandedId: orderId,
+        products: result.products,
+      });
+    } catch (error) {
+      console.error("[dashboard:openLineOrderDetail]", error);
+      alert("โหลดรายละเอียดออเดอร์ไม่สำเร็จ");
+    } finally {
+      setOpeningLineOrderId(null);
+    }
+  }
 
   const chartWidth = 400;
   const chartHeight = 104;
@@ -899,9 +942,11 @@ export function DashboardClient({
                     const isLinked = order.status === "converted" && Boolean(order.customerName);
 
                     return (
-                      <article
+                      <button
+                        type="button"
                         key={order.id}
-                        className="rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_10px_24px_rgba(15,23,42,0.05)]"
+                        onClick={() => void openLineOrderDetail(order.orderId)}
+                        className="group w-full rounded-2xl border border-slate-200 bg-white p-4 text-left shadow-[0_10px_24px_rgba(15,23,42,0.05)] transition hover:-translate-y-0.5 hover:border-[#06c755]/35 hover:shadow-[0_16px_34px_rgba(15,23,42,0.09)] active:scale-[0.99]"
                       >
                         <div className="flex items-start gap-3">
                           <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-2xl bg-slate-100 ring-1 ring-slate-200">
@@ -924,6 +969,9 @@ export function DashboardClient({
                               <h4 className="min-w-0 flex-1 truncate text-base font-black leading-tight text-slate-950">
                                 {displayName}
                               </h4>
+                              {openingLineOrderId === order.orderId ? (
+                                <Loader2 className="h-4 w-4 shrink-0 animate-spin text-[#06c755]" strokeWidth={2.6} />
+                              ) : null}
                               <span
                                 className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-black ${
                                   isLinked
@@ -948,26 +996,47 @@ export function DashboardClient({
                                 </>
                               ) : null}
                             </div>
+                            <p className="mt-2 text-xs font-black text-[#06c755] opacity-0 transition group-hover:opacity-100">
+                              {order.orderId ? "แตะเพื่อเปิดรายละเอียดออเดอร์" : "รอผูกร้านค้าก่อนเปิดรายละเอียด"}
+                            </p>
                           </div>
                         </div>
-                      </article>
+                      </button>
                     );
                   })}
                 </div>
               )}
             </div>
 
-            <div className="shrink-0 border-t border-slate-100 px-5 py-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
-              <Link
-                href="/orders/incoming"
-                className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[#003366] px-4 py-3 text-sm font-bold text-white shadow-[0_14px_28px_rgba(0,51,102,0.22)] transition hover:bg-[#00264d] active:scale-[0.98]"
-              >
-                ไปหน้ารายการออเดอร์
-                <ChevronRight className="h-4 w-4" strokeWidth={2.5} />
-              </Link>
-            </div>
           </aside>
         </div>
+      ) : null}
+
+      {openingLineOrderId ? (
+        <div className="fixed inset-0 z-[330] flex items-center justify-center bg-slate-950/45 px-6 backdrop-blur-[2px]">
+          <div className="flex w-full max-w-xs flex-col items-center gap-4 rounded-3xl border border-slate-100 bg-white px-7 py-6 text-center shadow-[0_24px_70px_rgba(15,23,42,0.22)]">
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#06c755]/10 text-[#06c755]">
+              <Loader2 className="h-7 w-7 animate-spin" strokeWidth={2.5} />
+            </div>
+            <div>
+              <p className="text-base font-black text-slate-950">กำลังเปิดรายละเอียดออเดอร์</p>
+              <p className="mt-1 text-sm font-semibold text-slate-500">โหลดข้อมูลจากรายการ LINE</p>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {lineOrderModal ? (
+        <IncomingOrderModal
+          key={`line-order-${lineOrderModal.expandedId}`}
+          allOrders={lineOrderModal.allOrders}
+          date={orderDate}
+          detail={lineOrderModal.detail}
+          expandedId={lineOrderModal.expandedId}
+          onAfterClose={() => setLineOrderModal(null)}
+          products={lineOrderModal.products}
+          searchTerm=""
+        />
       ) : null}
 
       {isStockModalOpen ? (
@@ -979,7 +1048,7 @@ export function DashboardClient({
         />
       ) : null}
 
-      {expandedOrderId ? (
+      {expandedOrderId && !lineOrderModal ? (
         <IncomingOrderModal
           allOrders={allOrders}
           date={orderDate}
