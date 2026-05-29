@@ -116,8 +116,7 @@ export function isCustomerOrderEditableAtTime({
   orderDate: string;
   status: string | null | undefined;
 }) {
-  if (status !== "submitted") return false;
+  if (status !== "submitted" && status !== "confirmed") return false;
   if (normalizeDate(orderDate) !== normalizeDate(currentDate)) return false;
   return allowOrderAfterCutoff || currentMinutes < timeStringToMinutes(closeTime);
 }
-

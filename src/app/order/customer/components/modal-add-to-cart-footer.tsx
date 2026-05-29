@@ -1,8 +1,26 @@
 "use client";
 
 import { memo, useCallback, useState, type MutableRefObject } from "react";
-import { Check, Loader2, Lock, Minus, Plus, ShoppingCart } from "lucide-react";
+import { Check, Loader2, Lock, MessageCircle, Minus, Plus, ShoppingCart } from "lucide-react";
 import { useLiff } from "@/components/liff-provider";
+
+const LINE_OA_ID = process.env.NEXT_PUBLIC_LINE_OA_ID?.trim() ?? "";
+
+function buildPriceInquiryText(productName: string) {
+  return [
+    "สอบถามราคาสินค้า",
+    `สินค้า: ${productName}`,
+    "รบกวนแจ้งราคาสินค้านี้ให้ด้วยครับ/ค่ะ",
+  ].join("\n");
+}
+
+function buildLineOaMessageUrl(messageText: string) {
+  if (!LINE_OA_ID) return null;
+
+  const encodedLineId = encodeURIComponent(LINE_OA_ID);
+  const encodedMessage = encodeURIComponent(messageText);
+  return `https://line.me/R/oaMessage/${encodedLineId}/?${encodedMessage}`;
+}
 
 const ModalQuantityStepper = memo(function ModalQuantityStepper({
   quantity,
@@ -88,9 +106,8 @@ export const ModalAddToCartFooter = memo(function ModalAddToCartFooter({
     setIsInquiring(true);
     setInquirySuccess(false);
     
-    const msgText = `สอบถามราคา: ${productName} ราคาเท่าไหร่?`;
-    const encodedText = encodeURIComponent(msgText);
-    const shareUrl = `https://line.me/R/share?text=${encodedText}`;
+    const msgText = buildPriceInquiryText(productName);
+    const oaMessageUrl = buildLineOaMessageUrl(msgText);
 
     // Try to copy to clipboard as a resilient fallback
     try {
@@ -109,16 +126,17 @@ export const ModalAddToCartFooter = memo(function ModalAddToCartFooter({
           setTimeout(() => setInquirySuccess(false), 3000);
           return;
         } catch (err) {
-          console.warn("sendMessages failed inside LINE app, trying fallback...", err);
-          // Fall through to opening share link
+          console.warn("sendMessages failed inside LINE app, opening OA chat fallback...", err);
+          // Fall through to opening the OA chat with prefilled text.
         }
       }
 
-      if (isInClient) {
-        window.location.href = shareUrl;
-      } else {
-        window.open(shareUrl, "_blank");
+      if (!oaMessageUrl) {
+        alert("ส่งข้อความอัตโนมัติไม่ได้ และยังไม่ได้ตั้งค่า LINE OA ID สำหรับเปิดแชท");
+        return;
       }
+
+      window.location.href = oaMessageUrl;
       
       setInquirySuccess(true);
       setTimeout(() => setInquirySuccess(false), 3000);
@@ -269,7 +287,7 @@ export const ModalAddToCartFooter = memo(function ModalAddToCartFooter({
             </>
           ) : (
             <>
-              <span className="text-[15px] leading-none">💬</span>
+              <MessageCircle className="h-4.5 w-4.5 shrink-0" strokeWidth={2.8} />
               <span>สอบถามราคา {productName}</span>
             </>
           )}

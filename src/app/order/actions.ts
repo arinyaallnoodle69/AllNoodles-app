@@ -24,7 +24,7 @@ import {
   type PendingOrderCreateItem,
 } from "@/lib/orders/line-pending";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
-import type { Database } from "@/types/database";
+import type { Database, Json } from "@/types/database";
 
 // ---------------------- Types ----------------------
 
@@ -37,6 +37,17 @@ type CustomerWithLineId = Customer & { line_user_id?: string | null };
 type ActionResult<T> =
   | { success: true; data: T }
   | { success: false; error: string };
+
+function isJsonObject(value: Json | null | undefined): value is Record<string, Json | undefined> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function markLineOrderMetadata(metadata: Json | null | undefined): Json {
+  return {
+    ...(isJsonObject(metadata) ? metadata : {}),
+    source: "line",
+  };
+}
 
 type FrequentProductSummary = {
   productId: string;
@@ -895,7 +906,7 @@ export async function createOrder(
   console.log(`[createOrder] Searching for orders for customer: ${customerId}, date: ${orderDate}`);
   const { data: existingOrderRows } = await supabase
     .from("orders")
-    .select("id, order_number, status, created_at")
+    .select("id, order_number, status, created_at, metadata")
     .eq("customer_id", customerId)
     .eq("order_date", orderDate)
     .neq("status", "cancelled")
@@ -974,6 +985,7 @@ export async function createOrder(
     const { data: updatedOrder, error: updateOrderError } = await supabase
       .from("orders")
       .update({
+        metadata: markLineOrderMetadata(existingOrder.metadata),
         total_amount: totalAmount,
         subtotal_amount: totalAmount,
       })
@@ -1003,6 +1015,7 @@ export async function createOrder(
         organization_id: organizationId,
         customer_id: customerId,
         order_number: orderNumber,
+        metadata: markLineOrderMetadata(null),
         status: "submitted",
         total_amount: totalAmount,
         subtotal_amount: totalAmount,

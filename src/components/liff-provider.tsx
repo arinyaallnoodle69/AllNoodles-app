@@ -18,6 +18,8 @@ type LiffProfile = {
   pictureUrl?: string;
 };
 
+type LiffSendMessagesParams = Parameters<LiffType["sendMessages"]>[0];
+
 type LiffContextType = {
   isReady: boolean;
   isInClient: boolean;
@@ -28,7 +30,7 @@ type LiffContextType = {
   logout: () => void;
   closeWindow: () => void;
   refreshProfile: () => Promise<void>;
-  sendMessages: (messages: { type: "text"; text: string }[]) => Promise<void>;
+  sendMessages: (messages: LiffSendMessagesParams) => Promise<void>;
 };
 
 const LiffContext = createContext<LiffContextType>({
@@ -168,7 +170,7 @@ export function LiffProvider({
     }
   };
 
-  const sendMessages = async (messages: { type: "text"; text: string }[]) => {
+  const sendMessages = async (messages: LiffSendMessagesParams) => {
     const liff = liffRef.current;
     if (!liff) throw new Error("LIFF not initialized");
     if (liff.isInClient() && liff.isApiAvailable("sendMessages")) {

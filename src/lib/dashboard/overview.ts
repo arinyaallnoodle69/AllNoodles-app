@@ -4,6 +4,7 @@ import { getTodayInBangkok } from "@/lib/orders/date";
 import { getRecentDailyPerformance } from "@/lib/reports/sales-overview";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { getStockDashboardData, type StockProductOption, type StockSupplierOption } from "@/lib/stock/admin";
+import type { Json } from "@/types/database";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -114,6 +115,15 @@ type LinePendingOrderDashboardRow = {
   line_display_name: string | null;
   line_picture_url: string | null;
   status: "pending_link" | "converted" | "cancelled";
+};
+
+type LineSourceOrderDashboardRow = {
+  id: string;
+  order_number: string | null;
+  created_at: string;
+  customer_id: string;
+  customers: { line_user_id: string | null; name: string | null } | null;
+  metadata: Json | null;
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -241,6 +251,7 @@ export async function getDashboardOverview(organizationId: string): Promise<Dash
     recentDailyPerformance,
     todayProfitSnapshot,
     pendingLineOrdersRes,
+    lineSourceOrdersRes,
   ] = await Promise.all([
     // 1. Today's submitted/confirmed orders
     supabase.from("orders")
@@ -309,12 +320,19 @@ export async function getDashboardOverview(organizationId: string): Promise<Dash
     // 10. Today's profit snapshot
     loadTodayNetProfit(organizationId, today),
 
-    // 11. Today's LINE orders, both pending and already linked to a store
+    // 11. Today's LINE orders that still need a store link
     supabase.from("line_pending_orders")
       .select("id, converted_customer_id, converted_order_id, line_display_name, line_picture_url, created_at, status")
       .eq("organization_id", organizationId)
       .eq("order_date", today)
-      .in("status", ["pending_link", "converted"]),
+      .eq("status", "pending_link"),
+
+    // 12. Today's customer orders that came from the LINE ordering page
+    supabase.from("orders")
+      .select("id, order_number, customer_id, created_at, metadata, customers!inner(name, line_user_id)")
+      .eq("organization_id", organizationId)
+      .eq("order_date", today)
+      .in("status", ["submitted", "confirmed"]),
   ]);
   const { netProfit: todayNetProfit, totalCost: todayCost } = todayProfitSnapshot;
 
@@ -346,13 +364,26 @@ export async function getDashboardOverview(organizationId: string): Promise<Dash
     }>;
   }[];
   const lineOrderRows = (pendingLineOrdersRes.data ?? []) as LinePendingOrderDashboardRow[];
+  const lineSourceOrderRows = ((lineSourceOrdersRes.data ?? []) as LineSourceOrderDashboardRow[])
+    .filter((row) => {
+      const metadata = row.metadata;
+      const source =
+        typeof metadata === "object" &&
+        metadata !== null &&
+        !Array.isArray(metadata) &&
+        typeof metadata.source === "string"
+          ? metadata.source
+          : "";
+      const hasLinkedLineCustomer = Boolean(row.customers?.line_user_id?.trim());
+      return source === "line" || source === "line_pending" || hasLinkedLineCustomer;
+    });
 
   const kpi: DashboardKpi = {
     todayOrderCount: todayOrders.length,
     todayOrderAmount: todayOrders.reduce((s, r) => s + toNum(r.total_amount), 0),
     todayNetProfit,
     todayCost,
-    submittedOrderCount: lineOrderRows.length,
+    submittedOrderCount: lineOrderRows.length + lineSourceOrderRows.length,
     pendingDeliveryCount: pendingDeliveries.length,
     pendingDeliveryAmount: pendingDeliveries.reduce((s, r) => s + toNum(r.total_amount), 0),
     monthDeliveredAmount: monthDelivered.reduce((s, r) => s + toNum(r.total_amount), 0),
@@ -489,15 +520,27 @@ export async function getDashboardOverview(organizationId: string): Promise<Dash
     ]),
   );
 
-  const lineOrders = lineOrderRows.map((row) => ({
+  const pendingLineOrders = lineOrderRows.map((row) => ({
     id: row.id,
     orderNumber: row.converted_order_id ? (orderNumberById.get(row.converted_order_id) ?? null) : null,
     lineDisplayName: row.line_display_name,
     linePictureUrl: row.line_picture_url,
     customerName: row.converted_customer_id ? (customerNameById.get(row.converted_customer_id) ?? null) : null,
     createdAt: row.created_at,
-    status: row.status === "converted" ? ("converted" as const) : ("pending_link" as const),
-  })).sort(
+    status: "pending_link" as const,
+  }));
+
+  const linkedLineOrders = lineSourceOrderRows.map((row) => ({
+    id: row.id,
+    orderNumber: row.order_number,
+    lineDisplayName: null,
+    linePictureUrl: null,
+    customerName: row.customers?.name ?? null,
+    createdAt: row.created_at,
+    status: "converted" as const,
+  }));
+
+  const lineOrders = [...pendingLineOrders, ...linkedLineOrders].sort(
     (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
   );
 
