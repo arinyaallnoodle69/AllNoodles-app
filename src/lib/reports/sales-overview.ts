@@ -1,6 +1,7 @@
 import "server-only";
 
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getTodayInBangkok } from "@/lib/orders/date";
 
 export type MonthlySalesRow = {
   month: number;
@@ -322,30 +323,36 @@ export async function getRecentDailyPerformance(
   const supabase = getSupabaseAdmin();
   const safeLimit = Math.max(1, limit);
 
+  let endDate = endIsoDate;
+  if (!endDate) {
+    const { data: latestNote } = await supabase
+      .from("delivery_notes")
+      .select("delivery_date")
+      .eq("organization_id", organizationId)
+      .eq("status", "confirmed")
+      .order("delivery_date", { ascending: false })
+      .limit(1);
+
+    endDate = latestNote?.[0]?.delivery_date ?? getTodayInBangkok();
+  }
+
+  const startDate = subtractDays(endDate, safeLimit - 1);
+
   const { data: notes } = await supabase
     .from("delivery_notes")
     .select("id, delivery_date, total_amount")
     .eq("organization_id", organizationId)
     .eq("status", "confirmed")
+    .gte("delivery_date", startDate)
+    .lte("delivery_date", endDate)
     .order("delivery_date", { ascending: true });
 
   const typedNotes = (notes ?? []) as DeliveryNoteRow[];
   if (typedNotes.length === 0) {
     return {
       rows: [],
-      rangeStartDate: null,
-      rangeEndDate: null,
-    };
-  }
-
-  const allDates = [...new Set(typedNotes.map((note) => note.delivery_date))];
-  const latestDataDate = allDates[allDates.length - 1] ?? null;
-  const endDate = endIsoDate ?? latestDataDate;
-  if (!endDate) {
-    return {
-      rows: [],
-      rangeStartDate: null,
-      rangeEndDate: null,
+      rangeStartDate: startDate,
+      rangeEndDate: endDate,
     };
   }
 

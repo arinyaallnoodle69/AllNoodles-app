@@ -165,7 +165,7 @@ function thaiDayShort(isoDate: string): string {
 async function loadTodayNetProfit(
   organizationId: string,
   isoDate: string,
-): Promise<{ netProfit: number; totalCost: number }> {
+): Promise<{ netProfit: number; totalCost: number; totalRevenue: number }> {
   const supabase = getSupabaseAdmin();
   const { data: notes } = await supabase
     .from("delivery_notes")
@@ -176,7 +176,7 @@ async function loadTodayNetProfit(
 
   const typedNotes = (notes ?? []) as DeliveryNoteRow[];
   if (typedNotes.length === 0) {
-    return { netProfit: 0, totalCost: 0 };
+    return { netProfit: 0, totalCost: 0, totalRevenue: 0 };
   }
 
   const noteIds = typedNotes.map((note) => note.id);
@@ -236,7 +236,7 @@ async function loadTodayNetProfit(
     return sum + unitCost * quantity;
   }, 0);
 
-  return { netProfit: totalRevenue - totalCost, totalCost };
+  return { netProfit: totalRevenue - totalCost, totalCost, totalRevenue };
 }
 
 // ─── Query ────────────────────────────────────────────────────────────────────
@@ -342,7 +342,7 @@ export async function getDashboardOverview(organizationId: string): Promise<Dash
       .eq("order_date", today)
       .in("status", ["submitted", "confirmed"]),
   ]);
-  const { netProfit: todayNetProfit, totalCost: todayCost } = todayProfitSnapshot;
+  const { netProfit: todayNetProfit, totalCost: todayCost, totalRevenue: todayDeliveryRevenue } = todayProfitSnapshot;
 
   // ── Process core KPIs ──────────────────────────────────────────────────────
 
@@ -388,7 +388,7 @@ export async function getDashboardOverview(organizationId: string): Promise<Dash
 
   const kpi: DashboardKpi = {
     todayOrderCount: todayOrders.length,
-    todayOrderAmount: todayOrders.reduce((s, r) => s + toNum(r.total_amount), 0),
+    todayOrderAmount: todayDeliveryRevenue,
     todayNetProfit,
     todayCost,
     submittedOrderCount: lineOrderRows.length + lineSourceOrderRows.length,
