@@ -7,7 +7,6 @@ import type {
   UIEventHandler,
 } from "react";
 import {
-  BadgeCheck,
   Gem,
   Info,
   Link2,
@@ -60,7 +59,6 @@ type ProductDetailModalProps = {
   onTouchEnd: TouchEventHandler<HTMLDivElement>;
   onTouchMove: TouchEventHandler<HTMLDivElement>;
   onTouchStart: TouchEventHandler<HTMLDivElement>;
-  relatedUnitProducts: ProductWithImage[];
   selectedProduct: ProductWithImage;
   selectedProductImageIndex: number;
   selectedProductImageSlides: ProductImageSlide[];
@@ -100,7 +98,6 @@ export function ProductDetailModal({
   onTouchEnd,
   onTouchMove,
   onTouchStart,
-  relatedUnitProducts,
   selectedProduct,
   selectedProductImageIndex,
   selectedProductImageSlides,
@@ -375,35 +372,6 @@ export function ProductDetailModal({
             </div>
           ) : null}
 
-          {relatedUnitProducts.length > 0 && (
-            <div className="mt-2 bg-white px-6 py-5 shadow-[0_16px_38px_rgba(15,23,42,0.10)]">
-              <h3 className="mb-4 flex items-center gap-2 text-[13px] font-bold text-slate-800">
-                <BadgeCheck className="h-4 w-4 text-[#003366]" strokeWidth={2.2} />
-                <span>หน่วย</span>
-              </h3>
-              <div className="grid grid-cols-2 gap-3">
-                {relatedUnitProducts.map((unitProduct) => {
-                  const isUnitActive = selectedProduct.id === unitProduct.id;
-                  return (
-                    <button
-                      key={unitProduct.id}
-                      onClick={() => onJumpToProduct(unitProduct.id)}
-                      className={`flex flex-col items-center justify-center rounded-xl border-2 p-4 transition-all ${
-                        isUnitActive
-                          ? "border-[#003366] bg-[#eef4fa] text-[#003366]"
-                          : "border-slate-100 bg-white text-slate-500 hover:border-slate-200"
-                      }`}
-                    >
-                      <span className="text-[14px] font-bold">
-                        {getDisplayUnit(unitProduct.sale_unit_label)}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
           {modalRecommendations.length > 0 && (
             <div className="mt-2 bg-white px-6 py-5 shadow-[0_16px_38px_rgba(15,23,42,0.10)]">
               <h3 className="mb-5 flex items-center gap-2 text-[13px] font-bold text-slate-800">
@@ -424,7 +392,7 @@ export function ProductDetailModal({
                     onClick={() => onJumpToProduct(product.id)}
                     className="group w-28 flex-shrink-0"
                   >
-                    <div className="relative mb-2 aspect-square w-full overflow-hidden rounded-xl border border-slate-100 bg-slate-50">
+                    <div className="relative mb-2 aspect-square w-full overflow-hidden rounded-xl border border-slate-100 bg-white p-1">
                       <Image
                         src={
                           product.product_images?.[0]?.public_url ||
@@ -433,7 +401,7 @@ export function ProductDetailModal({
                         alt={product.name}
                         fill
                         sizes="112px"
-                        className="object-cover"
+                        className="object-contain object-center"
                       />
                     </div>
                     <p className="line-clamp-2 text-[11px] font-bold leading-tight text-slate-700">

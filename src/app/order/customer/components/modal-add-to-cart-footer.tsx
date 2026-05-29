@@ -15,34 +15,34 @@ const ModalQuantityStepper = memo(function ModalQuantityStepper({
   onIncrease: () => void;
 }) {
   return (
-    <div className="flex items-center rounded-3xl border border-slate-300/85 bg-white p-2 shadow-[0_12px_24px_rgba(15,23,42,0.06)] touch-manipulation">
+    <div className="flex items-center rounded-2xl border border-slate-300/90 bg-slate-100 p-1.5 shadow-[0_8px_16px_rgba(15,23,42,0.04)] touch-manipulation">
       <button
         onClick={onDecrease}
-        className={`flex h-14 w-14 items-center justify-center rounded-2xl transition-all active:scale-95 ${
+        className={`flex h-11 w-11 items-center justify-center rounded-xl transition-all active:scale-95 ${
           quantity > 0
-            ? "border border-slate-300 bg-slate-100 text-slate-900 shadow-sm active:bg-slate-200"
-            : "pointer-events-none text-slate-300 bg-slate-50/50"
+            ? "border border-slate-400 bg-slate-200 text-slate-900 shadow-sm active:bg-slate-300"
+            : "pointer-events-none text-slate-400/60 bg-slate-200/30 border border-slate-200/30"
         }`}
         aria-label="decrease quantity"
       >
-        <Minus className="h-6 w-6" strokeWidth={3} />
+        <Minus className="h-5 w-5" strokeWidth={3} />
       </button>
 
-      <div className="flex w-[96px] select-none flex-col items-center justify-center">
-        <span className="text-[22px] font-black leading-none text-slate-900 [font-variant-numeric:tabular-nums]">
+      <div className="flex w-[68px] select-none flex-col items-center justify-center">
+        <span className="text-[18px] font-black leading-none text-slate-900 [font-variant-numeric:tabular-nums]">
           {quantity}
         </span>
-        <span className="mt-1.5 text-[11px] font-bold uppercase tracking-[0.08em] text-slate-500">
+        <span className="mt-1 text-[9.5px] font-extrabold uppercase tracking-[0.06em] text-slate-500 truncate max-w-full px-1">
           {unitLabel}
         </span>
       </div>
 
       <button
         onClick={onIncrease}
-        className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#003366] text-white shadow-md shadow-blue-900/20 transition-all active:scale-95 touch-manipulation hover:bg-[#00264d]"
+        className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#00264d] text-white shadow-md shadow-blue-950/20 transition-all active:scale-95 touch-manipulation hover:bg-[#001c38]"
         aria-label="increase quantity"
       >
-        <Plus className="h-6 w-6" strokeWidth={3} />
+        <Plus className="h-5 w-5" strokeWidth={3} />
       </button>
     </div>
   );
@@ -180,21 +180,21 @@ export const ModalAddToCartFooter = memo(function ModalAddToCartFooter({
           <button
             disabled={!isOrderOpen || pendingQty === 0}
             onClick={handleAddToCart}
-            className={`flex-1 flex items-center justify-center gap-2.5 h-16 rounded-3xl font-extrabold transition-all active:scale-[0.97] ${
+            className={`flex-1 flex items-center justify-center gap-2 h-14 rounded-2xl font-black transition-all active:scale-[0.97] px-4 ${
               !isOrderOpen
                 ? "bg-slate-300 text-slate-500 cursor-not-allowed"
                 : pendingQty > 0
-                  ? "bg-[#003366] text-white shadow-[0_10px_25px_rgba(0,51,102,0.25)] hover:bg-[#00264d]"
+                  ? "bg-[#00264d] text-white shadow-[0_8px_20px_rgba(0,38,77,0.22)] hover:bg-[#001c38]"
                   : "bg-slate-200 text-slate-400 cursor-not-allowed"
             }`}
           >
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 justify-center w-full min-w-0">
               {!isOrderOpen ? (
-                <Lock className="h-5.5 w-5.5" strokeWidth={2.5} />
+                <Lock className="h-5 w-5 shrink-0" strokeWidth={2.5} />
               ) : (
-                <ShoppingCart className="h-5.5 w-5.5" strokeWidth={2.5} />
+                <ShoppingCart className="h-5 w-5 shrink-0" strokeWidth={2.5} />
               )}
-              <span className="text-[16px] tracking-wide font-black">
+              <span className="text-[14px] xs:text-[15px] tracking-wide font-black truncate">
                 {!isOrderOpen ? closedLabel : openLabel}
               </span>
             </div>

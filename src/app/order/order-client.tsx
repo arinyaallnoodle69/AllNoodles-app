@@ -1149,19 +1149,6 @@ export default function OrderClient({
     } as ProductWithImage;
   }, [selectedProductBase, selectedUnitId]);
 
-  const relatedUnitProducts = useMemo(() => {
-    if (!selectedProductBase || !selectedProductBase.product_sale_units) return [];
-    
-    return selectedProductBase.product_sale_units.filter((u) => u.is_active).map((u) => ({
-      ...selectedProductBase,
-      id: `${selectedProductBase.product_id}:${u.id}`,
-      product_sale_unit_id: u.id,
-      sale_unit_label: u.unit_label,
-      sale_unit_ratio: Number(u.base_unit_quantity),
-      min_order_qty: Number(u.min_order_qty ?? 1),
-      step_order_qty: u.step_order_qty !== null ? Number(u.step_order_qty) : null,
-    })) as ProductWithImage[];
-  }, [selectedProductBase]);
 
   const selectedProductImages = useMemo(
     () => selectedProduct?.product_images ?? [],
@@ -2851,7 +2838,6 @@ export default function OrderClient({
           onTouchEnd={onTouchEnd}
           onTouchMove={onTouchMove}
           onTouchStart={onTouchStart}
-          relatedUnitProducts={relatedUnitProducts}
           selectedProduct={selectedProduct}
           selectedProductImageIndex={selectedProductImageIndex}
           selectedProductImageSlides={selectedProductImageSlides}
