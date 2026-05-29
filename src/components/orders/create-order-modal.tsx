@@ -1079,7 +1079,7 @@ export function CreateOrderModal({
   async function handleCustomerSelect(id: string) {
     setHistoryNotice(null);
     setCustomerId(id);
-    setActiveTab("history"); // Switch to history tab after selection
+    setActiveTab("create"); // Keep on Product List tab after selection
     setCustomerPickerOpen(false);
     setCustomerPickerQuery("");
     setPricesLoading(true);

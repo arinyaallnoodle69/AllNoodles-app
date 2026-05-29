@@ -1,4 +1,4 @@
-﻿import type { CSSProperties } from "react";
+import type { CSSProperties } from "react";
 import type { BillingStatementData } from "@/lib/billing/billing-statement";
 import {
   HALF_SHEET_HEIGHT_MM,
@@ -93,7 +93,7 @@ function BillPageView({
     <div
       className="note-slot__content"
       style={{
-        fontFamily: "'Sarabun', sans-serif",
+        fontFamily: "Tahoma, sans-serif",
         display: "flex",
         flexDirection: "column",
         height: "100%",
@@ -109,6 +109,7 @@ function BillPageView({
         pageLabel={totalPages > 1 ? `หน้า ${pageIndex + 1}/${totalPages}` : undefined}
         dividerStyle="none"
         docMetaFontSize="11.8pt"
+        hideOrgDetails={true}
       />
 
       <PrintCustomerRow customer={{ ...data.customer, address: data.customer.address ?? "-" }} />
@@ -127,24 +128,14 @@ function BillPageView({
             <th style={headerCellStyle({ borderTop: DOTTED_LINE, width: "6%", textAlign: "center" })}>
               {renderHeaderLabel("ลำดับ")}
             </th>
-            <th style={headerCellStyle({ borderTop: DOTTED_LINE, width: "40%", textAlign: "center" })}>
+            <th style={headerCellStyle({ borderTop: DOTTED_LINE, width: "50%", textAlign: "center" })}>
               {renderHeaderLabel("เลขที่ใบจัดส่ง")}
             </th>
-            <th style={headerCellStyle({ borderTop: DOTTED_LINE, width: "21%", textAlign: "center" })}>
+            <th style={headerCellStyle({ borderTop: DOTTED_LINE, width: "26%", textAlign: "center" })}>
               {renderHeaderLabel("วันที่")}
             </th>
             <th style={headerCellStyle({ borderTop: DOTTED_LINE, width: "18%", textAlign: "right" })}>
               {renderHeaderLabel("ยอดรวม")}
-            </th>
-            <th
-              style={headerCellStyle({
-                borderTop: DOTTED_LINE,
-                width: "15%",
-                textAlign: "left",
-                padding: "1mm 3mm",
-              })}
-            >
-              {renderHeaderLabel("หมายเหตุ")}
             </th>
           </tr>
         </thead>
@@ -155,13 +146,14 @@ function BillPageView({
                 {row.lineNumber}
               </td>
               <td
+                className="monospace-font"
                 style={{
                   padding: "0.8mm 2mm",
                   textAlign: "center",
                   fontFamily: "monospace",
                   fontSize: "11.8pt",
                   fontWeight: 700,
-                  color: "#003366",
+                  color: "black",
                 }}
               >
                 {row.deliveryNumber}
@@ -179,9 +171,6 @@ function BillPageView({
               >
                 {fmt(row.totalAmount)}
               </td>
-              <td style={{ padding: "0.8mm 3mm", fontSize: "11.8pt", color: "#475569" }}>
-                {row.notes?.trim() || "-"}
-              </td>
             </tr>
           ))}
         </tbody>
@@ -192,7 +181,7 @@ function BillPageView({
       {isLastPage ? (
         <>
           <PrintTotalRow totalAmount={data.grandTotal} dividerStyle="dotted" showBottomBorder={false} />
-          <PrintSignatureBlock leftLabel="ผู้รับวางบิล" rightLabel="ผู้วางบิล" lineStyle="dotted" />
+          <PrintSignatureBlock leftLabel="ผู้รับวางบิล" rightLabel="ผู้วางบิล" lineStyle="dotted" hideNotes={true} />
         </>
       ) : null}
 
@@ -269,6 +258,13 @@ export function BillingStatementLayout({
           overflow: hidden;
           display: flex;
           flex-direction: column;
+        }
+        .note-page, .note-page * {
+          font-family: Tahoma, 'Sarabun', sans-serif !important;
+          color: #000000 !important;
+        }
+        .note-page .monospace-font {
+          font-family: monospace !important;
         }
       `}</style>
 

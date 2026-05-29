@@ -107,6 +107,7 @@ export function PrintDocHeader({
   extraMeta,
   dividerStyle = "solid",
   docMetaFontSize = "8.8pt",
+  hideOrgDetails = false,
 }: {
   orgName: string;
   orgAddress?: string | null;
@@ -118,14 +119,15 @@ export function PrintDocHeader({
   extraMeta?: RightMetaItem[];
   dividerStyle?: DividerStyle;
   docMetaFontSize?: string;
+  hideOrgDetails?: boolean;
 }) {
   const headerStyle: CSSProperties = {
     position: "relative",
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: "1.5mm",
-    paddingBottom: dividerStyle === "none" ? "1.2mm" : "3mm",
+    marginBottom: hideOrgDetails ? "0.5mm" : "1.5mm",
+    paddingBottom: dividerStyle === "none" ? (hideOrgDetails ? "0.5mm" : "1.2mm") : "3mm",
   };
 
   if (dividerStyle === "solid") {
@@ -137,14 +139,14 @@ export function PrintDocHeader({
   return (
     <div style={headerStyle}>
       <div>
-        <p style={{ fontWeight: 800, fontSize: "13pt", color: "#1e3a5f", lineHeight: 1.2 }}>
+        <p style={{ fontWeight: 800, fontSize: "13pt", color: hideOrgDetails ? "black" : "#1e3a5f", lineHeight: 1.2 }}>
           {orgName}
         </p>
-        {orgAddress ? (
-          <p style={{ fontSize: "8.2pt", color: "#64748b", marginTop: "1px" }}>{orgAddress}</p>
+        {!hideOrgDetails && orgAddress ? (
+          <p style={{ fontSize: "8.2pt", color: "black", fontWeight: 800, marginTop: "1px" }}>{orgAddress}</p>
         ) : null}
-        {orgPhone ? (
-          <p style={{ fontSize: "8.2pt", color: "#64748b", marginTop: "1px" }}>โทร {orgPhone}</p>
+        {!hideOrgDetails && orgPhone ? (
+          <p style={{ fontSize: "8.2pt", color: "black", fontWeight: 800, marginTop: "1px" }}>โทร {orgPhone}</p>
         ) : null}
       </div>
 
@@ -157,37 +159,37 @@ export function PrintDocHeader({
           pointerEvents: "none",
         }}
       >
-        <p style={{ fontSize: "16pt", fontWeight: 900, color: "#1e3a5f", letterSpacing: "0.05em" }}>
+        <p style={{ fontSize: "16pt", fontWeight: 900, color: hideOrgDetails ? "black" : "#1e3a5f", letterSpacing: "0.05em" }}>
           {title}
         </p>
       </div>
 
       <div style={{ textAlign: "right", minWidth: "95px" }}>
         {docNumber ? (
-          <p style={{ fontSize: docMetaFontSize, color: "#1e3a5f", lineHeight: 1.15 }}>
-            <span style={{ color: "#64748b" }}>เลขที่ </span>
-            <span style={{ fontWeight: 800, fontFamily: "monospace" }}>{docNumber}</span>
+          <p style={{ fontSize: docMetaFontSize, color: "black", lineHeight: 1.15 }}>
+            <span style={{ color: "black", fontWeight: 800 }}>เลขที่ </span>
+            <span style={{ fontWeight: 850, fontFamily: "monospace" }}>{docNumber}</span>
           </p>
         ) : null}
         <p
           style={{
             fontSize: docMetaFontSize,
-            color: "#1e3a5f",
+            color: "black",
             lineHeight: 1.15,
             marginTop: docNumber ? "2px" : undefined,
           }}
         >
-          <span style={{ color: "#64748b" }}>วันที่ </span>
-          <span style={{ fontWeight: 700 }}>{formatDate(docDate)}</span>
+          <span style={{ color: "black", fontWeight: 800 }}>วันที่ </span>
+          <span style={{ fontWeight: 850 }}>{formatDate(docDate)}</span>
         </p>
         {extraMeta?.map((item) => (
-          <p key={item.label} style={{ fontSize: "8.2pt", color: "#1e3a5f", marginTop: "2px" }}>
-            <span style={{ color: "#64748b" }}>{item.label} </span>
-            <span style={{ fontWeight: 700 }}>{item.value}</span>
+          <p key={item.label} style={{ fontSize: "8.2pt", color: "black", marginTop: "2px" }}>
+            <span style={{ color: "black", fontWeight: 800 }}>{item.label} </span>
+            <span style={{ fontWeight: 850 }}>{item.value}</span>
           </p>
         ))}
         {pageLabel ? (
-          <p style={{ fontSize: "7.8pt", color: "#94a3b8", marginTop: "2px" }}>{pageLabel}</p>
+          <p style={{ fontSize: "7.8pt", color: "black", fontWeight: 700, marginTop: "2px" }}>{pageLabel}</p>
         ) : null}
       </div>
     </div>
@@ -254,10 +256,10 @@ export function PrintTotalRow({
 
   return (
     <div style={containerStyle}>
-      <p style={{ fontSize: "9.2pt", color: "black" }}>{bahtText(totalAmount)}</p>
+      <p style={{ fontSize: "12.5pt", fontWeight: "bold", color: "black" }}>{bahtText(totalAmount)}</p>
       <div style={{ display: "flex", alignItems: "baseline", gap: "6mm" }}>
-        <p style={{ fontSize: "9.2pt", fontWeight: 700, color: "black" }}>รวมทั้งสิ้น</p>
-        <p style={{ fontSize: "10.8pt", fontWeight: 800, color: "black", fontFamily: "monospace" }}>
+        <p style={{ fontSize: "12.5pt", fontWeight: 800, color: "black" }}>รวมทั้งสิ้น</p>
+        <p className="monospace-font" style={{ fontSize: "16.5pt", fontWeight: 900, color: "black", fontFamily: "monospace" }}>
           {fmt(totalAmount)}
         </p>
       </div>
@@ -270,11 +272,13 @@ export function PrintSignatureBlock({
   leftLabel,
   rightLabel,
   lineStyle = "solid",
+  hideNotes = false,
 }: {
   notes?: string | null;
   leftLabel: string;
   rightLabel: string;
   lineStyle?: Exclude<DividerStyle, "none">;
+  hideNotes?: boolean;
 }) {
   const signatureLineStyle =
     lineStyle === "dotted"
@@ -283,13 +287,17 @@ export function PrintSignatureBlock({
 
   return (
     <div style={{ display: "flex", gap: "6mm", alignItems: "flex-start" }}>
-      <div style={{ flex: 1, minHeight: "14mm", paddingTop: "1mm" }}>
-        <p style={{ fontSize: "10.5pt", lineHeight: 1.5, color: "black", fontWeight: 600 }}>
-          <span style={{ fontWeight: 700 }}>หมายเหตุ: </span>
-          {notes?.trim() ? notes : "-"}
-        </p>
-      </div>
-      <div style={{ width: "1px", background: "#e2e8f0", alignSelf: "stretch" }} />
+      {!hideNotes && (
+        <>
+          <div style={{ flex: 1, minHeight: "14mm", paddingTop: "1mm" }}>
+            <p style={{ fontSize: "10.5pt", lineHeight: 1.5, color: "black", fontWeight: 600 }}>
+              <span style={{ fontWeight: 700 }}>หมายเหตุ: </span>
+              {notes?.trim() ? notes : "-"}
+            </p>
+          </div>
+          <div style={{ width: "1px", background: "#e2e8f0", alignSelf: "stretch" }} />
+        </>
+      )}
       <div style={{ flex: 1, display: "flex", gap: "4mm" }}>
         <div style={{ flex: 1, textAlign: "center" }}>
           <p style={{ fontSize: "8.8pt", fontWeight: 700, color: "#1e3a5f", marginBottom: "6mm" }}>

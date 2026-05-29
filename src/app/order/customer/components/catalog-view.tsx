@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import Image from "next/image";
 import { useState } from "react";
@@ -48,7 +48,7 @@ export function CatalogView({
 }) {
   const [showAllRepeatItems, setShowAllRepeatItems] = useState(false);
   const isRepeatTab = activeCategory === "recent";
-  const shouldShowFrequent = !isRepeatTab && frequentProductCards.length > 0;
+  const shouldShowFrequent = false;
   const visibleRepeatOrderCards = repeatOrderCards;
   const repeatPreviewCards = showAllRepeatItems
     ? visibleRepeatOrderCards

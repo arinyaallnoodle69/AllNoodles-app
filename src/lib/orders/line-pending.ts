@@ -692,13 +692,30 @@ async function convertSinglePendingOrder(input: {
     order_number: syncedDeliveryNumber,
   };
 
+  const finalProductIds = Array.from(
+    new Set(
+      ((finalItems ?? []) as { product_id: string }[])
+        .map((item) => item.product_id)
+        .filter(Boolean),
+    ),
+  );
+
+  const { data: finalProducts } = finalProductIds.length
+    ? await input.admin
+        .from<ProductRow>("products")
+        .select("id, name")
+        .in("id", finalProductIds)
+    : { data: [] as ProductRow[] | null };
+
+  const finalProductMap = new Map((finalProducts ?? []).map((p) => [p.id, p]));
+
   const finalReceiptItems = ((finalItems ?? []) as {
     product_id: string;
     sale_unit_label: string;
     quantity: number | string | null;
     line_total: number | string | null;
   }[]).map((item) => ({
-    name: productById.get(item.product_id)?.name ?? "-",
+    name: finalProductMap.get(item.product_id)?.name ?? "-",
     quantity: Number(item.quantity) || 0,
     saleUnitLabel: item.sale_unit_label,
   }));

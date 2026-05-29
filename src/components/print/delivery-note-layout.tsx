@@ -1,4 +1,4 @@
-﻿import type { DeliveryNotePrintData } from "@/lib/delivery/print";
+import type { DeliveryNotePrintData } from "@/lib/delivery/print";
 import {
   HALF_SHEET_HEIGHT_MM,
   NOTE_PADDING,
@@ -257,6 +257,9 @@ export function DeliveryNoteLayout({ dns, showIntermediateFooter = false }: Prop
           .note-page:last-child {
             page-break-after: avoid;
             break-after: auto;
+          }
+          .note-page, .note-page * {
+            color: #000000 !important;
           }
         }
         @media screen {

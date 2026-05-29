@@ -286,6 +286,15 @@ export function BillingPreviewButton({
                   onTouchEnd={handleTouchEnd}
                 >
                   <div className="flex flex-col items-center gap-6 py-4">
+                    <style dangerouslySetInnerHTML={{ __html: `
+                      .billing-preview-card-element, .billing-preview-card-element * {
+                        font-family: Tahoma, 'Sarabun', sans-serif !important;
+                        color: #000000 !important;
+                      }
+                      .billing-preview-card-element .monospace-font {
+                        font-family: monospace !important;
+                      }
+                    ` }} />
                     {pages.map((pageDeliveries, pageIdx) => {
                       const isLastPage = pageIdx === totalPages - 1;
                       return (
@@ -322,6 +331,7 @@ export function BillingPreviewButton({
                               pageLabel={totalPages > 1 ? `หน้า ${pageIdx + 1}/${totalPages}` : undefined}
                               dividerStyle="none"
                               docMetaFontSize="11.8pt"
+                              hideOrgDetails={true}
                             />
 
                             <PrintCustomerRow customer={{ code: customerCode, name: customerName, address: "-" }} />
@@ -355,7 +365,7 @@ export function BillingPreviewButton({
                                       color: "black",
                                       borderTop: DOTTED_LINE,
                                       borderBottom: DOTTED_LINE,
-                                      width: "40%",
+                                      width: "50%",
                                       textAlign: "center",
                                     }}
                                   >
@@ -367,7 +377,7 @@ export function BillingPreviewButton({
                                       color: "black",
                                       borderTop: DOTTED_LINE,
                                       borderBottom: DOTTED_LINE,
-                                      width: "21%",
+                                      width: "26%",
                                       textAlign: "center",
                                     }}
                                   >
@@ -385,18 +395,6 @@ export function BillingPreviewButton({
                                   >
                                     ยอดรวม
                                   </th>
-                                  <th
-                                    style={{
-                                      padding: "1mm 3mm",
-                                      color: "black",
-                                      borderTop: DOTTED_LINE,
-                                      borderBottom: DOTTED_LINE,
-                                      width: "15%",
-                                      textAlign: "left",
-                                    }}
-                                  >
-                                    หมายเหตุ
-                                  </th>
                                 </tr>
                               </thead>
                               <tbody>
@@ -406,13 +404,14 @@ export function BillingPreviewButton({
                                       {pageIdx * 10 + index + 1}
                                     </td>
                                     <td
+                                      className="monospace-font"
                                       style={{
                                         padding: "0.8mm 2mm",
                                         textAlign: "center",
                                         fontFamily: "monospace",
                                         fontSize: "11.8pt",
                                         fontWeight: 700,
-                                        color: "#003366",
+                                        color: "black",
                                       }}
                                     >
                                       {item.number}
@@ -430,7 +429,6 @@ export function BillingPreviewButton({
                                     >
                                       {fmt(item.amount)}
                                     </td>
-                                    <td style={{ padding: "0.8mm 3mm", fontSize: "11.8pt", color: "#475569" }}>-</td>
                                   </tr>
                                 ))}
                               </tbody>

@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { after } from "next/server";
 import { requireAppRole } from "@/lib/auth/authorization";
 import { linkLineCustomerAndConvertPendingOrders } from "@/lib/orders/line-pending";
@@ -1507,6 +1507,7 @@ export async function updateIncomingOrderDateAction(formData: FormData): Promise
 	    revalidatePath("/billing");
 	    revalidatePath("/reports/billing");
 	    revalidateDashboardPages();
+	    revalidateTag(`orders-${session.organizationId}`, "max");
 
 	    after(() => {
 	      notifyUpdatedCustomerReceiptForOrder(admin, {
@@ -1606,6 +1607,7 @@ export async function updateIncomingOrderDateAction(formData: FormData): Promise
 	  revalidatePath("/billing");
 	  revalidatePath("/reports/billing");
 	  revalidateDashboardPages();
+	  revalidateTag(`orders-${session.organizationId}`, "max");
 
 	    after(() => {
 	      notifyUpdatedCustomerReceiptForOrder(admin, {
