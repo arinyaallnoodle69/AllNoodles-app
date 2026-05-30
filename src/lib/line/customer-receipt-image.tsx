@@ -228,7 +228,7 @@ function ReceiptImage({
         }}
       >
         <div style={{ fontSize: 14, fontWeight: 800, lineHeight: 1.6 }}>
-          เส้นรังนก T&amp;Y Noodle
+          T&amp;Y Noodle
         </div>
         <div style={{ fontSize: 13, lineHeight: 1.6, marginTop: 2 }}>
           ขอบคุณสำหรับการสนับสนุนครับ

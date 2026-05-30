@@ -128,7 +128,7 @@ export function OrderReceiptCard({
       ))}
 
       <div style={{ padding: `36px ${SIDE_PADDING} 32px`, textAlign: "center" }}>
-        <div style={{ fontSize: "14px", fontWeight: 800, lineHeight: 1.6 }}>เส้นหมี่ T&amp;Y Noodle</div>
+        <div style={{ fontSize: "14px", fontWeight: 800, lineHeight: 1.6 }}>T&amp;Y Noodle</div>
         <div style={{ fontSize: "13px", marginTop: "2px", lineHeight: 1.6 }}>ขอบคุณสำหรับการสั่งซื้อครับ</div>
       </div>
     </div>
