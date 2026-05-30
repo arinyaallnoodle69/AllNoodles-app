@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Download, Loader2, ReceiptText, X } from "lucide-react";
-import Image from "next/image";
 import { createPortal } from "react-dom";
 import * as htmlToImage from "html-to-image";
 import { fetchIncomingOrderDetailAction } from "@/app/orders/incoming/actions";
@@ -253,13 +252,16 @@ export function OrderDeliveryActionButton({
                 <div className="scrollbar-hide max-h-[85vh] overflow-y-auto">
                   <div className="bg-white text-black shadow-2xl" ref={receiptCardRef}>
                     <div className="px-6 py-6">
-                      <div className="mb-2 flex justify-end">
-                        <Image
+                      <div className="mb-2 flex justify-end pr-3 pt-2">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
                           src="/ty-noodles-logo.png"
                           alt="T&Y Noodle"
-                          width={48}
-                          height={48}
-                          className="object-contain"
+                          style={{
+                            width: "48px",
+                            height: "48px",
+                            objectFit: "contain",
+                          }}
                         />
                       </div>
 
@@ -282,10 +284,10 @@ export function OrderDeliveryActionButton({
                         <span className="text-[12px]"> {customerName}</span>
                       </div>
 
-                      <div className="grid grid-cols-[1fr_75px_50px_65px] gap-2 border-b border-[#cccccc] py-2">
+                      <div className="grid grid-cols-[1fr_80px_60px_65px] gap-2 border-b border-[#cccccc] py-2">
                         <span className="text-left text-[12px] font-black">สินค้า</span>
-                        <span className="text-center text-[12px] font-black">จำนวน</span>
-                        <span className="text-center text-[12px] font-black">หน่วย</span>
+                        <span className="text-right text-[12px] font-black">จำนวน</span>
+                        <span className="text-right text-[12px] font-black">ราคา</span>
                         <span className="text-right text-[12px] font-black">รวม</span>
                       </div>
 
@@ -293,13 +295,13 @@ export function OrderDeliveryActionButton({
                         {receiptItems.map((item, index) => (
                           <div
                             key={index}
-                            className="grid grid-cols-[1fr_75px_50px_65px] items-center gap-2 py-3"
+                            className="grid grid-cols-[1fr_80px_60px_65px] items-center gap-2 py-3"
                           >
-                            <div className="line-clamp-2 text-[11px] leading-[1.4]">{item.name}</div>
-                            <div className="text-center text-[12px] font-medium">
+                            <div className="text-[11px] leading-[1.4] break-words whitespace-normal overflow-visible">{item.name}</div>
+                            <div className="text-right text-[12px] font-medium">
                               {formatQuantity(item.quantity)} {item.saleUnitLabel}
                             </div>
-                            <div className="text-center text-[12px] text-slate-500">
+                            <div className="text-right text-[12px] text-slate-500">
                               {formatCurrency(item.unitPrice)}
                             </div>
                             <div className="text-right text-[12px] font-bold">

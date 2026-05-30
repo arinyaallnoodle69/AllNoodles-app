@@ -1,4 +1,3 @@
-import Image from "next/image";
 import type { CSSProperties, RefObject } from "react";
 import type { ReceiptItem } from "@/app/order/customer/order-client-types";
 
@@ -38,7 +37,7 @@ export function OrderReceiptCard({
     }).format(new Date(iso));
 
   const FONT = "'Sarabun','Noto Sans Thai',sans-serif";
-  const COL = "1fr 90px 90px";
+  const COL = "1fr 60px 48px";
   const SIDE_PADDING = "20px";
   const RULE_MARGIN = "0 16px";
   const LINE: CSSProperties = { borderTop: "1px solid #cccccc", margin: RULE_MARGIN };
@@ -60,13 +59,12 @@ export function OrderReceiptCard({
         margin: "0 auto",
       }}
     >
-      <div style={{ textAlign: "right", padding: "4px 8px 0" }}>
-        <Image
+      <div style={{ display: "flex", justifyContent: "flex-end", padding: "8px 16px 0" }}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
           src="/ty-noodles-logo.png"
           alt="T&Y Noodle"
-          width={56}
-          height={56}
-          style={{ objectFit: "contain", display: "inline-block", width: "56px", height: "auto" }}
+          style={{ objectFit: "contain", display: "inline-block", width: "56px", height: "56px" }}
         />
       </div>
 
@@ -94,7 +92,7 @@ export function OrderReceiptCard({
             style={{
               fontSize: "14px",
               fontWeight: 800,
-              textAlign: index === 0 ? "left" : "center",
+              textAlign: index === 0 ? "left" : "right",
             }}
           >
             {label}
@@ -115,11 +113,21 @@ export function OrderReceiptCard({
               alignItems: "center",
             }}
           >
-            <div style={{ fontSize: "13px", lineHeight: 1.5, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{item.name}</div>
-            <div style={{ fontSize: "14px", textAlign: "center" }}>
+            <div
+              style={{
+                fontSize: "13px",
+                lineHeight: 1.4,
+                whiteSpace: "normal",
+                wordBreak: "break-word",
+                overflow: "visible",
+              }}
+            >
+              {item.name}
+            </div>
+            <div style={{ fontSize: "14px", textAlign: "right" }}>
               {item.quantity.toLocaleString("th-TH")}
             </div>
-            <div style={{ fontSize: "14px", textAlign: "center" }}>
+            <div style={{ fontSize: "14px", textAlign: "right" }}>
               {item.saleUnitLabel}
             </div>
           </div>

@@ -167,15 +167,11 @@ function ReceiptImage({
         <span style={{ marginLeft: 4 }}>{customerName}</span>
       </div>
 
-      <div
-        style={{
-          display: "flex",
-          gap: 8,
-          padding: `6px ${sidePadding}px`,
-        }}
-      >
-        <span style={{ flex: 1, fontSize: 14, fontWeight: 800 }}>สินค้า</span>
-        <span style={{ fontSize: 14, fontWeight: 800, textAlign: "center", width: 54 }}>
+      <div style={{ display: "flex", gap: 8, padding: `6px ${sidePadding}px` }}>
+        <span style={{ flex: 1, fontSize: 14, fontWeight: 800, textAlign: "left" }}>
+          สินค้า
+        </span>
+        <span style={{ fontSize: 14, fontWeight: 800, textAlign: "right", width: 60 }}>
           จำนวน
         </span>
         <span style={{ fontSize: 14, fontWeight: 800, textAlign: "right", width: 48 }}>
@@ -199,15 +195,15 @@ function ReceiptImage({
               style={{
                 flex: 1,
                 fontSize: 13,
-                lineHeight: 1.5,
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-                whiteSpace: "nowrap",
+                lineHeight: 1.4,
+                whiteSpace: "normal",
+                wordBreak: "break-word",
+                overflow: "visible",
               }}
             >
               {item.name}
             </div>
-            <div style={{ fontSize: 14, textAlign: "center", width: 54 }}>
+            <div style={{ fontSize: 14, textAlign: "right", width: 60 }}>
               {item.quantity.toLocaleString("th-TH")}
             </div>
             <div style={{ fontSize: 14, textAlign: "right", width: 48 }}>

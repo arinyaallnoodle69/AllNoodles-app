@@ -2545,6 +2545,17 @@ export default function OrderClient({
                   {profile?.displayName && (
                     <p className="mt-1 text-sm text-slate-400">{profile.displayName}</p>
                   )}
+
+                  <div className="mt-3.5 flex items-center justify-center gap-1.5 text-[13px] font-bold text-slate-500 md:text-sm">
+                    <span>ติดต่อสอบถามราคาได้ที่ :</span>
+                    <Phone className="h-4 w-4 text-[#003366] shrink-0" strokeWidth={2.5} />
+                    <a
+                      href="tel:081-903-4686"
+                      className="text-[#003366] hover:underline font-extrabold tracking-tight"
+                    >
+                      081-903-4686
+                    </a>
+                  </div>
                 </>
               )}
             </div>
