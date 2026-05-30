@@ -729,9 +729,9 @@ async function convertSinglePendingOrder(input: {
     })
     .eq("id", input.order.id);
 
-  let receiptError: string | null = null;
-  try {
-    const receiptResult = await generateUploadAndNotifyCustomerReceiptImage({
+  return {
+    orderNumber: targetOrder.order_number,
+    receiptPayload: {
       customerName: input.customer.name,
       items: finalReceiptItems,
       lineUserId: input.lineUserId,
@@ -739,27 +739,7 @@ async function convertSinglePendingOrder(input: {
       orderNumber: targetOrder.order_number,
       organizationId: input.organizationId,
       totalAmount: finalTotal,
-    });
-    if ("error" in receiptResult) {
-      receiptError = receiptResult.error;
-      console.error("[line-pending:receipt-image]", {
-        error: receiptResult.error,
-        lineUserId: input.lineUserId,
-        orderNumber: targetOrder.order_number,
-      });
-    }
-  } catch (error) {
-    receiptError = error instanceof Error ? error.message : String(error);
-    console.error("[line-pending:receipt-image]", {
-      error,
-      lineUserId: input.lineUserId,
-      orderNumber: targetOrder.order_number,
-    });
-  }
-
-  return {
-    orderNumber: targetOrder.order_number,
-    receiptError,
+    },
   };
 }
 
@@ -855,7 +835,8 @@ export async function linkLineCustomerAndConvertPendingOrders(input: {
     .order("created_at", { ascending: true });
 
   const orderNumbers: string[] = [];
-  const receiptErrors: string[] = [];
+  const receiptJobs: Promise<{ orderNumber: string; receiptError: string | null }>[] = [];
+
   for (const order of allPendingOrders ?? []) {
     const convertedOrder = await convertSinglePendingOrder({
       admin,
@@ -867,9 +848,40 @@ export async function linkLineCustomerAndConvertPendingOrders(input: {
     });
     if (convertedOrder) {
       orderNumbers.push(convertedOrder.orderNumber);
-      if (convertedOrder.receiptError) {
-        receiptErrors.push(`${convertedOrder.orderNumber}: ${convertedOrder.receiptError}`);
-      }
+      
+      const payload = convertedOrder.receiptPayload;
+      receiptJobs.push(
+        (async () => {
+          let receiptError: string | null = null;
+          try {
+            const receiptResult = await generateUploadAndNotifyCustomerReceiptImage(payload);
+            if ("error" in receiptResult) {
+              receiptError = receiptResult.error;
+              console.error("[line-pending:receipt-image]", {
+                error: receiptResult.error,
+                lineUserId: pendingOrder.line_user_id,
+                orderNumber: convertedOrder.orderNumber,
+              });
+            }
+          } catch (error) {
+            receiptError = error instanceof Error ? error.message : String(error);
+            console.error("[line-pending:receipt-image]", {
+              error,
+              lineUserId: pendingOrder.line_user_id,
+              orderNumber: convertedOrder.orderNumber,
+            });
+          }
+          return { orderNumber: convertedOrder.orderNumber, receiptError };
+        })()
+      );
+    }
+  }
+
+  const receiptResults = await Promise.all(receiptJobs);
+  const receiptErrors: string[] = [];
+  for (const res of receiptResults) {
+    if (res.receiptError) {
+      receiptErrors.push(`${res.orderNumber}: ${res.receiptError}`);
     }
   }
 

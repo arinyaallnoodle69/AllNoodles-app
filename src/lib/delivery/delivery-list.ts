@@ -174,8 +174,8 @@ export async function getDeliveryList(
   }
 
   const { data: notesData, error: notesError } = await query
-    .order("delivery_date", { ascending: true })
-    .order("created_at", { ascending: true });
+    .order("delivery_date", { ascending: keyword ? false : true })
+    .order("created_at", { ascending: keyword ? false : true });
 
   if (notesError || !notesData) return [];
 
@@ -197,19 +197,33 @@ export async function getDeliveryList(
   if (filteredNotes.length === 0) return [];
 
   const noteIds = filteredNotes.map((row) => row.id);
-  const { data: linesData, error: linesError } = await supabase
-    .from("delivery_note_items")
-    .select(`
-      id, delivery_note_id, order_item_id, product_id, quantity_delivered, unit_price, line_total, sale_unit_label,
-      products!inner(name, sku, unit)
-    `)
-    .eq("organization_id", organizationId)
-    .in("delivery_note_id", noteIds)
-    .order("created_at", { ascending: true });
+  // Batch query delivery_note_items in chunks of 50 to avoid Supabase/PostgREST URL 414 too large error
+  const linesData: RawDeliveryLineRow[] = [];
+  const noteIdChunks: string[][] = [];
+  for (let i = 0; i < noteIds.length; i += 50) {
+    noteIdChunks.push(noteIds.slice(i, i + 50));
+  }
 
-  if (linesError || !linesData) return [];
+  for (const chunk of noteIdChunks) {
+    const { data, error } = await supabase
+      .from("delivery_note_items")
+      .select(`
+        id, delivery_note_id, order_item_id, product_id, quantity_delivered, unit_price, line_total, sale_unit_label,
+        products!inner(name, sku, unit)
+      `)
+      .eq("organization_id", organizationId)
+      .in("delivery_note_id", chunk)
+      .order("created_at", { ascending: true });
 
-  const lines = linesData as RawDeliveryLineRow[];
+    if (error) {
+      return [];
+    }
+    if (data) {
+      linesData.push(...(data as RawDeliveryLineRow[]));
+    }
+  }
+
+  const lines = linesData;
   const linesByNote = new Map<string, RawDeliveryLineRow[]>();
   const orderItemIds: string[] = [];
 
@@ -225,17 +239,24 @@ export async function getDeliveryList(
   const orderItemById = new Map<string, RawOrderItemRow>();
 
   if (uniqueOrderItemIds.length > 0) {
-    const { data: orderItemsData } = await supabase
-      .from("order_items")
-      .select(`
-        id, quantity, line_total, sale_unit_label,
-        orders(order_number)
-      `)
-      .eq("organization_id", organizationId)
-      .in("id", uniqueOrderItemIds);
+    const orderItemIdChunks: string[][] = [];
+    for (let i = 0; i < uniqueOrderItemIds.length; i += 50) {
+      orderItemIdChunks.push(uniqueOrderItemIds.slice(i, i + 50));
+    }
 
-    for (const orderItem of (orderItemsData ?? []) as RawOrderItemRow[]) {
-      orderItemById.set(orderItem.id, orderItem);
+    for (const chunk of orderItemIdChunks) {
+      const { data } = await supabase
+        .from("order_items")
+        .select(`
+          id, quantity, line_total, sale_unit_label,
+          orders(order_number)
+        `)
+        .eq("organization_id", organizationId)
+        .in("id", chunk);
+
+      for (const orderItem of (data ?? []) as RawOrderItemRow[]) {
+        orderItemById.set(orderItem.id, orderItem);
+      }
     }
   }
 

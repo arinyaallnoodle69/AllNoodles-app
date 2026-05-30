@@ -1,15 +1,21 @@
 "use client";
 
 import Image from "next/image";
-import type {
-  RefObject,
-  TouchEventHandler,
-  UIEventHandler,
+import {
+  useCallback,
+  useState,
+  useTransition,
+  type RefObject,
+  type TouchEventHandler,
+  type UIEventHandler,
 } from "react";
 import {
+  BadgeCheck,
   Gem,
   Info,
   Link2,
+  Loader2,
+  MessageCircle,
   Package,
   Share2,
   ShoppingCart,
@@ -19,6 +25,7 @@ import {
   X,
 } from "lucide-react";
 import { ModalAddToCartFooter as CustomerModalAddToCartFooter } from "@/app/order/customer/components/modal-add-to-cart-footer";
+import { sendPriceInquiry } from "@/app/order/actions";
 import type {
   ProductImage,
   ProductWithImage,
@@ -114,6 +121,31 @@ export function ProductDetailModal({
   const description = meta.description ?? "";
   const hasMinimumOrder = selectedProduct.min_order_qty > 1;
   const hasContent = brand || category || description;
+
+  const [isInquiryPending, startInquiryTransition] = useTransition();
+  const [inquirySent, setInquirySent] = useState(false);
+
+  const handlePriceInquiry = useCallback(() => {
+    if (isInquiryPending || inquirySent) return;
+
+    startInquiryTransition(async () => {
+      try {
+        const result = await sendPriceInquiry({
+          organizationId,
+          productName: selectedProduct.name,
+        });
+
+        if (result.success) {
+          setInquirySent(true);
+        } else {
+          alert(result.error || "ไม่สามารถส่งคำถามได้ในขณะนี้");
+        }
+      } catch (error) {
+        console.error("[ProductDetailModal:handlePriceInquiry]", error);
+        alert("เกิดข้อผิดพลาดในการส่งข้อมูล");
+      }
+    });
+  }, [organizationId, selectedProduct.name, isInquiryPending, inquirySent]);
 
   return (
     <div
@@ -328,6 +360,30 @@ export function ProductDetailModal({
                 <h1 className="text-[22px] font-extrabold leading-tight text-slate-900">
                   {selectedProduct.name}
                 </h1>
+
+                {/* Price Inquiry Button */}
+                <div className="mt-2.5">
+                  <button
+                    type="button"
+                    onClick={handlePriceInquiry}
+                    disabled={isInquiryPending || inquirySent}
+                    className={`flex w-full items-center justify-center gap-2 rounded-xl py-3 text-sm font-black transition-all active:scale-[0.98] ${
+                      inquirySent
+                        ? "bg-slate-100 text-slate-400 cursor-default"
+                        : "bg-[#00A86B] text-white shadow-[0_6px_16px_rgba(0,168,107,0.22)] hover:brightness-105"
+                    }`}
+                  >
+                    {isInquiryPending ? (
+                      <Loader2 className="h-4.5 w-4.5 animate-spin" />
+                    ) : inquirySent ? (
+                      <BadgeCheck className="h-4.5 w-4.5 text-emerald-500" />
+                    ) : (
+                      <MessageCircle className="h-4.5 w-4.5" strokeWidth={2.8} />
+                    )}
+                    <span>{inquirySent ? "ส่งคำถามแล้ว" : `สอบถามราคา ${selectedProduct.name}`}</span>
+                  </button>
+                </div>
+
                 <div className="mt-2 flex flex-wrap items-center gap-1.5">
                   <TrustBadge icon={Truck} label="พร้อมส่ง" />
                   <TrustBadge icon={Gem} label="คัดคุณภาพ" />

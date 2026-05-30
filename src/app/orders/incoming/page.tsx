@@ -1,8 +1,7 @@
 import { ClipboardList, Search } from "lucide-react";
 import dynamic from "next/dynamic";
-import { Fragment } from "react";
 import { SettingsShell } from "@/components/settings/settings-shell";
-import { IncomingOrderOpenCard } from "@/components/orders/incoming-order-open-card";
+import { IncomingOrdersMobileList } from "@/components/orders/incoming-orders-mobile-list";
 import { IncomingOrderDateFilter } from "@/components/orders/incoming-order-date-filter";
 import { MobileSearchDrawer } from "@/components/mobile-search/mobile-search-drawer";
 import { OrderCustomerFilter } from "@/components/orders/order-customer-filter";
@@ -283,18 +282,39 @@ export default async function IncomingOrdersPage({ searchParams }: IncomingOrder
     return `${a.customerCode} ${a.customerName}`.localeCompare(`${b.customerCode} ${b.customerName}`, "th");
   });
 
-  function buildExpandedHref(nextExpandedId: string | null) {
-    const query = new URLSearchParams();
-    query.set("date", orderDate);
-    if (endDate !== orderDate) query.set("endDate", endDate);
-    if (searchTerm) query.set("q", searchTerm);
-    if (selectedCustomerIds.length > 0) query.set("customers", selectedCustomerIds.join(","));
-    if (nextExpandedId) query.set("expanded", nextExpandedId);
-    return `/orders/incoming?${query.toString()}`;
+  type DirectDeliveryRow = {
+    id: string;
+    order_id: string | null;
+    customer_id: string;
+    delivery_date: string;
+    delivery_number: string;
+  };
+
+  // Fetch direct delivery notes by activeOrderIds in chunks of 40 to solve any deliveryDate vs orderDate mismatches and URL limit errors
+  const directDeliveries: DirectDeliveryRow[] = [];
+  if (activeOrderIds.length > 0) {
+    const orderIdChunks: string[][] = [];
+    for (let i = 0; i < activeOrderIds.length; i += 40) {
+      orderIdChunks.push(activeOrderIds.slice(i, i + 40));
+    }
+
+    for (const chunk of orderIdChunks) {
+      const { data, error } = await admin
+        .from("delivery_notes")
+        .select("id, order_id, customer_id, delivery_date, delivery_number")
+        .eq("organization_id", session.organizationId)
+        .in("order_id", chunk)
+        .eq("status", "confirmed");
+
+      if (!error && data) {
+        directDeliveries.push(...data);
+      }
+    }
   }
 
   const deliveryMap = new Map<string, string[]>();
   const deliveryIdMap = new Map<string, string[]>();
+
   for (const item of deliveryData) {
     const key = `${item.customerId}_${item.deliveryDate}`;
     deliveryMap.set(
@@ -305,6 +325,30 @@ export default async function IncomingOrdersPage({ searchParams }: IncomingOrder
       key,
       item.deliveryNotes.map((note) => note.id),
     );
+  }
+
+  // Enrich with direct deliveries using orderDate!
+  if (directDeliveries) {
+    for (const note of directDeliveries) {
+      if (!note.order_id) continue;
+      const matchedOrder = activeOrders.find((o) => o.id === note.order_id);
+      if (matchedOrder) {
+        // We map under key: customerId_orderDate
+        const key = `${matchedOrder.customerId}_${matchedOrder.orderDate}`;
+        
+        const existingNumbers = deliveryMap.get(key) ?? [];
+        if (!existingNumbers.includes(note.delivery_number)) {
+          existingNumbers.push(note.delivery_number);
+        }
+        deliveryMap.set(key, existingNumbers);
+
+        const existingIds = deliveryIdMap.get(key) ?? [];
+        if (!existingIds.includes(note.id)) {
+          existingIds.push(note.id);
+        }
+        deliveryIdMap.set(key, existingIds);
+      }
+    }
   }
 
   type GroupedOrderStore = {
@@ -363,6 +407,28 @@ export default async function IncomingOrdersPage({ searchParams }: IncomingOrder
       deliveryNumbers.some((deliveryNumber) => billedDeliveryNumbers.has(deliveryNumber)),
     ]),
   );
+
+  const mobileMappedOrders = filteredOrders.map((order) => {
+    const deliveryNumbers = deliveryMap.get(`${order.customerId}_${order.orderDate}`);
+    const isBilled = billedDeliveryByCustomerDate[`${order.customerId}_${order.orderDate}`] ?? false;
+    return {
+      id: order.id,
+      orderNumber: order.orderNumber,
+      customerId: order.customerId,
+      customerName: order.customerName,
+      customerCode: order.customerCode,
+      channelLabel: order.channelLabel,
+      orderDate: order.orderDate,
+      notes: order.notes,
+      productCount: order.productCount,
+      totalAmount: order.totalAmount,
+      totalAmountText: `${formatCurrency(order.totalAmount)} บาท`,
+      vehicleId: order.vehicleId,
+      vehicleName: order.vehicleName,
+      deliveryNumbers,
+      isBilled,
+    };
+  });
 
   return (
     <SettingsShell
@@ -539,50 +605,13 @@ export default async function IncomingOrdersPage({ searchParams }: IncomingOrder
           {filteredOrders.length > 0 ? (
             <>
               <div className="relative left-1/2 w-screen -translate-x-1/2 lg:hidden">
-                <div className="grid grid-cols-1 divide-y divide-slate-200 border-t border-slate-200 sm:grid-cols-2 sm:divide-y-0 sm:gap-px sm:bg-slate-200">
-                  {filteredOrders.map((order, index) => {
-                    const showDivider = index === 0 || order.orderDate !== filteredOrders[index - 1].orderDate;
-
-                    return (
-                      <Fragment key={order.id}>
-                        {showDivider ? (
-                          <div className="col-span-full flex items-center gap-3 bg-slate-50/80 px-4 py-3">
-                            <div className="h-[2px] flex-1 bg-slate-200" />
-                            <div className="shrink-0 rounded-2xl border border-slate-200 bg-white px-4 py-1.5 shadow-sm">
-                              <span className="text-[13px] font-black uppercase tracking-wider text-[#003366]">
-                                {formatDisplayDate(order.orderDate)}
-                              </span>
-                            </div>
-                            <div className="h-[2px] flex-1 bg-slate-200" />
-                          </div>
-                        ) : null}
-
-                        <IncomingOrderOpenCard
-                          href={buildExpandedHref(order.id)}
-                          orderId={order.id}
-                          orderNumber={order.orderNumber}
-                          customerId={order.customerId}
-                          customerName={order.customerName}
-                          customerCode={order.customerCode}
-                          channelLabel={order.channelLabel}
-                          currentListDate={orderDate}
-                          deliveryNumbers={deliveryMap.get(`${order.customerId}_${order.orderDate}`)}
-                          displayDate={formatDisplayDate(order.orderDate)}
-                          isBilled={billedDeliveryByCustomerDate[`${order.customerId}_${order.orderDate}`] ?? false}
-                          notes={order.notes}
-                          orderDate={order.orderDate}
-                          productCount={order.productCount}
-                          searchTerm={searchTerm}
-                          selectedCustomerIds={selectedCustomerIds}
-                          totalAmountText={`${formatCurrency(order.totalAmount)} บาท`}
-                          vehicleId={order.vehicleId}
-                          vehicleName={order.vehicleName}
-                          vehicles={vehicles}
-                        />
-                      </Fragment>
-                    );
-                  })}
-                </div>
+                <IncomingOrdersMobileList
+                  orders={mobileMappedOrders}
+                  vehicles={vehicles}
+                  currentListDate={orderDate}
+                  searchTerm={searchTerm}
+                  selectedCustomerIds={selectedCustomerIds}
+                />
               </div>
 
               <div className="hidden overflow-x-auto no-scrollbar lg:block">
