@@ -59,7 +59,7 @@ type StoreListModalState = {
 
 type LineOrderModalState = {
   allOrders: IncomingOrderListItem[];
-  detail: OrderDetailData;
+  detail: OrderDetailData | null;
   expandedId: string;
   products: OrderProductOption[];
 };
@@ -253,9 +253,28 @@ export function DashboardClient({
   const { open: openCreateOrder } = useCreateOrder();
   const [isStockModalOpen, setIsStockModalOpen] = useState(false);
   const [isLineOrdersDrawerOpen, setIsLineOrdersDrawerOpen] = useState(false);
-  const [openingLineOrderId, setOpeningLineOrderId] = useState<string | null>(null);
+  const [isLineOrdersDrawerClosing, setIsLineOrdersDrawerClosing] = useState(false);
   const [lineOrderModal, setLineOrderModal] = useState<LineOrderModalState | null>(null);
+
+  function closeLineOrdersDrawer() {
+    if (isLineOrdersDrawerClosing) return;
+    setIsLineOrdersDrawerClosing(true);
+    setTimeout(() => {
+      setIsLineOrdersDrawerOpen(false);
+      setIsLineOrdersDrawerClosing(false);
+    }, 450);
+  }
   const [viewingStores, setViewingStores] = useState<StoreListModalState | null>(null);
+  const [isViewingStoresClosing, setIsViewingStoresClosing] = useState(false);
+
+  function closeViewingStores() {
+    if (isViewingStoresClosing) return;
+    setIsViewingStoresClosing(true);
+    setTimeout(() => {
+      setViewingStores(null);
+      setIsViewingStoresClosing(false);
+    }, 450);
+  }
 
   const [now, setNow] = useState(new Date());
   const [prevSs, setPrevSs] = useState("");
@@ -296,16 +315,21 @@ export function DashboardClient({
       return;
     }
 
-    if (openingLineOrderId === orderId) return;
-
     setIsLineOrdersDrawerOpen(false);
-    setLineOrderModal(null);
-    setOpeningLineOrderId(orderId);
+
+    // Open the modal instantly with a loading skeleton state
+    setLineOrderModal({
+      allOrders: [],
+      detail: null,
+      expandedId: orderId,
+      products: [],
+    });
 
     try {
       const result = await fetchIncomingOrderModalDataAction(orderId, orderDate);
       if (result.error || !result.detail) {
         alert(result.error ?? "โหลดรายละเอียดออเดอร์ไม่สำเร็จ");
+        setLineOrderModal(null);
         return;
       }
 
@@ -318,8 +342,7 @@ export function DashboardClient({
     } catch (error) {
       console.error("[dashboard:openLineOrderDetail]", error);
       alert("โหลดรายละเอียดออเดอร์ไม่สำเร็จ");
-    } finally {
-      setOpeningLineOrderId(null);
+      setLineOrderModal(null);
     }
   }
 
@@ -383,11 +406,39 @@ export function DashboardClient({
                 from { transform: translateY(100%); opacity: 0; }
                 to { transform: translateY(0); opacity: 1; }
               }
+              @keyframes drawerSlideIn {
+                from { transform: translateY(100%); }
+                to { transform: translateY(0); }
+              }
+              @keyframes drawerSlideOut {
+                from { transform: translateY(0); }
+                to { transform: translateY(100%); }
+              }
+              @keyframes backdropFadeIn {
+                from { opacity: 0; }
+                to { opacity: 1; }
+              }
+              @keyframes backdropFadeOut {
+                from { opacity: 1; }
+                to { opacity: 0; }
+              }
               .animate-slide-up-out {
                 animation: slideUpOut 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
               }
               .animate-slide-up-in {
                 animation: slideUpIn 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+              }
+              .animate-drawer-slide-in {
+                animation: drawerSlideIn 0.58s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+              }
+              .animate-drawer-slide-out {
+                animation: drawerSlideOut 0.45s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+              }
+              .animate-backdrop-fade-in {
+                animation: backdropFadeIn 0.45s ease-out forwards;
+              }
+              .animate-backdrop-fade-out {
+                animation: backdropFadeOut 0.4s ease-in forwards;
               }
             `}</style>
             <p className="mt-1 text-[14px] font-bold text-slate-400 md:text-base flex items-center">
@@ -438,12 +489,13 @@ export function DashboardClient({
 
           <section className="order-2 flex flex-col gap-4 md:gap-6 xl:order-1 xl:col-span-8">
             <button
-              onClick={() =>
+              onClick={() => {
+                setIsViewingStoresClosing(false);
                 setViewingStores({
                   title: "ร้านค้าทั้งหมด",
                   stores: storeStatusSummary.allStores,
-                })
-              }
+                });
+              }}
               className="group flex w-full items-center gap-5 rounded-[1.35rem] border border-slate-200 bg-white p-5 text-left shadow-sm transition-all hover:border-[#002581]/30 hover:shadow-md active:scale-[0.99] md:p-7"
             >
               <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-3xl bg-[#002581]/5 text-[#002581] transition-colors group-hover:bg-[#002581] group-hover:text-white md:h-20 md:w-20">
@@ -468,12 +520,13 @@ export function DashboardClient({
 
             <div className="grid grid-cols-2 gap-4 md:gap-6">
               <button
-                onClick={() =>
+                onClick={() => {
+                  setIsViewingStoresClosing(false);
                   setViewingStores({
                     title: "ร้านค้าที่ยังไม่ได้สั่ง",
                     stores: storeStatusSummary.unorderedStores,
-                  })
-                }
+                  });
+                }}
                 className="group flex items-center gap-4 rounded-[1.35rem] border border-slate-200 bg-white p-4 text-left shadow-sm transition-all hover:border-rose-200 hover:shadow-md active:scale-[0.98] md:p-6"
               >
                 <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-rose-50 text-rose-600 transition-colors group-hover:bg-rose-600 group-hover:text-white md:h-16 md:w-16">
@@ -490,12 +543,13 @@ export function DashboardClient({
               </button>
 
               <button
-                onClick={() =>
+                onClick={() => {
+                  setIsViewingStoresClosing(false);
                   setViewingStores({
                     title: "ร้านค้าที่สั่งแล้ว",
                     stores: storeStatusSummary.orderedStores,
-                  })
-                }
+                  });
+                }}
                 className="group flex items-center gap-4 rounded-[1.35rem] border border-slate-200 bg-white p-4 text-left shadow-sm transition-all hover:border-emerald-200 hover:shadow-md active:scale-[0.98] md:p-6"
               >
                 <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600 transition-colors group-hover:bg-emerald-600 group-hover:text-white md:h-16 md:w-16">
@@ -798,23 +852,33 @@ export function DashboardClient({
         </div>
       </main>
 
-      {viewingStores ? (
-        <div className="fixed inset-0 z-[300] flex items-end justify-center bg-slate-950/60 p-0 backdrop-blur-[6px] sm:items-center sm:p-4">
-          <div className="w-full max-w-xl animate-in slide-in-from-bottom overflow-hidden rounded-t-[3rem] bg-white pb-12 pt-4 shadow-2xl sm:rounded-[3rem]">
+      {viewingStores || isViewingStoresClosing ? (
+        <div className={`fixed inset-0 z-[300] flex items-end justify-center bg-slate-950/60 p-0 backdrop-blur-[6px] sm:items-center sm:p-4 ${
+          isViewingStoresClosing ? "animate-backdrop-fade-out" : "animate-backdrop-fade-in"
+        }`}>
+          <button
+            type="button"
+            aria-label="ปิดรายการร้านค้า"
+            className="absolute inset-0 cursor-default"
+            onClick={closeViewingStores}
+          />
+          <div className={`relative z-10 w-full max-w-xl overflow-hidden rounded-t-[3rem] bg-white pb-12 pt-4 shadow-2xl sm:rounded-[3rem] ${
+            isViewingStoresClosing ? "animate-drawer-slide-out" : "animate-drawer-slide-in"
+          }`}>
             <div className="mb-6 flex justify-center">
               <div className="h-1.5 w-16 rounded-full bg-slate-200" />
             </div>
             <div className="mb-8 flex items-center justify-between px-8">
               <div>
                 <h3 className="text-2xl font-black tracking-tight text-[#001E5D]">
-                  {viewingStores.title}
+                  {viewingStores?.title}
                 </h3>
                 <p className="mt-1 text-xs font-bold uppercase tracking-widest text-slate-400">
                   Store Registry
                 </p>
               </div>
               <button
-                onClick={() => setViewingStores(null)}
+                onClick={closeViewingStores}
                 className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 text-slate-400 transition-transform active:scale-90"
               >
                 <X className="h-6 w-6" strokeWidth={3} />
@@ -822,7 +886,7 @@ export function DashboardClient({
             </div>
 
             <div className="no-scrollbar max-h-[60vh] space-y-px overflow-y-auto pb-10">
-              {viewingStores.stores.length === 0 ? (
+              {!viewingStores || viewingStores.stores.length === 0 ? (
                 <div className="flex flex-col items-center py-24 text-center">
                   <div className="mb-5 rounded-full bg-slate-50 p-7">
                     <Store className="h-14 w-14 text-slate-200" />
@@ -848,7 +912,7 @@ export function DashboardClient({
                               const params = new URLSearchParams(searchParams.toString());
                               params.set("expanded", store.latestOrderId ?? "");
                               router.push(`/dashboard?${params.toString()}`, { scroll: false });
-                              setViewingStores(null);
+                              closeViewingStores();
                             });
                             return;
                           }
@@ -894,15 +958,19 @@ export function DashboardClient({
         </div>
       ) : null}
 
-      {isLineOrdersDrawerOpen ? (
-        <div className="fixed inset-0 z-[310] flex items-end justify-end bg-slate-950/55 backdrop-blur-[4px]">
+      {isLineOrdersDrawerOpen || isLineOrdersDrawerClosing ? (
+        <div className={`fixed inset-0 z-[310] flex items-end justify-end bg-slate-950/55 backdrop-blur-[4px] ${
+          isLineOrdersDrawerClosing ? "animate-backdrop-fade-out" : "animate-backdrop-fade-in"
+        }`}>
           <button
             type="button"
             aria-label="ปิดรายการออเดอร์จาก LINE"
             className="absolute inset-0 cursor-default"
-            onClick={() => setIsLineOrdersDrawerOpen(false)}
+            onClick={closeLineOrdersDrawer}
           />
-          <aside className="relative flex h-[86dvh] w-full max-w-lg flex-col overflow-hidden rounded-t-[2rem] bg-white shadow-[0_-24px_70px_rgba(15,23,42,0.24)] sm:h-full sm:rounded-l-[2rem] sm:rounded-tr-none">
+          <aside className={`relative flex h-[86dvh] w-full max-w-lg flex-col overflow-hidden rounded-t-[2rem] bg-white shadow-[0_-24px_70px_rgba(15,23,42,0.24)] sm:h-full sm:rounded-l-[2rem] sm:rounded-tr-none ${
+            isLineOrdersDrawerClosing ? "animate-drawer-slide-out" : "animate-drawer-slide-in"
+          }`}>
             <div className="flex shrink-0 items-start justify-between gap-4 border-b border-slate-100 px-5 py-5 pt-[max(1.25rem,env(safe-area-inset-top))] sm:px-6">
               <div className="flex min-w-0 items-center gap-3">
                 <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#06c755]/10">
@@ -919,7 +987,7 @@ export function DashboardClient({
               </div>
               <button
                 type="button"
-                onClick={() => setIsLineOrdersDrawerOpen(false)}
+                onClick={closeLineOrdersDrawer}
                 className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-slate-100 text-slate-500 transition hover:bg-slate-200 active:scale-95"
                 aria-label="ปิด"
               >
@@ -969,8 +1037,10 @@ export function DashboardClient({
                               <h4 className="min-w-0 flex-1 truncate text-base font-black leading-tight text-slate-950">
                                 {displayName}
                               </h4>
-                              {openingLineOrderId === order.orderId ? (
-                                <Loader2 className="h-4 w-4 shrink-0 animate-spin text-[#06c755]" strokeWidth={2.6} />
+                              {order.hasUnpricedItems ? (
+                                <span className="shrink-0 rounded-full bg-red-600 px-2.5 py-1 text-[11px] font-black text-yellow-200 border border-red-500 shadow-sm animate-pulse-subtle">
+                                  ออเดอร์ไม่สมบูรณ์
+                                </span>
                               ) : null}
                               <span
                                 className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-black ${
@@ -1012,19 +1082,7 @@ export function DashboardClient({
         </div>
       ) : null}
 
-      {openingLineOrderId ? (
-        <div className="fixed inset-0 z-[330] flex items-center justify-center bg-slate-950/45 px-6 backdrop-blur-[2px]">
-          <div className="flex w-full max-w-xs flex-col items-center gap-4 rounded-3xl border border-slate-100 bg-white px-7 py-6 text-center shadow-[0_24px_70px_rgba(15,23,42,0.22)]">
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#06c755]/10 text-[#06c755]">
-              <Loader2 className="h-7 w-7 animate-spin" strokeWidth={2.5} />
-            </div>
-            <div>
-              <p className="text-base font-black text-slate-950">กำลังเปิดรายละเอียดออเดอร์</p>
-              <p className="mt-1 text-sm font-semibold text-slate-500">โหลดข้อมูลจากรายการ LINE</p>
-            </div>
-          </div>
-        </div>
-      ) : null}
+
 
       {lineOrderModal ? (
         <IncomingOrderModal

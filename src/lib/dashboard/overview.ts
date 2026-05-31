@@ -68,6 +68,7 @@ export type LineOrderOverviewItem = {
   customerName: string | null;
   createdAt: string;
   status: "pending_link" | "converted";
+  hasUnpricedItems?: boolean;
 };
 
 export type DashboardOverview = {
@@ -125,6 +126,7 @@ type LineSourceOrderDashboardRow = {
   customer_id: string;
   customers: { line_user_id: string | null; name: string | null } | null;
   metadata: Json | null;
+  order_items: { unit_price: number | string | null }[];
 };
 
 type LineCustomerProfileDashboardRow = {
@@ -337,7 +339,7 @@ export async function getDashboardOverview(organizationId: string): Promise<Dash
 
     // 12. Today's customer orders that came from the LINE ordering page
     supabase.from("orders")
-      .select("id, order_number, customer_id, created_at, metadata, customers!inner(name, line_user_id)")
+      .select("id, order_number, customer_id, created_at, metadata, customers!inner(name, line_user_id), order_items(unit_price)")
       .eq("organization_id", organizationId)
       .eq("order_date", today)
       .in("status", ["submitted", "confirmed"]),
@@ -586,6 +588,10 @@ export async function getDashboardOverview(organizationId: string): Promise<Dash
       lineProfileByCustomerId.get(row.customer_id) ??
       lineProfileByUserId.get(row.customers?.line_user_id?.trim() ?? "");
 
+    const hasUnpricedItems = row.order_items?.some(
+      (item) => item.unit_price === null || item.unit_price === undefined || Number(item.unit_price) <= 0
+    ) ?? false;
+
     return {
       id: row.id,
       orderNumber: row.order_number,
@@ -595,6 +601,7 @@ export async function getDashboardOverview(organizationId: string): Promise<Dash
       customerName: row.customers?.name ?? null,
       createdAt: row.created_at,
       status: "converted" as const,
+      hasUnpricedItems,
     };
   });
 

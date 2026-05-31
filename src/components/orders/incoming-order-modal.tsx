@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { memo, useEffect, useState, useTransition } from "react";
 import dynamic from "next/dynamic";
@@ -337,6 +337,13 @@ const EditItemsPanel = memo(({
         throw new Error("จำนวนสินค้าต้องมากกว่า 0 และราคาต้องไม่ติดลบ");
       }
 
+      const hasZeroPriceActive = Object.values(normalizedUnitPrices).some((price) => price <= 0);
+      const hasZeroPriceAdded = normalizedAddedItems.some((item) => item.unitPrice <= 0);
+      if (hasZeroPriceActive || hasZeroPriceAdded) {
+        alert("มีสินค้าบางรายการที่ยังไม่ได้ผูกราคา กรุณากรอกราคาก่อนบันทึก");
+        throw new Error("มีสินค้าบางรายการที่ยังไม่ได้ผูกราคา กรุณากรอกราคาก่อนบันทึก");
+      }
+
       const result = await updateOrderItemsBatchAction({
         orderId: detail.id,
         notes,
@@ -528,8 +535,18 @@ const EditItemsPanel = memo(({
                             value={addedUnitPriceInputs[item.key] ?? String(addedUnitPrice)}
                             onChange={(e) => handleAddedUnitPriceInput(item.key, e.target.value)}
                             onBlur={() => commitAddedUnitPriceInput(item.key)}
-                            className="h-9 w-28 rounded-lg border border-slate-200 bg-white px-2 text-center font-black text-slate-950 outline-none transition focus:border-[#003366] focus:ring-2 focus:ring-[#003366]/10 mx-auto block"
+                            className={`h-9 w-28 rounded-lg border px-2 text-center font-black outline-none transition mx-auto block focus:ring-2 ${
+                              addedUnitPrice <= 0
+                                ? "border-red-500 bg-red-50 text-red-700 focus:border-red-600 focus:ring-red-600/10"
+                                : "border-slate-200 bg-white text-slate-950 focus:border-[#003366] focus:ring-[#003366]/10"
+                            }`}
                           />
+                          {addedUnitPrice <= 0 ? (
+                            <span className="text-[10px] font-black text-red-600 flex items-center justify-center gap-1 mt-1 animate-pulse">
+                              <AlertTriangle className="h-3 w-3 text-red-600 shrink-0" />
+                              ยังไม่ผูกราคา
+                            </span>
+                          ) : null}
                         </td>
                         <td className="px-5 py-4 text-center font-black text-slate-950 border-r border-slate-100">฿{formatTHB(item.quantity * addedUnitPrice)}</td>
                         <td className="px-5 py-4 text-center border-r border-slate-100">
@@ -590,8 +607,18 @@ const EditItemsPanel = memo(({
                             value={unitPriceInputs[item.id] ?? String(unitPrice)}
                             onChange={(e) => handleUnitPriceInput(item.id, e.target.value)}
                             onBlur={() => commitUnitPriceInput(item.id)}
-                            className="h-9 w-28 rounded-lg border border-slate-200 bg-white px-2 text-center font-black text-slate-950 outline-none transition focus:border-[#003366] focus:ring-2 focus:ring-[#003366]/10 mx-auto block"
+                            className={`h-9 w-28 rounded-lg border px-2 text-center font-black outline-none transition mx-auto block focus:ring-2 ${
+                              unitPrice <= 0
+                                ? "border-red-500 bg-red-50 text-red-700 focus:border-red-600 focus:ring-red-600/10"
+                                : "border-slate-200 bg-white text-slate-950 focus:border-[#003366] focus:ring-[#003366]/10"
+                            }`}
                           />
+                          {unitPrice <= 0 ? (
+                            <span className="text-[10px] font-black text-red-600 flex items-center justify-center gap-1 mt-1 animate-pulse">
+                              <AlertTriangle className="h-3 w-3 text-red-600 shrink-0" />
+                              ยังไม่ผูกราคา
+                            </span>
+                          ) : null}
                         </td>
                         <td className="px-5 py-4 text-center font-black text-slate-950 border-r border-slate-100">฿{formatTHB(qty * unitPrice)}</td>
                         <td className="px-5 py-4 text-center border-r border-slate-100">
@@ -699,8 +726,18 @@ const EditItemsPanel = memo(({
                               value={addedUnitPriceInputs[item.key] ?? String(addedUnitPrice)}
                               onChange={(e) => handleAddedUnitPriceInput(item.key, e.target.value)}
                               onBlur={() => commitAddedUnitPriceInput(item.key)}
-                              className="mt-1 h-9 w-full rounded-lg border border-slate-200 bg-white px-2 text-right text-[15px] font-black text-slate-950 outline-none transition focus:border-[#003366] focus:ring-2 focus:ring-[#003366]/10"
+                              className={`mt-1 h-9 w-full rounded-lg border px-2 text-right text-[15px] font-black outline-none transition focus:ring-2 ${
+                                addedUnitPrice <= 0
+                                  ? "border-red-500 bg-red-50 text-red-700 focus:border-red-600 focus:ring-red-600/10"
+                                  : "border-slate-200 bg-white text-slate-950 focus:border-[#003366] focus:ring-[#003366]/10"
+                              }`}
                             />
+                            {addedUnitPrice <= 0 ? (
+                              <span className="text-[10px] font-black text-red-600 flex items-center justify-end gap-1 mt-1 animate-pulse">
+                                <AlertTriangle className="h-3 w-3 text-red-600 shrink-0" />
+                                ยังไม่ผูกราคา
+                              </span>
+                            ) : null}
                           </div>
                         </div>
                       </div>
@@ -770,8 +807,18 @@ const EditItemsPanel = memo(({
                               value={unitPriceInputs[item.id] ?? String(unitPrice)}
                               onChange={(e) => handleUnitPriceInput(item.id, e.target.value)}
                               onBlur={() => commitUnitPriceInput(item.id)}
-                              className="mt-1 h-9 w-full rounded-lg border border-slate-200 bg-white px-2 text-right text-[15px] font-black text-slate-950 outline-none transition focus:border-[#003366] focus:ring-2 focus:ring-[#003366]/10"
+                              className={`mt-1 h-9 w-full rounded-lg border px-2 text-right text-[15px] font-black outline-none transition focus:ring-2 ${
+                                unitPrice <= 0
+                                  ? "border-red-500 bg-red-50 text-red-700 focus:border-red-600 focus:ring-red-600/10"
+                                  : "border-slate-200 bg-white text-slate-950 focus:border-[#003366] focus:ring-[#003366]/10"
+                              }`}
                             />
+                            {unitPrice <= 0 ? (
+                              <span className="text-[10px] font-black text-red-600 flex items-center justify-end gap-1 mt-1 animate-pulse">
+                                <AlertTriangle className="h-3 w-3 text-red-600 shrink-0" />
+                                ยังไม่ผูกราคา
+                              </span>
+                            ) : null}
                           </div>
                         </div>
                       </div>
@@ -994,9 +1041,15 @@ export function IncomingOrderModal({ allOrders, detail, expandedId, onAfterClose
     }
   }
 
-  if (!isOpen || !detail) return null;
-  const deliveryNumber =
-    detail.deliveryNumber || (detail.orderNumber.startsWith("DN") ? detail.orderNumber : null);
+  if (!isOpen) return null;
+
+  const deliveryNumber = detail
+    ? detail.deliveryNumber || (detail.orderNumber.startsWith("DN") ? detail.orderNumber : null)
+    : null;
+
+  const hasUnpricedItems = detail
+    ? detail.items.some((item) => item.unitPrice === null || item.unitPrice === undefined || Number(item.unitPrice) <= 0)
+    : false;
 
   return (
     <div className={`fixed inset-0 z-[250] flex flex-col items-center justify-end overflow-x-hidden overflow-y-hidden lg:justify-center`}>
@@ -1047,7 +1100,7 @@ export function IncomingOrderModal({ allOrders, detail, expandedId, onAfterClose
       <div className={`absolute inset-0 bg-slate-950/45 backdrop-blur-[2px] ${isClosing ? "backdrop-out" : "animate-fade-in"}`} onClick={close} />
 
       {/* Main Container */}
-      <div className={`${isClosing ? "m-anim-out" : "m-anim"} relative z-10 flex h-full w-full max-w-[100vw] min-w-0 flex-col overflow-x-hidden overflow-y-hidden bg-white shadow-2xl lg:h-[90vh] lg:max-w-4xl lg:rounded-[2.5rem]`}>
+      <div className={`${isClosing ? "animate-slide-up-premium" : "animate-slide-down-premium"} relative z-10 flex h-full w-full max-w-[100vw] min-w-0 flex-col overflow-x-hidden overflow-y-hidden bg-white shadow-2xl lg:h-[90vh] lg:max-w-4xl lg:rounded-[2.5rem]`}>
         {saveToast ? (
           <div className="absolute inset-0 z-[100] flex items-center justify-center bg-slate-950/45 backdrop-blur-[2px]" onClick={() => setSaveToast(null)}>
             <div className="m-anim flex w-[calc(100%-2.5rem)] max-w-sm flex-col items-center gap-4 rounded-3xl border border-emerald-200 bg-white p-6 text-center shadow-[0_22px_60px_rgba(16,185,129,0.18)] relative" onClick={(e) => e.stopPropagation()}>
@@ -1073,10 +1126,10 @@ export function IncomingOrderModal({ allOrders, detail, expandedId, onAfterClose
           <div className="flex items-center justify-between gap-4 relative z-10">
             <div className="min-w-0 flex-1">
               <h2 className="text-2xl font-black text-white leading-normal line-clamp-1">
-                {detail.customer.name}
+                {detail ? detail.customer.name : "กำลังโหลดข้อมูล..."}
               </h2>
               <div className="flex flex-wrap items-center gap-2 mt-1">
-                <span className="font-mono text-[11px] font-black text-white/50 tracking-widest uppercase">{detail.customer.code}</span>
+                <span className="font-mono text-[11px] font-black text-white/50 tracking-widest uppercase">{detail ? detail.customer.code : "—"}</span>
                 <span className="h-2 w-px bg-white/20" />
                 {deliveryNumber ? (
                   <>
@@ -1084,7 +1137,7 @@ export function IncomingOrderModal({ allOrders, detail, expandedId, onAfterClose
                     <span className="h-2 w-px bg-white/20" />
                   </>
                 ) : null}
-                <span className="text-[11px] font-black text-white/80 tracking-tight">{formatDisplayDate(detail.orderDate)}</span>
+                <span className="text-[11px] font-black text-white/80 tracking-tight">{detail ? formatDisplayDate(detail.orderDate) : "—"}</span>
               </div>
             </div>
             <button
@@ -1101,7 +1154,7 @@ export function IncomingOrderModal({ allOrders, detail, expandedId, onAfterClose
                 <Clock className="h-3.5 w-3.5 text-white/50" />
                 รับออเดอร์
               </span>
-              <span className="text-[10px] font-black text-white/40 uppercase tracking-[0.2em]">{detail.channelLabel}</span>
+              <span className="text-[10px] font-black text-white/40 uppercase tracking-[0.2em]">{detail ? detail.channelLabel : "—"}</span>
             </div>
 
             <div className="flex items-center gap-1.5 rounded-xl bg-black/20 p-1.5">
@@ -1132,6 +1185,18 @@ export function IncomingOrderModal({ allOrders, detail, expandedId, onAfterClose
 
         {/* Content Body */}
         <div className={`relative flex-1 min-w-0 overflow-x-hidden overflow-y-hidden bg-white ${slideAnim ? (slideAnim === "slide-left" ? "c-slide-l" : "c-slide-r") : ""}`}>
+          {!detail ? (
+            <div className="absolute inset-0 flex flex-col items-center justify-center bg-white z-50">
+              <div className="relative flex items-center justify-center">
+                <div className="absolute h-14 w-14 rounded-full border-4 border-[#003366]/10" />
+                <Loader2 className="h-14 w-14 animate-spin text-[#003366]" strokeWidth={2} />
+              </div>
+              <p className="mt-4 text-[11px] font-black uppercase tracking-[0.25em] text-[#003366] animate-pulse">
+                กำลังโหลดข้อมูลออเดอร์...
+              </p>
+            </div>
+          ) : (
+            <>
           {navPending && (
             <div className="absolute inset-0 z-50 flex items-center justify-center bg-white/70 backdrop-blur-[1px]">
               <div className="flex flex-col items-center gap-4">
@@ -1228,6 +1293,14 @@ export function IncomingOrderModal({ allOrders, detail, expandedId, onAfterClose
 
               {/* Scrollable Body */}
               <div className="flex-1 overflow-y-auto custom-scrollbar">
+                {hasUnpricedItems && (
+                  <div className="border border-red-500 bg-red-600 px-6 py-3 flex items-center gap-3 animate-in fade-in slide-in-from-top duration-200 shrink-0 rounded-2xl mx-6 mt-4 shadow-sm">
+                    <AlertTriangle className="h-5 w-5 text-yellow-200 shrink-0" />
+                    <p className="text-sm font-black text-yellow-200 uppercase tracking-wider">
+                      มีสินค้าที่ยังไม่ระบุราคา
+                    </p>
+                  </div>
+                )}
                 <ItemsViewList detail={detail} />
               </div>
 
@@ -1271,6 +1344,8 @@ export function IncomingOrderModal({ allOrders, detail, expandedId, onAfterClose
                 </div>
               </div>
             </div>
+          )}
+            </>
           )}
         </div>
       </div>

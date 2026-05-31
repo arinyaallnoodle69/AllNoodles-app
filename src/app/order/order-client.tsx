@@ -1424,12 +1424,24 @@ export default function OrderClient({
     const productId = new URL(window.location.href).searchParams.get("product");
     if (!productId) return;
 
-    const index = gridProductIndexById.get(productId);
-    if (index === undefined) return;
+    // Search in all products, not just filtered ones
+    const product = productsById.get(productId);
+    if (!product) return;
 
-    setSelectedProductIndex(index);
+    // Find index in original products list to set as selectedProductBase
+    const baseIndex = gridProducts.findIndex(p => p.product_id === product.product_id);
+    if (baseIndex === -1) return;
+
+    // If the ID contains a unit, set it
+    if (productId.includes(":")) {
+      setSelectedUnitId(productId.split(":")[1]);
+    } else {
+      setSelectedUnitId(null);
+    }
+
+    setSelectedProductIndex(baseIndex);
     setIsModalOpen(true);
-  }, [currentView, gridProductIndexById]);
+  }, [currentView, gridProducts, productsById]);
 
   const syncRecommendationIndicator = useCallback((rail: HTMLDivElement | null) => {
     if (!rail) {

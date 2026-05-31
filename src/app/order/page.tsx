@@ -254,9 +254,13 @@ async function getInitialOrderAuth(
   };
 }
 
-function getProductShareMetadata(productId: string | undefined, products: CatalogProduct[]) {
+function getProductShareMetadata(idWithOptionalUnit: string | undefined, products: CatalogProduct[]) {
+  const productId = idWithOptionalUnit?.includes(":")
+    ? idWithOptionalUnit.split(":")[0]
+    : idWithOptionalUnit;
+
   const selectedProduct = productId
-    ? products.find((product) => product.id === productId)
+    ? products.find((product) => product.id === productId || product.product_id === productId)
     : undefined;
 
   if (!selectedProduct) {
