@@ -77,13 +77,14 @@ const ItemsViewList = memo(({ detail }: { detail: OrderDetailData }) => {
             {/* Right: Product Detail */}
             <div className="ml-5 min-w-0 flex-1 flex flex-col justify-center py-1">
               <div className="min-w-0">
-                <p className="text-xl font-black text-slate-950 uppercase leading-relaxed mb-1 line-clamp-2">
+                <p className="mb-1 line-clamp-2 text-xl font-black uppercase leading-relaxed text-slate-950 md:text-2xl">
+                  <span className="hidden md:inline">{item.sku} - </span>
                   {item.productName}
                 </p>
                 <div className="flex items-center gap-3">
-                  <span className="font-mono text-[11px] font-black text-slate-950 uppercase tracking-tighter">{item.sku}</span>
-                  <span className="h-3 w-px bg-slate-200" />
-                  <span className="text-[14px] font-black text-slate-500">฿{formatTHB(item.unitPrice)} / {item.unit}</span>
+                  <span className="font-mono text-[11px] font-black uppercase tracking-tighter text-slate-950 md:hidden">{item.sku}</span>
+                  <span className="h-3 w-px bg-slate-200 md:hidden" />
+                  <span className="text-[14px] font-black text-slate-500 md:text-[18px]">฿{formatTHB(item.unitPrice)} / {item.unit}</span>
                 </div>
               </div>
 
@@ -106,17 +107,16 @@ const ItemsViewList = memo(({ detail }: { detail: OrderDetailData }) => {
           </div>
 
           {/* Bottom Bar: Action Values */}
-          <div className="flex items-center justify-between border-t border-slate-100 bg-slate-50 px-5 py-4">
-            <div className="flex flex-col">
-              <span className="text-[10px] font-black text-slate-950 uppercase tracking-[0.2em] mb-1">จำนวนสั่ง</span>
-              <p className="text-3xl font-black text-slate-950 tabular-nums leading-none">
-                {item.quantity.toLocaleString("th-TH")} <span className="text-[12px] font-bold text-slate-400 opacity-60 ml-1">{item.unit}</span>
+          <div className="flex items-center border-t border-slate-100 bg-slate-50 px-5 py-4">
+            <div className="flex flex-1 items-center justify-center pr-4 text-center">
+              <p className="text-lg font-black text-slate-950 tabular-nums">
+                จำนวนสั่ง : {item.quantity.toLocaleString("th-TH")} {item.unit}
               </p>
             </div>
-            <div className="text-right flex flex-col">
-              <span className="text-[10px] font-black text-slate-950 uppercase tracking-[0.2em] mb-1">ยอดรวมรายการ</span>
-              <p className="text-3xl font-black text-slate-950 tabular-nums leading-none">
-                ฿{formatTHB(item.lineTotal)}
+            <div className="mx-1 h-8 w-px shrink-0 bg-slate-300" />
+            <div className="flex flex-1 items-center justify-center pl-4 text-center">
+              <p className="text-lg font-black text-slate-950 tabular-nums">
+                ยอดรวม : ฿{formatTHB(item.lineTotal)}
               </p>
             </div>
           </div>
@@ -1128,16 +1128,16 @@ export function IncomingOrderModal({ allOrders, detail, expandedId, onAfterClose
               <h2 className="text-2xl font-black text-white leading-normal line-clamp-1">
                 {detail ? detail.customer.name : "กำลังโหลดข้อมูล..."}
               </h2>
-              <div className="flex flex-wrap items-center gap-2 mt-1">
-                <span className="font-mono text-[11px] font-black text-white/50 tracking-widest uppercase">{detail ? detail.customer.code : "—"}</span>
+              <div className="mt-1 flex flex-wrap items-center gap-2">
+                <span className="font-mono text-[11px] font-black uppercase tracking-widest text-white/50 md:text-[18px]">{detail ? detail.customer.code : "—"}</span>
                 <span className="h-2 w-px bg-white/20" />
                 {deliveryNumber ? (
                   <>
-                    <span className="font-mono text-[11px] font-black text-white/80 tracking-tight">{deliveryNumber}</span>
+                    <span className="font-mono text-[11px] font-black tracking-tight text-white/80 md:text-[18px]">{deliveryNumber}</span>
                     <span className="h-2 w-px bg-white/20" />
                   </>
                 ) : null}
-                <span className="text-[11px] font-black text-white/80 tracking-tight">{detail ? formatDisplayDate(detail.orderDate) : "—"}</span>
+                <span className="text-[11px] font-black tracking-tight text-white/80 md:text-[18px]">{detail ? formatDisplayDate(detail.orderDate) : "—"}</span>
               </div>
             </div>
             <button
@@ -1157,7 +1157,31 @@ export function IncomingOrderModal({ allOrders, detail, expandedId, onAfterClose
               <span className="text-[10px] font-black text-white/40 uppercase tracking-[0.2em]">{detail ? detail.channelLabel : "—"}</span>
             </div>
 
-            <div className="flex items-center gap-1.5 rounded-xl bg-black/20 p-1.5">
+            <div className="flex items-center gap-2">
+              <div className="hidden items-center gap-2 md:flex">
+                <button
+                  onClick={() => setConfirmCancel(true)}
+                  className="inline-flex items-center justify-center rounded-xl bg-rose-700 px-4 py-2 text-[12px] font-black uppercase tracking-[0.14em] text-white shadow-lg shadow-rose-100 transition-all active:scale-95"
+                >
+                  ลบออเดอร์
+                </button>
+                <button
+                  onClick={() => void openEditMode()}
+                  disabled={isPreparingEdit || editModePending}
+                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-white/15 px-4 py-2 text-[12px] font-black uppercase tracking-[0.14em] text-white shadow-xl shadow-[#003366]/20 transition-all active:scale-95 disabled:opacity-75"
+                >
+                  {isPreparingEdit || editModePending ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Edit3 className="h-4 w-4" />
+                  )}
+                  <span className="leading-none">
+                    {isPreparingEdit || editModePending ? "กำลังเปิด..." : "แก้ไขรายการ"}
+                  </span>
+                </button>
+              </div>
+
+              <div className="flex items-center gap-1.5 rounded-xl bg-black/20 p-1.5">
               <button
                 onClick={() => handleNav("prev")}
                 disabled={!prevOrder || navPending}
@@ -1179,6 +1203,7 @@ export function IncomingOrderModal({ allOrders, detail, expandedId, onAfterClose
               >
                 <ChevronRight className="h-5 w-5" strokeWidth={4} />
               </button>
+            </div>
             </div>
           </div>
         </div>
@@ -1266,31 +1291,6 @@ export function IncomingOrderModal({ allOrders, detail, expandedId, onAfterClose
             />
           ) : (
             <div className="flex flex-col h-full">
-              <div className="hidden shrink-0 border-b border-slate-200 bg-white px-6 py-4 lg:block">
-                <div className="flex items-center justify-end gap-3">
-                  <button
-                    onClick={() => setConfirmCancel(true)}
-                    className="inline-flex items-center justify-center rounded-2xl bg-rose-700 px-5 py-3 text-[12px] font-black uppercase tracking-[0.18em] text-white shadow-lg shadow-rose-100 transition-all active:scale-95"
-                  >
-                    ลบออเดอร์
-                  </button>
-                  <button
-                    onClick={() => void openEditMode()}
-                    disabled={isPreparingEdit || editModePending}
-                    className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#003366] px-5 py-3 text-[12px] font-black uppercase tracking-[0.18em] text-white shadow-xl shadow-[#003366]/20 transition-all active:scale-95 disabled:opacity-75"
-                  >
-                    {isPreparingEdit || editModePending ? (
-                      <Loader2 className="h-4.5 w-4.5 animate-spin" />
-                    ) : (
-                      <Edit3 className="h-4.5 w-4.5" />
-                    )}
-                    <span className="leading-none">
-                      {isPreparingEdit || editModePending ? "กำลังเปิด..." : "แก้ไขรายการ"}
-                    </span>
-                  </button>
-                </div>
-              </div>
-
               {/* Scrollable Body */}
               <div className="flex-1 overflow-y-auto custom-scrollbar">
                 {hasUnpricedItems && (

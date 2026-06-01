@@ -211,7 +211,7 @@ export function SettingsMobileBottomNav() {
            <button
             type="button"
             onClick={() => openCreateOrder()}
-            className={`absolute -top-5 left-1/2 z-50 flex h-16 w-16 -translate-x-1/2 items-center justify-center rounded-full shadow-[0_12px_32px_rgba(0,51,102,0.35)] transition-all duration-300 active:scale-90 ${
+            className={`absolute -top-4 left-1/2 z-50 flex h-16 w-16 -translate-x-1/2 items-center justify-center rounded-full shadow-[0_12px_32px_rgba(0,51,102,0.35)] transition-all duration-300 active:scale-90 ${
               isCreateModalOpen
                 ? "bg-rose-600 text-white rotate-45"
                 : createOrderActive

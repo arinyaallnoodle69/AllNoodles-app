@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, memo, useEffect, useMemo, useState, useTransition } from "react";
+import { Fragment, memo, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { Building2, Check, ChevronDown, ChevronUp, Loader2 } from "lucide-react";
 import { fetchIncomingOrderDetailAction } from "@/app/orders/incoming/actions";
 import { DesktopOrderDetail } from "@/components/orders/desktop-order-detail";
@@ -237,6 +237,12 @@ export const IncomingOrdersDesktopTable = memo(function IncomingOrdersDesktopTab
   const [loadingOrderId, setLoadingOrderId] = useState<string | null>(null);
   const [detailError, setDetailError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+  const [stickyFrame, setStickyFrame] = useState<{ left: number; width: number }>({ left: 0, width: 0 });
+  const mainScrollRef = useRef<HTMLDivElement | null>(null);
+  const stickyScrollRef = useRef<HTMLDivElement | null>(null);
+  const stickyScrollInnerRef = useRef<HTMLDivElement | null>(null);
 
   const visibleOrderIds = useMemo(() => new Set(orders.map((order) => order.id)), [orders]);
 
@@ -257,6 +263,53 @@ export const IncomingOrdersDesktopTable = memo(function IncomingOrdersDesktopTab
       return next;
     });
   }, [initialExpandedDetail, initialExpandedOrderId, visibleOrderIds]);
+
+  useEffect(() => {
+    const main = mainScrollRef.current;
+    const sticky = stickyScrollRef.current;
+    const stickyInner = stickyScrollInnerRef.current;
+    if (!main || !sticky || !stickyInner) return;
+
+    let syncing = false;
+    const threshold = 4;
+
+    const syncWidths = () => {
+      const rect = main.getBoundingClientRect();
+      setStickyFrame({ left: rect.left, width: rect.width });
+      stickyInner.style.width = `${main.scrollWidth}px`;
+      sticky.scrollLeft = main.scrollLeft;
+      const maxScrollLeft = Math.max(0, main.scrollWidth - main.clientWidth);
+      setCanScrollLeft(main.scrollLeft > threshold);
+      setCanScrollRight(maxScrollLeft - main.scrollLeft > threshold);
+    };
+
+    const onMainScroll = () => {
+      if (syncing) return;
+      syncing = true;
+      sticky.scrollLeft = main.scrollLeft;
+      syncing = false;
+    };
+
+    const onStickyScroll = () => {
+      if (syncing) return;
+      syncing = true;
+      main.scrollLeft = sticky.scrollLeft;
+      syncing = false;
+    };
+
+    syncWidths();
+    main.addEventListener("scroll", onMainScroll, { passive: true });
+    sticky.addEventListener("scroll", onStickyScroll, { passive: true });
+    window.addEventListener("resize", syncWidths);
+    window.addEventListener("scroll", syncWidths, { passive: true });
+
+    return () => {
+      main.removeEventListener("scroll", onMainScroll);
+      sticky.removeEventListener("scroll", onStickyScroll);
+      window.removeEventListener("resize", syncWidths);
+      window.removeEventListener("scroll", syncWidths);
+    };
+  }, [orders.length, expandedOrderId]);
 
   async function toggleOrder(orderId: string) {
     setDetailError(null);
@@ -296,6 +349,9 @@ export const IncomingOrdersDesktopTable = memo(function IncomingOrdersDesktopTab
             <p className="mt-1 text-sm font-medium text-slate-950 xl:text-base">
               จัดการและติดตามสถานะออเดอร์ในวันที่เลือกจากจุดเดียว
             </p>
+            <p className="mt-1 hidden text-xs font-semibold text-slate-500 lg:block xl:hidden">
+              ↔ เลื่อนซ้าย-ขวาเพื่อดูข้อมูลเพิ่มเติม
+            </p>
           </div>
           <div className="flex items-center gap-2 text-sm font-semibold text-slate-950 xl:text-base">
             <span className="h-2.5 w-2.5 rounded-full bg-[#003366]" />
@@ -303,8 +359,20 @@ export const IncomingOrdersDesktopTable = memo(function IncomingOrdersDesktopTab
           </div>
         </div>
 
-        <div className="overflow-visible">
-          <table className="w-full table-fixed border-collapse text-left">
+        <div className="relative">
+          {canScrollLeft ? (
+            <div className="pointer-events-none absolute bottom-0 left-0 top-0 z-10 w-8 bg-gradient-to-r from-white to-transparent" />
+          ) : null}
+          {canScrollRight ? (
+            <div className="pointer-events-none absolute bottom-0 right-0 top-0 z-10 w-8 bg-gradient-to-l from-white to-transparent" />
+          ) : null}
+
+          <div
+            ref={mainScrollRef}
+            data-horizontal-scroll="true"
+            className="overflow-x-auto touch-pan-x pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          >
+            <table className="min-w-[1180px] border-collapse text-left">
             <thead className="bg-slate-50 text-slate-950">
               <tr className="border-b border-slate-200">
                 <th className="w-[20%] px-2 py-2 text-xs font-bold tracking-[0.04em] text-slate-950 xl:px-3 xl:py-2.5 xl:text-sm">ร้านค้า</th>
@@ -346,7 +414,23 @@ export const IncomingOrdersDesktopTable = memo(function IncomingOrdersDesktopTab
                 );
               })}
             </tbody>
-          </table>
+            </table>
+          </div>
+        </div>
+
+        <div
+          className="fixed bottom-[max(0.35rem,env(safe-area-inset-bottom))] z-50 xl:hidden"
+          style={{ left: `${stickyFrame.left}px`, width: `${stickyFrame.width}px` }}
+        >
+          <div className="w-full px-2 py-1">
+          <div
+            ref={stickyScrollRef}
+            aria-label="แถบเลื่อนแนวนอน"
+            className="overflow-x-auto touch-pan-x [scrollbar-color:#003366_#cbd5e1] [scrollbar-width:auto] [&::-webkit-scrollbar]:h-3 [&::-webkit-scrollbar-track]:rounded-full [&::-webkit-scrollbar-track]:bg-slate-300 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-[#003366] [&::-webkit-scrollbar-thumb:hover]:bg-[#002952]"
+          >
+            <div ref={stickyScrollInnerRef} className="h-1 min-w-[1180px]" />
+          </div>
+          </div>
         </div>
       </div>
     </div>

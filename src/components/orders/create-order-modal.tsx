@@ -1328,9 +1328,9 @@ export function CreateOrderModal({
             setIsClosing(false);
             setOpen(true);
           }}
-          className="action-touch-safe inline-flex items-center justify-center gap-2 rounded-full bg-[#003366] px-5 py-3 text-sm font-bold text-white shadow-[0_12px_40px_rgba(0,51,102,0.35)] transition-all hover:scale-105 hover:bg-[#002244] active:scale-95 md:h-16 md:px-8 md:text-base"
+          className="action-touch-safe inline-flex items-center justify-center gap-2 rounded-full bg-[#003366] px-4 py-2.5 text-sm font-bold text-white shadow-[0_12px_40px_rgba(0,51,102,0.35)] transition-all hover:scale-105 hover:bg-[#002244] active:scale-95 md:h-14 md:px-7 md:text-[15px]"
         >
-          <Plus className="h-5 w-5 md:h-6 md:w-6" strokeWidth={3} />
+          <Plus className="h-4.5 w-4.5 md:h-5 md:w-5" strokeWidth={3} />
           สร้างออเดอร์
         </button>
       )}

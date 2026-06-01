@@ -1848,6 +1848,47 @@ export type Database = {
           },
         ]
       }
+      system_performance_logs: {
+        Row: {
+          created_at: string
+          duration_ms: number
+          event_name: string
+          event_type: string
+          id: string
+          metadata: Json | null
+          organization_id: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          duration_ms: number
+          event_name: string
+          event_type: string
+          id?: string
+          metadata?: Json | null
+          organization_id?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          duration_ms?: number
+          event_name?: string
+          event_type?: string
+          id?: string
+          metadata?: Json | null
+          organization_id?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "system_performance_logs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       vehicles: {
         Row: {
           created_at: string
@@ -1904,7 +1945,28 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      system_database_stats: {
+        Row: {
+          index_scans: number | null
+          row_count: number | null
+          schemaname: unknown
+          sequential_scans: number | null
+          size_bytes: number | null
+          table_name: unknown
+          total_size: string | null
+        }
+        Relationships: []
+      }
+      system_index_stats: {
+        Row: {
+          index_name: unknown
+          index_scans: number | null
+          index_size: string | null
+          schemaname: unknown
+          table_name: unknown
+        }
+        Relationships: []
+      }
     }
     Functions: {
       adjust_delivery_note_item:
@@ -2092,6 +2154,22 @@ export type Database = {
           shortage_product_count: number
           total_amount: number
           total_quantity: number
+        }[]
+      }
+      get_profit_sales_report: {
+        Args: {
+          p_customer_ids?: string[]
+          p_from_date: string
+          p_organization_id: string
+          p_to_date: string
+        }
+        Returns: {
+          cost: number
+          iso_date: string
+          margin_percent: number
+          net_profit: number
+          order_count: number
+          sales: number
         }[]
       }
       next_billing_number: {
