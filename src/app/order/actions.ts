@@ -23,6 +23,7 @@ import {
   hasExistingLineOrderCustomerChoice,
   type PendingOrderCreateItem,
 } from "@/lib/orders/line-pending";
+import { getCustomerRequiredWarehouse } from "@/lib/warehouses";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import type { Database, Json } from "@/types/database";
 
@@ -961,13 +962,22 @@ export async function createOrder(
 
   const supabase = getSupabaseAdmin();
   const orderDate = bangkokNow.date;
+  const warehouseResult = await getCustomerRequiredWarehouse(organizationId, customerId);
+
+  if (warehouseResult.error || !warehouseResult.warehouse) {
+    return { success: false, error: warehouseResult.error ?? "ไม่พบคลังสินค้าประจำสำหรับร้านค้า" };
+  }
+
+  const warehouseId = warehouseResult.warehouse.id;
 
   console.log(`[createOrder] Searching for orders for customer: ${customerId}, date: ${orderDate}`);
   const { data: existingOrderRows } = await supabase
     .from("orders")
-    .select("id, order_number, status, created_at, metadata")
+    .select("id, order_number, status, created_at, metadata, warehouse_id")
+    .eq("organization_id", organizationId)
     .eq("customer_id", customerId)
     .eq("order_date", orderDate)
+    .or(`warehouse_id.eq.${warehouseId},warehouse_id.is.null`)
     .neq("status", "cancelled")
     .order("created_at", { ascending: true });
 
@@ -1047,6 +1057,7 @@ export async function createOrder(
         metadata: markLineOrderMetadata(existingOrder.metadata),
         total_amount: totalAmount,
         subtotal_amount: totalAmount,
+        warehouse_id: existingOrder.warehouse_id ?? warehouseId,
       })
       .eq("id", orderIdToUse)
       .select()
@@ -1079,6 +1090,7 @@ export async function createOrder(
         total_amount: totalAmount,
         subtotal_amount: totalAmount,
         order_date: orderDate,
+        warehouse_id: warehouseId,
       })
       .select()
       .single();

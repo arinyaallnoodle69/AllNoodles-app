@@ -52,11 +52,11 @@ export function StockReceiptDetailModal({ detail, onClose, onEdit }: Props) {
           <div className="block lg:hidden bg-white text-black shadow-2xl font-[family-name:var(--font-sukhumvit)]">
             <div className="px-6 py-6">
               <div className="flex justify-end mb-2">
-                <Image src="/ty-noodles-logo.png" alt="T&Y Noodle" width={48} height={48} className="object-contain" />
+                <Image src="/brand/512x512.png" alt="All Noodles" width={48} height={48} className="object-contain" />
               </div>
 
               <div className="text-center mb-4">
-                <div className="text-[11px] leading-relaxed text-slate-500">T&Y Noodle - ใบรับสินค้าเข้า</div>
+                <div className="text-[11px] leading-relaxed text-slate-500">All Noodles - ใบรับสินค้าเข้า</div>
                 <div className="text-[14px] font-[800] leading-tight mt-0.5">เลขที่ออเดอร์: {detail.receiptNumber}</div>
                 <div className="text-[12px] leading-relaxed text-slate-500 mt-1">{fmtDateTimeTH(detail.receivedAt)}</div>
               </div>
@@ -100,7 +100,7 @@ export function StockReceiptDetailModal({ detail, onClose, onEdit }: Props) {
 
               <div className="flex items-center justify-between mb-6 px-1">
                  <span className="text-[13px] font-[800]">ยอดรวมทั้งหมด:</span>
-                 <span className="text-[16px] font-[800] text-[#0051d5] underline decoration-double decoration-slate-300 underline-offset-4">
+                 <span className="text-[16px] font-[800] text-[#082A63] underline decoration-double decoration-slate-300 underline-offset-4">
                     {formatCurrency(detail.totalAmount)}
                  </span>
               </div>
@@ -123,7 +123,7 @@ export function StockReceiptDetailModal({ detail, onClose, onEdit }: Props) {
               )}
 
               <div className="pt-8 pb-4 text-center">
-                <div className="text-[12px] font-[800] leading-[1.6]">เส้นรังนก T&Y Noodle</div>
+                <div className="text-[12px] font-[800] leading-[1.6]">All Noodles</div>
               </div>
             </div>
           </div>
@@ -141,17 +141,17 @@ export function StockReceiptDetailModal({ detail, onClose, onEdit }: Props) {
                 <div className="relative h-16 w-16 shrink-0">
                   <Image
                     src="/brand/512x512.png"
-                    alt="T&Y Noodle Logo"
+                    alt="All Noodles Logo"
                     fill
                     className="object-contain"
                   />
                 </div>
                 <div>
-                  <h1 className="text-[20px] font-black leading-tight text-black">T&Y NOODLES</h1>
+                  <h1 className="text-[20px] font-black leading-tight text-black">All Noodles</h1>
                 </div>
               </div>
                 <div className="text-left sm:text-right">
-                 <h2 className="text-[18px] font-black text-[#0051d5] md:text-[20px]">ใบรับสินค้าเข้า</h2>
+                 <h2 className="text-[18px] font-black text-[#082A63] md:text-[20px]">ใบรับสินค้าเข้า</h2>
                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#45464d]">Goods Receipt Voucher</p>
                  <button 
                    onClick={onEdit}
@@ -243,7 +243,7 @@ export function StockReceiptDetailModal({ detail, onClose, onEdit }: Props) {
               <div className="flex items-baseline gap-6">
                 <span className="text-[16px] font-black text-black">รวมทั้งสิ้น / Total:</span>
                 <div className="text-right">
-                  <p className="text-[28px] font-black text-[#0051d5] leading-none mb-1">
+                  <p className="text-[28px] font-black text-[#082A63] leading-none mb-1">
                     {formatCurrency(detail.totalAmount)}
                   </p>
                 </div>

@@ -86,7 +86,7 @@ export function OtpPinForm({ disabled, error, next, action }: OtpPinFormProps) {
               key={index}
               className={`h-4 w-4 rounded-full border transition ${
                 filled
-                  ? "border-accent-600 bg-accent-600 shadow-[0_0_0_6px_rgba(0,0,255,0.12)]"
+                  ? "border-accent-600 bg-accent-600 shadow-[0_0_0_6px_rgba(4,53,106,0.12)]"
                   : "border-slate-300 bg-white"
               }`}
             />
@@ -94,15 +94,15 @@ export function OtpPinForm({ disabled, error, next, action }: OtpPinFormProps) {
         })}
       </div>
 
-      <div className="mt-5 h-6 text-center">
+      <div className="mt-3 h-5 text-center">
         {isSubmitting ? (
-          <p className="text-sm font-semibold text-[#003366]">กำลังเข้า...</p>
+          <p className="text-sm font-semibold text-[#082A63]">กำลังเข้า...</p>
         ) : error ? (
           <p className="text-sm font-semibold text-rose-600">{error}</p>
         ) : null}
       </div>
 
-      <div className="mx-auto mt-5 grid w-full grid-cols-3 gap-4 sm:gap-5">
+      <div className="mx-auto mt-3 grid w-full max-w-[19rem] grid-cols-3 gap-3 sm:gap-4">
         {keypad.map((key, index) => {
           if (key === "") return <div key={`empty-${index}`} />;
 
@@ -114,7 +114,7 @@ export function OtpPinForm({ disabled, error, next, action }: OtpPinFormProps) {
                 onClick={removeDigit}
                 disabled={disabled || isSubmitting || digits.length === 0}
                 aria-disabled={disabled || isSubmitting || digits.length === 0}
-                className={`${instrumentSansClass} flex aspect-square items-center justify-center rounded-full bg-white text-base font-bold text-accent-700 shadow-[0_14px_30px_rgba(0,0,255,0.10)] hover:bg-accent-50 disabled:cursor-not-allowed disabled:opacity-60`}
+                className={`${instrumentSansClass} flex aspect-square items-center justify-center rounded-full bg-white text-base font-bold text-accent-700 shadow-[0_14px_30px_rgba(4,53,106,0.10)] hover:bg-accent-50 disabled:cursor-not-allowed disabled:opacity-60`}
               >
                 ลบ
               </button>
@@ -129,9 +129,9 @@ export function OtpPinForm({ disabled, error, next, action }: OtpPinFormProps) {
               disabled={disabled || isSubmitting || digits.length >= 6}
               aria-disabled={disabled || isSubmitting || digits.length >= 6}
               aria-label={`ใส่เลข ${key}`}
-              className={`${instrumentSansClass} group flex aspect-square flex-col items-center justify-center rounded-full bg-white text-slate-800 shadow-[0_14px_32px_rgba(0,0,255,0.10)] hover:bg-accent-50 disabled:cursor-not-allowed disabled:opacity-60`}
+              className={`${instrumentSansClass} group flex aspect-square flex-col items-center justify-center rounded-full bg-white text-slate-800 shadow-[0_14px_32px_rgba(4,53,106,0.10)] hover:bg-accent-50 disabled:cursor-not-allowed disabled:opacity-60`}
             >
-              <span className="text-[2.05rem] font-medium leading-none tracking-[-0.01em] text-slate-800 sm:text-[2.2rem]">
+              <span className="text-[1.85rem] font-medium leading-none tracking-[-0.01em] text-slate-800 sm:text-[2rem]">
                 {key}
               </span>
               <span className="mt-1 text-[0.58rem] font-semibold uppercase tracking-[0.22em] text-slate-600 group-hover:text-slate-700">

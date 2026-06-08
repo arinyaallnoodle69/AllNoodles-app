@@ -3,8 +3,9 @@
 import { revalidatePath, revalidateTag, updateTag } from "next/cache";
 import { requireAppRole } from "@/lib/auth/authorization";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { resolveGeography } from "@/lib/settings/geography-resolver";
 
-type CreateCustomerField = "address" | "customerCode" | "defaultVehicleId" | "name";
+type CreateCustomerField = "address" | "customerCode" | "defaultVehicleId" | "defaultWarehouseId" | "name";
 
 export type CreateCustomerActionState = {
   fieldErrors: Partial<Record<CreateCustomerField, string>>;
@@ -23,6 +24,28 @@ type AddressPayload = {
   provinceName: string;
   subdistrictCode: string;
   subdistrictName: string;
+};
+
+type ImportCustomersActionState = {
+  errors?: string[];
+  message: string;
+  status: "idle" | "success" | "error";
+} | null;
+
+type CustomerImportInsert = {
+  address: string;
+  customer_code: string;
+  default_warehouse_id: string;
+  default_vehicle_id: string | null;
+  district: string | null;
+  metadata: {
+    address: ReturnType<typeof buildAddressMetadata>;
+  };
+  name: string;
+  organization_id: string;
+  postal_code: string | null;
+  province: string | null;
+  subdistrict: string | null;
 };
 
 function getTrimmedText(value: unknown) {
@@ -62,7 +85,7 @@ function revalidateCustomerSettings(organizationId: string) {
 
 function getNextCustomerCode(codes: string[]) {
   const maxSequence = codes.reduce((max, code) => {
-    const match = /^TYS(\d+)$/i.exec(code.trim());
+    const match = /^ANS(\d+)$/i.exec(code.trim());
 
     if (!match) {
       return max;
@@ -72,7 +95,7 @@ function getNextCustomerCode(codes: string[]) {
     return Number.isFinite(sequence) ? Math.max(max, sequence) : max;
   }, 0);
 
-  return `TYS${String(maxSequence + 1).padStart(3, "0")}`;
+  return `ANS${String(maxSequence + 1).padStart(3, "0")}`;
 }
 
 async function generateCustomerCode(organizationId: string) {
@@ -122,6 +145,7 @@ function getAddressPayload(value: FormDataEntryValue | null): AddressPayload | n
 
 function validateCustomerForm(formData: FormData) {
   const defaultVehicleId = getTrimmedText(formData.get("defaultVehicleId"));
+  const defaultWarehouseId = getTrimmedText(formData.get("defaultWarehouseId"));
   const name = getTrimmedText(formData.get("name"));
   const address = getAddressPayload(formData.get("addressPayload"));
   const fieldErrors: Partial<Record<CreateCustomerField, string>> = {};
@@ -130,6 +154,10 @@ function validateCustomerForm(formData: FormData) {
     fieldErrors.name = "กรอกชื่อร้านค้าก่อนบันทึก";
   } else if (name.length > 120) {
     fieldErrors.name = "ชื่อร้านค้าต้องไม่เกิน 120 ตัวอักษร";
+  }
+
+  if (!defaultWarehouseId) {
+    fieldErrors.defaultWarehouseId = "กรุณาเลือกคลังประจำร้านก่อนบันทึก";
   }
 
   if (!address) {
@@ -147,6 +175,7 @@ function validateCustomerForm(formData: FormData) {
   return {
     address,
     defaultVehicleId: defaultVehicleId || null,
+    defaultWarehouseId: defaultWarehouseId || null,
     fieldErrors,
     name,
     success: Object.keys(fieldErrors).length === 0,
@@ -169,7 +198,7 @@ export async function createCustomerAction(
   }
 
   const admin = getSupabaseAdmin();
-  const { address, defaultVehicleId, name } = validation;
+  const { address, defaultVehicleId, defaultWarehouseId, name } = validation;
   const customerCode = await generateCustomerCode(session.organizationId);
 
   if (!customerCode) {
@@ -200,9 +229,46 @@ export async function createCustomerAction(
     }
   }
 
-  const { error } = await admin.from("customers").insert({
+  if (defaultWarehouseId) {
+    const { data: warehouse, error: warehouseError } = await (admin as unknown as {
+      from(table: "warehouses"): {
+        select(columns: string): {
+          eq(column: string, value: boolean | string): {
+            eq(column: string, value: boolean | string): {
+              eq(column: string, value: boolean | string): {
+                maybeSingle(): Promise<{ data: { id: string } | null; error: { message?: string } | null }>;
+              };
+            };
+          };
+        };
+      };
+    })
+      .from("warehouses")
+      .select("id")
+      .eq("organization_id", session.organizationId)
+      .eq("id", defaultWarehouseId)
+      .eq("is_active", true)
+      .maybeSingle();
+
+    if (warehouseError || !warehouse) {
+      return {
+        fieldErrors: {
+          defaultWarehouseId: "เลือกคลังประจำร้านใหม่อีกครั้ง",
+        },
+        message: "ยังบันทึกร้านค้าไม่ได้ เพราะไม่พบคลังที่เลือกไว้",
+        status: "error",
+      };
+    }
+  }
+
+  const { error } = await (admin as unknown as {
+    from(table: "customers"): {
+      insert(values: Record<string, unknown>): Promise<{ error: { code?: string; message?: string } | null }>;
+    };
+  }).from("customers").insert({
     address: address.addressSummary,
     customer_code: customerCode,
+    default_warehouse_id: defaultWarehouseId,
     default_vehicle_id: defaultVehicleId,
     district: address.districtName || null,
     metadata: {
@@ -260,7 +326,7 @@ export async function updateCustomerAction(
   }
 
   const admin = getSupabaseAdmin();
-  const { address, defaultVehicleId, name } = validation;
+  const { address, defaultVehicleId, defaultWarehouseId, name } = validation;
 
   const { data: customer, error: customerLookupError } = await admin
     .from("customers")
@@ -298,11 +364,44 @@ export async function updateCustomerAction(
     }
   }
 
+  if (defaultWarehouseId) {
+    const { data: warehouse, error: warehouseError } = await (admin as unknown as {
+      from(table: "warehouses"): {
+        select(columns: string): {
+          eq(column: string, value: boolean | string): {
+            eq(column: string, value: boolean | string): {
+              eq(column: string, value: boolean | string): {
+                maybeSingle(): Promise<{ data: { id: string } | null; error: { message?: string } | null }>;
+              };
+            };
+          };
+        };
+      };
+    })
+      .from("warehouses")
+      .select("id")
+      .eq("organization_id", session.organizationId)
+      .eq("id", defaultWarehouseId)
+      .eq("is_active", true)
+      .maybeSingle();
+
+    if (warehouseError || !warehouse) {
+      return {
+        fieldErrors: {
+          defaultWarehouseId: "เลือกคลังประจำร้านใหม่อีกครั้ง",
+        },
+        message: "ยังบันทึกการแก้ไขร้านค้าไม่ได้ เพราะไม่พบคลังที่เลือกไว้",
+        status: "error",
+      };
+    }
+  }
+
   const currentMetadata = isRecord(customer.metadata) ? customer.metadata : {};
   const { error } = await admin
     .from("customers")
     .update({
       address: address.addressSummary,
+      default_warehouse_id: defaultWarehouseId,
       default_vehicle_id: defaultVehicleId,
       district: address.districtName || null,
       metadata: {
@@ -415,4 +514,321 @@ export async function deleteCustomerAction(customerId: string): Promise<{ error?
   revalidateCustomerSettings(session.organizationId);
 
   return {};
+}
+
+export async function updateCustomerDefaultWarehouseAction(
+  customerId: string,
+  defaultWarehouseId: string | null,
+): Promise<{ error?: string }> {
+  const session = await requireAppRole("admin");
+  const admin = getSupabaseAdmin();
+
+  const { data: customer, error: customerLookupError } = await admin
+    .from("customers")
+    .select("id")
+    .eq("id", customerId)
+    .eq("organization_id", session.organizationId)
+    .eq("is_active", true)
+    .maybeSingle();
+
+  if (customerLookupError || !customer) {
+    return { error: "ไม่พบร้านค้าที่ต้องการอัปเดต" };
+  }
+
+  if (defaultWarehouseId) {
+    const { data: warehouse, error: warehouseLookupError } = await admin
+      .from("warehouses")
+      .select("id")
+      .eq("id", defaultWarehouseId)
+      .eq("organization_id", session.organizationId)
+      .eq("is_active", true)
+      .maybeSingle();
+
+    if (warehouseLookupError || !warehouse) {
+      return { error: "ไม่พบคลังสินค้าที่เลือก กรุณาลองเลือกใหม่อีกครั้ง" };
+    }
+  }
+
+  const { error: updateError } = await admin
+    .from("customers")
+    .update({
+      default_warehouse_id: defaultWarehouseId,
+    })
+    .eq("id", customerId)
+    .eq("organization_id", session.organizationId);
+
+  if (updateError) {
+    return { error: "อัปเดตคลังประจำร้านไม่สำเร็จ กรุณาลองอีกครั้ง" };
+  }
+
+  revalidateCustomerSettings(session.organizationId);
+  revalidatePath("/settings/warehouses");
+
+  return {};
+}
+
+export async function importCustomersAction(
+  _prevState: ImportCustomersActionState,
+  formData: FormData
+): Promise<{ status: "success" | "error"; message: string; errors?: string[] }> {
+  const session = await requireAppRole("admin");
+  const admin = getSupabaseAdmin();
+
+  const file = formData.get("file") as File;
+  if (!file || file.size === 0) {
+    return {
+      status: "error",
+      message: "ไม่พบไฟล์ที่เลือก หรือไฟล์มีขนาดว่างเปล่า",
+    };
+  }
+
+  const text = await file.text();
+  const rows = parseCSV(text);
+
+  if (rows.length <= 1) {
+    return {
+      status: "error",
+      message: "ไม่พบข้อมูลในไฟล์นำเข้า (กรุณากรอกข้อมูลตามเทมเพลต)",
+    };
+  }
+
+  // Fetch active warehouses and vehicles for name lookup
+  const [warehousesResult, vehiclesResult] = await Promise.all([
+    admin
+      .from("warehouses")
+      .select("id, name, slug")
+      .eq("organization_id", session.organizationId)
+      .eq("is_active", true),
+    admin
+      .from("vehicles")
+      .select("id, name, license_plate")
+      .eq("organization_id", session.organizationId)
+      .eq("is_active", true),
+  ]);
+
+  if (warehousesResult.error || vehiclesResult.error) {
+    return {
+      status: "error",
+      message: "ไม่สามารถดึงข้อมูลคลังสินค้าหรือรถส่งสินค้าในระบบเพื่อตรวจสอบความถูกต้องได้",
+    };
+  }
+
+  const activeWarehouses = (warehousesResult.data || []) as { id: string; name: string; slug: string }[];
+  const activeVehicles = (vehiclesResult.data || []) as { id: string; name: string; license_plate: string | null }[];
+
+  // Get sequential customer code generator ready
+  const { data: customerCodesData } = await admin
+    .from("customers")
+    .select("customer_code")
+    .eq("organization_id", session.organizationId);
+
+  const existingCodes = (customerCodesData ?? []).map((c) => c.customer_code ?? "");
+  let maxSequence = existingCodes.reduce((max, code) => {
+    const match = /^ANS(\d+)$/i.exec(code.trim());
+    if (!match) return max;
+    const seq = Number.parseInt(match[1], 10);
+    return Number.isFinite(seq) ? Math.max(max, seq) : max;
+  }, 0);
+
+  function getNextSequentialCode() {
+    maxSequence++;
+    return `ANS${String(maxSequence).padStart(3, "0")}`;
+  }
+
+  const importErrors: string[] = [];
+  const customersToInsert: CustomerImportInsert[] = [];
+
+  for (let i = 1; i < rows.length; i++) {
+    const row = rows[i];
+    if (row.length === 0 || (row.length === 1 && !row[0])) {
+      continue; // skip empty rows
+    }
+
+    const name = row[0]?.trim();
+    const warehouseInput = row[1]?.trim();
+    const vehicleInput = row[2]?.trim();
+    const addressDetails = row[3]?.trim();
+    const subdistrict = row[4]?.trim() || "";
+    const district = row[5]?.trim() || "";
+    const province = row[6]?.trim() || "";
+    const postalCodeInput = row[7]?.trim() || "";
+
+    const rowNum = i + 1;
+
+    // Check if it's just a completely blank row (Excel sometimes outputs extra empty commas)
+    if (!name && !warehouseInput && !addressDetails && !subdistrict && !district && !province) {
+      continue;
+    }
+
+    if (!name) {
+      importErrors.push(`แถวที่ ${rowNum}: ไม่มีชื่อร้านค้า`);
+      continue;
+    }
+
+    if (!warehouseInput) {
+      importErrors.push(`แถวที่ ${rowNum}: ไม่มีระบุคลังสินค้าหลัก`);
+      continue;
+    }
+
+
+
+    // Lookup warehouse
+    const warehouse = activeWarehouses.find(
+      (w) =>
+        w.name.toLowerCase() === warehouseInput.toLowerCase() ||
+        w.slug.toLowerCase() === warehouseInput.toLowerCase() ||
+        w.id === warehouseInput
+    );
+
+    if (!warehouse) {
+      importErrors.push(`แถวที่ ${rowNum}: คลังสินค้า "${warehouseInput}" ไม่มีอยู่ในระบบ หรือปิดใช้งานอยู่`);
+      continue;
+    }
+
+    // Lookup vehicle
+    let defaultVehicleId: string | null = null;
+    if (vehicleInput) {
+      const vehicle = activeVehicles.find(
+        (v) =>
+          v.name.toLowerCase() === vehicleInput.toLowerCase() ||
+          v.license_plate?.toLowerCase() === vehicleInput.toLowerCase() ||
+          v.id === vehicleInput
+      );
+      if (vehicle) {
+        defaultVehicleId = vehicle.id;
+      } else {
+        importErrors.push(`แถวที่ ${rowNum}: รถส่งสินค้า "${vehicleInput}" ไม่มีอยู่ในระบบ หรือปิดใช้งานอยู่`);
+        continue;
+      }
+    }
+
+    // Resolve geography codes from text
+    const geo = resolveGeography(subdistrict, district, province);
+    
+    const resolvedSubdistrict = geo?.subdistrictName || subdistrict || null;
+    const resolvedDistrict = geo?.districtName || district || null;
+    const resolvedProvince = geo?.provinceName || province || null;
+    const resolvedPostalCode = geo?.postalCode || postalCodeInput || null;
+
+    // Join full address
+    const fullAddress = [
+      addressDetails || "",
+      resolvedSubdistrict ? `ตำบล/แขวง ${resolvedSubdistrict}` : "",
+      resolvedDistrict ? `อำเภอ/เขต ${resolvedDistrict}` : "",
+      resolvedProvince ? `จังหวัด ${resolvedProvince}` : "",
+      resolvedPostalCode || "",
+    ]
+      .map((part) => part?.trim() || "")
+      .filter(Boolean)
+      .join(" ");
+
+    const customerCode = getNextSequentialCode();
+
+    const addressMetadata = {
+      districtCode: geo?.districtCode || "",
+      districtName: resolvedDistrict || "",
+      line1: addressDetails || "",
+      postalCode: resolvedPostalCode || "",
+      provinceCode: geo?.provinceCode || "",
+      provinceName: resolvedProvince || "",
+      street: {
+        details: addressDetails || "",
+      },
+      subdistrictCode: geo?.subdistrictCode || "",
+      subdistrictName: resolvedSubdistrict || "",
+    };
+
+    customersToInsert.push({
+      address: fullAddress,
+      customer_code: customerCode,
+      default_warehouse_id: warehouse.id,
+      default_vehicle_id: defaultVehicleId,
+      district: resolvedDistrict,
+      metadata: {
+        address: addressMetadata,
+      },
+      name,
+      organization_id: session.organizationId,
+      postal_code: resolvedPostalCode,
+      province: resolvedProvince,
+      subdistrict: resolvedSubdistrict,
+    });
+  }
+
+  if (importErrors.length > 0) {
+    return {
+      status: "error",
+      message: `ไม่สามารถนำเข้าร้านค้าได้ เนื่องจากพบข้อมูลไม่ถูกต้อง ${importErrors.length} รายการ`,
+      errors: importErrors.slice(0, 50), // Show up to 50 errors in client UI
+    };
+  }
+
+  if (customersToInsert.length === 0) {
+    return {
+      status: "error",
+      message: "ไม่พบร้านค้าที่ถูกต้องเพื่อทำการบันทึกนำเข้า",
+    };
+  }
+
+  // Insert customers
+  const { error: insertError } = await admin
+    .from("customers")
+    .insert(customersToInsert);
+
+  if (insertError) {
+    console.error("Bulk Insert Error:", insertError);
+    return {
+      status: "error",
+      message: "ระบบบันทึกนำเข้าร้านค้าลงฐานข้อมูลไม่สำเร็จ กรุณาลองใหม่อีกครั้ง",
+    };
+  }
+
+  revalidateCustomerSettings(session.organizationId);
+  revalidatePath("/settings/vehicles");
+
+  return {
+    status: "success",
+    message: `นำเข้าร้านค้าเรียบร้อยทั้งหมด ${customersToInsert.length} ร้านค้า`,
+  };
+}
+
+function parseCSV(text: string): string[][] {
+  const lines: string[][] = [];
+  let row: string[] = [];
+  let inQuotes = false;
+  let currentValue = "";
+
+  // Normalize line endings and strip BOM if exists
+  const cleanText = text.replace(/^\uFEFF/, "").replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+
+  for (let i = 0; i < cleanText.length; i++) {
+    const char = cleanText[i];
+    const nextChar = cleanText[i + 1];
+
+    if (char === '"') {
+      if (inQuotes && nextChar === '"') {
+        currentValue += '"';
+        i++;
+      } else {
+        inQuotes = !inQuotes;
+      }
+    } else if (char === "," && !inQuotes) {
+      row.push(currentValue.trim());
+      currentValue = "";
+    } else if (char === "\n" && !inQuotes) {
+      row.push(currentValue.trim());
+      lines.push(row);
+      row = [];
+      currentValue = "";
+    } else {
+      currentValue += char;
+    }
+  }
+
+  if (currentValue || row.length > 0) {
+    row.push(currentValue.trim());
+    lines.push(row);
+  }
+
+  return lines;
 }

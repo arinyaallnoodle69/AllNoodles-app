@@ -14,15 +14,63 @@ import { revalidateDashboardPages } from "@/lib/dashboard/revalidate-dashboard-p
 import { mergeItemsIntoOrder, type MergeableOrderItemInput } from "@/lib/orders/merge-order-items";
 import { notifyUpdatedCustomerReceiptForOrder } from "@/lib/orders/notify-customer-receipt";
 import { syncDeliveryNoteForOrder } from "@/lib/orders/sync-delivery-note";
+import { getCustomerRequiredWarehouse } from "@/lib/warehouses";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/types/database";
 import type { ActionResult, CustomerLastOrderSnapshot, CustomerLastOrderItem } from "./types";
 
+function invalidateIncomingOrderCaches(organizationId: string) {
+  revalidateTag(`orders-${organizationId}`, "max");
+  revalidateTag(`settings-${organizationId}`, "max");
+  revalidateTag(`stock-${organizationId}`, "max");
+  revalidatePath("/orders/incoming");
+  revalidatePath("/orders");
+  revalidatePath("/billing");
+  revalidateDashboardPages();
+}
+
+
 
 
 type OrderIdRow = { id: string };
+type ExistingWarehouseOrderRow = {
+  created_at: string;
+  id: string;
+  notes: string | null;
+  order_number: string;
+  status: string;
+  subtotal_amount: number | string | null;
+  total_amount: number | string | null;
+  warehouse_id: string | null;
+};
 
 type ActionsAdmin = SupabaseClient<Database>;
+type WarehouseOrderAdmin = {
+  // The generated Supabase types do not include warehouse_id until gen:types runs after the migration.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  from(table: "orders"): any;
+};
+type LineCustomerWarehouseAdmin = {
+  // The generated Supabase types do not include warehouse tables/columns until gen:types runs after the migration.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  from(table: "customers" | "warehouses"): any;
+};
+type WarehouseStockRpcAdmin = {
+  rpc: (
+    fn: "apply_product_warehouse_stock_delta",
+    args: {
+      p_organization_id: string;
+      p_product_id: string;
+      p_warehouse_id: string;
+      p_quantity_delta: number;
+      p_movement_type: string;
+      p_notes?: string | null;
+      p_created_by?: string | null;
+      p_metadata?: Record<string, unknown>;
+      p_reference_number?: string | null;
+    },
+  ) => Promise<{ data: unknown; error: { message?: string } | null }>;
+};
 
 // For the remaining-items check (need .eq().select() chain returning id array)
 type SimpleSelectChain = {
@@ -31,6 +79,12 @@ type SimpleSelectChain = {
 type MinimalAdmin = { from(table: string): { select: (cols: string) => SimpleSelectChain } };
 
 type StockReductionMode = "return" | "lost";
+
+const MISSING_ORDER_WAREHOUSE_MESSAGE = "ออเดอร์นี้ยังไม่ได้ผูกคลัง กรุณาตั้งค่าคลังของร้านค้าก่อนทำรายการสต็อค";
+
+function getWarehouseOrderAdmin(admin: ActionsAdmin): WarehouseOrderAdmin {
+  return admin as unknown as WarehouseOrderAdmin;
+}
 
 function isEditableOrderStatus(status: string | null | undefined) {
   return status !== "cancelled";
@@ -140,36 +194,62 @@ async function restoreItemStock(
   orgId: string,
   userId: string,
   productId: string,
+  warehouseId: string,
   qtyBase: number,
   note: string,
-) {
-  const { data: product } = await admin
-    .from("products")
-    .select("id, stock_quantity")
-    .eq("id", productId)
-    .eq("organization_id", orgId)
-    .single();
-
-  if (!product) return;
-
-  const stockBefore = Number(product.stock_quantity ?? 0);
-  const stockAfter = stockBefore + Number(qtyBase || 0);
-
-  await Promise.all([
-    admin.from("products").update({ stock_quantity: stockAfter }).eq("id", productId),
-    admin.from("inventory_movements").insert({
-      created_by: userId,
-      movement_type: "adjustment",
-      notes: note,
-      organization_id: orgId,
-      product_id: productId,
-      quantity_delta: qtyBase,
-      stock_after: stockAfter,
-      stock_before: stockBefore,
-    }),
-  ]);
+  metadata: Record<string, unknown> = {},
+): Promise<string | null> {
+  return applyProductWarehouseStockDelta(admin, {
+    metadata,
+    movementType: "adjustment",
+    notes: note,
+    organizationId: orgId,
+    productId,
+    quantityDelta: Number(qtyBase || 0),
+    userId,
+    warehouseId,
+  });
 }
 
+async function applyProductWarehouseStockDelta(
+  admin: ActionsAdmin,
+  input: {
+    metadata?: Record<string, unknown>;
+    movementType: "adjustment" | "issue" | "receipt" | string;
+    notes: string | null;
+    organizationId: string;
+    productId: string;
+    quantityDelta: number;
+    referenceNumber?: string | null;
+    userId: string;
+    warehouseId: string;
+  },
+): Promise<string | null> {
+  if (!input.warehouseId) {
+    return MISSING_ORDER_WAREHOUSE_MESSAGE;
+  }
+
+  if (!Number.isFinite(input.quantityDelta) || input.quantityDelta === 0) {
+    return null;
+  }
+
+  const { error } = await (admin as unknown as WarehouseStockRpcAdmin).rpc(
+    "apply_product_warehouse_stock_delta",
+    {
+      p_created_by: input.userId,
+      p_metadata: input.metadata ?? {},
+      p_movement_type: input.movementType,
+      p_notes: input.notes,
+      p_organization_id: input.organizationId,
+      p_product_id: input.productId,
+      p_quantity_delta: input.quantityDelta,
+      p_reference_number: input.referenceNumber ?? null,
+      p_warehouse_id: input.warehouseId,
+    },
+  );
+
+  return error?.message ?? null;
+}
 
 
 export async function cancelOrderAction(formData: FormData): Promise<ActionResult> {
@@ -179,15 +259,16 @@ export async function cancelOrderAction(formData: FormData): Promise<ActionResul
 
   if (!orderId) return { error: "ไม่พบรหัสออเดอร์" };
 
-  const { data: order } = await admin
+  const { data: order } = await getWarehouseOrderAdmin(admin)
     .from("orders")
-    .select("id, status, order_number, organization_id")
+    .select("id, status, order_number, organization_id, warehouse_id")
     .eq("id", orderId)
     .eq("organization_id", session.organizationId)
     .single();
 
   if (!order) return { error: "ไม่พบออเดอร์นี้" };
   if (order.status !== "submitted" && order.status !== "confirmed") return { error: "ยกเลิกได้เฉพาะออเดอร์สถานะ 'รับแล้ว' หรือ 'ยืนยันแล้ว' เท่านั้น" };
+  if (!order.warehouse_id) return { error: MISSING_ORDER_WAREHOUSE_MESSAGE };
 
   // If confirmed, it might have delivery note items that deducted stock.
   // We need to clean them up.
@@ -196,33 +277,34 @@ export async function cancelOrderAction(formData: FormData): Promise<ActionResul
     // Actually restoreItemStock already handles stock, but we should make sure we only restore what was DELIVERED if it's different.
     // In this system, we usually deliver 100% of order quantity.
   }
-
   const { data: items } = await admin
     .from("order_items")
     .select("product_id, quantity_in_base_unit")
     .eq("order_id", orderId);
 
-  await Promise.all(
+  const restoreErrors = await Promise.all(
     (items ?? []).map((item) =>
       restoreItemStock(
         admin,
         session.organizationId,
         session.userId,
         item.product_id,
+        order.warehouse_id,
         Number(item.quantity_in_base_unit),
         `ยกเลิกออเดอร์ ${order.order_number}`,
+        { order_id: orderId, source: "cancel_order" },
       ),
     ),
   );
+  const restoreError = restoreErrors.find((error): error is string => Boolean(error));
+  if (restoreError) return { error: restoreError };
 
   // If there are delivery note items, delete them
   await admin.from("delivery_note_items").delete().eq("order_id", orderId);
 
   await admin.from("orders").update({ status: "cancelled", fulfillment_status: "pending" }).eq("id", orderId);
 
-  revalidatePath("/orders/incoming");
-  revalidatePath("/orders");
-  revalidateDashboardPages();
+  invalidateIncomingOrderCaches(session.organizationId);
   return { success: true };
 }
 
@@ -244,14 +326,15 @@ export async function updateOrderItemQtyAction(formData: FormData): Promise<Acti
 
   if (!item) return { error: "ไม่พบรายการสินค้า" };
 
-  const { data: order } = await admin
+  const { data: order } = await getWarehouseOrderAdmin(admin)
     .from("orders")
-    .select("id, status, organization_id, total_amount, order_number")
+    .select("id, status, organization_id, total_amount, order_number, warehouse_id")
     .eq("id", item.order_id)
     .single();
 
   if (!order || order.organization_id !== session.organizationId) return { error: "ไม่พบออเดอร์" };
   if (!isEditableOrderStatus(order.status)) return { error: "ออเดอร์ที่ยกเลิกแล้วไม่สามารถแก้ไขได้" };
+  if (order.status === "submitted" && !order.warehouse_id) return { error: MISSING_ORDER_WAREHOUSE_MESSAGE };
 
   const oldQty = Number(item.quantity);
   const ratio = Number(item.sale_unit_ratio) || 1;
@@ -274,34 +357,17 @@ export async function updateOrderItemQtyAction(formData: FormData): Promise<Acti
     .eq("id", item.order_id);
 
   if (qtyDelta !== 0 && order.status === "submitted") {
-    const { data: product } = await admin
-      .from("products")
-      .select("stock_quantity")
-      .eq("id", item.product_id)
-      .single();
-
-    if (product) {
-      const stockBefore = Number(product.stock_quantity);
-      // qtyDelta > 0 means more items ordered -> deduct stock
-      // qtyDelta < 0 means fewer items ordered -> restore stock
-      const stockAfter = stockBefore - qtyDelta;
-
-      await Promise.all([
-        admin.from("products").update({ stock_quantity: stockAfter }).eq("id", item.product_id),
-        admin.from("inventory_movements").insert({
-          created_by: session.userId,
-          metadata: { order_id: item.order_id, order_item_id: itemId, source: "order_management" },
-          movement_type: qtyDelta > 0 ? "issue" : "adjustment",
-          notes: `แก้ไขจำนวน ออเดอร์ ${order.order_number}`,
-          organization_id: session.organizationId,
-          product_id: item.product_id,
-          quantity_delta: -qtyDelta,
-          stock_after: stockAfter,
-          stock_before: stockBefore,
-        }),
-
-      ]);
-    }
+    const stockError = await applyProductWarehouseStockDelta(admin, {
+      metadata: { order_id: item.order_id, order_item_id: itemId, source: "order_management" },
+      movementType: qtyDelta > 0 ? "issue" : "adjustment",
+      notes: `แก้ไขจำนวน ออเดอร์ ${order.order_number}`,
+      organizationId: session.organizationId,
+      productId: item.product_id,
+      quantityDelta: -qtyDelta,
+      userId: session.userId,
+      warehouseId: order.warehouse_id,
+    });
+    if (stockError) return { error: stockError };
   }
 
   if (order.status === "confirmed") {
@@ -320,11 +386,8 @@ export async function updateOrderItemQtyAction(formData: FormData): Promise<Acti
     });
   });
 
-  revalidatePath("/orders/incoming");
-  revalidatePath("/orders");
-  revalidatePath("/billing");
+  invalidateIncomingOrderCaches(session.organizationId);
   revalidatePath("/settings/customers/pricing");
-  revalidateDashboardPages();
   return { success: true };
 }
 
@@ -345,28 +408,32 @@ export async function removeOrderItemAction(formData: FormData): Promise<ActionR
 
   if (!item) return { error: "ไม่พบรายการสินค้า" };
 
-  const { data: order } = await admin
+  const { data: order } = await getWarehouseOrderAdmin(admin)
     .from("orders")
-    .select("id, status, organization_id, total_amount, order_number")
+    .select("id, status, organization_id, total_amount, order_number, warehouse_id")
     .eq("id", item.order_id)
     .single();
 
   if (!order || order.organization_id !== session.organizationId) return { error: "ไม่พบออเดอร์" };
   if (!isEditableOrderStatus(order.status)) return { error: "ออเดอร์ที่ยกเลิกแล้วไม่สามารถแก้ไขได้" };
+  if (order.status === "submitted" && !order.warehouse_id) return { error: MISSING_ORDER_WAREHOUSE_MESSAGE };
 
   const qtyBase = Number(item.quantity_in_base_unit);
   const lineTotal = Number(item.line_total);
 
   await admin.from("order_items").delete().eq("id", itemId);
   if (order.status === "submitted") {
-    await restoreItemStock(
+    const stockError = await restoreItemStock(
       admin,
       session.organizationId,
       session.userId,
       item.product_id,
+      order.warehouse_id,
       qtyBase,
       `ลบรายการจากออเดอร์ ${order.order_number}`,
+      { order_id: item.order_id, order_item_id: itemId, source: "remove_order_item" },
     );
+    if (stockError) return { error: stockError };
   }
 
   const newTotal = Math.max(0, Number(order.total_amount) - lineTotal);
@@ -402,10 +469,7 @@ export async function removeOrderItemAction(formData: FormData): Promise<ActionR
     });
   });
 
-  revalidatePath("/orders/incoming");
-  revalidatePath("/orders");
-  revalidatePath("/billing");
-  revalidateDashboardPages();
+  invalidateIncomingOrderCaches(session.organizationId);
   return { success: true };
 }
 
@@ -489,15 +553,18 @@ export async function updateOrderItemsBatchAction(input: {
   if (!orderId) return { error: "ไม่พบเลขออเดอร์" };
 
   // 1. Verify order
-  const { data: order } = await admin
+  const { data: order } = await getWarehouseOrderAdmin(admin)
     .from("orders")
-    .select("id, status, organization_id, customer_id, order_number, total_amount")
+    .select("id, status, organization_id, customer_id, order_number, total_amount, warehouse_id")
     .eq("id", orderId)
     .single();
 
   if (!order || order.organization_id !== session.organizationId) return { error: "ไม่พบออเดอร์" };
   if (!isEditableOrderStatus(order.status)) {
     return { error: "ออเดอร์ที่ยกเลิกแล้วไม่สามารถแก้ไขได้" };
+  }
+  if (order.status === "submitted" && !order.warehouse_id) {
+    return { error: MISSING_ORDER_WAREHOUSE_MESSAGE };
   }
 
   // 2. Parallel Data Gathering
@@ -510,7 +577,7 @@ export async function updateOrderItemsBatchAction(input: {
       ? admin.from("order_items").select("*").in("id", itemIdsToFetch)
       : Promise.resolve({ data: [] }),
     additionProductIds.length > 0
-      ? admin.from("products").select("id, cost_price, stock_quantity").in("id", additionProductIds)
+      ? admin.from("products").select("id, cost_price").in("id", additionProductIds)
       : Promise.resolve({ data: [] }),
     additionSaleUnitIds.length > 0
       ? admin.from("product_sale_units").select("*").in("id", additionSaleUnitIds)
@@ -527,7 +594,7 @@ export async function updateOrderItemsBatchAction(input: {
   if (missingProductIdsForStock.length > 0) {
     const { data: extraProducts } = await admin
       .from("products")
-      .select("id, cost_price, stock_quantity")
+      .select("id, cost_price")
       .in("id", missingProductIdsForStock);
     (extraProducts ?? []).forEach((p) => productsMap.set(p.id, p));
   }
@@ -546,22 +613,12 @@ export async function updateOrderItemsBatchAction(input: {
   // 3. Prepare Batch Operations
   const itemsToUpdate: Database["public"]["Tables"]["order_items"]["Insert"][] = [];
   const itemsToInsert: Database["public"]["Tables"]["order_items"]["Insert"][] = [];
-  const stockDeltas = new Map<string, number>(); // productId -> total qty_in_base_unit change (+ ordered, - ordered)
   const reductionChoiceMap = new Map<string, StockReductionMode>(
     updates
       .filter((update) => update.reductionMode === "return" || update.reductionMode === "lost")
       .map((update) => [update.itemId, update.reductionMode ?? "return"]),
   );
   const lossInBaseUnitByItemId = new Map<string, number>();
-
-  // Removals
-  for (const itemId of removedIds) {
-    const item = itemsMap.get(itemId);
-    if (item && order.status === "submitted") {
-      const current = stockDeltas.get(item.product_id) || 0;
-      stockDeltas.set(item.product_id, current - Number(item.quantity_in_base_unit));
-    }
-  }
 
   // Updates
   for (const update of updates) {
@@ -602,11 +659,7 @@ export async function updateOrderItemsBatchAction(input: {
           lossInBaseUnitByItemId.set(item.id, Math.abs(qtyDelta));
         }
 
-        if (order.status === "submitted") {
-          const current = stockDeltas.get(item.product_id) || 0;
-          const effectiveDelta = qtyDelta < 0 && reductionMode === "lost" ? 0 : qtyDelta;
-          stockDeltas.set(item.product_id, current + effectiveDelta);
-        }
+
       }
     }
   }
@@ -623,6 +676,16 @@ export async function updateOrderItemsBatchAction(input: {
       const lineTotal = add.quantity * add.unitPrice;
       const qtyBase = add.quantity * ratio;
 
+      const effectiveCost = getEffectiveSaleUnitCost({
+        baseCostPrice: Number(product?.cost_price ?? 0),
+        baseUnitQuantity: ratio,
+        costMode: saleUnit.cost_mode ?? null,
+        fixedCostPrice:
+          saleUnit.fixed_cost_price === null || saleUnit.fixed_cost_price === undefined
+            ? null
+            : Number(saleUnit.fixed_cost_price),
+      });
+
       itemsToInsert.push({
         order_id: orderId,
         organization_id: session.organizationId,
@@ -634,13 +697,8 @@ export async function updateOrderItemsBatchAction(input: {
         line_total: lineTotal,
         sale_unit_label: saleUnit.unit_label,
         sale_unit_ratio: ratio,
-        cost_price: Number(product?.cost_price ?? 0),
+        cost_price: effectiveCost,
       });
-
-      if (order.status === "submitted") {
-        const current = stockDeltas.get(add.productId) || 0;
-        stockDeltas.set(add.productId, current + qtyBase);
-      }
     }
   }
 
@@ -719,34 +777,7 @@ export async function updateOrderItemsBatchAction(input: {
     }
   }
 
-  // Update stocks and movements if needed
-  if (stockDeltas.size > 0 && order.status === "submitted") {
-    const movements: Database["public"]["Tables"]["inventory_movements"]["Insert"][] = [];
-    for (const [productId, delta] of stockDeltas.entries()) {
-      if (delta === 0) continue;
-      const product = productsMap.get(productId);
-      if (product) {
-        const stockBefore = Number(product.stock_quantity);
-        const stockAfter = stockBefore - delta;
 
-        await admin.from("products").update({ stock_quantity: stockAfter }).eq("id", productId);
-        movements.push({
-          created_by: session.userId,
-          metadata: { order_id: orderId, source: "order_management_batch_optimized" },
-          movement_type: delta > 0 ? "issue" : "adjustment",
-          notes: `ปรับออเดอร์ ${order.order_number} (Batch Optimized)`,
-          organization_id: session.organizationId,
-          product_id: productId,
-          quantity_delta: -delta,
-          stock_after: stockAfter,
-          stock_before: stockBefore,
-        });
-      }
-    }
-    if (movements.length > 0) {
-      await admin.from("inventory_movements").insert(movements);
-    }
-  }
 
   // 5. Recalculate Order Total
   const { data: finalItems } = await admin.from("order_items").select("line_total").eq("order_id", orderId);
@@ -775,10 +806,7 @@ export async function updateOrderItemsBatchAction(input: {
     });
   });
 
-  revalidatePath("/orders/incoming");
-  revalidatePath("/orders");
-  revalidatePath("/billing");
-  revalidateDashboardPages();
+  invalidateIncomingOrderCaches(session.organizationId);
   return { success: true };
 }
 
@@ -796,14 +824,15 @@ export async function addOrderItemAction(formData: FormData): Promise<ActionResu
   if (!Number.isFinite(quantity) || quantity <= 0) return { error: "จำนวนสินค้าต้องมากกว่า 0" };
   if (!Number.isFinite(unitPrice) || unitPrice <= 0) return { error: "ราคาสินค้าต้องมากกว่า 0" };
 
-  const { data: order } = await admin
+  const { data: order } = await getWarehouseOrderAdmin(admin)
     .from("orders")
-    .select("id, customer_id, status, organization_id, total_amount, order_number")
+    .select("id, customer_id, status, organization_id, total_amount, order_number, warehouse_id")
     .eq("id", orderId)
     .single();
 
   if (!order || order.organization_id !== session.organizationId) return { error: "ไม่พบออเดอร์" };
   if (!isEditableOrderStatus(order.status)) return { error: "ออเดอร์ที่ยกเลิกแล้วไม่สามารถแก้ไขได้" };
+  if (order.status === "submitted" && !order.warehouse_id) return { error: MISSING_ORDER_WAREHOUSE_MESSAGE };
 
   const { data: saleUnit } = productSaleUnitId
     ? await admin
@@ -871,7 +900,7 @@ export async function addOrderItemAction(formData: FormData): Promise<ActionResu
   }
 
   await admin.from("order_items").insert({
-    cost_price: Number(product.cost_price ?? 0),
+    cost_price: effectiveCost,
     line_total: lineTotal,
     order_id: orderId,
     organization_id: session.organizationId,
@@ -884,24 +913,17 @@ export async function addOrderItemAction(formData: FormData): Promise<ActionResu
     unit_price: unitPrice,
   });
   if (order.status === "submitted") {
-    const stockBefore = Number(product.stock_quantity);
-    const stockAfter = stockBefore - quantityInBaseUnit;
-
-    await Promise.all([
-      admin.from("products").update({ stock_quantity: stockAfter }).eq("id", productId),
-
-      admin.from("inventory_movements").insert({
-        created_by: session.userId,
-        metadata: { order_id: orderId, source: "order_management" },
-        movement_type: "issue",
-        notes: `เพิ่มสินค้าในออเดอร์ ${order.order_number}`,
-        organization_id: session.organizationId,
-        product_id: productId,
-        quantity_delta: -quantityInBaseUnit,
-        stock_after: stockAfter,
-        stock_before: stockBefore,
-      }),
-    ]);
+    const stockError = await applyProductWarehouseStockDelta(admin, {
+      metadata: { order_id: orderId, source: "order_management" },
+      movementType: "issue",
+      notes: `เพิ่มสินค้าในออเดอร์ ${order.order_number}`,
+      organizationId: session.organizationId,
+      productId,
+      quantityDelta: -quantityInBaseUnit,
+      userId: session.userId,
+      warehouseId: order.warehouse_id,
+    });
+    if (stockError) return { error: stockError };
   }
 
   const nextTotal = Number(order.total_amount) + lineTotal;
@@ -926,10 +948,7 @@ export async function addOrderItemAction(formData: FormData): Promise<ActionResu
     });
   });
 
-  revalidatePath("/orders/incoming");
-  revalidatePath("/orders");
-  revalidatePath("/billing");
-  revalidateDashboardPages();
+  invalidateIncomingOrderCaches(session.organizationId);
   return { success: true };
 }
 
@@ -1252,14 +1271,21 @@ export async function createManualOrderAction(formData: FormData): Promise<Actio
   if (!customerId) return { error: "กรุณาเลือกลูกค้า" };
   if (items.length === 0) return { error: "กรุณาเพิ่มสินค้าอย่างน้อย 1 รายการ" };
 
+  const customerWarehouse = await getCustomerRequiredWarehouse(session.organizationId, customerId);
+  if (customerWarehouse.error) {
+    return { error: customerWarehouse.error };
+  }
+  const customerWarehouseId = customerWarehouse.warehouse!.id;
+
   console.log(`[createManualOrderAction] Received Date: ${orderDate}, Customer: ${customerId}`);
 
   const totalAmount = items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
-  const { data: existingOrderRows, error: existingOrderError } = await admin
+  const { data: existingOrderRows, error: existingOrderError } = await getWarehouseOrderAdmin(admin)
     .from("orders")
-    .select("id, order_number, notes, subtotal_amount, total_amount, created_at, status")
+    .select("id, order_number, notes, subtotal_amount, total_amount, created_at, status, warehouse_id")
     .eq("organization_id", session.organizationId)
     .eq("customer_id", customerId)
+    .eq("warehouse_id", customerWarehouseId)
     .eq("order_date", orderDate)
     .order("created_at", { ascending: true });
 
@@ -1268,7 +1294,8 @@ export async function createManualOrderAction(formData: FormData): Promise<Actio
     return { error: "ไม่สามารถตรวจสอบออเดอร์เดิมได้" };
   }
 
-  const existingOrder = (existingOrderRows ?? []).find((row) => row.status !== "cancelled") ?? null;
+  const existingOrder = ((existingOrderRows ?? []) as ExistingWarehouseOrderRow[])
+    .find((row) => row.status !== "cancelled") ?? null;
 
   let orderId = existingOrder?.id ?? null;
   let effectiveOrderNumber = existingOrder?.order_number ?? null;
@@ -1297,6 +1324,7 @@ export async function createManualOrderAction(formData: FormData): Promise<Actio
         status: "submitted",
         subtotal_amount: totalAmount,
         total_amount: totalAmount,
+        warehouse_id: customerWarehouseId,
       })
       .select("id, order_number")
       .single();
@@ -1319,6 +1347,10 @@ export async function createManualOrderAction(formData: FormData): Promise<Actio
 
     if (mergedNotes !== (currentOrder.notes ?? null)) {
       updatePayload.notes = mergedNotes;
+    }
+
+    if (!currentOrder.warehouse_id) {
+      updatePayload.warehouse_id = customerWarehouseId;
     }
 
     const { error: updateExistingOrderError } = await admin
@@ -1385,8 +1417,7 @@ export async function createManualOrderAction(formData: FormData): Promise<Actio
     revalidateDashboardPages();
   });
 
-  revalidatePath("/orders/incoming");
-  revalidatePath("/orders");
+  invalidateIncomingOrderCaches(session.organizationId);
 
   return {
     success: true,
@@ -1398,9 +1429,41 @@ export async function linkPendingLineOrderAction(formData: FormData): Promise<Ac
   const session = await requireAppRole("admin");
   const pendingOrderId = String(formData.get("pendingOrderId") ?? "").trim();
   const customerId = String(formData.get("customerId") ?? "").trim();
+  const warehouseId = String(formData.get("warehouseId") ?? "").trim();
 
   if (!pendingOrderId || !customerId) {
     return { error: "กรุณาเลือกร้านค้าที่ต้องการผูก" };
+  }
+
+  if (warehouseId) {
+    const admin = getSupabaseAdmin() as unknown as LineCustomerWarehouseAdmin;
+    const { data: warehouse, error: warehouseError } = await admin
+      .from("warehouses")
+      .select("id")
+      .eq("id", warehouseId)
+      .eq("organization_id", session.organizationId)
+      .eq("is_active", true)
+      .maybeSingle();
+
+    if (warehouseError || !warehouse) {
+      return { error: "ไม่พบคลังที่เลือก กรุณาเลือกคลังใหม่อีกครั้ง" };
+    }
+
+    const { data: customer, error: customerError } = await admin
+      .from("customers")
+      .update({
+        default_warehouse_id: warehouseId,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", customerId)
+      .eq("organization_id", session.organizationId)
+      .eq("is_active", true)
+      .select("id")
+      .maybeSingle();
+
+    if (customerError || !customer) {
+      return { error: "บันทึกคลังประจำร้านไม่สำเร็จ กรุณาลองอีกครั้ง" };
+    }
   }
 
   const result = await linkLineCustomerAndConvertPendingOrders({
@@ -1414,10 +1477,9 @@ export async function linkPendingLineOrderAction(formData: FormData): Promise<Ac
     return { error: result.error ?? "ผูกร้านค้าไม่สำเร็จ" };
   }
 
-  revalidatePath("/orders/incoming");
-  revalidatePath("/orders");
-  revalidatePath("/billing");
-  revalidateDashboardPages();
+  invalidateIncomingOrderCaches(session.organizationId);
+  revalidatePath("/settings/customers");
+  revalidatePath("/settings/warehouses");
 
   return {
     receiptWarning: result.receiptErrors.length > 0
@@ -1444,7 +1506,7 @@ export async function updateIncomingOrderDateAction(formData: FormData): Promise
 
   const { data: order } = await admin
     .from("orders")
-    .select("id, status, order_number, order_date, organization_id, customer_id")
+    .select("id, status, order_number, order_date, organization_id, customer_id, warehouse_id")
     .eq("id", orderId)
     .single();
 
@@ -1461,15 +1523,20 @@ export async function updateIncomingOrderDateAction(formData: FormData): Promise
   }
 
   // 1. Check if an order already exists on the NEXT date
-  const { data: existingOrder } = await admin
+  let existingOrderQuery = admin
     .from("orders")
     .select("id, status, total_amount")
     .eq("organization_id", session.organizationId)
     .eq("customer_id", order.customer_id)
     .eq("order_date", nextOrderDate)
     .neq("status", "cancelled")
-    .limit(1)
-    .maybeSingle();
+    .limit(1);
+
+  if (order.warehouse_id) {
+    existingOrderQuery = existingOrderQuery.eq("warehouse_id", order.warehouse_id);
+  }
+
+  const { data: existingOrder } = await existingOrderQuery.maybeSingle();
 
   if (existingOrder) {
     // CASE 1: Order exists on next date -> MERGE!
@@ -1559,12 +1626,9 @@ export async function updateIncomingOrderDateAction(formData: FormData): Promise
       }
     }
 
-	    revalidatePath("/orders/incoming");
-	    revalidatePath("/orders");
+	    invalidateIncomingOrderCaches(session.organizationId);
 	    revalidatePath("/delivery");
-	    revalidatePath("/billing");
 	    revalidatePath("/reports/billing");
-	    revalidateDashboardPages();
 	    revalidateTag(`orders-${session.organizationId}`, "max");
 
 	    after(() => {
@@ -1659,12 +1723,9 @@ export async function updateIncomingOrderDateAction(formData: FormData): Promise
       }
     }
 
-	  revalidatePath("/orders/incoming");
-	  revalidatePath("/orders");
+	  invalidateIncomingOrderCaches(session.organizationId);
 	  revalidatePath("/delivery");
-	  revalidatePath("/billing");
 	  revalidatePath("/reports/billing");
-	  revalidateDashboardPages();
 	  revalidateTag(`orders-${session.organizationId}`, "max");
 
 	    after(() => {
@@ -1804,8 +1865,7 @@ export async function syncOrderDeliveryNoteAction(
     }
   }
 
-  revalidatePath("/orders/incoming");
-  revalidatePath("/billing");
+  invalidateIncomingOrderCaches(session.organizationId);
   return { success: true, deliveryNumber: syncedDeliveryNumber };
 }
 
@@ -1818,9 +1878,9 @@ export async function deleteOrderAction(formData: FormData): Promise<ActionResul
     return { error: "ไม่พบรหัสออเดอร์" };
   }
 
-  const { data: order } = await admin
+  const { data: order } = await getWarehouseOrderAdmin(admin)
     .from("orders")
-    .select("id, status, order_number, organization_id, customer_id")
+    .select("id, status, order_number, organization_id, customer_id, warehouse_id")
     .eq("id", orderId)
     .eq("organization_id", session.organizationId)
     .single();
@@ -1832,141 +1892,7 @@ export async function deleteOrderAction(formData: FormData): Promise<ActionResul
   if (!isEditableOrderStatus(order.status)) {
     return { error: "ออเดอร์ที่ยกเลิกแล้วไม่สามารถลบได้" };
   }
-
-  const { data: deliveryItems } = await admin
-    .from("delivery_note_items")
-    .select("delivery_note_id, product_id, quantity_in_base_unit")
-    .eq("order_id", orderId);
-
-  const restoreByProduct = new Map<string, number>();
-  for (const item of deliveryItems ?? []) {
-    restoreByProduct.set(
-      item.product_id,
-      (restoreByProduct.get(item.product_id) ?? 0) + Number(item.quantity_in_base_unit),
-    );
-  }
-
-  if (restoreByProduct.size === 0) {
-    const { data: orderItems } = await admin
-      .from("order_items")
-      .select("product_id, quantity_in_base_unit")
-      .eq("order_id", orderId);
-
-    for (const item of orderItems ?? []) {
-      restoreByProduct.set(
-        item.product_id,
-        (restoreByProduct.get(item.product_id) ?? 0) + Number(item.quantity_in_base_unit),
-      );
-    }
-  }
-
-  await Promise.all(
-    Array.from(restoreByProduct.entries()).map(([productId, quantityInBaseUnit]) =>
-      restoreItemStock(
-        admin,
-        session.organizationId,
-        session.userId,
-        productId,
-        quantityInBaseUnit,
-        `ลบออเดอร์ ${order.order_number}`,
-      ),
-    ),
-  );
-
-  const deliveryNoteIds = Array.from(new Set((deliveryItems ?? []).map((item) => item.delivery_note_id)));
-  let deliveryNumbers: string[] = [];
-  if (deliveryNoteIds.length > 0) {
-    const { data: deliveryNotes } = await admin
-      .from("delivery_notes")
-      .select("id, delivery_number")
-      .in("id", deliveryNoteIds);
-
-    deliveryNumbers = Array.from(new Set((deliveryNotes ?? []).map((note) => String(note.delivery_number))));
-  }
-
-  if (deliveryItems && deliveryItems.length > 0) {
-    const { error: deleteDeliveryItemsError } = await admin
-      .from("delivery_note_items")
-      .delete()
-      .eq("order_id", orderId);
-
-    if (deleteDeliveryItemsError) {
-      return { error: deleteDeliveryItemsError.message ?? "ไม่สามารถลบรายการใบส่งของได้" };
-    }
-  }
-
-  if (deliveryNoteIds.length > 0) {
-    const { error: deleteDeliveryNotesError } = await admin
-      .from("delivery_notes")
-      .delete()
-      .in("id", deliveryNoteIds);
-
-    if (deleteDeliveryNotesError) {
-      return { error: deleteDeliveryNotesError.message ?? "ไม่สามารถลบใบส่งของได้" };
-    }
-  }
-
-  const { error: deleteOrderItemsError } = await admin
-    .from("order_items")
-    .delete()
-    .eq("order_id", orderId);
-
-  if (deleteOrderItemsError) {
-    return { error: deleteOrderItemsError.message ?? "ไม่สามารถลบรายการสินค้าในออเดอร์ได้" };
-  }
-
-  const { error: deleteOrderError } = await admin
-    .from("orders")
-    .delete()
-    .eq("id", orderId)
-    .eq("organization_id", session.organizationId);
-
-  if (deleteOrderError) {
-    return { error: deleteOrderError.message ?? "ไม่สามารถลบออเดอร์ได้" };
-  }
-
-  if (deliveryNumbers.length > 0) {
-    const billingSync = await syncBillingSnapshotsForDeliveryNumbers({
-      organizationId: session.organizationId,
-      customerId: order.customer_id,
-      deliveryNumbers,
-    });
-
-    if (!billingSync.success) {
-      return { error: billingSync.error };
-    }
-  }
-
-  revalidatePath("/orders/incoming");
-  revalidatePath("/orders");
-  revalidatePath("/billing");
-  revalidateDashboardPages();
-  return { success: true };
-}
-
-export async function deleteOrderCascadeAction(formData: FormData): Promise<ActionResult> {
-  const session = await requireAppRole("admin");
-  const admin = getSupabaseAdmin() as unknown as ActionsAdmin;
-  const orderId = String(formData.get("orderId") ?? "").trim();
-
-  if (!orderId) {
-    return { error: "ไม่พบรหัสออเดอร์" };
-  }
-
-  const { data: order } = await admin
-    .from("orders")
-    .select("id, status, order_number, organization_id, customer_id")
-    .eq("id", orderId)
-    .eq("organization_id", session.organizationId)
-    .single();
-
-  if (!order) {
-    return { error: "ไม่พบออเดอร์นี้" };
-  }
-
-  if (!isEditableOrderStatus(order.status)) {
-    return { error: "ออเดอร์ที่ยกเลิกแล้วไม่สามารถลบได้" };
-  }
+  if (!order.warehouse_id) return { error: MISSING_ORDER_WAREHOUSE_MESSAGE };
 
   const { data: orderItems, error: orderItemsError } = await admin
     .from("order_items")
@@ -1992,34 +1918,40 @@ export async function deleteOrderCascadeAction(formData: FormData): Promise<Acti
   }
 
   const restoreByProduct = new Map<string, number>();
-  for (const item of deliveryItems ?? []) {
-    restoreByProduct.set(
-      item.product_id,
-      (restoreByProduct.get(item.product_id) ?? 0) + Number(item.quantity_in_base_unit),
-    );
-  }
-
-  if (restoreByProduct.size === 0) {
-    for (const item of orderItems ?? []) {
+  if (order.status === "confirmed") {
+    for (const item of deliveryItems ?? []) {
       restoreByProduct.set(
         item.product_id,
         (restoreByProduct.get(item.product_id) ?? 0) + Number(item.quantity_in_base_unit),
       );
     }
+
+    if (restoreByProduct.size === 0) {
+      for (const item of orderItems ?? []) {
+        restoreByProduct.set(
+          item.product_id,
+          (restoreByProduct.get(item.product_id) ?? 0) + Number(item.quantity_in_base_unit),
+        );
+      }
+    }
   }
 
-  await Promise.all(
+  const restoreErrors = await Promise.all(
     Array.from(restoreByProduct.entries()).map(([productId, quantityInBaseUnit]) =>
       restoreItemStock(
         admin,
         session.organizationId,
         session.userId,
         productId,
+        order.warehouse_id,
         quantityInBaseUnit,
         `ลบออเดอร์ ${order.order_number}`,
+        { order_id: orderId, source: "delete_order_cascade" },
       ),
     ),
   );
+  const restoreError = restoreErrors.find((error): error is string => Boolean(error));
+  if (restoreError) return { error: restoreError };
 
   const deliveryNoteIds = Array.from(new Set((deliveryItems ?? []).map((item) => item.delivery_note_id)));
   let deliveryNumbers: string[] = [];
@@ -2156,9 +2088,9 @@ export async function deleteOrderCascadeActionV2(formData: FormData): Promise<Ac
     return { error: "ไม่พบรหัสออเดอร์" };
   }
 
-  const { data: order, error: orderError } = await admin
+  const { data: order, error: orderError } = await getWarehouseOrderAdmin(admin)
     .from("orders")
-    .select("id, status, order_number, organization_id, customer_id")
+    .select("id, status, order_number, organization_id, customer_id, warehouse_id")
     .eq("id", orderId)
     .eq("organization_id", session.organizationId)
     .single();
@@ -2170,6 +2102,7 @@ export async function deleteOrderCascadeActionV2(formData: FormData): Promise<Ac
   if (!isEditableOrderStatus(order.status)) {
     return { error: "ออเดอร์ที่ยกเลิกแล้วไม่สามารถลบได้" };
   }
+  if (!order.warehouse_id) return { error: MISSING_ORDER_WAREHOUSE_MESSAGE };
 
   const { data: orderItems, error: orderItemsError } = await admin
     .from("order_items")
@@ -2195,34 +2128,40 @@ export async function deleteOrderCascadeActionV2(formData: FormData): Promise<Ac
   }
 
   const restoreByProduct = new Map<string, number>();
-  for (const item of deliveryItems ?? []) {
-    restoreByProduct.set(
-      item.product_id,
-      (restoreByProduct.get(item.product_id) ?? 0) + Number(item.quantity_in_base_unit),
-    );
-  }
-
-  if (restoreByProduct.size === 0) {
-    for (const item of orderItems ?? []) {
+  if (order.status === "confirmed") {
+    for (const item of deliveryItems ?? []) {
       restoreByProduct.set(
         item.product_id,
         (restoreByProduct.get(item.product_id) ?? 0) + Number(item.quantity_in_base_unit),
       );
     }
+
+    if (restoreByProduct.size === 0) {
+      for (const item of orderItems ?? []) {
+        restoreByProduct.set(
+          item.product_id,
+          (restoreByProduct.get(item.product_id) ?? 0) + Number(item.quantity_in_base_unit),
+        );
+      }
+    }
   }
 
-  await Promise.all(
+  const restoreErrors = await Promise.all(
     Array.from(restoreByProduct.entries()).map(([productId, quantityInBaseUnit]) =>
       restoreItemStock(
         admin,
         session.organizationId,
         session.userId,
         productId,
+        order.warehouse_id,
         quantityInBaseUnit,
         `ลบออเดอร์ ${order.order_number}`,
+        { order_id: orderId, source: "delete_order_confirmed" },
       ),
     ),
   );
+  const restoreError = restoreErrors.find((error): error is string => Boolean(error));
+  if (restoreError) return { error: restoreError };
 
   const deliveryNoteIds = Array.from(new Set((deliveryItems ?? []).map((item) => item.delivery_note_id)));
   let deliveryNumbers: string[] = [];
@@ -2361,9 +2300,9 @@ export async function deleteOrderCascadeActionV3(formData: FormData): Promise<Ac
     return { error: "ไม่พบรหัสออเดอร์" };
   }
 
-  const { data: order, error: orderError } = await admin
+  const { data: order, error: orderError } = await getWarehouseOrderAdmin(admin)
     .from("orders")
-    .select("id, status, order_number, organization_id, customer_id, order_date")
+    .select("id, status, order_number, organization_id, customer_id, order_date, warehouse_id")
     .eq("id", orderId)
     .eq("organization_id", session.organizationId)
     .single();
@@ -2375,6 +2314,7 @@ export async function deleteOrderCascadeActionV3(formData: FormData): Promise<Ac
   if (!isEditableOrderStatus(order.status)) {
     return { error: "ออเดอร์ที่ยกเลิกแล้วไม่สามารถลบได้" };
   }
+  if (!order.warehouse_id) return { error: MISSING_ORDER_WAREHOUSE_MESSAGE };
 
   const { data: orderItems, error: orderItemsError } = await admin
     .from("order_items")
@@ -2410,34 +2350,40 @@ export async function deleteOrderCascadeActionV3(formData: FormData): Promise<Ac
   }
 
   const restoreByProduct = new Map<string, number>();
-  for (const item of deliveryItems ?? []) {
-    restoreByProduct.set(
-      item.product_id,
-      (restoreByProduct.get(item.product_id) ?? 0) + Number(item.quantity_in_base_unit),
-    );
-  }
-
-  if (restoreByProduct.size === 0) {
-    for (const item of orderItems ?? []) {
+  if (order.status === "confirmed") {
+    for (const item of deliveryItems ?? []) {
       restoreByProduct.set(
         item.product_id,
         (restoreByProduct.get(item.product_id) ?? 0) + Number(item.quantity_in_base_unit),
       );
     }
+
+    if (restoreByProduct.size === 0) {
+      for (const item of orderItems ?? []) {
+        restoreByProduct.set(
+          item.product_id,
+          (restoreByProduct.get(item.product_id) ?? 0) + Number(item.quantity_in_base_unit),
+        );
+      }
+    }
   }
 
-  await Promise.all(
+  const restoreErrors = await Promise.all(
     Array.from(restoreByProduct.entries()).map(([productId, quantityInBaseUnit]) =>
       restoreItemStock(
         admin,
         session.organizationId,
         session.userId,
         productId,
+        order.warehouse_id,
         quantityInBaseUnit,
         `ลบออเดอร์ ${order.order_number}`,
+        { order_id: orderId, source: "delete_order_with_date" },
       ),
     ),
   );
+  const restoreError = restoreErrors.find((error): error is string => Boolean(error));
+  if (restoreError) return { error: restoreError };
 
   const deliveryNoteMap = new Map(
     (primaryDeliveryNotes ?? []).map((note) => [note.id, note] as const),

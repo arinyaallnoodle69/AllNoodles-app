@@ -53,7 +53,7 @@ export function OrderSuccessView({
           <button
             onClick={onSaveReceiptAsImage}
             disabled={isSavingImage}
-            className="mb-4 w-full rounded-2xl border border-[#003366] bg-[#003366] px-4 py-3.5 text-left text-white shadow-[0_12px_24px_rgba(0,51,102,0.2)] transition-all hover:border-[#0a437d] hover:bg-[#0a437d] active:scale-[0.98] disabled:opacity-60"
+            className="mb-4 w-full rounded-2xl border border-[#082A63] bg-[#082A63] px-4 py-3.5 text-left text-white shadow-[0_12px_24px_rgba(4,53,106,0.2)] transition-all hover:border-[#103B82] hover:bg-[#103B82] active:scale-[0.98] disabled:opacity-60"
           >
             <div className="flex items-center gap-3">
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/15 shadow-sm">
@@ -87,7 +87,7 @@ export function OrderSuccessView({
 
           <button
             onClick={() => onOpenOrderHistory(highlightedHistoryOrderId)}
-            className="mb-3 w-full rounded-2xl border border-[#003366]/15 bg-white px-4 py-3.5 text-left text-[#003366] shadow-sm transition-all hover:border-[#003366]/25 hover:bg-[#f8fbff] active:scale-[0.98]"
+            className="mb-3 w-full rounded-2xl border border-[#082A63]/15 bg-white px-4 py-3.5 text-left text-[#082A63] shadow-sm transition-all hover:border-[#082A63]/25 hover:bg-[#FAF7F2] active:scale-[0.98]"
           >
             <div className="flex items-center justify-between gap-3">
               <div>
@@ -104,7 +104,7 @@ export function OrderSuccessView({
 
       <button
         onClick={onBackToCatalog}
-        className="mb-8 flex w-full items-center justify-center gap-2 rounded-2xl border border-[#003366]/15 bg-[#eef4fa] px-6 py-4 text-base font-semibold text-[#003366] transition-all hover:bg-[#e4eef8] active:scale-[0.98]"
+        className="mb-8 flex w-full items-center justify-center gap-2 rounded-2xl border border-[#082A63]/15 bg-[#FAF7F2] px-6 py-4 text-base font-semibold text-[#082A63] transition-all hover:bg-[#F2E3AE] active:scale-[0.98]"
       >
         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path

@@ -49,19 +49,37 @@ function LoginShell({
   action?: (formData: FormData) => void;
 }) {
   return (
-    <main className="flex h-[100dvh] w-full items-center justify-center bg-[radial-gradient(circle_at_top,rgba(0,0,255,0.08),transparent_32%),linear-gradient(180deg,#f7f9ff_0%,#ffffff_100%)] px-4 overflow-hidden touch-none select-none">
-      <section className="w-full max-w-[22.5rem] rounded-[2rem] bg-white px-5 pb-7 pt-9 shadow-[0_20px_50px_rgba(69,95,176,0.12)] border border-slate-100/50">
+    <main className="relative flex min-h-[100dvh] w-full items-center justify-center overflow-x-hidden bg-white px-4 py-3 select-none">
+      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div className="absolute left-1/2 top-[-18rem] h-[34rem] w-[34rem] -translate-x-1/2 rounded-full bg-[#082A63]/[0.07] blur-3xl" />
+        <div className="absolute bottom-[-16rem] right-[-10rem] h-[30rem] w-[30rem] rounded-full bg-[#D4AF37]/[0.14] blur-3xl" />
+        <div className="absolute left-[-12rem] top-1/3 h-[26rem] w-[26rem] rounded-full bg-[#082A63]/[0.05] blur-3xl" />
+      </div>
+
+      <section className="relative w-full max-w-[22rem] overflow-hidden rounded-[2rem] border border-[#D4AF37]/35 bg-white px-5 pb-5 pt-5 shadow-[0_30px_90px_rgba(0,29,63,0.18)] ring-1 ring-white sm:max-w-[23rem]">
+        <div className="pointer-events-none absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-[#D4AF37] to-transparent" />
+        <div className="pointer-events-none absolute -right-20 -top-24 h-44 w-44 rounded-full bg-[#D4AF37]/10 blur-2xl" />
         <div className="relative mx-auto w-full">
-          <div className="mb-6 flex justify-center">
+          <div className="mb-3 flex justify-center">
             <Image
-              src="/ty-noodles-logo-cropped.png"
-              alt="T&Y Noodles logo"
-              width={200}
-              height={120}
+              src="/brand/logo1.png"
+              alt="All Noodles logo"
+              width={220}
+              height={180}
               priority
-              className="h-auto w-[10rem] drop-shadow-[0_8px_16px_rgba(0,0,255,0.06)]"
+              className="h-auto w-[9rem] drop-shadow-[0_12px_24px_rgba(0,29,63,0.16)] sm:w-[9.75rem]"
             />
           </div>
+
+          <div className="mb-3 text-center">
+            <h1 className="text-[1.65rem] font-black tracking-tight text-[#082A63]">
+              เข้าสู่ระบบ
+            </h1>
+            <p className="mt-1 text-sm font-semibold text-[#667085]">
+              กรอกรหัส PIN เพื่อจัดการระบบ All Noodles
+            </p>
+          </div>
+
           <OtpPinForm
             disabled={!configured || !action}
             error={error}

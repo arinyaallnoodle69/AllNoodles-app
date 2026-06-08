@@ -57,7 +57,6 @@ import {
   registerLineCustomer,
   continueExistingLineCustomer,
   createPendingLineOrderAction,
-  getLineCustomerOnboardingState,
   submitNewCustomerInquiry,
   getFrequentlyOrderedProducts,
   getCustomerOrders,
@@ -619,14 +618,27 @@ export default function OrderClient({
           setCanSubmitPendingLineOrder(false);
           setCurrentView("catalog");
         } else {
-          const onboarding = await getLineCustomerOnboardingState(organizationId, lineUserId);
-          if (onboarding.success && onboarding.data.canSubmitPendingOrder) {
-            setCanSubmitPendingLineOrder(true);
+          // Auto-continue as pending/existing customer to bypass register choice page
+          const autoResult = await continueExistingLineCustomer({
+            displayName: profile?.displayName ?? undefined,
+            lineUserId,
+            organizationId,
+            pictureUrl: profile?.pictureUrl ?? undefined,
+          });
+
+          if (autoResult.success) {
+            if (autoResult.data) {
+              setLinkedCustomer(normalizeLinkedCustomer(autoResult.data));
+              setCanSubmitPendingLineOrder(false);
+            } else {
+              setCanSubmitPendingLineOrder(true);
+            }
+            setSessionLineUserId(lineUserId);
             setRegFormOpen(false);
             setCurrentView("catalog");
           } else {
-            setRegFormOpen(false);
-            setCurrentView("register");
+            console.error("Auto registration failed:", autoResult.error);
+            setCurrentView("login");
           }
         }
       } catch (error) {
@@ -636,7 +648,16 @@ export default function OrderClient({
         hasResolvedAuthRef.current = true;
       }
     });
-  }, [currentView, isReady, linkedCustomer, organizationId, profile?.userId, sessionLineUserId]);
+  }, [
+    currentView,
+    isReady,
+    linkedCustomer,
+    organizationId,
+    profile?.displayName,
+    profile?.pictureUrl,
+    profile?.userId,
+    sessionLineUserId,
+  ]);
 
   // Geography cascade: load provinces when entering register view
   useEffect(() => {
@@ -2005,15 +2026,15 @@ export default function OrderClient({
         <div className="-translate-y-8">
         <div className="flex w-full max-w-md flex-col items-center justify-center text-center">
         <Image
-          src="/ty-noodles-logo-cropped.png"
-          alt="T&Y Noodles logo"
+          src="/brand/logo1.png"
+          alt="All Noodles logo"
           width={384}
           height={384}
           priority
           className="animate-gentle-drop-in mb-2 w-84 max-w-full object-contain sm:w-96"
         />
         <div className="animate-gentle-drop-in-delay-1">
-        <h1 className="text-2xl font text-slate-900 mb-2">เส้นรังนก T&amp;Y Noodle</h1>
+        <h1 className="text-2xl font text-slate-900 mb-2">All Noodles</h1>
         <p className="text-slate-500 mb-10 text-sm leading-relaxed">
           กรุณากดเข้าสู่ระบบด้วย LINE เพื่อสั่งสินค้า
         </p>
@@ -2360,7 +2381,7 @@ export default function OrderClient({
             </div>
             <div>
               <p className="text-xs font-bold uppercase tracking-widest text-teal-700">สามารถติดต่อเราได้ที่</p>
-              <p className="mt-0.5 text-xl font-extrabold tracking-wide text-teal-900">{orgPhone || "081-903-4686"}</p>
+              <p className="mt-0.5 text-xl font-extrabold tracking-wide text-teal-900">{orgPhone || "099-356-4653"}</p>
             </div>
             <ChevronRight className="ml-auto h-5 w-5 shrink-0 text-teal-400" strokeWidth={2.5} />
           </a>
@@ -2371,7 +2392,7 @@ export default function OrderClient({
 
   // ─── 5. Inquiry submitted ───────────────────────────────────────────────────
     if (currentView === "inquiry_done") {
-      const contactPhone = orgPhone || "081-903-4686";
+      const contactPhone = orgPhone || "099-356-4653";
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-[linear-gradient(160deg,#f0fdfa_0%,#fff_100%)] px-5 text-center">
         {/* Success icon */}
@@ -2480,7 +2501,7 @@ export default function OrderClient({
                 alt=""
                 fill
                 sizes="100vw"
-                className="object-cover object-center"
+                className="object-contain object-center scale-90"
                 style={{  }}
                 aria-hidden
                 priority
@@ -2510,7 +2531,7 @@ export default function OrderClient({
 
               {/* Layer 3: store name at bottom-center */}
               <p className="absolute bottom-2.5 left-0 right-0 text-center text-[11px] font-bold uppercase tracking-[0.18em] text-white/55">
-                เส้นรังนก T&amp;Y Noodle
+                All Noodles
               </p>
             </div>
 
@@ -2562,10 +2583,10 @@ export default function OrderClient({
                     <span>ติดต่อสอบถามราคาได้ที่ :</span>
                     <Phone className="h-4 w-4 text-[#003366] shrink-0" strokeWidth={2.5} />
                     <a
-                      href="tel:081-903-4686"
+                      href="tel:099-356-4653"
                       className="text-[#003366] hover:underline font-extrabold tracking-tight"
                     >
-                      081-903-4686
+                      099-356-4653
                     </a>
                   </div>
                 </>
@@ -2614,7 +2635,7 @@ export default function OrderClient({
           </button>
           <div className="flex items-center gap-2">
             <Image
-              src="/brand/logo.png"
+              src="/brand/logo1.png"
               alt="Logo"
               width={48}
               height={48}

@@ -1,10 +1,10 @@
 import { AppSidebarLayout } from "@/components/app-sidebar";
-import { DashboardLoadingShell } from "@/components/dashboard/dashboard-loading-shell";
+import { PageLoader } from "@/components/page-loader";
 
 export default function DashboardLoading() {
   return (
     <AppSidebarLayout>
-      <DashboardLoadingShell />
+      <PageLoader />
     </AppSidebarLayout>
   );
 }

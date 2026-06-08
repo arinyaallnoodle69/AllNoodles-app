@@ -8,6 +8,7 @@ import { createActionClient } from "@/lib/supabase/action";
 import type { Json } from "@/types/database";
 
 const STOCK_RECEIPT_IMAGES_BUCKET = "stock-receipts";
+const MISSING_WAREHOUSE_MESSAGE = "กรุณาเลือกคลังก่อนทำรายการสต็อค";
 
 type ReceiveStockField = "productId" | "totalQuantity";
 type ReceiveStockItemInput = {
@@ -111,9 +112,18 @@ export async function receiveStockAction(
 
   const supplierId = getText(formData, "supplierId") || null;
   const supplierName = getText(formData, "supplierName") || "ผู้ขาย";
+  const warehouseId = getText(formData, "warehouseId");
   const receivedAt = getText(formData, "receivedAt");
   const notes = getText(formData, "notes");
   const imageFile = formData.get("receiptImage") as File | null;
+
+  if (!warehouseId) {
+    return {
+      fieldErrors: {},
+      message: MISSING_WAREHOUSE_MESSAGE,
+      status: "error",
+    };
+  }
 
   if (items.length === 0) {
     return {
@@ -171,6 +181,7 @@ export async function receiveStockAction(
     p_receipt_number: receiptNumber,
     p_received_at: receivedAt ? new Date(receivedAt).toISOString() : new Date().toISOString(),
     p_supplier_name: supplierName,
+    p_warehouse_id: warehouseId,
     p_receipt_url: receiptUrl,
     p_supplier_id: supplierId,
   });
@@ -205,9 +216,14 @@ export type BulkReceiveItem = {
 export async function bulkReceiveStockAction(
   items: BulkReceiveItem[],
   notes: string = "รับเข้าจากการตั้งเตือนสต็อกไม่พอ",
+  warehouseId?: string,
 ) {
   const session = await requireAppRole("admin");
   const admin = getSupabaseAdmin();
+
+  if (!warehouseId) {
+    return { success: false, message: MISSING_WAREHOUSE_MESSAGE };
+  }
 
   let receiptNumber = `RCV-${Date.now()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
   const { data: generatedNumber, error: generateError } = await admin.rpc("generate_receipt_number", {
@@ -231,6 +247,7 @@ export async function bulkReceiveStockAction(
     p_receipt_number: receiptNumber,
     p_received_at: new Date().toISOString(),
     p_supplier_name: "ดึงข้อมูลสต็อกฉุกเฉิน",
+    p_warehouse_id: warehouseId,
     p_supplier_id: null,
   });
 
@@ -255,8 +272,13 @@ export async function adjustStockAction(
   const admin = getSupabaseAdmin();
 
   const productId = getText(formData, "productId");
+  const warehouseId = getText(formData, "warehouseId");
   const newQuantity = getNumber(formData, "newQuantity");
   const notes = getText(formData, "notes");
+
+  if (!warehouseId) {
+    return { status: "error", message: MISSING_WAREHOUSE_MESSAGE };
+  }
 
   if (!productId) {
     return { status: "error", message: "ไม่พบรหัสสินค้า" };
@@ -272,6 +294,7 @@ export async function adjustStockAction(
     p_new_stock_quantity: newQuantity,
     p_adjusted_by: session.userId,
     p_notes: notes || "ปรับปรุงสต็อกด้วยตนเอง",
+    p_warehouse_id: warehouseId,
   });
 
   if (error) {

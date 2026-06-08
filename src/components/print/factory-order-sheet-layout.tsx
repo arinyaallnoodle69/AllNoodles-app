@@ -7,7 +7,7 @@ const SCREEN_SHEET_W = "794px";
 const SCREEN_SHEET_H = "559px";
 
 const VEHICLE_COLUMN_PALETTES = [
-  { header: "#dbeafe", body: "#f5f9ff", border: "#000000" },
+  { header: "#F2E3AE", body: "#FAF7F2", border: "#000000" },
   { header: "#dcfce7", body: "#f3fdf7", border: "#000000" },
   { header: "#fef3c7", body: "#fffaf0", border: "#000000" },
   { header: "#fde2e8", body: "#fff4f6", border: "#000000" },
@@ -236,7 +236,7 @@ function FactoryOrderStyles() {
         font-weight: 800;
         line-height: 1.25;
         letter-spacing: 0.04em;
-        color: #123c73;
+        color: #082A63;
       }
 
       .vehicle-summary-header__line {

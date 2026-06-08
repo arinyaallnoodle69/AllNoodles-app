@@ -5,6 +5,7 @@ import { cacheLife, cacheTag } from "next/cache";
 import type { Json } from "@/types/database";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { normalizeSearch } from "@/lib/utils/search";
+import { getActiveWarehouses } from "@/lib/warehouses";
 
 type QueryError = {
   message?: string;
@@ -52,6 +53,7 @@ type OrderRow = {
   status: "draft" | "submitted" | "confirmed" | "cancelled";
   subtotal_amount: number | string;
   total_amount: number | string;
+  warehouse_id: string | null;
 };
 
 type CustomerRow = {
@@ -135,6 +137,7 @@ export type OrderDetailData = {
   subtotalAmount: number;
   totalAmount: number;
   totalQuantity: number;
+  warehouseId: string | null;
 };
 
 export type IncomingOrderListItem = {
@@ -153,6 +156,8 @@ export type IncomingOrderListItem = {
   totalAmount: number;
   vehicleId: string | null;
   vehicleName: string | null;
+  warehouseId: string | null;
+  warehouseName: string | null;
 };
 
 function normalizeNumber(value: number | string | null | undefined) {
@@ -217,7 +222,7 @@ export async function getOrderDetailById(
   const orderResult = await admin
     .from("orders")
     .select(
-      "id, customer_id, order_number, order_date, status, subtotal_amount, total_amount, notes, metadata, created_at",
+      "id, customer_id, order_number, order_date, status, subtotal_amount, total_amount, notes, metadata, created_at, warehouse_id",
     )
     .eq("organization_id", organizationId)
     .eq("id", orderId)
@@ -371,6 +376,7 @@ export async function getOrderDetailById(
     subtotalAmount: normalizeNumber(order.subtotal_amount),
     totalAmount: normalizeNumber(order.total_amount),
     totalQuantity: items.reduce((total, item) => total + item.quantity, 0),
+    warehouseId: order.warehouse_id,
   };
 }
 
@@ -395,7 +401,7 @@ export async function getIncomingOrders(
 
   let query = admin
     .from("orders")
-    .select("id, customer_id, order_number, order_date, status, fulfillment_status, total_amount, metadata, created_at, notes")
+    .select("id, customer_id, order_number, order_date, status, fulfillment_status, total_amount, metadata, created_at, notes, warehouse_id")
     .eq("organization_id", organizationId);
 
   // If searchTerm is provided, we search across all dates (Global Search)
@@ -509,6 +515,9 @@ export async function getIncomingOrders(
     orderProductSets.set(item.order_id, set);
   }
 
+  const warehouses = await getActiveWarehouses(organizationId);
+  const warehouseNameMap = new Map(warehouses.map((w) => [w.id, w.name]));
+
   return orders
     .map((order: OrderRow) => {
       const customer = customerMap.get(order.customer_id);
@@ -531,6 +540,8 @@ export async function getIncomingOrders(
         vehicleName: customer?.default_vehicle_id
           ? (vehicleNameMap.get(customer.default_vehicle_id) ?? null)
           : null,
+        warehouseId: order.warehouse_id,
+        warehouseName: order.warehouse_id ? (warehouseNameMap.get(order.warehouse_id) ?? null) : null,
       } satisfies IncomingOrderListItem;
     })
     .filter((order: IncomingOrderListItem) => {

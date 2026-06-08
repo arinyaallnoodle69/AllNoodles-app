@@ -25,7 +25,7 @@ export function OrderCartView({
           <p className="font-medium">ตะกร้าสินค้าว่างเปล่า</p>
           <button
             onClick={onBackToCatalog}
-            className="mt-4 rounded-full bg-[#eef4fa] px-6 py-2 text-sm font-bold text-[#003366]"
+            className="mt-4 rounded-full bg-[#FAF7F2] px-6 py-2 text-sm font-bold text-[#082A63]"
           >
             กลับไปเลือกสินค้า
           </button>

@@ -18,7 +18,7 @@ type SettingsTopBarProps = {
 
 function getActionClassName(tone: SettingsTopBarAction["tone"]) {
   return tone === "primary"
-    ? "whitespace-nowrap rounded-lg bg-[#003366] px-4 py-2.5 text-sm font-medium text-white shadow-lg shadow-[#003366]/20 transition hover:bg-[#002244] md:px-5"
+    ? "whitespace-nowrap rounded-lg bg-[#082A63] px-4 py-2.5 text-sm font-medium text-white shadow-lg shadow-[#082A63]/20 transition hover:bg-[#103B82] md:px-5"
     : "whitespace-nowrap rounded-lg border border-slate-200 px-3 py-2.5 text-sm font-medium text-slate-600 transition hover:bg-slate-50 md:px-4";
 }
 
@@ -30,8 +30,8 @@ export function SettingsTopBar({ actions = [] }: SettingsTopBarProps) {
           <div className="flex min-w-0 items-center">
             <Link href="/dashboard" className="block shrink-0">
               <Image
-                src="/ty-noodles-logo-cropped.png"
-                alt="T&Y Noodles"
+                src="/brand/512x512.png"
+                alt="All Noodles"
                 width={176}
                 height={64}
                 priority

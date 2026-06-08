@@ -4,18 +4,20 @@ import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { AppSidebarLayout } from "@/components/app-sidebar";
 import { DashboardClient } from "@/components/dashboard/dashboard-client";
-import { DashboardLoadingShell } from "@/components/dashboard/dashboard-loading-shell";
+import { PageLoader } from "@/components/page-loader";
 import { requireAppSession, roleHomePage } from "@/lib/auth/authorization";
 import { getDashboardOverview } from "@/lib/dashboard/overview";
 import { getIncomingOrders, getOrderDetailById } from "@/lib/orders/detail";
 import { getTodayInBangkok } from "@/lib/orders/date";
 import { getProductsForOrder } from "@/lib/orders/manage";
 import { getOrderStoreStatusSummary } from "@/lib/orders/store-status";
+import { getActiveWarehouses } from "@/lib/warehouses";
 
 import type { DashboardOverview } from "@/lib/dashboard/overview";
 import type { IncomingOrderListItem, OrderDetailData } from "@/lib/orders/detail";
 import type { OrderProductOption } from "@/lib/orders/manage";
 import type { OrderStoreStatusSummary } from "@/lib/orders/store-status";
+import type { WarehouseOption } from "@/lib/warehouses";
 
 export const metadata = { title: "ภาพรวม" };
 
@@ -41,6 +43,7 @@ async function DashboardDataContent({
   let expandedDetail: OrderDetailData | null = null;
   let orders: IncomingOrderListItem[] = [];
   let products: OrderProductOption[] = [];
+  let warehouses: WarehouseOption[] = [];
 
   try {
     const results = await Promise.all([
@@ -51,6 +54,7 @@ async function DashboardDataContent({
         : Promise.resolve(null),
       expandedOrderId ? getIncomingOrders(organizationId, { orderDate }) : Promise.resolve([]),
       expandedOrderId ? getProductsForOrder(organizationId) : Promise.resolve([]),
+      getActiveWarehouses(organizationId),
     ]);
 
     overview = results[0];
@@ -58,6 +62,7 @@ async function DashboardDataContent({
     expandedDetail = results[2];
     orders = results[3];
     products = results[4];
+    warehouses = results[5];
   } catch (error) {
     console.error("Dashboard data fetch error:", error);
     overview = {
@@ -74,12 +79,9 @@ async function DashboardDataContent({
         lowStockCount: 0,
       },
       recentOrders: [],
-      weeklyTrend: [],
       dailyPerformanceRows: [],
       dailyPerformanceRangeStartDate: null,
       dailyPerformanceRangeEndDate: null,
-      topCustomers: [],
-      topProducts: [],
       stockProducts: [],
       stockSuppliers: [],
       lineOrders: [],
@@ -97,6 +99,7 @@ async function DashboardDataContent({
       storeStatusSummary={storeStatusSummary}
       stockProducts={overview.stockProducts}
       stockSuppliers={overview.stockSuppliers}
+      stockWarehouses={warehouses}
       today={today}
       orderDate={orderDate}
       expandedDetail={expandedDetail}
@@ -121,7 +124,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
 
   return (
     <AppSidebarLayout>
-      <Suspense key={suspenseKey} fallback={<DashboardLoadingShell />}>
+      <Suspense key={suspenseKey} fallback={<PageLoader />}>
         <DashboardDataContent
           expandedOrderId={expandedOrderId}
           orderDate={orderDate}

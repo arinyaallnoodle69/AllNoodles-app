@@ -238,7 +238,7 @@ export async function getVehicleProductSummaryData(
   }
 
   return {
-    organizationName: "T&Y Noodle",
+    organizationName: "All Noodles",
     dateLabel,
     products: filteredProducts,
     vehicles,

@@ -11,12 +11,12 @@
   width: 210mm !important;
   height: 297mm !important; /* STRICT A4 HEIGHT */
   background: #ffffff !important;
-  padding: 4mm !important; 
+  padding: 4mm !important;
   margin: 0 !important;
   box-sizing: border-box !important;
   overflow: hidden !important;
   font-family: "SukhumvitSet-SemiBold", var(--font-sukhumvit), sans-serif !important;
-  color: #111111 !important;
+  color: #1F2A44 !important;
 }
 
 .printPage {
@@ -30,14 +30,14 @@
   flex-direction: column !important;
 }
 
-.printRankNumber { display: inline !important; font-size: 9pt !important; font-weight: 700 !important; color: #111111 !important; }
-.printHeader { 
-  display: block !important; 
-  margin-bottom: 1.5mm !important; 
-  border-bottom: 1pt solid #003366 !important; 
-  padding: 1mm 0 1.5mm 0 !important; 
-  background: #ffffff !important; 
-  flex-shrink: 0 !important; 
+.printRankNumber { display: inline !important; font-size: 9pt !important; font-weight: 700 !important; color: #1F2A44 !important; }
+.printHeader {
+  display: block !important;
+  margin-bottom: 1.5mm !important;
+  border-bottom: 1pt solid #082A63 !important;
+  padding: 1mm 0 1.5mm 0 !important;
+  background: #ffffff !important;
+  flex-shrink: 0 !important;
 }
 .printHeaderTop {
   display: flex !important;
@@ -54,45 +54,45 @@
   width: 10mm !important; /* Shrunk for space */
   height: 10mm !important;
 }
-.printCompanyName { font-size: 13pt !important; font-weight: 900 !important; line-height: 1 !important; color: #003366 !important; margin: 0 !important; }
+.printCompanyName { font-size: 13pt !important; font-weight: 900 !important; line-height: 1 !important; color: #082A63 !important; margin: 0 !important; }
 .printSubtitle { font-size: 8pt !important; font-weight: 600 !important; color: #475569 !important; margin-top: 0.5mm !important; }
 .printMeta { font-size: 7.5pt !important; font-weight: 500 !important; color: #64748b !important; text-align: right !important; line-height: 1.2 !important; }
-.printReportTitle { font-size: 14pt !important; font-weight: 900 !important; color: #003366 !important; margin: 1mm 0 0 0 !important; }
+.printReportTitle { font-size: 14pt !important; font-weight: 900 !important; color: #082A63 !important; margin: 1mm 0 0 0 !important; }
 
 .printFilters { margin-top: 1.2mm !important; padding-top: 0.8mm !important; }
 .printFilterItem { display: inline-flex !important; align-items: center !important; gap: 1mm !important; }
 .printFilterLabel { font-size: 8pt !important; font-weight: 700 !important; color: #64748b !important; }
-.printFilterValue { font-size: 8pt !important; font-weight: 600 !important; color: #111111 !important; }
+.printFilterValue { font-size: 8pt !important; font-weight: 600 !important; color: #1F2A44 !important; }
 
 
-.printArea table { 
-  width: 100% !important; 
-  table-layout: fixed !important; 
-  border-collapse: collapse !important; 
+.printArea table {
+  width: 100% !important;
+  table-layout: fixed !important;
+  border-collapse: collapse !important;
   margin-top: 1.2mm !important;
   flex-shrink: 0 !important;
 }
 /* COMPACT ROWS FOR 35 ITEMS - PERFECT CALIBRATION */
-.printArea thead th { padding: 0.8mm 1mm !important; font-size: 8pt !important; font-weight: 900 !important; background: #f8fafc !important; border-bottom: 1.2pt solid #003366 !important; color: #003366 !important; text-transform: uppercase !important; }
-.printArea tbody td { padding: 1.05mm 1mm !important; font-size: 8.8pt !important; border-bottom: 0.5pt solid #e2e8f0 !important; color: #111111 !important; }
+.printArea thead th { padding: 0.8mm 1mm !important; font-size: 8pt !important; font-weight: 900 !important; background: #FAF7F2 !important; border-bottom: 1.2pt solid #082A63 !important; color: #082A63 !important; text-transform: uppercase !important; }
+.printArea tbody td { padding: 1.05mm 1mm !important; font-size: 8.8pt !important; border-bottom: 0.5pt solid #e2e8f0 !important; color: #1F2A44 !important; }
 
 .printProductCell { display: flex !important; align-items: center !important; gap: 1mm !important; min-width: 0 !important; }
-.printProductName { font-size: 9pt !important; font-weight: 800 !important; color: #111111 !important; white-space: normal !important; line-height: 1.15 !important; }
+.printProductName { font-size: 9pt !important; font-weight: 800 !important; color: #1F2A44 !important; white-space: normal !important; line-height: 1.15 !important; }
 
-.printFooter { 
-  display: block !important; 
-  margin-top: auto !important; 
-  padding-top: 3mm !important; 
-  border-top: 0.8pt solid #e2e8f0 !important; 
-  font-size: 8pt !important; 
-  font-weight: 600 !important; 
-  color: #94a3b8 !important; 
-  text-align: right !important; 
+.printFooter {
+  display: block !important;
+  margin-top: auto !important;
+  padding-top: 3mm !important;
+  border-top: 0.8pt solid #e2e8f0 !important;
+  font-size: 8pt !important;
+  font-weight: 600 !important;
+  color: #94a3b8 !important;
+  text-align: right !important;
   flex-shrink: 0 !important;
 }
 /* ─── Media Print Specifics ─── */
 @media print {
-  :global(header), :global(aside), :global(nav), :global(footer), 
+  :global(header), :global(aside), :global(nav), :global(footer),
   :global(button), :global(form), :global(.no-print) {
     display: none !important;
   }

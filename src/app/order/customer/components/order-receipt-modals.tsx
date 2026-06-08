@@ -92,7 +92,7 @@ export function OrderReceiptModals({
             <span className="text-base font-bold text-white">บันทึกรูปภาพ</span>
             <a
               href={receiptImageUrl}
-              download={`TYNoodle-${receiptOrder?.order_number ?? "order"}.png`}
+              download={`All Noodles-${receiptOrder?.order_number ?? "order"}.png`}
               className="flex items-center gap-1.5 rounded-full bg-white/20 px-4 py-2 text-sm font-bold text-white hover:bg-white/30"
             >
               <Download className="h-4 w-4" />

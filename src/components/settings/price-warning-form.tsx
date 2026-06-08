@@ -105,7 +105,7 @@ export function PriceWarningForm({ customers, saleUnits }: PriceWarningFormProps
               required
               value={priceValue}
               onChange={(e) => setPriceValue(e.target.value)}
-              className={`w-full rounded-lg border p-3 pl-7 text-sm outline-none transition focus:border-transparent focus:ring-2 focus:ring-[#003366] ${
+              className={`w-full rounded-lg border p-3 pl-7 text-sm outline-none transition focus:border-transparent focus:ring-2 focus:ring-[#082A63] ${
                 isBelowCost
                   ? "border-amber-300 bg-amber-50"
                   : "border-slate-200 bg-white"

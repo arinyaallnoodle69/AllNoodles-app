@@ -2,6 +2,7 @@ import "server-only";
 
 import { cacheLife, cacheTag } from "next/cache";
 import { sortProductsByCategory } from "@/lib/products/sort-by-category";
+import { getActiveWarehouses } from "@/lib/warehouses";
 
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import {
@@ -63,6 +64,8 @@ export type SettingsCustomer = {
   address: string;
   addressDraft: SettingsCustomerAddress;
   code: string;
+  defaultWarehouseId: string | null;
+  defaultWarehouseName: string | null;
   defaultVehicleId: string | null;
   defaultVehicleName: string | null;
   id: string;
@@ -181,6 +184,7 @@ type ProductSaleUnitRow = {
 type CustomerRow = {
   address: string;
   customer_code: string;
+  default_warehouse_id: string | null;
   default_vehicle_id: string | null;
   district: string | null;
   id: string;
@@ -225,7 +229,7 @@ function isMissingTableError(message: string | undefined) {
 
 function getNextProductSku(skus: string[]) {
   const maxSequence = skus.reduce((max, sku) => {
-    const match = /^TYN(\d+)$/i.exec(sku.trim());
+    const match = /^ANP(\d+)$/i.exec(sku.trim());
 
     if (!match) {
       return max;
@@ -235,12 +239,12 @@ function getNextProductSku(skus: string[]) {
     return Number.isFinite(sequence) ? Math.max(max, sequence) : max;
   }, 0);
 
-  return `TYN${String(maxSequence + 1).padStart(3, "0")}`;
+  return `ANP${String(maxSequence + 1).padStart(3, "0")}`;
 }
 
 function getNextCustomerCode(codes: string[]) {
   const maxSequence = codes.reduce((max, code) => {
-    const match = /^TYS(\d+)$/i.exec(code.trim());
+    const match = /^ANS(\d+)$/i.exec(code.trim());
 
     if (!match) {
       return max;
@@ -250,7 +254,7 @@ function getNextCustomerCode(codes: string[]) {
     return Number.isFinite(sequence) ? Math.max(max, sequence) : max;
   }, 0);
 
-  return `TYS${String(maxSequence + 1).padStart(3, "0")}`;
+  return `ANS${String(maxSequence + 1).padStart(3, "0")}`;
 }
 
 const skuCollator = new Intl.Collator("th", {
@@ -311,7 +315,7 @@ type SupplierRow = {
 
 function getNextSupplierCode(codes: string[]) {
   const maxSequence = codes.reduce((max, code) => {
-    const match = /^TYV(\d+)$/i.exec(code.trim());
+    const match = /^(?:TYV|ANV)(\d+)$/i.exec(code.trim());
 
     if (!match) {
       return max;
@@ -321,7 +325,7 @@ function getNextSupplierCode(codes: string[]) {
     return Number.isFinite(sequence) ? Math.max(max, sequence) : max;
   }, 0);
 
-  return `TYV${String(maxSequence + 1).padStart(3, "0")}`;
+  return `ANV${String(maxSequence + 1).padStart(3, "0")}`;
 }
 
 function getSupplierAddressDraft(supplier: SupplierRow): SettingsCustomerAddress {
@@ -385,7 +389,7 @@ async function fetchSettingsData(organizationId: string): Promise<SettingsData> 
       admin
         .from("customers")
         .select(
-          "id, customer_code, name, address, province, district, subdistrict, postal_code, metadata, default_vehicle_id",
+          "id, customer_code, name, address, province, district, subdistrict, postal_code, metadata, default_vehicle_id, default_warehouse_id",
         )
         .eq("organization_id", organizationId)
         .eq("is_active", true)
@@ -452,7 +456,7 @@ async function fetchSettingsData(organizationId: string): Promise<SettingsData> 
   );
   const images = (imagesResult.data ?? []) as ProductImageRow[];
   const saleUnits = (saleUnitsResult.data ?? []) as ProductSaleUnitRow[];
-  const customers = (customersResult.data ?? []) as CustomerRow[];
+  const customers = (customersResult.data ?? []) as unknown as CustomerRow[];
   const suppliers = (suppliersResult.data ?? []) as SupplierRow[];
   const activeProductIds = new Set(
     products.filter((product) => product.is_active).map((product) => product.id),
@@ -573,6 +577,9 @@ async function fetchSettingsData(organizationId: string): Promise<SettingsData> 
   );
   const customerMap = new Map(customers.map((customer) => [customer.id, customer.name]));
   const vehicleMap = new Map(vehicles.map((vehicle) => [vehicle.id, vehicle.name]));
+  const warehouseMap = new Map(
+    (await getActiveWarehouses(organizationId)).map((warehouse) => [warehouse.id, warehouse.name]),
+  );
   const customersByVehicleId = new Map<string, { code: string; id: string; name: string }[]>();
 
   for (const customer of customers) {
@@ -594,6 +601,10 @@ async function fetchSettingsData(organizationId: string): Promise<SettingsData> 
       address: customer.address,
       addressDraft: getCustomerAddressDraft(customer),
       code: customer.customer_code,
+      defaultWarehouseId: customer.default_warehouse_id,
+      defaultWarehouseName: customer.default_warehouse_id
+        ? (warehouseMap.get(customer.default_warehouse_id) ?? null)
+        : null,
       defaultVehicleId: customer.default_vehicle_id,
       defaultVehicleName: customer.default_vehicle_id
         ? (vehicleMap.get(customer.default_vehicle_id) ?? null)

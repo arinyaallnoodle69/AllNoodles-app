@@ -253,7 +253,7 @@ export function PrintButton({
         type="button"
         onClick={handlePrint}
         disabled={isPrinting || isCapturing}
-        className={`${hidePrintOnMobile ? "hidden md:flex" : "flex"} h-10 items-center justify-center gap-2 rounded-xl bg-[#003366] px-3 text-white transition hover:bg-[#002244] active:scale-95 disabled:opacity-50`}
+        className={`${hidePrintOnMobile ? "hidden md:flex" : "flex"} h-10 items-center justify-center gap-2 rounded-xl bg-[#082A63] px-3 text-white transition hover:bg-[#103B82] active:scale-95 disabled:opacity-50`}
         aria-label="พิมพ์รายงาน"
       >
         <Printer className="h-4.5 w-4.5 shrink-0" strokeWidth={2} />
@@ -267,7 +267,7 @@ export function PrintButton({
           {/* ─── Premium Glassmorphism Header ─── */}
           <div className="sticky top-0 z-50 flex shrink-0 items-center justify-between border-b border-white/5 bg-[#12151c]/80 px-4 py-3 backdrop-blur-xl sm:px-8 sm:py-5">
             <div className="flex items-center gap-4">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#003366] text-white shadow-[0_0_20px_rgba(0,51,102,0.4)] sm:h-12 sm:w-12">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#082A63] text-white shadow-[0_0_20px_rgba(4,53,106,0.4)] sm:h-12 sm:w-12">
                 <ImageIcon className="h-5 w-5 sm:h-6 sm:w-6" strokeWidth={2.5} />
               </div>
               <div className="min-w-0">
@@ -301,13 +301,13 @@ export function PrintButton({
           </div>
 
           {/* ─── Scrollable Preview Body ─── */}
-          <div className="flex-1 overflow-y-auto bg-[radial-gradient(circle_at_center,rgba(0,51,102,0.05)_0%,transparent_70%)] p-6 sm:p-12">
+          <div className="flex-1 overflow-y-auto bg-[radial-gradient(circle_at_center,rgba(4,53,106,0.05)_0%,transparent_70%)] p-6 sm:p-12">
             <div className="mx-auto flex flex-col items-center gap-12 sm:gap-20">
               {isCapturing && previewImages.length === 0 && (
                 <div className="flex flex-col items-center justify-center py-20 text-slate-500 gap-8">
                   <div className="relative">
                     <div className="h-28 w-24 rounded-2xl border-2 border-dashed border-slate-800 animate-[pulse_2s_infinite]" />
-                    <Loader2 className="absolute inset-0 m-auto h-10 w-10 animate-spin text-[#003366]" strokeWidth={3} />
+                    <Loader2 className="absolute inset-0 m-auto h-10 w-10 animate-spin text-[#082A63]" strokeWidth={3} />
                   </div>
                   <div className="text-center">
                     <p className="text-xl font-black text-white">กำลังสร้างไฟล์รายงานคุณภาพสูง</p>
@@ -320,7 +320,7 @@ export function PrintButton({
                 <div key={idx} className="group relative flex flex-col items-center">
                   {/* Page Indicator Tag */}
                   <div className="mb-4 flex items-center gap-3 self-start sm:absolute sm:-left-20 sm:mb-0 sm:flex-col sm:self-auto">
-                    <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#1a1f26] text-sm font-black text-white ring-1 ring-white/10 shadow-2xl transition group-hover:bg-[#003366] group-hover:ring-[#003366]/50">
+                    <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#1a1f26] text-sm font-black text-white ring-1 ring-white/10 shadow-2xl transition group-hover:bg-[#082A63] group-hover:ring-[#082A63]/50">
                       {idx + 1}
                     </span>
                     <div className="h-px w-8 bg-white/10 sm:h-12 sm:w-px" />

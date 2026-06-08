@@ -58,7 +58,7 @@ export function ReprintButton({
       type="button"
       onClick={handleReprint}
       disabled={isPrinting}
-      className="flex h-10 w-10 items-center justify-center border border-slate-200 bg-white text-slate-600 shadow-sm transition-all hover:border-[#003366] hover:bg-slate-50 hover:text-[#003366] disabled:opacity-50"
+      className="flex h-10 w-10 items-center justify-center border border-slate-200 bg-white text-slate-600 shadow-sm transition-all hover:border-[#082A63] hover:bg-slate-50 hover:text-[#082A63] disabled:opacity-50"
       title={title}
     >
       {isPrinting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Printer className="h-5 w-5" />}

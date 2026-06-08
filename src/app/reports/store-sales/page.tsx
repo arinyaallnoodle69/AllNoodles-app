@@ -528,8 +528,8 @@ async function StoreSalesReportContent({ searchParams }: PageProps) {
                   <div className={styles.printHeaderTop}>
                     <div className={styles.printBrand}>
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src="/ty-noodles-logo-cropped.png" alt="T&Y Noodle" width="64" height="64" className={styles.printLogo} />
-                      <div><p className={styles.printCompanyName}>T&amp;Y Noodle</p><p className={styles.printSubtitle}>รายงานยอดขาย กำไร และอันดับร้านค้า</p></div>
+                      <img src="/brand/512x512.png" alt="All Noodles" width="64" height="64" className={styles.printLogo} />
+                      <div><p className={styles.printCompanyName}>All Noodles</p><p className={styles.printSubtitle}>รายงานยอดขาย กำไร และอันดับร้านค้า</p></div>
                     </div>
                     <div className={styles.printMeta}><p>วันที่พิมพ์: {printedAt.datePart}</p><p>เวลาพิมพ์: {printedAt.timePart} น.</p><p>หน้า: {pageIdx + 1} / {pages.length}</p></div>
                   </div>
@@ -574,7 +574,7 @@ async function StoreSalesReportContent({ searchParams }: PageProps) {
                     )}
                   </tbody>
                 </table>
-                <div className={styles.printFooter}>พิมพ์จากระบบรายงานอัตโนมัติ (T&amp;Y Noodle) - หน้า {pageIdx + 1} / {pages.length}</div>
+                <div className={styles.printFooter}>พิมพ์จากระบบรายงานอัตโนมัติ (All Noodles) - หน้า {pageIdx + 1} / {pages.length}</div>
               </div>
             ));
           })()}

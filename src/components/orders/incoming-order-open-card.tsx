@@ -29,6 +29,7 @@ type IncomingOrderOpenCardProps = {
   searchTerm?: string;
   selectedCustomerIds?: string[];
   isBilled: boolean;
+  warehouseName?: string | null;
 };
 
 function InfoBlock({
@@ -47,7 +48,7 @@ function InfoBlock({
       <p className="text-[11px] font-black uppercase tracking-[0.12em] text-slate-950">{label}</p>
       <div className="mt-1.5 flex items-center justify-between gap-2">
         <div className="flex min-w-0 items-center gap-2 text-[15px] font-semibold text-slate-950">
-          <span className="shrink-0 text-slate-400">{icon}</span>
+          <span className="shrink-0 text-[#082A63]">{icon}</span>
           <span className="truncate">{value}</span>
         </div>
         {trailing}
@@ -77,6 +78,7 @@ export const IncomingOrderOpenCard = memo(function IncomingOrderOpenCard({
   searchTerm,
   selectedCustomerIds = [],
   isBilled,
+  warehouseName,
 }: IncomingOrderOpenCardProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -98,13 +100,20 @@ export const IncomingOrderOpenCard = memo(function IncomingOrderOpenCard({
   }
 
   return (
-    <article className="border-b border-slate-400 bg-white px-5 py-4 shadow-[0_10px_26px_rgba(15,23,42,0.1)] last:border-b-0">
+    <article className="relative overflow-hidden rounded-[1.35rem] border border-[#D4AF37]/35 bg-white px-5 py-4 shadow-[0_14px_34px_rgba(8,42,99,0.08)]">
+      <div className="pointer-events-none absolute inset-x-5 top-0 h-px bg-gradient-to-r from-transparent via-[#D4AF37]/70 to-transparent" />
+      <div className="pointer-events-none absolute bottom-0 left-0 top-0 w-1 bg-[#082A63]" />
       <div className="flex items-start gap-3">
         <div className="min-w-0 flex-1">
           <p className="line-clamp-2 text-[1.18rem] font-bold leading-tight text-slate-950">
             <span translate="no">{customerCode}</span> - {customerName}
           </p>
-          <div className="mt-1.5 flex items-center gap-2">
+          <div className="mt-1.5 flex flex-wrap items-center gap-2">
+            {warehouseName ? (
+              <span className="shrink-0 rounded-full bg-[#082A63]/8 px-2 py-0.5 text-[10px] font-black text-[#082A63] ring-1 ring-[#082A63]/25">
+                {warehouseName}
+              </span>
+            ) : null}
             {isBilled ? (
               <span
                 className="inline-flex size-5 shrink-0 items-center justify-center rounded-full bg-emerald-700 text-white"
@@ -145,7 +154,7 @@ export const IncomingOrderOpenCard = memo(function IncomingOrderOpenCard({
           icon={<CalendarDays className="h-4 w-4" strokeWidth={2.2} />}
           value={displayDate}
         />
-        <div className="min-w-0 border-l border-slate-300 pl-4">
+        <div className="min-w-0 border-l border-[#D4AF37]/30 pl-4">
           <p className="text-[11px] font-black uppercase tracking-[0.12em] text-slate-950">ช่องทาง</p>
           <div className="mt-1.5 flex items-center justify-between gap-2">
             <span className="inline-flex min-h-8 items-center py-1 text-sm font-semibold text-slate-950">
@@ -159,7 +168,7 @@ export const IncomingOrderOpenCard = memo(function IncomingOrderOpenCard({
           icon={<Package2 className="h-4 w-4" strokeWidth={2.2} />}
           value={`${productCount.toLocaleString("th-TH")} รายการ`}
         />
-        <div className="min-w-0 border-l border-slate-300 pl-4">
+        <div className="min-w-0 border-l border-[#D4AF37]/30 pl-4">
           <p className="text-[11px] font-black uppercase tracking-[0.12em] text-slate-950">ยอดรวม</p>
           <p className="mt-1.5 text-[1.05rem] font-bold leading-none text-slate-950">
             {totalAmountText}
@@ -167,11 +176,11 @@ export const IncomingOrderOpenCard = memo(function IncomingOrderOpenCard({
         </div>
       </div>
 
-      <div className="mt-4 grid grid-cols-2 gap-4 border-t border-slate-200 pt-4">
+      <div className="mt-4 grid grid-cols-2 gap-4 border-t border-[#D4AF37]/25 pt-4">
         <div className="min-w-0">
           <p className="text-[11px] font-black uppercase tracking-[0.12em] text-slate-950">การจัดส่ง</p>
           <div className="mt-2 flex items-center gap-2">
-            <Truck className="h-4 w-4 shrink-0 text-slate-400" strokeWidth={2.2} />
+            <Truck className="h-4 w-4 shrink-0 text-[#082A63]" strokeWidth={2.2} />
             <div className="min-w-0 flex-1">
               <IncomingOrderVehicleSelect
                 customerId={customerId}
@@ -185,7 +194,7 @@ export const IncomingOrderOpenCard = memo(function IncomingOrderOpenCard({
           </div>
         </div>
 
-        <div className="min-w-0 border-l border-slate-300 pl-4">
+        <div className="min-w-0 border-l border-[#D4AF37]/30 pl-4">
           <p className="text-[11px] font-black uppercase tracking-[0.12em] text-slate-950">เลขจัดส่ง</p>
           <div className="mt-1.5 min-w-0">
             {hasDisplayDelivery ? (
@@ -193,21 +202,21 @@ export const IncomingOrderOpenCard = memo(function IncomingOrderOpenCard({
                 {displayDeliveryNumbers.map((num) => (
                   <span
                     key={num}
-                    className="truncate py-0.5 font-mono text-[1.05rem] font-bold leading-none text-emerald-700"
+                    className="truncate py-0.5 font-mono text-[1.05rem] font-bold leading-none text-[#D4AF37]"
                   >
                     {num}
                   </span>
                 ))}
               </div>
             ) : (
-              <span className="text-[1.05rem] font-medium text-slate-400">-</span>
+              <span className="text-[1.05rem] font-medium text-[#1F2A44]">-</span>
             )}
           </div>
         </div>
       </div>
 
-      <div className="mt-4 border-t border-slate-200 pt-3">
-        <p className="text-sm font-semibold leading-6 text-slate-700">
+      <div className="mt-4 border-t border-[#D4AF37]/25 pt-3">
+        <p className="text-sm font-semibold leading-6 text-[#1F2A44]">
           <span className="mr-2 text-[11px] font-black uppercase tracking-[0.12em] text-slate-950">
             หมายเหตุ:
           </span>
@@ -220,13 +229,13 @@ export const IncomingOrderOpenCard = memo(function IncomingOrderOpenCard({
           type="button"
           onClick={openDetail}
           disabled={isPending}
-          className="inline-flex min-h-11 flex-1 items-center justify-between rounded-2xl bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-900 transition hover:bg-slate-100 active:scale-[0.99] disabled:opacity-60"
+          className="inline-flex min-h-11 flex-1 items-center justify-between rounded-2xl border border-[#D4AF37]/55 bg-[#082A63] px-4 py-3 text-sm font-bold text-white shadow-[0_12px_26px_rgba(8,42,99,0.22)] transition hover:bg-[#103B82] active:scale-[0.99] disabled:opacity-60"
         >
           <span>{isPending ? "กำลังเปิดรายละเอียด..." : "เปิดรายละเอียดออเดอร์"}</span>
           {isPending ? (
-            <Loader2 className="h-4 w-4 animate-spin text-[#003366]" strokeWidth={2.5} />
+            <Loader2 className="h-4 w-4 animate-spin text-[#082A63]" strokeWidth={2.5} />
           ) : (
-            <ChevronRight className="h-4 w-4 text-slate-400" strokeWidth={2.6} />
+            <ChevronRight className="h-4 w-4 text-white" strokeWidth={2.6} />
           )}
         </button>
       </div>

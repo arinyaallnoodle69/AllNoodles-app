@@ -77,7 +77,7 @@ export function ProductImagePreview({ alt, src, thumbnailSizes }: ProductImagePr
           alt={alt}
           fill
           sizes={thumbnailSizes}
-          className="object-contain bg-white p-1 transition-transform duration-200 group-hover:scale-[1.02]"
+          className="object-contain bg-white transition-transform duration-200 group-hover:scale-[1.02]"
         />
       </button>
 

@@ -50,6 +50,7 @@ type DeliveryNoteItemRow = {
   delivery_note_id: string;
   quantity_delivered: number | string | null;
   product_sale_unit_id: string | null;
+  order_items?: { cost_price: number | string | null } | null;
 };
 
 type ProductSaleUnitRow = {
@@ -104,7 +105,12 @@ async function loadNoteCosts(noteIds: string[]) {
     const chunk = noteIds.slice(i, i + chunkSize);
     const { data: items, error } = await supabase
       .from("delivery_note_items")
-      .select("delivery_note_id, quantity_delivered, product_sale_unit_id")
+      .select(`
+        delivery_note_id,
+        quantity_delivered,
+        product_sale_unit_id,
+        order_items(cost_price)
+      `)
       .in("delivery_note_id", chunk);
 
     if (error) throw new Error(error.message);
@@ -174,9 +180,12 @@ async function loadNoteCosts(noteIds: string[]) {
 
   for (const item of typedItems) {
     const quantity = toNumber(item.quantity_delivered);
-    const unitCost = item.product_sale_unit_id
-      ? (saleUnitCostById.get(item.product_sale_unit_id) ?? 0)
-      : 0;
+    const orderItemCost = item.order_items ? toNumber(item.order_items.cost_price) : null;
+    const unitCost = (orderItemCost !== null && orderItemCost > 0)
+      ? orderItemCost
+      : (item.product_sale_unit_id
+          ? (saleUnitCostById.get(item.product_sale_unit_id) ?? 0)
+          : 0);
 
     noteCostById.set(
       item.delivery_note_id,

@@ -7,11 +7,12 @@ import { useRouter } from "next/navigation";
 
 type DeleteProductButtonProps = {
   formId: string;
+  iconOnly?: boolean;
   productName: string;
   triggerClassName?: string;
 };
 
-export function DeleteProductButton({ formId, productName, triggerClassName }: DeleteProductButtonProps) {
+export function DeleteProductButton({ formId, iconOnly = false, productName, triggerClassName }: DeleteProductButtonProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [isOpen, setIsOpen] = useState(false);
@@ -45,10 +46,11 @@ export function DeleteProductButton({ formId, productName, triggerClassName }: D
           setIsOpen(true);
         }}
         disabled={isPending}
+        aria-label={iconOnly ? `ลบ ${productName}` : undefined}
         className={triggerClassName || "action-touch-safe inline-flex items-center gap-1.5 rounded-lg border border-red-200 px-3 py-2 text-xs font-medium text-red-600 transition hover:bg-red-50 disabled:opacity-50"}
       >
         <Trash2 className="h-3.5 w-3.5" />
-        ลบ
+        {iconOnly ? null : "ลบ"}
       </button>
 
       {isOpen && (

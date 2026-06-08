@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ChevronDown, KeyRound, Package2, Settings2, Store, Truck } from "lucide-react";
+import { ChevronDown, KeyRound, Package2, Settings2, Store, Truck, Warehouse } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { LineAppIcon } from "@/components/icons/line-app-icon";
@@ -30,6 +30,12 @@ const items = [
     href: "/settings/vehicles",
     icon: Truck,
     label: "จัดการรถ",
+  },
+  {
+    description: "เพิ่มและจัดการคลังสินค้าสำหรับแยกสต็อคตามพื้นที่",
+    href: "/settings/warehouses",
+    icon: Warehouse,
+    label: "จัดการคลัง",
   },
   {
     description: "เปลี่ยนรหัสเข้าใช้งานและดูประวัติล่าสุด",
@@ -65,7 +71,7 @@ export function SettingsNavMenu() {
         onClick={() => setOpen((value) => !value)}
         className={`inline-flex items-center gap-2 rounded-full px-3 py-2 text-sm font-medium transition ${
           isActive
-            ? "bg-[#003366]/10 text-[#003366]"
+            ? "bg-[#F2E3AE] text-[#1F2A44] ring-1 ring-[#D4AF37]/40"
             : "text-slate-600 hover:bg-slate-100 hover:text-slate-950"
         }`}
         aria-expanded={open}
@@ -99,13 +105,13 @@ export function SettingsNavMenu() {
               onClick={() => setOpen(false)}
               className={`flex items-start gap-3 rounded-xl px-3 py-3 transition ${
                 active
-                  ? "bg-[#003366]/8 text-[#003366]"
+                  ? "bg-[#F2E3AE] text-[#1F2A44]"
                   : "text-slate-700 hover:bg-slate-50 hover:text-slate-950"
               }`}
             >
               <span
                 className={`mt-0.5 flex h-9 w-9 items-center justify-center rounded-xl ${
-                  active ? "bg-[#003366]/12" : "bg-slate-100"
+                  active ? "bg-[#F2E3AE] text-[#082A63]" : "bg-slate-100"
                 }`}
               >
                 <Icon className="h-4.5 w-4.5" strokeWidth={2.2} />

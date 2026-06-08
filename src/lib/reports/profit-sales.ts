@@ -41,6 +41,7 @@ type RpcClient = {
       p_from_date: string;
       p_to_date: string;
       p_customer_ids: string[] | null;
+      p_warehouse_id?: string | null;
     },
   ) => Promise<{ data: ProfitSalesRpcRow[] | null; error: { message: string } | null }>;
 };
@@ -68,8 +69,9 @@ export async function getProfitSalesReport(params: {
   fromDate: string;
   toDate: string;
   customerIds?: string[];
+  warehouseId?: string;
 }): Promise<ProfitSalesReportData> {
-  const { organizationId, fromDate, toDate, customerIds = [] } = params;
+  const { organizationId, fromDate, toDate, customerIds = [], warehouseId } = params;
   const supabase = getSupabaseAdmin() as unknown as RpcClient;
 
   const { data, error } = await supabase.rpc("get_profit_sales_report", {
@@ -77,6 +79,7 @@ export async function getProfitSalesReport(params: {
     p_from_date: fromDate,
     p_to_date: toDate,
     p_customer_ids: customerIds.length > 0 ? customerIds : null,
+    p_warehouse_id: warehouseId || null,
   });
 
   if (error) throw new Error(error.message);

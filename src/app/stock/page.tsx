@@ -1,14 +1,42 @@
-import { StockList } from "@/components/settings/stock-list";
 import { requireAppRole } from "@/lib/auth/authorization";
-import { getStockDashboardData } from "@/lib/stock/admin";
+import { getStockDashboardData, getStockHistoryData, type StockHistoryRow } from "@/lib/stock/admin";
+import { getStockIssueHistoryData, type StockIssueRow } from "@/lib/stock/issues";
+import { getActiveWarehouses } from "@/lib/warehouses";
+import { UnifiedStockClient } from "@/components/settings/unified-stock-client";
 
 export const metadata = {
   title: "จัดการสต็อก",
 };
 
-export default async function StockPage() {
+type SearchParams = Promise<{
+  tab?: string;
+  warehouse?: string;
+  date?: string;
+}>;
+
+export default async function StockPage({ searchParams }: { searchParams: SearchParams }) {
   const session = await requireAppRole("admin");
-  const data = await getStockDashboardData(session.organizationId);
+  const params = await searchParams;
+  const tab = params.tab || "stock";
+  const warehouseId = params.warehouse || "all";
+  
+  // Default to today's date in Thailand timezone if not provided
+  const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Bangkok" }).format(new Date());
+  const date = params.date || today;
+
+  const [data, warehouses] = await Promise.all([
+    getStockDashboardData(session.organizationId),
+    getActiveWarehouses(session.organizationId),
+  ]);
+
+  let initialHistory: StockHistoryRow[] = [];
+  let initialIssues: StockIssueRow[] = [];
+
+  if (tab === "history") {
+    initialHistory = await getStockHistoryData(session.organizationId, 50, 0, warehouseId);
+  } else if (tab === "issues") {
+    initialIssues = await getStockIssueHistoryData(session.organizationId, 50, 0, date, warehouseId);
+  }
 
   return (
     <>
@@ -19,12 +47,17 @@ export default async function StockPage() {
         </div>
       ) : null}
 
-      <div className="mt-8">
+      <div>
         <div className="-mx-3 md:mx-0">
-          <StockList 
-            products={data.products} 
+          <UnifiedStockClient
+            products={data.products}
             suppliers={data.suppliers}
-            baseHref="/stock" 
+            warehouses={warehouses}
+            initialTab={tab as "stock" | "history" | "issues"}
+            initialHistory={initialHistory}
+            initialIssues={initialIssues}
+            initialWarehouseId={warehouseId}
+            initialDate={date}
           />
         </div>
       </div>

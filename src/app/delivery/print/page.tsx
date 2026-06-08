@@ -1,5 +1,6 @@
 import { requireAppRole } from "@/lib/auth/authorization";
-import type { DeliveryNotePrintData } from "@/lib/delivery/print";
+import { type DeliveryNotePrintData, sortDeliveryItems } from "@/lib/delivery/print";
+import { sortDeliveryPrintRowsByCustomerOrder } from "@/lib/delivery/print-ordering";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { DeliveryNoteLayout } from "@/components/print/delivery-note-layout";
 import { AutoPrint, PrintButton } from "./print-button";
@@ -18,6 +19,7 @@ type Props = {
 };
 
 type RawDeliveryPrintRow = {
+  created_at: string | null;
   id: string;
   delivery_number: string;
   delivery_date: string;
@@ -46,6 +48,7 @@ type RawDeliveryPrintRow = {
       name: string;
       sku: string;
       unit: string;
+      display_order?: number | null;
     };
   }[];
 };
@@ -105,6 +108,7 @@ function buildPrintData(rows: RawDeliveryPrintRow[]): DeliveryNotePrintData[] {
         saleUnitLabel: string;
         unitPrice: number;
         lineTotal: number;
+        display_order?: number | null;
       }
     >();
 
@@ -131,11 +135,12 @@ function buildPrintData(rows: RawDeliveryPrintRow[]): DeliveryNotePrintData[] {
           saleUnitLabel: unitLabel,
           unitPrice: toNumber(item.unit_price),
           lineTotal: toNumber(item.line_total),
+          display_order: item.products.display_order,
         });
       }
     }
 
-    const items = Array.from(itemMap.values());
+    const items = sortDeliveryItems(Array.from(itemMap.values()));
     items.forEach((item, index) => {
       item.lineNumber = index + 1;
     });
@@ -154,7 +159,7 @@ function buildPrintData(rows: RawDeliveryPrintRow[]): DeliveryNotePrintData[] {
       totalAmount,
       notes,
       organization: {
-        name: base.organizations.name || "T&Y Noodle",
+        name: base.organizations.name || "All Noodles",
         logoUrl: (organizationMetadata.logo_url as string) || null,
         address: (organizationMetadata.address as string) || null,
         phone: (organizationMetadata.phone as string) || null,
@@ -196,13 +201,13 @@ export default async function DeliveryBatchPrintPage({ searchParams }: Props) {
   let query = supabase
     .from("delivery_notes")
     .select(`
-      id, delivery_number, delivery_date, total_amount, notes, customer_id,
+      id, delivery_number, delivery_date, total_amount, notes, customer_id, created_at,
       customers!inner(id, name, customer_code, address, default_vehicle_id, vehicles(id, name)),
       organizations!inner(name, metadata),
       orders(order_number),
       delivery_note_items(
         id, quantity_delivered, unit_price, line_total,
-        products!inner(name, sku, unit)
+        products!inner(name, sku, unit, display_order)
       )
     `)
     .eq("organization_id", session.organizationId)
@@ -226,7 +231,10 @@ export default async function DeliveryBatchPrintPage({ searchParams }: Props) {
     .order("delivery_date", { ascending: true })
     .order("created_at", { ascending: true });
 
-  const dns = rows && rows.length > 0 ? buildPrintData(rows as unknown as RawDeliveryPrintRow[]) : [];
+  const sortedRows = rows && rows.length > 0
+    ? sortDeliveryPrintRowsByCustomerOrder(rows as unknown as RawDeliveryPrintRow[])
+    : [];
+  const dns = sortedRows.length > 0 ? buildPrintData(sortedRows) : [];
 
   return (
     <>

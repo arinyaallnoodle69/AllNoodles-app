@@ -93,6 +93,7 @@ type ProductSelectModalProps = {
   products: OrderProductOption[];
   productsLoading: boolean;
   selectedCustomerLabel: string | null;
+  selectedWarehouseId: string | null;
 };
 
 type Props = {
@@ -155,7 +156,7 @@ function ActionPopup({
     <div className="pointer-events-none absolute inset-x-4 top-4 z-[70] flex justify-center">
       <div
         role="alert"
-        className="pointer-events-auto flex w-full max-w-md items-start gap-3 rounded-2xl border border-amber-200 bg-white px-4 py-3 shadow-[0_14px_36px_rgba(0,51,102,0.18)]"
+        className="pointer-events-auto flex w-full max-w-md items-start gap-3 rounded-2xl border border-amber-200 bg-white px-4 py-3 shadow-[0_14px_36px_rgba(8,42,99,0.18)]"
       >
         <span className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-amber-100 text-amber-700">
           <AlertTriangle className="h-4 w-4" strokeWidth={2.2} />
@@ -269,6 +270,15 @@ function getUnitPrice(productId: string, unitId: string | null, priceMap: Record
   return priceMap[unitId ?? productId] ?? priceMap[productId] ?? 0;
 }
 
+function getDisplayStockQuantity(product: OrderProductOption, warehouseId: string | null) {
+  if (!warehouseId) {
+    return product.stockQuantity;
+  }
+
+  return product.warehouseStocks.find((stock) => stock.warehouseId === warehouseId)?.stockQuantity
+    ?? product.stockQuantity;
+}
+
 const ProductRow = React.memo(({
   product,
   isSelected,
@@ -277,7 +287,8 @@ const ProductRow = React.memo(({
   onUpdateSelection,
   addedCount,
   priceMap,
-  noCustomer
+  noCustomer,
+  selectedWarehouseId,
 }: {
   product: OrderProductOption;
   isSelected: boolean;
@@ -291,6 +302,7 @@ const ProductRow = React.memo(({
   addedCount: number;
   priceMap: Record<string, number>;
   noCustomer: boolean;
+  selectedWarehouseId: string | null;
 }) => {
   const units = getUnits(product);
   const unit = units.find((u) => u.id === selection?.unitId) ?? units.find((u) => u.isDefault) ?? units[0] ?? null;
@@ -303,6 +315,7 @@ const ProductRow = React.memo(({
   const currentPriceNum = selection?.unitPrice ? Number.parseFloat(selection.unitPrice) : 0;
   const isBelowCost = Boolean(selection && effectiveCost > 0 && currentPriceNum > 0 && currentPriceNum < (effectiveCost - 0.001));
   const customerPrice = priceMap[unit?.id ?? product.id] ?? priceMap[product.id] ?? 0;
+  const displayStockQuantity = getDisplayStockQuantity(product, selectedWarehouseId);
 
   return (
     <div
@@ -310,7 +323,7 @@ const ProductRow = React.memo(({
         isSelected
           ? isBelowCost
             ? "border-[#FF0000]/60 bg-rose-50 ring-1 ring-[#FF0000]/10"
-            : "border-[#003366]/40 bg-[#003366]/5 ring-1 ring-[#003366]/5"
+            : "border-[#082A63]/40 bg-[#082A63]/15 ring-1 ring-[#082A63]/5"
           : "border-slate-200 bg-white hover:border-slate-300"
       } col-span-1`}
     >
@@ -333,7 +346,7 @@ const ProductRow = React.memo(({
               readOnly
               tabIndex={-1}
               checked={isSelected}
-              className="peer pointer-events-none h-5 w-5 appearance-none rounded border-2 border-slate-300 transition-all checked:border-[#003366] checked:bg-[#003366]"
+              className="peer pointer-events-none h-5 w-5 appearance-none rounded border-2 border-slate-300 transition-all checked:border-[#082A63] checked:bg-[#082A63]"
             />
             <Check className="pointer-events-none absolute h-3.5 w-3.5 scale-0 text-white transition-transform peer-checked:scale-100" strokeWidth={5} />
           </label>
@@ -369,10 +382,10 @@ const ProductRow = React.memo(({
 
             <div className="mt-2 flex flex-wrap items-center justify-center gap-2 md:justify-start">
               <span className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-[13.5px] font-black shadow-sm ${
-                product.stockQuantity < 0 ? "bg-[#FF0000] text-white" : "bg-[#003366] text-white"
+                displayStockQuantity < 0 ? "bg-[#FF0000] text-white" : "bg-[#082A63] text-white"
               }`}>
                 <Boxes className="h-3.5 w-3.5 md:h-4 md:w-4" strokeWidth={2.5} />
-                สต็อก: {product.stockQuantity.toLocaleString("th-TH")} {product.unit}
+                สต็อก: {displayStockQuantity.toLocaleString("th-TH")} {product.unit}
               </span>
             </div>
 
@@ -390,7 +403,7 @@ const ProductRow = React.memo(({
               )}
 
               {addedCount > 0 && (
-                <span className="rounded-lg bg-[#003366] px-2 py-1 text-[11px] font-black text-white shadow-sm md:px-2.5 md:text-[12px]">
+                <span className="rounded-lg bg-[#082A63] px-2 py-1 text-[11px] font-black text-white shadow-sm md:px-2.5 md:text-[12px]">
                   ในตะกร้า {addedCount} {unit?.label}
                 </span>
               )}
@@ -400,7 +413,7 @@ const ProductRow = React.memo(({
       </div>
 
       {isSelected && selection && (
-        <div className="bg-[#003366]/5 px-3 pb-4 pt-2 md:px-4 md:pb-4 md:pt-1">
+        <div className="bg-[#082A63]/15 px-3 pb-4 pt-2 md:px-4 md:pb-4 md:pt-1">
           <div className="space-y-3">
             <div className="space-y-2">
               <label className="text-[14px] font-black uppercase tracking-wider text-slate-600">
@@ -418,7 +431,7 @@ const ProductRow = React.memo(({
                   type="number"
                   value={selection.quantity}
                   onChange={(e) => onUpdateSelection(product.id, "quantity", e.target.value)}
-                  className="h-10 w-full min-w-0 rounded-2xl border-2 border-transparent bg-white px-2 text-center text-xl font-black text-slate-950 shadow-md outline-none focus:border-[#003366]/30"
+                  className="h-10 w-full min-w-0 rounded-2xl border-2 border-transparent bg-white px-2 text-center text-xl font-black text-slate-950 shadow-md outline-none focus:border-[#082A63]/30"
                 />
                 <button
                   type="button"
@@ -454,7 +467,7 @@ const ProductRow = React.memo(({
                   className={`h-10 w-full rounded-2xl border-2 pl-4 pr-12 text-xl font-black shadow-md outline-none transition-all ${
                     selection.isPriceLocked
                       ? "border-transparent bg-slate-100 text-slate-400 shadow-none"
-                      : "border-transparent bg-white text-slate-950 focus:border-[#003366]/30"
+                      : "border-transparent bg-white text-slate-950 focus:border-[#082A63]/30"
                   } ${isBelowCost ? "!border-[#FF0000] !bg-rose-50 !text-[#FF0000]" : ""}`}
                 />
                 <button
@@ -465,7 +478,7 @@ const ProductRow = React.memo(({
                       ? "text-slate-400"
                       : isBelowCost
                         ? "bg-[#FF0000] text-white"
-                        : "bg-[#003366] text-white"
+                        : "bg-[#082A63] text-white"
                   }`}
                 >
                   {selection.isPriceLocked ? <Lock className="h-5 w-5" /> : <Unlock className="h-5 w-5" />}
@@ -502,6 +515,7 @@ function ProductSelectModal({
   products,
   productsLoading,
   selectedCustomerLabel,
+  selectedWarehouseId,
 }: ProductSelectModalProps) {
   const [query, setQuery] = useState("");
   const deferredQuery = React.useDeferredValue(query);
@@ -677,9 +691,9 @@ function ProductSelectModal({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-[10000] flex items-end justify-center bg-slate-950/60 p-0 sm:items-center sm:p-4">
+    <div className="fixed inset-0 z-[10000] flex items-end justify-center bg-[#001D3F]/70 p-0 backdrop-blur-[2px] sm:items-center sm:p-4">
       <div className="absolute inset-0" onClick={onClose} />
-      <div className="relative flex h-full w-full max-h-full flex-col overflow-hidden bg-white shadow-2xl sm:h-[90dvh] sm:max-h-[90dvh] sm:max-w-6xl sm:rounded-[2.5rem]">
+      <div className="relative flex h-full w-full max-h-full flex-col overflow-hidden border-[#D4AF37]/45 bg-white shadow-[0_30px_90px_rgba(0,29,63,0.35)] sm:h-[90dvh] sm:max-h-[90dvh] sm:max-w-6xl sm:rounded-[2.5rem] sm:border">
         <ActionPopup message={popupMessage} onClose={() => setPopupMessage(null)} />
         
         {/* Cost Warning Blocking Popup */}
@@ -719,44 +733,44 @@ function ProductSelectModal({
         )}
 
         {/* Header */}
-        <div className="flex shrink-0 items-center justify-between gap-4 border-b border-slate-100 bg-white px-4 py-2.5 sm:px-8 sm:py-4">
+        <div className="flex shrink-0 items-center justify-between gap-4 border-b border-[#D4AF37]/70 bg-[#082A63] px-4 py-2.5 text-white sm:px-8 sm:py-4">
           <div className="min-w-0 flex-1">
-            <h3 className="text-lg font-black tracking-tight text-slate-900 sm:text-xl">เลือกสินค้าเพิ่ม</h3>
+            <h3 className="text-lg font-black tracking-tight text-white sm:text-xl">เลือกสินค้าเพิ่ม</h3>
             {selectedCustomerLabel && (
-              <p className="mt-0.5 text-[10px] font-bold text-[#003366] truncate sm:text-xs">ร้าน: {selectedCustomerLabel}</p>
+              <p className="mt-0.5 truncate text-[10px] font-bold text-white/85 sm:text-xs">ร้าน: {selectedCustomerLabel}</p>
             )}
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-500 transition active:scale-95 sm:h-11 sm:w-11 sm:rounded-2xl"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-white/15 bg-white/10 text-white transition active:scale-95 sm:h-11 sm:w-11 sm:rounded-2xl"
           >
             <X className="h-5 w-5 sm:h-6 sm:w-6" strokeWidth={3} />
           </button>
         </div>
 
         {/* Combined Search & Category Filter */}
-        <div className="shrink-0 border-b-2 border-slate-100 bg-white px-4 py-3 sm:px-8">
+        <div className="shrink-0 border-b border-[#D4AF37]/30 bg-white px-4 py-3 sm:px-8">
           <div className="flex items-center gap-2">
-            <div className="flex flex-1 items-center gap-2 rounded-2xl border-2 border-slate-100 bg-slate-50 px-3 py-2.5 focus-within:border-[#003366]/40 focus-within:bg-white transition-all shadow-sm">
-              <Search className="h-5 w-5 text-slate-400" />
+            <div className="flex flex-1 items-center gap-2 rounded-2xl border-2 border-[#D4AF37]/25 bg-[#FAF7F2] px-3 py-2.5 shadow-sm transition-all focus-within:border-[#D4AF37] focus-within:bg-white">
+              <Search className="h-5 w-5 text-[#082A63]" />
               <input
                 type="text"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="ค้นหาสินค้า..."
-                className="min-w-0 flex-1 bg-transparent text-base font-bold text-slate-900 outline-none placeholder:text-slate-400"
+                className="min-w-0 flex-1 bg-transparent text-base font-bold text-[#1F2A44] outline-none placeholder:text-[#1F2A44]/65"
               />
             </div>
             <button
               onClick={() => setCategoryPickerOpen(true)}
-              className="flex items-center gap-2 rounded-2xl border-2 border-slate-100 bg-slate-50 px-3 py-2.5 text-sm font-black text-slate-700 transition active:scale-95 hover:border-[#003366]/20 shadow-sm shrink-0"
+              className="flex shrink-0 items-center gap-2 rounded-2xl border-2 border-[#D4AF37]/25 bg-[#FAF7F2] px-3 py-2.5 text-sm font-black text-[#1F2A44] shadow-sm transition hover:border-[#D4AF37]/70 active:scale-95"
             >
               <div className="flex flex-col items-start leading-none gap-1">
-                <span className="text-[9px] text-slate-400 uppercase tracking-widest">หมวดหมู่</span>
-                <span className="text-[#003366] truncate max-w-[90px]">{activeCategoryName}</span>
+                <span className="text-[9px] uppercase tracking-widest text-[#1F2A44]/70">หมวดหมู่</span>
+                <span className="text-[#082A63] truncate max-w-[90px]">{activeCategoryName}</span>
               </div>
-              <ChevronRight className="h-3.5 w-3.5 text-slate-300" strokeWidth={4} />
+              <ChevronRight className="h-3.5 w-3.5 text-[#D4AF37]" strokeWidth={4} />
             </button>
           </div>
         </div>
@@ -792,6 +806,7 @@ function ProductSelectModal({
                     addedCount={cart.filter(item => item.productId === p.id).reduce((s, i) => s + i.quantity, 0)}
                     priceMap={priceMap}
                     noCustomer={noCustomer}
+                    selectedWarehouseId={selectedWarehouseId}
                   />
                 ))}
               </div>
@@ -800,17 +815,17 @@ function ProductSelectModal({
         </div>
 
         {/* Modal Footer */}
-        <div className="shrink-0 border-t-2 border-slate-200 bg-white px-5 py-4 pb-safe-or-4 sm:px-8 shadow-[0_-10px_40px_rgba(0,0,0,0.1)]">
+        <div className="shrink-0 border-t border-[#D4AF37]/35 bg-white px-5 py-4 pb-safe-or-4 shadow-[0_-10px_40px_rgba(8,42,99,0.10)] sm:px-8">
           <div className="flex items-center justify-between gap-6">
             <div className="min-w-0">
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">เลือกแล้ว</p>
-              <p className="text-2xl font-black text-[#003366] tabular-nums leading-none">{selectedIds.size} <span className="text-xs">รายการ</span></p>
+              <p className="mb-1 text-[10px] font-black uppercase leading-none tracking-widest text-[#1F2A44]">เลือกแล้ว</p>
+              <p className="text-2xl font-black text-[#082A63] tabular-nums leading-none">{selectedIds.size} <span className="text-xs">รายการ</span></p>
             </div>
             <button
               type="button"
               onClick={() => void handleConfirm()}
               disabled={saving || selectedIds.size === 0}
-              className="flex-1 flex items-center justify-center gap-3 rounded-2xl bg-[#003366] py-3.5 text-xl font-black text-white shadow-xl shadow-[#003366]/30 transition-all hover:bg-[#002244] disabled:opacity-40 active:scale-[0.98]"
+              className="flex-1 flex items-center justify-center gap-3 rounded-2xl border border-[#D4AF37]/75 bg-[#082A63] py-3.5 text-xl font-black text-white shadow-xl shadow-[#082A63]/30 transition-all hover:bg-[#103B82] disabled:opacity-40 active:scale-[0.98]"
             >
               {saving ? (
                 <>
@@ -831,12 +846,12 @@ function ProductSelectModal({
         {categoryPickerOpen && (
           <div className="absolute inset-0 z-[10010] flex flex-col bg-slate-950/40 backdrop-blur-sm">
             <div className="absolute inset-0" onClick={() => setCategoryPickerOpen(false)} />
-            <div className="mt-auto relative flex max-h-[85%] flex-col overflow-hidden rounded-t-[3rem] bg-white shadow-2xl animate-in slide-in-from-bottom duration-300">
-              <div className="flex items-center justify-between border-b border-slate-100 px-8 py-6">
-                <h4 className="text-2xl font-black text-slate-900 uppercase tracking-tight">เลือกหมวดหมู่</h4>
+            <div className="relative mt-auto flex max-h-[85%] flex-col overflow-hidden rounded-t-[3rem] border-t border-[#D4AF37]/45 bg-white shadow-2xl animate-in slide-in-from-bottom duration-300">
+              <div className="flex items-center justify-between border-b border-[#D4AF37]/30 px-8 py-6">
+                <h4 className="text-2xl font-black uppercase tracking-tight text-[#082A63]">เลือกหมวดหมู่</h4>
                 <button
                   onClick={() => setCategoryPickerOpen(false)}
-                  className="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-100 text-slate-500 transition active:scale-95"
+                  className="flex h-11 w-11 items-center justify-center rounded-2xl border border-[#D4AF37]/35 bg-white text-[#1F2A44] transition active:scale-95"
                 >
                   <X className="h-6 w-6" strokeWidth={3} />
                 </button>
@@ -845,8 +860,8 @@ function ProductSelectModal({
                 <div className="grid grid-cols-1 gap-3">
                   <button
                     onClick={() => { setSelectedCategoryId("__all__"); setCategoryPickerOpen(false); }}
-                    className={`flex items-center justify-between rounded-3xl px-6 py-5 text-left transition-all ${
-                      selectedCategoryId === "__all__" ? "bg-[#003366] text-white shadow-xl" : "bg-slate-50 text-slate-700 hover:bg-slate-100"
+                    className={`flex items-center justify-between rounded-3xl border px-6 py-5 text-left transition-all ${
+                      selectedCategoryId === "__all__" ? "border-[#D4AF37]/70 bg-[#082A63] text-white shadow-xl" : "border-[#D4AF37]/25 bg-[#FAF7F2] text-[#1F2A44] hover:border-[#D4AF37]/70"
                     }`}
                   >
                     <span className="text-xl font-black">ทุกหมวดหมู่</span>
@@ -856,8 +871,8 @@ function ProductSelectModal({
                     <button
                       key={c.id}
                       onClick={() => { setSelectedCategoryId(c.id); setCategoryPickerOpen(false); }}
-                      className={`flex items-center justify-between rounded-3xl px-6 py-5 text-left transition-all ${
-                        selectedCategoryId === c.id ? "bg-[#003366] text-white shadow-xl" : "bg-slate-50 text-slate-700 hover:bg-slate-100"
+                      className={`flex items-center justify-between rounded-3xl border px-6 py-5 text-left transition-all ${
+                        selectedCategoryId === c.id ? "border-[#D4AF37]/70 bg-[#082A63] text-white shadow-xl" : "border-[#D4AF37]/25 bg-[#FAF7F2] text-[#1F2A44] hover:border-[#D4AF37]/70"
                       }`}
                     >
                       <span className="text-xl font-black">{c.name}</span>
@@ -1328,7 +1343,7 @@ export function CreateOrderModal({
             setIsClosing(false);
             setOpen(true);
           }}
-          className="action-touch-safe inline-flex items-center justify-center gap-2 rounded-full bg-[#003366] px-4 py-2.5 text-sm font-bold text-white shadow-[0_12px_40px_rgba(0,51,102,0.35)] transition-all hover:scale-105 hover:bg-[#002244] active:scale-95 md:h-14 md:px-7 md:text-[15px]"
+          className="action-touch-safe inline-flex items-center justify-center gap-2 rounded-full border border-[#D4AF37]/80 bg-[#082A63] px-4 py-2.5 text-sm font-bold text-white shadow-[0_12px_40px_rgba(8,42,99,0.35)] transition-all hover:scale-105 hover:bg-[#103B82] active:scale-95 md:h-14 md:px-7 md:text-[15px]"
         >
           <Plus className="h-4.5 w-4.5 md:h-5 md:w-5" strokeWidth={3} />
           สร้างออเดอร์
@@ -1339,14 +1354,14 @@ export function CreateOrderModal({
       {/* Main modal */}
       {(open || isClosing) && (
         <div
-          className={`fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/60 p-0 sm:p-4 ${
+          className={`fixed inset-0 z-[9999] flex items-center justify-center bg-[#001D3F]/70 p-0 backdrop-blur-[2px] sm:p-4 ${
             isClosing ? "animate-fade-out" : "animate-fade-in"
           }`}
         >
           <div className="absolute inset-0" onClick={handleClose} />
 
           <div
-            className={`relative flex h-full w-full max-h-full flex-col overflow-hidden rounded-none bg-white shadow-2xl sm:h-[94dvh] sm:max-h-[94dvh] sm:max-w-6xl sm:rounded-[2rem] lg:h-[86dvh] lg:max-h-[86dvh] ${
+            className={`relative flex h-full w-full max-h-full flex-col overflow-hidden rounded-none border-[#D4AF37]/45 bg-white shadow-[0_30px_90px_rgba(0,29,63,0.35)] sm:h-[94dvh] sm:max-h-[94dvh] sm:max-w-6xl sm:rounded-[2rem] sm:border lg:h-[86dvh] lg:max-h-[86dvh] ${
               isClosing ? "animate-slide-up-premium" : "animate-slide-down-premium"
             }`}
           >
@@ -1355,19 +1370,19 @@ export function CreateOrderModal({
             {/* Premium Success Overlay */}
             {showSuccessOverlay && success && (
               <div className="absolute inset-0 z-[100] flex items-center justify-center bg-white/60 backdrop-blur-md animate-in fade-in duration-300">
-                <div className="flex w-full max-w-sm flex-col items-center rounded-[2.5rem] bg-white p-10 text-center shadow-[0_32px_64px_rgba(0,0,0,0.15)] ring-1 ring-slate-100 animate-in zoom-in-95 duration-500">
-                  <div className="mb-6 flex h-24 w-24 items-center justify-center rounded-full bg-emerald-500 text-white shadow-lg shadow-emerald-500/20">
+                <div className="flex w-full max-w-sm flex-col items-center rounded-[2.5rem] border border-[#D4AF37]/40 bg-white p-10 text-center shadow-[0_32px_64px_rgba(0,29,63,0.18)] ring-1 ring-[#D4AF37]/20 animate-in zoom-in-95 duration-500">
+                  <div className="mb-6 flex h-24 w-24 items-center justify-center rounded-full border border-[#D4AF37]/60 bg-emerald-500 text-white shadow-lg shadow-emerald-500/20">
                     <Check className="h-14 w-14" strokeWidth={4} />
                   </div>
-                  <h3 className="mb-2 text-3xl font-black text-slate-900 tracking-tight">บันทึกสำเร็จ!</h3>
-                  <div className="space-y-1 text-slate-500">
-                    <p className="text-sm font-bold uppercase tracking-widest opacity-60">เลขที่ใบส่งของ</p>
-                    <p className="font-mono text-2xl font-black text-[#003366]">{success.deliveryNumber}</p>
+                  <h3 className="mb-2 text-3xl font-black tracking-tight text-[#082A63]">บันทึกสำเร็จ!</h3>
+                  <div className="space-y-1 text-[#1F2A44]">
+                    <p className="text-sm font-bold uppercase tracking-widest opacity-80">เลขที่ใบส่งของ</p>
+                    <p className="font-mono text-2xl font-black text-[#082A63]">{success.deliveryNumber}</p>
                   </div>
                   {success.deliveryNumber && (
-                    <div className="mt-4 rounded-2xl bg-slate-50 px-6 py-3 border border-slate-100">
-                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">ใบส่งของ</p>
-                      <p className="font-mono text-lg font-black text-slate-700">{success.deliveryNumber}</p>
+                    <div className="mt-4 rounded-2xl border border-[#D4AF37]/35 bg-[#FAF7F2] px-6 py-3">
+                      <p className="mb-0.5 text-[10px] font-black uppercase tracking-widest text-[#082A63]">ใบส่งของ</p>
+                      <p className="font-mono text-lg font-black text-[#1F2A44]">{success.deliveryNumber}</p>
                     </div>
                   )}
                 </div>
@@ -1375,20 +1390,20 @@ export function CreateOrderModal({
             )}
 
             {/* Header */}
-            <div className="sticky top-0 z-40 flex shrink-0 items-center justify-between gap-3 border-b border-[#003366]/30 bg-[#003366] px-4 py-2.5 pt-[max(0.625rem,env(safe-area-inset-top))] text-white shadow-sm sm:px-5 sm:py-4 sm:pt-4">
+            <div className="sticky top-0 z-40 flex shrink-0 items-center justify-between gap-3 border-b border-[#D4AF37]/70 bg-[#082A63] px-4 py-2.5 pt-[max(0.625rem,env(safe-area-inset-top))] text-white shadow-[0_10px_28px_rgba(8,42,99,0.20)] sm:px-5 sm:py-4 sm:pt-4">
               <div className="flex min-w-0 items-center gap-2.5 sm:gap-3">
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/10 sm:h-11 sm:w-11 sm:rounded-2xl">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-[#D4AF37]/50 bg-white/10 sm:h-11 sm:w-11 sm:rounded-2xl">
                   <ShoppingCart className="h-4.5 w-4.5 text-white sm:h-5 sm:w-5" strokeWidth={2.2} />
                 </div>
                 <div className="min-w-0">
                   <h2 className="text-base font-bold text-white sm:text-lg">สร้างออเดอร์ใหม่</h2>
-                  <p className="text-[10px] text-white/60 sm:text-xs">ช่องทาง: สร้าง (โดยแอดมิน)</p>
+                  <p className="text-[10px] font-semibold text-white/85 sm:text-xs">ช่องทาง: สร้าง (โดยแอดมิน)</p>
                 </div>
               </div>
               <button
                 type="button"
                 onClick={handleClose}
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/10 text-white/70 transition hover:bg-white/20 hover:text-white active:scale-95 sm:h-11 sm:w-11 sm:rounded-2xl"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-white/15 bg-white/10 text-white/80 transition hover:bg-white/20 hover:text-white active:scale-95 sm:h-11 sm:w-11 sm:rounded-2xl"
                 aria-label="ปิด"
               >
                 <X className="h-4.5 w-4.5 sm:h-5 sm:w-5" strokeWidth={2.2} />
@@ -1406,7 +1421,7 @@ export function CreateOrderModal({
                     <div>
                       <p className="text-base font-bold leading-tight">บันทึกออเดอร์สำเร็จ!</p>
                       <p className="mt-1 text-sm font-semibold opacity-90">
-                        ใบส่งของ: <span className="font-mono text-[#003366] font-bold">{success.deliveryNumber}</span>
+                        ใบส่งของ: <span className="font-mono text-[#082A63] font-bold">{success.deliveryNumber}</span>
                       </p>
                     </div>
                   </div>
@@ -1416,7 +1431,7 @@ export function CreateOrderModal({
                       setOpen(false);
                       router.push("/dashboard?date=" + orderDate + "&print=" + success.deliveryNumber);
                     }}
-                    className="inline-flex items-center gap-2 rounded-xl bg-[#003366] px-4 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-[#002244]"
+                    className="inline-flex items-center gap-2 rounded-xl bg-[#082A63] px-4 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-[#1F2A44]"
                   >
                     <Truck className="h-3.5 w-3.5" strokeWidth={2.4} />
                     ไปที่หน้าพิมพ์
@@ -1426,13 +1441,13 @@ export function CreateOrderModal({
             )}
 
             <div className="flex-1 overflow-y-auto">
-              <div className="flex flex-col lg:grid lg:grid-cols-2 lg:divide-x lg:divide-slate-200">
+              <div className="flex flex-col lg:grid lg:grid-cols-2 lg:divide-x lg:divide-[#D4AF37]/25">
                 {/* Left Column: Customer + Date + History Tab Control */}
-                <div className="flex flex-col px-4 py-5 sm:px-5">
+                <div className="flex flex-col bg-white px-4 py-5 sm:px-5">
                   <div className="space-y-6">
                     {/* Customer */}
                     <div>
-                      <label className="mb-2 block text-sm font-semibold text-slate-700">
+                      <label className="mb-2 block text-sm font-bold text-[#1F2A44]">
                         ลูกค้า <span className="text-rose-500">*</span>
                       </label>
                       <div className="flex items-center gap-2">
@@ -1440,10 +1455,10 @@ export function CreateOrderModal({
                           type="button"
                           onClick={() => setCustomerPickerOpen(true)}
                           className={`action-touch-safe flex min-w-0 flex-1 items-center gap-3 rounded-2xl border bg-white px-4 py-3.5 text-left transition ${
-                            customerId ? "border-[#003366]/40" : "border-slate-200 hover:border-[#003366]/40"
+                            customerId ? "border-[#D4AF37]/80 ring-2 ring-[#D4AF37]/15" : "border-[#D4AF37]/35 hover:border-[#D4AF37]/70"
                           }`}
                         >
-                          <Building2 className="h-5 w-5 shrink-0 text-slate-400" strokeWidth={2} />
+                          <Building2 className="h-5 w-5 shrink-0 text-[#082A63]" strokeWidth={2} />
                           <div className="min-w-0 flex-1">
                             {selectedCustomer ? (
                               <>
@@ -1451,7 +1466,7 @@ export function CreateOrderModal({
                                   {selectedCustomer.name}
                                 </p>
                                 <div className="mt-1 flex flex-wrap items-center gap-2">
-                                  <p className="text-sm text-slate-500">{selectedCustomer.code}</p>
+                                  <p className="text-sm font-semibold text-[#1F2A44]">{selectedCustomer.code}</p>
                                   {selectedCustomerOrderCount > 0 ? (
                                     <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-bold text-emerald-700 ring-1 ring-emerald-200">
                                       สั่งแล้ววันนี้
@@ -1463,10 +1478,10 @@ export function CreateOrderModal({
                                 </div>
                               </>
                             ) : (
-                              <p className="text-base text-slate-400">แตะเพื่อเลือกร้านค้า</p>
+                              <p className="text-base font-semibold text-[#1F2A44]/75">แตะเพื่อเลือกร้านค้า</p>
                             )}
                           </div>
-                          <ChevronRight className="h-4.5 w-4.5 shrink-0 text-slate-400" strokeWidth={2.2} />
+                          <ChevronRight className="h-4.5 w-4.5 shrink-0 text-[#D4AF37]" strokeWidth={2.2} />
                         </button>
                         {customerId ? (
                           <button
@@ -1478,7 +1493,7 @@ export function CreateOrderModal({
                               setHistoryError(null);
                               setHistoryNotice(null);
                             }}
-                            className="action-touch-safe flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-slate-200 text-slate-500 transition hover:bg-slate-50"
+                            className="action-touch-safe flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-[#D4AF37]/35 text-[#1F2A44] transition hover:bg-[#FAF7F2]"
                             aria-label="ล้างการเลือกลูกค้า"
                           >
                             <X className="h-4.5 w-4.5" strokeWidth={2.2} />
@@ -1489,7 +1504,7 @@ export function CreateOrderModal({
 
                     {/* Order date */}
                     <div>
-                      <label className="mb-2 block text-sm font-semibold text-slate-700">
+                      <label className="mb-2 block text-sm font-bold text-[#1F2A44]">
                         วันที่ออเดอร์
                       </label>
                       <ThaiDatePicker
@@ -1508,7 +1523,7 @@ export function CreateOrderModal({
                     <div>
                       <label
                         htmlFor="create-order-notes"
-                        className="mb-2 block text-sm font-semibold text-slate-700"
+                        className="mb-2 block text-sm font-bold text-[#1F2A44]"
                       >
                         หมายเหตุ
                       </label>
@@ -1519,20 +1534,20 @@ export function CreateOrderModal({
                         value={notes}
                         onChange={(event) => setNotes(event.target.value)}
                         placeholder="ใส่หมายเหตุสำหรับออเดอร์นี้"
-                        className="min-h-[88px] w-full resize-none rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-[#003366]/40 focus:ring-2 focus:ring-[#003366]/10"
+                        className="min-h-[88px] w-full resize-none rounded-2xl border border-[#D4AF37]/35 bg-white px-4 py-3 text-sm font-medium text-[#1F2A44] outline-none transition placeholder:text-[#1F2A44]/65 focus:border-[#D4AF37] focus:ring-2 focus:ring-[#D4AF37]/20"
                       />
                     </div>
 
                     {/* History Tab Toggle (Mobile only, hidden on desktop if we want both visible, but user said history on right) */}
-                    <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm lg:hidden">
-                      <div className="grid grid-cols-2 gap-2 bg-slate-50 p-2">
+                    <section className="overflow-hidden rounded-3xl border border-[#D4AF37]/35 bg-white shadow-sm lg:hidden">
+                      <div className="grid grid-cols-2 gap-2 bg-[#FAF7F2] p-2">
                         <button
                           type="button"
                           onClick={() => setActiveTab("create")}
                           className={`inline-flex items-center justify-center gap-2 rounded-2xl px-3 py-2.5 text-sm font-semibold transition ${
                             activeTab === "create"
-                              ? "bg-[#003366] text-white shadow-sm"
-                              : "bg-white text-slate-600 hover:text-[#003366]"
+                              ? "bg-[#082A63] text-white shadow-sm ring-1 ring-[#D4AF37]/45"
+                              : "bg-white text-[#1F2A44] hover:text-[#082A63]"
                           }`}
                         >
                           <ClipboardList className="h-4 w-4" strokeWidth={2.2} />
@@ -1543,8 +1558,8 @@ export function CreateOrderModal({
                           onClick={() => setActiveTab("history")}
                           className={`inline-flex items-center justify-center gap-2 rounded-2xl px-3 py-2.5 text-sm font-semibold transition ${
                             activeTab === "history"
-                              ? "bg-[#003366] text-white shadow-sm"
-                              : "bg-white text-slate-600 hover:text-[#003366]"
+                              ? "bg-[#082A63] text-white shadow-sm ring-1 ring-[#D4AF37]/45"
+                              : "bg-white text-[#1F2A44] hover:text-[#082A63]"
                           }`}
                         >
                           <History className="h-4 w-4" strokeWidth={2.2} />
@@ -1564,22 +1579,22 @@ export function CreateOrderModal({
                 </div>
 
                 {/* Right Column: Products + History (Desktop) */}
-                <div className="flex flex-col bg-slate-50/30 px-4 py-5 sm:px-5">
+                <div className="flex flex-col bg-[#FAF7F2]/45 px-4 py-5 sm:px-5">
                   <div className="space-y-6">
                     {historyNotice ? (
-                      <div className="rounded-2xl border border-[#003366]/20 bg-[#003366]/5 px-4 py-3 text-sm font-medium text-[#003366]">
+                      <div className="rounded-2xl border border-[#082A63]/20 bg-[#082A63]/15 px-4 py-3 text-sm font-medium text-[#082A63]">
                         {historyNotice}
                       </div>
                     ) : null}
 
                     {/* Only show Create/History toggle on desktop if we want to switch views in right col */}
                     <div className="hidden lg:block">
-                      <div className="mb-4 grid grid-cols-2 gap-2 rounded-2xl bg-slate-100 p-1.5">
+                      <div className="mb-4 grid grid-cols-2 gap-2 rounded-2xl border border-[#D4AF37]/25 bg-white p-1.5">
                         <button
                           type="button"
                           onClick={() => setActiveTab("create")}
                           className={`inline-flex items-center justify-center gap-2 rounded-xl py-2 text-sm font-bold transition ${
-                            activeTab === "create" ? "bg-white text-[#003366] shadow-sm" : "text-slate-500 hover:text-slate-700"
+                            activeTab === "create" ? "bg-[#082A63] text-white shadow-sm ring-1 ring-[#D4AF37]/45" : "text-[#1F2A44] hover:text-[#082A63]"
                           }`}
                         >
                           <ClipboardList className="h-4 w-4" />
@@ -1589,7 +1604,7 @@ export function CreateOrderModal({
                           type="button"
                           onClick={() => setActiveTab("history")}
                           className={`inline-flex items-center justify-center gap-2 rounded-xl py-2 text-sm font-bold transition ${
-                            activeTab === "history" ? "bg-white text-[#003366] shadow-sm" : "text-slate-500 hover:text-slate-700"
+                            activeTab === "history" ? "bg-[#082A63] text-white shadow-sm ring-1 ring-[#D4AF37]/45" : "text-[#1F2A44] hover:text-[#082A63]"
                           }`}
                         >
                           <History className="h-4 w-4" />
@@ -1599,15 +1614,15 @@ export function CreateOrderModal({
                     </div>
 
                     {activeTab === "create" ? (
-                      <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
-                        <div className="flex items-center justify-between gap-3 border-b border-slate-100 bg-slate-50 px-4 py-3">
-                          <p className="text-xs font-bold tracking-widest text-slate-400 uppercase">
+                      <section className="overflow-hidden rounded-3xl border border-[#D4AF37]/35 bg-white shadow-[0_12px_30px_rgba(8,42,99,0.06)]">
+                        <div className="flex items-center justify-between gap-3 border-b border-[#D4AF37]/25 bg-[#FAF7F2] px-4 py-3">
+                          <p className="text-xs font-black uppercase tracking-widest text-[#082A63]">
                             รายการสินค้า
                           </p>
                           <button
                             type="button"
                             onClick={() => setProductModalOpen(true)}
-                            className="action-touch-safe inline-flex items-center gap-1.5 rounded-xl bg-[#003366] px-3 py-2 text-sm font-bold text-white transition hover:bg-[#002244] active:scale-95"
+                            className="action-touch-safe inline-flex items-center gap-1.5 rounded-xl border border-[#D4AF37]/70 bg-[#082A63] px-3 py-2 text-sm font-bold text-white transition hover:bg-[#103B82] active:scale-95"
                           >
                             <Plus className="h-4 w-4" strokeWidth={2.5} />
                             เพิ่มสินค้า
@@ -1619,16 +1634,16 @@ export function CreateOrderModal({
                             <button
                               type="button"
                               onClick={() => setProductModalOpen(true)}
-                              className="action-touch-safe flex w-full flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50 px-4 py-10 text-center transition hover:border-[#003366]/30 hover:bg-[#003366]/5"
+                              className="action-touch-safe flex w-full flex-col items-center justify-center rounded-2xl border-2 border-dashed border-[#D4AF37]/45 bg-[#FAF7F2] px-4 py-10 text-center transition hover:border-[#D4AF37] hover:bg-[#D4AF37]/10"
                             >
-                              <Package2 className="h-9 w-9 text-slate-300" strokeWidth={1.8} />
-                              <p className="mt-3 text-base font-semibold text-slate-500">
+                              <Package2 className="h-9 w-9 text-[#082A63]" strokeWidth={1.8} />
+                              <p className="mt-3 text-base font-bold text-[#1F2A44]">
                                 ยังไม่มีสินค้าในออเดอร์
                               </p>
-                              <p className="mt-1 text-sm text-slate-400">แตะที่นี่เพื่อเพิ่มสินค้า</p>
+                              <p className="mt-1 text-sm font-semibold text-[#1F2A44]/70">แตะที่นี่เพื่อเพิ่มสินค้า</p>
                             </button>
                           ) : (
-                            <div className="divide-y divide-slate-100">
+                            <div className="divide-y divide-[#D4AF37]/18">
                               {cart.map((item, index) => {
                                 const product = productsById.get(item.productId);
                                 return (
@@ -1662,7 +1677,7 @@ export function CreateOrderModal({
                                       <p className="whitespace-nowrap text-sm font-bold tabular-nums text-slate-900">
                                         ×{item.quantity.toLocaleString("th-TH")} {item.saleUnitLabel}
                                       </p>
-                                      <p className="mt-0.5 text-xs font-semibold tabular-nums text-[#003366]">
+                                      <p className="mt-0.5 text-xs font-semibold tabular-nums text-[#082A63]">
                                         ฿{formatTHB(item.quantity * item.unitPrice)}
                                       </p>
                                     </div>
@@ -1670,7 +1685,7 @@ export function CreateOrderModal({
                                     <button
                                       type="button"
                                       onClick={() => openCartEdit(index)}
-                                      className="shrink-0 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-600 transition hover:border-[#003366]/30 hover:bg-[#003366]/5 hover:text-[#003366] active:scale-95"
+                                    className="shrink-0 rounded-lg border border-[#D4AF37]/35 bg-white px-2.5 py-1.5 text-xs font-semibold text-[#1F2A44] transition hover:border-[#D4AF37] hover:bg-[#FAF7F2] hover:text-[#082A63] active:scale-95"
                                       aria-label={`แก้ไขจำนวน ${item.productName}`}
                                     >
                                       แก้ไข
@@ -1683,14 +1698,14 @@ export function CreateOrderModal({
                         </div>
                       </section>
                     ) : (
-                      <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
-                        <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50 px-4 py-3">
-                          <p className="text-sm font-semibold text-slate-700">รายการที่เคยสั่งล่าสุด</p>
+                      <section className="overflow-hidden rounded-3xl border border-[#D4AF37]/35 bg-white shadow-[0_12px_30px_rgba(8,42,99,0.06)]">
+                        <div className="flex items-center justify-between border-b border-[#D4AF37]/25 bg-[#FAF7F2] px-4 py-3">
+                          <p className="text-sm font-black text-[#082A63]">รายการที่เคยสั่งล่าสุด</p>
                           {customerId ? (
                             <button
                               type="button"
                               onClick={() => void loadLastOrderSnapshot(customerId, orderDate)}
-                              className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:text-[#003366]"
+                              className="rounded-xl border border-[#D4AF37]/35 bg-white px-3 py-1.5 text-xs font-semibold text-[#1F2A44] transition hover:text-[#082A63]"
                             >
                               รีเฟรช
                             </button>
@@ -1699,11 +1714,11 @@ export function CreateOrderModal({
 
                         <div className="px-4 py-4">
                           {!customerId ? (
-                            <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-8 text-center text-sm text-slate-500">
+                            <div className="rounded-2xl border border-dashed border-[#D4AF37]/35 bg-[#FAF7F2] px-4 py-8 text-center text-sm font-semibold text-[#1F2A44]">
                               กรุณาเลือกร้านค้าก่อน
                             </div>
                           ) : historyLoading ? (
-                            <div className="flex items-center justify-center gap-2 rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-8 text-sm text-slate-500">
+                            <div className="flex items-center justify-center gap-2 rounded-2xl border border-dashed border-[#D4AF37]/35 bg-[#FAF7F2] px-4 py-8 text-sm font-semibold text-[#1F2A44]">
                               <Loader2 className="h-4 w-4 animate-spin" strokeWidth={2.2} />
                               กำลังโหลดประวัติการสั่งซื้อ
                             </div>
@@ -1712,7 +1727,7 @@ export function CreateOrderModal({
                               {historyError}
                             </div>
                           ) : historyItems.length === 0 ? (
-                            <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-8 text-center text-sm text-slate-500">
+                            <div className="rounded-2xl border border-dashed border-[#D4AF37]/35 bg-[#FAF7F2] px-4 py-8 text-center text-sm font-semibold text-[#1F2A44]">
                               ไม่พบประวัติการสั่งซื้อที่ผ่านมา
                             </div>
                           ) : (
@@ -1720,12 +1735,12 @@ export function CreateOrderModal({
                               <button
                                 type="button"
                                 onClick={() => applyLastOrderItemsToCart(lastOrderSnapshot)}
-                                className="w-full rounded-2xl bg-[#003366] py-3.5 text-base font-bold text-white shadow-[0_8px_16px_rgba(0,51,102,0.15)] transition hover:bg-[#002244] active:scale-[0.98]"
+                                className="w-full rounded-2xl border border-[#D4AF37]/70 bg-[#082A63] py-3.5 text-base font-bold text-white shadow-[0_8px_16px_rgba(8,42,99,0.18)] transition hover:bg-[#103B82] active:scale-[0.98]"
                               >
                                 สั่งซ้ำและกลับไปแก้รายการ
                               </button>
 
-                              <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+                              <div className="rounded-2xl border border-[#D4AF37]/30 bg-[#FAF7F2] px-4 py-3 text-sm font-semibold text-[#1F2A44]">
                                 วันที่อ้างอิง {formatThaiShortDate(lastOrderSnapshot?.sourceDate ?? "")}
                                 <span className="mx-2 text-slate-300">|</span>
                                 {lastOrderSnapshot?.orderCount ?? 0} ใบสั่งซื้อ
@@ -1737,7 +1752,7 @@ export function CreateOrderModal({
                                 return (
                                   <div
                                     key={`${item.productId}-${item.saleUnitId ?? "__default__"}`}
-                                    className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-3 py-3"
+                                    className="flex items-center gap-3 rounded-2xl border border-[#D4AF37]/25 bg-white px-3 py-3"
                                   >
                                     <div className="relative h-11 w-11 shrink-0 overflow-hidden rounded-xl bg-slate-100">
                                       {product?.imageUrl ? (
@@ -1775,7 +1790,7 @@ export function CreateOrderModal({
             </div>
 
             {/* Sticky Footer */}
-            <div className="sticky bottom-0 z-40 border-t border-slate-200 bg-white/95 px-4 pb-safe-or-5 pt-4 backdrop-blur supports-[backdrop-filter]:bg-white/90 sm:px-6">
+            <div className="sticky bottom-0 z-40 border-t border-[#D4AF37]/35 bg-white/95 px-4 pb-safe-or-5 pt-4 backdrop-blur supports-[backdrop-filter]:bg-white/90 sm:px-6">
               <div className="mx-auto max-w-6xl">
                 {error && (
                   <div className="mb-4 flex items-start gap-2.5 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3">
@@ -1794,8 +1809,8 @@ export function CreateOrderModal({
 
                 <div className="grid grid-cols-2 items-center gap-4 sm:gap-6">
                   <div className="flex flex-col justify-center">
-                    <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">ยอดรวมทั้งหมด</span>
-                    <span className="mt-1 text-2xl font-black tabular-nums text-[#003366] sm:text-3xl">
+                    <span className="text-xs font-black uppercase tracking-wider text-[#1F2A44]">ยอดรวมทั้งหมด</span>
+                    <span className="mt-1 text-2xl font-black tabular-nums text-[#082A63] sm:text-3xl">
                       ฿{formatTHB(totalAmount)}
                     </span>
                   </div>
@@ -1804,7 +1819,7 @@ export function CreateOrderModal({
                     type="button"
                     onClick={handleSubmit}
                     disabled={pending}
-                    className="action-touch-safe flex h-14 items-center justify-center rounded-2xl bg-[#003366] px-4 py-4 text-lg font-bold text-white shadow-lg shadow-[#003366]/20 transition hover:bg-[#002244] disabled:opacity-40 active:scale-[0.98] sm:h-16 sm:text-xl"
+                    className="action-touch-safe flex h-14 items-center justify-center rounded-2xl border border-[#D4AF37]/75 bg-[#082A63] px-4 py-4 text-lg font-bold text-white shadow-lg shadow-[#082A63]/20 transition hover:bg-[#103B82] disabled:opacity-40 active:scale-[0.98] sm:h-16 sm:text-xl"
                   >
                     {pending ? (
                       <div className="flex items-center gap-2">
@@ -1842,7 +1857,7 @@ export function CreateOrderModal({
             </div>
 
             <div className="shrink-0 border-b border-slate-100 px-4 py-3">
-              <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 transition focus-within:border-[#003366]/60 focus-within:ring-2 focus-within:ring-[#003366]/10">
+              <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 transition focus-within:border-[#082A63]/60 focus-within:ring-2 focus-within:ring-[#082A63]/10">
                 <Search className="h-5 w-5 shrink-0 text-slate-400" strokeWidth={2} />
                 <input
                   type="text"
@@ -1882,7 +1897,7 @@ export function CreateOrderModal({
                         onClick={() => void handleCustomerSelect(customer.id)}
                         className={`action-touch-safe flex w-full items-center gap-3 rounded-2xl border px-4 py-3.5 text-left transition ${
                           isSelected
-                            ? "border-[#003366]/50 bg-[#003366]/5"
+                            ? "border-[#082A63]/50 bg-[#082A63]/15"
                             : "border-slate-200 bg-white hover:bg-slate-50"
                         }`}
                       >
@@ -1901,7 +1916,7 @@ export function CreateOrderModal({
                           </div>
                         </div>
                         {isSelected ? (
-                          <span className="rounded-full bg-[#003366] px-2 py-0.5 text-xs font-bold text-white">
+                          <span className="rounded-full bg-[#082A63] px-2 py-0.5 text-xs font-bold text-white">
                             เลือกแล้ว
                           </span>
                         ) : null}
@@ -1999,7 +2014,7 @@ export function CreateOrderModal({
               <button
                 type="button"
                 onClick={confirmCartEdit}
-                className="rounded-xl bg-[#003366] px-2 py-2.5 text-xs font-bold text-white transition hover:bg-[#002244] active:scale-95"
+                className="rounded-xl bg-[#082A63] px-2 py-2.5 text-xs font-bold text-white transition hover:bg-[#1F2A44] active:scale-95"
               >
                 ยืนยัน
               </button>
@@ -2021,6 +2036,7 @@ export function CreateOrderModal({
         selectedCustomerLabel={
           selectedCustomer ? `${selectedCustomer.code} ${selectedCustomer.name}` : null
         }
+        selectedWarehouseId={selectedCustomer?.defaultWarehouseId ?? null}
       />
       </CreateOrderPortal>
     </>
@@ -2042,7 +2058,7 @@ export function GlobalCreateOrderModal() {
           onClick={close}
         />
         <div className="relative w-full max-w-sm rounded-3xl bg-white p-6 text-center shadow-2xl">
-          <div className="mx-auto mb-4 h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-[#003366]" />
+          <div className="mx-auto mb-4 h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-[#082A63]" />
           <p className="text-base font-bold text-slate-950">กำลังเตรียมข้อมูลสร้างออเดอร์</p>
           <p className="mt-1 text-sm font-medium text-slate-600">
             {isLoading ? "กรุณารอสักครู่" : "กำลังโหลดข้อมูลร้านค้าและสินค้า"}

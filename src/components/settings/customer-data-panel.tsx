@@ -94,7 +94,7 @@ export function CustomerDataPanel({ data }: CustomerDataPanelProps) {
       </div>
 
       <SettingsPanel className="overflow-hidden rounded-[1.75rem] border-slate-200 shadow-[0_20px_55px_rgba(15,23,42,0.06)]">
-        <div className="border-b border-slate-100 bg-[linear-gradient(135deg,rgba(6,199,85,0.08),rgba(0,51,102,0.04))] px-5 py-5 md:px-6">
+        <div className="border-b border-slate-100 bg-[linear-gradient(135deg,rgba(6,199,85,0.08),rgba(4,53,106,0.04))] px-5 py-5 md:px-6">
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div className="min-w-0">
               <div className="inline-flex items-center gap-2 rounded-full bg-white/80 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-[#06c755] ring-1 ring-[#06c755]/15">
@@ -213,7 +213,7 @@ export function CustomerDataPanel({ data }: CustomerDataPanelProps) {
                         </td>
                         <td className="px-5 py-4">
                           <div className="flex items-center gap-2">
-                            <Store className="h-4 w-4 text-[#003366]" strokeWidth={2.1} />
+                            <Store className="h-4 w-4 text-[#082A63]" strokeWidth={2.1} />
                             <span className="font-semibold text-slate-950">{getCustomerLabel(customer)}</span>
                           </div>
                         </td>

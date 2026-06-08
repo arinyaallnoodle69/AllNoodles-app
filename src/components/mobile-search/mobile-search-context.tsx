@@ -43,6 +43,14 @@ export function MobileSearchProvider({ children }: { children: React.ReactNode }
 
 export function useMobileSearch() {
   const ctx = useContext(Ctx);
-  if (!ctx) throw new Error("useMobileSearch must be used inside MobileSearchProvider");
+  if (!ctx) {
+    return {
+      isOpen: false,
+      open: () => {},
+      close: () => {},
+      hasSearch: false,
+      _register: () => () => {},
+    };
+  }
   return ctx;
 }

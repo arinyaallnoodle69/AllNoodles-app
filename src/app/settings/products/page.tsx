@@ -37,8 +37,9 @@ export default async function SettingsProductsPage({
     <SettingsShell
       current="products"
       title="จัดการสินค้า"
-      description="เพิ่มสินค้าใหม่ อัปเดตรหัสสินค้า รูปสินค้า ต้นทุน และจัดกลุ่มหมวดหมู่เพื่อให้ค้นหาใช้งานง่ายขึ้น"
+      description="จัดการข้อมูลสินค้าและสต็อกทั้งหมดของคุณ"
       floatingSubmit={false}
+      hideHeader
     >
       {data.setupHint ? (
         <div className="mb-8 rounded-xl border border-amber-200 bg-amber-50 px-4 py-4 text-sm text-amber-800">
@@ -48,42 +49,53 @@ export default async function SettingsProductsPage({
         </div>
       ) : null}
 
-      <div className="mb-6 inline-flex rounded-full border border-slate-200 bg-white p-1 shadow-sm">
-        <Link
-          href="/settings/products"
-          scroll={false}
-          className={`inline-flex items-center gap-2 rounded-full px-4 py-2.5 text-sm font-semibold transition ${
-            activeTab === "products"
-              ? "bg-[#003366] text-white shadow-[0_10px_24px_rgba(0,51,102,0.18)]"
-              : "text-slate-600 hover:bg-slate-50"
-          }`}
-        >
-          <Package2 className="h-4 w-4" strokeWidth={2.1} />
-          จัดการสินค้า
-        </Link>
-        <Link
-          href="/settings/products?tab=categories"
-          scroll={false}
-          className={`inline-flex items-center gap-2 rounded-full px-4 py-2.5 text-sm font-semibold transition ${
-            activeTab === "categories"
-              ? "bg-[#003366] text-white shadow-[0_10px_24px_rgba(0,51,102,0.18)]"
-              : "text-slate-600 hover:bg-slate-50"
-          }`}
-        >
-          <FolderTree className="h-4 w-4" strokeWidth={2.1} />
-          เพิ่มหมวดหมู่
-        </Link>
-      </div>
-
       {activeTab === "categories" ? (
-        <ProductCategoryManager categories={data.productCategories} products={data.products} />
+        <>
+          <div className="mb-4 inline-flex rounded-lg border border-[#E8DCC7] bg-white p-1 shadow-sm">
+            <Link
+              href="/settings/products"
+              scroll={false}
+              className="inline-flex items-center gap-2 rounded-md px-4 py-2.5 text-sm font-semibold transition text-[#1F2A44] hover:bg-slate-50"
+            >
+              <Package2 className="h-4 w-4" strokeWidth={2.1} />
+              จัดการสินค้า
+            </Link>
+            <Link
+              href="/settings/products?tab=categories"
+              scroll={false}
+              className="inline-flex items-center gap-2 rounded-md px-4 py-2.5 text-sm font-semibold transition bg-[#082A63] text-white shadow-[0_10px_24px_rgba(8,42,99,0.18)]"
+            >
+              <FolderTree className="h-4 w-4" strokeWidth={2.1} />
+              เพิ่มหมวดหมู่
+            </Link>
+          </div>
+          <ProductCategoryManager categories={data.productCategories} products={data.products} />
+        </>
       ) : (
         <>
           <ProductFilterClient
             allProducts={data.products}
-            categories={data.productCategories}
             baseListHref="/settings/products"
-          />
+          >
+            <div className="mb-4 inline-flex rounded-lg border border-[#E8DCC7] bg-white p-1 shadow-sm">
+              <Link
+                href="/settings/products"
+                scroll={false}
+                className="inline-flex items-center gap-2 rounded-md px-4 py-2.5 text-sm font-semibold transition bg-[#082A63] text-white shadow-[0_10px_24px_rgba(8,42,99,0.18)]"
+              >
+                <Package2 className="h-4 w-4" strokeWidth={2.1} />
+                จัดการสินค้า
+              </Link>
+              <Link
+                href="/settings/products?tab=categories"
+                scroll={false}
+                className="inline-flex items-center gap-2 rounded-md px-4 py-2.5 text-sm font-semibold transition text-[#1F2A44] hover:bg-slate-50"
+              >
+                <FolderTree className="h-4 w-4" strokeWidth={2.1} />
+                เพิ่มหมวดหมู่
+              </Link>
+            </div>
+          </ProductFilterClient>
           {shouldShowForm ? (
             <ProductForm
               categories={data.productCategories}

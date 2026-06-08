@@ -41,7 +41,7 @@ export function HistoryTable({ history }: Props) {
       {/* Desktop View */}
       <div className="hidden md:block overflow-hidden border border-slate-200 bg-white shadow-md">
         <table className="w-full border-collapse text-left">
-          <thead className="bg-[#003366]">
+          <thead className="bg-[#082A63]">
             <tr>
               <th className="px-6 py-3 text-[11px] font-black uppercase tracking-widest text-white border-r border-white/10">เลขที่ใบวางบิล</th>
               <th className="px-6 py-3 text-[11px] font-black uppercase tracking-widest text-white border-r border-white/10">ร้านค้า</th>
@@ -59,10 +59,10 @@ export function HistoryTable({ history }: Props) {
               >
                 <td className="px-6 py-4">
                   <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center bg-slate-50 text-[#003366] transition-colors group-hover:bg-[#003366] group-hover:text-white">
+                    <div className="flex h-10 w-10 items-center justify-center bg-slate-50 text-[#082A63] transition-colors group-hover:bg-[#082A63] group-hover:text-white">
                       <FileText className="h-5 w-5" />
                     </div>
-                    <span className="font-mono text-base font-black text-[#003366]">{record.billing_number}</span>
+                    <span className="font-mono text-base font-black text-[#082A63]">{record.billing_number}</span>
                   </div>
                 </td>
                 <td className="px-6 py-4">
@@ -113,8 +113,8 @@ export function HistoryTable({ history }: Props) {
           >
             <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50 px-4 py-3">
               <div className="flex items-center gap-2">
-                <FileText className="h-4 w-4 text-[#003366]" />
-                <span className="font-mono text-sm font-black text-[#003366]">{record.billing_number}</span>
+                <FileText className="h-4 w-4 text-[#082A63]" />
+                <span className="font-mono text-sm font-black text-[#082A63]">{record.billing_number}</span>
               </div>
               <ChevronRight className="h-4 w-4 text-slate-300" />
             </div>
@@ -150,7 +150,7 @@ export function HistoryTable({ history }: Props) {
           
           <div className="relative w-full max-w-3xl max-h-[90vh] overflow-hidden bg-white shadow-2xl animate-in zoom-in-95 duration-200 flex flex-col">
             {/* Modal Header */}
-            <div className="flex items-center justify-between bg-[#003366] p-4 text-white sm:px-8 sm:py-6">
+            <div className="flex items-center justify-between bg-[#082A63] p-4 text-white sm:px-8 sm:py-6">
               <div className="flex items-center gap-4">
                 <div className="flex h-12 w-12 items-center justify-center bg-white/10">
                   <Receipt className="h-6 w-6" />
@@ -183,14 +183,14 @@ export function HistoryTable({ history }: Props) {
                    />
                    <div className="bg-slate-50 px-6 py-3 text-right border border-slate-100">
                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">ยอดรวมทั้งสิ้น</p>
-                     <p className="font-mono text-2xl font-black text-[#003366]">{fmt(selectedRecord.total_amount)} <span className="text-sm">บาท</span></p>
+                     <p className="font-mono text-2xl font-black text-[#082A63]">{fmt(selectedRecord.total_amount)} <span className="text-sm">บาท</span></p>
                    </div>
                 </div>
               </div>
 
               <div className="space-y-4">
                 <div className="flex items-center gap-2">
-                  <div className="h-4 w-1 bg-[#003366]" />
+                  <div className="h-4 w-1 bg-[#082A63]" />
                   <h5 className="text-[13px] font-black uppercase tracking-widest text-slate-800">รายการใบจัดส่งที่รวมในใบนี้</h5>
                 </div>
                 
@@ -210,7 +210,7 @@ export function HistoryTable({ history }: Props) {
                       {selectedRecord.snapshot_rows.map((row) => (
                         <tr key={row.deliveryNumber} className="hover:bg-slate-50 transition-colors">
                           <td className="px-4 py-2 font-mono text-xs text-slate-400">{row.lineNumber}</td>
-                          <td className="px-4 py-2 font-mono font-bold text-[#003366]">{row.deliveryNumber}</td>
+                          <td className="px-4 py-2 font-mono font-bold text-[#082A63]">{row.deliveryNumber}</td>
                           <td className="px-4 py-2 text-xs font-bold text-slate-600">{fmtDateTH(row.deliveryDate)}</td>
                           <td className="px-4 py-2 text-right font-mono font-black text-slate-900">{fmt(row.totalAmount)}</td>
                         </tr>
@@ -223,7 +223,7 @@ export function HistoryTable({ history }: Props) {
                     {selectedRecord.snapshot_rows.map((row) => (
                       <div key={row.deliveryNumber} className="flex items-center justify-between p-4">
                         <div className="flex flex-col">
-                          <span className="font-mono text-sm font-bold text-[#003366]">{row.deliveryNumber}</span>
+                          <span className="font-mono text-sm font-bold text-[#082A63]">{row.deliveryNumber}</span>
                           <span className="text-[10px] font-bold text-slate-400">{fmtDateTH(row.deliveryDate)}</span>
                         </div>
                         <span className="font-mono font-black text-slate-900">{fmt(row.totalAmount)}</span>
@@ -238,7 +238,7 @@ export function HistoryTable({ history }: Props) {
                 <div>
                   <p className="text-[11px] font-black uppercase tracking-widest text-slate-400 mb-1">ช่วงเวลาที่สรุปยอด</p>
                   <p className="text-sm font-bold text-slate-700 leading-relaxed">
-                    ใบวางบิลฉบับนี้สรุปรายการตั้งแต่วันที่ <span className="text-[#003366]">{fmtDateTH(selectedRecord.from_date)}</span> ถึง <span className="text-[#003366]">{fmtDateTH(selectedRecord.to_date)}</span>
+                    ใบวางบิลฉบับนี้สรุปรายการตั้งแต่วันที่ <span className="text-[#082A63]">{fmtDateTH(selectedRecord.from_date)}</span> ถึง <span className="text-[#082A63]">{fmtDateTH(selectedRecord.to_date)}</span>
                   </p>
                 </div>
               </div>

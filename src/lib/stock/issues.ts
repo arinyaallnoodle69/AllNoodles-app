@@ -78,13 +78,13 @@ function firstProduct(product: ProductRow | ProductRow[] | null | undefined) {
   return product ?? null;
 }
 
-export const getStockIssueHistoryData = cache(async (organizationId: string, limit = 50, offset = 0, date?: string): Promise<StockIssueRow[]> => {
+export const getStockIssueHistoryData = cache(async (organizationId: string, limit = 50, offset = 0, date?: string, warehouseId?: string): Promise<StockIssueRow[]> => {
   const admin = getSupabaseAdmin();
 
   let query = admin
     .from("orders")
     .select(`
-      id, customer_id, order_number, order_date, status, total_amount, created_at,
+      id, customer_id, order_number, order_date, status, total_amount, created_at, warehouse_id,
       delivery_notes(delivery_number)
     `)
     .eq("organization_id", organizationId)
@@ -92,6 +92,10 @@ export const getStockIssueHistoryData = cache(async (organizationId: string, lim
 
   if (date) {
     query = query.eq("order_date", date);
+  }
+
+  if (warehouseId && warehouseId !== "all") {
+    query = query.eq("warehouse_id", warehouseId);
   }
 
   query = query

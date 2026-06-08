@@ -10,10 +10,12 @@ export function ProfitViewSwitcher({
   fromDate,
   toDate,
   view,
+  warehouseId,
 }: {
   fromDate: string;
   toDate: string;
   view: ProfitView;
+  warehouseId?: string;
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -26,6 +28,9 @@ export function ProfitViewSwitcher({
       to: toDate,
       view: nextView,
     });
+    if (warehouseId) {
+      params.set("warehouse", warehouseId);
+    }
 
     startTransition(() => {
       router.push(`/reports/profit-sales?${params.toString()}`, { scroll: false });
@@ -33,9 +38,9 @@ export function ProfitViewSwitcher({
   }
 
   return (
-    <div className="relative flex w-full border-y border-[#003366] bg-white text-base font-bold shadow-sm sm:w-auto sm:overflow-hidden sm:rounded-md sm:border sm:text-xs">
+    <div className="relative flex w-full border-y border-[#082A63] bg-white text-base font-bold shadow-sm sm:w-auto sm:overflow-hidden sm:rounded-md sm:border sm:text-xs">
       {isPending ? (
-        <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/70 text-[#003366] backdrop-blur-[1px]">
+        <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/70 text-[#082A63] backdrop-blur-[1px]">
           <Loader2 className="h-5 w-5 animate-spin" strokeWidth={2.4} />
         </div>
       ) : null}
@@ -44,7 +49,7 @@ export function ProfitViewSwitcher({
         onClick={() => changeView("daily")}
         disabled={isPending}
         className={`flex min-h-11 flex-1 items-center justify-center px-4 py-2.5 text-center transition sm:min-h-0 sm:flex-initial sm:py-2 ${
-          view === "daily" ? "bg-[#003366] text-white" : "text-[#003366] hover:bg-slate-50"
+          view === "daily" ? "bg-[#082A63] text-white" : "text-[#082A63] hover:bg-slate-50"
         }`}
       >
         รายวัน
@@ -53,8 +58,8 @@ export function ProfitViewSwitcher({
         type="button"
         onClick={() => changeView("monthly")}
         disabled={isPending}
-        className={`flex min-h-11 flex-1 items-center justify-center border-l border-[#003366] px-4 py-2.5 text-center transition sm:min-h-0 sm:flex-initial sm:py-2 ${
-          view === "monthly" ? "bg-[#003366] text-white" : "text-[#003366] hover:bg-slate-50"
+        className={`flex min-h-11 flex-1 items-center justify-center border-l border-[#082A63] px-4 py-2.5 text-center transition sm:min-h-0 sm:flex-initial sm:py-2 ${
+          view === "monthly" ? "bg-[#082A63] text-white" : "text-[#082A63] hover:bg-slate-50"
         }`}
       >
         รายเดือน

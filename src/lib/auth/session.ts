@@ -4,7 +4,7 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 import { cookies } from "next/headers";
 import { getSessionSecret } from "@/lib/supabase/env";
 
-export const APP_SESSION_COOKIE = "tynoodle_session";
+export const APP_SESSION_COOKIE = "allnoodles_session";
 
 export type AppSessionPayload = {
   displayName: string;

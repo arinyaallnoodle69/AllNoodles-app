@@ -120,7 +120,7 @@ async function FactoryOrderSheetPage({ searchParams }: Props) {
           border: "1px solid rgba(15,23,42,0.06)",
         }}
       >
-        <span style={{ fontSize: "15px", fontWeight: 800, color: "#003366" }}>ใบสั่งของ (โรงงานอนามัย)</span>
+        <span style={{ fontSize: "15px", fontWeight: 800, color: "#082A63" }}>ใบสั่งของ (โรงงานอนามัย)</span>
         <span className="vehicle-summary-toolbar__meta" style={{ fontSize: "13px", color: "#64748b", fontWeight: 700 }}>
           {filteredSummaryData.dateLabel} · {filteredSummaryData.vehicles.length} รถ
         </span>
@@ -163,7 +163,7 @@ async function FactoryOrderSheetPage({ searchParams }: Props) {
           }}
         >
           <p style={{ fontSize: "18px", fontWeight: 600, color: "#64748b" }}>ไม่มีข้อมูลสินค้าสำหรับการแสดงฟอร์มนี้</p>
-          <a href="/orders/incoming" style={{ marginTop: "8px", color: "#1e3a5f", fontSize: "14px" }}>
+          <a href="/orders/incoming" style={{ marginTop: "8px", color: "#103B82", fontSize: "14px" }}>
             กลับหน้ารายการออเดอร์
           </a>
         </div>

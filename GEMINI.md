@@ -1,7 +1,7 @@
-# GEMINI.md - T&YNoodle Project Context
+# GEMINI.md - AllNoodles Project Context
 
 ## Project Overview
-**T&YNoodle** is a digital management system for a noodle and raw material distribution business. It handles orders, delivery, payments, and reporting. The application is built with **Next.js 16 (App Router)** and designed as a **Progressive Web App (PWA)** to provide a mobile-first, offline-capable experience for staff.
+**AllNoodles** is a digital management system for a noodle and raw material distribution business. It handles orders, delivery, payments, and reporting. The application is built with **Next.js 16 (App Router)** and designed as a **Progressive Web App (PWA)** to provide a mobile-first, offline-capable experience for staff.
 
 ### Main Technologies
 - **Framework:** [Next.js 16](https://nextjs.org) (App Router, Server Components, Server Actions).
@@ -62,7 +62,7 @@ The application requires the following environment variables (defined in `.env.l
 
 ## Development Conventions
 1. **Server-Side Logic:** Always use `"server-only"` for modules containing sensitive logic or direct database access in `src/lib`.
-2. **Authentication:** Uses a custom PIN-based authentication system. Sessions are stored in a signed cookie (`tynoodle_session`).
+2. **Authentication:** Uses a custom PIN-based authentication system. Sessions are stored in a signed cookie (`allnoodles_session`).
 3. **Data Fetching:** Prefer Server Components and Server Actions for data operations. Use `createServerClient` from `src/lib/supabase/server.ts`.
 4. **PWA:** The application is a PWA. Ensure new UI elements are responsive and mobile-friendly.
 5. **i18n:** The primary user interface is in Thai. Use the `Sarabun` font for Thai text.

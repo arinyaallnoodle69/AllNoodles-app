@@ -12,7 +12,7 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
-    "tynoodle-app/**",
+    "allnoodles-app/**",
     ".codex/**",
     "fix-revalidate.js",
     "fix-revalidate-back.js",

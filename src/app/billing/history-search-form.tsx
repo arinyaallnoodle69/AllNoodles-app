@@ -44,14 +44,14 @@ export function HistorySearchForm({
   const filteredCustomers = useMemo(() => {
     const q = customerSearch.trim().toLowerCase();
     if (!q) return allCustomers;
-    return allCustomers.filter(c => 
-      c.name.toLowerCase().includes(q) || 
+    return allCustomers.filter(c =>
+      c.name.toLowerCase().includes(q) ||
       c.customer_code.toLowerCase().includes(q)
     );
   }, [allCustomers, customerSearch]);
 
   const toggleCustomer = (id: string) => {
-    setSelectedIds(prev => 
+    setSelectedIds(prev =>
       prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
     );
   };
@@ -128,7 +128,7 @@ export function HistorySearchForm({
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="ระบุเลขใบวางบิล..."
-                className="h-12 w-full rounded-lg border border-slate-200 bg-slate-50/50 pl-10 pr-4 text-sm font-bold text-slate-900 outline-none focus:ring-2 focus:ring-[#003366]/10 focus:border-[#003366]/40"
+                className="h-12 w-full rounded-lg border border-slate-200 bg-slate-50/50 pl-10 pr-4 text-sm font-bold text-slate-900 outline-none focus:ring-2 focus:ring-[#082A63]/10 focus:border-[#082A63]/40"
               />
             </div>
           </div>
@@ -139,7 +139,7 @@ export function HistorySearchForm({
                 handleSearch();
                 closeSearchDrawer();
               }}
-              className="w-full h-14 rounded-xl bg-[#003366] text-white font-black shadow-lg shadow-[#003366]/20 active:scale-95 transition-transform"
+              className="w-full h-14 rounded-xl bg-[#082A63] text-white font-black shadow-lg shadow-[#082A63]/20 active:scale-95 transition-transform"
             >
               ค้นหาประวัติ
             </button>
@@ -177,13 +177,13 @@ export function HistorySearchForm({
             <button
               type="button"
               onClick={() => setIsCustomerDialogOpen(true)}
-              className="flex h-12 w-full items-center justify-between rounded-lg border border-slate-200 bg-white px-4 text-left transition-all hover:bg-slate-50 hover:border-[#003366]"
+              className="flex h-12 w-full items-center justify-between rounded-lg border border-slate-200 bg-white px-4 text-left transition-all hover:bg-slate-50 hover:border-[#082A63]"
             >
               <div className="flex items-center gap-2 overflow-hidden">
                 <User className="h-4 w-4 shrink-0 text-slate-400" />
                 <span className="truncate text-sm font-bold text-slate-700">
-                  {selectedIds.length === 0 
-                    ? "เลือกทั้งหมด..." 
+                  {selectedIds.length === 0
+                    ? "เลือกทั้งหมด..."
                     : `เลือกแล้ว ${selectedIds.length} ร้าน`}
                 </span>
               </div>
@@ -202,7 +202,7 @@ export function HistorySearchForm({
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="เลขใบวางบิล..."
-              className="h-12 w-full border border-slate-200 bg-white pl-10 pr-4 text-sm font-bold text-slate-900 outline-none focus:ring-2 focus:ring-[#003366]/10 focus:border-[#003366]/40"
+              className="h-12 w-full border border-slate-200 bg-white pl-10 pr-4 text-sm font-bold text-slate-900 outline-none focus:ring-2 focus:ring-[#082A63]/10 focus:border-[#082A63]/40"
             />
           </div>
         </div>
@@ -213,7 +213,7 @@ export function HistorySearchForm({
         <button
           onClick={handleSearch}
           disabled={activePending}
-          className="flex h-14 w-full items-center justify-center gap-3 bg-[#003366] px-10 text-base font-black text-white shadow-lg shadow-[#003366]/20 transition-all hover:bg-[#002244] disabled:opacity-50 active:scale-95 md:w-auto"
+          className="flex h-14 w-full items-center justify-center gap-3 bg-[#082A63] px-10 text-base font-black text-white shadow-lg shadow-[#082A63]/20 transition-all hover:bg-[#103B82] disabled:opacity-50 active:scale-95 md:w-auto"
         >
           {activePending ? <Loader2 className="h-5 w-5 animate-spin" /> : <Search className="h-5 w-5" />}
           ค้นหาประวัติ
@@ -236,7 +236,7 @@ export function HistorySearchForm({
                 <h3 className="text-xl font-black text-slate-900">เลือกร้านค้า</h3>
                 <p className="text-xs font-bold text-slate-400">เลือกแล้ว {selectedIds.length} ร้าน</p>
               </div>
-              <button 
+              <button
                 onClick={() => setIsCustomerDialogOpen(false)}
                 className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-500 active:scale-95"
               >
@@ -252,7 +252,7 @@ export function HistorySearchForm({
                   value={customerSearch}
                   onChange={(e) => setCustomerSearch(e.target.value)}
                   placeholder="ค้นหาชื่อร้านหรือรหัส..."
-                  className="w-full rounded-2xl border-none bg-slate-100 py-4 pl-12 pr-4 text-base font-bold text-slate-900 focus:ring-2 focus:ring-[#003366]/20 outline-none"
+                  className="w-full rounded-2xl border-none bg-slate-100 py-4 pl-12 pr-4 text-base font-bold text-slate-900 focus:ring-2 focus:ring-[#082A63]/20 outline-none"
                 />
               </div>
             </div>
@@ -264,7 +264,7 @@ export function HistorySearchForm({
                   const ids = filteredCustomers.map(c => c.id);
                   setSelectedIds(prev => Array.from(new Set([...prev, ...ids])));
                 }}
-                className="text-[11px] font-black uppercase tracking-widest text-[#003366]"
+                className="text-[11px] font-black uppercase tracking-widest text-[#082A63]"
               >
                 เลือกที่พบทั้งหมด
               </button>
@@ -291,12 +291,12 @@ export function HistorySearchForm({
                       key={c.id}
                       onClick={() => toggleCustomer(c.id)}
                       className={`flex w-full items-center gap-4 rounded-2xl px-4 py-4 text-left transition-colors active:bg-slate-100 ${
-                        isSelected ? "bg-[#003366]/5" : ""
+                        isSelected ? "bg-[#082A63]/15" : ""
                       }`}
                     >
                       <div className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-lg border-2 transition-all ${
-                        isSelected 
-                          ? "bg-[#003366] border-[#003366] text-white" 
+                        isSelected
+                          ? "bg-[#082A63] border-[#082A63] text-white"
                           : "border-slate-200 bg-white"
                       }`}>
                         {isSelected ? <Check className="h-4 w-4" strokeWidth={4} /> : null}
@@ -315,7 +315,7 @@ export function HistorySearchForm({
             <div className="border-t border-slate-100 p-6">
               <button
                 onClick={() => setIsCustomerDialogOpen(false)}
-                className="w-full rounded-2xl bg-[#003366] py-4 text-lg font-black text-white shadow-lg shadow-[#003366]/20 active:scale-[0.98]"
+                className="w-full rounded-2xl bg-[#082A63] py-4 text-lg font-black text-white shadow-lg shadow-[#082A63]/20 active:scale-[0.98]"
               >
                 เสร็จสิ้น
               </button>

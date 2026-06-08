@@ -2,15 +2,15 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "T&YNoodle",
-    short_name: "T&YNoodle",
+    name: "All Noodles",
+    short_name: "All Noodles",
     description:
       "ระบบจัดการธุรกิจจำหน่ายเส้นก๋วยเตี๋ยวและวัตถุดิบแบบดิจิทัล รองรับออเดอร์ จัดส่ง และรายงาน",
     start_url: "/login",
     scope: "/",
     display: "standalone",
-    background_color: "#f7fbff",
-    theme_color: "#003366",
+    background_color: "#FAF7F2",
+    theme_color: "#082A63",
     lang: "th",
     orientation: "portrait",
     icons: [
@@ -31,11 +31,6 @@ export default function manifest(): MetadataRoute.Manifest {
         sizes: "180x180",
         type: "image/png",
         purpose: "any",
-      },
-      {
-        src: "/favicon.ico",
-        sizes: "48x48 32x32 16x16",
-        type: "image/x-icon",
       },
     ],
   };

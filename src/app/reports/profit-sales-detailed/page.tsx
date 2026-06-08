@@ -1,4 +1,4 @@
-﻿import { Suspense } from "react";
+import { Suspense } from "react";
 import { Filter, FileSpreadsheet, Store } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -10,6 +10,7 @@ import { requireAppSession } from "@/lib/auth/authorization";
 import { getTodayInBangkok } from "@/lib/orders/date";
 import { getDetailedProfitSalesReport, type DetailedProfitStoreGroup, type DetailedProfitProductItem } from "@/lib/reports/profit-sales-detailed";
 import { getCustomersForFilter } from "@/lib/reports/product-sales";
+import { getActiveWarehouses } from "@/lib/warehouses";
 import { StoreFilter } from "../product-sales/store-filter";
 import { PrintButton } from "../product-sales/print-button";
 import styles from "./print.module.css";
@@ -23,6 +24,7 @@ type PageProps = {
   searchParams: Promise<{
     from?: string;
     to?: string;
+    warehouse?: string;
     stores?: string;
   }>;
 };
@@ -173,16 +175,19 @@ async function DetailedProfitContent({ searchParams }: PageProps) {
 
   const fromDate = params.from && /^\d{4}-\d{2}-\d{2}$/.test(params.from) ? params.from : defaultFrom;
   const toDate = params.to && /^\d{4}-\d{2}-\d{2}$/.test(params.to) ? params.to : today;
+  const warehouseId = params.warehouse || "";
   const selectedStoreIds = params.stores ? params.stores.split(",").filter(Boolean) : [];
 
-  const [report, customers] = await Promise.all([
+  const [report, customers, warehouses] = await Promise.all([
     getDetailedProfitSalesReport({
       organizationId: session.organizationId,
       fromDate,
       toDate,
       customerIds: selectedStoreIds,
+      warehouseId,
     }),
     getCustomersForFilter(session.organizationId),
+    getActiveWarehouses(session.organizationId),
   ]);
 
   const selectedStoreLabel = summarizeSelection(customers, selectedStoreIds, "ทุกร้านค้า");
@@ -231,6 +236,21 @@ async function DetailedProfitContent({ searchParams }: PageProps) {
                 <StoreFilter customers={customers} selectedIds={selectedStoreIds} />
               </div>
               <div>
+                <label className="mb-1.5 block text-[12px] font-semibold uppercase tracking-wider text-[#45464d]">คลังสินค้า</label>
+                <select
+                  name="warehouse"
+                  defaultValue={warehouseId}
+                  className="h-10 w-full rounded-[4px] border border-[#c6c6cd] bg-white px-3 text-[14px] font-semibold text-[#1F2A44] outline-none focus:border-[#1F2A44]"
+                >
+                  <option value="">ทุกคลังสินค้า</option>
+                  {warehouses.map((w) => (
+                    <option key={w.id} value={w.id}>
+                      {w.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
                 <label className="mb-1.5 block text-[12px] font-semibold uppercase tracking-wider text-[#45464d]">ช่วงวันที่</label>
                 <div className="flex items-center gap-2">
                   <div className="min-w-0 flex-1">
@@ -256,6 +276,21 @@ async function DetailedProfitContent({ searchParams }: PageProps) {
                 <div className="w-full sm:min-w-[240px] sm:flex-1">
                   <label className="mb-1.5 block text-[12px] font-semibold uppercase tracking-wider text-[#45464d]">ร้านค้า</label>
                   <StoreFilter customers={customers} selectedIds={selectedStoreIds} />
+                </div>
+                <div className="min-w-[180px] shrink-0">
+                  <label className="mb-1.5 block text-[12px] font-semibold uppercase tracking-wider text-[#45464d]">คลังสินค้า</label>
+                  <select
+                    name="warehouse"
+                    defaultValue={warehouseId}
+                    className="h-10 w-full rounded-[4px] border border-[#c6c6cd] bg-white px-3 text-[12px] font-semibold tracking-wider text-[#0b1c30] outline-none focus:border-[#131b2e]"
+                  >
+                    <option value="">ทุกคลังสินค้า</option>
+                    {warehouses.map((w) => (
+                      <option key={w.id} value={w.id}>
+                        {w.name}
+                      </option>
+                    ))}
+                  </select>
                 </div>
                 <div className="min-w-[420px] flex-1">
                   <label className="mb-1.5 block text-[12px] font-semibold uppercase tracking-wider text-[#45464d]">ช่วงวันที่</label>

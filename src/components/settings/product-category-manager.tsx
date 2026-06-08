@@ -261,8 +261,8 @@ export function ProductCategoryManager({
                 onClick={openCreateCategoryModal}
                 className={`flex w-full items-center justify-between gap-3 rounded-2xl border px-4 py-3 text-left transition ${
                   isCreating
-                    ? "border-[#003366] bg-white text-[#003366] shadow-[0_12px_28px_rgba(0,51,102,0.12)]"
-                    : "border-dashed border-[#003366]/30 bg-white text-slate-700 hover:border-[#003366]/50"
+                    ? "border-[#082A63] bg-white text-[#082A63] shadow-[0_12px_28px_rgba(4,53,106,0.12)]"
+                    : "border-dashed border-[#082A63]/30 bg-white text-slate-700 hover:border-[#082A63]/50"
                 }`}
               >
                 <div className="min-w-0 flex-1">
@@ -273,7 +273,7 @@ export function ProductCategoryManager({
                 </div>
                 <Plus
                   className={`h-5 w-5 shrink-0 ${
-                    isCreating ? "text-[#003366]" : "text-slate-300"
+                    isCreating ? "text-[#082A63]" : "text-slate-300"
                   }`}
                   strokeWidth={2}
                 />
@@ -294,7 +294,7 @@ export function ProductCategoryManager({
                       onClick={() => openCategory(category.id)}
                       className={`flex w-full items-center justify-between gap-3 rounded-2xl border px-4 py-3 text-left transition ${
                         isActive
-                          ? "border-[#003366] bg-white text-[#003366] shadow-[0_12px_28px_rgba(0,51,102,0.12)]"
+                          ? "border-[#082A63] bg-white text-[#082A63] shadow-[0_12px_28px_rgba(4,53,106,0.12)]"
                           : "border-transparent bg-white text-slate-700 hover:border-slate-200"
                       }`}
                     >
@@ -306,7 +306,7 @@ export function ProductCategoryManager({
                       </div>
                       <Tag
                         className={`h-5 w-5 shrink-0 ${
-                          isActive ? "text-[#003366]" : "text-slate-300"
+                          isActive ? "text-[#082A63]" : "text-slate-300"
                         }`}
                         strokeWidth={2}
                       />
@@ -332,7 +332,7 @@ export function ProductCategoryManager({
                     : "เริ่มจากกดปุ่มเพิ่มหมวดหมู่ใหม่ แล้วตั้งชื่อหมวดหมู่ก่อน"}
                 </p>
                 {isCreating ? (
-                  <div className="mt-3 inline-flex items-center gap-2 rounded-full bg-[#eef4fa] px-3 py-1.5 text-sm font-semibold text-[#003366]">
+                  <div className="mt-3 inline-flex items-center gap-2 rounded-full bg-[#FAF7F2] px-3 py-1.5 text-sm font-semibold text-[#082A63]">
                     <Plus className="h-4 w-4" strokeWidth={2.2} />
                     กำลังสร้างหมวดหมู่ใหม่
                   </div>
@@ -364,7 +364,7 @@ export function ProductCategoryManager({
                   type="button"
                   onClick={handleSave}
                   disabled={isPending || !hasChanges || !draftName.trim()}
-                  className="inline-flex h-11 items-center gap-2 rounded-2xl bg-[#003366] px-5 text-sm font-semibold text-white shadow-[0_12px_28px_rgba(0,51,102,0.18)] transition hover:bg-[#002244] disabled:cursor-not-allowed disabled:opacity-45"
+                  className="inline-flex h-11 items-center gap-2 rounded-2xl bg-[#082A63] px-5 text-sm font-semibold text-white shadow-[0_12px_28px_rgba(8,42,99,0.18)] transition hover:bg-[#103B82] disabled:cursor-not-allowed disabled:opacity-45"
                 >
                   <Save className="h-4 w-4" strokeWidth={2.2} />
                   {isPending ? "กำลังบันทึก..." : "บันทึกหมวดหมู่"}
@@ -433,7 +433,7 @@ export function ProductCategoryManager({
                               isDisabled
                                 ? "cursor-not-allowed border-slate-100 bg-slate-50 opacity-50"
                                 : isSelected
-                                  ? "cursor-pointer border-[#003366] bg-[#eef4fa]"
+                                  ? "cursor-pointer border-[#082A63] bg-[#FAF7F2]"
                                   : "cursor-pointer border-slate-200 bg-white hover:border-slate-300"
                             }`}
                           >
@@ -442,7 +442,7 @@ export function ProductCategoryManager({
                               checked={isSelected}
                               disabled={isDisabled}
                               onChange={() => !isDisabled && toggleProduct(product.id)}
-                              className="h-5 w-5 rounded border-slate-300 accent-[#003366] disabled:cursor-not-allowed"
+                              className="h-5 w-5 rounded border-slate-300 accent-[#082A63] disabled:cursor-not-allowed"
                             />
 
                             {product.imageUrls[0] ? (
@@ -469,7 +469,7 @@ export function ProductCategoryManager({
                                   อยู่ในหมวด: {otherCategoryName} แล้ว
                                 </p>
                               ) : isSelected ? (
-                                <p className="mt-1 text-xs font-medium text-[#003366]">
+                                <p className="mt-1 text-xs font-medium text-[#082A63]">
                                   ✓ เลือกอยู่ในหมวดนี้
                                 </p>
                               ) : null}
@@ -546,7 +546,7 @@ export function ProductCategoryManager({
               <button
                 type="button"
                 onClick={confirmNameModal}
-                className="inline-flex h-11 items-center gap-2 rounded-2xl bg-[#003366] px-5 text-sm font-semibold text-white shadow-[0_12px_28px_rgba(0,51,102,0.18)] transition hover:bg-[#002244]"
+                className="inline-flex h-11 items-center gap-2 rounded-2xl bg-[#082A63] px-5 text-sm font-semibold text-white shadow-[0_12px_28px_rgba(8,42,99,0.18)] transition hover:bg-[#103B82]"
               >
                 <Save className="h-4 w-4" strokeWidth={2.2} />
                 ยืนยันชื่อหมวดหมู่

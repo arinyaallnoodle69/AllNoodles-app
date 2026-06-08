@@ -125,7 +125,7 @@ export function ProductPriceSelectorModal({
               placeholder="ค้นหาสินค้า หรือ SKU..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3 pl-10 pr-4 text-sm outline-none transition-all focus:border-transparent focus:ring-2 focus:ring-[#003366]"
+              className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3 pl-10 pr-4 text-sm outline-none transition-all focus:border-transparent focus:ring-2 focus:ring-[#082A63]"
             />
           </div>
         </div>
@@ -149,8 +149,8 @@ export function ProductPriceSelectorModal({
                   <div
                     key={unit.id}
                     className={`flex flex-col overflow-hidden rounded-2xl border-2 transition-all duration-300 ${
-                      isSelected 
-                        ? "border-[#003366] bg-white shadow-lg ring-4 ring-[#003366]/5" 
+                      isSelected
+                        ? "border-[#082A63] bg-white shadow-lg ring-4 ring-[#082A63]/5"
                         : "border-white bg-white shadow-sm hover:border-slate-200"
                     }`}
                   >
@@ -160,12 +160,12 @@ export function ProductPriceSelectorModal({
                     >
                       <div className="relative h-24 w-24 shrink-0 overflow-hidden bg-white md:h-14 md:w-14">
                         {unit.imageUrl ? (
-                          <Image 
-                            src={unit.imageUrl} 
-                            alt={unit.productName} 
-                            fill 
+                          <Image
+                            src={unit.imageUrl}
+                            alt={unit.productName}
+                            fill
                             sizes="(max-width: 768px) 96px, 56px"
-                            className="object-contain" 
+                            className="object-contain"
                           />
                         ) : (
                           <div className="flex h-full w-full items-center justify-center">
@@ -173,9 +173,9 @@ export function ProductPriceSelectorModal({
                           </div>
                         )}
                       </div>
-                      
+
                       <div className="min-w-0 flex-1">
-                        <p className="mb-0.5 font-mono text-[10px] font-extrabold tracking-wider text-[#003366]/60">
+                        <p className="mb-0.5 font-mono text-[10px] font-extrabold tracking-wider text-[#082A63]/60">
                           {unit.sku}
                         </p>
                         <p className="text-sm font-bold leading-tight text-slate-900">
@@ -188,8 +188,8 @@ export function ProductPriceSelectorModal({
 
                       <div
                         className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 transition-all duration-300 ${
-                          isSelected 
-                            ? "border-[#003366] bg-[#003366] text-white rotate-0" 
+                          isSelected
+                            ? "border-[#082A63] bg-[#082A63] text-white rotate-0"
                             : "border-slate-200 bg-white rotate-[-90deg]"
                         }`}
                       >
@@ -219,14 +219,14 @@ export function ProductPriceSelectorModal({
                               onChange={(e) => updatePrice(unit.id, e.target.value)}
                               onClick={(e) => e.stopPropagation()}
                               placeholder="0.00"
-                              className={`w-full rounded-xl border py-3 pl-9 pr-4 text-lg font-bold outline-none transition-all focus:ring-4 focus:ring-[#003366]/10 ${
-                                isBelowCost 
-                                  ? "border-amber-300 bg-amber-50 text-amber-700" 
-                                  : "border-slate-200 bg-slate-50 text-slate-900 focus:border-[#003366] focus:bg-white"
+                              className={`w-full rounded-xl border py-3 pl-9 pr-4 text-lg font-bold outline-none transition-all focus:ring-4 focus:ring-[#082A63]/10 ${
+                                isBelowCost
+                                  ? "border-amber-300 bg-amber-50 text-amber-700"
+                                  : "border-slate-200 bg-slate-50 text-slate-900 focus:border-[#082A63] focus:bg-white"
                               }`}
                             />
                           </div>
-                          
+
                           {isBelowCost && (
                             <div className="mt-2 flex items-center gap-1.5 rounded-lg bg-amber-100/50 px-2 py-1.5 text-[10px] font-bold text-amber-700">
                               ⚠️ ต่ำกว่าทุน (฿{unit.effectiveCostPrice.toLocaleString("th-TH")})
@@ -259,7 +259,7 @@ export function ProductPriceSelectorModal({
             <button
               onClick={handleSave}
               disabled={isPending || selections.size === 0}
-              className="flex-[2] rounded-2xl bg-[#003366] py-4 text-sm font-bold text-white shadow-xl shadow-[#003366]/20 transition enabled:hover:bg-[#002244] enabled:active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
+              className="flex-[2] rounded-2xl bg-[#082A63] py-4 text-sm font-bold text-white shadow-xl shadow-[#082A63]/20 transition enabled:hover:bg-[#103B82] enabled:active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
             >
               {isPending ? "กำลังบันทึก..." : `บันทึก ${selections.size} รายการ`}
             </button>

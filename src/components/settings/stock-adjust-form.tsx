@@ -27,9 +27,17 @@ import type { StockProductOption } from "@/lib/stock/admin";
 
 type StockAdjustFormProps = {
   products: StockProductOption[];
+  warehouses: StockWarehouseOption[];
   returnHref: string;
   defaultProductId?: string;
+  defaultWarehouseId?: string;
   onClose?: () => void;
+};
+
+type StockWarehouseOption = {
+  id: string;
+  name: string;
+  slug: string;
 };
 
 const initialAdjustStockState: AdjustStockActionState = {
@@ -39,8 +47,10 @@ const initialAdjustStockState: AdjustStockActionState = {
 
 export function StockAdjustForm({
   products,
+  warehouses,
   returnHref,
   defaultProductId = "",
+  defaultWarehouseId = "",
   onClose,
 }: StockAdjustFormProps) {
   const router = useRouter();
@@ -50,6 +60,7 @@ export function StockAdjustForm({
   );
 
   const [selectedProductId, setSelectedProductId] = useState(defaultProductId);
+  const [warehouseId, setWarehouseId] = useState(defaultWarehouseId);
   const [newQuantity, setNewQuantity] = useState<string>("");
   const [notes, setNotes] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
@@ -58,6 +69,12 @@ export function StockAdjustForm({
   const selectedProduct = useMemo(() => {
     return products.find((p) => p.id === selectedProductId);
   }, [products, selectedProductId]);
+
+  const selectedWarehouseStock = useMemo(() => {
+    return selectedProduct?.warehouseStocks.find((stock) => stock.warehouseId === warehouseId) ?? null;
+  }, [selectedProduct, warehouseId]);
+
+  const selectedWarehouseQuantity = selectedWarehouseStock?.onHandQuantity ?? 0;
 
   const filteredProducts = useMemo(() => {
     const q = deferredQuery.trim().toLowerCase();
@@ -89,10 +106,10 @@ export function StockAdjustForm({
   // Set initial quantity when product is selected
   useEffect(() => {
     if (selectedProduct) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- Initial sync when product is selected
-      setNewQuantity(String(selectedProduct.onHandQuantity));
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Initial sync when product or warehouse is selected
+      setNewQuantity(warehouseId ? String(selectedWarehouseQuantity) : "");
     }
-  }, [selectedProduct]);
+  }, [selectedProduct, selectedWarehouseQuantity, warehouseId]);
 
   const handleClose = () => {
     setIsClosing(true);
@@ -113,7 +130,7 @@ export function StockAdjustForm({
         onClick={handleClose}
         className="absolute inset-0" 
       />
-      <div className={`relative flex h-full w-full max-w-lg flex-col overflow-hidden bg-[#F8FAFC] shadow-2xl rounded-none sm:rounded-[2.8rem] border border-white/40 ${
+      <div className={`relative flex h-full w-full max-w-lg flex-col overflow-hidden bg-[#FAF7F2] shadow-2xl rounded-none sm:rounded-[2.8rem] border border-white/40 ${
         isClosing ? "animate-slide-up-premium" : "animate-slide-down-premium"
       }`}>
         
@@ -127,7 +144,7 @@ export function StockAdjustForm({
             >
               <X className="h-5 w-5" />
             </button>
-            <h2 className="text-xl font-black text-[#003366]">ปรับปรุงยอดสต็อก</h2>
+            <h2 className="text-xl font-black text-[#082A63]">ปรับปรุงยอดสต็อก</h2>
           </div>
         </div>
 
@@ -139,7 +156,7 @@ export function StockAdjustForm({
                 <input
                   type="text"
                   placeholder="ค้นหาชื่อสินค้า หรือ SKU..."
-                  className="w-full h-14 pl-12 pr-4 bg-white border-2 border-slate-100 rounded-2xl outline-none focus:border-indigo-600/20 transition-all text-lg font-bold"
+                  className="w-full h-14 pl-12 pr-4 bg-white border-2 border-slate-100 rounded-2xl outline-none focus:border-[#082A63]/20 transition-all text-lg font-bold"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
@@ -164,7 +181,7 @@ export function StockAdjustForm({
                     <div className="min-w-0 flex-1">
                       <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1.5">{p.sku}</p>
                       <p className="text-base font-black text-slate-950 truncate leading-tight">{p.name}</p>
-                      <p className="mt-1 text-sm font-bold text-indigo-600">คงเหลือ: {p.onHandQuantity} {p.unit}</p>
+                      <p className="mt-1 text-sm font-bold text-[#082A63]">คงเหลือ: {p.onHandQuantity} {p.unit}</p>
                     </div>
                   </button>
                 ))}
@@ -187,7 +204,7 @@ export function StockAdjustForm({
                   <div className="min-w-0 flex-1">
                     <button 
                       onClick={() => setSelectedProductId("")}
-                      className="text-[10px] font-black text-indigo-600 uppercase tracking-widest flex items-center gap-1 mb-1"
+                      className="text-[10px] font-black text-[#082A63] uppercase tracking-widest flex items-center gap-1 mb-1"
                     >
                       <ChevronLeft className="h-3 w-3" /> เปลี่ยนสินค้า
                     </button>
@@ -198,6 +215,22 @@ export function StockAdjustForm({
               </div>
 
               <div className="p-6 space-y-8">
+                <div className="space-y-3">
+                  <label className="text-sm font-black text-slate-400 uppercase tracking-widest pl-2">คลังสินค้า</label>
+                  <select
+                    value={warehouseId}
+                    onChange={(event) => setWarehouseId(event.target.value)}
+                    className="h-16 w-full rounded-3xl border-2 border-slate-100 bg-white px-5 text-lg font-black text-[#082A63] outline-none transition-all focus:border-[#082A63]/30"
+                  >
+                    <option value="">เลือกคลัง...</option>
+                    {warehouses.map((warehouse) => (
+                      <option key={warehouse.id} value={warehouse.id}>
+                        {warehouse.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
                 {/* Quantity Input Section */}
                 <div className="space-y-4 text-center">
                   <label className="text-sm font-black text-slate-400 uppercase tracking-widest">จำนวนสต็อกที่ถูกต้อง ( {selectedProduct?.unit} )</label>
@@ -219,7 +252,7 @@ export function StockAdjustForm({
                     <button
                       type="button"
                       onClick={() => setNewQuantity(String(Number(newQuantity) + 1))}
-                      className="h-16 w-16 flex items-center justify-center rounded-3xl bg-indigo-600 text-white active:scale-90 transition-all shadow-lg shadow-indigo-600/20"
+                      className="h-16 w-16 flex items-center justify-center rounded-3xl bg-[#082A63] text-white active:scale-90 transition-all shadow-lg shadow-[#082A63]/20"
                     >
                       <Plus className="h-8 w-8" strokeWidth={3} />
                     </button>
@@ -227,17 +260,19 @@ export function StockAdjustForm({
                 </div>
 
                 {/* Info Card */}
-                <div className="bg-indigo-50/50 rounded-[2rem] p-6 border border-indigo-100/50 space-y-4">
+                <div className="bg-[#FAF7F2]/50 rounded-[2rem] p-6 border border-[#F2E3AE]/50 space-y-4">
                   <div className="flex justify-between items-center">
-                    <span className="text-sm font-bold text-indigo-600/60">คงเหลือเดิม</span>
-                    <span className="text-lg font-black text-indigo-900">{selectedProduct?.onHandQuantity} {selectedProduct?.unit}</span>
+                    <span className="text-sm font-bold text-[#082A63]/60">คงเหลือเดิม</span>
+                    <span className="text-lg font-black text-[#103B82]">
+                      {warehouseId ? selectedWarehouseQuantity : "-"} {selectedProduct?.unit}
+                    </span>
                   </div>
-                  <div className="h-px bg-indigo-100/50" />
+                  <div className="h-px bg-[#F2E3AE]/50" />
                   <div className="flex justify-between items-center">
-                    <span className="text-sm font-bold text-indigo-600/60">ยอดปรับปรุง</span>
-                    <span className="text-lg font-black text-indigo-900">
-                      {Number(newQuantity) - (selectedProduct?.onHandQuantity || 0) > 0 ? "+" : ""}
-                      {Number(newQuantity) - (selectedProduct?.onHandQuantity || 0)} {selectedProduct?.unit}
+                    <span className="text-sm font-bold text-[#082A63]/60">ยอดปรับปรุง</span>
+                    <span className="text-lg font-black text-[#103B82]">
+                      {warehouseId && Number.isFinite(Number(newQuantity)) && Number(newQuantity) - selectedWarehouseQuantity > 0 ? "+" : ""}
+                      {warehouseId && Number.isFinite(Number(newQuantity)) ? Number(newQuantity) - selectedWarehouseQuantity : "-"} {selectedProduct?.unit}
                     </span>
                   </div>
                 </div>
@@ -249,7 +284,7 @@ export function StockAdjustForm({
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
                     placeholder="ระบุสาเหตุการปรับยอด (ถ้ามี)..."
-                    className="w-full h-32 p-5 rounded-3xl bg-white border-2 border-slate-100 outline-none focus:border-indigo-600/20 transition-all text-lg font-medium resize-none"
+                    className="w-full h-32 p-5 rounded-3xl bg-white border-2 border-slate-100 outline-none focus:border-[#082A63]/20 transition-all text-lg font-medium resize-none"
                   />
                 </div>
               </div>
@@ -264,6 +299,7 @@ export function StockAdjustForm({
               onClick={() => {
                 const formData = new FormData();
                 formData.append("productId", selectedProductId);
+                formData.append("warehouseId", warehouseId);
                 formData.append("newQuantity", newQuantity);
                 formData.append("notes", notes);
                 startTransition(() => {
@@ -271,7 +307,7 @@ export function StockAdjustForm({
                 });
               }}
               disabled={isPending}
-              className="w-full h-16 bg-indigo-600 text-white rounded-[1.5rem] font-black text-xl flex items-center justify-center gap-3 shadow-xl shadow-indigo-600/20 disabled:opacity-50 active:scale-[0.98] transition-all"
+              className="w-full h-16 bg-[#082A63] text-white rounded-[1.5rem] font-black text-xl flex items-center justify-center gap-3 shadow-xl shadow-[#082A63]/20 disabled:opacity-50 active:scale-[0.98] transition-all"
             >
               {isPending ? (
                 <Loader2 className="h-6 w-6 animate-spin" />

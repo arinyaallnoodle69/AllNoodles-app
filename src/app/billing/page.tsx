@@ -8,7 +8,7 @@ import {
 } from "@/lib/billing/billing-statement";
 import { BillingDashboardClient } from "./billing-dashboard-client";
 
-export const metadata = { title: "ใบวางบิล | T&Y Noodles" };
+export const metadata = { title: "ใบวางบิล | All Noodles" };
 
 type BillingPageProps = {
   searchParams: Promise<{ 

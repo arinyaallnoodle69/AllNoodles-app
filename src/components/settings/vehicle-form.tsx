@@ -8,7 +8,6 @@ import type { CreateVehicleActionState } from "@/app/settings/vehicles/actions";
 import {
   SettingsPanel,
   SettingsPanelBody,
-  SettingsPanelHeader,
   settingsFieldLabelClass,
   settingsInputClass,
 } from "@/components/settings/settings-ui";
@@ -26,8 +25,10 @@ const initialCreateVehicleState: CreateVehicleActionState = {
 };
 
 function getInputClass(hasError: boolean) {
-  return `${settingsInputClass} ${hasError ? "border-red-300 ring-1 ring-red-200" : ""}`;
+  return `${settingsInputClass} placeholder:text-[#1F2A44] ${hasError ? "border-red-300 ring-1 ring-red-200" : ""}`;
 }
+
+const vehicleFieldLabelClass = `${settingsFieldLabelClass} !text-[#1F2A44]`;
 
 export function VehicleForm({ initialVehicle, returnHref }: VehicleFormProps) {
   const router = useRouter();
@@ -36,7 +37,9 @@ export function VehicleForm({ initialVehicle, returnHref }: VehicleFormProps) {
     : createVehicleAction;
   const [actionState, formAction, isPending] = useActionState(action, initialCreateVehicleState);
   const [hasSubmitted, setHasSubmitted] = useState(false);
+  const [isClosing, setIsClosing] = useState(false);
   const hasSubmittedRef = useRef(false);
+  const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const fieldErrors =
     actionState && typeof actionState === "object" && "fieldErrors" in actionState
@@ -60,7 +63,14 @@ export function VehicleForm({ initialVehicle, returnHref }: VehicleFormProps) {
   const isEditMode = Boolean(initialVehicle);
 
   function closeModal() {
-    router.replace(returnHref);
+    if (isClosing) return;
+    setIsClosing(true);
+    if (closeTimerRef.current) {
+      clearTimeout(closeTimerRef.current);
+    }
+    closeTimerRef.current = setTimeout(() => {
+      router.replace(returnHref);
+    }, 380);
   }
 
   const handleSuccess = useEffectEvent(() => {
@@ -76,22 +86,30 @@ export function VehicleForm({ initialVehicle, returnHref }: VehicleFormProps) {
     }
   }, [state.status]);
 
+  useEffect(() => {
+    return () => {
+      if (closeTimerRef.current) {
+        clearTimeout(closeTimerRef.current);
+      }
+    };
+  }, []);
+
   const showFeedback = hasSubmitted && state.status !== "idle";
   const showFieldErrors = hasSubmitted && state.status === "error";
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/45 p-3 sm:p-4">
-      <div className="flex max-h-[96dvh] w-full max-w-3xl flex-col overflow-hidden rounded-[1.75rem] border border-slate-200 bg-white shadow-[0_28px_80px_rgba(15,23,42,0.22)]">
+    <div className={`fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/45 p-3 sm:p-4 ${isClosing ? "animate-fade-out" : "animate-fade-in"}`}>
+      <div className={`flex max-h-[96dvh] w-full max-w-3xl flex-col overflow-hidden rounded-[1.75rem] border border-slate-200 bg-white shadow-[0_28px_80px_rgba(15,23,42,0.22)] ${isClosing ? "animate-slide-up-premium" : "animate-slide-down-premium"}`}>
         <div className="flex items-start justify-between gap-4 border-b border-slate-100 px-6 py-5">
           <div>
-            <p className="text-xs font-medium uppercase tracking-[0.18em] text-slate-400">
+            <p className="text-xs font-medium uppercase tracking-[0.18em] text-[#1F2A44]">
               {isEditMode ? "แก้ไขรถ" : "เพิ่มรถ"}
             </p>
             <div className="mt-1 flex items-center gap-2 text-slate-950">
               {isEditMode ? (
-                <PencilLine className="h-6 w-6 text-[#003366]" strokeWidth={2.2} />
+                <PencilLine className="h-6 w-6 text-[#082A63]" strokeWidth={2.2} />
               ) : (
-                <CirclePlus className="h-6 w-6 text-[#003366]" strokeWidth={2.2} />
+                <CirclePlus className="h-6 w-6 text-[#082A63]" strokeWidth={2.2} />
               )}
               <h3 className="text-2xl font-semibold tracking-[-0.02em]">
                 {isEditMode ? "แก้ไขข้อมูลรถ" : "รายการรถใหม่"}
@@ -135,14 +153,22 @@ export function VehicleForm({ initialVehicle, returnHref }: VehicleFormProps) {
 
           <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5 sm:px-6 sm:py-6">
             <SettingsPanel>
-              <SettingsPanelHeader
-                icon="truck"
-                title="ข้อมูลรถ"
-                description="บังคับกรอกเฉพาะชื่อรถ ส่วนทะเบียนและชื่อคนขับใส่ภายหลังหรือเว้นว่างไว้ได้"
-              />
+              <div className="border-b border-slate-100 px-6 py-4">
+                <div className="flex items-start gap-3">
+                  <Truck className="mt-0.5 h-5 w-5 text-[#082A63]" strokeWidth={2.2} />
+                  <div>
+                    <h2 className="text-lg font-semibold tracking-[-0.01em] text-slate-950">
+                      ข้อมูลรถ
+                    </h2>
+                    <p className="mt-1 text-sm leading-6 text-[#1F2A44]">
+                      บังคับกรอกเฉพาะชื่อรถ ส่วนทะเบียนและชื่อคนขับใส่ภายหลังหรือเว้นว่างไว้ได้
+                    </p>
+                  </div>
+                </div>
+              </div>
               <SettingsPanelBody className="grid grid-cols-1 gap-6 md:grid-cols-2">
                 <div className="flex flex-col gap-2 md:col-span-2">
-                  <label className={settingsFieldLabelClass} htmlFor="vehicle-name">
+                  <label className={vehicleFieldLabelClass} htmlFor="vehicle-name">
                     ชื่อรถ
                   </label>
                   <div className="relative">
@@ -159,20 +185,20 @@ export function VehicleForm({ initialVehicle, returnHref }: VehicleFormProps) {
                 </div>
 
                 <div className="flex flex-col gap-2">
-                  <label className={settingsFieldLabelClass} htmlFor="vehicle-license-plate">
+                  <label className={vehicleFieldLabelClass} htmlFor="vehicle-license-plate">
                     ทะเบียนรถ (ไม่บังคับ)
                   </label>
                   <input
                     id="vehicle-license-plate"
                     name="licensePlate"
                     defaultValue={initialVehicle?.licensePlate ?? ""}
-                    className={settingsInputClass}
+                    className={`${settingsInputClass} placeholder:text-[#1F2A44]`}
                     placeholder="เช่น 1กข 1234"
                   />
                 </div>
 
                 <div className="flex flex-col gap-2">
-                  <label className={settingsFieldLabelClass} htmlFor="vehicle-driver-name">
+                  <label className={vehicleFieldLabelClass} htmlFor="vehicle-driver-name">
                     ชื่อคนขับ (ไม่บังคับ)
                   </label>
                   <div className="relative">
@@ -181,7 +207,7 @@ export function VehicleForm({ initialVehicle, returnHref }: VehicleFormProps) {
                       id="vehicle-driver-name"
                       name="driverName"
                       defaultValue={initialVehicle?.driverName ?? ""}
-                      className={`${settingsInputClass} pl-10`}
+                      className={`${settingsInputClass} pl-10 placeholder:text-[#1F2A44]`}
                       placeholder="เช่น พี่แดง"
                     />
                   </div>
@@ -194,14 +220,14 @@ export function VehicleForm({ initialVehicle, returnHref }: VehicleFormProps) {
             <button
               type="button"
               onClick={closeModal}
-              className="rounded-xl border border-slate-200 px-4 py-3 text-sm font-medium text-slate-600 transition hover:bg-slate-50"
+              className="rounded-xl border border-slate-200 px-4 py-3 text-sm font-medium text-[#1F2A44] transition hover:bg-slate-50"
             >
               ยกเลิก
             </button>
             <button
               type="submit"
               disabled={isPending}
-              className="inline-flex items-center gap-2 rounded-xl bg-[#003366] px-5 py-3 text-sm font-medium text-white shadow-[0_12px_30px_rgba(0,51,102,0.22)] transition hover:bg-[#002244] disabled:cursor-not-allowed disabled:opacity-60"
+              className="inline-flex items-center gap-2 rounded-xl bg-[#082A63] px-5 py-3 text-sm font-medium text-white shadow-[0_12px_30px_rgba(8,42,99,0.22)] transition hover:bg-[#103B82] disabled:cursor-not-allowed disabled:opacity-60"
             >
               <Save className="h-4 w-4" strokeWidth={2.2} />
               {isEditMode ? "บันทึกการแก้ไข" : "บันทึกรถ"}

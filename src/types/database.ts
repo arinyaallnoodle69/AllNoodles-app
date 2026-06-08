@@ -15,7 +15,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.4"
+    PostgrestVersion: "14.5"
   }
   public: {
     Tables: {
@@ -443,6 +443,7 @@ export type Database = {
           created_at: string
           customer_code: string
           default_vehicle_id: string | null
+          default_warehouse_id: string | null
           district: string | null
           id: string
           is_active: boolean
@@ -461,6 +462,7 @@ export type Database = {
           created_at?: string
           customer_code: string
           default_vehicle_id?: string | null
+          default_warehouse_id?: string | null
           district?: string | null
           id?: string
           is_active?: boolean
@@ -479,6 +481,7 @@ export type Database = {
           created_at?: string
           customer_code?: string
           default_vehicle_id?: string | null
+          default_warehouse_id?: string | null
           district?: string | null
           id?: string
           is_active?: boolean
@@ -498,6 +501,13 @@ export type Database = {
             columns: ["default_vehicle_id"]
             isOneToOne: false
             referencedRelation: "vehicles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customers_default_warehouse_id_fkey"
+            columns: ["default_warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "warehouses"
             referencedColumns: ["id"]
           },
           {
@@ -689,6 +699,7 @@ export type Database = {
           total_amount: number
           updated_at: string
           vehicle_id: string | null
+          warehouse_id: string | null
         }
         Insert: {
           created_at?: string
@@ -707,6 +718,7 @@ export type Database = {
           total_amount?: number
           updated_at?: string
           vehicle_id?: string | null
+          warehouse_id?: string | null
         }
         Update: {
           created_at?: string
@@ -725,6 +737,7 @@ export type Database = {
           total_amount?: number
           updated_at?: string
           vehicle_id?: string | null
+          warehouse_id?: string | null
         }
         Relationships: [
           {
@@ -762,6 +775,13 @@ export type Database = {
             referencedRelation: "vehicles"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "delivery_notes_warehouse_id_fkey"
+            columns: ["warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "warehouses"
+            referencedColumns: ["id"]
+          },
         ]
       }
       inventory_movements: {
@@ -780,6 +800,7 @@ export type Database = {
           reference_number: string | null
           stock_after: number
           stock_before: number
+          warehouse_id: string | null
         }
         Insert: {
           created_at?: string
@@ -796,6 +817,7 @@ export type Database = {
           reference_number?: string | null
           stock_after: number
           stock_before: number
+          warehouse_id?: string | null
         }
         Update: {
           created_at?: string
@@ -812,6 +834,7 @@ export type Database = {
           reference_number?: string | null
           stock_after?: number
           stock_before?: number
+          warehouse_id?: string | null
         }
         Relationships: [
           {
@@ -849,6 +872,13 @@ export type Database = {
             referencedRelation: "inventory_receipt_items"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "inventory_movements_warehouse_id_fkey"
+            columns: ["warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "warehouses"
+            referencedColumns: ["id"]
+          },
         ]
       }
       inventory_receipt_items: {
@@ -863,6 +893,7 @@ export type Database = {
           stock_before: number
           unit: string
           unit_cost: number
+          warehouse_id: string | null
         }
         Insert: {
           created_at?: string
@@ -875,6 +906,7 @@ export type Database = {
           stock_before: number
           unit: string
           unit_cost: number
+          warehouse_id?: string | null
         }
         Update: {
           created_at?: string
@@ -887,6 +919,7 @@ export type Database = {
           stock_before?: number
           unit?: string
           unit_cost?: number
+          warehouse_id?: string | null
         }
         Relationships: [
           {
@@ -910,6 +943,13 @@ export type Database = {
             referencedRelation: "inventory_receipts"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "inventory_receipt_items_warehouse_id_fkey"
+            columns: ["warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "warehouses"
+            referencedColumns: ["id"]
+          },
         ]
       }
       inventory_receipts: {
@@ -924,6 +964,7 @@ export type Database = {
           received_at: string
           supplier_id: string | null
           supplier_name: string
+          warehouse_id: string | null
         }
         Insert: {
           created_at?: string
@@ -936,6 +977,7 @@ export type Database = {
           received_at?: string
           supplier_id?: string | null
           supplier_name?: string
+          warehouse_id?: string | null
         }
         Update: {
           created_at?: string
@@ -948,6 +990,7 @@ export type Database = {
           received_at?: string
           supplier_id?: string | null
           supplier_name?: string
+          warehouse_id?: string | null
         }
         Relationships: [
           {
@@ -969,6 +1012,13 @@ export type Database = {
             columns: ["supplier_id"]
             isOneToOne: false
             referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_receipts_warehouse_id_fkey"
+            columns: ["warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "warehouses"
             referencedColumns: ["id"]
           },
         ]
@@ -1302,6 +1352,7 @@ export type Database = {
           total_amount: number
           updated_at: string
           verified_by_user_id: string | null
+          warehouse_id: string | null
         }
         Insert: {
           created_at?: string
@@ -1320,6 +1371,7 @@ export type Database = {
           total_amount?: number
           updated_at?: string
           verified_by_user_id?: string | null
+          warehouse_id?: string | null
         }
         Update: {
           created_at?: string
@@ -1338,6 +1390,7 @@ export type Database = {
           total_amount?: number
           updated_at?: string
           verified_by_user_id?: string | null
+          warehouse_id?: string | null
         }
         Relationships: [
           {
@@ -1366,6 +1419,13 @@ export type Database = {
             columns: ["verified_by_user_id"]
             isOneToOne: false
             referencedRelation: "app_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_warehouse_id_fkey"
+            columns: ["warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "warehouses"
             referencedColumns: ["id"]
           },
         ]
@@ -1649,6 +1709,61 @@ export type Database = {
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      product_warehouse_stocks: {
+        Row: {
+          created_at: string
+          id: string
+          organization_id: string
+          product_id: string
+          reserved_quantity: number
+          stock_quantity: number
+          updated_at: string
+          warehouse_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          organization_id: string
+          product_id: string
+          reserved_quantity?: number
+          stock_quantity?: number
+          updated_at?: string
+          warehouse_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          organization_id?: string
+          product_id?: string
+          reserved_quantity?: number
+          stock_quantity?: number
+          updated_at?: string
+          warehouse_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_warehouse_stocks_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_warehouse_stocks_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_warehouse_stocks_warehouse_id_fkey"
+            columns: ["warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "warehouses"
             referencedColumns: ["id"]
           },
         ]
@@ -1943,6 +2058,65 @@ export type Database = {
           },
         ]
       }
+      warehouses: {
+        Row: {
+          address: string | null
+          created_at: string
+          district: string | null
+          id: string
+          is_active: boolean
+          metadata: Json
+          name: string
+          organization_id: string
+          postal_code: string | null
+          province: string | null
+          slug: string
+          sort_order: number
+          subdistrict: string | null
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          created_at?: string
+          district?: string | null
+          id?: string
+          is_active?: boolean
+          metadata?: Json
+          name: string
+          organization_id: string
+          postal_code?: string | null
+          province?: string | null
+          slug: string
+          sort_order?: number
+          subdistrict?: string | null
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          created_at?: string
+          district?: string | null
+          id?: string
+          is_active?: boolean
+          metadata?: Json
+          name?: string
+          organization_id?: string
+          postal_code?: string | null
+          province?: string | null
+          slug?: string
+          sort_order?: number
+          subdistrict?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "warehouses_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       system_database_stats: {
@@ -1989,22 +2163,51 @@ export type Database = {
             }
             Returns: undefined
           }
-      adjust_inventory: {
-        Args: {
-          p_adjusted_by: string
-          p_new_stock_quantity: number
-          p_notes: string
-          p_organization_id: string
-          p_product_id: string
-        }
-        Returns: undefined
-      }
+      adjust_inventory:
+        | {
+            Args: {
+              p_adjusted_by: string
+              p_new_stock_quantity: number
+              p_notes: string
+              p_organization_id: string
+              p_product_id: string
+            }
+            Returns: undefined
+          }
+        | {
+            Args: {
+              p_adjusted_by: string
+              p_new_stock_quantity: number
+              p_notes: string
+              p_organization_id: string
+              p_product_id: string
+              p_warehouse_id: string
+            }
+            Returns: undefined
+          }
       allocate_requisition_document_numbers: {
         Args: { requested_at?: string; requested_count?: number }
         Returns: {
           document_no: string
           sequence_key: string
           sequence_value: number
+        }[]
+      }
+      apply_product_warehouse_stock_delta: {
+        Args: {
+          p_created_by?: string
+          p_metadata?: Json
+          p_movement_type: string
+          p_notes?: string
+          p_organization_id: string
+          p_product_id: string
+          p_quantity_delta: number
+          p_reference_number?: string
+          p_warehouse_id: string
+        }
+        Returns: {
+          stock_after: number
+          stock_before: number
         }[]
       }
       cleanup_stale_orders: { Args: never; Returns: number }
@@ -2086,16 +2289,54 @@ export type Database = {
             }
             Returns: string
           }
-      create_store_delivery_note: {
+        | {
+            Args: {
+              p_created_by: string
+              p_items: Json
+              p_notes: string
+              p_organization_id: string
+              p_receipt_number: string
+              p_receipt_url?: string
+              p_received_at: string
+              p_supplier_id?: string
+              p_supplier_name: string
+              p_warehouse_id: string
+            }
+            Returns: string
+          }
+      create_store_delivery_note:
+        | {
+            Args: {
+              p_created_by: string
+              p_customer_id: string
+              p_delivery_date: string
+              p_items: Json
+              p_notes: string
+              p_order_ids: string[]
+              p_organization_id: string
+              p_vehicle_id: string
+            }
+            Returns: string
+          }
+        | {
+            Args: {
+              p_created_by: string
+              p_customer_id: string
+              p_delivery_date: string
+              p_items: Json
+              p_notes: string
+              p_order_ids: string[]
+              p_organization_id: string
+              p_vehicle_id: string
+              p_warehouse_id: string
+            }
+            Returns: string
+          }
+      ensure_product_warehouse_stock: {
         Args: {
-          p_created_by: string
-          p_customer_id: string
-          p_delivery_date: string
-          p_items: Json
-          p_notes: string
-          p_order_ids: string[]
           p_organization_id: string
-          p_vehicle_id: string
+          p_product_id: string
+          p_warehouse_id: string
         }
         Returns: string
       }
@@ -2191,6 +2432,10 @@ export type Database = {
       next_supplier_code: {
         Args: { p_organization_id: string }
         Returns: string
+      }
+      recalculate_product_stock_totals: {
+        Args: { p_organization_id: string; p_product_id: string }
+        Returns: undefined
       }
       record_pin_auth_result: {
         Args: {

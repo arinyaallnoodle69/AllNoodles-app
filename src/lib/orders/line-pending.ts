@@ -61,6 +61,7 @@ type LineOrderCustomerRow = {
 
 type CustomerRow = {
   customer_code: string | null;
+  default_warehouse_id: string | null;
   default_vehicle_id: string | null;
   id: string;
   line_user_id: string | null;
@@ -220,7 +221,7 @@ export async function getLinkedCustomerByLineUserId(
   if (lineCustomer?.customer_id) {
     const { data: mappedCustomer } = await admin
       .from<CustomerRow>("customers")
-      .select("id, name, customer_code, organization_id, line_user_id, metadata")
+      .select("id, name, customer_code, organization_id, line_user_id, metadata, default_vehicle_id, default_warehouse_id")
       .eq("organization_id", organizationId)
       .eq("id", lineCustomer.customer_id)
       .eq("is_active", true)
@@ -233,7 +234,7 @@ export async function getLinkedCustomerByLineUserId(
 
   const { data: legacyCustomer } = await admin
     .from<CustomerRow>("customers")
-    .select("id, name, customer_code, organization_id, line_user_id, metadata")
+    .select("id, name, customer_code, organization_id, line_user_id, metadata, default_vehicle_id, default_warehouse_id")
     .eq("organization_id", organizationId)
     .eq("line_user_id", lineUserId)
     .eq("is_active", true)
@@ -558,10 +559,16 @@ async function convertSinglePendingOrder(input: {
     (sum, item) => sum + Number(item.quantity) * Number(item.unitPrice),
     0,
   );
+
+  if (!input.customer.default_warehouse_id) {
+    throw new Error("ร้านค้านี้ยังไม่ได้ตั้งคลังประจำ กรุณาตั้งค่าคลังก่อนแปลงออเดอร์ LINE");
+  }
+
   const { data: existingOrderRows, error: existingOrderError } = await input.admin
-    .from<NewOrderRow & { status: string; subtotal_amount: number | string | null; total_amount: number | string | null }>("orders")
-    .select("id, order_number, order_date, created_at, status, subtotal_amount, total_amount")
+    .from<NewOrderRow & { status: string; subtotal_amount: number | string | null; total_amount: number | string | null; warehouse_id: string | null }>("orders")
+    .select("id, order_number, order_date, created_at, status, subtotal_amount, total_amount, warehouse_id")
     .eq("customer_id", input.customer.id)
+    .eq("warehouse_id", input.customer.default_warehouse_id)
     .eq("order_date", input.order.order_date)
     .order("created_at", { ascending: true });
 
@@ -600,6 +607,7 @@ async function convertSinglePendingOrder(input: {
         status: "submitted",
         subtotal_amount: totalAmount,
         total_amount: totalAmount,
+        warehouse_id: input.customer.default_warehouse_id,
       })
       .select("id, order_number, order_date, created_at")
       .single();
@@ -615,6 +623,7 @@ async function convertSinglePendingOrder(input: {
       .update({
         subtotal_amount: Number(existingOrder.subtotal_amount ?? 0) + totalAmount,
         total_amount: Number(existingOrder.total_amount ?? 0) + totalAmount,
+        warehouse_id: existingOrder.warehouse_id ?? input.customer.default_warehouse_id,
       })
       .eq("id", existingOrder.id);
 
@@ -765,14 +774,14 @@ export async function linkLineCustomerAndConvertPendingOrders(input: {
   const [{ data: customer }, { data: existingLinkedCustomer }] = await Promise.all([
     admin
       .from<CustomerRow>("customers")
-      .select("id, name, customer_code, organization_id, line_user_id, metadata, default_vehicle_id")
+      .select("id, name, customer_code, organization_id, line_user_id, metadata, default_vehicle_id, default_warehouse_id")
       .eq("organization_id", input.organizationId)
       .eq("id", input.customerId)
       .eq("is_active", true)
       .maybeSingle(),
     admin
       .from<CustomerRow>("customers")
-      .select("id, name, customer_code, organization_id, line_user_id, metadata, default_vehicle_id")
+      .select("id, name, customer_code, organization_id, line_user_id, metadata, default_vehicle_id, default_warehouse_id")
       .eq("organization_id", input.organizationId)
       .eq("line_user_id", pendingOrder.line_user_id)
       .eq("is_active", true)
@@ -781,6 +790,10 @@ export async function linkLineCustomerAndConvertPendingOrders(input: {
 
   if (!customer) {
     return { error: "ไม่พบร้านค้าที่ต้องการผูก" };
+  }
+
+  if (!customer.default_warehouse_id) {
+    return { error: "ร้านค้านี้ยังไม่ได้ตั้งคลังประจำ กรุณาตั้งค่าคลังก่อนแปลงออเดอร์ LINE" };
   }
 
   if (existingLinkedCustomer && existingLinkedCustomer.id !== customer.id) {

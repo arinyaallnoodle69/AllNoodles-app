@@ -45,10 +45,19 @@ export function SupplierForm({
     initialState,
   );
   const [hasSubmitted, setHasSubmitted] = useState(false);
+  const [isClosing, setIsClosing] = useState(false);
   const hasSubmittedRef = useRef(false);
+  const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   function closeModal() {
-    router.replace(returnHref);
+    if (isClosing) return;
+    setIsClosing(true);
+    if (closeTimerRef.current) {
+      clearTimeout(closeTimerRef.current);
+    }
+    closeTimerRef.current = setTimeout(() => {
+      router.replace(returnHref);
+    }, 380);
   }
 
   const handleSuccess = useEffectEvent(() => {
@@ -64,11 +73,19 @@ export function SupplierForm({
     }
   }, [state.status]);
 
+  useEffect(() => {
+    return () => {
+      if (closeTimerRef.current) {
+        clearTimeout(closeTimerRef.current);
+      }
+    };
+  }, []);
+
   const showFeedback = hasSubmitted && state.status !== "idle";
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/45 p-3 sm:p-4">
-      <div className="flex max-h-[96dvh] w-full max-w-5xl flex-col overflow-hidden rounded-[1.75rem] border border-slate-200 bg-white shadow-[0_28px_80px_rgba(15,23,42,0.22)]">
+    <div className={`fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/45 p-3 sm:p-4 ${isClosing ? "animate-fade-out" : "animate-fade-in"}`}>
+      <div className={`flex max-h-[96dvh] w-full max-w-5xl flex-col overflow-hidden rounded-[1.75rem] border border-slate-200 bg-white shadow-[0_28px_80px_rgba(15,23,42,0.22)] ${isClosing ? "animate-slide-up-premium" : "animate-slide-down-premium"}`}>
         <div className="flex items-start justify-between gap-4 border-b border-slate-100 px-6 py-5">
           <div>
             <p className="text-xs font-medium uppercase tracking-[0.18em] text-slate-400">
@@ -76,9 +93,9 @@ export function SupplierForm({
             </p>
             <div className="mt-1 flex items-center gap-2 text-slate-950">
               {isEditMode ? (
-                <PencilLine className="h-6 w-6 text-[#003366]" strokeWidth={2.2} />
+                <PencilLine className="h-6 w-6 text-[#082A63]" strokeWidth={2.2} />
               ) : (
-                <CirclePlus className="h-6 w-6 text-[#003366]" strokeWidth={2.2} />
+                <CirclePlus className="h-6 w-6 text-[#082A63]" strokeWidth={2.2} />
               )}
               <h3 className="text-2xl font-semibold tracking-[-0.02em]">
                 {isEditMode ? initialSupplier?.name : "รายการผู้ขายใหม่"}
@@ -136,7 +153,7 @@ export function SupplierForm({
                       readOnly
                       defaultValue={initialSupplier?.code ?? defaultCode}
                       className={getInputClass(false)}
-                      placeholder="TYV001"
+                      placeholder="ANV001"
                     />
                     <p className="text-sm text-slate-500">
                       ระบบกำหนดรหัสผู้ขายให้อัตโนมัติตามลำดับถัดไป
@@ -178,7 +195,7 @@ export function SupplierForm({
             <button
               type="submit"
               disabled={isPending}
-              className="inline-flex items-center gap-2 rounded-xl bg-[#003366] px-5 py-3 text-sm font-medium text-white shadow-[0_12px_30px_rgba(0,51,102,0.22)] transition hover:bg-[#002244] disabled:cursor-not-allowed disabled:opacity-60"
+              className="inline-flex items-center gap-2 rounded-xl bg-[#082A63] px-5 py-3 text-sm font-medium text-white shadow-[0_12px_30px_rgba(8,42,99,0.22)] transition hover:bg-[#103B82] disabled:cursor-not-allowed disabled:opacity-60"
             >
               <Save className="h-4 w-4" strokeWidth={2.2} />
               บันทึกผู้ขาย

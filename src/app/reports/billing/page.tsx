@@ -8,6 +8,7 @@ import { ThaiDatePicker } from "@/components/ui/thai-date-picker";
 import { requireAppSession } from "@/lib/auth/authorization";
 import { getTodayInBangkok } from "@/lib/orders/date";
 import { getBillingReport } from "@/lib/reports/billing";
+import { getActiveWarehouses } from "@/lib/warehouses";
 import { PrintButton } from "../product-sales/print-button";
 import styles from "../product-sales/print.module.css";
 
@@ -21,6 +22,7 @@ type PageProps = {
   searchParams: Promise<{
     from?: string;
     to?: string;
+    warehouse?: string;
     page?: string;
   }>;
 };
@@ -75,16 +77,20 @@ export default async function Page({ searchParams }: PageProps) {
 }
 
 async function BillingContent({ searchParams }: PageProps) {
-  await requireAppSession();
+  const session = await requireAppSession();
   const sp = await searchParams;
 
   const today = getTodayInBangkok();
   const fromDate = sp.from || today;
   const toDate = sp.to || today;
+  const warehouseId = sp.warehouse || "";
   const pageParam = Number(sp.page) || 1;
   const safeCurrentPage = pageParam < 1 ? 1 : pageParam;
 
-  const report = await getBillingReport(fromDate, toDate);
+  const [report, warehouses] = await Promise.all([
+    getBillingReport(fromDate, toDate, warehouseId),
+    getActiveWarehouses(session.organizationId),
+  ]);
   const printedAt = formatPrintedAt(new Date());
 
   const itemsPerPage = BILLING_REPORT_ROWS_PER_PAGE;
@@ -101,11 +107,11 @@ async function BillingContent({ searchParams }: PageProps) {
         <div className="flex-1 space-y-4 p-4 print:hidden sm:p-6 md:space-y-6 md:p-8">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 shadow-sm">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#FAF7F2] text-[#082A63] shadow-sm">
                 <FileText className="h-6 w-6" />
               </div>
               <div>
-                <h1 className="text-2xl font-black text-[#003366] md:text-3xl">รายงานใบวางบิล</h1>
+                <h1 className="text-2xl font-black text-[#082A63] md:text-3xl">รายงานใบวางบิล</h1>
                 <p className="text-xs font-semibold text-slate-500 md:text-sm">
                   ข้อมูลสรุปการวางบิลแยกตามร้านค้า
                 </p>
@@ -122,6 +128,21 @@ async function BillingContent({ searchParams }: PageProps) {
 
           <MobileSearchDrawer title="ค้นหารายงานใบวางบิล">
             <form method="GET" action="/reports/billing" className="flex flex-col gap-4 pb-32">
+              <div className="space-y-1.5">
+                <label className="ml-1 text-[12px] font-black uppercase tracking-widest text-slate-500">คลังสินค้า</label>
+                <select
+                  name="warehouse"
+                  defaultValue={warehouseId}
+                  className="h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 outline-none focus:border-[#082A63]"
+                >
+                  <option value="">ทุกคลังสินค้า</option>
+                  {warehouses.map((w) => (
+                    <option key={w.id} value={w.id}>
+                      {w.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
               <div>
                 <label className="mb-1.5 block text-xs font-bold uppercase tracking-widest text-slate-500">ช่วงวันที่</label>
                 <div className="flex items-center gap-2">
@@ -134,7 +155,7 @@ async function BillingContent({ searchParams }: PageProps) {
                   </div>
                 </div>
               </div>
-              <button type="submit" className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#003366] py-3.5 text-base font-bold text-white transition hover:bg-[#002244]">
+              <button type="submit" className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#082A63] py-3.5 text-base font-bold text-white transition hover:bg-[#103B82]">
                 <Filter className="h-4 w-4" strokeWidth={2} />
                 ค้นหา
               </button>
@@ -145,6 +166,21 @@ async function BillingContent({ searchParams }: PageProps) {
             <form action="/reports/billing" method="get">
               <div className="flex flex-wrap items-end gap-3">
                 <div className="w-[180px]">
+                  <label className="mb-1 block text-xs font-bold text-slate-500">คลังสินค้า</label>
+                  <select
+                    name="warehouse"
+                    defaultValue={warehouseId}
+                    className="h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 outline-none focus:border-[#082A63]"
+                  >
+                    <option value="">ทุกคลังสินค้า</option>
+                    {warehouses.map((w) => (
+                      <option key={w.id} value={w.id}>
+                        {w.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="w-[180px]">
                   <label className="mb-1 block text-xs font-bold text-slate-500">เริ่มวันที่</label>
                   <ThaiDatePicker id="from" name="from" defaultValue={fromDate} />
                 </div>
@@ -154,7 +190,7 @@ async function BillingContent({ searchParams }: PageProps) {
                 </div>
                 <button
                   type="submit"
-                  className="flex h-10 items-center gap-2 rounded-lg bg-[#003366] px-4 text-sm font-bold text-white shadow-sm transition hover:bg-[#002244] active:bg-[#001122]"
+                  className="flex h-10 items-center gap-2 rounded-lg bg-[#082A63] px-4 text-sm font-bold text-white shadow-sm transition hover:bg-[#103B82] active:bg-[#7A422D]"
                 >
                   <Filter className="h-4 w-4" />
                   ค้นหา
@@ -176,7 +212,7 @@ async function BillingContent({ searchParams }: PageProps) {
                       <col style={{ width: "20%" }} />
                     </colgroup>
                     <thead>
-                      <tr className="bg-[#003366]">
+                      <tr className="bg-[#082A63]">
                         {["#", "วันที่", "รหัสร้าน", "ชื่อร้าน", "จำนวนเงิน"].map((label, idx) => (
                           <th
                             key={label}
@@ -187,7 +223,7 @@ async function BillingContent({ searchParams }: PageProps) {
                         ))}
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-[#003366]/25">
+                    <tbody className="divide-y divide-[#082A63]/25">
                       {currentPageRows.map((row, index) => (
                         <tr key={row.id} className="odd:bg-white even:bg-slate-50/50">
                           <td className="px-0.5 py-1 text-center text-[10px] font-bold leading-tight text-slate-700 sm:px-1 sm:text-[10.5px] md:px-3 md:py-2 md:text-sm">
@@ -230,8 +266,8 @@ async function BillingContent({ searchParams }: PageProps) {
                 {totalPages > 1 ? (
                   <div className="mt-6 flex items-center justify-between border-t border-slate-100 p-4 pt-4 sm:p-0 sm:pt-4">
                     <Link
-                      href={`/reports/billing?from=${fromDate}&to=${toDate}&page=${safeCurrentPage - 1}`}
-                      className={`flex items-center gap-1 text-sm font-bold text-[#003366] transition ${safeCurrentPage === 1 ? "pointer-events-none opacity-30" : "hover:text-[#002244]"}`}
+                      href={`/reports/billing?from=${fromDate}&to=${toDate}&warehouse=${warehouseId}&page=${safeCurrentPage - 1}`}
+                      className={`flex items-center gap-1 text-sm font-bold text-[#082A63] transition ${safeCurrentPage === 1 ? "pointer-events-none opacity-30" : "hover:text-[#103B82]"}`}
                     >
                       <ChevronLeft className="h-4 w-4" />
                       ก่อนหน้า
@@ -240,8 +276,8 @@ async function BillingContent({ searchParams }: PageProps) {
                       หน้า {safeCurrentPage} / {totalPages}
                     </span>
                     <Link
-                      href={`/reports/billing?from=${fromDate}&to=${toDate}&page=${safeCurrentPage + 1}`}
-                      className={`flex items-center gap-1 text-sm font-bold text-[#003366] transition ${safeCurrentPage === totalPages ? "pointer-events-none opacity-30" : "hover:text-[#002244]"}`}
+                      href={`/reports/billing?from=${fromDate}&to=${toDate}&warehouse=${warehouseId}&page=${safeCurrentPage + 1}`}
+                      className={`flex items-center gap-1 text-sm font-bold text-[#082A63] transition ${safeCurrentPage === totalPages ? "pointer-events-none opacity-30" : "hover:text-[#103B82]"}`}
                     >
                       ถัดไป
                       <ChevronRight className="h-4 w-4" />
@@ -268,14 +304,14 @@ async function BillingContent({ searchParams }: PageProps) {
                   <div className="flex items-center gap-2">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
-                      src="/ty-noodles-logo-cropped.png"
-                      alt="T&Y Noodle"
+                      src="/brand/512x512.png"
+                      alt="All Noodles"
                       width={40}
                       height={40}
                       className="h-10 w-10 object-contain"
                     />
                     <div>
-                      <p className="text-sm leading-tight font-black text-[#003366]">T&Y Noodle</p>
+                      <p className="text-sm leading-tight font-black text-[#082A63]">All Noodles</p>
                       <p className="text-[10px] font-semibold text-slate-500">ระบบรายงานใบวางบิล</p>
                     </div>
                   </div>
@@ -285,7 +321,7 @@ async function BillingContent({ searchParams }: PageProps) {
                     <p>หน้า: {pageIndex + 1} / {pages.length}</p>
                   </div>
                 </div>
-                <p className="text-base font-black text-[#003366]">รายงานใบวางบิล</p>
+                <p className="text-base font-black text-[#082A63]">รายงานใบวางบิล</p>
                 <p className="text-xs font-semibold text-slate-600">
                   ช่วงวันที่ {formatDateThai(fromDate)} — {formatDateThai(toDate)}
                 </p>
@@ -300,7 +336,7 @@ async function BillingContent({ searchParams }: PageProps) {
                   <col style={{ width: "20%" }} />
                 </colgroup>
                 <thead>
-                  <tr className="bg-[#003366]">
+                  <tr className="bg-[#082A63]">
                     {["#", "วันที่", "รหัสร้าน", "ชื่อร้าน", "จำนวนเงิน"].map((label, idx) => (
                       <th
                         key={label}
@@ -340,7 +376,7 @@ async function BillingContent({ searchParams }: PageProps) {
                 ) : null}
               </table>
               <div className={styles.printFooter}>
-                พิมพ์จากระบบรายงานอัตโนมัติ (T&Y Noodle) - หน้า {pageIndex + 1} / {pages.length}
+                พิมพ์จากระบบรายงานอัตโนมัติ (All Noodles) - หน้า {pageIndex + 1} / {pages.length}
               </div>
             </div>
           ))}

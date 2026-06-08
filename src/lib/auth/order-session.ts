@@ -4,7 +4,7 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 import { cookies } from "next/headers";
 import { getSessionSecret } from "@/lib/supabase/env";
 
-export const ORDER_CUSTOMER_SESSION_COOKIE = "tynoodle_order_session";
+export const ORDER_CUSTOMER_SESSION_COOKIE = "allnoodles_order_session";
 const ORDER_CUSTOMER_SESSION_TTL_MS = 1000 * 60 * 60 * 24 * 30; // 30 days
 
 export type OrderCustomerSessionPayload = {

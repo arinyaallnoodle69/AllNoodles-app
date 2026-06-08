@@ -92,7 +92,7 @@ export function BillingDashboardClient({
     <div className="mx-auto max-w-7xl px-0 md:px-4 py-6 sm:px-8 sm:py-10">
       <header className="mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4 px-4 md:px-0">
         <div className="flex items-center gap-4">
-          <div className="flex h-14 w-14 items-center justify-center bg-[#003366] text-white shadow-xl shadow-[#003366]/20">
+          <div className="flex h-14 w-14 items-center justify-center bg-[#082A63] text-white shadow-xl shadow-[#082A63]/20">
             <Receipt className="h-7 w-7" strokeWidth={2.2} />
           </div>
           <div>
@@ -108,7 +108,7 @@ export function BillingDashboardClient({
           onClick={() => setCurrentTab("create")}
           className={`flex-1 text-center px-2 md:px-8 py-4 text-sm md:text-base font-bold transition-all border-b-4 ${
             currentTab === "create"
-              ? "border-[#003366] text-[#003366]"
+              ? "border-[#082A63] text-[#082A63]"
               : "border-transparent text-slate-400 hover:text-slate-600"
           }`}
         >
@@ -118,7 +118,7 @@ export function BillingDashboardClient({
           onClick={() => setCurrentTab("history")}
           className={`flex-1 text-center px-2 md:px-8 py-4 text-sm md:text-base font-bold transition-all border-b-4 ${
             currentTab === "history"
-              ? "border-[#003366] text-[#003366]"
+              ? "border-[#082A63] text-[#082A63]"
               : "border-transparent text-slate-400 hover:text-slate-600"
           }`}
         >
@@ -142,7 +142,7 @@ export function BillingDashboardClient({
           <section className="space-y-8">
             <div className="flex flex-wrap items-end justify-between gap-6 px-4 md:px-0">
               <div className="flex items-center gap-3">
-                <div className="h-8 w-1.5 rounded-full bg-[#003366]" />
+                <div className="h-8 w-1.5 rounded-full bg-[#082A63]" />
                 <div>
                   <h2 className="text-xl font-extrabold text-slate-900">ค้นหาประวัติ</h2>
                 </div>
@@ -152,7 +152,7 @@ export function BillingDashboardClient({
                   <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-emerald-600">
                     รวมรายการที่ค้นพบ {history.length} ฉบับ
                   </p>
-                  <p className="font-mono text-xl font-extrabold tabular-nums text-[#003366]">
+                  <p className="font-mono text-xl font-extrabold tabular-nums text-[#082A63]">
                     {fmtBaht(totalBilled)}
                   </p>
                 </div>
@@ -174,7 +174,7 @@ export function BillingDashboardClient({
             <div className="min-h-[300px] px-4 md:px-0">
               {isLoadingHistory ? (
                 <div className="flex flex-col items-center justify-center py-24 text-center">
-                  <Loader2 className="h-10 w-10 animate-spin text-[#003366]" />
+                  <Loader2 className="h-10 w-10 animate-spin text-[#082A63]" />
                   <p className="mt-4 text-sm font-semibold text-slate-500">
                     กำลังดึงข้อมูลประวัติการวางบิลย้อนหลังแบบเรียลไทม์...
                   </p>

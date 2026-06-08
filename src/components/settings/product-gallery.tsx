@@ -41,7 +41,7 @@ export function ProductGallery({ images, name }: ProductGalleryProps) {
               onClick={() => setIndex(imageIndex)}
               className={`relative h-14 w-14 shrink-0 overflow-hidden rounded-2xl border ${
                 imageIndex === index
-                  ? "border-accent-500 shadow-[0_10px_20px_rgba(0,0,255,0.12)]"
+                  ? "border-accent-500 shadow-[0_10px_20px_rgba(4,53,106,0.12)]"
                   : "border-accent-100"
               }`}
             >

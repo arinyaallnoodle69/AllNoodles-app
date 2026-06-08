@@ -83,7 +83,7 @@ function toArrayBuffer(buffer: Buffer) {
 
 async function getReceiptAssets() {
   receiptAssetsPromise ??= Promise.all([
-    readFile(join(process.cwd(), "public", "ty-noodles-logo.png")),
+    readFile(join(process.cwd(), "public", "brand", "512x512.png")),
     readFile(join(process.cwd(), "public", "fonts", "NotoSansThai-Regular.ttf")),
     readFile(join(process.cwd(), "public", "fonts", "NotoSansThai-Bold.ttf")),
   ]).then(([logo, regularFont, boldFont]) => ({
@@ -126,7 +126,7 @@ function ReceiptImage({
       >
         {/* eslint-disable-next-line @next/next/no-img-element -- ImageResponse requires a plain image element. */}
         <img
-          alt="T&Y Noodle"
+          alt="All Noodles"
           height={56}
           src={logoDataUrl}
           style={{ height: 56, objectFit: "contain", width: 56 }}
@@ -144,7 +144,7 @@ function ReceiptImage({
         }}
       >
         <div style={{ fontSize: 12, lineHeight: 1.6 }}>
-          T&amp;Y Noodle - ใบยืนยันคำสั่งซื้อ
+          All Noodles - ใบยืนยันคำสั่งซื้อ
         </div>
         <div style={{ fontSize: 16, fontWeight: 800, lineHeight: 1.3, marginTop: 2 }}>
           {`เลขที่ออเดอร์: ${orderNumber}`}
@@ -224,7 +224,7 @@ function ReceiptImage({
         }}
       >
         <div style={{ fontSize: 14, fontWeight: 800, lineHeight: 1.6 }}>
-          T&amp;Y Noodle
+          All Noodles
         </div>
         <div style={{ fontSize: 13, lineHeight: 1.6, marginTop: 2 }}>
           ขอบคุณสำหรับการสนับสนุนครับ

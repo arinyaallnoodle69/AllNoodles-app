@@ -51,7 +51,7 @@ node -e "console.log(require('node:crypto').randomBytes(32).toString('hex'))"
 
 ```bash
 $env:SEED_ORGANIZATION_SLUG="ty-noodle"
-$env:SEED_ORGANIZATION_NAME="T&Y Noodles"
+$env:SEED_ORGANIZATION_NAME="All Noodles"
 $env:SEED_USER_DISPLAY_NAME="Owner"
 $env:SEED_USER_ROLE="admin"
 $env:SEED_USER_PIN="123456"

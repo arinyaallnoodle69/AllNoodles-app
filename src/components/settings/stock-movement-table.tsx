@@ -11,7 +11,8 @@ import {
   RefreshCw,
   Plus,
   Search,
-  FileText
+  FileText,
+  Warehouse,
 } from "lucide-react";
 import type { StockMovementRow } from "@/lib/stock/admin";
 import { fmtDateTH } from "@/lib/utils/date";
@@ -21,6 +22,13 @@ import { useMobileSearch } from "@/components/mobile-search/mobile-search-contex
 
 type StockMovementTableProps = {
   initialMovementRows: StockMovementRow[];
+  warehouses: StockWarehouseOption[];
+};
+
+type StockWarehouseOption = {
+  id: string;
+  name: string;
+  slug: string;
 };
 
 function formatQuantity(value: number) {
@@ -64,7 +72,7 @@ function getMovementIcon(movementType: string) {
 
 const LIMIT = 50;
 
-export function StockMovementTable({ initialMovementRows }: StockMovementTableProps) {
+export function StockMovementTable({ initialMovementRows, warehouses }: StockMovementTableProps) {
   const [allMovements, setAllMovements] = useState<StockMovementRow[]>(initialMovementRows);
   const [hasMore, setHasMore] = useState(initialMovementRows.length === LIMIT);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
@@ -74,7 +82,12 @@ export function StockMovementTable({ initialMovementRows }: StockMovementTablePr
   // Filtering states
   const [searchTerm, setSearchTerm] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
+  const [warehouseFilter, setWarehouseFilter] = useState("all");
   const { close: closeSearch } = useMobileSearch();
+  const warehouseNameMap = useMemo(
+    () => new Map(warehouses.map((warehouse) => [warehouse.id, warehouse.name])),
+    [warehouses],
+  );
 
   async function handleLoadMore() {
     if (isLoadingMore || !hasMore) return;
@@ -101,6 +114,9 @@ export function StockMovementTable({ initialMovementRows }: StockMovementTablePr
     if (typeFilter !== "all") {
       result = result.filter(m => m.movementType.toLowerCase() === typeFilter);
     }
+    if (warehouseFilter !== "all") {
+      result = result.filter(m => m.warehouseId === warehouseFilter);
+    }
     const q = searchTerm.toLowerCase().trim();
     if (q) {
       result = result.filter(m => 
@@ -110,7 +126,7 @@ export function StockMovementTable({ initialMovementRows }: StockMovementTablePr
       );
     }
     return result;
-  }, [allMovements, searchTerm, typeFilter]);
+  }, [allMovements, searchTerm, typeFilter, warehouseFilter]);
 
   const groupedMovements = useMemo(() => {
     const groups = new Map<string, StockMovementRow[]>();
@@ -166,6 +182,29 @@ export function StockMovementTable({ initialMovementRows }: StockMovementTablePr
             </div>
           </div>
 
+          <div className="space-y-1.5">
+            <label className="ml-1 text-[12px] font-black uppercase tracking-widest text-slate-500">คลังสินค้า</label>
+            <div className="grid grid-cols-1 gap-2">
+              {[
+                { id: "all", name: "ทุกคลัง" },
+                ...warehouses,
+              ].map((warehouse) => (
+                <button
+                  key={warehouse.id}
+                  onClick={() => setWarehouseFilter(warehouse.id)}
+                  className={`flex h-12 items-center justify-between rounded-xl border-2 px-4 text-sm font-black transition-all ${
+                    warehouseFilter === warehouse.id
+                      ? "border-[#082A63] bg-[#082A63] text-white"
+                      : "border-slate-200 bg-white text-slate-600"
+                  }`}
+                >
+                  <span>{warehouse.name}</span>
+                  <Warehouse className="h-4 w-4" strokeWidth={2.5} />
+                </button>
+              ))}
+            </div>
+          </div>
+
           <button
             onClick={closeSearch}
             className="mt-4 w-full h-14 rounded-2xl bg-[#0f172a] text-white font-black text-lg shadow-lg active:scale-95 transition-all"
@@ -198,6 +237,19 @@ export function StockMovementTable({ initialMovementRows }: StockMovementTablePr
             <option value="receipt">รับเข้า (Receipt)</option>
             <option value="issue">เบิกออก (Issue)</option>
             <option value="adjustment">ปรับปรุง (Adjustment)</option>
+          </select>
+
+          <select
+            value={warehouseFilter}
+            onChange={(e) => setWarehouseFilter(e.target.value)}
+            className="h-[36px] rounded bg-white border-2 border-slate-200 px-3 text-[13px] font-black text-[#0f172a] outline-none focus:ring-1 focus:ring-[#0f172a] cursor-pointer appearance-none pr-8 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmciIGZpbGw9Im5vbmUiIHZpZXdCb3g9IjAgMCAyNCAyNCIgc3Ryb2tlPSJjdXJyZW50Q29sb3IiIHN0cm9rZS13aWR0aD0iMyI+PHBhdGggc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIiBkPSJNMTkgOWwtNyA3LTctNyIvPjwvc3ZnPg==')] bg-[length:14px] bg-[right_10px_center] bg-no-repeat"
+          >
+            <option value="all">คลัง: ทุกคลัง</option>
+            {warehouses.map((warehouse) => (
+              <option key={warehouse.id} value={warehouse.id}>
+                คลัง: {warehouse.name}
+              </option>
+            ))}
           </select>
         </div>
         
@@ -249,12 +301,16 @@ export function StockMovementTable({ initialMovementRows }: StockMovementTablePr
                         <span className="font-mono text-slate-500 mr-1.5">{m.sku}</span>
                         <span>- {m.productName}</span>
                       </h4>
+                      <p className="mt-1 inline-flex items-center gap-1 rounded-full bg-[#FAF7F2] px-2 py-0.5 text-[10px] font-black text-[#082A63]">
+                        <Warehouse className="h-3 w-3" strokeWidth={2.4} />
+                        {m.warehouseId ? (warehouseNameMap.get(m.warehouseId) ?? "คลังสินค้า") : "ยังไม่ระบุคลัง"}
+                      </p>
                     </div>
 
                     <div className="flex items-center justify-between pt-2 border-t-2 border-slate-100">
                       <div className="min-w-0 flex items-center gap-2">
                         <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest shrink-0 whitespace-nowrap">REF:</span>
-                        <span className="text-[12px] font-black text-blue-600 underline decoration-2 decoration-blue-50 truncate">
+                        <span className="text-[12px] font-black text-[#082A63] underline decoration-2 decoration-[#FAF7F2] truncate">
                           {m.referenceNumber || m.notes || "-"}
                         </span>
                       </div>
@@ -307,9 +363,13 @@ export function StockMovementTable({ initialMovementRows }: StockMovementTablePr
                     <div className="text-[11px] text-slate-400 font-bold leading-none mt-0.5 whitespace-nowrap">{formatMovementTime(m.createdAt)}</div>
                   </td>
                   <td className="py-3 px-4 border-l border-slate-100">
-                    <div className="font-black text-[#0f172a] text-[15px] group-hover:text-blue-700 transition-colors leading-tight">
+                    <div className="font-black text-[#0f172a] text-[15px] group-hover:text-[#082A63] transition-colors leading-tight">
                       <span className="font-mono text-slate-500 mr-2 uppercase tracking-tight whitespace-nowrap">{m.sku}</span>
                       <span className="whitespace-normal break-words">- {m.productName}</span>
+                    </div>
+                    <div className="mt-1 inline-flex items-center gap-1 rounded-full bg-[#FAF7F2] px-2 py-0.5 text-[10px] font-black text-[#082A63]">
+                      <Warehouse className="h-3 w-3" strokeWidth={2.4} />
+                      {m.warehouseId ? (warehouseNameMap.get(m.warehouseId) ?? "คลังสินค้า") : "ยังไม่ระบุคลัง"}
                     </div>
                   </td>
                   <td className="py-3 px-4 text-center border-l border-slate-100">
@@ -324,7 +384,7 @@ export function StockMovementTable({ initialMovementRows }: StockMovementTablePr
                     {formatQuantity(m.stockAfter)}
                   </td>
                   <td className="py-3 px-4 border-l border-slate-100">
-                    <span className="text-blue-600 hover:text-blue-800 font-black cursor-default underline decoration-2 decoration-blue-50 transition-colors whitespace-normal break-all line-clamp-2">
+                    <span className="text-[#082A63] hover:text-[#103B82] font-black cursor-default underline decoration-2 decoration-[#FAF7F2] transition-colors whitespace-normal break-all line-clamp-2">
                       {m.referenceNumber || m.notes || "-"}
                     </span>
                   </td>
@@ -361,7 +421,7 @@ export function StockMovementTable({ initialMovementRows }: StockMovementTablePr
       </div>
 
       {/* Load More Section */}
-      {hasMore && filteredMovements.length > 0 && searchTerm === "" && typeFilter === "all" && (
+      {hasMore && filteredMovements.length > 0 && searchTerm === "" && typeFilter === "all" && warehouseFilter === "all" && (
         <div className="mt-6 text-center pb-10">
           <button 
             onClick={handleLoadMore}
@@ -383,7 +443,7 @@ export function StockMovementTable({ initialMovementRows }: StockMovementTablePr
         </div>
       )}
       
-      {!hasMore && allMovements.length > 0 && searchTerm === "" && typeFilter === "all" && (
+      {!hasMore && allMovements.length > 0 && searchTerm === "" && typeFilter === "all" && warehouseFilter === "all" && (
         <div className="mt-8 text-center pb-8 text-slate-500 text-[10px] font-black uppercase tracking-[0.2em] py-3 border-t-2 border-slate-300 whitespace-nowrap bg-slate-50/50">
           — สิ้นสุดรายการ —
         </div>

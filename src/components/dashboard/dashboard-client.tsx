@@ -20,6 +20,7 @@ import {
   Truck,
   UserRound,
   Wallet,
+  Warehouse,
   X,
 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -39,6 +40,11 @@ type Props = {
   storeStatusSummary: OrderStoreStatusSummary;
   stockProducts: StockProductOption[];
   stockSuppliers: StockSupplierOption[];
+  stockWarehouses: {
+    id: string;
+    name: string;
+    slug: string;
+  }[];
   today: string;
   orderDate: string;
   expandedDetail: OrderDetailData | null;
@@ -85,9 +91,9 @@ function DashboardStatCard({
 }) {
   const tone = {
     blue: {
-      value: "text-[#1746a2]",
-      badge: "bg-[#eef3ff] text-[#1746a2]",
-      ghost: "text-[#d7e0f2]",
+      value: "text-[#1F2A44]",
+      badge: "bg-[#F2E3AE] text-[#1F2A44]",
+      ghost: "text-[#eadfbe]",
     },
     green: {
       value: "text-[#10a760]",
@@ -126,7 +132,7 @@ function DashboardStatCard({
         >
           {icon}
         </div>
-        <span className="min-w-0 whitespace-nowrap text-[12.5px] font-bold leading-none text-[#111111] sm:text-[13px] md:text-base">
+        <span className="min-w-0 whitespace-nowrap text-[12.5px] font-bold leading-none text-[#1F2A44] sm:text-[13px] md:text-base">
           {title}
         </span>
       </div>
@@ -169,20 +175,7 @@ function toThaiLongDate(isoDate: string) {
   }).format(new Date(`${isoDate}T00:00:00+07:00`));
 }
 
-function formatRange(startIso: string | null, endIso: string | null) {
-  if (!startIso || !endIso) return "-";
-  const start = new Intl.DateTimeFormat("th-TH", {
-    day: "numeric",
-    month: "short",
-    timeZone: "Asia/Bangkok",
-  }).format(new Date(`${startIso}T00:00:00+07:00`));
-  const end = new Intl.DateTimeFormat("th-TH", {
-    day: "numeric",
-    month: "short",
-    timeZone: "Asia/Bangkok",
-  }).format(new Date(`${endIso}T00:00:00+07:00`));
-  return `${start} - ${end}`;
-}
+
 
 function formatThaiDateTime(value: string) {
   const date = new Date(value);
@@ -201,45 +194,14 @@ function formatThaiDateTime(value: string) {
   return `${datePart} ${timePart}`;
 }
 
-function formatYAxis(value: number) {
-  const rounded = Math.round(value / 500) * 500;
-  return rounded.toLocaleString("th-TH", { maximumFractionDigits: 0 });
-}
 
-function buildChartPoints(values: number[], width: number, height: number, padding: number, forcedMax?: number) {
-  if (values.length === 0) return [];
-  const max = forcedMax ?? Math.max(...values, 1);
-  const usableWidth = width - padding * 2;
-  const usableHeight = height - padding * 2;
-  const stepX = values.length === 1 ? 0 : usableWidth / (values.length - 1);
-
-  return values.map((value, index) => {
-    const x = padding + stepX * index;
-    const ratio = value / max;
-    const y = height - padding - ratio * usableHeight;
-    return { x, y };
-  });
-}
-
-function pointsToPath(points: { x: number; y: number }[]) {
-  if (points.length === 0) return "";
-  return points
-    .map((point, index) => `${index === 0 ? "M" : "L"} ${point.x.toFixed(2)} ${point.y.toFixed(2)}`)
-    .join(" ");
-}
-
-function areaToPath(points: { x: number; y: number }[], height: number, bottomPadding: number) {
-  if (points.length === 0) return "";
-  const first = points[0];
-  const last = points[points.length - 1];
-  return `${pointsToPath(points)} L ${last.x.toFixed(2)} ${(height - bottomPadding).toFixed(2)} L ${first.x.toFixed(2)} ${(height - bottomPadding).toFixed(2)} Z`;
-}
 
 export function DashboardClient({
   overview,
   storeStatusSummary,
   stockProducts,
   stockSuppliers,
+  stockWarehouses,
   today,
   orderDate,
   expandedDetail,
@@ -276,16 +238,24 @@ export function DashboardClient({
     }, 450);
   }
 
-  const [now, setNow] = useState(new Date());
+  const [now, setNow] = useState<Date | null>(null);
   const [prevSs, setPrevSs] = useState("");
 
   useEffect(() => {
-    const timer = setInterval(() => {
-      setPrevSs(String(now.getSeconds()).padStart(2, '0'));
-      setNow(new Date());
-    }, 1000);
+    const updateClock = () => {
+      const next = new Date();
+      setNow((current) => {
+        if (current) {
+          setPrevSs(String(current.getSeconds()).padStart(2, "0"));
+        }
+        return next;
+      });
+    };
+
+    updateClock();
+    const timer = setInterval(updateClock, 1000);
     return () => clearInterval(timer);
-  }, [now]);
+  }, []);
 
   const orderedStoreIds = useMemo(
     () => new Set(storeStatusSummary.orderedStores.map((store) => store.id)),
@@ -295,11 +265,7 @@ export function DashboardClient({
   const {
     kpi,
     dailyPerformanceRows,
-    dailyPerformanceRangeStartDate,
-    dailyPerformanceRangeEndDate,
     lineOrders,
-    topCustomers,
-    topProducts,
   } = overview;
 
   const fmtNumber = (value: number) => (value ?? 0).toLocaleString("th-TH");
@@ -308,6 +274,37 @@ export function DashboardClient({
       minimumFractionDigits: 0,
       maximumFractionDigits: 2,
     });
+
+  const warehouseSummaries = useMemo(() => {
+    return stockWarehouses.map((warehouse) => {
+      const summary = stockProducts.reduce(
+        (total, product) => {
+          const stock = product.warehouseStocks.find((item) => item.warehouseId === warehouse.id);
+          const onHandQuantity = stock?.onHandQuantity ?? 0;
+          const reservedQuantity = stock?.reservedQuantity ?? 0;
+          const availableQuantity = onHandQuantity - reservedQuantity;
+
+          return {
+            itemCount: total.itemCount + (onHandQuantity !== 0 || reservedQuantity !== 0 ? 1 : 0),
+            lowStockCount: total.lowStockCount + (product.isActive && availableQuantity <= 5 ? 1 : 0),
+            reservedQuantity: total.reservedQuantity + reservedQuantity,
+            stockValue: total.stockValue + onHandQuantity * product.costPrice,
+          };
+        },
+        {
+          itemCount: 0,
+          lowStockCount: 0,
+          reservedQuantity: 0,
+          stockValue: 0,
+        },
+      );
+
+      return {
+        ...warehouse,
+        ...summary,
+      };
+    });
+  }, [stockProducts, stockWarehouses]);
 
   async function openLineOrderDetail(orderId: string | null) {
     if (!orderId) {
@@ -346,54 +343,23 @@ export function DashboardClient({
     }
   }
 
-  const chartWidth = 400;
-  const chartHeight = 104;
-  const chartPaddingTop = 8;
-  const chartPaddingBottom = 16;
-  const chartRevenueValues = dailyPerformanceRows.map((row) => row.revenue);
-  const chartProfitValues = dailyPerformanceRows.map((row) => Math.max(row.profit, 0));
-  const commonMax = Math.max(...chartRevenueValues, ...chartProfitValues, 1);
-  const revenuePoints = buildChartPoints(
-    chartRevenueValues,
-    chartWidth,
-    chartHeight,
-    chartPaddingTop,
-    commonMax
-  );
-  const profitPoints = buildChartPoints(
-    chartProfitValues,
-    chartWidth,
-    chartHeight,
-    chartPaddingTop,
-    commonMax
-  );
-  const peakIndex =
-    chartRevenueValues.length > 0
-      ? chartRevenueValues.reduce(
-          (best, current, index, array) => (current > array[best] ? index : best),
-          0,
-        )
-      : -1;
-  const markerPoint = peakIndex >= 0 ? revenuePoints[peakIndex] : null;
-  const yAxisMax = Math.max(...chartRevenueValues, 0);
-  const yAxisMid = yAxisMax / 2;
   const dailySummaryRows = [...dailyPerformanceRows].reverse().slice(0, 7);
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] pb-24 font-apple-ui text-slate-800">
-      <header className="mx-auto mb-6 max-w-7xl px-5 pt-8">
+    <div className="min-h-screen bg-white pb-24 font-apple-ui text-slate-800">
+      <header className="relative mx-auto mb-6 max-w-7xl overflow-hidden px-5 pt-8">
         <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
           <div>
             <div className="flex items-center gap-3">
-              <div className="relative h-14 w-14 shrink-0 overflow-hidden">
+              <div className="relative h-14 w-14 shrink-0 overflow-hidden bg-transparent">
                 <Image
-                  src="/ty-noodles-logo-cropped.png"
-                  alt="T&Y Noodles"
+                  src="/brand/512x512.png"
+                  alt="All Noodles"
                   fill
-                  className="object-contain"
+                  className="object-contain mix-blend-multiply"
                 />
               </div>
-              <h1 className="text-3xl font-black leading-tight tracking-tight text-[#002581] md:text-4xl">
+              <h1 className="text-3xl font-black leading-tight tracking-tight text-[#082A63] md:text-4xl">
                 ภาพรวมวันนี้
               </h1>
             </div>
@@ -442,18 +408,24 @@ export function DashboardClient({
               }
             `}</style>
             <p className="mt-1 text-[14px] font-bold text-slate-400 md:text-base flex items-center">
-              สวัสดี T&Y Noodles • {toThaiLongDate(today)}
-              <span className="ml-1.5 tabular-nums">
-                {String(now.getHours()).padStart(2, '0')}:{String(now.getMinutes()).padStart(2, '0')}:
-              </span>
-              <span className="relative inline-block w-[2ch] h-[1em] overflow-hidden tabular-nums leading-none">
-                <span key={`prev-${prevSs}`} className="absolute left-0 top-0 animate-slide-up-out leading-none">
-                  {prevSs}
-                </span>
-                <span key={`curr-${String(now.getSeconds()).padStart(2, '0')}`} className="absolute left-0 top-0 animate-slide-up-in leading-none">
-                  {String(now.getSeconds()).padStart(2, '0')}
-                </span>
-              </span>
+              สวัสดี All Noodles • {toThaiLongDate(today)}
+              {now ? (
+                <>
+                  <span className="ml-1.5 tabular-nums">
+                    {String(now.getHours()).padStart(2, "0")}:{String(now.getMinutes()).padStart(2, "0")}:
+                  </span>
+                  <span className="relative inline-block h-[1em] w-[2ch] overflow-hidden tabular-nums leading-none">
+                    <span key={`prev-${prevSs}`} className="absolute left-0 top-0 animate-slide-up-out leading-none">
+                      {prevSs}
+                    </span>
+                    <span key={`curr-${String(now.getSeconds()).padStart(2, "0")}`} className="absolute left-0 top-0 animate-slide-up-in leading-none">
+                      {String(now.getSeconds()).padStart(2, "0")}
+                    </span>
+                  </span>
+                </>
+              ) : (
+                <span className="ml-1.5 tabular-nums">--:--:--</span>
+              )}
             </p>
           </div>
           <div className="hidden items-center gap-3 rounded-2xl border border-slate-100 bg-white px-4 py-2 shadow-sm md:flex">
@@ -468,7 +440,7 @@ export function DashboardClient({
           <div className="order-1 grid grid-cols-2 gap-4 xl:order-2 xl:col-span-4 xl:grid-cols-1">
             <button
               onClick={() => openCreateOrder()}
-              className="flex min-h-[4.25rem] flex-row items-center justify-center gap-3 rounded-[1rem] bg-[#0038b8] px-4 py-4 text-white shadow-[0_10px_24px_rgba(0,56,184,0.22)] transition-transform active:scale-95"
+              className="flex min-h-[4.25rem] flex-row items-center justify-center gap-3 rounded-[1rem] bg-[#082A63] px-4 py-4 text-white shadow-[0_10px_24px_rgba(8,42,99,0.22)] transition-transform active:scale-95"
             >
               <Phone className="h-5 w-5 shrink-0 rotate-90" fill="white" strokeWidth={0} />
               <span className="whitespace-nowrap text-base font-extrabold md:text-lg">
@@ -478,7 +450,7 @@ export function DashboardClient({
 
             <button
               onClick={() => setIsStockModalOpen(true)}
-              className="flex min-h-[4.25rem] flex-row items-center justify-center gap-3 rounded-[1rem] border border-[#d8f2df] bg-[#eefcf0] px-4 py-4 text-[#14a44d] shadow-[0_10px_24px_rgba(20,164,77,0.08)] transition-transform active:scale-95"
+              className="flex min-h-[4.25rem] flex-row items-center justify-center gap-3 rounded-[1rem] border border-[#D4AF37]/55 bg-[#F2E3AE] px-4 py-4 text-[#1F2A44] shadow-[0_10px_24px_rgba(212,175,55,0.16)] transition-transform active:scale-95"
             >
               <Truck className="h-5 w-5 shrink-0" strokeWidth={2.2} />
               <span className="whitespace-nowrap text-base font-extrabold md:text-lg">
@@ -496,9 +468,9 @@ export function DashboardClient({
                   stores: storeStatusSummary.allStores,
                 });
               }}
-              className="group flex w-full items-center gap-5 rounded-[1.35rem] border border-slate-200 bg-white p-5 text-left shadow-sm transition-all hover:border-[#002581]/30 hover:shadow-md active:scale-[0.99] md:p-7"
+              className="group flex w-full items-center gap-5 rounded-[1.35rem] border border-slate-200 bg-white p-5 text-left shadow-sm transition-all hover:border-[#082A63]/30 hover:shadow-md active:scale-[0.99] md:p-7"
             >
-              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-3xl bg-[#002581]/5 text-[#002581] transition-colors group-hover:bg-[#002581] group-hover:text-white md:h-20 md:w-20">
+              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-3xl bg-[#F2E3AE] text-[#1F2A44] transition-colors group-hover:bg-[#D4AF37] group-hover:text-[#1F2A44] md:h-20 md:w-20">
                 <Store className="h-7 w-7 md:h-10 md:w-10" strokeWidth={2} />
               </div>
               <div className="min-w-0 flex-1">
@@ -513,7 +485,7 @@ export function DashboardClient({
                 </div>
               </div>
               <ChevronRight
-                className="h-8 w-8 text-slate-200 transition-colors group-hover:text-[#002581]"
+                className="h-8 w-8 text-slate-200 transition-colors group-hover:text-[#082A63]"
                 strokeWidth={3}
               />
             </button>
@@ -640,96 +612,72 @@ export function DashboardClient({
           </Link>
         </section>
 
-        <div className="grid grid-cols-1 gap-8">
-          <section className="rounded-2xl border border-gray-50 bg-white p-4 shadow-sm">
-            <div className="mb-3">
-              <div className="flex flex-wrap items-center gap-2">
-                <h3 className="text-[15px] font-bold leading-none text-slate-800">
-                  กราฟเปรียบเทียบรายวัน
+        {warehouseSummaries.length > 0 ? (
+          <section className="rounded-[1.8rem] border border-[#E8DCC7] bg-white p-4 shadow-[0_18px_48px_rgba(4,53,106,0.08)] md:p-6">
+            <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-[11px] font-black uppercase tracking-[0.22em] text-[#082A63]/55">
+                  Warehouse summary
+                </p>
+                <h3 className="mt-1 text-xl font-black text-[#1F2A44] md:text-2xl">
+                  ภาพรวมสต็อคแยกตามคลัง
                 </h3>
-                <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-bold leading-none text-slate-500">
-                  7 วันล่าสุด
-                </span>
               </div>
-              <p className="mt-1 text-[11px] font-medium text-slate-500">
-                {formatRange(dailyPerformanceRangeStartDate, dailyPerformanceRangeEndDate)}
-              </p>
-              <div className="mt-1 flex flex-wrap items-center gap-2.5 text-[10px] font-medium text-slate-600">
-                <div className="flex items-center gap-1.5">
-                  <span className="h-0.5 w-4 rounded-full bg-blue-600" />
-                  <span>ยอดขายรายวัน</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <span className="h-0.5 w-4 border-t-2 border-dashed border-emerald-500" />
-                  <span>กำไรสุทธิรายวัน</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <span className="h-3 w-0.5 bg-[#F59E0B]" />
-                  <span>วันที่ยอดขายสูงสุด</span>
-                </div>
-              </div>
+              <Link
+                href="/stock"
+                className="inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-[#082A63] px-4 text-sm font-black text-white shadow-lg shadow-[#082A63]/20 transition active:scale-[0.98]"
+              >
+                ไปหน้าสต็อค
+                <ChevronRight className="h-4 w-4" strokeWidth={3} />
+              </Link>
             </div>
 
-            {dailyPerformanceRows.length > 0 ? (
-              <>
-                <div className="relative h-32 w-full pl-6">
-                  <svg
-                    className="h-full w-full overflow-visible"
-                    preserveAspectRatio="none"
-                    viewBox={`0 0 ${chartWidth} ${chartHeight}`}
-                  >
-                    {[0, 0.33, 0.66, 1].map((ratio) => {
-                      const y =
-                        chartHeight -
-                        chartPaddingBottom -
-                        (chartHeight - chartPaddingTop - chartPaddingBottom) * ratio;
-                      return <line key={ratio} x1="0" x2={chartWidth} y1={y} y2={y} stroke="#F1F5F9" />;
-                    })}
-
-                    <path
-                      d={areaToPath(revenuePoints, chartHeight, chartPaddingBottom)}
-                      fill="rgba(59,130,246,0.18)"
-                    />
-                    <path d={pointsToPath(revenuePoints)} fill="none" stroke="#1D4ED8" strokeWidth="2" />
-                    <path
-                      d={pointsToPath(profitPoints)}
-                      fill="none"
-                      stroke="#10B981"
-                      strokeDasharray="4"
-                      strokeWidth="2"
-                    />
-
-                    {markerPoint ? (
-                      <line
-                        x1={markerPoint.x}
-                        x2={markerPoint.x}
-                        y1={chartPaddingTop}
-                        y2={chartHeight - chartPaddingBottom}
-                        stroke="#F59E0B"
-                        strokeWidth="2"
-                      />
-                    ) : null}
-                  </svg>
-
-                  <div className="absolute left-0 top-0 flex h-full flex-col justify-between text-[8px] font-medium text-gray-400">
-                    <span>{formatYAxis(yAxisMax)}</span>
-                    <span>{formatYAxis(yAxisMid)}</span>
-                    <span>0</span>
+            <div className="grid gap-3 md:grid-cols-2">
+              {warehouseSummaries.map((warehouse) => (
+                <Link
+                  key={warehouse.id}
+                  href={`/stock?warehouse=${warehouse.id}`}
+                  className="group overflow-hidden rounded-[1.5rem] border border-[#F2E3AE]/70 bg-gradient-to-br from-[#FAF7F2] via-white to-[#F2E3AE] p-4 transition hover:border-[#103B82]/30 hover:shadow-xl hover:shadow-[#082A63]/10 active:scale-[0.99] md:p-5"
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-[#082A63] text-white shadow-lg shadow-[#082A63]/20">
+                        <Warehouse className="h-7 w-7" strokeWidth={2.3} />
+                      </div>
+                      <div>
+                        <h4 className="text-xl font-black text-[#1F2A44] md:text-2xl">
+                          {warehouse.name}
+                        </h4>
+                        <p className="mt-1 text-xs font-bold uppercase tracking-widest text-slate-400">
+                          {warehouse.slug}
+                        </p>
+                      </div>
+                    </div>
+                    <ChevronRight className="mt-2 h-5 w-5 text-[#082A63] transition group-hover:translate-x-1" strokeWidth={3} />
                   </div>
-                </div>
 
-                <div className="mt-2 flex justify-between pl-6 pr-1 text-[8px] font-medium text-gray-500">
-                  {dailyPerformanceRows.map((row) => (
-                    <span key={row.isoDate}>{row.monthLabel}</span>
-                  ))}
-                </div>
-              </>
-            ) : (
-              <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-10 text-center text-sm font-bold text-slate-400">
-                ยังไม่มีข้อมูลกราฟรายวัน
-              </div>
-            )}
+                  <div className="mt-5 grid grid-cols-3 gap-2">
+                    <div className="rounded-2xl bg-white/85 px-3 py-3">
+                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">สินค้า</p>
+                      <p className="mt-1 text-2xl font-black text-[#1F2A44]">{fmtNumber(warehouse.itemCount)}</p>
+                    </div>
+                    <div className="rounded-2xl bg-white/85 px-3 py-3">
+                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">ใกล้หมด</p>
+                      <p className="mt-1 text-2xl font-black text-[#ff7f11]">{fmtNumber(warehouse.lowStockCount)}</p>
+                    </div>
+                    <div className="rounded-2xl bg-white/85 px-3 py-3">
+                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">มูลค่า</p>
+                      <p className="mt-1 text-lg font-black text-[#082A63]">฿{fmtMoney(warehouse.stockValue)}</p>
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
           </section>
+        ) : null}
+
+        <div className="grid grid-cols-1 gap-8">
+
 
           <section className="rounded-[2rem] border border-slate-100 bg-white p-5 shadow-[0_8px_30px_rgb(0,0,0,0.02)] md:p-6">
             <div className="mb-4 flex flex-wrap items-center gap-2">
@@ -785,71 +733,7 @@ export function DashboardClient({
           </section>
         </div>
 
-        <div className="mb-12 grid grid-cols-1 gap-8 lg:grid-cols-2">
-          <section>
-            <h2 className="mb-6 px-2 text-2xl font-black tracking-tight text-slate-900">
-              สินค้าขายดี เดือนนี้
-            </h2>
-            <div className="flex flex-col gap-4">
-              {topProducts.map((product, idx) => (
-                <div
-                  key={product.productId}
-                  className="group flex items-center gap-5 rounded-[2rem] border border-slate-50 bg-white p-5 shadow-[0_8px_30px_rgb(0,0,0,0.02)] transition-shadow hover:shadow-md"
-                >
-                  <div className="relative flex h-16 w-16 items-center justify-center overflow-hidden rounded-3xl bg-slate-50 font-black text-2xl text-[#002581] transition-transform group-hover:scale-105 md:h-20 md:w-20">
-                    {product.imageUrl ? (
-                      <Image src={product.imageUrl} alt={product.productName} fill className="object-cover" />
-                    ) : (
-                      <ShoppingBag className="h-10 w-10 text-slate-200" />
-                    )}
-                    <div className="absolute left-0 top-0 flex h-6 w-6 items-center justify-center rounded-br-xl bg-[#002581] text-xs font-black text-white shadow-md">
-                      {idx + 1}
-                    </div>
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-lg font-black text-slate-800 md:text-xl">
-                      {product.productName}
-                    </p>
-                    <p className="mt-1 text-base font-black text-[#28A745]">
-                      ฿{fmtMoney(product.totalAmount)}
-                    </p>
-                  </div>
-                  <div className="hidden pr-4 md:block">
-                    <ChevronRight className="h-6 w-6 text-slate-100 transition-colors group-hover:text-slate-300" />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </section>
 
-          <section>
-            <h2 className="mb-6 px-2 text-2xl font-black tracking-tight text-slate-900">
-              ลูกค้าชั้นนำ เดือนนี้
-            </h2>
-            <div className="flex flex-col gap-4">
-              {topCustomers.map((customer, idx) => (
-                <div
-                  key={customer.customerId}
-                  className="group flex items-center gap-5 rounded-[2rem] border border-slate-50 bg-white p-5 shadow-[0_8px_30px_rgb(0,0,0,0.02)] transition-shadow hover:shadow-md"
-                >
-                  <div className="flex h-14 w-14 items-center justify-center rounded-[1.5rem] bg-blue-50 text-2xl font-black text-[#002581] transition-all group-hover:bg-[#002581] group-hover:text-white md:h-16 md:w-16">
-                    {idx + 1}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-lg font-black text-slate-800 md:text-xl">
-                      {customer.customerName}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-xl font-black text-[#002581] md:text-2xl">
-                      ฿{fmtMoney(customer.totalAmount)}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </section>
-        </div>
       </main>
 
       {viewingStores || isViewingStoresClosing ? (
@@ -870,7 +754,7 @@ export function DashboardClient({
             </div>
             <div className="mb-8 flex items-center justify-between px-8">
               <div>
-                <h3 className="text-2xl font-black tracking-tight text-[#001E5D]">
+                <h3 className="text-2xl font-black tracking-tight text-[#1F2A44]">
                   {viewingStores?.title}
                 </h3>
                 <p className="mt-1 text-xs font-bold uppercase tracking-widest text-slate-400">
@@ -897,7 +781,7 @@ export function DashboardClient({
                 <div className="relative">
                   {isNavigating ? (
                     <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/60 backdrop-blur-[1px]">
-                      <Loader2 className="h-10 w-10 animate-spin text-[#001E5D]" strokeWidth={3} />
+                      <Loader2 className="h-10 w-10 animate-spin text-[#1F2A44]" strokeWidth={3} />
                     </div>
                   ) : null}
                   {viewingStores.stores.map((store) => {
@@ -922,7 +806,7 @@ export function DashboardClient({
                         className="group flex w-full items-center gap-5 border-b border-slate-100 bg-white px-6 py-6 text-left transition-colors hover:bg-slate-50 disabled:opacity-50"
                         disabled={isNavigating}
                       >
-                        <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-slate-50 text-[#001E5D] shadow-sm transition-all group-hover:bg-[#001E5D] group-hover:text-white">
+                        <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-slate-50 text-[#1F2A44] shadow-sm transition-all group-hover:bg-[#1F2A44] group-hover:text-white">
                           <Store className="h-7 w-7" />
                         </div>
                         <div className="min-w-0 flex-1">
@@ -945,7 +829,7 @@ export function DashboardClient({
                           </div>
                         </div>
                         <ChevronRight
-                          className="h-6 w-6 text-slate-200 transition-all group-hover:translate-x-1 group-hover:text-[#001E5D]"
+                          className="h-6 w-6 text-slate-200 transition-all group-hover:translate-x-1 group-hover:text-[#1F2A44]"
                           strokeWidth={3}
                         />
                       </button>
@@ -1062,7 +946,7 @@ export function DashboardClient({
                               {order.orderNumber ? (
                                 <>
                                   <span className="text-slate-300">•</span>
-                                  <span className="text-[#003366]">{order.orderNumber}</span>
+                                  <span className="text-[#082A63]">{order.orderNumber}</span>
                                 </>
                               ) : null}
                             </div>
@@ -1101,6 +985,7 @@ export function DashboardClient({
         <StockReceiveForm
           products={stockProducts}
           suppliers={stockSuppliers}
+          warehouses={stockWarehouses}
           returnHref="/dashboard"
           onClose={() => setIsStockModalOpen(false)}
         />

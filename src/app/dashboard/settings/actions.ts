@@ -101,7 +101,7 @@ function parseSaleUnits(formData: FormData, fallbackBaseUnit: string) {
 
 function getNextProductSku(skus: string[]) {
   const maxSequence = skus.reduce((max, sku) => {
-    const match = /^TYN(\d+)$/i.exec(sku.trim());
+    const match = /^ANP(\d+)$/i.exec(sku.trim());
 
     if (!match) {
       return max;
@@ -111,7 +111,7 @@ function getNextProductSku(skus: string[]) {
     return Number.isFinite(sequence) ? Math.max(max, sequence) : max;
   }, 0);
 
-  return `TYN${String(maxSequence + 1).padStart(3, "0")}`;
+  return `ANP${String(maxSequence + 1).padStart(3, "0")}`;
 }
 
 async function generateProductSku(organizationId: string) {

@@ -1,7 +1,7 @@
 import type { CSSProperties } from "react";
 import { bahtText } from "@/lib/format/baht-text";
 
-export const PRINT_ORGANIZATION_NAME = "เส้นรังนก (T&Y Noodle)";
+export const PRINT_ORGANIZATION_NAME = "AllNoodles";
 export const SHEET_WIDTH_MM = 228.6;
 export const SHEET_HEIGHT_MM = 279.4;
 export const HALF_SHEET_HEIGHT_MM = 139.7;
@@ -114,7 +114,7 @@ export function PrintDocHeader({
   orgPhone?: string | null;
   title: string;
   docNumber?: string;
-  docDate: string;
+  docDate?: string;
   pageLabel?: string;
   extraMeta?: RightMetaItem[];
   dividerStyle?: DividerStyle;
@@ -139,7 +139,7 @@ export function PrintDocHeader({
   return (
     <div style={headerStyle}>
       <div>
-        <p style={{ fontWeight: 800, fontSize: "13pt", color: hideOrgDetails ? "black" : "#1e3a5f", lineHeight: 1.2 }}>
+        <p style={{ fontWeight: 800, fontSize: "13pt", color: hideOrgDetails ? "black" : "#103B82", lineHeight: 1.2 }}>
           {orgName}
         </p>
         {!hideOrgDetails && orgAddress ? (
@@ -159,7 +159,7 @@ export function PrintDocHeader({
           pointerEvents: "none",
         }}
       >
-        <p style={{ fontSize: "16pt", fontWeight: 900, color: hideOrgDetails ? "black" : "#1e3a5f", letterSpacing: "0.05em" }}>
+        <p style={{ fontSize: "16pt", fontWeight: 900, color: hideOrgDetails ? "black" : "#103B82", letterSpacing: "0.05em" }}>
           {title}
         </p>
       </div>
@@ -171,17 +171,19 @@ export function PrintDocHeader({
             <span style={{ fontWeight: 850, fontFamily: "monospace" }}>{docNumber}</span>
           </p>
         ) : null}
-        <p
-          style={{
-            fontSize: docMetaFontSize,
-            color: "black",
-            lineHeight: 1.15,
-            marginTop: docNumber ? "2px" : undefined,
-          }}
-        >
-          <span style={{ color: "black", fontWeight: 800 }}>วันที่ </span>
-          <span style={{ fontWeight: 850 }}>{formatDate(docDate)}</span>
-        </p>
+        {docDate ? (
+          <p
+            style={{
+              fontSize: docMetaFontSize,
+              color: "black",
+              lineHeight: 1.15,
+              marginTop: docNumber ? "2px" : undefined,
+            }}
+          >
+            <span style={{ color: "black", fontWeight: 800 }}>วันที่ </span>
+            <span style={{ fontWeight: 850 }}>{formatDate(docDate)}</span>
+          </p>
+        ) : null}
         {extraMeta?.map((item) => (
           <p key={item.label} style={{ fontSize: "8.2pt", color: "black", marginTop: "2px" }}>
             <span style={{ color: "black", fontWeight: 800 }}>{item.label} </span>
@@ -198,23 +200,77 @@ export function PrintDocHeader({
 
 export function PrintCustomerRow({
   customer,
+  docNumber,
+  docDate,
+  docMetaFontSize = "11.8pt",
 }: {
   customer: { name: string; code: string; address: string };
+  docNumber?: string;
+  docDate?: string;
+  docMetaFontSize?: string;
 }) {
+  const displayAddress = (!customer.address || 
+                          customer.address.trim() === "" || 
+                          customer.address.toLowerCase().trim() === "unknown" || 
+                          customer.address.toLowerCase().trim() === "unknow") 
+                          ? "-" 
+                          : customer.address;
+
   return (
     <div style={{ marginBottom: "1.5mm", padding: "0" }}>
-      <div style={{ display: "flex", gap: "8px", alignItems: "baseline" }}>
+      <div style={{ display: "flex", gap: "8px", alignItems: "baseline", position: "relative" }}>
         <span style={{ fontSize: "13.5pt", color: "black", flexShrink: 0 }}>ลูกค้า</span>
         <span
           style={{ fontFamily: "monospace", fontSize: "13.5pt", color: "black", fontWeight: 700 }}
         >
           {customer.code}
         </span>
-        <span style={{ fontWeight: 700, fontSize: "13.5pt", color: "black" }}>{customer.name}</span>
+        <span
+          style={{
+            fontWeight: 700,
+            fontSize: "13.5pt",
+            color: "black",
+            maxWidth: "48%",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+          }}
+        >
+          {customer.name}
+        </span>
+
+        {docNumber || docDate ? (
+          <div
+            style={{
+              position: "absolute",
+              left: "52%",
+              top: "-1px",
+              whiteSpace: "nowrap",
+              fontSize: docMetaFontSize,
+              color: "black",
+              display: "flex",
+              flexDirection: "column",
+              gap: "2px",
+            }}
+          >
+            {docNumber ? (
+              <span style={{ lineHeight: 1.15 }}>
+                <strong style={{ fontWeight: 800 }}>เลขที่ </strong>
+                <span style={{ fontFamily: "monospace", fontWeight: 850 }}>{docNumber}</span>
+              </span>
+            ) : null}
+            {docDate ? (
+              <span style={{ lineHeight: 1.15 }}>
+                <strong style={{ fontWeight: 800 }}>วันที่ </strong>
+                <span style={{ fontWeight: 850 }}>{formatDate(docDate)}</span>
+              </span>
+            ) : null}
+          </div>
+        ) : null}
       </div>
       <div style={{ display: "flex", gap: "8px", alignItems: "baseline", marginTop: "1px" }}>
         <span style={{ fontSize: "10.5pt", color: "black", flexShrink: 0 }}>ที่อยู่</span>
-        <span style={{ fontSize: "10.5pt", color: "black" }}>{customer.address}</span>
+        <span style={{ fontSize: "10.5pt", color: "black", maxWidth: "48%" }}>{displayAddress}</span>
       </div>
     </div>
   );
@@ -300,14 +356,14 @@ export function PrintSignatureBlock({
       )}
       <div style={{ flex: 1, display: "flex", gap: "4mm" }}>
         <div style={{ flex: 1, textAlign: "center" }}>
-          <p style={{ fontSize: "8.8pt", fontWeight: 700, color: "#1e3a5f", marginBottom: "6mm" }}>
+          <p style={{ fontSize: "8.8pt", fontWeight: 700, color: "#103B82", marginBottom: "6mm" }}>
             {leftLabel}
           </p>
           <div style={signatureLineStyle} />
         </div>
         <div style={{ width: "1px", background: "#e2e8f0" }} />
         <div style={{ flex: 1, textAlign: "center" }}>
-          <p style={{ fontSize: "8.8pt", fontWeight: 700, color: "#1e3a5f", marginBottom: "6mm" }}>
+          <p style={{ fontSize: "8.8pt", fontWeight: 700, color: "#103B82", marginBottom: "6mm" }}>
             {rightLabel}
           </p>
           <div style={signatureLineStyle} />

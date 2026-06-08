@@ -19,14 +19,14 @@ Pre-PR checks: `npm run lint` + successful `npm run build` (no automated test su
 
 ## Architecture
 
-**T&YNoodle** is a Next.js 16 App Router PWA for a noodle distribution business. UI is in Thai (Sarabun + IBM Plex Mono + Instrument Sans via Google Fonts; LINE Seed Sans TH local fonts in `src/app/fonts/` used in print layouts). Uses Supabase (PostgreSQL + RLS), LINE LIFF for mobile integration, and Tailwind CSS 4. React Compiler is enabled. Offline support via `/offline` page and service worker.
+**AllNoodles** is a Next.js 16 App Router PWA for a noodle distribution business. UI is in Thai (Sarabun + IBM Plex Mono + Instrument Sans via Google Fonts; LINE Seed Sans TH local fonts in `src/app/fonts/` used in print layouts). Uses Supabase (PostgreSQL + RLS), LINE LIFF for mobile integration, and Tailwind CSS 4. React Compiler is enabled. Offline support via `/offline` page and service worker.
 
 ### Authentication
 
 Custom PIN-based auth — no Supabase Auth:
 - User enters 6-digit PIN → `src/app/login/actions.ts` calls `verifyPin()`
 - PIN hashed with scrypt + pepper (`LOGIN_PIN_PEPPER`) and compared against `pin_lookup` table
-- On success: HMAC-signed cookie (`tynoodle_session`) created via `src/lib/auth/session.ts`
+- On success: HMAC-signed cookie (`allnoodles_session`) created via `src/lib/auth/session.ts`
 - Session contains: user ID, display name, role (`admin | member`), org ID, expiry
 - Middleware in `src/proxy.ts` protects `/dashboard/:path*` via `updateSession()` in `src/lib/supabase/middleware.ts`
 - Use `requireAppSession()` from `src/lib/auth/authorization.ts` as an auth guard in server components/actions
@@ -86,7 +86,7 @@ Key routes:
 - `/reports/store-sales` — store-level sales ranking with revenue/profit/margin
 - `/reports/delivery-notes` — delivery note history and search
 - `/api/geography` — cascading province/district/subdistrict lookup from `thailand-geography.json` (used by address forms; responses are cached for 1 day)
-- `/api/order/session` — sets/reads the LIFF customer session cookie (`tynoodle_order_session`)
+- `/api/order/session` — sets/reads the LIFF customer session cookie (`allnoodles_order_session`)
 
 ### Route Protection
 
@@ -95,7 +95,7 @@ Middleware (`src/proxy.ts`) only runs on `/dashboard/:path*` and `/login`. All o
 ### LINE Integration
 
 Two distinct LINE integrations:
-- **LIFF** (`NEXT_PUBLIC_LIFF_ID`): wraps the `/order` route via `LiffProvider` — identifies customers by `line_user_id` from the LIFF context, no PIN required. Set `NEXT_PUBLIC_LIFF_MOCK=true` in `.env.local` to bypass real LINE auth during local dev — **must be unset or `false` in production**. After order submission, the order receipt card is rasterised with `html2canvas` (dynamically imported) and offered as a shareable image. The LIFF customer identity is persisted in a separate HMAC-signed cookie (`tynoodle_order_session`, 30-day TTL) via `src/lib/auth/order-session.ts` — distinct from the admin PIN session.
+- **LIFF** (`NEXT_PUBLIC_LIFF_ID`): wraps the `/order` route via `LiffProvider` — identifies customers by `line_user_id` from the LIFF context, no PIN required. Set `NEXT_PUBLIC_LIFF_MOCK=true` in `.env.local` to bypass real LINE auth during local dev — **must be unset or `false` in production**. After order submission, the order receipt card is rasterised with `html2canvas` (dynamically imported) and offered as a shareable image. The LIFF customer identity is persisted in a separate HMAC-signed cookie (`allnoodles_order_session`, 30-day TTL) via `src/lib/auth/order-session.ts` — distinct from the admin PIN session.
 - **Messaging API** (`LINE_CHANNEL_ACCESS_TOKEN` + `LINE_GROUP_ID`): `src/lib/line/notify.ts` pushes a Flex Message to a LINE group when a new order is submitted; both vars are optional — notification silently skips if unset
 - `/api/line/webhook` — utility endpoint to capture `LINE_GROUP_ID` when the OA bot joins a group (logs it to console)
 
@@ -174,6 +174,6 @@ The LIFF `/order` route enforces a configurable daily order window stored in `or
 | `src/lib/products/sale-unit-cost.ts` | `getEffectiveSaleUnitCost()` — derived vs fixed cost mode |
 | `src/lib/products/sort-by-category.ts` | `sortProductsByCategory()` — canonical product sort order |
 | `src/lib/orders/date.ts` | `getTodayInBangkok()` / `normalizeOrderDate()` — Bangkok-timezone date helpers |
-| `src/lib/auth/order-session.ts` | LIFF customer session (cookie `tynoodle_order_session`) — separate from admin PIN session |
+| `src/lib/auth/order-session.ts` | LIFF customer session (cookie `allnoodles_order_session`) — separate from admin PIN session |
 | `src/components/pricing/price-guard.ts` | `isBelowCostPrice()` / `confirmBelowCostSave()` — client-side below-cost price warning helpers used in pricing forms |
 | `src/components/page-loader.tsx` | `PageLoader` — animated loading indicator used in all `loading.tsx` files |

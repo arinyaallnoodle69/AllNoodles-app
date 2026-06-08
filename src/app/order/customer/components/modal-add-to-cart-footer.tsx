@@ -39,7 +39,7 @@ const ModalQuantityStepper = memo(function ModalQuantityStepper({
 
       <button
         onClick={onIncrease}
-        className="flex h-10 w-10 items-center justify-center rounded-lg bg-white text-[#003366] shadow-md transition-all active:scale-95 touch-manipulation hover:bg-white/90"
+        className="flex h-10 w-10 items-center justify-center rounded-lg bg-white text-[#082A63] shadow-md transition-all active:scale-95 touch-manipulation hover:bg-white/90"
         aria-label="increase quantity"
       >
         <Plus className="h-4.5 w-4.5" strokeWidth={3} />
@@ -167,7 +167,7 @@ export const ModalAddToCartFooter = memo(function ModalAddToCartFooter({
   }, [isOrderOpen, modalCartBtnRef, modalStepperRef, onAddToCart, onCloseModal, pendingQty, primaryImageUrl, productId]);
 
   return (
-    <div className="z-30 border-t border-white/10 bg-[#003366] px-4 pb-[max(0.6rem,env(safe-area-inset-bottom))] pt-2.5 shadow-[0_-10px_40px_rgba(0,0,0,0.3)]">
+    <div className="z-30 border-t border-white/10 bg-[#082A63] px-4 pb-[max(0.6rem,env(safe-area-inset-bottom))] pt-2.5 shadow-[0_-10px_40px_rgba(0,0,0,0.3)]">
       <div className="mx-auto max-w-lg flex flex-row items-center gap-3">
         {/* Quantity Stepper Line */}
         <div ref={modalStepperRef} className="flex-shrink-0">
@@ -187,7 +187,7 @@ export const ModalAddToCartFooter = memo(function ModalAddToCartFooter({
             !isOrderOpen
               ? "bg-white/10 text-white/30 cursor-not-allowed"
               : pendingQty > 0
-                ? "bg-white text-[#003366] shadow-[0_8px_20px_rgba(255,255,255,0.15)] hover:bg-white/95"
+                ? "bg-gradient-to-r from-[#C5A059] to-[#E5C158] text-[#082A63] shadow-[0_8px_20px_rgba(197,160,89,0.25)]"
                 : "bg-white/10 text-white/40 cursor-not-allowed"
           }`}
         >

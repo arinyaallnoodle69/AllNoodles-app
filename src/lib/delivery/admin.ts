@@ -1,5 +1,6 @@
 import "server-only";
 
+import { createWarehouseStockMap, getProductWarehouseStockSnapshots } from "@/lib/stock/warehouse-stocks";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -93,6 +94,7 @@ type RawOrderRow = {
   order_number: string;
   order_date: string;
   customer_id: string;
+  warehouse_id: string | null;
   customers: {
     name: string;
     customer_code: string;
@@ -285,7 +287,7 @@ export async function getOrderItemsForDelivery(
   // 1. Order header
   const { data: orderRow, error: orderError } = await supabase
     .from("orders")
-    .select("id, order_number, order_date, customer_id, customers!inner(name, customer_code)")
+    .select("id, order_number, order_date, customer_id, warehouse_id, customers!inner(name, customer_code)")
     .eq("id", orderId)
     .eq("organization_id", organizationId)
     .single();
@@ -310,6 +312,12 @@ export async function getOrderItemsForDelivery(
 
   // 3. First product image per product
   const productIds = [...new Set((itemRows as RawOrderItemRow[]).map((r) => r.product_id))];
+  const warehouseStocks = await getProductWarehouseStockSnapshots(
+    organizationId,
+    productIds,
+    order.warehouse_id,
+  );
+  const warehouseStockMap = createWarehouseStockMap(warehouseStocks);
   const imageMap = new Map<string, string>();
   if (productIds.length > 0) {
     const { data: imgRows } = await supabase
@@ -344,8 +352,9 @@ export async function getOrderItemsForDelivery(
     const orderedBaseQty = toNum(row.quantity_in_base_unit) || toNum(row.quantity) * saleUnitRatio;
     const deliveredBaseQty = deliveredMap.get(row.id) ?? 0;
     const remainingBaseQty = Math.max(0, orderedBaseQty - deliveredBaseQty);
-    const stockQty = toNum(row.products.stock_quantity);
-    const reservedQty = toNum(row.products.reserved_quantity);
+    const stockSnapshot = warehouseStockMap.get(row.product_id)?.[0];
+    const stockQty = stockSnapshot?.stockQuantity ?? toNum(row.products.stock_quantity);
+    const reservedQty = stockSnapshot?.reservedQuantity ?? toNum(row.products.reserved_quantity);
     const availableStock = Math.max(0, stockQty - reservedQty);
 
     return {

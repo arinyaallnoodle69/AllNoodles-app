@@ -1,6 +1,7 @@
 import { requireAnyRole } from "@/lib/auth/authorization";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { getDeliveryNotePrintData, type DeliveryNotePrintData } from "@/lib/delivery/print";
+import { sortDeliveryPrintDataByCustomerOrder } from "@/lib/delivery/print-ordering";
 import { DeliveryNoteLayout } from "@/components/print/delivery-note-layout";
 import { PrintButton } from "./print-button";
 
@@ -31,7 +32,7 @@ export default async function DeliveryNotePreviewPage({ searchParams }: Props) {
     return (
       <div className="p-10 text-center">
         <p className="text-lg font-bold text-slate-900">ไม่มีข้อมูลสำหรับพิมพ์</p>
-        <a href="/orders/incoming" className="mt-4 inline-block font-bold text-[#003366]">กลับหน้าออเดอร์</a>
+        <a href="/orders/incoming" className="mt-4 inline-block font-bold text-[#082A63]">กลับหน้าออเดอร์</a>
       </div>
     );
   }
@@ -54,7 +55,7 @@ export default async function DeliveryNotePreviewPage({ searchParams }: Props) {
         <div className="p-10 text-center">
           <p className="text-lg font-bold text-slate-900">ไม่พบใบส่งของสำหรับร้านที่เลือกในวันที่ {date}</p>
           <p className="mt-2 text-sm text-slate-500">โปรดยืนยันออเดอร์เพื่อสร้างใบส่งของก่อนพิมพ์</p>
-          <a href="/orders/incoming" className="mt-4 inline-block font-bold text-[#003366]">กลับหน้าออเดอร์</a>
+          <a href="/orders/incoming" className="mt-4 inline-block font-bold text-[#082A63]">กลับหน้าออเดอร์</a>
         </div>
       );
     }
@@ -66,13 +67,15 @@ export default async function DeliveryNotePreviewPage({ searchParams }: Props) {
     selectedNoteIds.map((id) => getDeliveryNotePrintData(session.organizationId, id)),
   );
 
-  const validPrintData = printDataResults.filter((data): data is DeliveryNotePrintData => data !== null);
+  const validPrintData = sortDeliveryPrintDataByCustomerOrder(
+    printDataResults.filter((data): data is DeliveryNotePrintData => data !== null),
+  );
 
   if (validPrintData.length === 0) {
     return (
       <div className="p-10 text-center">
         <p className="text-lg font-bold text-slate-900">ไม่สามารถโหลดข้อมูลการพิมพ์ได้</p>
-        <a href="/orders/incoming" className="mt-4 inline-block font-bold text-[#003366]">กลับหน้าออเดอร์</a>
+        <a href="/orders/incoming" className="mt-4 inline-block font-bold text-[#082A63]">กลับหน้าออเดอร์</a>
       </div>
     );
   }
@@ -80,7 +83,7 @@ export default async function DeliveryNotePreviewPage({ searchParams }: Props) {
   return (
     <>
       <div className="no-print sticky top-0 z-50 flex items-center gap-3 border-b bg-white p-4">
-        <div className="rounded-xl bg-[#003366]/10 px-4 py-2 text-sm font-bold text-[#003366]">
+        <div className="rounded-xl bg-[#082A63]/20 px-4 py-2 text-sm font-bold text-[#082A63]">
           พิมพ์ใบส่งของ - {validPrintData.length} ร้านค้า
         </div>
         <PrintButton />

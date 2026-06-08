@@ -31,7 +31,7 @@ export function AdminSettingsNav({ current }: AdminSettingsNavProps) {
             href={link.href}
             className={`rounded-3xl border px-5 py-5 shadow-[0_12px_32px_rgba(15,23,42,0.05)] transition ${
               active
-                ? "border-accent-500 bg-[linear-gradient(135deg,#f8fbff_0%,#eef4ff_100%)]"
+                ? "border-accent-500 bg-[linear-gradient(135deg,#FAF7F2_0%,#F8F1DD_100%)]"
                 : "border-slate-200 bg-white hover:border-accent-300 hover:bg-slate-50"
             }`}
           >

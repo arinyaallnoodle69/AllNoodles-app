@@ -4,7 +4,7 @@ function SkeletonBlock({ className }: { className: string }) {
 
 export function DashboardLoadingShell() {
   return (
-    <div className="min-h-screen bg-[#F8FAFC] pb-24 font-apple-ui text-slate-800">
+    <div className="min-h-screen bg-white pb-24 font-apple-ui text-slate-800">
       <header className="mx-auto mb-6 max-w-7xl px-5 pt-8">
         <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
           <div className="space-y-3">

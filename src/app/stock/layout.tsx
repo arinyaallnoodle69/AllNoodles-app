@@ -1,8 +1,7 @@
 "use client";
 
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { SettingsShell } from "@/components/settings/settings-shell";
-import { StockTabs } from "@/components/settings/stock-tabs";
 import { PackageCheck } from "lucide-react";
 
 export default function StockLayout({
@@ -11,12 +10,14 @@ export default function StockLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
 
-  // Determine current tab from pathname
+  // Determine current tab from searchParams or pathname
   let current: "stock" | "history" | "issues" = "stock";
-  if (pathname.includes("/stock/history")) current = "history";
-  else if (pathname.includes("/stock/issues")) current = "issues";
-  else if (pathname === "/stock") current = "stock";
+  const tabParam = searchParams.get("tab");
+  if (tabParam === "history" || pathname.includes("/stock/history")) current = "history";
+  else if (tabParam === "issues" || pathname.includes("/stock/issues")) current = "issues";
+  else current = "stock";
 
   // Dynamic description based on tab
   const descriptions = {
@@ -31,9 +32,9 @@ export default function StockLayout({
       description={descriptions[current]}
       floatingSubmit={false}
       titleIcon={PackageCheck}
+      hideHeader
     >
-      <StockTabs current={current} />
-      <div className="mt-8">
+      <div>
         {children}
       </div>
     </SettingsShell>

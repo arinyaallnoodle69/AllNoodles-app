@@ -1,7 +1,12 @@
-import Link from "next/link";
+"use client";
+
+import { useRouter } from "next/navigation";
+import { useState, useTransition } from "react";
+import { Loader2 } from "lucide-react";
 
 type StockTabsProps = {
   current: "stock" | "history" | "issues";
+  onChangeTab?: (key: "stock" | "history" | "issues") => void;
 };
 
 const tabs = [
@@ -22,25 +27,43 @@ const tabs = [
   },
 ] as const;
 
-export function StockTabs({ current }: StockTabsProps) {
+export function StockTabs({ current, onChangeTab }: StockTabsProps) {
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+  const [targetKey, setTargetKey] = useState<string | null>(null);
+
+  const handleTabClick = (href: string, key: "stock" | "history" | "issues") => {
+    if (onChangeTab) {
+      onChangeTab(key);
+    } else {
+      setTargetKey(key);
+      startTransition(() => {
+        router.push(href);
+      });
+    }
+  };
+
   return (
     <div className="mt-4 mb-6">
       <div className="grid grid-cols-3 rounded-xl bg-slate-100/80 p-1 backdrop-blur-sm border border-slate-200/50 shadow-sm">
         {tabs.map((tab) => {
           const isActive = current === tab.key;
+          const isLoading = isPending && targetKey === tab.key;
 
           return (
-            <Link
+            <button
               key={tab.href}
-              href={tab.href}
-              className={`rounded-lg px-1 py-2.5 text-center text-[11px] font-black transition-all duration-200 sm:px-4 sm:py-2.5 sm:text-sm ${
+              disabled={isPending}
+              onClick={() => handleTabClick(tab.href, tab.key)}
+              className={`rounded-lg px-1 py-2.5 text-center text-[11px] font-black transition-all duration-200 sm:px-4 sm:py-2.5 sm:text-sm flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-85 ${
                 isActive
-                  ? "bg-[#0051d5] text-white shadow-sm scale-[1.02]"
+                  ? "bg-[#082A63] text-white shadow-sm scale-[1.02]"
                   : "text-slate-600 hover:text-slate-900"
               }`}
             >
-              {tab.label}
-            </Link>
+              {isLoading && <Loader2 className="h-3 w-3 animate-spin text-[#082A63]" />}
+              <span>{tab.label}</span>
+            </button>
           );
         })}
       </div>

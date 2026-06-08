@@ -1,9 +1,9 @@
 import { ClipboardList, Search } from "lucide-react";
 import dynamic from "next/dynamic";
 import { SettingsShell } from "@/components/settings/settings-shell";
+import { MobileSearchDrawer } from "@/components/mobile-search/mobile-search-drawer";
 import { IncomingOrdersMobileList } from "@/components/orders/incoming-orders-mobile-list";
 import { IncomingOrderDateFilter } from "@/components/orders/incoming-order-date-filter";
-import { MobileSearchDrawer } from "@/components/mobile-search/mobile-search-drawer";
 import { OrderCustomerFilter } from "@/components/orders/order-customer-filter";
 import { requireAppRole } from "@/lib/auth/authorization";
 import { normalizeOrderDate, getTodayInBangkok } from "@/lib/orders/date";
@@ -13,6 +13,7 @@ import { getPendingLineOrders } from "@/lib/orders/line-pending";
 import { getCustomersForOrder, getProductsForOrder, getVehiclesForOrder } from "@/lib/orders/manage";
 import { getDeliveryList } from "@/lib/delivery/delivery-list";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getActiveWarehouses } from "@/lib/warehouses";
 import { IncomingOrdersDeliveryActions } from "@/components/orders/incoming-orders-delivery-actions";
 import type {
   PackingListSummaryProduct,
@@ -57,6 +58,7 @@ type IncomingOrdersPageProps = {
     endDate?: string;
     expanded?: string;
     q?: string;
+    warehouse?: string;
   }>;
 };
 
@@ -133,6 +135,7 @@ export default async function IncomingOrdersPage({ searchParams }: IncomingOrder
   const searchTerm = params.q?.trim() ?? "";
   const expandedOrderId = params.expanded?.trim() ?? "";
   const autoOpenCreateModal = params.create === "1";
+  const selectedWarehouseId = params.warehouse?.trim() ?? "";
   const selectedCustomerIds = Array.from(
     new Set(
       (params.customers ?? "")
@@ -149,6 +152,7 @@ export default async function IncomingOrdersPage({ searchParams }: IncomingOrder
     products,
     vehicles,
     pendingLineOrders,
+    warehouses,
     customerOrderCountsToday,
     deliveryData,
     billedDeliveryNumbers,
@@ -159,6 +163,7 @@ export default async function IncomingOrdersPage({ searchParams }: IncomingOrder
     getProductsForOrder(session.organizationId),
     getVehiclesForOrder(session.organizationId),
     getPendingLineOrders(session.organizationId, { orderDate, endDate, searchTerm }),
+    getActiveWarehouses(session.organizationId),
     getCustomerOrderCountsByDate(session.organizationId, orderDate, endDate),
     getDeliveryList(session.organizationId, orderDate, endDate, searchTerm || ""),
     getBilledDeliveryNumbersForRange(session.organizationId, orderDate, endDate),
@@ -173,15 +178,20 @@ export default async function IncomingOrdersPage({ searchParams }: IncomingOrder
 
   const activeOrders = orders.filter((order) => order.status !== "cancelled");
 
-  const filteredOrders =
+  let filteredOrders =
     selectedCustomerIds.length > 0
       ? activeOrders.filter((order) => selectedCustomerIds.includes(order.customerId))
       : activeOrders;
 
+  if (selectedWarehouseId) {
+    filteredOrders = filteredOrders.filter((order) => order.warehouseId === selectedWarehouseId);
+  }
+
   const filteredExpandedDetail =
     expandedDetail &&
     expandedDetail.status !== "cancelled" &&
-    (selectedCustomerIds.length === 0 || selectedCustomerIds.includes(expandedDetail.customer.id))
+    (selectedCustomerIds.length === 0 || selectedCustomerIds.includes(expandedDetail.customer.id)) &&
+    (!selectedWarehouseId || expandedDetail.warehouseId === selectedWarehouseId)
       ? expandedDetail
       : null;
 
@@ -427,6 +437,8 @@ export default async function IncomingOrdersPage({ searchParams }: IncomingOrder
       vehicleName: order.vehicleName,
       deliveryNumbers,
       isBilled,
+      warehouseId: order.warehouseId,
+      warehouseName: order.warehouseName,
     };
   });
 
@@ -435,140 +447,172 @@ export default async function IncomingOrdersPage({ searchParams }: IncomingOrder
       title="คำสั่งซื้อ"
       description=""
       floatingSubmit={false}
-      headerContent={
-        <div className="hidden rounded-2xl border border-white/15 bg-white/10 p-3 shadow-[0_18px_50px_rgba(0,0,0,0.16)] backdrop-blur-md lg:block">
-          <form action="/orders/incoming" method="get" className="hidden flex-1 items-center gap-2 lg:flex">
-            <label className="relative block flex-1">
-              <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-700" />
+      hideHeader
+    >
+      <div className="space-y-6">
+        <div className="sticky top-0 z-40 -mx-3 hidden border-b border-[#D4AF37]/35 bg-white/95 px-4 py-3 shadow-[0_14px_34px_rgba(8,42,99,0.08)] backdrop-blur lg:block">
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+              <div className="min-w-0">
+                <div className="flex items-center gap-3">
+                  <span className="h-8 w-1.5 rounded-full bg-[#D4AF37]" />
+                  <p className="text-lg font-black text-[#082A63]">รายการออเดอร์</p>
+                </div>
+                <p className="mt-1 text-xs font-semibold text-[#1F2A44]">
+                  แสดง {filteredOrders.length.toLocaleString("th-TH")} ออเดอร์
+                </p>
+              </div>
+
+            </div>
+
+            <form action="/orders/incoming" method="get" className="grid grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-[minmax(14rem,1fr)_14rem_12rem_10rem_10rem_auto]">
+              <label className="relative block">
+                <Search className="pointer-events-none absolute left-4 top-1/2 h-4.5 w-4.5 -translate-y-1/2 text-[#082A63]" strokeWidth={2} />
+                <input
+                  type="search"
+                  name="q"
+                  defaultValue={searchTerm}
+                  placeholder="ค้นหาชื่อร้าน หรือเลขออเดอร์"
+                  className="h-12 w-full rounded-xl border border-[#D4AF37]/35 bg-white pl-11 pr-4 text-sm font-semibold text-[#1F2A44] shadow-sm outline-none transition placeholder:text-[#1F2A44]/70 focus:border-[#D4AF37] focus:ring-2 focus:ring-[#D4AF37]/20"
+                />
+              </label>
+
+              <OrderCustomerFilter
+                options={customerOptions}
+                selectedIds={selectedCustomerIds}
+                placeholder="เลือกร้านค้า"
+              />
+
+              <div className="w-full">
+                <select
+                  name="warehouse"
+                  defaultValue={selectedWarehouseId}
+                  className="h-12 w-full rounded-xl border border-[#D4AF37]/35 bg-white px-3 text-sm font-semibold text-[#1F2A44] shadow-sm outline-none transition focus:border-[#D4AF37] focus:ring-2 focus:ring-[#D4AF37]/20"
+                >
+                  <option value="">ทุกคลังสินค้า</option>
+                  {warehouses.map((w) => (
+                    <option key={w.id} value={w.id}>
+                      {w.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <IncomingOrderDateFilter
+                id="incoming-date"
+                name="date"
+                defaultValue={orderDate}
+                noAutoSubmit={true}
+              />
+
+              <IncomingOrderDateFilter
+                id="incoming-endDate"
+                name="endDate"
+                defaultValue={endDate}
+                noAutoSubmit={true}
+              />
+
+              <button
+                type="submit"
+                className="inline-flex h-12 items-center justify-center rounded-xl border border-[#D4AF37]/70 bg-[#082A63] px-5 text-sm font-bold text-white shadow-[0_12px_26px_rgba(8,42,99,0.24)] transition hover:bg-[#103B82] active:scale-[0.98]"
+              >
+                ค้นหา
+              </button>
+            </form>
+          </div>
+        </div>
+
+        <div className="fixed bottom-8 right-8 z-40 hidden lg:block [&_.action-touch-safe]:border [&_.action-touch-safe]:border-[#D4AF37]/85 [&_.action-touch-safe]:bg-[#082A63] [&_.action-touch-safe]:shadow-[0_18px_44px_rgba(8,42,99,0.34)] [&_.action-touch-safe]:hover:bg-[#103B82]">
+          <div className="rounded-full bg-[#D4AF37]/35 p-[2px] shadow-[0_18px_42px_rgba(8,42,99,0.28)]">
+            <CreateOrderModal
+              autoOpen={autoOpenCreateModal}
+              customerOrderCountsToday={customerOrderCountsToday}
+              customers={customers}
+              products={products}
+              today={getTodayInBangkok()}
+            />
+          </div>
+        </div>
+
+        <MobileSearchDrawer title="ค้นหาออเดอร์">
+          <form action="/orders/incoming" method="get" className="flex flex-col gap-4 pb-24">
+            <label htmlFor="m-incoming-date" className="text-sm font-semibold text-[#1F2A44]">
+              วันที่เริ่มต้น
+            </label>
+            <IncomingOrderDateFilter
+              id="m-incoming-date"
+              name="date"
+              defaultValue={orderDate}
+              noAutoSubmit={true}
+            />
+
+            <label htmlFor="m-incoming-endDate" className="text-sm font-semibold text-[#1F2A44]">
+              วันที่สิ้นสุด
+            </label>
+            <IncomingOrderDateFilter
+              id="m-incoming-endDate"
+              name="endDate"
+              defaultValue={endDate}
+              noAutoSubmit={true}
+            />
+
+            <label className="relative block">
+              <Search className="pointer-events-none absolute left-4 top-1/2 h-4.5 w-4.5 -translate-y-1/2 text-[#082A63]" strokeWidth={2} />
               <input
                 type="search"
                 name="q"
                 defaultValue={searchTerm}
                 placeholder="ค้นหาชื่อร้าน หรือเลขออเดอร์"
-                className="w-full rounded-lg border border-white/25 bg-white py-2.5 pl-10 pr-4 text-sm font-medium text-slate-950 outline-none transition focus:border-white focus:ring-2 focus:ring-white/25"
+                className="h-12 w-full rounded-xl border border-[#D4AF37]/35 bg-white pl-11 pr-4 text-sm font-semibold text-[#1F2A44] outline-none transition placeholder:text-[#1F2A44]/70 focus:border-[#D4AF37] focus:ring-2 focus:ring-[#D4AF37]/20"
               />
             </label>
 
-            <div className="w-72">
-              <OrderCustomerFilter
-                options={customerOptions}
-                selectedIds={selectedCustomerIds}
-                placeholder="เลือกร้านค้า"
-              />
+            <OrderCustomerFilter
+              options={customerOptions}
+              selectedIds={selectedCustomerIds}
+              placeholder="เลือกร้านค้า"
+            />
+
+            <label className="text-sm font-semibold text-[#1F2A44]">
+              คลังสินค้า
+            </label>
+            <div className="w-full">
+              <select
+                name="warehouse"
+                defaultValue={selectedWarehouseId}
+                className="h-12 w-full rounded-xl border border-[#D4AF37]/35 bg-white px-3 text-sm font-semibold text-[#1F2A44] outline-none transition focus:border-[#D4AF37] focus:ring-2 focus:ring-[#D4AF37]/20"
+              >
+                <option value="">ทุกคลังสินค้า</option>
+                {warehouses.map((w) => (
+                  <option key={w.id} value={w.id}>
+                    {w.name}
+                  </option>
+                ))}
+              </select>
             </div>
 
             <button
               type="submit"
-              className="rounded-lg bg-white px-5 py-2.5 text-sm font-bold text-[#003366] shadow-sm transition hover:bg-slate-100 active:scale-[0.98]"
-            >
-              ค้นหา
-            </button>
-
-            <div className="ml-2 flex items-center gap-2 border-l border-white/20 pl-4">
-              <div className="flex items-center gap-2">
-                <div className="w-40">
-                  <IncomingOrderDateFilter
-                    id="incoming-date"
-                    name="date"
-                    defaultValue={orderDate}
-                    noAutoSubmit={true}
-                  />
-                </div>
-                <span className="font-bold text-white/40">ถึง</span>
-                <div className="w-40">
-                  <IncomingOrderDateFilter
-                    id="incoming-endDate"
-                    name="endDate"
-                    defaultValue={endDate}
-                    noAutoSubmit={true}
-                  />
-                </div>
-              </div>
-            </div>
-          </form>
-        </div>
-      }
-    >
-      <div className="space-y-6">
-        <div className="fixed bottom-6 right-6 z-[100] hidden lg:block">
-          <div className="group relative">
-            <div className="absolute -inset-1 rounded-full bg-gradient-to-r from-[#003366] to-[#1a237e] opacity-25 blur transition duration-300 group-hover:opacity-50" />
-            <div className="relative">
-              <CreateOrderModal
-                autoOpen={autoOpenCreateModal}
-                customerOrderCountsToday={customerOrderCountsToday}
-                customers={customers}
-                products={products}
-                today={getTodayInBangkok()}
-              />
-            </div>
-          </div>
-        </div>
-
-        <MobileSearchDrawer title="ค้นหาออเดอร์">
-          <form action="/orders/incoming" method="get" className="flex flex-col gap-4 pb-32">
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <label className="ml-1 text-xs font-bold text-slate-900">จากวันที่</label>
-                <IncomingOrderDateFilter
-                  id="m-incoming-date"
-                  name="date"
-                  defaultValue={orderDate}
-                  noAutoSubmit={true}
-                />
-              </div>
-              <div className="space-y-1">
-                <label className="ml-1 text-xs font-bold text-slate-900">ถึงวันที่</label>
-                <IncomingOrderDateFilter
-                  id="m-incoming-endDate"
-                  name="endDate"
-                  defaultValue={endDate}
-                  noAutoSubmit={true}
-                />
-              </div>
-            </div>
-
-            <div className="space-y-1">
-              <label className="ml-1 text-xs font-bold text-slate-900">ค้นหาออเดอร์</label>
-              <label className="relative block">
-                <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-700" />
-                <input
-                  type="search"
-                  name="q"
-                  defaultValue={searchTerm}
-                  placeholder="ค้นหาจากเลขออเดอร์ ชื่อร้าน หรือช่องทาง"
-                  className="w-full rounded-2xl border border-slate-200 bg-slate-50 py-3.5 pl-11 pr-4 text-base font-medium text-slate-950 outline-none transition focus:border-[#003366] focus:bg-white"
-                />
-              </label>
-            </div>
-
-            <div className="space-y-1">
-              <label className="ml-1 text-xs font-bold text-slate-900">เลือกร้านค้า</label>
-              <OrderCustomerFilter
-                options={customerOptions}
-                selectedIds={selectedCustomerIds}
-                placeholder="เลือกร้านค้า"
-              />
-            </div>
-
-            <button
-              type="submit"
-              className="mt-2 w-full rounded-2xl bg-[#003366] py-4 text-base font-bold text-white shadow-[0_12px_24px_rgba(0,51,102,0.2)] transition active:scale-[0.98]"
+              className="inline-flex h-12 items-center justify-center rounded-xl border border-[#D4AF37]/70 bg-[#082A63] px-5 text-sm font-bold text-white shadow-[0_12px_26px_rgba(8,42,99,0.24)] transition active:scale-[0.98]"
             >
               ค้นหา
             </button>
           </form>
         </MobileSearchDrawer>
 
-        <PendingLineOrdersSection customers={customers} pendingOrders={pendingLineOrders} />
+        <PendingLineOrdersSection
+          customers={customers}
+          pendingOrders={pendingLineOrders}
+          warehouses={warehouses}
+        />
 
         <section className="relative mt-0 w-full bg-transparent">
           <div className="flex flex-col gap-3 px-1 py-1 sm:py-3">
             <div className="flex items-center justify-center gap-2 w-full">
-              <ClipboardList className="h-5 w-5 text-[#003366] sm:h-6 sm:w-6" strokeWidth={2.5} />
+              <ClipboardList className="h-5 w-5 text-[#082A63] sm:h-6 sm:w-6" strokeWidth={2.5} />
               <h2 className="text-base font-bold text-slate-950 sm:text-xl">รายการออเดอร์เข้า</h2>
               {filteredOrders.length > 0 ? (
-                <span className="rounded-md bg-slate-100 px-1 py-0.5 text-[9px] font-bold text-slate-950 ring-1 ring-slate-200 sm:text-xs">
+                <span className="rounded-md bg-[#D4AF37]/20 px-1.5 py-0.5 text-[9px] font-black text-[#082A63] ring-1 ring-[#D4AF37]/40 sm:text-xs">
                   {filteredOrders.length}
                 </span>
               ) : null}
@@ -588,7 +632,7 @@ export default async function IncomingOrdersPage({ searchParams }: IncomingOrder
 
             {/* Desktop & Tablet View: 5 Equal Width Action Cards Grid */}
             <div className="hidden sm:block w-full">
-              <div className="grid grid-cols-5 gap-3 w-full [&_button]:w-full [&_button]:h-full [&_button]:justify-center [&_button]:py-3.5 [&_button]:px-5 [&_button]:rounded-2xl">
+              <div className="grid grid-cols-5 gap-3 w-full [&_button]:w-full [&_button]:h-full [&_button]:justify-center [&_button]:rounded-2xl [&_button]:border-[#D4AF37]/35 [&_button]:py-3.5 [&_button]:px-5">
                 <PackingListSummaryButton
                   dateLabel={orderDate === endDate ? formatDisplayDate(orderDate) : `${formatDisplayDate(orderDate)} - ${formatDisplayDate(endDate)}`}
                   products={summaryProducts}

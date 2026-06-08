@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { Plus, Search, MapPin, PencilLine, Trash2, Factory } from "lucide-react";
+import { MobileSearchDrawer } from "@/components/mobile-search/mobile-search-drawer";
 import { SettingsShell } from "@/components/settings/settings-shell";
 import { SupplierForm } from "@/components/settings/supplier-form";
 import { deleteSupplierAction } from "@/components/settings/suppliers-delete-action";
@@ -44,35 +45,69 @@ export function SettingsSuppliersPageClient({
       title="จัดการผู้ขาย"
       description="เพิ่ม แก้ไข และจัดการข้อมูลผู้ขาย (Suppliers)"
       titleIcon={Factory}
+      floatingSubmit={false}
+      hideHeader
     >
-      <div className="space-y-6">
-        {/* Header Actions */}
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="ค้นหาชื่อผู้ขายหรือรหัส..."
-              className="w-full rounded-2xl border border-slate-200 bg-white py-2.5 pl-10 pr-4 text-sm outline-none transition focus:border-[#003366] focus:ring-4 focus:ring-[#003366]/5"
-            />
+      <div className="sticky top-0 z-40 -mx-3 mb-4 hidden border-b border-[#E8DCC7] bg-white/95 px-4 py-3 shadow-[0_10px_30px_rgba(31,42,68,0.08)] backdrop-blur lg:block">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div className="min-w-0">
+            <p className="text-lg font-black text-[#082A63]">จัดการผู้ขาย</p>
+            <p className="text-xs font-semibold text-[#667085]">
+              แสดง {filteredSuppliers.length.toLocaleString("th-TH")} จาก {initialSuppliers.length.toLocaleString("th-TH")} รายการ
+            </p>
           </div>
-          <Link
-            href="/settings/suppliers?create"
-            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#003366] px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-[#003366]/20 transition active:scale-95 hover:brightness-110"
-          >
-            <Plus className="h-5 w-5" strokeWidth={3} />
-            <span>เพิ่มผู้ขายใหม่</span>
-          </Link>
-        </div>
 
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-[minmax(14rem,1fr)_auto] lg:w-[42rem]">
+            <label className="relative block">
+              <Search className="pointer-events-none absolute left-4 top-1/2 h-4.5 w-4.5 -translate-y-1/2 text-[#667085]" strokeWidth={2} />
+              <input
+                type="search"
+                value={searchTerm}
+                onChange={(event) => setSearchTerm(event.target.value)}
+                placeholder="ค้นหาชื่อผู้ขายหรือรหัส"
+                className="h-12 w-full rounded-lg border border-[#D7DEE8] bg-white pl-11 pr-4 text-sm font-semibold text-[#1F2A44] outline-none transition placeholder:text-[#667085] focus:border-[#082A63] focus:ring-2 focus:ring-[#082A63]/15"
+              />
+            </label>
+
+            <Link
+              href="/settings/suppliers?create"
+              className="inline-flex h-12 items-center justify-center gap-2 rounded-lg bg-[#082A63] px-4 text-sm font-bold text-white shadow-[0_12px_26px_rgba(8,42,99,0.22)] transition hover:bg-[#103B82] active:scale-[0.98]"
+            >
+              <Plus className="h-4.5 w-4.5" strokeWidth={2.4} />
+              เพิ่มผู้ขาย
+            </Link>
+          </div>
+        </div>
+      </div>
+
+      <MobileSearchDrawer title="ค้นหาผู้ขาย">
+        <label className="relative block">
+          <Search className="pointer-events-none absolute left-4 top-1/2 h-4.5 w-4.5 -translate-y-1/2 text-[#667085]" strokeWidth={2} />
+          <input
+            type="search"
+            value={searchTerm}
+            onChange={(event) => setSearchTerm(event.target.value)}
+            placeholder="ค้นหาชื่อผู้ขายหรือรหัส"
+            className="h-12 w-full rounded-lg border border-[#D7DEE8] bg-white pl-11 pr-4 text-sm font-semibold text-[#1F2A44] outline-none transition placeholder:text-[#667085] focus:border-[#082A63] focus:ring-2 focus:ring-[#082A63]/15"
+          />
+        </label>
+      </MobileSearchDrawer>
+
+      <Link
+        href="/settings/suppliers?create"
+        aria-label="เพิ่มผู้ขาย"
+        className="fixed bottom-[calc(4.75rem+env(safe-area-inset-bottom)+12px)] left-4 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-[#082A63] text-white shadow-[0_14px_32px_rgba(8,42,99,0.32)] transition active:scale-95 lg:hidden"
+      >
+        <Plus className="h-7 w-7" strokeWidth={2.6} />
+      </Link>
+
+      <div className="space-y-6">
         {/* Suppliers Grid */}
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-3">
           {filteredSuppliers.map((supplier) => (
             <div
               key={supplier.id}
-              className="group relative flex flex-col overflow-hidden rounded-[2rem] border border-slate-200 bg-white transition-all hover:border-[#003366]/30 hover:shadow-xl hover:shadow-slate-200/50"
+              className="group relative flex flex-col overflow-hidden rounded-[2rem] border border-slate-200 bg-white transition-all hover:border-[#082A63]/30 hover:shadow-xl hover:shadow-slate-200/50"
             >
               <div className="p-6">
                 <div className="flex items-start justify-between gap-4">
@@ -82,7 +117,7 @@ export function SettingsSuppliersPageClient({
                         {supplier.code}
                       </span>
                     </div>
-                    <h3 className="mt-1 truncate text-lg font-bold text-slate-900 group-hover:text-[#003366]">
+                    <h3 className="mt-1 truncate text-lg font-bold text-slate-900 group-hover:text-[#082A63]">
                       {supplier.name}
                     </h3>
                   </div>
@@ -90,7 +125,7 @@ export function SettingsSuppliersPageClient({
                   <div className="flex gap-1 opacity-0 transition-opacity group-hover:opacity-100 max-lg:opacity-100">
                     <Link
                       href={`/settings/suppliers?edit=${supplier.id}`}
-                      className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-50 text-slate-400 transition hover:bg-[#003366]/10 hover:text-[#003366]"
+                      className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-50 text-slate-400 transition hover:bg-[#082A63]/20 hover:text-[#082A63]"
                       title="แก้ไข"
                     >
                       <PencilLine className="h-4.5 w-4.5" />

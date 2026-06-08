@@ -266,7 +266,7 @@ function getProductShareMetadata(idWithOptionalUnit: string | undefined, product
   if (!selectedProduct) {
     return {
       title: "สั่งสินค้า",
-      description: "ระบบสั่งสินค้าสำหรับลูกค้า T&Y Noodle",
+      description: "ระบบสั่งสินค้าสำหรับลูกค้า All Noodles",
       url: `${siteUrl}/order`,
       image: `${siteUrl}/brand/1200x630.png`,
     };
@@ -277,7 +277,7 @@ function getProductShareMetadata(idWithOptionalUnit: string | undefined, product
     typeof metadata.description === "string" ? metadata.description.trim() : "";
   const description =
     rawDescription.replace(/\s*\n+\s*/g, " ").trim() ||
-    `สั่งซื้อ ${selectedProduct.name} หน่วย ${selectedProduct.unit ?? selectedProduct.sale_unit_label} กับ T&Y Noodle`;
+    `สั่งซื้อ ${selectedProduct.name} หน่วย ${selectedProduct.unit ?? selectedProduct.sale_unit_label} กับ All Noodles`;
 
   return {
     title: `${selectedProduct.name} | สั่งสินค้า`,
@@ -308,7 +308,7 @@ export async function generateMetadata({
     openGraph: {
       type: "website",
       locale: "th_TH",
-      siteName: "T&Y Noodle",
+      siteName: "All Noodles",
       title: shareMeta.title,
       description: shareMeta.description,
       url: shareMeta.url,

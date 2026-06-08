@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, Clock3, KeyRound, MessageCircleMore, Package2, Store, Truck, Factory, Gauge } from "lucide-react";
+import { ArrowRight, Clock3, KeyRound, MessageCircleMore, Package2, Store, Truck, Factory, Gauge, Warehouse } from "lucide-react";
 import { SettingsShell } from "@/components/settings/settings-shell";
 import { requireAppRole } from "@/lib/auth/authorization";
 
@@ -21,6 +21,12 @@ const options = [
     href: "/settings/suppliers",
     icon: Factory,
     label: "จัดการผู้ขาย",
+  },
+  {
+    description: "เพิ่มคลังสินค้า ตั้งค่าคลังหลักและคลังต่างจังหวัด สำหรับแยกสต็อคตามพื้นที่",
+    href: "/settings/warehouses",
+    icon: Warehouse,
+    label: "จัดการคลัง",
   },
   {
     description: "ดูชื่อ LINE รูปโปรไฟล์ สถานะการใช้งาน และจัดการสิทธิ์ลูกค้าที่เข้ามาผ่าน LINE",
@@ -71,10 +77,10 @@ export default async function SettingsIndexPage() {
             <Link
               key={option.href}
               href={option.href}
-              className="group rounded-3xl border border-slate-200 bg-white p-5 shadow-[0_18px_55px_rgba(15,23,42,0.04)] transition hover:-translate-y-0.5 hover:border-[#003366]/30 hover:shadow-[0_24px_60px_rgba(0,51,102,0.08)] sm:p-6"
+              className="group rounded-3xl border border-slate-200 bg-white p-5 shadow-[0_18px_55px_rgba(15,23,42,0.04)] transition hover:-translate-y-0.5 hover:border-[#082A63]/30 hover:shadow-[0_24px_60px_rgba(4,53,106,0.08)] sm:p-6"
             >
               <div className="flex items-center gap-4 sm:flex-col sm:items-start sm:gap-5">
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#003366]/10 text-[#003366]">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#D4AF37]/30 text-[#103B82]">
                   <Icon className="h-6 w-6" strokeWidth={2.2} />
                 </div>
                 <h2 className="text-lg font-bold text-slate-950 sm:text-xl">{option.label}</h2>
@@ -82,7 +88,7 @@ export default async function SettingsIndexPage() {
 
               <p className="mt-3 text-sm leading-7 text-slate-500 sm:mt-2">{option.description}</p>
 
-              <span className="mt-4 inline-flex items-center gap-2 text-sm font-bold text-[#003366] sm:mt-5">
+              <span className="mt-4 inline-flex items-center gap-2 text-sm font-bold text-[#082A63] sm:mt-5">
                 ไปยังหน้านี้
                 <ArrowRight
                   className="h-4 w-4 transition group-hover:translate-x-1"

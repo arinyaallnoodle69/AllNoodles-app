@@ -1,51 +1,219 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Boxes, FolderTree, ImageOff, Search, Tags, TrendingUp } from "lucide-react";
+import Link from "next/link";
+import { Download, Plus, Search } from "lucide-react";
 import { MobileSearchDrawer } from "@/components/mobile-search/mobile-search-drawer";
-import { useMobileSearch } from "@/components/mobile-search/mobile-search-context";
-import { normalizeSearch } from "@/lib/utils/search";
 import { ProductList } from "@/components/settings/product-list";
-import type { SettingsProduct, SettingsProductCategory } from "@/lib/settings/admin";
+import { normalizeSearch } from "@/lib/utils/search";
+import type { SettingsProduct } from "@/lib/settings/admin";
 
 type ProductFilterClientProps = {
   allProducts: SettingsProduct[];
-  categories: SettingsProductCategory[];
   baseListHref: string;
+  children?: React.ReactNode;
 };
 
-type QuickFilterMode = "all" | "missing-image" | "uncategorized";
+type SpreadsheetCell = string | number;
 
-function hasImage(product: SettingsProduct) {
-  return product.imageUrls.some((url) => url.trim().length > 0);
+function escapeXml(value: string) {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll("\"", "&quot;")
+    .replaceAll("'", "&apos;");
+}
+
+function getColumnName(index: number) {
+  let column = "";
+  let value = index + 1;
+
+  while (value > 0) {
+    const remainder = (value - 1) % 26;
+    column = String.fromCharCode(65 + remainder) + column;
+    value = Math.floor((value - 1) / 26);
+  }
+
+  return column;
+}
+
+function buildWorksheetXml(rows: SpreadsheetCell[][]) {
+  const sheetRows = rows
+    .map((row, rowIndex) => {
+      const rowNumber = rowIndex + 1;
+      const cells = row
+        .map((cell, columnIndex) => {
+          const reference = `${getColumnName(columnIndex)}${rowNumber}`;
+          if (typeof cell === "number") {
+            return `<c r="${reference}"><v>${cell}</v></c>`;
+          }
+
+          return `<c r="${reference}" t="inlineStr"><is><t>${escapeXml(cell)}</t></is></c>`;
+        })
+        .join("");
+
+      return `<row r="${rowNumber}">${cells}</row>`;
+    })
+    .join("");
+
+  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+  <sheetData>${sheetRows}</sheetData>
+</worksheet>`;
+}
+
+function crc32(bytes: Uint8Array) {
+  let crc = 0xffffffff;
+
+  for (const byte of bytes) {
+    crc ^= byte;
+    for (let index = 0; index < 8; index += 1) {
+      crc = (crc >>> 1) ^ (crc & 1 ? 0xedb88320 : 0);
+    }
+  }
+
+  return (crc ^ 0xffffffff) >>> 0;
+}
+
+function writeUInt16(output: number[], value: number) {
+  output.push(value & 0xff, (value >>> 8) & 0xff);
+}
+
+function writeUInt32(output: number[], value: number) {
+  output.push(value & 0xff, (value >>> 8) & 0xff, (value >>> 16) & 0xff, (value >>> 24) & 0xff);
+}
+
+function createZip(files: Array<{ name: string; content: string }>) {
+  const encoder = new TextEncoder();
+  const output: number[] = [];
+  const centralDirectory: number[] = [];
+  const now = new Date();
+  const dosTime = (now.getHours() << 11) | (now.getMinutes() << 5) | Math.floor(now.getSeconds() / 2);
+  const dosDate = ((now.getFullYear() - 1980) << 9) | ((now.getMonth() + 1) << 5) | now.getDate();
+
+  for (const file of files) {
+    const nameBytes = encoder.encode(file.name);
+    const contentBytes = encoder.encode(file.content);
+    const checksum = crc32(contentBytes);
+    const localOffset = output.length;
+
+    writeUInt32(output, 0x04034b50);
+    writeUInt16(output, 20);
+    writeUInt16(output, 0);
+    writeUInt16(output, 0);
+    writeUInt16(output, dosTime);
+    writeUInt16(output, dosDate);
+    writeUInt32(output, checksum);
+    writeUInt32(output, contentBytes.length);
+    writeUInt32(output, contentBytes.length);
+    writeUInt16(output, nameBytes.length);
+    writeUInt16(output, 0);
+    output.push(...nameBytes, ...contentBytes);
+
+    writeUInt32(centralDirectory, 0x02014b50);
+    writeUInt16(centralDirectory, 20);
+    writeUInt16(centralDirectory, 20);
+    writeUInt16(centralDirectory, 0);
+    writeUInt16(centralDirectory, 0);
+    writeUInt16(centralDirectory, dosTime);
+    writeUInt16(centralDirectory, dosDate);
+    writeUInt32(centralDirectory, checksum);
+    writeUInt32(centralDirectory, contentBytes.length);
+    writeUInt32(centralDirectory, contentBytes.length);
+    writeUInt16(centralDirectory, nameBytes.length);
+    writeUInt16(centralDirectory, 0);
+    writeUInt16(centralDirectory, 0);
+    writeUInt16(centralDirectory, 0);
+    writeUInt16(centralDirectory, 0);
+    writeUInt32(centralDirectory, 0);
+    writeUInt32(centralDirectory, localOffset);
+    centralDirectory.push(...nameBytes);
+  }
+
+  const centralDirectoryOffset = output.length;
+  output.push(...centralDirectory);
+  writeUInt32(output, 0x06054b50);
+  writeUInt16(output, 0);
+  writeUInt16(output, 0);
+  writeUInt16(output, files.length);
+  writeUInt16(output, files.length);
+  writeUInt32(output, centralDirectory.length);
+  writeUInt32(output, centralDirectoryOffset);
+  writeUInt16(output, 0);
+
+  return new Uint8Array(output);
+}
+
+function buildXlsxBlob(products: SettingsProduct[]) {
+  const rows = [
+    ["รหัสสินค้า", "ชื่อสินค้า", "หน่วย", "ต้นทุน", "สถานะ"],
+    ...products.map((product) => {
+      const defaultUnit = product.saleUnits.find((unit) => unit.isDefault) ?? product.saleUnits[0];
+      return [
+        product.sku,
+        product.name,
+        product.baseUnit,
+        defaultUnit?.effectiveCostPrice ?? "",
+        product.isActive ? "พร้อมขาย" : "ไม่พร้อมขาย",
+      ];
+    }),
+  ];
+
+  const bytes = createZip([
+    {
+      name: "[Content_Types].xml",
+      content: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+  <Default Extension="xml" ContentType="application/xml"/>
+  <Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>
+  <Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>
+</Types>`,
+    },
+    {
+      name: "_rels/.rels",
+      content: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>
+</Relationships>`,
+    },
+    {
+      name: "xl/workbook.xml",
+      content: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+  <sheets>
+    <sheet name="Products" sheetId="1" r:id="rId1"/>
+  </sheets>
+</workbook>`,
+    },
+    {
+      name: "xl/_rels/workbook.xml.rels",
+      content: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>
+</Relationships>`,
+    },
+    {
+      name: "xl/worksheets/sheet1.xml",
+      content: buildWorksheetXml(rows),
+    },
+  ]);
+
+  return new Blob([bytes], {
+    type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  });
 }
 
 export function ProductFilterClient({
   allProducts,
-  categories,
   baseListHref,
+  children,
 }: ProductFilterClientProps) {
-  const { close } = useMobileSearch();
   const [searchQuery, setSearchQuery] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState("");
-  const [quickFilter, setQuickFilter] = useState<QuickFilterMode>("all");
-
-  const counts = useMemo(() => {
-    const productCount = allProducts.length;
-    const categoryCount = categories.length;
-    const missingImageCount = allProducts.filter((product) => !hasImage(product)).length;
-    const uncategorizedCount = allProducts.filter((product) => product.categoryIds.length === 0).length;
-    return { productCount, categoryCount, missingImageCount, uncategorizedCount };
-  }, [allProducts, categories.length]);
 
   const filteredProducts = useMemo(() => {
     return allProducts.filter((product) => {
-      if (quickFilter === "missing-image" && hasImage(product)) return false;
-      if (quickFilter === "uncategorized" && product.categoryIds.length > 0) return false;
-
-      const matchesCategory = !categoryFilter || product.categoryIds.includes(categoryFilter);
-      if (!matchesCategory) return false;
-
       if (!searchQuery) return true;
       const normalized = normalizeSearch(searchQuery);
       return (
@@ -54,257 +222,108 @@ export function ProductFilterClient({
         product.categoryNames.some((name) => normalizeSearch(name).includes(normalized))
       );
     });
-  }, [allProducts, categoryFilter, quickFilter, searchQuery]);
+  }, [allProducts, searchQuery]);
 
-  const kpis = useMemo(() => {
-    return [
-      {
-        key: "product-count",
-        icon: Boxes,
-        label: "สินค้าทั้งหมด",
-        value: counts.productCount,
-        accentClassName: "bg-[#003366]",
-        trendLabel: "คงที่",
-        trendClassName: "text-slate-500",
-      },
-      {
-        key: "category-count",
-        icon: FolderTree,
-        label: "หมวดหมู่ทั้งหมด",
-        value: counts.categoryCount,
-        accentClassName: "bg-sky-600",
-        trendLabel: "คงที่",
-        trendClassName: "text-slate-500",
-      },
-      {
-        key: "missing-image",
-        icon: ImageOff,
-        label: "สินค้าไม่มีรูป",
-        value: counts.missingImageCount,
-        accentClassName: "bg-amber-500",
-        trendLabel: counts.missingImageCount > 0 ? "ต้องจัดการ" : "พร้อมใช้งาน",
-        trendClassName: counts.missingImageCount > 0 ? "text-amber-700" : "text-emerald-700",
-      },
-      {
-        key: "uncategorized",
-        icon: Tags,
-        label: "สินค้าไม่อยู่ในหมวดหมู่",
-        value: counts.uncategorizedCount,
-        accentClassName: "bg-violet-600",
-        trendLabel: counts.uncategorizedCount > 0 ? "ต้องจัดการ" : "พร้อมใช้งาน",
-        trendClassName: counts.uncategorizedCount > 0 ? "text-violet-700" : "text-emerald-700",
-      },
-    ] as const;
-  }, [counts]);
-
-  function activateQuickFilter(mode: QuickFilterMode) {
-    setQuickFilter(mode);
-    setSearchQuery("");
-    setCategoryFilter("");
-    window.requestAnimationFrame(() => {
-      document.getElementById("product-list-anchor")?.scrollIntoView({
-        behavior: "smooth",
-        block: "start",
-      });
-    });
-  }
-
-  function handleClear() {
-    setSearchQuery("");
-    setCategoryFilter("");
-    setQuickFilter("all");
+  function handleExport() {
+    const blob = buildXlsxBlob(filteredProducts);
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "all-noodles-products.xlsx";
+    link.click();
+    URL.revokeObjectURL(url);
   }
 
   return (
     <>
-      <section className="mb-4 grid grid-cols-2 gap-2 sm:gap-3 md:grid-cols-4">
-        {kpis.map((item) => {
-          const Icon = item.icon;
-          const isMissingImageCard = item.key === "missing-image";
-          const isUncategorizedCard = item.key === "uncategorized";
-          const showAction = isMissingImageCard || isUncategorizedCard;
-          const isActive =
-            (isMissingImageCard && quickFilter === "missing-image") ||
-            (isUncategorizedCard && quickFilter === "uncategorized");
+      <div className="sticky top-0 z-40 -mx-3 mb-4 hidden border-b border-[#E8DCC7] bg-white/95 px-4 py-3 shadow-[0_10px_30px_rgba(31,42,68,0.08)] backdrop-blur lg:block">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div className="min-w-0">
+            <p className="text-lg font-black text-[#082A63]">รายการสินค้า</p>
+            <p className="text-xs font-semibold text-[#667085]">
+              แสดง {filteredProducts.length.toLocaleString("th-TH")} จาก {allProducts.length.toLocaleString("th-TH")} รายการ
+            </p>
+          </div>
 
-          const actionLabel = isMissingImageCard ? "ดูรายการ" : "จัดหมวดหมู่";
-          const onAction = isMissingImageCard
-            ? () => activateQuickFilter("missing-image")
-            : () => activateQuickFilter("uncategorized");
-          const disableAction = isMissingImageCard
-            ? counts.missingImageCount === 0
-            : counts.uncategorizedCount === 0;
-
-          return (
-            <article
-              key={item.key}
-              className="relative flex min-h-[148px] flex-col rounded-none border border-slate-200 bg-white px-2.5 py-2 shadow-[0_6px_18px_rgba(15,23,42,0.08)] sm:min-h-[156px] sm:px-3 sm:py-2.5"
-            >
-              <div className={`absolute left-0 top-0 h-[3px] w-full ${item.accentClassName}`} />
-
-              <div className="flex flex-col">
-                <div className="flex items-center gap-1.5 sm:gap-2">
-                  <Icon className="h-4 w-4 shrink-0 text-[#003366] sm:h-5 sm:w-5" strokeWidth={2.2} />
-                  <p className="whitespace-nowrap text-[13px] font-bold leading-tight text-slate-700 xs:text-sm sm:text-base">
-                    {item.label}
-                  </p>
-                </div>
-                
-                {/* Desktop Trend Label */}
-                <span
-                  className={`absolute right-2.5 top-2.5 hidden items-center gap-1 text-xs font-semibold sm:inline-flex ${item.trendClassName}`}
-                >
-                  <TrendingUp className="h-3.5 w-3.5" strokeWidth={2.4} />
-                  {item.trendLabel}
-                </span>
-              </div>
-
-              <p className="mt-2 text-center text-[36px] font-bold leading-none tabular-nums text-[#003366] sm:mt-3 sm:text-[40px]">
-                {item.value.toLocaleString("th-TH")}
-              </p>
-
-              {/* Mobile Trend Label - Positioned bottom right */}
-              <span
-                className={`absolute bottom-2 right-2.5 inline-flex items-center gap-1 text-[10px] font-bold sm:hidden ${item.trendClassName} rounded-md border border-current/10 bg-white/60 px-1.5 py-0.5 backdrop-blur-[2px]`}
-              >
-                <TrendingUp className="h-3 w-3" strokeWidth={2.6} />
-                {item.trendLabel}
-              </span>
-
-              {showAction ? (
-                <div className="mt-auto pt-2">
-                  <button
-                    type="button"
-                    onClick={onAction}
-                    disabled={disableAction}
-                    className={`inline-flex items-center rounded-none border px-2.5 py-1.5 text-[11px] font-semibold transition sm:text-xs ${
-                      isActive
-                        ? "border-[#003366] bg-[#003366] text-white"
-                        : "border-slate-300 text-[#003366] hover:bg-[#003366]/5"
-                    } disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400`}
-                  >
-                    {actionLabel}
-                  </button>
-                </div>
-              ) : null}
-            </article>
-          );
-        })}
-      </section>
-
-      {quickFilter !== "all" ? (
-        <div className="mb-3 flex items-center justify-between gap-3 rounded-none border border-[#003366]/20 bg-[#003366]/5 px-3 py-2">
-          <p className="text-xs font-semibold text-[#003366] sm:text-sm">
-            {quickFilter === "missing-image"
-              ? "กำลังแสดงเฉพาะสินค้าไม่มีรูป"
-              : "กำลังแสดงเฉพาะสินค้าไม่อยู่ในหมวดหมู่"}
-          </p>
-          <button
-            type="button"
-            onClick={() => setQuickFilter("all")}
-            className="rounded-none border border-[#003366]/30 bg-white px-2 py-1 text-[11px] font-semibold text-[#003366] transition hover:bg-[#003366]/10"
-          >
-            แสดงทั้งหมด
-          </button>
-        </div>
-      ) : null}
-
-      <div className="mb-4 hidden rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:block">
-        <div className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr)_220px_auto_auto]">
-          <label className="block">
-            <span className="mb-1.5 block text-xs font-semibold text-slate-600">ค้นหาสินค้า</span>
-            <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5">
-              <Search className="h-4.5 w-4.5 text-slate-400" strokeWidth={2} />
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-[minmax(14rem,1fr)_auto_auto] lg:w-[48rem]">
+            <label className="relative block">
+              <Search className="pointer-events-none absolute left-4 top-1/2 h-4.5 w-4.5 -translate-y-1/2 text-[#667085]" strokeWidth={2} />
               <input
                 type="search"
                 value={searchQuery}
                 onChange={(event) => setSearchQuery(event.target.value)}
-                placeholder="ชื่อสินค้า หรือรหัสสินค้า"
-                className="min-w-0 flex-1 bg-transparent text-sm text-slate-800 outline-none placeholder:text-slate-400"
+                placeholder="ค้นหาสินค้า หรือรหัสสินค้า"
+                className="h-12 w-full rounded-lg border border-[#D7DEE8] bg-white pl-11 pr-4 text-sm font-semibold text-[#1F2A44] outline-none transition placeholder:text-[#667085] focus:border-[#082A63] focus:ring-2 focus:ring-[#082A63]/15"
               />
-            </div>
-          </label>
+            </label>
 
-          <label className="block">
-            <span className="mb-1.5 block text-xs font-semibold text-slate-600">หมวดหมู่</span>
-            <select
-              value={categoryFilter}
-              onChange={(event) => setCategoryFilter(event.target.value)}
-              className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 outline-none"
+            <Link
+              href={`${baseListHref}${baseListHref.includes("?") ? "&" : "?"}create=1`}
+              scroll={false}
+              className="inline-flex h-12 items-center justify-center gap-2 rounded-lg bg-[#082A63] px-4 text-sm font-bold text-white shadow-[0_12px_26px_rgba(8,42,99,0.22)] transition hover:bg-[#103B82] active:scale-[0.98]"
             >
-              <option value="">ทุกหมวดหมู่</option>
-              {categories.map((category) => (
-                <option key={category.id} value={category.id}>
-                  {category.name}
-                </option>
-              ))}
-            </select>
-          </label>
+              <Plus className="h-4.5 w-4.5" strokeWidth={2.4} />
+              เพิ่มสินค้า
+            </Link>
 
-          <div className="flex items-end">
             <button
               type="button"
-              onClick={handleClear}
-              className="action-touch-safe w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
+              onClick={handleExport}
+              className="inline-flex h-12 items-center justify-center gap-2 rounded-lg border border-[#082A63]/20 bg-white px-4 text-sm font-bold text-[#082A63] transition hover:border-[#082A63] hover:bg-[#082A63]/[0.04] active:scale-[0.98]"
             >
-              ล้างตัวกรอง
+              <Download className="h-4.5 w-4.5" strokeWidth={2.2} />
+              ส่งออกข้อมูล
             </button>
           </div>
         </div>
       </div>
 
+      {children}
+
       <MobileSearchDrawer title="ค้นหาสินค้า">
         <div className="space-y-3">
-          <label className="block">
-            <span className="mb-1.5 block text-sm font-semibold text-slate-700">ค้นหาสินค้า</span>
-            <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5">
-              <Search className="h-4 w-4 text-slate-400" strokeWidth={2} />
-              <input
-                type="search"
-                value={searchQuery}
-                onChange={(event) => setSearchQuery(event.target.value)}
-                placeholder="ชื่อสินค้า หรือรหัสสินค้า"
-                className="min-w-0 flex-1 bg-transparent text-sm text-slate-800 outline-none placeholder:text-slate-400"
-              />
-            </div>
-          </label>
-
-          <label className="block">
-            <span className="mb-1.5 block text-sm font-semibold text-slate-700">หมวดหมู่</span>
-            <select
-              value={categoryFilter}
-              onChange={(event) => setCategoryFilter(event.target.value)}
-              className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 outline-none"
-            >
-              <option value="">ทุกหมวดหมู่</option>
-              {categories.map((category) => (
-                <option key={category.id} value={category.id}>
-                  {category.name}
-                </option>
-              ))}
-            </select>
+          <label className="relative block">
+            <Search className="pointer-events-none absolute left-4 top-1/2 h-4.5 w-4.5 -translate-y-1/2 text-[#667085]" strokeWidth={2} />
+            <input
+              type="search"
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
+              placeholder="ค้นหาสินค้า หรือรหัสสินค้า"
+              className="h-12 w-full rounded-lg border border-[#D7DEE8] bg-white pl-11 pr-4 text-sm font-semibold text-[#1F2A44] outline-none transition placeholder:text-[#667085] focus:border-[#082A63] focus:ring-2 focus:ring-[#082A63]/15"
+            />
           </label>
 
           <div className="grid grid-cols-2 gap-2">
+            <Link
+              href={`${baseListHref}${baseListHref.includes("?") ? "&" : "?"}create=1`}
+              scroll={false}
+              className="inline-flex h-12 items-center justify-center gap-2 rounded-lg bg-[#082A63] px-4 text-sm font-bold text-white shadow-[0_12px_26px_rgba(8,42,99,0.22)] transition active:scale-[0.98]"
+            >
+              <Plus className="h-4.5 w-4.5" strokeWidth={2.4} />
+              เพิ่มสินค้า
+            </Link>
+
             <button
               type="button"
-              onClick={handleClear}
-              className="action-touch-safe w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-600"
+              onClick={handleExport}
+              className="inline-flex h-12 items-center justify-center gap-2 rounded-lg border border-[#082A63]/20 bg-white px-4 text-sm font-bold text-[#082A63] transition active:scale-[0.98]"
             >
-              ล้างตัวกรอง
-            </button>
-            <button
-              type="button"
-              onClick={close}
-              className="action-touch-safe w-full rounded-xl bg-[#003366] px-4 py-2.5 text-sm font-semibold text-white"
-            >
-              แสดงผล
+              <Download className="h-4.5 w-4.5" strokeWidth={2.2} />
+              ส่งออกข้อมูล
             </button>
           </div>
         </div>
       </MobileSearchDrawer>
 
-      <div id="product-list-anchor" />
+      <Link
+        href={`${baseListHref}${baseListHref.includes("?") ? "&" : "?"}create=1`}
+        scroll={false}
+        aria-label="เพิ่มสินค้า"
+        className="fixed bottom-[calc(4.75rem+env(safe-area-inset-bottom)+12px)] left-4 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-[#082A63] text-white shadow-[0_14px_32px_rgba(8,42,99,0.32)] transition active:scale-95 lg:hidden"
+      >
+        <Plus className="h-7 w-7" strokeWidth={2.6} />
+      </Link>
+
       <ProductList products={filteredProducts} baseListHref={baseListHref} />
     </>
   );

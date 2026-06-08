@@ -4,6 +4,7 @@ import { StockReceiveForm } from "@/components/settings/stock-receive-form";
 
 import { requireAppRole } from "@/lib/auth/authorization";
 import { getStockDashboardData } from "@/lib/stock/admin";
+import { getActiveWarehouses } from "@/lib/warehouses";
 
 export const metadata = {
   title: "เคลื่อนไหวสต็อก",
@@ -19,7 +20,10 @@ export default async function StockMovementsPage({
   searchParams,
 }: StockMovementsPageProps) {
   const session = await requireAppRole("admin");
-  const data = await getStockDashboardData(session.organizationId, 50);
+  const [data, warehouses] = await Promise.all([
+    getStockDashboardData(session.organizationId, 50),
+    getActiveWarehouses(session.organizationId),
+  ]);
   const params = await searchParams;
 
   return (
@@ -34,7 +38,7 @@ export default async function StockMovementsPage({
 
 
       <div className="mt-8">
-        <StockMovementTable initialMovementRows={data.movementRows} />
+        <StockMovementTable initialMovementRows={data.movementRows} warehouses={warehouses} />
       </div>
 
       <StockMobileReceiveButton baseHref="/stock/movements" />
@@ -44,6 +48,7 @@ export default async function StockMovementsPage({
         <StockReceiveForm 
           products={data.products} 
           suppliers={data.suppliers}
+          warehouses={warehouses}
           returnHref="/stock/movements" 
         />
       ) : null}

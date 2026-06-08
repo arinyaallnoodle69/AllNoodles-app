@@ -1,4 +1,4 @@
-const CACHE_NAME = "T&Y Noodle-v7";
+const CACHE_NAME = "All Noodles-v8";
 const APP_SHELL = [
   "/offline",
   "/manifest.webmanifest",

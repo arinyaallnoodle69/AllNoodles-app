@@ -21,6 +21,8 @@ type MobileListOrder = {
   vehicleName: string | null;
   deliveryNumbers: string[] | undefined;
   isBilled: boolean;
+  warehouseId?: string | null;
+  warehouseName?: string | null;
 };
 
 function formatDisplayDate(value: string) {
@@ -77,21 +79,21 @@ export function IncomingOrdersMobileList({
   const hasMore = visibleCount < orders.length;
 
   return (
-    <div className="grid grid-cols-1 divide-y divide-slate-200 border-t border-slate-200 sm:grid-cols-2 sm:divide-y-0 sm:gap-px sm:bg-slate-200">
+    <div className="grid grid-cols-1 gap-3 border-t border-[#D4AF37]/25 bg-white px-3 py-3 sm:grid-cols-2 sm:gap-3">
       {visibleOrders.map((order, index) => {
         const showDivider = index === 0 || order.orderDate !== visibleOrders[index - 1].orderDate;
 
         return (
           <Fragment key={order.id}>
             {showDivider ? (
-              <div className="col-span-full flex items-center gap-3 bg-slate-50/80 px-4 py-3">
-                <div className="h-[2px] flex-1 bg-slate-200" />
-                <div className="shrink-0 rounded-2xl border border-slate-200 bg-white px-4 py-1.5 shadow-sm">
-                  <span className="text-[13px] font-black uppercase tracking-wider text-[#003366]">
+              <div className="col-span-full flex items-center gap-3 bg-white px-1 py-2">
+                <div className="h-[2px] flex-1 bg-[#D4AF37]/35" />
+                <div className="shrink-0 rounded-2xl border border-[#D4AF37]/50 bg-[#FAF7F2] px-4 py-1.5 shadow-sm">
+                  <span className="text-[13px] font-black uppercase tracking-wider text-[#082A63]">
                     {formatDisplayDate(order.orderDate)}
                   </span>
                 </div>
-                <div className="h-[2px] flex-1 bg-slate-200" />
+                <div className="h-[2px] flex-1 bg-[#D4AF37]/35" />
               </div>
             ) : null}
 
@@ -116,6 +118,7 @@ export function IncomingOrdersMobileList({
               vehicleId={order.vehicleId}
               vehicleName={order.vehicleName}
               vehicles={vehicles}
+              warehouseName={order.warehouseName}
             />
           </Fragment>
         );
@@ -123,9 +126,9 @@ export function IncomingOrdersMobileList({
 
       {/* Sensor for Infinite Scrolling */}
       {hasMore && (
-        <div ref={sensorRef} className="col-span-full flex items-center justify-center py-6 bg-white gap-2">
-          <Loader2 className="h-5 w-5 animate-spin text-[#003366]" strokeWidth={2.4} />
-          <span className="text-sm font-semibold text-slate-500">กำลังโหลดออเดอร์เพิ่ม...</span>
+        <div ref={sensorRef} className="col-span-full flex items-center justify-center gap-2 rounded-2xl border border-[#D4AF37]/25 bg-white py-6">
+          <Loader2 className="h-5 w-5 animate-spin text-[#082A63]" strokeWidth={2.4} />
+          <span className="text-sm font-semibold text-[#1F2A44]">กำลังโหลดออเดอร์เพิ่ม...</span>
         </div>
       )}
     </div>

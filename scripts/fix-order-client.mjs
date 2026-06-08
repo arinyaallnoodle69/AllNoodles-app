@@ -60,7 +60,7 @@ const captureReceiptImageReplacement = `const captureReceiptImage = useCallback(
       if (!blob) return null;
 
       const receiptOrderMeta = receiptOrder as { order_number?: string } | null;
-      const fileName = \`TYNoodle-\${lastOrderMeta?.orderNumber ?? receiptOrderMeta?.order_number ?? "order"}.png\`;
+      const fileName = \`All Noodles-\${lastOrderMeta?.orderNumber ?? receiptOrderMeta?.order_number ?? "order"}.png\`;
 
       return { blob, fileName };
     } catch (err) {

@@ -56,7 +56,7 @@ function PodiumCard({ item, rank }: { item: DeliveredProductSummary; rank: 1 | 2
       <p className={`w-full truncate text-center font-bold text-slate-800 leading-tight ${c.nameSize}`}>
         {item.productName}
       </p>
-      <p className={`font-black text-[#003366] leading-none ${c.qtySize}`}>
+      <p className={`font-black text-[#082A63] leading-none ${c.qtySize}`}>
         {item.totalDelivered.toLocaleString("th-TH")}
         <span className="ml-0.5 text-[10px] font-semibold opacity-60">
           {formatDisplayUnit(item.saleUnitLabel)}
@@ -156,7 +156,7 @@ export function OrderSummaryView({ customerId }: { customerId: string }) {
                   </p>
                 </div>
                 <div className="shrink-0 text-right">
-                  <p className="text-sm font-black text-[#003366]">
+                  <p className="text-sm font-black text-[#082A63]">
                     {item.totalDelivered.toLocaleString("th-TH")}
                   </p>
                   <p className="text-xs text-slate-400">{formatDisplayUnit(item.saleUnitLabel)}</p>

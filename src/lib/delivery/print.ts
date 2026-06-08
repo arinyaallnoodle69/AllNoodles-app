@@ -1,5 +1,6 @@
 import "server-only";
 
+import { sortDeliveryPrintDataByCustomerOrder } from "@/lib/delivery/print-ordering";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
 export type DeliveryNotePrintData = {
@@ -30,8 +31,29 @@ export type DeliveryNotePrintData = {
     saleUnitLabel: string;
     unitPrice: number;
     lineTotal: number;
+    display_order?: number | null;
   }>;
 };
+
+const skuCollator = new Intl.Collator("th", {
+  numeric: true,
+  sensitivity: "base",
+});
+
+export function sortDeliveryItems<T extends { productSku: string; productName: string; display_order?: number | null }>(
+  items: T[]
+): T[] {
+  return [...items].sort((left, right) => {
+    const orderA = left.display_order ?? 0;
+    const orderB = right.display_order ?? 0;
+    if (orderA !== orderB) return orderA - orderB;
+
+    const skuComparison = skuCollator.compare(left.productSku, right.productSku);
+    if (skuComparison !== 0) return skuComparison;
+
+    return left.productName.localeCompare(right.productName, "th");
+  });
+}
 
 /** One merged document per store for all DNs on a given date. */
 export async function getAllDeliveryNotesPrintDataForDate(
@@ -66,7 +88,9 @@ export async function getAllDeliveryNotesPrintDataForDate(
     ),
   );
 
-  return results.filter((r): r is DeliveryNotePrintData => r !== null);
+  return sortDeliveryPrintDataByCustomerOrder(
+    results.filter((r): r is DeliveryNotePrintData => r !== null),
+  );
 }
 
 /** Merge all delivery notes (by ids) into a single printable document. */
@@ -103,7 +127,7 @@ export async function getMergedDeliveryPrintData(
       itemMap.set(key, { ...item });
     }
   }
-  const mergedItems = Array.from(itemMap.values());
+  const mergedItems = sortDeliveryItems(Array.from(itemMap.values()));
   // Re-number lines sequentially
   mergedItems.forEach((item, i) => { item.lineNumber = i + 1; });
 
@@ -166,11 +190,10 @@ export async function getDeliveryNotePrintData(
     .from("delivery_note_items")
     .select(`
       id, quantity_delivered, sale_unit_label, unit_price, line_total,
-      products!inner(name, sku, unit)
+      products!inner(name, sku, unit, display_order)
     `)
     .eq("delivery_note_id", dn.id)
-    .eq("organization_id", organizationId)
-    .order("created_at", { ascending: true });
+    .eq("organization_id", organizationId);
 
   if (itemsError || !items) return null;
 
@@ -180,7 +203,7 @@ export async function getDeliveryNotePrintData(
     sale_unit_label: string;
     unit_price: number | string;
     line_total: number | string;
-    products: { name: string; sku: string; unit: string; };
+    products: { name: string; sku: string; unit: string; display_order: number | null; };
   };
 
   const toNum = (v: number | string | null | undefined) => {
@@ -216,15 +239,21 @@ export async function getDeliveryNotePrintData(
       vehicleId: (dn.customers.default_vehicle_id as string | null) ?? null,
       vehicleName: (dn.customers.vehicles as { id: string; name: string } | null)?.name ?? null,
     },
-    items: (items as RawItem[]).map((item, idx) => ({
-      id: item.id,
+    items: sortDeliveryItems(
+      (items as RawItem[]).map((item) => ({
+        id: item.id,
+        lineNumber: 0,
+        productSku: item.products.sku,
+        productName: item.products.name,
+        quantityDelivered: toNum(item.quantity_delivered),
+        saleUnitLabel: item.products.unit,
+        unitPrice: toNum(item.unit_price),
+        lineTotal: toNum(item.line_total),
+        display_order: item.products.display_order,
+      }))
+    ).map((item, idx) => ({
+      ...item,
       lineNumber: idx + 1,
-      productSku: item.products.sku,
-      productName: item.products.name,
-      quantityDelivered: toNum(item.quantity_delivered),
-      saleUnitLabel: item.products.unit,
-      unitPrice: toNum(item.unit_price),
-      lineTotal: toNum(item.line_total),
     })),
   };
 }

@@ -1,11 +1,12 @@
 import "server-only";
 import { cacheLife, cacheTag } from "next/cache";
 
+import { createWarehouseStockMap, getProductWarehouseStockSnapshots } from "@/lib/stock/warehouse-stocks";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
 // Row types
 
-type CustomerRow = { id: string; customer_code: string; name: string };
+type CustomerRow = { id: string; customer_code: string; default_warehouse_id: string | null; name: string };
 type ProductRow = {
   cost_price: number | string;
   id: string;
@@ -98,7 +99,7 @@ function compareProductSku(left: OrderProductOption, right: OrderProductOption) 
 
 // Exported types
 
-export type OrderCustomerOption = { code: string; id: string; name: string };
+export type OrderCustomerOption = { code: string; defaultWarehouseId: string | null; id: string; name: string };
 
 export type OrderVehicleOption = { id: string; name: string };
 
@@ -122,6 +123,11 @@ export type OrderProductOption = {
   sku: string;
   stockQuantity: number;
   unit: string;
+  warehouseStocks: {
+    reservedQuantity: number;
+    stockQuantity: number;
+    warehouseId: string;
+  }[];
   display_order?: number;
 };
 
@@ -135,13 +141,18 @@ export async function getCustomersForOrder(orgId: string): Promise<OrderCustomer
   const admin = getSupabaseAdmin() as unknown as ManageAdmin;
   const { data } = await admin
     .from("customers")
-    .select("id, customer_code, name")
+    .select("id, customer_code, name, default_warehouse_id")
     .eq("organization_id", orgId)
     .eq("is_active", true)
     .order("customer_code", { ascending: true });
 
   return (data ?? [])
-    .map((c) => ({ code: c.customer_code, id: c.id, name: c.name }))
+    .map((c) => ({
+      code: c.customer_code,
+      defaultWarehouseId: c.default_warehouse_id,
+      id: c.id,
+      name: c.name,
+    }))
     .toSorted(compareCustomerCode);
 }
 
@@ -212,6 +223,12 @@ export async function getProductsForOrder(orgId: string): Promise<OrderProductOp
     return [];
   }
 
+  const warehouseStocks = await getProductWarehouseStockSnapshots(
+    orgId,
+    (productsRes.data ?? []).map((product) => product.id),
+  );
+  const warehouseStockMap = createWarehouseStockMap(warehouseStocks);
+
   const productUnitMap = new Map((productsRes.data ?? []).map(p => [p.id, p.unit]));
   const byProduct = new Map<string, OrderProductOption["saleUnits"]>();
   for (const u of saleUnitsRes.data ?? []) {
@@ -279,6 +296,11 @@ export async function getProductsForOrder(orgId: string): Promise<OrderProductOp
       sku: p.sku,
       stockQuantity: Number(p.stock_quantity),
       unit: p.unit,
+      warehouseStocks: (warehouseStockMap.get(p.id) ?? []).map((stock) => ({
+        reservedQuantity: stock.reservedQuantity,
+        stockQuantity: stock.stockQuantity,
+        warehouseId: stock.warehouseId,
+      })),
       display_order: p.display_order ?? undefined,
     };
   });

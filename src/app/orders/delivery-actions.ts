@@ -4,6 +4,7 @@ import { revalidateTag } from "next/cache";
 import { requireAppRole } from "@/lib/auth/authorization";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { getOrderItemsForDelivery, getStoreOrdersForDelivery } from "@/lib/delivery/admin";
+import { getOrderRequiredWarehouse } from "@/lib/warehouses";
 import type { DeliveryFormData } from "@/lib/delivery/admin";
 
 export type BatchDeliveryReviewStoreInput = {
@@ -604,11 +605,18 @@ export async function createDeliveryNoteAction(
   }
 
   const admin = getSupabaseAdmin() as unknown as RpcAdmin;
+  const warehouseResult = await getOrderRequiredWarehouse(session.organizationId, orderIds[0]);
+
+  if (warehouseResult.error) {
+    return { status: "error", message: warehouseResult.error };
+  }
+  const warehouseId = warehouseResult.warehouse!.id;
 
   const { data, error } = await admin.rpc("create_store_delivery_note", {
     p_organization_id: session.organizationId,
     p_order_ids: orderIds,
     p_customer_id: customerId,
+    p_warehouse_id: warehouseId,
     p_vehicle_id: vehicleId,
     p_delivery_date: deliveryDate,
     p_notes: notes || null,
@@ -670,10 +678,26 @@ export async function createBatchDeliveryNotesAction(
       continue;
     }
 
+    const warehouseResult = await getOrderRequiredWarehouse(session.organizationId, orderIds[0]);
+
+    if (warehouseResult.error) {
+      results.push({
+        customerId: group.customerId,
+        customerName: group.customerName,
+        state: {
+          status: "error",
+          message: warehouseResult.error,
+        },
+      });
+      continue;
+    }
+    const warehouseId = warehouseResult.warehouse!.id;
+
     const { data, error } = await admin.rpc("create_store_delivery_note", {
       p_organization_id: session.organizationId,
       p_order_ids: orderIds,
       p_customer_id: customerId,
+      p_warehouse_id: warehouseId,
       p_vehicle_id: group.vehicleId?.trim() || null,
       p_delivery_date: normalizedDate,
       p_notes: group.notes?.trim() || null,

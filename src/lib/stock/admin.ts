@@ -25,6 +25,11 @@ export type StockProductOption = {
     isDefault: boolean;
     label: string;
   }[];
+  warehouseStocks: {
+    onHandQuantity: number;
+    reservedQuantity: number;
+    warehouseId: string;
+  }[];
   categoryName: string | null;
   sku: string;
   unit: string;
@@ -49,6 +54,7 @@ export type StockMovementRow = {
   sku: string;
   stockAfter: number;
   stockBefore: number;
+  warehouseId: string | null;
 };
 
 export type StockDashboardData = {
@@ -101,6 +107,26 @@ type SupplierRow = {
   supplier_code: string;
 };
 
+type ProductWarehouseStockRow = {
+  product_id: string;
+  reserved_quantity: number | string;
+  stock_quantity: number | string;
+  warehouse_id: string;
+};
+
+type WarehouseStockQuery = {
+  eq: (column: string, value: string) => Promise<{
+    data: ProductWarehouseStockRow[] | null;
+    error: { message?: string } | null;
+  }>;
+};
+
+type WarehouseStockAdmin = {
+  from: (table: "product_warehouse_stocks") => {
+    select: (columns: string) => WarehouseStockQuery;
+  };
+};
+
 type MovementRow = {
   created_at: string;
   id: string;
@@ -112,6 +138,7 @@ type MovementRow = {
   reference_number: string | null;
   stock_after: number | string;
   stock_before: number | string;
+  warehouse_id: string | null;
 };
 
 function isMissingTableError(message: string | undefined) {
@@ -129,20 +156,27 @@ export type StockHistoryRow = {
   supplierId: string | null;
   supplierName: string;
   totalAmount: number;
+  warehouseId?: string | null;
 };
 
 export const getStockHistoryData = cache(
-  async (organizationId: string, limit = 50, offset = 0): Promise<StockHistoryRow[]> => {
+  async (organizationId: string, limit = 50, offset = 0, warehouseId?: string): Promise<StockHistoryRow[]> => {
     const admin = getSupabaseAdmin();
 
-    const { data, error } = await admin
+    let query = admin
       .from("inventory_receipts")
       .select(`
-        id, receipt_number, supplier_name, supplier_id, received_at, created_at, notes, receipt_url,
+        id, receipt_number, supplier_name, supplier_id, received_at, created_at, notes, receipt_url, warehouse_id,
         inventory_receipt_items(quantity_received, unit_cost),
         suppliers(name)
       `)
-      .eq("organization_id", organizationId)
+      .eq("organization_id", organizationId);
+
+    if (warehouseId && warehouseId !== "all") {
+      query = query.eq("warehouse_id", warehouseId);
+    }
+
+    const { data, error } = await query
       .order("received_at", { ascending: false })
       .order("created_at", { ascending: false })
       .range(offset, offset + limit - 1);
@@ -158,6 +192,7 @@ export const getStockHistoryData = cache(
       created_at: string;
       notes: string | null;
       receipt_url: string | null;
+      warehouse_id: string | null;
       inventory_receipt_items: { quantity_received: number; unit_cost: number }[];
       suppliers: { name: string } | null;
     }[]).map((r) => {
@@ -178,6 +213,7 @@ export const getStockHistoryData = cache(
         supplierId: r.supplier_id,
         supplierName: r.suppliers?.name || r.supplier_name || "ไม่ระบุผู้ขาย",
         totalAmount,
+        warehouseId: r.warehouse_id,
       };
     });
   },
@@ -278,7 +314,7 @@ export const getStockDashboardData = cache(
   async (organizationId: string, movementLimit = 20, movementOffset = 0): Promise<StockDashboardData> => {
     const admin = getSupabaseAdmin();
 
-    const [productsResult, imagesResult, saleUnitsResult, movementsResult, suppliersResult] = await Promise.all([
+    const [productsResult, imagesResult, saleUnitsResult, movementsResult, suppliersResult, warehouseStocksResult] = await Promise.all([
       admin.from("products")
         .select(`
           id, sku, name, cost_price, stock_quantity, reserved_quantity, unit, is_active, display_order,
@@ -298,7 +334,7 @@ export const getStockDashboardData = cache(
         .order("sort_order", { ascending: true }),
       admin.from("inventory_movements")
         .select(
-          "id, product_id, movement_type, quantity_delta, stock_before, stock_after, reference_number, notes, created_at, inventory_receipts(receipt_url)",
+          "id, product_id, warehouse_id, movement_type, quantity_delta, stock_before, stock_after, reference_number, notes, created_at, inventory_receipts(receipt_url)",
         )
         .eq("organization_id", organizationId)
         .order("created_at", { ascending: false })
@@ -308,6 +344,10 @@ export const getStockDashboardData = cache(
         .eq("organization_id", organizationId)
         .eq("is_active", true)
         .order("name", { ascending: true }),
+      (admin as unknown as WarehouseStockAdmin)
+        .from("product_warehouse_stocks")
+        .select("product_id, warehouse_id, stock_quantity, reserved_quantity")
+        .eq("organization_id", organizationId),
     ]);
 
     const errors = [
@@ -338,6 +378,7 @@ export const getStockDashboardData = cache(
     const saleUnits = (saleUnitsResult.data ?? []) as StockSaleUnitRow[];
     const movements = (movementsResult.data ?? []) as MovementRow[];
     const suppliers = (suppliersResult.data ?? []) as SupplierRow[];
+    const warehouseStocks = warehouseStocksResult.error ? [] : (warehouseStocksResult.data ?? []);
 
     const imageMap = new Map<string, string>();
     for (const image of images) {
@@ -354,6 +395,13 @@ export const getStockDashboardData = cache(
     }
 
     const productMap = new Map(products.map((product) => [product.id, product]));
+    const warehouseStockMap = new Map<string, ProductWarehouseStockRow[]>();
+    for (const stock of warehouseStocks) {
+      const current = warehouseStockMap.get(stock.product_id) ?? [];
+      current.push(stock);
+      warehouseStockMap.set(stock.product_id, current);
+    }
+
     const normalizedProducts = products.map((product) => {
       const baseCostPrice = Number(product.cost_price);
       const productSaleUnits = (saleUnitMap.get(product.id) ?? [])
@@ -382,17 +430,29 @@ export const getStockDashboardData = cache(
         onHandQuantity: Number(product.stock_quantity),
         reservedQuantity: Number(product.reserved_quantity),
         saleUnits: productSaleUnits,
+        warehouseStocks: (warehouseStockMap.get(product.id) ?? []).map((stock) => ({
+          onHandQuantity: Number(stock.stock_quantity),
+          reservedQuantity: Number(stock.reserved_quantity),
+          warehouseId: stock.warehouse_id,
+        })),
         sku: product.sku,
         unit: product.unit,
       };
     });
 
     return {
-      lowStockCount: normalizedProducts.filter((product) => {
-        if (!product.isActive) return false;
-        const availableQuantity = product.onHandQuantity - product.reservedQuantity;
-        return availableQuantity <= 5;
-      }).length,
+      lowStockCount: normalizedProducts.reduce((total, product) => {
+        if (!product.isActive) return total;
+        if (product.warehouseStocks.length === 0) {
+          const availableQuantity = product.onHandQuantity - product.reservedQuantity;
+          return total + (availableQuantity <= 5 ? 1 : 0);
+        }
+
+        return total + product.warehouseStocks.filter((stock) => {
+          const availableQuantity = stock.onHandQuantity - stock.reservedQuantity;
+          return availableQuantity <= 5;
+        }).length;
+      }, 0),
       movementRows: movements.map((movement) => ({
         createdAt: movement.created_at,
         id: movement.id,
@@ -406,6 +466,7 @@ export const getStockDashboardData = cache(
         sku: productMap.get(movement.product_id)?.sku ?? "-",
         stockAfter: Number(movement.stock_after),
         stockBefore: Number(movement.stock_before),
+        warehouseId: movement.warehouse_id,
       })),
       products: normalizedProducts,
       suppliers: suppliers.map(s => ({
@@ -433,7 +494,7 @@ export const getStockMovementsData = cache(
     const [movementsResult, productsResult] = await Promise.all([
       admin.from("inventory_movements")
         .select(
-          "id, product_id, movement_type, quantity_delta, stock_before, stock_after, reference_number, notes, created_at, inventory_receipts(receipt_url)",
+          "id, product_id, warehouse_id, movement_type, quantity_delta, stock_before, stock_after, reference_number, notes, created_at, inventory_receipts(receipt_url)",
         )
         .eq("organization_id", organizationId)
         .order("created_at", { ascending: false })
@@ -462,6 +523,7 @@ export const getStockMovementsData = cache(
       sku: productMap.get(movement.product_id)?.sku ?? "-",
       stockAfter: Number(movement.stock_after),
       stockBefore: Number(movement.stock_before),
+      warehouseId: movement.warehouse_id,
     }));
   }
 );

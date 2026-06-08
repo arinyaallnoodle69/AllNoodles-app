@@ -126,7 +126,7 @@ export function OrderDeliveryActionButton({
         pixelRatio: 2,
       });
 
-      const fileName = `TYNoodle-${detail?.orderNumber ?? "order"}.png`;
+      const fileName = `All Noodles-${detail?.orderNumber ?? "order"}.png`;
 
       // Check if iOS
       const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
@@ -200,7 +200,7 @@ export function OrderDeliveryActionButton({
         aria-label={label}
         title={label}
         className={[
-          "inline-flex items-center justify-center border border-[#003366] bg-[#003366] text-white transition hover:bg-[#002952] active:scale-95 disabled:opacity-50",
+          "inline-flex items-center justify-center border border-[#082A63] bg-[#082A63] text-white transition hover:bg-[#103B82] active:scale-95 disabled:opacity-50",
           iconOnly ? "size-10 shrink-0 rounded-full p-0 leading-none" : "min-h-9 w-full gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold",
         ].join(" ")}
       >
@@ -215,7 +215,7 @@ export function OrderDeliveryActionButton({
       {mounted && isOpen && detail
         ? createPortal(
             <div
-              className="fixed inset-0 z-[500] flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm animate-in fade-in duration-200"
+              className="fixed inset-0 z-[500] flex items-center justify-center bg-black/40 p-1 sm:p-4 backdrop-blur-sm animate-in fade-in duration-200"
               onClick={(event) => {
                 if (event.target === event.currentTarget) setIsOpen(false);
               }}
@@ -238,12 +238,12 @@ export function OrderDeliveryActionButton({
                     type="button"
                     onClick={saveReceiptAsImage}
                     disabled={isSaving}
-                    className="inline-flex items-center gap-1.5 rounded-full bg-[#0051d5] px-4 py-2 text-sm font-bold text-white transition hover:bg-[#003d99] disabled:opacity-60 shadow-md"
+                    className="inline-flex items-center gap-2 rounded-full border border-[#D4AF37]/70 bg-[#082A63] px-5 py-2 text-sm font-bold text-white transition-all hover:bg-[#103B82] active:scale-95 disabled:opacity-60 shadow-md shadow-[#082A63]/20"
                   >
                     {isSaving ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <Loader2 className="h-4.5 w-4.5 animate-spin" />
                     ) : (
-                      <Download className="h-4 w-4" />
+                      <Download className="h-4.5 w-4.5" strokeWidth={2.5} />
                     )}
                     บันทึกรูป
                   </button>
@@ -251,12 +251,12 @@ export function OrderDeliveryActionButton({
 
                 <div className="scrollbar-hide max-h-[85vh] overflow-y-auto">
                   <div className="bg-white text-black shadow-2xl" ref={receiptCardRef}>
-                    <div className="px-6 py-6">
+                    <div className="px-2 py-5 sm:px-6 sm:py-6">
                       <div className="mb-2 flex justify-end pr-3 pt-2">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
-                          src="/ty-noodles-logo.png"
-                          alt="T&Y Noodle"
+                          src="/brand/512x512.png"
+                          alt="All Noodles"
                           style={{
                             width: "48px",
                             height: "48px",
@@ -266,13 +266,13 @@ export function OrderDeliveryActionButton({
                       </div>
 
                       <div className="mb-4 text-center">
-                        <div className="text-[11px] leading-relaxed text-slate-500">
-                          T&Y Noodle - ใบยืนยันคำสั่งซื้อ
+                        <div className="text-[11px] leading-relaxed text-black font-extrabold">
+                          All Noodles - ใบยืนยันคำสั่งซื้อ
                         </div>
                         <div className="mt-0.5 text-[14px] font-black leading-tight">
                           เลขที่ออเดอร์: {detail.orderNumber}
                         </div>
-                        <div className="mt-1 text-[12px] leading-relaxed text-slate-500">
+                        <div className="mt-1 text-[12px] leading-relaxed text-black font-semibold">
                           {fmtDateTH(detail.createdAt)}
                         </div>
                       </div>
@@ -284,7 +284,7 @@ export function OrderDeliveryActionButton({
                         <span className="text-[12px]"> {customerName}</span>
                       </div>
 
-                      <div className="grid grid-cols-[1fr_80px_60px_65px] gap-2 border-b border-[#cccccc] py-2">
+                      <div className="grid grid-cols-[1fr_80px_60px_65px] gap-1 sm:gap-2 border-b border-[#cccccc] py-2">
                         <span className="text-left text-[12px] font-black">สินค้า</span>
                         <span className="text-right text-[12px] font-black">จำนวน</span>
                         <span className="text-right text-[12px] font-black">ราคา</span>
@@ -295,13 +295,13 @@ export function OrderDeliveryActionButton({
                         {receiptItems.map((item, index) => (
                           <div
                             key={index}
-                            className="grid grid-cols-[1fr_80px_60px_65px] items-center gap-2 py-3"
+                            className="grid grid-cols-[1fr_80px_60px_65px] items-center gap-1 sm:gap-2 py-3"
                           >
                             <div className="text-[11px] leading-[1.4] break-words whitespace-normal overflow-visible">{item.name}</div>
                             <div className="text-right text-[12px] font-medium">
                               {formatQuantity(item.quantity)} {item.saleUnitLabel}
                             </div>
-                            <div className="text-right text-[12px] text-slate-500">
+                            <div className="text-right text-[12px] text-black font-medium">
                               {formatCurrency(item.unitPrice)}
                             </div>
                             <div className="text-right text-[12px] font-bold">
@@ -315,7 +315,7 @@ export function OrderDeliveryActionButton({
 
                       <div className="mb-6 flex items-center justify-between px-1">
                         <span className="text-[13px] font-black">ยอดรวมทั้งหมด:</span>
-                        <span className="text-[16px] font-black text-[#0051d5] underline decoration-double decoration-slate-300 underline-offset-4">
+                        <span className="text-[16px] font-black text-[#082A63] underline decoration-double decoration-slate-300 underline-offset-4">
                           {formatCurrency(detail.totalAmount)}
                         </span>
                       </div>

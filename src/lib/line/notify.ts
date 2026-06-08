@@ -98,7 +98,7 @@ function buildFlexMessage(payload: NewOrderPayload): object {
           type: "text",
           text: `× ${item.quantity.toLocaleString("th-TH")}`,
           size: "sm",
-          color: "#003366",
+          color: "#082A63",
           weight: "bold",
           flex: 2,
           align: "end",
@@ -219,7 +219,7 @@ function buildFlexMessage(payload: NewOrderPayload): object {
                 type: "text",
                 text: `฿${total}`,
                 size: "md",
-                color: "#003366",
+                color: "#082A63",
                 weight: "bold",
                 flex: 2,
                 align: "end",
@@ -232,7 +232,7 @@ function buildFlexMessage(payload: NewOrderPayload): object {
         type: "box",
         layout: "vertical",
         paddingAll: "16px",
-        backgroundColor: "#f8fafc",
+        backgroundColor: "#FAF7F2",
         contents: [
           {
             type: "button",
@@ -242,7 +242,7 @@ function buildFlexMessage(payload: NewOrderPayload): object {
               uri: `${siteUrl}/orders`,
             },
             style: "primary",
-            color: "#003366",
+            color: "#082A63",
             height: "sm",
           },
         ],
@@ -287,7 +287,7 @@ function buildPriceInquiryFlex(payload: PriceInquiryPayload): object {
       header: {
         type: "box",
         layout: "vertical",
-        backgroundColor: "#003366",
+        backgroundColor: "#082A63",
         paddingAll: "16px",
         contents: [
           {
@@ -393,7 +393,7 @@ function buildPriceInquiryFlex(payload: PriceInquiryPayload): object {
             type: "text",
             text: "กรุณาตรวจสอบและแจ้งราคากลับลูกค้า",
             size: "sm",
-            color: "#003366",
+            color: "#082A63",
             weight: "bold",
             wrap: true,
             margin: "sm",
@@ -527,7 +527,7 @@ function buildCustomerReceiptFlex(payload: NewOrderPayload): object {
         paddingAll: "14px",
         backgroundColor: "#f0fdf4",
         contents: [
-          { type: "text", text: "ขอบคุณที่ใช้บริการ T&Y Noodle 🙏", size: "xs", color: "#15803d", align: "center", weight: "bold" },
+          { type: "text", text: "ขอบคุณที่ใช้บริการ All Noodles 🙏", size: "xs", color: "#15803d", align: "center", weight: "bold" },
           { type: "text", text: "เส้นรังนก · ส่งตรงถึงร้าน", size: "xs", color: "#86efac", align: "center", margin: "xs" },
         ],
       },
@@ -621,7 +621,7 @@ export async function notifyCustomerOrderReceiptSummary(
   const message = {
     type: "text",
     text: [
-      "T&Y Noodle - ใบยืนยันคำสั่งซื้อ",
+      "All Noodles - ใบยืนยันคำสั่งซื้อ",
       `เลขที่ออเดอร์: ${payload.orderNumber}`,
       `ร้านค้า: ${payload.customerName}`,
       "",

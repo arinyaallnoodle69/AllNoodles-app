@@ -4,14 +4,14 @@ import { requireAppRole } from "@/lib/auth/authorization";
 import { getStockHistoryData, getStockMovementsData } from "@/lib/stock/admin";
 import { getStockIssueHistoryData } from "@/lib/stock/issues";
 
-export async function loadMoreStockHistoryAction(offset: number, limit = 50) {
+export async function loadMoreStockHistoryAction(offset: number, limit = 50, warehouseId?: string) {
   const session = await requireAppRole("admin");
-  return getStockHistoryData(session.organizationId, limit, offset);
+  return getStockHistoryData(session.organizationId, limit, offset, warehouseId);
 }
 
-export async function loadMoreStockIssuesAction(offset: number, limit = 50) {
+export async function loadMoreStockIssuesAction(offset: number, limit = 50, warehouseId?: string, date?: string) {
   const session = await requireAppRole("admin");
-  return getStockIssueHistoryData(session.organizationId, limit, offset);
+  return getStockIssueHistoryData(session.organizationId, limit, offset, date, warehouseId);
 }
 
 export async function loadMoreStockMovementsAction(offset: number, limit = 50) {

@@ -80,32 +80,37 @@ const IncomingOrderRow = memo(function IncomingOrderRow({
   return (
     <Fragment key={order.id}>
       {showDivider ? (
-        <tr className="bg-slate-50/50">
-          <td colSpan={7} className="border-y border-slate-200 px-3 py-3 xl:px-6 xl:py-4">
+        <tr className="bg-[#FAF7F2]">
+          <td colSpan={7} className="border-y border-[#D4AF37]/25 px-3 py-3 xl:px-6 xl:py-4">
             <div className="flex items-center gap-4">
-              <div className="h-px flex-1 bg-slate-300" />
-              <span className="rounded-2xl border border-slate-200 bg-white px-3 py-1 text-[11px] font-black uppercase tracking-[0.2em] text-[#003366] shadow-sm xl:px-5 xl:py-2 xl:text-xs">
+              <div className="h-px flex-1 bg-[#D4AF37]/45" />
+              <span className="rounded-2xl border border-[#D4AF37]/50 bg-white px-3 py-1 text-[11px] font-black uppercase tracking-[0.2em] text-[#082A63] shadow-sm xl:px-5 xl:py-2 xl:text-xs">
                 {formatOrderDate(order.orderDate)}
               </span>
-              <div className="h-px flex-1 bg-slate-300" />
+              <div className="h-px flex-1 bg-[#D4AF37]/45" />
             </div>
           </td>
         </tr>
       ) : null}
 
-      <tr className="align-middle transition-colors hover:bg-slate-50/80">
+      <tr className="align-middle transition-colors hover:bg-[#FAF7F2]/70">
         <td className="px-2 py-2 xl:px-3 xl:py-3">
           <div className="min-w-0">
             <div className="flex min-w-0 items-center gap-2">
-              <Building2 className="h-4 w-4 shrink-0 text-[#003366]" strokeWidth={2.2} />
+              <Building2 className="h-4 w-4 shrink-0 text-[#082A63]" strokeWidth={2.2} />
               <p className="min-w-0 break-words line-clamp-2 text-sm font-bold leading-tight text-slate-950 xl:text-base">
                 <span translate="no">{order.customerCode}</span> - {order.customerName}
               </p>
             </div>
-            <div className="mt-1 flex items-center gap-2 pl-6">
-              <span className="shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-700 ring-1 ring-slate-200">
+            <div className="mt-1 flex flex-wrap items-center gap-2 pl-6">
+              <span className="shrink-0 rounded-full bg-[#D4AF37]/18 px-2 py-0.5 text-[10px] font-bold text-[#082A63] ring-1 ring-[#D4AF37]/30">
                 {order.channelLabel}
               </span>
+              {order.warehouseName ? (
+                <span className="shrink-0 rounded-full bg-[#082A63]/8 px-2 py-0.5 text-[10px] font-black text-[#082A63] ring-1 ring-[#082A63]/25">
+                  {order.warehouseName}
+                </span>
+              ) : null}
               {isBilled ? (
                 <span
                   className="inline-flex size-5 shrink-0 items-center justify-center rounded-full bg-emerald-700 text-white"
@@ -133,13 +138,13 @@ const IncomingOrderRow = memo(function IncomingOrderRow({
           {hasDisplayDelivery ? (
             <div className="flex min-w-0 flex-col items-start gap-1">
               {displayDeliveryNumbers.map((num) => (
-                <span key={num} className="whitespace-nowrap font-mono text-sm font-bold text-emerald-700 xl:text-base">
+                <span key={num} className="whitespace-nowrap font-mono text-sm font-bold text-[#D4AF37] xl:text-base">
                   {num}
                 </span>
               ))}
             </div>
           ) : (
-            <span className="text-sm font-medium text-slate-400 xl:text-base">-</span>
+            <span className="text-sm font-medium text-[#1F2A44] xl:text-base">-</span>
           )}
         </td>
         <td className="min-w-0 px-2 py-2 xl:px-3 xl:py-3">
@@ -170,7 +175,7 @@ const IncomingOrderRow = memo(function IncomingOrderRow({
               aria-busy={isLoading}
               aria-label={isExpanded ? "ซ่อนรายละเอียดออเดอร์" : "แสดงรายละเอียดออเดอร์"}
               title={isExpanded ? "ซ่อนรายละเอียดออเดอร์" : "แสดงรายละเอียดออเดอร์"}
-              className="inline-flex size-10 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white p-0 leading-none text-slate-950 shadow-sm transition hover:border-[#003366]/30 hover:bg-slate-50 hover:text-[#003366] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#003366]/20 disabled:opacity-85"
+              className="inline-flex size-10 shrink-0 items-center justify-center rounded-full border border-[#D4AF37]/45 bg-white p-0 leading-none text-[#082A63] shadow-sm transition hover:border-[#D4AF37] hover:bg-[#FAF7F2] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D4AF37]/25 disabled:opacity-85"
             >
               {isLoading ? (
                 <Loader2 className="h-4.5 w-4.5 animate-spin" strokeWidth={2.2} />
@@ -200,8 +205,8 @@ const IncomingOrderRow = memo(function IncomingOrderRow({
             {detail ? (
               <DesktopOrderDetail detail={detail} deliveryNumbers={deliveryNumbers} />
             ) : (
-              <div className="flex items-center justify-center gap-3 border-y border-slate-300 bg-white px-6 py-8 text-base font-semibold text-slate-700">
-                <Loader2 className="h-5 w-5 animate-spin text-[#003366]" strokeWidth={2.4} />
+              <div className="flex items-center justify-center gap-3 border-y border-[#D4AF37]/25 bg-white px-6 py-8 text-base font-semibold text-[#1F2A44]">
+                <Loader2 className="h-5 w-5 animate-spin text-[#082A63]" strokeWidth={2.4} />
                 กำลังโหลดรายละเอียดออเดอร์
               </div>
             )}
@@ -341,20 +346,20 @@ export const IncomingOrdersDesktopTable = memo(function IncomingOrdersDesktopTab
   }
 
   return (
-    <div className="rounded-[1.25rem] border border-slate-200 bg-white shadow-[0_18px_48px_rgba(15,23,42,0.05)] lg:block">
+    <div className="rounded-[1.35rem] border border-[#D4AF37]/35 bg-white shadow-[0_18px_48px_rgba(8,42,99,0.08)] lg:block">
       <div className="lg:min-w-0 xl:min-w-[1150px]">
-        <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3 xl:px-6 xl:py-4">
+        <div className="flex items-center justify-between border-b border-[#D4AF37]/30 bg-white px-4 py-3 xl:px-6 xl:py-4">
           <div>
-            <h3 className="text-lg font-bold text-slate-950 xl:text-xl">ตารางรายการคำสั่งซื้อล่าสุด</h3>
-            <p className="mt-1 text-sm font-medium text-slate-950 xl:text-base">
+            <h3 className="text-lg font-black text-[#082A63] xl:text-xl">ตารางรายการคำสั่งซื้อล่าสุด</h3>
+            <p className="mt-1 text-sm font-semibold text-[#1F2A44] xl:text-base">
               จัดการและติดตามสถานะออเดอร์ในวันที่เลือกจากจุดเดียว
             </p>
-            <p className="mt-1 hidden text-xs font-semibold text-slate-500 lg:block xl:hidden">
+            <p className="mt-1 hidden text-xs font-semibold text-[#1F2A44] lg:block xl:hidden">
               ↔ เลื่อนซ้าย-ขวาเพื่อดูข้อมูลเพิ่มเติม
             </p>
           </div>
-          <div className="flex items-center gap-2 text-sm font-semibold text-slate-950 xl:text-base">
-            <span className="h-2.5 w-2.5 rounded-full bg-[#003366]" />
+          <div className="flex items-center gap-2 rounded-full border border-[#D4AF37]/45 bg-[#FAF7F2] px-3 py-1.5 text-sm font-black text-[#082A63] xl:text-base">
+            <span className="h-2.5 w-2.5 rounded-full bg-[#D4AF37]" />
             รายการทั้งหมด
           </div>
         </div>
@@ -372,19 +377,19 @@ export const IncomingOrdersDesktopTable = memo(function IncomingOrdersDesktopTab
             data-horizontal-scroll="true"
             className="overflow-x-auto touch-pan-x pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
           >
-            <table className="min-w-[1180px] border-collapse text-left">
-            <thead className="bg-slate-50 text-slate-950">
-              <tr className="border-b border-slate-200">
-                <th className="w-[20%] px-2 py-2 text-xs font-bold tracking-[0.04em] text-slate-950 xl:px-3 xl:py-2.5 xl:text-sm">ร้านค้า</th>
-                <th className="w-[11%] px-2 py-2 text-center text-xs font-bold tracking-[0.04em] text-slate-950 xl:px-3 xl:py-2.5 xl:text-sm">วันที่</th>
-                <th className="w-[9%] px-2 py-2 text-center text-xs font-bold tracking-[0.04em] text-slate-950 xl:px-3 xl:py-2.5 xl:text-sm">สินค้า</th>
-                <th className="w-[11%] whitespace-nowrap px-2 py-2 text-center text-xs font-bold tracking-[0.04em] text-slate-950 xl:px-3 xl:py-2.5 xl:text-sm">ยอดรวม</th>
-                <th className="w-[13%] px-2 py-2 text-left text-xs font-bold tracking-[0.04em] text-slate-950 xl:px-3 xl:py-2.5 xl:text-sm">เลขจัดส่ง</th>
-                <th className="w-[18%] px-2 py-2 text-left text-xs font-bold tracking-[0.04em] text-slate-950 xl:px-3 xl:py-2.5 xl:text-sm">การจัดส่ง</th>
-                <th className="w-[18%] px-2 py-2 text-center text-xs font-bold tracking-[0.04em] text-slate-950 xl:px-3 xl:py-2.5 xl:text-sm">จัดการ</th>
+            <table className="w-full min-w-[1180px] border-collapse text-left">
+            <thead className="bg-[#082A63] text-white">
+              <tr className="border-b border-[#D4AF37]/45">
+                <th className="w-[20%] px-2 py-2.5 text-xs font-black tracking-[0.04em] text-white xl:px-3 xl:py-3 xl:text-sm">ร้านค้า</th>
+                <th className="w-[11%] px-2 py-2.5 text-center text-xs font-black tracking-[0.04em] text-white xl:px-3 xl:py-3 xl:text-sm">วันที่</th>
+                <th className="w-[9%] px-2 py-2.5 text-center text-xs font-black tracking-[0.04em] text-white xl:px-3 xl:py-3 xl:text-sm">สินค้า</th>
+                <th className="w-[11%] whitespace-nowrap px-2 py-2.5 text-center text-xs font-black tracking-[0.04em] text-white xl:px-3 xl:py-3 xl:text-sm">ยอดรวม</th>
+                <th className="w-[13%] px-2 py-2.5 text-left text-xs font-black tracking-[0.04em] text-white xl:px-3 xl:py-3 xl:text-sm">เลขจัดส่ง</th>
+                <th className="w-[18%] px-2 py-2.5 text-left text-xs font-black tracking-[0.04em] text-white xl:px-3 xl:py-3 xl:text-sm">การจัดส่ง</th>
+                <th className="w-[18%] px-2 py-2.5 text-center text-xs font-black tracking-[0.04em] text-white xl:px-3 xl:py-3 xl:text-sm">จัดการ</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-200">
+            <tbody className="divide-y divide-[#D4AF37]/18">
               {orders.map((order, index) => {
                 const orderKey = `${order.customerId}_${order.orderDate}`;
                 const isExpanded = expandedOrderId === order.id && visibleOrderIds.has(order.id);
@@ -426,7 +431,7 @@ export const IncomingOrdersDesktopTable = memo(function IncomingOrdersDesktopTab
           <div
             ref={stickyScrollRef}
             aria-label="แถบเลื่อนแนวนอน"
-            className="overflow-x-auto touch-pan-x [scrollbar-color:#003366_#cbd5e1] [scrollbar-width:auto] [&::-webkit-scrollbar]:h-3 [&::-webkit-scrollbar-track]:rounded-full [&::-webkit-scrollbar-track]:bg-slate-300 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-[#003366] [&::-webkit-scrollbar-thumb:hover]:bg-[#002952]"
+            className="overflow-x-auto touch-pan-x [scrollbar-color:#082A63_#cbd5e1] [scrollbar-width:auto] [&::-webkit-scrollbar]:h-3 [&::-webkit-scrollbar-track]:rounded-full [&::-webkit-scrollbar-track]:bg-slate-300 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-[#082A63] [&::-webkit-scrollbar-thumb:hover]:bg-[#103B82]"
           >
             <div ref={stickyScrollInnerRef} className="h-1 min-w-[1180px]" />
           </div>

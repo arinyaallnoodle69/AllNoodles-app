@@ -88,7 +88,7 @@ export function CustomerInquiryModal({ inquiry }: CustomerInquiryModalProps) {
               </div>
 
               <div className="flex items-center gap-3 rounded-2xl bg-white px-4 py-3 ring-1 ring-slate-200">
-                <CalendarDays className="h-4 w-4 shrink-0 text-[#003366]" strokeWidth={2.2} />
+                <CalendarDays className="h-4 w-4 shrink-0 text-[#082A63]" strokeWidth={2.2} />
                 <div>
                   <p className="text-xs font-medium uppercase tracking-[0.12em] text-slate-400">
                     เวลาที่ส่งข้อมูล

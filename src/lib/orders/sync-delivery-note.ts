@@ -3,10 +3,30 @@ import "server-only";
 import { syncBillingSnapshotsForDeliveryNumbers } from "@/lib/billing/actions";
 import { revalidateDashboardPages } from "@/lib/dashboard/revalidate-dashboard-pages";
 import { revalidateReportPages } from "@/lib/reports/revalidate-report-pages";
+import { getOrderRequiredWarehouse } from "@/lib/warehouses";
 import type { Database } from "@/types/database";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 type Admin = SupabaseClient<Database>;
+
+type WarehouseMutationResult = {
+  data: unknown;
+  error: { message?: string } | null;
+};
+
+type WarehouseMutationQuery = {
+  eq(column: string, value: number | string): WarehouseMutationQuery;
+  in(column: string, values: string[]): Promise<WarehouseMutationResult>;
+  insert(values: unknown): Promise<WarehouseMutationResult>;
+  select(columns: string): WarehouseMutationQuery;
+  then: Promise<WarehouseMutationResult>["then"];
+  update(values: Record<string, unknown>): WarehouseMutationQuery;
+};
+
+type WarehouseMutationClient = {
+  from(table: string): WarehouseMutationQuery;
+  rpc(fn: string, params: Record<string, unknown>): Promise<WarehouseMutationResult>;
+};
 
 type SyncResult =
   | { success: true; deliveryNumber: string }
@@ -56,6 +76,12 @@ export async function syncDeliveryNoteForOrder(
     };
   }
 
+  const warehouseResult = await getOrderRequiredWarehouse(input.organizationId, input.orderId);
+  if (warehouseResult.error) {
+    return { error: warehouseResult.error };
+  }
+  const warehouseId = warehouseResult.warehouse!.id;
+
   const { data: customer } = await admin
     .from("customers")
     .select("default_vehicle_id")
@@ -71,6 +97,7 @@ export async function syncDeliveryNoteForOrder(
     .eq("organization_id", input.organizationId)
     .eq("customer_id", order.customer_id)
     .eq("order_date", order.order_date)
+    .eq("warehouse_id", warehouseId)
     .neq("status", "cancelled")
     .order("created_at", { ascending: true });
 
@@ -153,6 +180,7 @@ export async function syncDeliveryNoteForOrder(
       .eq("organization_id", input.organizationId)
       .eq("customer_id", order.customer_id)
       .eq("delivery_date", order.order_date)
+      .eq("warehouse_id", warehouseId)
       .eq("status", "confirmed")
       .order("created_at", { ascending: true })
       .limit(1)
@@ -192,13 +220,19 @@ export async function syncDeliveryNoteForOrder(
 
     const productIdsToRestore = Array.from(restoreByProduct.keys());
     if (productIdsToRestore.length > 0) {
-      const { data: productsToRestore } = await admin
-        .from("products")
-        .select("id, stock_quantity")
-        .in("id", productIdsToRestore);
+      const warehouseDb = admin as unknown as WarehouseMutationClient;
+      const { data: stocksToRestore } = await warehouseDb
+        .from("product_warehouse_stocks")
+        .select("product_id, stock_quantity")
+        .eq("organization_id", input.organizationId)
+        .eq("warehouse_id", warehouseId)
+        .in("product_id", productIdsToRestore);
 
       const productMap = new Map(
-        (productsToRestore ?? []).map((product) => [product.id, Number(product.stock_quantity)]),
+        ((stocksToRestore ?? []) as { product_id: string; stock_quantity: number | string }[]).map((stock) => [
+          stock.product_id,
+          Number(stock.stock_quantity),
+        ]),
       );
       const inventoryMovements: Database["public"]["Tables"]["inventory_movements"]["Insert"][] = [];
 
@@ -222,10 +256,19 @@ export async function syncDeliveryNoteForOrder(
           stock_before: stockBefore,
         });
 
-        const { error: updateError } = await admin
-          .from("products")
+        const { error: updateError } = await warehouseDb
+          .from("product_warehouse_stocks")
           .update({ stock_quantity: stockAfter })
-          .eq("id", productId);
+          .eq("organization_id", input.organizationId)
+          .eq("warehouse_id", warehouseId)
+          .eq("product_id", productId);
+
+        if (!updateError) {
+          await warehouseDb.rpc("recalculate_product_stock_totals", {
+            p_organization_id: input.organizationId,
+            p_product_id: productId,
+          });
+        }
 
         if (updateError) {
           console.error(`[syncDeliveryNoteForOrder:updateProduct:${productId}]`, updateError);
@@ -234,7 +277,12 @@ export async function syncDeliveryNoteForOrder(
       }
 
       if (inventoryMovements.length > 0) {
-        await admin.from("inventory_movements").insert(inventoryMovements);
+        await warehouseDb.from("inventory_movements").insert(
+          inventoryMovements.map((movement) => ({
+            ...movement,
+            warehouse_id: warehouseId,
+          })),
+        );
       }
     }
 
@@ -277,6 +325,7 @@ export async function syncDeliveryNoteForOrder(
     p_notes: mergedNotes as unknown as string,
     p_created_by: actorUserId,
     p_items: payloadItems,
+    p_warehouse_id: warehouseId,
   });
 
   if (deliveryError) {

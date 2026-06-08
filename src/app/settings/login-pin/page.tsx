@@ -66,7 +66,7 @@ export default async function LoginPinSettingsPage() {
 
         <section className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-[0_18px_55px_rgba(15,23,42,0.05)] sm:p-7">
           <div className="flex items-center gap-4">
-            <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 text-[#003366]">
+            <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 text-[#082A63]">
               <MonitorSmartphone className="h-6 w-6" strokeWidth={2.4} />
             </span>
             <div className="min-w-0">
@@ -91,7 +91,7 @@ export default async function LoginPinSettingsPage() {
                       {formatThaiDateTime(log.created_at)}
                     </p>
                   </div>
-                  <span className="inline-flex w-fit rounded-full bg-[#003366]/8 px-3 py-1 text-xs font-black text-[#003366]">
+                  <span className="inline-flex w-fit rounded-full bg-[#082A63]/20 px-3 py-1 text-xs font-black text-[#082A63]">
                     {getDeviceLabel(log.user_agent)}
                   </span>
                 </div>

@@ -62,12 +62,12 @@ export function CustomerVehicleSelect({
   return (
     <div className={className}>
       <div className="relative">
-        <Truck className={`pointer-events-none absolute ${compact ? 'left-2 h-3 w-3' : 'left-3 h-4 w-4'} top-1/2 -translate-y-1/2 text-[#003366]`} strokeWidth={2.1} />
+        <Truck className={`pointer-events-none absolute ${compact ? 'left-2 h-3 w-3' : 'left-3 h-4 w-4'} top-1/2 -translate-y-1/2 text-[#082A63]`} strokeWidth={2.1} />
         <select
           value={selectedVehicleId}
           disabled={isPending}
           onChange={(event) => handleChange(event.target.value)}
-          className={`w-full rounded-xl border border-slate-200 bg-white ${compact ? 'py-1.5 pl-7 pr-6 text-[11px]' : 'py-2 pl-9 pr-8 text-sm'} font-medium text-slate-700 outline-none transition focus:border-[#003366]/30 focus:ring-2 focus:ring-[#003366]/20 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400`}
+          className={`w-full rounded-xl border border-slate-200 bg-white ${compact ? 'py-1.5 pl-7 pr-6 text-[11px]' : 'py-2 pl-9 pr-8 text-sm'} font-bold text-slate-700 outline-none transition focus:border-[#082A63]/30 focus:ring-2 focus:ring-[#082A63]/20 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400`}
           aria-label="เลือกรถประจำร้าน"
         >
           <option value="">{compact ? 'ไม่มีรถ' : 'ยังไม่กำหนดรถประจำร้าน'}</option>

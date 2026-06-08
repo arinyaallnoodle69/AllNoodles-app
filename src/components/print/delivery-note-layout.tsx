@@ -89,14 +89,17 @@ function DeliveryNotePageView({
         orgAddress={dn.organization.address}
         orgPhone={dn.organization.phone}
         title="ใบส่งของ"
-        docNumber={dn.deliveryNumber}
-        docDate={dn.deliveryDate}
         pageLabel={totalPages > 1 ? `หน้า ${pageIndex + 1}/${totalPages}` : undefined}
         dividerStyle="none"
         docMetaFontSize="11.8pt"
       />
 
-      <PrintCustomerRow customer={dn.customer} />
+      <PrintCustomerRow
+        customer={dn.customer}
+        docNumber={dn.deliveryNumber}
+        docDate={dn.deliveryDate}
+        docMetaFontSize="11.8pt"
+      />
 
       <table
         style={{
@@ -201,7 +204,7 @@ function DeliveryNotePageView({
             }}
           >
             <div style={{ flex: 1 }}>
-              <p style={{ fontSize: "8.8pt", fontWeight: 700, color: "#1e3a5f" }}>
+              <p style={{ fontSize: "8.8pt", fontWeight: 700, color: "#103B82" }}>
                 มีรายการต่อหน้าถัดไป
               </p>
               <p style={{ marginTop: "1mm", fontSize: "7.8pt", color: "#64748b" }}>
@@ -210,14 +213,14 @@ function DeliveryNotePageView({
             </div>
             <div style={{ width: "48%", display: "flex", gap: "4mm" }}>
               <div style={{ flex: 1, textAlign: "center" }}>
-                <p style={{ fontSize: "8.8pt", fontWeight: 700, color: "#1e3a5f", marginBottom: "6mm" }}>
+                <p style={{ fontSize: "8.8pt", fontWeight: 700, color: "#103B82", marginBottom: "6mm" }}>
                   ผู้รับสินค้า
                 </p>
                 <div style={{ borderTop: "4px dotted #334155" }} />
               </div>
               <div style={{ width: "1px", background: "#e2e8f0" }} />
               <div style={{ flex: 1, textAlign: "center" }}>
-                <p style={{ fontSize: "8.8pt", fontWeight: 700, color: "#1e3a5f", marginBottom: "6mm" }}>
+                <p style={{ fontSize: "8.8pt", fontWeight: 700, color: "#103B82", marginBottom: "6mm" }}>
                   ผู้จัดสินค้า
                 </p>
                 <div style={{ borderTop: "4px dotted #334155" }} />

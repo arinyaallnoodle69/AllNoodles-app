@@ -62,14 +62,14 @@ export function OrderReceiptCard({
       <div style={{ display: "flex", justifyContent: "flex-end", padding: "8px 16px 0" }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src="/ty-noodles-logo.png"
-          alt="T&Y Noodle"
+          src="/brand/512x512.png"
+          alt="All Noodles"
           style={{ objectFit: "contain", display: "inline-block", width: "56px", height: "56px" }}
         />
       </div>
 
       <div style={{ textAlign: "center", padding: `0 ${SIDE_PADDING} 10px` }}>
-        <div style={{ fontSize: "12px", lineHeight: 1.6 }}>T&amp;Y Noodle - ใบยืนยันคำสั่งซื้อ</div>
+        <div style={{ fontSize: "12px", lineHeight: 1.6 }}>All Noodles - ใบยืนยันคำสั่งซื้อ</div>
         <div style={{ fontSize: "16px", fontWeight: 800, lineHeight: 1.3, marginTop: "2px" }}>
           เลขที่ใบจัดส่ง: {orderNumber}
         </div>
@@ -136,7 +136,7 @@ export function OrderReceiptCard({
       ))}
 
       <div style={{ padding: `36px ${SIDE_PADDING} 32px`, textAlign: "center" }}>
-        <div style={{ fontSize: "14px", fontWeight: 800, lineHeight: 1.6 }}>T&amp;Y Noodle</div>
+        <div style={{ fontSize: "14px", fontWeight: 800, lineHeight: 1.6 }}>All Noodles</div>
         <div style={{ fontSize: "13px", marginTop: "2px", lineHeight: 1.6 }}>ขอบคุณสำหรับการสั่งซื้อครับ</div>
       </div>
     </div>

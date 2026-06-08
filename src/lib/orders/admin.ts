@@ -1,6 +1,7 @@
 import "server-only";
 
 import { unstable_cache } from "next/cache";
+import { createWarehouseStockMap, getProductWarehouseStockSnapshots } from "@/lib/stock/warehouse-stocks";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
 type QueryError = {
@@ -61,6 +62,7 @@ type OrderRoundRow = {
   order_number: string;
   status: "draft" | "submitted" | "confirmed" | "cancelled";
   total_amount: number | string;
+  warehouse_id?: string | null;
 };
 
 type RawOrderItemDeliveryRow = {
@@ -266,7 +268,7 @@ async function getOrderStoreDetail(
       }),
       supabase
         .from("orders")
-        .select("id, order_number, status, total_amount, created_at")
+        .select("id, order_number, status, total_amount, created_at, warehouse_id")
         .eq("organization_id", organizationId)
         .eq("customer_id", customerId)
         .eq("order_date", orderDate)
@@ -324,26 +326,43 @@ async function getOrderStoreDetail(
   const itemRows = (itemsData ?? []) as ItemAggregateRow[];
   const productIds = Array.from(new Set(itemRows.map((row) => row.product_id)));
   const productBaseMap = new Map<string, { stockQuantity: number; unit: string }>();
+  const warehouseId =
+    (((roundsData ?? []) as OrderRoundRow[]).find((row) => row.warehouse_id)?.warehouse_id) ?? null;
 
   if (productIds.length > 0) {
-    const { data: productRows, error: productError } = await getSupabaseAdmin()
-      .from("products")
-      .select("id, stock_quantity, unit")
-      .in("id", productIds);
+    if (warehouseId) {
+      const warehouseStocks = await getProductWarehouseStockSnapshots(
+        organizationId,
+        productIds,
+        warehouseId,
+      );
 
-    if (productError) {
-      throw new Error(productError.message ?? "Failed to load product stock.");
-    }
+      for (const [productId, rows] of createWarehouseStockMap(warehouseStocks).entries()) {
+        productBaseMap.set(productId, {
+          stockQuantity: rows[0]?.stockQuantity ?? 0,
+          unit: "",
+        });
+      }
+    } else {
+      const { data: productRows, error: productError } = await getSupabaseAdmin()
+        .from("products")
+        .select("id, stock_quantity, unit")
+        .in("id", productIds);
 
-    for (const product of (productRows ?? []) as Array<{
-      id: string;
-      stock_quantity: number | string | null;
-      unit: string | null;
-    }>) {
-      productBaseMap.set(product.id, {
-        stockQuantity: normalizeNumeric(product.stock_quantity),
-        unit: product.unit ?? "",
-      });
+      if (productError) {
+        throw new Error(productError.message ?? "Failed to load product stock.");
+      }
+
+      for (const product of (productRows ?? []) as Array<{
+        id: string;
+        stock_quantity: number | string | null;
+        unit: string | null;
+      }>) {
+        productBaseMap.set(product.id, {
+          stockQuantity: normalizeNumeric(product.stock_quantity),
+          unit: product.unit ?? "",
+        });
+      }
     }
   }
 

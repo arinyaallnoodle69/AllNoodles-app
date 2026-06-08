@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
@@ -28,7 +28,7 @@ function formatMoney(value: number) {
 }
 
 function formatPendingLine(item: PendingOrder["pendingItems"][number]) {
-  return `à¸„à¹‰à¸²à¸‡à¸ªà¹ˆà¸‡: ${item.productName} ${formatNum(item.remainingQty)} ${item.saleUnitLabel}`;
+  return `ค้างส่ง: ${item.productName} ${formatNum(item.remainingQty)} ${item.saleUnitLabel}`;
 }
 
 
@@ -174,9 +174,9 @@ function DeliveryModal({
     if (!formData || !hasAnyQty || isPending) return;
 
     if (unpricedActiveItems.length > 0) {
-      const names = unpricedActiveItems.map((i) => `  â€¢ ${i.productName} (${i.saleUnitLabel})`).join("\n");
+      const names = unpricedActiveItems.map((i) => `  • ${i.productName} (${i.saleUnitLabel})`).join("\n");
       const confirmed = window.confirm(
-        `âš ï¸ à¸£à¸²à¸¢à¸à¸²à¸£à¸•à¹ˆà¸­à¹„à¸›à¸™à¸µà¹‰à¸¢à¸±à¸‡à¹„à¸¡à¹ˆà¹„à¸”à¹‰à¸•à¸±à¹‰à¸‡à¸£à¸²à¸„à¸² (${unpricedActiveItems.length} à¸£à¸²à¸¢à¸à¸²à¸£)\n\n${names}\n\nà¹ƒà¸šà¸ªà¹ˆà¸‡à¸‚à¸­à¸‡à¸ˆà¸°à¸„à¸´à¸”à¸£à¸²à¸„à¸²à¹€à¸›à¹‡à¸™ 0 à¸šà¸²à¸—\nà¸•à¹‰à¸­à¸‡à¸à¸²à¸£à¸¢à¸·à¸™à¸¢à¸±à¸™à¸•à¹ˆà¸­à¹„à¸«à¸¡?`
+        `⚠️ รายการต่อไปนี้ยังไม่ได้ตั้งราคา (${unpricedActiveItems.length} รายการ)\n\n${names}\n\nใบส่งของจะคิดราคาเป็น 0 บาท\nต้องการยืนยันต่อไหม?`
       );
       if (!confirmed) return;
     }
@@ -217,12 +217,12 @@ function DeliveryModal({
         <div className="sticky top-0 z-10 flex items-start justify-between gap-3 rounded-t-3xl border-b border-slate-100 bg-white px-6 py-5">
           <div>
             <div className="flex items-center gap-2">
-              <Truck className="h-5 w-5 text-[#003366]" strokeWidth={2.2} />
+              <Truck className="h-5 w-5 text-[#082A63]" strokeWidth={2.2} />
               <h2 className="text-lg font-bold text-slate-950">พิมพ์ใบส่งของ</h2>
             </div>
             {formData && (
               <p className="mt-0.5 text-sm text-slate-500">
-                {formData.customerName} Â·{" "}
+                {formData.customerName} ·{" "}
                 <span className="font-mono">{formData.orderNumber}</span>
               </p>
             )}
@@ -243,7 +243,7 @@ function DeliveryModal({
               <Loader2 className="h-6 w-6 animate-spin text-slate-300" strokeWidth={2} />
             </div>
           ) : !formData ? (
-            <p className="py-8 text-center text-sm text-slate-500">à¹‚à¸«à¸¥à¸”à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¹„à¸¡à¹ˆà¸ªà¸³à¹€à¸£à¹‡à¸ˆ</p>
+            <p className="py-8 text-center text-sm text-slate-500">โหลดข้อมูลไม่สำเร็จ</p>
           ) : (
             <div className="space-y-3">
               {deliveryItems.map((item) => {
@@ -260,14 +260,14 @@ function DeliveryModal({
                         <p className="mt-0.5 font-mono text-xs text-slate-400">{item.productSku}</p>
                         <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500">
                           <span>
-                            à¸ªà¸±à¹ˆà¸‡{" "}
+                            สั่ง{" "}
                             <span className="font-semibold text-slate-700">
                               {formatNum(item.orderedQty)} {item.saleUnitLabel}
                             </span>
                           </span>
                           {item.deliveredBaseQty > 0 && (
                             <span>
-                              à¸ªà¹ˆà¸‡à¹à¸¥à¹‰à¸§{" "}
+                              ส่งแล้ว{" "}
                               <span className="font-semibold text-emerald-600">
                                 {formatNum(item.deliveredBaseQty / item.saleUnitRatio)}{" "}
                                 {item.saleUnitLabel}
@@ -275,7 +275,7 @@ function DeliveryModal({
                             </span>
                           )}
                           <span>
-                            à¸ªà¸•à¹‡à¸­à¸{" "}
+                            สต็อก{" "}
                             <span
                               className={`font-semibold ${
                                 item.availableStock <= 0 ? "text-red-600" : "text-slate-700"
@@ -301,7 +301,7 @@ function DeliveryModal({
                             }))
                           }
                           className={`w-24 rounded-xl border px-3 py-2 text-right text-base font-bold outline-none transition focus:ring-2 ${
-                            "border-slate-200 bg-white text-slate-950 focus:border-[#003366] focus:ring-[#003366]/10"
+                            "border-slate-200 bg-white text-slate-950 focus:border-[#082A63] focus:ring-[#082A63]/10"
                           }`}
                           placeholder="0"
                         />
@@ -315,7 +315,7 @@ function DeliveryModal({
                     {item.unitPrice === 0 && (
                       <div className="mt-3 flex items-center gap-2 rounded-xl bg-amber-50 px-3 py-2.5 text-xs text-amber-700">
                         <AlertTriangle className="h-3.5 w-3.5 shrink-0" strokeWidth={2.4} />
-                        <span>à¸¢à¸±à¸‡à¹„à¸¡à¹ˆà¹„à¸”à¹‰à¸•à¸±à¹‰à¸‡à¸£à¸²à¸„à¸²à¸ªà¸´à¸™à¸„à¹‰à¸²à¸™à¸µà¹‰à¸à¸±à¸šà¸¥à¸¹à¸à¸„à¹‰à¸² à¹ƒà¸šà¸ªà¹ˆà¸‡à¸‚à¸­à¸‡à¸ˆà¸°à¸„à¸´à¸”à¹€à¸›à¹‡à¸™ 0 à¸šà¸²à¸—</span>
+                        <span>ยังไม่ได้ตั้งราคาสินค้านี้กับลูกค้า ใบส่งของจะคิดเป็น 0 บาท</span>
                       </div>
                     )}
                   </div>
@@ -325,14 +325,14 @@ function DeliveryModal({
               {/* Notes */}
               <div className="pt-1">
                 <label className="mb-1.5 block text-xs font-semibold text-slate-500">
-                  à¸«à¸¡à¸²à¸¢à¹€à¸«à¸•à¸¸ (à¸–à¹‰à¸²à¸¡à¸µ)
+                  หมายเหตุ (ถ้ามี)
                 </label>
                 <input
                   type="text"
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
-                  placeholder="à¹€à¸Šà¹ˆà¸™ à¸ªà¹ˆà¸‡à¸£à¸­à¸šà¹€à¸Šà¹‰à¸²"
-                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 outline-none transition focus:border-[#003366] focus:ring-2 focus:ring-[#003366]/10"
+                  placeholder="เช่น ส่งรอบเช้า"
+                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 outline-none transition focus:border-[#082A63] focus:ring-2 focus:ring-[#082A63]/10"
                 />
               </div>
             </div>
@@ -349,7 +349,7 @@ function DeliveryModal({
             <div className="mt-4 flex items-center justify-between gap-3 rounded-xl bg-emerald-50 px-4 py-3">
               <div className="flex items-center gap-2 text-sm font-semibold text-emerald-700">
                 <CheckCircle2 className="h-4 w-4 shrink-0" strokeWidth={2.4} />
-                à¸ªà¸£à¹‰à¸²à¸‡ {actionState.deliveryNumber} à¹€à¸£à¸µà¸¢à¸šà¸£à¹‰à¸­à¸¢à¹à¸¥à¹‰à¸§
+                สร้าง {actionState.deliveryNumber} เรียบร้อยแล้ว
               </div>
               {actionState.deliveryId && (
                 <a
@@ -374,24 +374,24 @@ function DeliveryModal({
             disabled={isPending}
             className="rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:opacity-50"
           >
-            à¸¢à¸à¹€à¸¥à¸´à¸
+            ยกเลิก
           </button>
 
           <button
             type="button"
             onClick={handleSubmit}
             disabled={!formData || !hasAnyQty || isPending}
-            className="inline-flex items-center gap-2 rounded-xl bg-[#003366] px-5 py-2.5 text-sm font-bold text-white shadow-[0_14px_30px_rgba(0,51,102,0.16)] transition hover:bg-[#002244] disabled:cursor-not-allowed disabled:opacity-40"
+            className="inline-flex items-center gap-2 rounded-xl bg-[#082A63] px-5 py-2.5 text-sm font-bold text-white shadow-[0_14px_30px_rgba(8,42,99,0.16)] transition hover:bg-[#103B82] disabled:cursor-not-allowed disabled:opacity-40"
           >
             {isPending ? (
               <>
                 <Loader2 className="h-4 w-4 animate-spin" strokeWidth={2} />
-                à¸à¸³à¸¥à¸±à¸‡à¸ªà¸£à¹‰à¸²à¸‡...
+                กำลังสร้าง...
               </>
             ) : (
               <>
                 <Truck className="h-4 w-4" strokeWidth={2.2} />
-                à¸¢à¸·à¸™à¸¢à¸±à¸™à¹ƒà¸šà¸ªà¹ˆà¸‡à¸‚à¸­à¸‡
+                ยืนยันใบส่งของ
               </>
             )}
           </button>
@@ -449,15 +449,15 @@ function StoreDeliveryModal({
 
     if (!selectedVehicleId) {
       window.alert(
-        "âš ï¸ à¸¢à¸±à¸‡à¹„à¸¡à¹ˆà¹„à¸”à¹‰à¹€à¸¥à¸·à¸­à¸à¸£à¸–à¸ˆà¸±à¸”à¸ªà¹ˆà¸‡\n\nà¸à¸£à¸¸à¸“à¸²à¹€à¸¥à¸·à¸­à¸à¸£à¸–à¸ˆà¸±à¸”à¸ªà¹ˆà¸‡à¸à¹ˆà¸­à¸™à¸¢à¸·à¸™à¸¢à¸±à¸™\nà¹€à¸¥à¸·à¸­à¸à¹„à¸”à¹‰à¸ˆà¸²à¸à¸Šà¹ˆà¸­à¸‡ \"à¸£à¸–à¸ˆà¸±à¸”à¸ªà¹ˆà¸‡\" à¸”à¹‰à¸²à¸™à¸šà¸™"
+        "⚠️ ยังไม่ได้เลือกรถจัดส่ง\n\nกรุณาเลือกรถจัดส่งก่อนยืนยัน\nเลือกได้จากช่อง \"รถจัดส่ง\" ด้านบน"
       );
       return;
     }
 
     if (unpricedActiveGroups.length > 0) {
-      const names = unpricedActiveGroups.map((g) => `  â€¢ ${g.productName} (${g.saleUnitLabel})`).join("\n");
+      const names = unpricedActiveGroups.map((g) => `  • ${g.productName} (${g.saleUnitLabel})`).join("\n");
       const confirmed = window.confirm(
-        `âš ï¸ à¸£à¸²à¸¢à¸à¸²à¸£à¸•à¹ˆà¸­à¹„à¸›à¸™à¸µà¹‰à¸¢à¸±à¸‡à¹„à¸¡à¹ˆà¹„à¸”à¹‰à¸•à¸±à¹‰à¸‡à¸£à¸²à¸„à¸² (${unpricedActiveGroups.length} à¸£à¸²à¸¢à¸à¸²à¸£)\n\n${names}\n\nà¹ƒà¸šà¸ªà¹ˆà¸‡à¸‚à¸­à¸‡à¸ˆà¸°à¸„à¸´à¸”à¸£à¸²à¸„à¸²à¹€à¸›à¹‡à¸™ 0 à¸šà¸²à¸—\nà¸•à¹‰à¸­à¸‡à¸à¸²à¸£à¸¢à¸·à¸™à¸¢à¸±à¸™à¸•à¹ˆà¸­à¹„à¸«à¸¡?`
+        `⚠️ รายการต่อไปนี้ยังไม่ได้ตั้งราคา (${unpricedActiveGroups.length} รายการ)\n\n${names}\n\nใบส่งของจะคิดราคาเป็น 0 บาท\nต้องการยืนยันต่อไหม?`
       );
       if (!confirmed) return;
     }
@@ -516,7 +516,7 @@ function StoreDeliveryModal({
         <div className="sticky top-0 z-10 flex items-start justify-between gap-3 border-b border-slate-200/80 bg-white/95 px-6 py-5 backdrop-blur">
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-3">
-              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#003366]/8 text-[#003366]">
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#D4AF37]/30 text-[#103B82]">
                 <Truck className="h-5 w-5" strokeWidth={2.2} />
               </span>
               <div>
@@ -527,17 +527,17 @@ function StoreDeliveryModal({
               {customerName}
               {orders.length > 1 && (
                 <span className="ml-1.5 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-0.5 text-xs font-semibold text-slate-600">
-                  {orders.length} à¸£à¸­à¸šà¸­à¸­à¹€à¸”à¸­à¸£à¹Œ
+                  {orders.length} รอบออเดอร์
                 </span>
               )}
             </p>
             {/* Vehicle selector */}
             <div className="mt-4 flex flex-wrap items-center gap-2">
-              <span className="text-sm font-semibold text-slate-700">à¸£à¸–à¸ˆà¸±à¸”à¸ªà¹ˆà¸‡</span>
+              <span className="text-sm font-semibold text-slate-700">รถจัดส่ง</span>
               {vehicles.length === 0 ? (
-                <span className="text-sm text-slate-400">à¸¢à¸±à¸‡à¹„à¸¡à¹ˆà¸¡à¸µà¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸£à¸–</span>
+                <span className="text-sm text-slate-400">ยังไม่มีข้อมูลรถ</span>
               ) : defaultVehicleId && defaultVehicleName ? (
-                <span className="rounded-full border border-[#003366]/15 bg-[#003366]/8 px-3 py-1 text-sm font-semibold text-[#003366]">
+                <span className="rounded-full border border-[#082A63]/15 bg-[#082A63]/20 px-3 py-1 text-sm font-semibold text-[#082A63]">
                   {defaultVehicleName}
                 </span>
               ) : (
@@ -551,7 +551,7 @@ function StoreDeliveryModal({
                       : "border-orange-400 bg-orange-50 text-orange-700",
                   ].join(" ")}
                 >
-                  <option value="">â€” à¸à¸£à¸¸à¸“à¸²à¹€à¸¥à¸·à¸­à¸à¸£à¸–à¸ˆà¸±à¸”à¸ªà¹ˆà¸‡ â€”</option>
+                  <option value="">— กรุณาเลือกรถจัดส่ง —</option>
                   {vehicles.map((v) => (
                     <option key={v.id} value={v.id}>{v.name}</option>
                   ))}
@@ -571,7 +571,7 @@ function StoreDeliveryModal({
         {/* Body */}
         <div className="px-4 py-4 sm:px-6 sm:py-5">
 
-        {/* â”€â”€ Mobile card view (< sm) â”€â”€ */}
+        {/* Mobile card view (< sm) */}
         <div className="space-y-2 sm:hidden">
           {groupedItems.map((item) => {
             const qty = qtys[item.groupKey] ?? "";
@@ -600,7 +600,7 @@ function StoreDeliveryModal({
                     {item.unitPrice === 0 && (
                       <div className="mt-0.5 inline-flex items-center gap-1 rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700">
                         <AlertTriangle className="h-2.5 w-2.5 shrink-0" strokeWidth={2.4} />
-                        à¸¢à¸±à¸‡à¹„à¸¡à¹ˆà¸•à¸±à¹‰à¸‡à¸£à¸²à¸„à¸²
+                        ยังไม่ตั้งราคา
                       </div>
                     )}
                   </div>
@@ -615,7 +615,7 @@ function StoreDeliveryModal({
                         setQtys((prev) => ({ ...prev, [item.groupKey]: e.target.value }))
                       }
                       className={`w-20 rounded-xl border px-2 py-2 text-center text-sm font-bold outline-none transition focus:ring-2 ${
-                        "border-slate-200 bg-white text-slate-950 focus:border-[#003366] focus:ring-[#003366]/10"
+                        "border-slate-200 bg-white text-slate-950 focus:border-[#082A63] focus:ring-[#082A63]/10"
                       }`}
                       placeholder="0"
                     />
@@ -626,19 +626,19 @@ function StoreDeliveryModal({
                 {/* Info row */}
                 <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
                   <span className="text-slate-500">
-                    à¸ªà¸•à¹‡à¸­à¸{" "}
+                    สต็อก{" "}
                     <span className={`font-semibold ${item.availableStock <= 0 ? "text-red-600" : "text-slate-700"}`}>
                       {formatNum(item.availableStock)} {item.productUnit}
                     </span>
                   </span>
                   <span className="text-slate-500">
-                    à¸£à¸²à¸„à¸²{" "}
+                    ราคา{" "}
                     <span className="font-semibold text-slate-700">
-                      {item.unitPrice > 0 ? `${formatMoney(item.unitPrice)} à¸šà¸²à¸—` : "-"}
+                      {item.unitPrice > 0 ? `${formatMoney(item.unitPrice)} บาท` : "-"}
                     </span>
                   </span>
                   {lineTotal > 0 && (
-                    <span className="ml-auto font-bold text-slate-900">{formatMoney(lineTotal)} à¸šà¸²à¸—</span>
+                    <span className="ml-auto font-bold text-slate-900">{formatMoney(lineTotal)} บาท</span>
                   )}
                 </div>
 
@@ -648,40 +648,40 @@ function StoreDeliveryModal({
 
           {/* Mobile total */}
           <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-4 py-2.5">
-            <span className="text-sm font-semibold text-slate-600">à¸£à¸§à¸¡à¸—à¸±à¹‰à¸‡à¸«à¸¡à¸”</span>
+            <span className="text-sm font-semibold text-slate-600">รวมทั้งหมด</span>
             <span className="text-base font-bold text-slate-950">
               {formatMoney(
                 groupedItems.reduce((sum, item) => sum + (parseFloat(qtys[item.groupKey] ?? "0") || 0) * item.unitPrice, 0)
-              )} à¸šà¸²à¸—
+              )} บาท
             </span>
           </div>
         </div>
 
-        {/* â”€â”€ Desktop table view (â‰¥ sm) â”€â”€ */}
+        {/* Desktop table view (>= sm) */}
         <div className="hidden overflow-x-auto rounded-xl border border-slate-200 sm:block">
           <table className="w-full border-collapse text-sm">
             <thead>
               <tr className="bg-slate-50">
                 <th className="border-b border-r border-slate-200 px-3 py-2.5 text-center text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">
-                  à¸£à¸«à¸±à¸ª
+                  รหัส
                 </th>
                 <th className="border-b border-r border-slate-200 px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">
-                  à¸ªà¸´à¸™à¸„à¹‰à¸²
+                  สินค้า
                 </th>
                 <th className="border-b border-r border-slate-200 px-3 py-2.5 text-center text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">
-                  à¸ˆà¸³à¸™à¸§à¸™
+                  จำนวน
                 </th>
                 <th className="border-b border-r border-slate-200 px-3 py-2.5 text-center text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">
-                  à¸«à¸™à¹ˆà¸§à¸¢
+                  หน่วย
                 </th>
                 <th className="border-b border-r border-slate-200 px-3 py-2.5 text-right text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">
-                  à¸ªà¸•à¹‡à¸­à¸
+                  สต็อก
                 </th>
                 <th className="border-b border-r border-slate-200 px-3 py-2.5 text-right text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">
-                  à¸£à¸²à¸„à¸²/à¸«à¸™à¹ˆà¸§à¸¢
+                  ราคา/หน่วย
                 </th>
                 <th className="border-b border-slate-200 px-3 py-2.5 text-right text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">
-                  à¸£à¸§à¸¡à¸¢à¸­à¸”à¹€à¸‡à¸´à¸™
+                  รวมยอดเงิน
                 </th>
               </tr>
             </thead>
@@ -716,7 +716,7 @@ function StoreDeliveryModal({
                           {item.unitPrice === 0 && (
                             <div className="mt-0.5 inline-flex items-center gap-1 rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700">
                               <AlertTriangle className="h-2.5 w-2.5 shrink-0" strokeWidth={2.4} />
-                              à¸¢à¸±à¸‡à¹„à¸¡à¹ˆà¸•à¸±à¹‰à¸‡à¸£à¸²à¸„à¸²
+                              ยังไม่ตั้งราคา
                             </div>
                           )}
                         </div>
@@ -733,7 +733,7 @@ function StoreDeliveryModal({
                             setQtys((prev) => ({ ...prev, [item.groupKey]: e.target.value }))
                           }
                           className={`w-20 rounded-lg border px-2 py-1.5 text-center text-sm font-bold outline-none transition focus:ring-2 ${
-                            "border-slate-200 bg-white text-slate-950 focus:border-[#003366] focus:ring-[#003366]/10"
+                            "border-slate-200 bg-white text-slate-950 focus:border-[#082A63] focus:ring-[#082A63]/10"
                           }`}
                           placeholder="0"
                         />
@@ -761,12 +761,12 @@ function StoreDeliveryModal({
             <tfoot>
               <tr className="border-t-2 border-slate-300 bg-slate-50">
                 <td colSpan={6} className="px-3 py-3 text-right text-sm font-semibold text-slate-600">
-                  à¸£à¸§à¸¡à¸—à¸±à¹‰à¸‡à¸«à¸¡à¸”
+                  รวมทั้งหมด
                 </td>
                 <td className="px-3 py-3 text-right text-base font-bold text-slate-950">
                   {formatMoney(
                     groupedItems.reduce((sum, item) => sum + (parseFloat(qtys[item.groupKey] ?? "0") || 0) * item.unitPrice, 0)
-                  )} à¸šà¸²à¸—
+                  )} บาท
                 </td>
               </tr>
             </tfoot>
@@ -777,14 +777,14 @@ function StoreDeliveryModal({
 
           <div className="mt-4 pt-1">
             <label className="mb-1.5 block text-xs font-semibold text-slate-500">
-              à¸«à¸¡à¸²à¸¢à¹€à¸«à¸•à¸¸ (à¸–à¹‰à¸²à¸¡à¸µ)
+              หมายเหตุ (ถ้ามี)
             </label>
             <input
               type="text"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder="à¹€à¸Šà¹ˆà¸™ à¸ªà¹ˆà¸‡à¸£à¸­à¸šà¹€à¸Šà¹‰à¸²"
-              className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 outline-none transition focus:border-[#003366] focus:ring-2 focus:ring-[#003366]/10"
+              placeholder="เช่น ส่งรอบเช้า"
+              className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 outline-none transition focus:border-[#082A63] focus:ring-2 focus:ring-[#082A63]/10"
             />
           </div>
 
@@ -803,7 +803,7 @@ function StoreDeliveryModal({
                   <div key={i} className="flex items-center justify-between gap-3">
                     <div className="flex items-center gap-2 text-sm font-semibold text-emerald-700">
                       <CheckCircle2 className="h-4 w-4 shrink-0" strokeWidth={2.4} />
-                      à¸ªà¸£à¹‰à¸²à¸‡ {r.deliveryNumber} à¹€à¸£à¸µà¸¢à¸šà¸£à¹‰à¸­à¸¢à¹à¸¥à¹‰à¸§
+                      สร้าง {r.deliveryNumber} เรียบร้อยแล้ว
                     </div>
                     {r.deliveryId && (
                       <a
@@ -830,23 +830,23 @@ function StoreDeliveryModal({
             disabled={isPending}
             className="rounded-xl border border-slate-200 px-5 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:opacity-50"
           >
-            à¸¢à¸à¹€à¸¥à¸´à¸
+            ยกเลิก
           </button>
           <button
             type="button"
             onClick={handleSubmit}
             disabled={!hasAnyQty || isPending}
-            className="inline-flex items-center gap-2 rounded-xl bg-[#003366] px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#002244] disabled:cursor-not-allowed disabled:opacity-40"
+            className="inline-flex items-center gap-2 rounded-xl bg-[#082A63] px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#103B82] disabled:cursor-not-allowed disabled:opacity-40"
           >
             {isPending ? (
               <>
                 <Loader2 className="h-4 w-4 animate-spin" strokeWidth={2} />
-                à¸à¸³à¸¥à¸±à¸‡à¸ªà¸£à¹‰à¸²à¸‡...
+                กำลังสร้าง...
               </>
             ) : (
               <>
                 <Truck className="h-4 w-4" strokeWidth={2.2} />
-                à¸¢à¸·à¸™à¸¢à¸±à¸™à¹ƒà¸šà¸ªà¹ˆà¸‡à¸‚à¸­à¸‡
+                ยืนยันใบส่งของ
               </>
             )}
           </button>
@@ -1048,7 +1048,7 @@ function AllStoresDeliveryModal({
         <div className="border-b border-slate-200 bg-white px-4 py-3 sm:px-6 sm:py-4">
           <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-4">
             <div className="flex min-w-0 items-start gap-2.5 sm:gap-3">
-              <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#003366] text-white shadow-lg sm:h-12 sm:w-12 sm:rounded-2xl">
+              <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#082A63] text-white shadow-lg sm:h-12 sm:w-12 sm:rounded-2xl">
                 <Printer className="h-4 w-4 sm:h-5 sm:w-5" strokeWidth={2.5} />
               </span>
               <div className="min-w-0">
@@ -1075,7 +1075,7 @@ function AllStoresDeliveryModal({
           <div className="grid grid-cols-3 gap-2 sm:gap-4">
             <div className="flex flex-col items-center justify-center rounded-xl border border-slate-200 bg-white p-2 text-center shadow-sm sm:items-start sm:rounded-2xl sm:p-4 sm:text-left">
               <p className="text-[9px] font-black uppercase tracking-wider text-slate-400 sm:text-xs">ร้านค้าในแท็บนี้</p>
-              <p className="text-lg font-black text-[#003366] sm:mt-1 sm:text-2xl">{currentTabTotalCount}</p>
+              <p className="text-lg font-black text-[#082A63] sm:mt-1 sm:text-2xl">{currentTabTotalCount}</p>
             </div>
             <div className="flex flex-col items-center justify-center rounded-xl border border-emerald-200 bg-emerald-50 p-2 text-center shadow-sm sm:items-start sm:rounded-2xl sm:p-4 sm:text-left">
               <p className="text-[9px] font-black uppercase tracking-wider text-emerald-600 sm:text-xs">เลือกพิมพ์ในแท็บนี้</p>
@@ -1095,7 +1095,7 @@ function AllStoresDeliveryModal({
               onClick={() => setActiveTab("all")}
               className={`relative flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-black transition active:scale-95 sm:px-5 sm:py-2.5 sm:text-sm ${
                 activeTab === "all"
-                  ? "bg-[#003366] text-white shadow-[0_8px_20px_rgba(0,51,102,0.15)]"
+                  ? "bg-[#082A63] text-white shadow-[0_8px_20px_rgba(8,42,99,0.15)]"
                   : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
               }`}
             >
@@ -1119,7 +1119,7 @@ function AllStoresDeliveryModal({
                   onClick={() => setActiveTab(vehicle.id)}
                   className={`relative flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-black transition active:scale-95 sm:px-5 sm:py-2.5 sm:text-sm ${
                     isActive
-                      ? "bg-[#003366] text-white shadow-[0_8px_20px_rgba(0,51,102,0.15)]"
+                      ? "bg-[#082A63] text-white shadow-[0_8px_20px_rgba(8,42,99,0.15)]"
                       : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
                   }`}
                 >
@@ -1146,7 +1146,7 @@ function AllStoresDeliveryModal({
                 onClick={() => setActiveTab("unassigned")}
                 className={`relative flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-black transition active:scale-95 sm:px-5 sm:py-2.5 sm:text-sm ${
                   activeTab === "unassigned"
-                    ? "bg-[#003366] text-white shadow-[0_8px_20px_rgba(0,51,102,0.15)]"
+                    ? "bg-[#082A63] text-white shadow-[0_8px_20px_rgba(8,42,99,0.15)]"
                     : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
                 }`}
               >
@@ -1175,14 +1175,14 @@ function AllStoresDeliveryModal({
                   value={query}
                   onChange={(event) => setQuery(event.target.value)}
                   placeholder="ค้นหาร้านค้า..."
-                  className="w-full rounded-lg border border-slate-200 bg-slate-50 py-2 pl-9 pr-3 text-xs font-semibold text-slate-950 outline-none transition focus:border-[#003366] focus:bg-white focus:ring-2 focus:ring-[#003366]/10 sm:rounded-xl sm:py-3 sm:pl-11 sm:pr-4 sm:text-sm"
+                  className="w-full rounded-lg border border-slate-200 bg-slate-50 py-2 pl-9 pr-3 text-xs font-semibold text-slate-950 outline-none transition focus:border-[#082A63] focus:bg-white focus:ring-2 focus:ring-[#082A63]/10 sm:rounded-xl sm:py-3 sm:pl-11 sm:pr-4 sm:text-sm"
                 />
               </label>
               <div className="grid grid-cols-2 gap-2 md:flex md:shrink-0">
                 <button
                   type="button"
                   onClick={selectAllStores}
-                  className="rounded-lg bg-[#003366] px-3 py-2 text-[11px] font-bold text-white transition hover:bg-[#002244] sm:rounded-xl sm:px-4 sm:py-3 sm:text-sm"
+                  className="rounded-lg bg-[#082A63] px-3 py-2 text-[11px] font-bold text-white transition hover:bg-[#103B82] sm:rounded-xl sm:px-4 sm:py-3 sm:text-sm"
                 >
                   เลือกทั้งหมดในแท็บ
                 </button>
@@ -1219,13 +1219,13 @@ function AllStoresDeliveryModal({
                       </span>
                       <span className="mt-1 flex flex-wrap items-center gap-1.5">
                         {store.vehicleName ? (
-                          <span className="inline-flex items-center gap-1 rounded bg-[#003366]/5 px-1.5 py-0.5 text-[10px] font-bold uppercase text-[#003366]">
+                          <span className="inline-flex items-center gap-1 rounded bg-[#082A63]/15 px-1.5 py-0.5 text-[10px] font-bold uppercase text-[#082A63]">
                             <Truck className="h-2.5 w-2.5" strokeWidth={2.5} />
                             {store.vehicleName}
                           </span>
                         ) : null}
                         {endDate ? (
-                          <span className="text-[10px] font-bold uppercase text-[#003366]">
+                          <span className="text-[10px] font-bold uppercase text-[#082A63]">
                             วันที่จัดส่ง: {formatDate(store.orderDate)}
                           </span>
                         ) : null}
@@ -1237,7 +1237,7 @@ function AllStoresDeliveryModal({
                     <span className="hidden text-center text-sm font-bold text-slate-900 md:block">
                       {store.orderRounds}
                     </span>
-                    <span className="hidden text-right text-sm font-black text-[#003366] md:block">
+                    <span className="hidden text-right text-sm font-black text-[#082A63] md:block">
                       {formatMoney(store.totalAmount)} บาท
                     </span>
                     <span className="flex items-center justify-end md:justify-center">
@@ -1245,7 +1245,7 @@ function AllStoresDeliveryModal({
                         type="checkbox"
                         checked={checked}
                         onChange={() => togglePrintStore(compositeKey)}
-                        className="h-5 w-5 rounded border-slate-300 text-[#003366] focus:ring-[#003366]"
+                        className="h-5 w-5 rounded border-slate-300 text-[#082A63] focus:ring-[#082A63]"
                       />
                     </span>
                   </label>
@@ -1278,7 +1278,7 @@ function AllStoresDeliveryModal({
                 type="button"
                 onClick={handlePrintSelected}
                 disabled={currentTabSelectedCount === 0 || isPrintingSelected}
-                className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#003366] px-5 py-3 text-base font-black text-white shadow-[0_14px_30px_rgba(0,51,102,0.18)] transition hover:bg-[#002244] disabled:cursor-not-allowed disabled:opacity-40 sm:min-w-44"
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#082A63] px-5 py-3 text-base font-black text-white shadow-[0_14px_30px_rgba(8,42,99,0.18)] transition hover:bg-[#103B82] disabled:cursor-not-allowed disabled:opacity-40 sm:min-w-44"
               >
                 {isPrintingSelected ? (
                   <>
@@ -1318,7 +1318,7 @@ export function AllStoresDeliveryButton({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border border-[#003366]/20 bg-[#003366] px-3 py-1.5 text-[13px] font-bold text-white shadow-sm transition hover:bg-[#002244] hover:shadow-lg active:scale-[0.98] disabled:opacity-50 print:hidden md:gap-2 md:px-6 md:py-2.5 md:text-sm"
+        className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border border-[#082A63]/20 bg-[#082A63] px-3 py-1.5 text-[13px] font-bold text-white shadow-sm transition hover:bg-[#103B82] hover:shadow-lg active:scale-[0.98] disabled:opacity-50 print:hidden md:gap-2 md:px-6 md:py-2.5 md:text-sm"
       >
         <Printer className="h-3.5 w-3.5 md:h-4.5 md:w-4.5" strokeWidth={2.5} />
         พิมพ์ใบส่งของทุกร้านค้า
@@ -1363,7 +1363,7 @@ export function StoreDeliveryButton({
         type="button"
         onClick={handleOpen}
         disabled={loading}
-        className="hidden sm:inline-flex shrink-0 items-center gap-1.5 rounded-xl bg-[#003366] px-3.5 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-[#002244] disabled:opacity-60"
+        className="hidden sm:inline-flex shrink-0 items-center gap-1.5 rounded-xl bg-[#082A63] px-3.5 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-[#103B82] disabled:opacity-60"
       >
         {loading ? (
           <Loader2 className="h-3.5 w-3.5 animate-spin" strokeWidth={2} />
@@ -1403,7 +1403,7 @@ export function CreateDeliveryButton({ orderId }: { orderId: string }) {
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="inline-flex min-h-9 w-full items-center justify-center gap-1.5 rounded-lg bg-[#003366] px-3 py-2 text-xs font-semibold text-white transition hover:bg-[#002244] active:scale-[0.98]"
+          className="inline-flex min-h-9 w-full items-center justify-center gap-1.5 rounded-lg bg-[#082A63] px-3 py-2 text-xs font-semibold text-white transition hover:bg-[#103B82] active:scale-[0.98]"
         >
           <Truck className="h-3.5 w-3.5" strokeWidth={2.4} />
           พิมพ์ใบส่งของ
@@ -1434,16 +1434,16 @@ export function PendingOrdersSection({ orders }: { orders: PendingOrder[] }) {
         <div className="flex flex-wrap items-center gap-3 border-b border-amber-200 bg-amber-100/60 px-5 py-3.5">
           <AlertTriangle className="h-4 w-4 shrink-0 text-amber-700" strokeWidth={2.4} />
           <span className="text-sm font-bold text-amber-800">
-            à¸„à¹‰à¸²à¸‡à¸ªà¹ˆà¸‡ {orders.length} à¸­à¸­à¹€à¸”à¸­à¸£à¹Œ
+            ค้างส่ง {orders.length} ออเดอร์
           </span>
           <span className="text-xs font-semibold text-amber-700">
-            à¸¢à¸­à¸”à¸„à¹‰à¸²à¸‡à¸ªà¹ˆà¸‡ {formatMoney(totalOutstandingAmount)} à¸šà¸²à¸—
+            ยอดค้างส่ง {formatMoney(totalOutstandingAmount)} บาท
           </span>
           <span className="text-xs text-amber-700/80">
-            à¸‚à¸­à¸‡à¸§à¸±à¸™à¸—à¸µà¹ˆ {outstandingDateLabel}
+            ของวันที่ {outstandingDateLabel}
           </span>
           <span className="ml-auto text-xs text-amber-600">
-            à¸­à¸­à¹€à¸”à¸­à¸£à¹Œà¸ˆà¸²à¸à¸§à¸±à¸™à¸à¹ˆà¸­à¸™à¸«à¸™à¹‰à¸²à¸—à¸µà¹ˆà¸¢à¸±à¸‡à¹„à¸¡à¹ˆà¹„à¸”à¹‰à¸ˆà¸±à¸”à¸ªà¹ˆà¸‡
+            ออเดอร์จากวันก่อนหน้าที่ยังไม่ได้จัดส่ง
           </span>
         </div>
 
@@ -1460,7 +1460,7 @@ export function PendingOrdersSection({ orders }: { orders: PendingOrder[] }) {
                   </p>
                   {order.fulfillmentStatus === "partial" && (
                     <span className="mt-1 inline-block rounded-full bg-amber-200 px-2 py-0.5 text-[10px] font-bold text-amber-800">
-                      à¸ªà¹ˆà¸‡à¸šà¸²à¸‡à¸ªà¹ˆà¸§à¸™
+                      ส่งบางส่วน
                     </span>
                   )}
                 </div>
@@ -1474,12 +1474,12 @@ export function PendingOrdersSection({ orders }: { orders: PendingOrder[] }) {
                 {/* Amount + button (stacked on mobile, side-by-side on sm+) */}
                 <div className="flex shrink-0 flex-col items-end gap-2 sm:flex-row sm:items-center">
                   <p className="text-sm font-bold text-slate-950 whitespace-nowrap">
-                    {formatMoney(order.totalAmount)} à¸šà¸²à¸—
+                    {formatMoney(order.totalAmount)} บาท
                   </p>
                   <button
                     type="button"
                     onClick={() => setActiveOrderId(order.id)}
-                    className="inline-flex items-center gap-1.5 rounded-xl bg-[#003366] px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-[#002244]"
+                    className="inline-flex items-center gap-1.5 rounded-xl bg-[#082A63] px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-[#103B82]"
                   >
                     <Truck className="h-3.5 w-3.5" strokeWidth={2.2} />
                     <span className="hidden xs:inline">พิมพ์ใบส่งของ</span>
@@ -1495,7 +1495,7 @@ export function PendingOrdersSection({ orders }: { orders: PendingOrder[] }) {
                     <span
                       key={item.orderItemId}
                       className="inline-flex rounded-full bg-white px-2.5 py-0.5 text-xs font-medium text-amber-800 ring-1 ring-amber-200"
-                      title={`${item.productSku} Â· à¸ªà¸±à¹ˆà¸‡ ${formatNum(item.orderedQty)} ${item.saleUnitLabel} Â· à¸ªà¹ˆà¸‡à¹à¸¥à¹‰à¸§ ${formatNum(item.deliveredQty)} ${item.saleUnitLabel}`}
+                      title={`${item.productSku} · สั่ง ${formatNum(item.orderedQty)} ${item.saleUnitLabel} · ส่งแล้ว ${formatNum(item.deliveredQty)} ${item.saleUnitLabel}`}
                     >
                       {formatPendingLine(item)}
                     </span>

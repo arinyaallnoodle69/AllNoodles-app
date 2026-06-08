@@ -25,8 +25,7 @@ import {
   X,
   Factory,
   KeyRound,
-  Plus,
-  ClipboardEdit,
+  Warehouse,
 } from "lucide-react";
 import { signOut } from "@/app/login/actions";
 import { LineAppIcon } from "@/components/icons/line-app-icon";
@@ -68,7 +67,7 @@ function getPageTitle(pathname: string): string {
   for (const [prefix, title] of PAGE_TITLES) {
     if (pathname === prefix || pathname.startsWith(prefix + "/")) return title;
   }
-  return "T&Y Noodle";
+  return "All Noodles";
 }
 
 // ─── Mobile top bar (uses search context) ────────────────────────────────────
@@ -84,8 +83,8 @@ function MobileTopBar() {
         {/* Logo */}
         <Link href="/dashboard" className="block shrink-0">
           <Image
-            src="/ty-noodles-logo-cropped.png"
-            alt="T&Y Noodles"
+            src="/brand/512x512.png"
+            alt="All Noodles"
             width={176}
             height={64}
             priority
@@ -100,25 +99,6 @@ function MobileTopBar() {
 
         {/* Actions for specific pages */}
         <div className="flex items-center gap-2">
-          {pathname === "/stock" && !isOpen && (
-            <div className="flex items-center gap-1.5">
-              <Link
-                href="/stock?receive=1"
-                className="flex items-center gap-1 rounded-full bg-[#003366] px-2.5 py-1.5 text-[12px] font-bold text-white shadow-lg shadow-[#003366]/20 transition active:scale-95"
-              >
-                <Plus className="h-3.5 w-3.5" strokeWidth={3} />
-                รับเข้า
-              </Link>
-              <Link
-                href="/stock?adjust=1"
-                className="flex items-center gap-1 rounded-full bg-indigo-600 px-2.5 py-1.5 text-[12px] font-bold text-white shadow-lg shadow-indigo-600/20 transition active:scale-95"
-              >
-                <ClipboardEdit className="h-3.5 w-3.5" strokeWidth={3} />
-                ปรับยอด
-              </Link>
-            </div>
-          )}
-
           {hasSearch ? (
             <button
               type="button"
@@ -164,13 +144,14 @@ const settingsNavItems = [
   { href: "/settings/suppliers", icon: Factory, label: "จัดการผู้ขาย" },
   { href: "/settings/customer-data", icon: LineAppIcon, label: "ข้อมูลลูกค้า" },
   { href: "/settings/vehicles", icon: Truck, label: "จัดการรถ" },
+  { href: "/settings/warehouses", icon: Warehouse, label: "จัดการคลัง" },
   { href: "/settings/order-window", icon: Clock, label: "เวลารับออเดอร์" },
   { href: "/settings/login-pin", icon: KeyRound, label: "ตั้งค่า PIN" },
 ] as const;
 
 function isActive(href: string, pathname: string): boolean {
   if (href === "/dashboard") return pathname === "/dashboard";
-  return pathname.startsWith(href);
+  return pathname === href || pathname.startsWith(href + "/");
 }
 
 function shouldShowScrollTopButton(pathname: string) {
@@ -232,7 +213,7 @@ function SidebarLink({
     <Link
       href={item.href}
       title={collapsed ? item.label : undefined}
-      className={`flex items-center gap-3 rounded-xl px-2.5 py-2.5 text-sm font-black transition-colors ${active ? "bg-[#003366]/10 text-[#003366]" : "text-slate-700 hover:bg-slate-100 hover:text-slate-950"
+      className={`flex items-center gap-3 rounded-xl px-2.5 py-2.5 text-sm font-black transition-colors ${active ? "bg-[#082A63] text-white shadow-sm shadow-[#082A63]/20" : "text-[#1F2A44] hover:bg-[#FAF7F2] hover:text-[#1F2A44]"
         } ${collapsed ? "justify-center" : ""} ${indent && !collapsed ? "pl-9" : ""}`}
     >
       <Icon className="h-4.5 w-4.5 shrink-0" strokeWidth={2.2} />
@@ -320,33 +301,33 @@ export function AppSidebarLayout({
       <MobileSearchProvider>
         {/* ── Desktop sidebar (fixed) ───────────────────────────────────────── */}
         <aside
-          className={`hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-50 lg:flex lg:flex-col lg:border-r lg:border-slate-200 lg:bg-white lg:shadow-[2px_0_20px_rgba(15,23,42,0.06)] ${collapsed ? "w-16" : "w-60"
+          className={`hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-50 lg:flex lg:flex-col lg:overflow-hidden lg:border-r lg:border-[#E8DCC7] lg:bg-white lg:shadow-[2px_0_28px_rgba(0,29,63,0.08)] ${collapsed ? "w-16" : "w-60"
             } transition-[width] duration-200 ease-in-out [will-change:width] motion-reduce:transition-none`}
         >
           {/* Logo + toggle */}
           <div
-            className={`flex h-[68px] shrink-0 items-center border-b border-slate-100 ${collapsed ? "justify-center px-3" : "justify-between px-4"
+            className={`relative z-10 flex h-[68px] shrink-0 items-center border-b border-[#E8DCC7] bg-white ${collapsed ? "justify-center px-3" : "justify-between px-4"
               }`}
           >
             {!collapsed && (
               <Link href="/dashboard" className="flex min-w-0 shrink items-center gap-2.5">
                 <Image
-                  src="/ty-noodles-logo-cropped.png"
-                  alt="T&Y Noodles"
+                  src="/brand/512x512.png"
+                  alt="All Noodles"
                   width={176}
                   height={64}
                   priority
                   className="h-12 w-auto object-contain"
                 />
-                <span className="truncate text-base font-bold tracking-tight text-slate-800">
-                  T&amp;Y Noodle
+                <span className="truncate text-base font-bold tracking-tight text-[#1F2A44]">
+                  All Noodles
                 </span>
               </Link>
             )}
             <button
               type="button"
               onClick={toggleCollapsed}
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-500 transition hover:bg-[#FAF7F2] hover:text-[#1F2A44]"
               aria-label={collapsed ? "ขยาย sidebar" : "ย่อ sidebar"}
             >
               {collapsed ? (
@@ -358,7 +339,7 @@ export function AppSidebarLayout({
           </div>
 
           {/* Navigation */}
-          <nav className="flex-1 overflow-y-auto overflow-x-hidden py-3">
+          <nav className="relative z-10 flex-1 overflow-y-auto overflow-x-hidden py-3">
             {/* Main nav items */}
             <div className="space-y-0.5 px-2">
               {mainNavItems.map((item) => (
@@ -367,7 +348,7 @@ export function AppSidebarLayout({
             </div>
 
             {/* Divider */}
-            <div className="mx-3 my-3 border-t border-slate-100" />
+            <div className="mx-3 my-3 border-t border-[#E8DCC7]" />
 
             {/* Reports collapsible section */}
             <div className="px-2">
@@ -376,8 +357,8 @@ export function AppSidebarLayout({
                   href="/reports/profit-sales"
                   title="Reports"
                   className={`flex items-center justify-center rounded-xl px-2.5 py-2.5 text-sm font-black transition-colors ${anyReportsActive
-                      ? "bg-[#003366]/10 text-[#003366]"
-                      : "text-slate-700 hover:bg-slate-100 hover:text-slate-950"
+                      ? "bg-[#082A63] text-white shadow-sm shadow-[#082A63]/20"
+                      : "text-[#1F2A44] hover:bg-[#FAF7F2] hover:text-[#1F2A44]"
                     }`}
                 >
                   <BarChart2 className="h-4.5 w-4.5 shrink-0" strokeWidth={2.2} />
@@ -391,8 +372,8 @@ export function AppSidebarLayout({
                       setReportsUserToggled(true);
                     }}
                     className={`flex w-full items-center justify-between rounded-xl px-2.5 py-2.5 text-sm font-black transition-colors ${anyReportsActive
-                        ? "text-[#003366]"
-                        : "text-slate-700 hover:bg-slate-100 hover:text-slate-950"
+                        ? "bg-[#F2E3AE] text-[#1F2A44]"
+                        : "text-[#1F2A44] hover:bg-[#FAF7F2] hover:text-[#1F2A44]"
                       }`}
                   >
                     <span className="flex items-center gap-3">
@@ -426,7 +407,7 @@ export function AppSidebarLayout({
             </div>
 
             {/* Divider */}
-            <div className="mx-3 my-3 border-t border-slate-100" />
+            <div className="mx-3 my-3 border-t border-[#E8DCC7]" />
 
             {/* Settings collapsible section */}
             <div className="px-2">
@@ -435,8 +416,8 @@ export function AppSidebarLayout({
                   href="/settings/products"
                   title="Settings"
                   className={`flex items-center justify-center rounded-xl px-2.5 py-2.5 text-sm font-black transition-colors ${anySettingsActive
-                      ? "bg-[#003366]/10 text-[#003366]"
-                      : "text-slate-700 hover:bg-slate-100 hover:text-slate-950"
+                      ? "bg-[#082A63] text-white shadow-sm shadow-[#082A63]/20"
+                      : "text-[#1F2A44] hover:bg-[#FAF7F2] hover:text-[#1F2A44]"
                     }`}
                 >
                   <Settings2 className="h-4.5 w-4.5 shrink-0" strokeWidth={2.2} />
@@ -450,8 +431,8 @@ export function AppSidebarLayout({
                       setSettingsUserToggled(true);
                     }}
                     className={`flex w-full items-center justify-between rounded-xl px-2.5 py-2.5 text-sm font-black transition-colors ${anySettingsActive
-                        ? "text-[#003366]"
-                        : "text-slate-700 hover:bg-slate-100 hover:text-slate-950"
+                        ? "bg-[#F2E3AE] text-[#1F2A44]"
+                        : "text-[#1F2A44] hover:bg-[#FAF7F2] hover:text-[#1F2A44]"
                       }`}
                   >
                     <span className="flex items-center gap-3">
@@ -487,12 +468,12 @@ export function AppSidebarLayout({
           </nav>
 
           {/* Logout button */}
-          <div className={`shrink-0 border-t border-slate-100 p-2 ${collapsed ? "" : "px-2"}`}>
+          <div className={`relative z-10 shrink-0 border-t border-[#E8DCC7] bg-white/85 p-2 backdrop-blur-[2px] ${collapsed ? "" : "px-2"}`}>
             <form action={signOut}>
               <button
                 type="submit"
                 title={collapsed ? "ออกจากระบบ" : undefined}
-                className={`flex w-full items-center gap-3 rounded-xl px-2.5 py-2.5 text-sm font-black text-slate-700 transition-colors hover:bg-rose-50 hover:text-rose-600 ${collapsed ? "justify-center" : ""}`}
+                className={`flex w-full items-center gap-3 rounded-xl px-2.5 py-2.5 text-sm font-black text-[#1F2A44] transition-colors hover:bg-[#FAF7F2] hover:text-[#1F2A44] ${collapsed ? "justify-center" : ""}`}
               >
                 <LogOut className="h-4.5 w-4.5 shrink-0" strokeWidth={2.2} />
                 {!collapsed && <span>ออกจากระบบ</span>}

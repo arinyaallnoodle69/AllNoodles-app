@@ -132,6 +132,7 @@ export async function getProductSalesRanking(params: {
   productSearch?: string;
   productIds?: string[];
   customerIds?: string[];
+  warehouseId?: string;
   page?: number;
   pageSize?: number;
 }): Promise<{
@@ -147,6 +148,7 @@ export async function getProductSalesRanking(params: {
     productSearch = "",
     productIds = [],
     customerIds = [],
+    warehouseId,
     page = 1,
     pageSize = 20,
   } = params;
@@ -163,7 +165,8 @@ export async function getProductSalesRanking(params: {
         unit_price,
         line_total,
         sale_unit_label,
-        products!inner(id, name, sku, unit, cost_price, product_images(public_url, sort_order))
+        products!inner(id, name, sku, unit, cost_price, product_images(public_url, sort_order)),
+        order_items(cost_price)
       )
     `)
     .eq("organization_id", organizationId)
@@ -173,6 +176,10 @@ export async function getProductSalesRanking(params: {
 
   if (customerIds.length > 0) {
     query = query.in("customer_id", customerIds);
+  }
+
+  if (warehouseId) {
+    query = query.eq("warehouse_id", warehouseId);
   }
 
   const { data, error } = await query;
@@ -194,6 +201,7 @@ export async function getProductSalesRanking(params: {
         cost_price: unknown;
         product_images: Array<{ public_url: string; sort_order: number }>;
       };
+      order_items: { cost_price: unknown } | null;
     }>;
   };
 
@@ -227,8 +235,10 @@ export async function getProductSalesRanking(params: {
       const imageUrl = sortedImages[0]?.public_url ?? null;
 
       const qty = toNum(item.quantity_in_base_unit) || toNum(item.quantity_delivered);
-      // delivery_note_items has no cost_price column — derive from product
-      const costPerUnit = toNum(product.cost_price);
+      const orderItemCost = item.order_items ? toNum(item.order_items.cost_price) : null;
+      const costPerUnit = (orderItemCost !== null && orderItemCost > 0)
+        ? orderItemCost
+        : toNum(product.cost_price);
       const cost = costPerUnit * toNum(item.quantity_delivered);
 
       const existing = productMap.get(product.id);

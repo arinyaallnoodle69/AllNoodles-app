@@ -21,6 +21,7 @@ import {
   Settings2,
   Store,
   Truck,
+  Warehouse,
   X,
 } from "lucide-react";
 import { signOut } from "@/app/login/actions";
@@ -51,7 +52,6 @@ export function SettingsMobileBottomNav() {
   const { open: openCreateOrder, isOpen: isCreateModalOpen } = useCreateOrder();
 
   const moreActive = moreItems.some((item) => pathname.startsWith(item.href));
-  const createOrderActive = pathname.startsWith("/orders/incoming");
 
   return (
     <>
@@ -62,20 +62,21 @@ export function SettingsMobileBottomNav() {
         />
       ) : null}
 
+      {/* More menu drawer */}
       <div
-        className={`fixed inset-x-0 bottom-0 z-[100] rounded-t-3xl bg-white shadow-2xl transition-transform duration-300 ease-out lg:hidden ${
+        className={`fixed inset-x-0 bottom-0 z-[100] rounded-t-[2rem] border-t border-[#D4AF37]/30 bg-[#FAF7F2] shadow-[0_-12px_40px_rgba(8,42,99,0.15)] transition-transform duration-300 ease-out lg:hidden ${
           moreOpen ? "translate-y-0" : "translate-y-full"
         }`}
       >
-        <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
-          <span className="text-base font-semibold text-slate-800">เมนูเพิ่มเติม</span>
+        <div className="flex items-center justify-between border-b border-[#D4AF37]/25 px-5 py-4">
+          <span className="text-base font-bold text-[#082A63]">เมนูเพิ่มเติม</span>
           <button
             type="button"
             onClick={() => setMoreOpen(false)}
-            className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-slate-500 transition hover:bg-slate-200"
+            className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-200/50 text-[#082A63] transition active:scale-90"
             aria-label="ปิด"
           >
-            <X className="h-5 w-5" strokeWidth={2} />
+            <X className="h-5 w-5" strokeWidth={2.5} />
           </button>
         </div>
 
@@ -90,10 +91,10 @@ export function SettingsMobileBottomNav() {
                   setMoreOpen(false);
                   setSettingsOpen(true);
                 }}
-                className={`flex flex-col items-center gap-2.5 rounded-2xl px-3 py-5 text-sm font-semibold transition ${
+                className={`flex flex-col items-center gap-2.5 rounded-2xl border px-3 py-5 text-sm font-semibold transition active:scale-[0.98] ${
                   active
-                    ? "bg-[#003366]/10 text-[#003366]"
-                    : "bg-slate-50 text-slate-600 active:bg-slate-200"
+                    ? "border-[#D4AF37]/45 bg-[#082A63] text-white shadow-lg shadow-[#082A63]/25"
+                    : "border-slate-200 bg-white text-[#1F2A44] shadow-sm"
                 }`}
               >
                 <Icon className="h-7 w-7" strokeWidth={1.8} />
@@ -104,10 +105,10 @@ export function SettingsMobileBottomNav() {
                 key={href}
                 href={href}
                 onClick={() => setMoreOpen(false)}
-                className={`flex flex-col items-center gap-2.5 rounded-2xl px-3 py-5 text-sm font-semibold transition ${
+                className={`flex flex-col items-center gap-2.5 rounded-2xl border px-3 py-5 text-sm font-semibold transition active:scale-[0.98] ${
                   active
-                    ? "bg-[#003366]/10 text-[#003366]"
-                    : "bg-slate-50 text-slate-600 active:bg-slate-200"
+                    ? "border-[#D4AF37]/45 bg-[#082A63] text-white shadow-lg shadow-[#082A63]/25"
+                    : "border-slate-200 bg-white text-[#1F2A44] shadow-sm"
                 }`}
               >
                 <Icon className="h-7 w-7" strokeWidth={1.8} />
@@ -117,7 +118,7 @@ export function SettingsMobileBottomNav() {
           })}
         </div>
 
-        <div className="border-t border-slate-100 px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-3">
+        <div className="border-t border-[#D4AF37]/20 px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-3">
           <form action={signOut}>
             <button
               type="submit"
@@ -147,7 +148,6 @@ export function SettingsMobileBottomNav() {
           </div>
 
           <div className="relative px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-3">
-
             <div className="grid grid-cols-5 items-end">
               {primaryNav.slice(0, 2).map(({ href, icon: Icon, label, ...rest }) => {
                 const activePrefix =
@@ -160,11 +160,11 @@ export function SettingsMobileBottomNav() {
                     href={href}
                     className={`flex flex-col items-center justify-center gap-1 rounded-2xl px-1 py-2 text-[10px] font-medium transition ${
                       active
-                        ? "text-[#003366]"
+                        ? "text-[#082A63]"
                         : "text-slate-500 hover:text-slate-900"
                     }`}
                   >
-                    <Icon className={`h-5 w-5 transition-colors ${active ? "text-[#003366]" : "text-slate-500"}`} strokeWidth={active ? 2.8 : 2.2} />
+                    <Icon className={`h-5 w-5 transition-colors ${active ? "text-[#082A63]" : "text-slate-500"}`} strokeWidth={active ? 2.8 : 2.2} />
                     <span className={`whitespace-nowrap transition-all ${active ? "font-bold scale-105" : ""}`}>{label}</span>
                   </Link>
                 );
@@ -183,56 +183,54 @@ export function SettingsMobileBottomNav() {
                     href={href}
                     className={`flex flex-col items-center justify-center gap-1 rounded-2xl px-1 py-2 text-[10px] font-medium transition ${
                       active
-                        ? "text-[#003366]"
+                        ? "text-[#082A63]"
                         : "text-slate-500 hover:text-slate-900"
                     }`}
                   >
-                    <Icon className={`h-5 w-5 transition-colors ${active ? "text-[#003366]" : "text-slate-500"}`} strokeWidth={active ? 2.8 : 2.2} />
+                    <Icon className={`h-5 w-5 transition-colors ${active ? "text-[#082A63]" : "text-slate-500"}`} strokeWidth={active ? 2.8 : 2.2} />
                     <span className={`whitespace-nowrap transition-all ${active ? "font-bold scale-105" : ""}`}>{label}</span>
                   </Link>
                 );
               })}
 
-               <button
+              <button
                 type="button"
                 onClick={() => setMoreOpen(true)}
                 className={`flex flex-col items-center justify-center gap-1 rounded-2xl px-1 py-2 text-[10px] font-medium transition ${
                   moreActive
-                    ? "text-[#003366]"
+                    ? "text-[#082A63]"
                     : "text-slate-500 hover:text-slate-900"
                 }`}
               >
-                <MoreHorizontal className={`h-5 w-5 transition-colors ${moreActive ? "text-[#003366]" : "text-slate-500"}`} strokeWidth={2.4} />
+                <MoreHorizontal className={`h-5 w-5 transition-colors ${moreActive ? "text-[#082A63]" : "text-slate-500"}`} strokeWidth={2.4} />
                 <span className={`whitespace-nowrap ${moreActive ? "font-bold" : ""}`}>เพิ่มเติม</span>
               </button>
             </div>
           </div>
 
-           <button
+          <button
             type="button"
             onClick={() => openCreateOrder()}
-            className={`absolute -top-4 left-1/2 z-50 flex h-16 w-16 -translate-x-1/2 items-center justify-center rounded-full shadow-[0_12px_32px_rgba(0,51,102,0.35)] transition-all duration-300 active:scale-90 ${
+            className={`absolute -top-5 left-1/2 z-50 flex h-16 w-16 -translate-x-1/2 items-center justify-center rounded-full transition-all duration-300 before:pointer-events-none before:absolute before:inset-x-4 before:top-2 before:h-px before:bg-gradient-to-r before:from-transparent before:via-white/60 before:to-transparent active:scale-90 ${
               isCreateModalOpen
-                ? "bg-rose-600 text-white rotate-45"
-                : createOrderActive
-                ? "bg-[#003366] text-white"
-                : "bg-gradient-to-br from-[#0B5BC6] to-[#003366] text-white hover:brightness-110"
+                ? "rotate-45 bg-[#082A63] text-[#D4AF37] border-2 border-[#D4AF37] shadow-[0_12px_28px_rgba(8,42,99,0.3)] ring-4 ring-[#082A63]/20"
+                : "bg-gradient-to-br from-[#F5D374] via-[#D4AF37] to-[#A6801E] text-white border-2 border-white/60 shadow-[0_12px_28px_rgba(212,175,55,0.4)] ring-4 ring-[#D4AF37]/25 hover:brightness-105"
             }`}
             aria-label="สร้างออเดอร์"
           >
-            <Plus className="h-9 w-9" strokeWidth={3} />
+            <Plus className="h-9 w-9 drop-shadow-[0_1.5px_3px_rgba(163,122,26,0.5)]" strokeWidth={3.5} />
           </button>
         </div>
       </nav>
 
       {/* Settings Full Screen Modal */}
       {settingsOpen && (
-        <div className="fixed inset-0 z-[200] bg-[#f6f7f8] animate-in fade-in duration-200 lg:hidden font-[family:var(--font-sarabun)]">
-          <div className="flex h-[68px] items-center justify-between border-b border-slate-200 bg-white px-4">
-            <span className="text-lg font-bold text-slate-950">ตั้งค่า</span>
+        <div className="fixed inset-0 z-[200] bg-[#FAF7F2] animate-in fade-in duration-200 lg:hidden font-[family:var(--font-sarabun)]">
+          <div className="flex h-[68px] items-center justify-between border-b border-[#D4AF37]/70 bg-[#082A63] px-4 text-white">
+            <span className="text-lg font-black tracking-wide text-white">ตั้งค่า</span>
             <button
               onClick={() => setSettingsOpen(false)}
-              className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-slate-500 transition active:scale-95"
+              className="flex h-9 w-9 items-center justify-center rounded-full bg-white/12 text-white/90 hover:bg-white/20 transition active:scale-95"
             >
               <X className="h-5 w-5" strokeWidth={2.5} />
             </button>
@@ -271,6 +269,12 @@ export function SettingsMobileBottomNav() {
                   label: "จัดการรถ",
                 },
                 {
+                  description: "เพิ่มคลังสินค้า ตั้งค่าคลังหลักและคลังต่างจังหวัด",
+                  href: "/settings/warehouses",
+                  icon: Warehouse,
+                  label: "จัดการคลัง",
+                },
+                {
                   description: "ตั้งเวลาเปิด-ปิดรับออเดอร์ และจัดการแจ้งเตือนออเดอร์ใหม่",
                   href: "/settings/order-window",
                   icon: Clock3,
@@ -287,16 +291,16 @@ export function SettingsMobileBottomNav() {
                   key={option.href}
                   href={option.href}
                   onClick={() => setSettingsOpen(false)}
-                  className="flex items-center gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition active:bg-slate-50"
+                  className="flex items-center gap-4 rounded-[1.35rem] border border-[#D4AF37]/25 bg-white p-4 shadow-[0_12px_30px_rgba(8,42,99,0.04)] transition active:scale-[0.98] active:bg-slate-50"
                 >
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#003366]/10 text-[#003366]">
-                    <option.icon className="h-5 w-5" strokeWidth={2.2} />
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#D4AF37]/25 text-[#082A63]">
+                    <option.icon className="h-5.5 w-5.5" strokeWidth={2.2} />
                   </div>
                   <div className="flex-1 min-w-0">
                     <h3 className="text-base font-bold text-slate-950 truncate">{option.label}</h3>
-                    <p className="text-[11px] text-slate-500 mt-0.5 line-clamp-2 leading-relaxed">{option.description}</p>
+                    <p className="text-[11.5px] text-slate-500 mt-0.5 line-clamp-2 leading-relaxed">{option.description}</p>
                   </div>
-                  <ArrowRight className="h-4 w-4 text-slate-400 shrink-0" />
+                  <ArrowRight className="h-4.5 w-4.5 text-[#D4AF37] shrink-0" />
                 </Link>
               ))}
             </div>

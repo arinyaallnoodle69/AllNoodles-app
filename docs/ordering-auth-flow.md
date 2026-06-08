@@ -1,6 +1,6 @@
-# TYNoodle: LINE Authentication & Store Selection Flow
+# All Noodles: LINE Authentication & Store Selection Flow
 
-This document details the implementation of **Plan B** for user authentication and authorization within the TYNoodle ordering system.
+This document details the implementation of **Plan B** for user authentication and authorization within the All Noodles ordering system.
 
 ## 1. Purpose & Objective
 We needed a secure and user-friendly way to restrict access to the ordering catalog.

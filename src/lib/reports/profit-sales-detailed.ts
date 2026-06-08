@@ -84,6 +84,7 @@ type DeliveryNoteItemRow = {
     unit: string | null;
     cost_price: number | string | null;
   } | null;
+  order_items: { cost_price: number | string | null } | null;
 };
 
 type ProductSaleUnitRow = {
@@ -111,8 +112,9 @@ export async function getDetailedProfitSalesReport(params: {
   fromDate: string;
   toDate: string;
   customerIds?: string[];
+  warehouseId?: string;
 }): Promise<DetailedProfitReportData> {
-  const { organizationId, fromDate, toDate, customerIds = [] } = params;
+  const { organizationId, fromDate, toDate, customerIds = [], warehouseId } = params;
   const supabase = getSupabaseAdmin();
 
   // 1. Fetch confirmed delivery notes in date range
@@ -139,6 +141,10 @@ export async function getDetailedProfitSalesReport(params: {
 
   if (customerIds.length > 0) {
     notesQuery = notesQuery.in("customer_id", customerIds);
+  }
+
+  if (warehouseId) {
+    notesQuery = notesQuery.eq("warehouse_id", warehouseId);
   }
 
   const { data: notesData, error: notesError } = await notesQuery;
@@ -174,6 +180,9 @@ export async function getDetailedProfitSalesReport(params: {
           name,
           sku,
           unit,
+          cost_price
+        ),
+        order_items(
           cost_price
         )
       `)
@@ -302,9 +311,12 @@ export async function getDetailedProfitSalesReport(params: {
     const lineTotal = toNumber(item.line_total);
 
     // Cost calculation
-    const unitCost = item.product_sale_unit_id
-      ? (saleUnitCostById.get(item.product_sale_unit_id) ?? 0)
-      : (item.products?.id ? (productCostById.get(item.products.id) ?? 0) : 0);
+    const orderItemCost = item.order_items ? toNumber(item.order_items.cost_price) : null;
+    const unitCost = (orderItemCost !== null && orderItemCost > 0)
+      ? orderItemCost
+      : (item.product_sale_unit_id
+          ? (saleUnitCostById.get(item.product_sale_unit_id) ?? 0)
+          : (item.products?.id ? (productCostById.get(item.products.id) ?? 0) : 0));
     const lineCost = unitCost * qty;
 
     // Aggregate globally

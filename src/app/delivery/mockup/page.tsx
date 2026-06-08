@@ -110,7 +110,7 @@ function StoreGroupHeader({ store }: { store: MockStore }) {
     <tr>
       <td
         colSpan={10}
-        className="border-t-2 border-[#0a2340] bg-[#0f2f56] px-4 py-2"
+        className="border-t-2 border-[#103B82] bg-[#103B82] px-4 py-2"
       >
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex flex-wrap items-center gap-2">
@@ -173,7 +173,7 @@ function ProductRow({ line, rowNum }: { line: MockLine; rowNum: number }) {
         {fmtMoney(lineTotal)}
       </td>
       <td className="px-3 py-2 text-center">
-        <span className="text-xs font-semibold text-[#0f2f56] underline decoration-slate-300 underline-offset-2 cursor-pointer">แก้ไข</span>
+        <span className="text-xs font-semibold text-[#103B82] underline decoration-slate-300 underline-offset-2 cursor-pointer">แก้ไข</span>
       </td>
     </tr>
   );
