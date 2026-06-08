@@ -132,6 +132,8 @@ function normalizeLinkedCustomer(value: unknown): Customer | null {
   const customerCode =
     "customer_code" in value && typeof value.customer_code === "string"
       ? value.customer_code
+      : "customerCode" in value && typeof value.customerCode === "string"
+        ? value.customerCode
       : null;
 
   if (!id || !name) {
@@ -550,6 +552,7 @@ export default function OrderClient({
   const [editingOrder, setEditingOrder] = useState<CustomerOrderRow | null>(null);
   const [editCart, setEditCart] = useState<Record<string, number>>({});
   const [highlightedHistoryOrderId, setHighlightedHistoryOrderId] = useState<string | null>(null);
+  const [sessionSyncError, setSessionSyncError] = useState<string | null>(null);
 
   // Sync server session cookie after LIFF login.
   useEffect(() => {
@@ -568,15 +571,30 @@ export default function OrderClient({
           headers: { "Content-Type": "application/json" },
           method: "POST",
         });
-        if (!response.ok || !isActive) return;
+        if (!isActive) return;
+        if (!response.ok) {
+          setSessionSyncError("LINE_SESSION_SYNC_FAILED");
+          return;
+        }
+        const payload = (await response.json().catch(() => null)) as {
+          customer?: unknown;
+        } | null;
         setSessionLineUserId(profile.userId);
+        const syncedCustomer = normalizeLinkedCustomer(payload?.customer);
+        if (syncedCustomer) {
+          setLinkedCustomer(syncedCustomer);
+          setCanSubmitPendingLineOrder(false);
+          setCurrentView("catalog");
+        }
         if (profile.pictureUrl) {
           setLinkedCustomer((current) =>
             current ? { ...current, linePictureUrl: profile.pictureUrl } : current,
           );
         }
+        setSessionSyncError(null);
       } catch (error) {
         console.error("[order-session:sync]", error);
+        setSessionSyncError("LINE_SESSION_SYNC_FAILED");
       }
     })();
 
@@ -588,6 +606,18 @@ export default function OrderClient({
   // Resolve auth state once on boot with session-first fallback.
   useEffect(() => {
     if (!isReady) return;
+    const profileLineUserId = profile?.userId ?? null;
+    const needsVerifiedSession =
+      Boolean(profileLineUserId && liffToken) &&
+      sessionLineUserId !== profileLineUserId;
+
+    if (needsVerifiedSession) {
+      if (sessionSyncError) {
+        setCurrentView("login");
+      }
+      return;
+    }
+
     const lineUserId = profile?.userId ?? sessionLineUserId;
     const shouldResolveAgainFromMockLogin =
       process.env.NEXT_PUBLIC_LIFF_MOCK === "true" &&
@@ -652,10 +682,12 @@ export default function OrderClient({
     currentView,
     isReady,
     linkedCustomer,
+    liffToken,
     organizationId,
     profile?.displayName,
     profile?.pictureUrl,
     profile?.userId,
+    sessionSyncError,
     sessionLineUserId,
   ]);
 

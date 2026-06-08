@@ -141,7 +141,12 @@ export function LiffProvider({
 
   const login = async () => {
     const liff = liffRef.current;
-    if (!liff || liff.isLoggedIn()) return;
+    if (!liff) return;
+
+    if (liff.isLoggedIn()) {
+      await refreshProfile();
+      return;
+    }
 
     liff.login();
 
