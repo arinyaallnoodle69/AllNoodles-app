@@ -13,7 +13,6 @@ import { uploadAndNotifyCustomerReceiptImage } from "@/lib/line/customer-receipt
 import { syncDeliveryNoteForOrder } from "@/lib/orders/sync-delivery-note";
 import { notifyUpdatedCustomerReceiptForOrder } from "@/lib/orders/notify-customer-receipt";
 import { sendNewCustomerInquiryPushNotification, sendNewOrderPushNotification } from "@/lib/push/web-push";
-import { revalidateReportPages } from "@/lib/reports/revalidate-report-pages";
 import { createCustomerInquiry } from "@/lib/customer-inquiries";
 import { getOrderCustomerSession } from "@/lib/auth/order-session";
 import {
@@ -167,7 +166,6 @@ function invalidateOrderCaches(organizationId: string) {
   revalidatePath("/orders/incoming");
   revalidatePath("/billing");
   revalidateDashboardPages();
-  revalidateReportPages();
 }
 
 async function getFallbackAppUserId(

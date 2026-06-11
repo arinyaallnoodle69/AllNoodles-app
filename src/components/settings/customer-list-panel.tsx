@@ -65,7 +65,7 @@ export function CustomerListPanel({
           </div>
         ) : (
           <>
-            <div className="divide-y divide-slate-100 sm:hidden">
+            <div className="divide-y divide-slate-300 sm:hidden">
               {filtered.map((customer) => (
                 <div key={customer.id} className="px-4 py-5">
                   <div className="flex items-start gap-3">
@@ -111,21 +111,25 @@ export function CustomerListPanel({
                     </span>
                   </div>
 
-                  <CustomerWarehouseSelect
-                    className="mt-3 w-full"
-                    customerId={customer.id}
-                    currentWarehouseId={customer.defaultWarehouseId}
-                    currentWarehouseName={customer.defaultWarehouseName}
-                    warehouses={warehouses}
-                  />
+                  <div className="mt-3 grid w-full grid-cols-2 gap-2">
+                    <CustomerWarehouseSelect
+                      compact
+                      className="min-w-0"
+                      customerId={customer.id}
+                      currentWarehouseId={customer.defaultWarehouseId}
+                      currentWarehouseName={customer.defaultWarehouseName}
+                      warehouses={warehouses}
+                    />
 
-                  <CustomerVehicleSelect
-                    className="mt-3 w-full"
-                    customerId={customer.id}
-                    currentVehicleId={customer.defaultVehicleId}
-                    currentVehicleName={customer.defaultVehicleName}
-                    vehicles={vehicles}
-                  />
+                    <CustomerVehicleSelect
+                      compact
+                      className="min-w-0"
+                      customerId={customer.id}
+                      currentVehicleId={customer.defaultVehicleId}
+                      currentVehicleName={customer.defaultVehicleName}
+                      vehicles={vehicles}
+                    />
+                  </div>
                 </div>
               ))}
             </div>

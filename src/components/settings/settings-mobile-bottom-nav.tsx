@@ -1,8 +1,9 @@
 "use client";
 
-import Link from "next/link";
+import Link, { useLinkStatus } from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
+import { createPortal } from "react-dom";
 import {
   ArrowRight,
   BarChart2,
@@ -12,6 +13,7 @@ import {
   Factory,
   KeyRound,
   LayoutDashboard,
+  LoaderCircle,
   LogOut,
   MessageCircleMore,
   MoreHorizontal,
@@ -39,21 +41,53 @@ const moreItems = [
   { href: "/settings", icon: Settings2, label: "ตั้งค่า" },
 ] as const;
 
+function subscribeToClientMount() {
+  return () => {};
+}
+
+function getClientSnapshot() {
+  return true;
+}
+
+function getServerSnapshot() {
+  return false;
+}
+
 function isActive(href: string, pathname: string, activePrefix?: string) {
   if (href === "/dashboard") return pathname === "/dashboard";
   if (activePrefix) return pathname.startsWith(activePrefix);
   return pathname.startsWith(href);
 }
 
+function SettingsLinkStatus() {
+  const { pending } = useLinkStatus();
+
+  if (!pending) return null;
+
+  return (
+    <span
+      aria-hidden="true"
+      className="absolute inset-0 rounded-[1.35rem] bg-[#082A63]/[0.03]"
+    />
+  );
+}
+
 export function SettingsMobileBottomNav() {
   const pathname = usePathname();
   const [moreOpen, setMoreOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [navigatingHref, setNavigatingHref] = useState<string | null>(null);
+  const mounted = useSyncExternalStore(
+    subscribeToClientMount,
+    getClientSnapshot,
+    getServerSnapshot,
+  );
   const { open: openCreateOrder, isOpen: isCreateModalOpen } = useCreateOrder();
 
   const moreActive = moreItems.some((item) => pathname.startsWith(item.href));
+  const settingsModalOpen = settingsOpen && navigatingHref !== pathname;
 
-  return (
+  const nav = (
     <>
       {moreOpen ? (
         <div
@@ -89,6 +123,7 @@ export function SettingsMobileBottomNav() {
                 key={href}
                 onClick={() => {
                   setMoreOpen(false);
+                  setNavigatingHref(null);
                   setSettingsOpen(true);
                 }}
                 className={`flex flex-col items-center gap-2.5 rounded-2xl border px-3 py-5 text-sm font-semibold transition active:scale-[0.98] ${
@@ -211,25 +246,36 @@ export function SettingsMobileBottomNav() {
           <button
             type="button"
             onClick={() => openCreateOrder()}
-            className={`absolute -top-5 left-1/2 z-50 flex h-16 w-16 -translate-x-1/2 items-center justify-center rounded-full transition-all duration-300 before:pointer-events-none before:absolute before:inset-x-4 before:top-2 before:h-px before:bg-gradient-to-r before:from-transparent before:via-white/60 before:to-transparent active:scale-90 ${
+            className={`absolute -top-3 left-1/2 z-50 flex h-16 w-16 -translate-x-1/2 items-center justify-center rounded-full border-[3px] border-[#D4AF37] bg-white shadow-[0_12px_24px_rgba(8,42,99,0.18),0_8px_18px_rgba(212,175,55,0.22)] ring-2 ring-white transition-all duration-300 active:scale-90 ${
               isCreateModalOpen
-                ? "rotate-45 bg-[#082A63] text-[#D4AF37] border-2 border-[#D4AF37] shadow-[0_12px_28px_rgba(8,42,99,0.3)] ring-4 ring-[#082A63]/20"
-                : "bg-gradient-to-br from-[#F5D374] via-[#D4AF37] to-[#A6801E] text-white border-2 border-white/60 shadow-[0_12px_28px_rgba(212,175,55,0.4)] ring-4 ring-[#D4AF37]/25 hover:brightness-105"
+                ? "rotate-45"
+                : "hover:shadow-[0_14px_28px_rgba(8,42,99,0.22),0_10px_22px_rgba(212,175,55,0.28)]"
             }`}
             aria-label="สร้างออเดอร์"
           >
-            <Plus className="h-9 w-9 drop-shadow-[0_1.5px_3px_rgba(163,122,26,0.5)]" strokeWidth={3.5} />
+            <span className="flex h-12 w-12 items-center justify-center rounded-full bg-[#082A63] shadow-[inset_0_1px_2px_rgba(255,255,255,0.18),0_4px_10px_rgba(8,42,99,0.24)]">
+              <Plus className="h-8 w-8 text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.32)]" strokeWidth={3.2} />
+            </span>
           </button>
         </div>
       </nav>
 
       {/* Settings Full Screen Modal */}
-      {settingsOpen && (
+      {settingsModalOpen && (
         <div className="fixed inset-0 z-[200] bg-[#FAF7F2] animate-in fade-in duration-200 lg:hidden font-[family:var(--font-sarabun)]">
+          {navigatingHref ? (
+            <div className="absolute inset-0 z-20 flex items-center justify-center bg-[#FAF7F2]/86 backdrop-blur-[2px]">
+              <div className="flex min-w-44 flex-col items-center gap-3 rounded-2xl border border-[#D4AF37]/35 bg-white px-5 py-4 shadow-[0_18px_44px_rgba(8,42,99,0.16)]">
+                <LoaderCircle className="h-7 w-7 animate-spin text-[#082A63]" strokeWidth={2.4} />
+                <p className="text-sm font-black text-[#082A63]">กำลังโหลด...</p>
+              </div>
+            </div>
+          ) : null}
           <div className="flex h-[68px] items-center justify-between border-b border-[#D4AF37]/70 bg-[#082A63] px-4 text-white">
             <span className="text-lg font-black tracking-wide text-white">ตั้งค่า</span>
             <button
               onClick={() => setSettingsOpen(false)}
+              disabled={Boolean(navigatingHref)}
               className="flex h-9 w-9 items-center justify-center rounded-full bg-white/12 text-white/90 hover:bg-white/20 transition active:scale-95"
             >
               <X className="h-5 w-5" strokeWidth={2.5} />
@@ -290,9 +336,23 @@ export function SettingsMobileBottomNav() {
                 <Link
                   key={option.href}
                   href={option.href}
-                  onClick={() => setSettingsOpen(false)}
-                  className="flex items-center gap-4 rounded-[1.35rem] border border-[#D4AF37]/25 bg-white p-4 shadow-[0_12px_30px_rgba(8,42,99,0.04)] transition active:scale-[0.98] active:bg-slate-50"
+                  onClick={(event) => {
+                    if (navigatingHref) {
+                      event.preventDefault();
+                      return;
+                    }
+                    if (option.href === pathname) {
+                      setSettingsOpen(false);
+                      return;
+                    }
+                    setNavigatingHref(option.href);
+                  }}
+                  aria-busy={navigatingHref === option.href}
+                  className={`relative flex items-center gap-4 rounded-[1.35rem] border border-[#D4AF37]/25 bg-white p-4 shadow-[0_12px_30px_rgba(8,42,99,0.04)] transition active:scale-[0.98] active:bg-slate-50 ${
+                    navigatingHref && navigatingHref !== option.href ? "opacity-55" : ""
+                  }`}
                 >
+                  <SettingsLinkStatus />
                   <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#D4AF37]/25 text-[#082A63]">
                     <option.icon className="h-5.5 w-5.5" strokeWidth={2.2} />
                   </div>
@@ -300,7 +360,11 @@ export function SettingsMobileBottomNav() {
                     <h3 className="text-base font-bold text-slate-950 truncate">{option.label}</h3>
                     <p className="text-[11.5px] text-slate-500 mt-0.5 line-clamp-2 leading-relaxed">{option.description}</p>
                   </div>
-                  <ArrowRight className="h-4.5 w-4.5 text-[#D4AF37] shrink-0" />
+                  {navigatingHref === option.href ? (
+                    <LoaderCircle className="h-4.5 w-4.5 shrink-0 animate-spin text-[#D4AF37]" strokeWidth={2.5} />
+                  ) : (
+                    <ArrowRight className="h-4.5 w-4.5 text-[#D4AF37] shrink-0" />
+                  )}
                 </Link>
               ))}
             </div>
@@ -309,4 +373,7 @@ export function SettingsMobileBottomNav() {
       )}
     </>
   );
+
+  if (!mounted) return null;
+  return createPortal(nav, document.body);
 }

@@ -21,6 +21,7 @@ import {
   KeyboardSensor,
   MouseSensor,
   TouchSensor,
+  AutoScrollActivator,
   useSensor,
   useSensors,
   DragEndEvent
@@ -392,6 +393,13 @@ export function ProductList({ products, baseListHref = "/settings/products" }: P
           <DndContext 
             id="product-list-dnd"
             sensors={sensors}
+            autoScroll={{
+              enabled: true,
+              activator: AutoScrollActivator.Pointer,
+              acceleration: 16,
+              interval: 5,
+              threshold: { x: 0, y: 0.28 },
+            }}
             collisionDetection={closestCenter}
             onDragEnd={handleDragEnd}
             modifiers={[restrictToVerticalAxis]}

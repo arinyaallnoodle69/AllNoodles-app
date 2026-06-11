@@ -116,7 +116,7 @@ export function SettingsCustomersPageClient({
           <PlusCircle className="h-7 w-7 text-[#082A63]" strokeWidth={2.4} />
         </Link>
 
-		      <div className="-mx-3 md:mx-0 flex flex-col gap-6 w-full">
+		      <div className="-mx-4 flex w-[calc(100%+2rem)] flex-col gap-6 md:mx-0 md:w-full">
 	        <CustomerSettingsTabs current="customers" />
 
 	        <CustomerListPanel 

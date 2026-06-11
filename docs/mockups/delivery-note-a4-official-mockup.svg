@@ -1,0 +1,116 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="794" height="1123" viewBox="0 0 794 1123">
+  <rect width="794" height="1123" fill="#e9edf3"/>
+  <rect x="48" y="28" width="698" height="1067" fill="#ffffff" stroke="#111111" stroke-width="1"/>
+
+  <style>
+    .title { font: 900 30px "Sarabun", "Tahoma", sans-serif; fill: #111111; }
+    .brand { font: 900 21px "Sarabun", "Tahoma", sans-serif; fill: #111111; }
+    .label { font: 900 13px "Sarabun", "Tahoma", sans-serif; fill: #111111; }
+    .text { font: 800 13px "Sarabun", "Tahoma", sans-serif; fill: #111111; }
+    .small { font: 800 10.5px "Sarabun", "Tahoma", sans-serif; fill: #111111; }
+    .table-head { font: 900 12px "Sarabun", "Tahoma", sans-serif; fill: #111111; }
+    .cell { font: 800 10.8px "Sarabun", "Tahoma", sans-serif; fill: #111111; }
+    .cell-strong { font: 900 10.8px "Sarabun", "Tahoma", sans-serif; fill: #111111; }
+    .mono { font: 900 10.8px "Consolas", "Tahoma", monospace; fill: #111111; }
+    .line { stroke: #111111; stroke-width: 1; }
+    .thin { stroke: #111111; stroke-width: 0.7; }
+  </style>
+
+  <g transform="translate(74 54)">
+    <image href="../../public/brand/512x512.png" x="0" y="0" width="54" height="54" preserveAspectRatio="xMidYMid meet"/>
+    <text x="68" y="20" class="brand">AllNoodles</text>
+    <text x="68" y="40" class="small">ผู้ผลิตและจัดส่งสินค้าเส้นสด</text>
+    <text x="68" y="58" class="small">โทร. 080-000-0000</text>
+  </g>
+
+  <text x="397" y="84" text-anchor="middle" class="title">ใบส่งของ</text>
+
+  <g transform="translate(548 52)">
+    <rect x="0" y="0" width="166" height="76" fill="#ffffff" stroke="#111111" stroke-width="1"/>
+    <text x="12" y="23" class="label">เลขที่</text>
+    <text x="66" y="23" class="mono">DN2026060005</text>
+    <text x="12" y="47" class="label">วันที่</text>
+    <text x="66" y="47" class="text">10/06/2569</text>
+    <text x="12" y="67" class="label">หน้า</text>
+    <text x="66" y="67" class="mono">1 / 1</text>
+  </g>
+
+  <rect x="74" y="146" width="640" height="92" fill="#ffffff" stroke="#111111" stroke-width="1"/>
+  <line x1="74" y1="190" x2="714" y2="190" class="thin"/>
+  <line x1="430" y1="146" x2="430" y2="238" class="thin"/>
+
+  <text x="90" y="174" class="label">ลูกค้า</text>
+  <text x="154" y="174" class="text">ร้านวันดี</text>
+  <text x="446" y="174" class="label">รหัสร้านค้า</text>
+  <text x="548" y="174" class="mono">ANS001</text>
+
+  <text x="90" y="216" class="label">ที่อยู่</text>
+  <text x="154" y="216" class="text">123/45 ถนนตัวอย่าง แขวงตัวอย่าง เขตตัวอย่าง กรุงเทพมหานคร</text>
+  <text x="446" y="216" class="label">รถจัดส่ง</text>
+  <text x="548" y="216" class="text">รถกรุงเทพ1</text>
+
+  <g transform="translate(74 264)">
+    <rect x="0" y="0" width="640" height="34" fill="#ffffff" stroke="#111111" stroke-width="1"/>
+    <text x="24" y="22" text-anchor="middle" class="table-head">ลำดับ</text>
+    <text x="78" y="22" class="table-head">รหัสสินค้า</text>
+    <text x="172" y="22" class="table-head">รายการสินค้า</text>
+    <text x="392" y="22" text-anchor="middle" class="table-head">จำนวน</text>
+    <text x="452" y="22" text-anchor="middle" class="table-head">หน่วย</text>
+    <text x="516" y="22" text-anchor="middle" class="table-head">ราคา</text>
+    <text x="604" y="22" text-anchor="middle" class="table-head">จำนวนเงิน</text>
+
+    <line x1="50" y1="0" x2="50" y2="608" class="thin"/>
+    <line x1="146" y1="0" x2="146" y2="608" class="thin"/>
+    <line x1="356" y1="0" x2="356" y2="608" class="thin"/>
+    <line x1="424" y1="0" x2="424" y2="608" class="thin"/>
+    <line x1="480" y1="0" x2="480" y2="608" class="thin"/>
+    <line x1="552" y1="0" x2="552" y2="608" class="thin"/>
+    <line x1="640" y1="0" x2="640" y2="608" class="thin"/>
+
+    <g transform="translate(0 55)">
+      <text x="25" y="0" text-anchor="middle" class="cell">1</text><text x="60" y="0" class="mono">ANP001</text><text x="156" y="0" class="cell-strong">ผัดไท มหาชัย (ยาว) (แดง)</text><text x="410" y="0" text-anchor="end" class="cell">5</text><text x="452" y="0" text-anchor="middle" class="cell">kg</text><text x="540" y="0" text-anchor="end" class="cell">50.00</text><text x="630" y="0" text-anchor="end" class="cell">250.00</text>
+      <text x="25" y="27" text-anchor="middle" class="cell">2</text><text x="60" y="27" class="mono">ANP002</text><text x="156" y="27" class="cell-strong">จั๊บญวนสด ช้างคู่</text><text x="410" y="27" text-anchor="end" class="cell">5</text><text x="452" y="27" text-anchor="middle" class="cell">kg</text><text x="540" y="27" text-anchor="end" class="cell">50.00</text><text x="630" y="27" text-anchor="end" class="cell">250.00</text>
+      <text x="25" y="54" text-anchor="middle" class="cell">3</text><text x="60" y="54" class="mono">ANP003</text><text x="156" y="54" class="cell-strong">วุ้นเส้น กิเลนใหญ่ 450กรัม</text><text x="410" y="54" text-anchor="end" class="cell">5</text><text x="452" y="54" text-anchor="middle" class="cell">kg</text><text x="540" y="54" text-anchor="end" class="cell">49.00</text><text x="630" y="54" text-anchor="end" class="cell">245.00</text>
+      <text x="25" y="81" text-anchor="middle" class="cell">4</text><text x="60" y="81" class="mono">ANP004</text><text x="156" y="81" class="cell-strong">ผัดไท พระอาทิตย์ (แดง)</text><text x="410" y="81" text-anchor="end" class="cell">5</text><text x="452" y="81" text-anchor="middle" class="cell">kg</text><text x="540" y="81" text-anchor="end" class="cell">100.00</text><text x="630" y="81" text-anchor="end" class="cell">500.00</text>
+      <text x="25" y="108" text-anchor="middle" class="cell">5</text><text x="60" y="108" class="mono">ANP005</text><text x="156" y="108" class="cell-strong">ผัดไท มิตรภาพ</text><text x="410" y="108" text-anchor="end" class="cell">5</text><text x="452" y="108" text-anchor="middle" class="cell">kg</text><text x="540" y="108" text-anchor="end" class="cell">100.00</text><text x="630" y="108" text-anchor="end" class="cell">500.00</text>
+      <text x="25" y="135" text-anchor="middle" class="cell">6</text><text x="60" y="135" class="mono">ANP006</text><text x="156" y="135" class="cell-strong">เส้นเล็ก 1 กิโล</text><text x="410" y="135" text-anchor="end" class="cell">5</text><text x="452" y="135" text-anchor="middle" class="cell">kg</text><text x="540" y="135" text-anchor="end" class="cell">42.00</text><text x="630" y="135" text-anchor="end" class="cell">210.00</text>
+      <text x="25" y="162" text-anchor="middle" class="cell">7</text><text x="60" y="162" class="mono">ANP007</text><text x="156" y="162" class="cell-strong">เส้นใหญ่สด</text><text x="410" y="162" text-anchor="end" class="cell">5</text><text x="452" y="162" text-anchor="middle" class="cell">kg</text><text x="540" y="162" text-anchor="end" class="cell">42.00</text><text x="630" y="162" text-anchor="end" class="cell">210.00</text>
+      <text x="25" y="189" text-anchor="middle" class="cell">8</text><text x="60" y="189" class="mono">ANP008</text><text x="156" y="189" class="cell-strong">บะหมี่เหลืองใหญ่</text><text x="410" y="189" text-anchor="end" class="cell">5</text><text x="452" y="189" text-anchor="middle" class="cell">kg</text><text x="540" y="189" text-anchor="end" class="cell">44.00</text><text x="630" y="189" text-anchor="end" class="cell">220.00</text>
+      <text x="25" y="216" text-anchor="middle" class="cell">9</text><text x="60" y="216" class="mono">ANP009</text><text x="156" y="216" class="cell-strong">หมี่สด แชมปี้</text><text x="410" y="216" text-anchor="end" class="cell">5</text><text x="452" y="216" text-anchor="middle" class="cell">kg</text><text x="540" y="216" text-anchor="end" class="cell">31.00</text><text x="630" y="216" text-anchor="end" class="cell">155.00</text>
+      <text x="25" y="243" text-anchor="middle" class="cell">10</text><text x="60" y="243" class="mono">ANP010</text><text x="156" y="243" class="cell-strong">เส้นหมี่ขาว</text><text x="410" y="243" text-anchor="end" class="cell">5</text><text x="452" y="243" text-anchor="middle" class="cell">kg</text><text x="540" y="243" text-anchor="end" class="cell">35.00</text><text x="630" y="243" text-anchor="end" class="cell">175.00</text>
+      <text x="25" y="270" text-anchor="middle" class="cell">11</text><text x="60" y="270" class="mono">ANP011</text><text x="156" y="270" class="cell-strong">แผ่นเกี๊ยวบาง</text><text x="410" y="270" text-anchor="end" class="cell">5</text><text x="452" y="270" text-anchor="middle" class="cell">kg</text><text x="540" y="270" text-anchor="end" class="cell">38.00</text><text x="630" y="270" text-anchor="end" class="cell">190.00</text>
+      <text x="25" y="297" text-anchor="middle" class="cell">12</text><text x="60" y="297" class="mono">ANP012</text><text x="156" y="297" class="cell-strong">เกี๊ยวเหลืองใหญ่</text><text x="410" y="297" text-anchor="end" class="cell">5</text><text x="452" y="297" text-anchor="middle" class="cell">kg</text><text x="540" y="297" text-anchor="end" class="cell">44.00</text><text x="630" y="297" text-anchor="end" class="cell">220.00</text>
+      <text x="25" y="324" text-anchor="middle" class="cell">13</text><text x="60" y="324" class="mono">ANP013</text><text x="156" y="324" class="cell-strong">บะหมี่เป๊าะ</text><text x="410" y="324" text-anchor="end" class="cell">5</text><text x="452" y="324" text-anchor="middle" class="cell">kg</text><text x="540" y="324" text-anchor="end" class="cell">45.00</text><text x="630" y="324" text-anchor="end" class="cell">225.00</text>
+      <text x="25" y="351" text-anchor="middle" class="cell">14</text><text x="60" y="351" class="mono">ANP014</text><text x="156" y="351" class="cell-strong">เส้นราเมงสด</text><text x="410" y="351" text-anchor="end" class="cell">5</text><text x="452" y="351" text-anchor="middle" class="cell">kg</text><text x="540" y="351" text-anchor="end" class="cell">48.00</text><text x="630" y="351" text-anchor="end" class="cell">240.00</text>
+      <text x="25" y="378" text-anchor="middle" class="cell">15</text><text x="60" y="378" class="mono">ANP015</text><text x="156" y="378" class="cell-strong">เส้นโซบะสด</text><text x="410" y="378" text-anchor="end" class="cell">5</text><text x="452" y="378" text-anchor="middle" class="cell">kg</text><text x="540" y="378" text-anchor="end" class="cell">46.00</text><text x="630" y="378" text-anchor="end" class="cell">230.00</text>
+      <text x="25" y="405" text-anchor="middle" class="cell">16</text><text x="60" y="405" class="mono">ANP016</text><text x="156" y="405" class="cell-strong">เส้นอุด้งสด</text><text x="410" y="405" text-anchor="end" class="cell">5</text><text x="452" y="405" text-anchor="middle" class="cell">kg</text><text x="540" y="405" text-anchor="end" class="cell">52.00</text><text x="630" y="405" text-anchor="end" class="cell">260.00</text>
+      <text x="25" y="432" text-anchor="middle" class="cell">17</text><text x="60" y="432" class="mono">ANP017</text><text x="156" y="432" class="cell-strong">เส้นเล็ก รังนก</text><text x="410" y="432" text-anchor="end" class="cell">5</text><text x="452" y="432" text-anchor="middle" class="cell">kg</text><text x="540" y="432" text-anchor="end" class="cell">50.00</text><text x="630" y="432" text-anchor="end" class="cell">250.00</text>
+      <text x="25" y="459" text-anchor="middle" class="cell">18</text><text x="60" y="459" class="mono">ANP018</text><text x="156" y="459" class="cell-strong">เส้นใหญ่ นิ่มพิเศษ</text><text x="410" y="459" text-anchor="end" class="cell">5</text><text x="452" y="459" text-anchor="middle" class="cell">kg</text><text x="540" y="459" text-anchor="end" class="cell">43.00</text><text x="630" y="459" text-anchor="end" class="cell">215.00</text>
+      <text x="25" y="486" text-anchor="middle" class="cell">19</text><text x="60" y="486" class="mono">ANP019</text><text x="156" y="486" class="cell-strong">บะหมี่หยก</text><text x="410" y="486" text-anchor="end" class="cell">5</text><text x="452" y="486" text-anchor="middle" class="cell">kg</text><text x="540" y="486" text-anchor="end" class="cell">47.00</text><text x="630" y="486" text-anchor="end" class="cell">235.00</text>
+      <text x="25" y="513" text-anchor="middle" class="cell">20</text><text x="60" y="513" class="mono">ANP020</text><text x="156" y="513" class="cell-strong">แผ่นเกี๊ยวทอด</text><text x="410" y="513" text-anchor="end" class="cell">5</text><text x="452" y="513" text-anchor="middle" class="cell">kg</text><text x="540" y="513" text-anchor="end" class="cell">40.00</text><text x="630" y="513" text-anchor="end" class="cell">200.00</text>
+    </g>
+  </g>
+
+  <g transform="translate(74 886)">
+    <rect x="0" y="0" width="640" height="76" fill="#ffffff" stroke="#111111" stroke-width="1"/>
+    <line x1="0" y1="34" x2="640" y2="34" class="line"/>
+    <line x1="430" y1="0" x2="430" y2="34" class="line"/>
+    <line x1="522" y1="0" x2="522" y2="34" class="line"/>
+    <text x="18" y="23" class="cell-strong">(ห้าพันห้าร้อยแปดสิบห้าบาทถ้วน)</text>
+    <text x="452" y="23" class="cell-strong">รวมทั้งสิ้น</text>
+    <text x="630" y="23" text-anchor="end" class="mono">5,585.00</text>
+    <text x="14" y="58" class="label">หมายเหตุ :</text>
+    <text x="96" y="58" class="text">-</text>
+  </g>
+
+  <g transform="translate(112 1020)">
+    <line x1="0" y1="0" x2="210" y2="0" class="line"/>
+    <line x1="360" y1="0" x2="570" y2="0" class="line"/>
+    <text x="105" y="25" text-anchor="middle" class="label">ผู้รับสินค้า</text>
+    <text x="465" y="25" text-anchor="middle" class="label">ผู้จัดสินค้า</text>
+    <line x1="0" y1="54" x2="210" y2="54" class="thin"/>
+    <line x1="360" y1="54" x2="570" y2="54" class="thin"/>
+    <text x="105" y="78" text-anchor="middle" class="small">วันที่</text>
+    <text x="465" y="78" text-anchor="middle" class="small">วันที่</text>
+  </g>
+</svg>

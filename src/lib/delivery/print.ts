@@ -7,6 +7,7 @@ export type DeliveryNotePrintData = {
   deliveryNumber: string;
   deliveryDate: string;
   orderNumber: string | null;
+  warehouseName: string | null;
   totalAmount: number;
   notes: string | null;
   organization: {
@@ -162,7 +163,7 @@ export async function getDeliveryNotePrintData(
       id, delivery_number, delivery_date, total_amount, notes,
       customers!inner(name, customer_code, address, default_vehicle_id, vehicles(id, name)),
       organizations!inner(name, metadata),
-      orders(order_number)
+      orders(order_number, warehouse_id, warehouses:warehouse_id(name))
     `;
 
   const fetchHeaderBy = async (field: "id" | "delivery_number") =>
@@ -224,6 +225,7 @@ export async function getDeliveryNotePrintData(
     deliveryNumber: dn.delivery_number,
     deliveryDate: dn.delivery_date,
     orderNumber: dn.orders?.order_number ?? null,
+    warehouseName: (dn.orders?.warehouses as { name: string } | null)?.name ?? null,
     totalAmount: toNum(dn.total_amount),
     notes: dn.notes ?? null,
     organization: {

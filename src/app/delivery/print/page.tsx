@@ -3,6 +3,7 @@ import { type DeliveryNotePrintData, sortDeliveryItems } from "@/lib/delivery/pr
 import { sortDeliveryPrintRowsByCustomerOrder } from "@/lib/delivery/print-ordering";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { DeliveryNoteLayout } from "@/components/print/delivery-note-layout";
+import { ShareDeliveryPdfButton } from "@/components/print/share-delivery-pdf-button";
 import { AutoPrint, PrintButton } from "./print-button";
 
 export const metadata = { title: "ปริ้นใบส่งของ" };
@@ -38,7 +39,10 @@ type RawDeliveryPrintRow = {
     name: string | null;
     metadata: Record<string, unknown> | null;
   };
-  orders: { order_number: string | null } | { order_number: string | null }[] | null;
+  orders:
+    | { order_number: string | null; warehouses: { name: string | null } | null }
+    | { order_number: string | null; warehouses: { name: string | null } | null }[]
+    | null;
   delivery_note_items: {
     id: string;
     quantity_delivered: number | string | null;
@@ -82,6 +86,12 @@ function getOrderNumber(order: RawDeliveryPrintRow["orders"]) {
   if (!order) return null;
   if (Array.isArray(order)) return order[0]?.order_number ?? null;
   return order.order_number ?? null;
+}
+
+function getWarehouseName(order: RawDeliveryPrintRow["orders"]) {
+  if (!order) return null;
+  if (Array.isArray(order)) return order[0]?.warehouses?.name ?? null;
+  return order.warehouses?.name ?? null;
 }
 
 function buildPrintData(rows: RawDeliveryPrintRow[]): DeliveryNotePrintData[] {
@@ -156,6 +166,7 @@ function buildPrintData(rows: RawDeliveryPrintRow[]): DeliveryNotePrintData[] {
       deliveryNumber,
       deliveryDate: base.delivery_date,
       orderNumber: getOrderNumber(base.orders),
+      warehouseName: getWarehouseName(base.orders),
       totalAmount,
       notes,
       organization: {
@@ -204,7 +215,7 @@ export default async function DeliveryBatchPrintPage({ searchParams }: Props) {
       id, delivery_number, delivery_date, total_amount, notes, customer_id, created_at,
       customers!inner(id, name, customer_code, address, default_vehicle_id, vehicles(id, name)),
       organizations!inner(name, metadata),
-      orders(order_number),
+      orders(order_number, warehouses:warehouse_id(name)),
       delivery_note_items(
         id, quantity_delivered, unit_price, line_total,
         products!inner(name, sku, unit, display_order)
@@ -247,6 +258,7 @@ export default async function DeliveryBatchPrintPage({ searchParams }: Props) {
 
       <div className="no-print mb-6 flex items-center gap-3 px-4 pt-4">
         <PrintButton />
+        <ShareDeliveryPdfButton fileName={`delivery-notes-${date}-to-${endDate}`} />
         <span className="text-sm font-semibold text-slate-700">
           {dns.length} {customerId || noteIds.length > 0 ? "ใบ" : "ร้าน"} · {dateLabel}
         </span>

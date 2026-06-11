@@ -370,6 +370,7 @@ export default async function IncomingOrdersPage({ searchParams }: IncomingOrder
     orderIds: string[];
     orderNumbers: string[];
     deliveryNoteIds: string[];
+    deliveryNumbers: string[];
     orderRounds: number;
     totalAmount: number;
     vehicleId?: string | null;
@@ -390,6 +391,7 @@ export default async function IncomingOrdersPage({ searchParams }: IncomingOrder
           orderIds: [] as string[],
           orderNumbers: [] as string[],
           deliveryNoteIds: [] as string[],
+          deliveryNumbers: [] as string[],
           orderRounds: 0,
           totalAmount: 0,
           vehicleId: order.vehicleId,
@@ -408,6 +410,7 @@ export default async function IncomingOrdersPage({ searchParams }: IncomingOrder
     ...store,
     hasDelivery: Boolean(deliveryMap.get(`${store.customerId}_${store.orderDate}`)?.length),
     deliveryNoteIds: deliveryIdMap.get(`${store.customerId}_${store.orderDate}`) ?? [],
+    deliveryNumbers: deliveryMap.get(`${store.customerId}_${store.orderDate}`) ?? [],
   }));
 
   const deliveryByCustomerId = Object.fromEntries(deliveryMap.entries());

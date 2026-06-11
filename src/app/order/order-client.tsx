@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import dynamic from "next/dynamic";
+import { useRouter } from "next/navigation";
 import { createPortal } from "react-dom";
 import {
   useCallback,
@@ -294,6 +295,7 @@ export default function OrderClient({
   orgPhone: string;
   previewView?: string;
 }) {
+  const router = useRouter();
   const {
     isReady,
     isInClient,
@@ -524,6 +526,7 @@ export default function OrderClient({
   const [canSubmitPendingLineOrder, setCanSubmitPendingLineOrder] = useState(false);
   const [pendingLineOrderId, setPendingLineOrderId] = useState<string | null>(null);
   const hasResolvedAuthRef = useRef(false);
+  const isLoggingOutRef = useRef(false);
 
   // Self-registration form state
   const [regName, setRegName] = useState("");
@@ -556,6 +559,7 @@ export default function OrderClient({
 
   // Sync server session cookie after LIFF login.
   useEffect(() => {
+    if (isLoggingOutRef.current) return;
     if (!isReady || !profile?.userId || !liffToken) return;
 
     let isActive = true;
@@ -605,6 +609,7 @@ export default function OrderClient({
 
   // Resolve auth state once on boot with session-first fallback.
   useEffect(() => {
+    if (isLoggingOutRef.current) return;
     if (!isReady) return;
     const profileLineUserId = profile?.userId ?? null;
     const needsVerifiedSession =
@@ -1754,10 +1759,15 @@ export default function OrderClient({
 
   // Handlers
 
+  const handleLogin = () => {
+    isLoggingOutRef.current = false;
+    login();
+  };
+
   const handleRegister = () => {
     const lineUserId = profile?.userId ?? sessionLineUserId;
     if (!lineUserId) {
-      login();
+      handleLogin();
       return;
     }
     setRegError("");
@@ -1796,7 +1806,7 @@ export default function OrderClient({
   const handleContinueExistingCustomer = () => {
     const lineUserId = profile?.userId ?? sessionLineUserId;
     if (!lineUserId) {
-      login();
+      handleLogin();
       return;
     }
 
@@ -1868,7 +1878,7 @@ export default function OrderClient({
 
     if (!linkedCustomer) {
       if (!profile && !sessionLineUserId) {
-        login();
+        handleLogin();
         return;
       }
 
@@ -2024,6 +2034,29 @@ export default function OrderClient({
   };
 
   const handleLogout = () => {
+    isLoggingOutRef.current = true;
+    hasResolvedAuthRef.current = true;
+    setCurrentView("login");
+    setLinkedCustomer(null);
+    setSessionLineUserId(null);
+    setCanSubmitPendingLineOrder(false);
+    setPendingLineOrderId(null);
+    setSessionSyncError(null);
+    setCart({});
+    setPendingSelection({});
+    setPendingInput({});
+    setOrderHistory([]);
+    setFrequentProducts([]);
+    setEditingOrder(null);
+    setEditCart({});
+    setHighlightedHistoryOrderId(null);
+    setReceiptOrder(null);
+    setReceiptImageUrl(null);
+    setReceiptPopupUrl(null);
+    setReceiptBlob(null);
+    setReceiptFileName("");
+    setIsReceiptPopupOpen(false);
+
     startTransition(async () => {
       try {
         await fetch("/api/order/session", { method: "DELETE" });
@@ -2031,10 +2064,8 @@ export default function OrderClient({
         console.error("[order-session:clear]", error);
       }
 
-      setLinkedCustomer(null);
-      setSessionLineUserId(null);
       logout();
-      window.location.reload();
+      router.refresh();
     });
   };
 
@@ -2072,7 +2103,7 @@ export default function OrderClient({
         </p>
         </div>
         <button
-          onClick={login}
+          onClick={handleLogin}
           className="animate-gentle-drop-in-delay-2 flex w-full max-w-xs items-center justify-center gap-3 rounded-2xl bg-[#06C755] py-4 text-lg font-bold text-white shadow-lg shadow-green-200 transition-all hover:bg-[#05b34d] active:scale-[0.98]"
         >
           <svg className="w-7 h-7" viewBox="0 0 24 24" fill="currentColor">
