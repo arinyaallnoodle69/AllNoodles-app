@@ -6,36 +6,36 @@
 
 :root {
   --surface: #ffffff;
-  --surface-strong: #f7f1e4;
-  --accent-50: #faf7f2;
-  --accent-100: #f2e3ae;
-  --accent-200: #ebd182;
-  --accent-300: #deb955;
-  --accent-400: #d4af37;
-  --accent-500: #082A63;
-  --accent-600: #103B82;
-  --accent-700: #1F2A44;
-  --secondary-500: #D4AF37;
-  --secondary-700: #B68B1F;
-  --stone-650: #667085;
-  --background: #ffffff;
-  --foreground: #1F2A44;
+  --surface-strong: #E1BEE7;
+  --accent-50: #F3E5F5;
+  --accent-100: #E1BEE7;
+  --accent-200: #CE93D8;
+  --accent-300: #BA68C8;
+  --accent-400: #AB47BC;
+  --accent-500: #8E24AA;
+  --accent-600: #8E24AA;
+  --accent-700: #8E24AA;
+  --secondary-500: #AA00FF;
+  --secondary-700: #8E24AA;
+  --stone-650: #7B7585;
+  --background: #F3E5F5;
+  --foreground: #8E24AA;
   --card: #ffffff;
-  --card-foreground: #1F2A44;
+  --card-foreground: #8E24AA;
   --popover: #ffffff;
-  --popover-foreground: #1F2A44;
-  --primary: #082A63;
+  --popover-foreground: #8E24AA;
+  --primary: #8E24AA;
   --primary-foreground: #ffffff;
-  --secondary: #f2e3ae;
-  --secondary-foreground: #1F2A44;
-  --muted: #f4efe6;
-  --muted-foreground: #667085;
-  --accent: #f7f1e4;
-  --accent-foreground: #1F2A44;
+  --secondary: #EA80FC;
+  --secondary-foreground: #8E24AA;
+  --muted: #F3E5F5;
+  --muted-foreground: #7B7585;
+  --accent: #E1BEE7;
+  --accent-foreground: #8E24AA;
   --destructive: oklch(0.577 0.245 27.325);
-  --border: #e8dcc7;
-  --input: #e8dcc7;
-  --ring: #d4af37;
+  --border: #E1BEE7;
+  --input: #E1BEE7;
+  --ring: #AA00FF;
   --chart-1: oklch(0.87 0 0);
   --chart-2: oklch(0.556 0 0);
   --chart-3: oklch(0.439 0 0);
@@ -43,13 +43,13 @@
   --chart-5: oklch(0.269 0 0);
   --radius: 0.625rem;
   --sidebar: #ffffff;
-  --sidebar-foreground: #1F2A44;
-  --sidebar-primary: #082A63;
+  --sidebar-foreground: #8E24AA;
+  --sidebar-primary: #8E24AA;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #f7f1e4;
-  --sidebar-accent-foreground: #1F2A44;
-  --sidebar-border: #eadfcf;
-  --sidebar-ring: #d4af37;
+  --sidebar-accent: #F3E5F5;
+  --sidebar-accent-foreground: #8E24AA;
+  --sidebar-border: #E1BEE7;
+  --sidebar-ring: #AA00FF;
 }
 
 @theme inline {
@@ -129,7 +129,7 @@
   /* Prevent horizontal rubber-band overscroll on mobile */
   overscroll-behavior-x: none;
   /* Ensure gap below fixed bottom nav (during browser chrome animation) shows white */
-  background-color: #FFFFFF;
+  background-color: #F3E5F5;
   }
 
   body {
@@ -140,8 +140,8 @@
   font-weight: 600;
   font-size: 1rem;
   line-height: 1.35;
-  color: #1F2A44;
-  background-color: #ffffff;
+  color: #1F1A3A;
+  background-color: var(--background);
   background-image: none;
   font-feature-settings: "tnum" 1, "lnum" 1;
   -webkit-font-smoothing: antialiased;
@@ -156,7 +156,7 @@
   }
 
   :focus-visible {
-  outline: 2px solid #082A63;
+  outline: 2px solid var(--primary);
   outline-offset: 2px;
   }
 
@@ -176,7 +176,7 @@
   }
 
   ::selection {
-  background: rgba(212, 175, 55, 0.28);
+  background: rgba(170, 0, 255, 0.28);
   }
 
   .font-apple-ui {
@@ -198,17 +198,9 @@
   color: #667085 !important;
 }
 
-:where(
-  .text-slate-700,
-  .text-slate-800,
-  .text-slate-900
-) {
-  color: #1F2A44 !important;
-}
-
 @layer base {
-  :where(h1, h2, h3, h4, h5, h6, th, label, strong, b) {
-    color: #1F2A44;
+  :where(h1, h2, h3, h4, h5, h6) {
+    color: var(--primary);
     font-weight: 600;
   }
   * {
@@ -371,4 +363,62 @@
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.556 0 0);
+}
+
+@media print {
+  /* ─── Global Override for Report Print Preview & Print Output ─── */
+  body, html {
+    color: #000000 !important;
+  }
+
+  [id*="-print-area"],
+  [id*="-print-area"] *,
+  [class*="printArea"],
+  [class*="printArea"] *,
+  [class*="printPage"],
+  [class*="printPage"] *,
+  [class*="printHeader"],
+  [class*="printHeader"] * {
+    color: #000000 !important;
+    border-color: #000000 !important;
+  }
+
+  /* Force elements that had text-[#8E24AA] or text-purple-like inline colors to black */
+  .text-\[\#8E24AA\],
+  .text-purple-600,
+  .text-purple-700,
+  .text-violet-700,
+  [class*="text-[#8e24aa]"],
+  [class*="text-[#8E24AA]"] {
+    color: #000000 !important;
+  }
+
+  /* Force backgrounds like bg-[#8E24AA] to black on paper */
+  .bg-\[\#8E24AA\],
+  [class*="bg-[#8e24aa]"],
+  [class*="bg-[#8E24AA]"] {
+    background-color: #000000 !important;
+    color: #ffffff !important;
+  }
+
+  /* Force table header backgrounds to light gray on paper */
+  [id*="-print-area"] thead th,
+  [class*="printArea"] thead th,
+  .printTable thead th {
+    background-color: #f1f5f9 !important;
+    color: #000000 !important;
+    border-bottom: 1.2pt solid #000000 !important;
+  }
+
+  /* Force borders and divide borders to subtle dark gray instead of purple */
+  .divide-\[\#8E24AA\]\/25,
+  .divide-\[\#8E24AA\]\/16,
+  .border-\[\#8E24AA\]\/12,
+  .border-l-\[\#8E24AA\]\/10,
+  [class*="divide-[#8e24aa]"],
+  [class*="divide-[#8E24AA]"],
+  [class*="border-[#8e24aa]"],
+  [class*="border-[#8E24AA]"] {
+    border-color: rgba(0, 0, 0, 0.15) !important;
+  }
 }

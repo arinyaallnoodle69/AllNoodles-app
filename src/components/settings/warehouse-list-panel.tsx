@@ -139,7 +139,7 @@ export function WarehouseListPanel({ warehouses }: WarehouseListPanelProps) {
         {/* Card 1: Total Warehouses (col-span-2 on mobile, col-span-1 on desktop) */}
         <div className="col-span-2 sm:col-span-1 relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-4 sm:p-5 shadow-[0_2px_8px_rgba(26,26,26,0.08)]">
           <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:gap-4">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-[#FAF7F2] text-[#082A63]">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-[#F3E5F5] text-[#8E24AA]">
               <Box className="h-6 w-6" strokeWidth={2.2} />
             </div>
             <div>
@@ -165,7 +165,7 @@ export function WarehouseListPanel({ warehouses }: WarehouseListPanelProps) {
         {/* Card 3: Connected Stores */}
         <div className="col-span-1 relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-4 sm:p-5 shadow-[0_2px_8px_rgba(26,26,26,0.08)]">
           <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:gap-4">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-[#D4AF37]/5 text-[#D4AF37]">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-[#AA00FF]/5 text-[#AA00FF]">
               <Store className="h-6 w-6" strokeWidth={2.2} />
             </div>
             <div>
@@ -195,7 +195,7 @@ export function WarehouseListPanel({ warehouses }: WarehouseListPanelProps) {
                     onClick={() => setSelectedWarehouseId(w.id)}
                     className={`w-full text-left flex items-center justify-between p-4 rounded-2xl border transition-all duration-200 ${
                       isSelected
-                        ? "border-[#082A63] bg-[#FAF7F2]/50 shadow-sm"
+                        ? "border-[#8E24AA] bg-[#F3E5F5]/50 shadow-sm"
                         : "border-slate-200/80 bg-white hover:border-slate-300 hover:bg-slate-50/50"
                     }`}
                   >
@@ -203,15 +203,15 @@ export function WarehouseListPanel({ warehouses }: WarehouseListPanelProps) {
                       <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg transition ${
                         w.isActive
                           ? isSelected
-                            ? "bg-[#082A63] text-white"
-                            : "bg-[#FAF7F2] text-[#082A63]"
+                            ? "bg-[#8E24AA] text-white"
+                            : "bg-[#F3E5F5] text-[#8E24AA]"
                           : "bg-slate-100 text-slate-400"
                       }`}>
                         <Warehouse className="h-5 w-5" strokeWidth={2.2} />
                       </div>
                       <div>
                         <h4 className={`text-sm font-bold tracking-tight transition-colors ${
-                          isSelected ? "text-[#082A63]" : "text-[#1a1a1a]"
+                          isSelected ? "text-[#8E24AA]" : "text-[#1a1a1a]"
                         }`}>
                           {w.name}
                         </h4>
@@ -224,7 +224,7 @@ export function WarehouseListPanel({ warehouses }: WarehouseListPanelProps) {
                     <div className="flex items-center gap-2">
                       <span className={`h-2 w-2 rounded-full ${w.isActive ? "bg-emerald-500" : "bg-slate-300"}`} />
                       <ChevronRight className={`h-4 w-4 transition-transform text-slate-400 ${
-                        isSelected ? "translate-x-0.5 text-[#082A63]" : ""
+                        isSelected ? "translate-x-0.5 text-[#8E24AA]" : ""
                       }`} />
                     </div>
                   </button>
@@ -259,7 +259,7 @@ export function WarehouseListPanel({ warehouses }: WarehouseListPanelProps) {
                         variant="outline"
                         size="sm"
                         asChild
-                        className="rounded-md h-9 px-3.5 font-bold text-xs tracking-[0.5px] uppercase border-slate-200 text-slate-700 bg-white hover:border-[#082A63]/30 hover:text-[#082A63] transition duration-200"
+                        className="rounded-md h-9 px-3.5 font-bold text-xs tracking-[0.5px] uppercase border-slate-200 text-slate-700 bg-white hover:border-[#8E24AA]/30 hover:text-[#8E24AA] transition duration-200"
                       >
                         <Link href={`/settings/warehouses?edit=${activeWarehouse.id}`}>
                           <PencilLine className="size-3.5 mr-1.5" strokeWidth={2} />
@@ -307,7 +307,7 @@ export function WarehouseListPanel({ warehouses }: WarehouseListPanelProps) {
                         {activeWarehouse.customers.map((c) => (
                           <div key={c.id} className="flex items-center justify-between p-3.5 bg-white hover:bg-slate-50/50 transition">
                             <div className="flex items-center gap-2.5">
-                              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-[#FAF7F2] text-[#082A63]">
+                              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-[#F3E5F5] text-[#8E24AA]">
                                 <Store className="h-4 w-4" strokeWidth={2.2} />
                               </div>
                               <div>
@@ -318,7 +318,7 @@ export function WarehouseListPanel({ warehouses }: WarehouseListPanelProps) {
 
                             <Link
                               href={`/settings/customers?edit=${c.id}`}
-                              className="text-[11px] font-bold tracking-[0.5px] uppercase text-[#082A63] hover:underline"
+                              className="text-[11px] font-bold tracking-[0.5px] uppercase text-[#8E24AA] hover:underline"
                             >
                               จัดการร้านค้า
                             </Link>

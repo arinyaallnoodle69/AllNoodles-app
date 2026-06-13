@@ -118,7 +118,7 @@ function ProductRowScreen({ row, globalRank }: { row: ProductSalesRow; globalRan
         {fmtMoney(row.totalCost)}
       </td>
       <td className="px-4 py-4 text-center tabular-nums whitespace-nowrap" style={{ background: "rgba(212,163,115,0.03)" }}>
-        <span className="whitespace-nowrap text-base font-bold text-[#082A63]">{fmtMoney(row.totalRevenue)}</span>
+        <span className="whitespace-nowrap text-base font-bold text-[#8E24AA]">{fmtMoney(row.totalRevenue)}</span>
       </td>
       <td className="px-5 py-4 text-center tabular-nums whitespace-nowrap">
         <span className={`inline-flex items-center justify-center whitespace-nowrap text-base font-bold ${profitColor}`}>{fmtMoney(netProfit)}</span>
@@ -155,7 +155,7 @@ function ProductRowPrint({ row, globalRank }: { row: ProductSalesRow; globalRank
         {fmtMoney(row.totalCost)}
       </td>
       <td className="text-center tabular-nums whitespace-nowrap border-b border-slate-100" style={{ background: "rgba(212,163,115,0.03)" }}>
-        <span className="whitespace-nowrap font-bold text-[#082A63]">{fmtMoney(row.totalRevenue)}</span>
+        <span className="whitespace-nowrap font-bold text-[#8E24AA]">{fmtMoney(row.totalRevenue)}</span>
       </td>
       <td className="text-center tabular-nums whitespace-nowrap border-b border-slate-100">
         <span className={`inline-flex items-center justify-center whitespace-nowrap font-bold ${netProfit >= 0 ? "text-emerald-600" : "text-red-500"}`}>{fmtMoney(netProfit)}</span>
@@ -227,7 +227,7 @@ function ProductCard({ row, globalRank }: { row: ProductSalesRow; globalRank: nu
 
         <div className="shrink-0">
           <span
-            className={`flex h-9 w-9 items-center justify-center rounded-xl text-xs font-black text-white shadow-md ${rankBadgeStyle ? "" : "bg-[#082A63]"}`}
+            className={`flex h-9 w-9 items-center justify-center rounded-xl text-xs font-black text-white shadow-md ${rankBadgeStyle ? "" : "bg-[#8E24AA]"}`}
             style={rankBadgeStyle}
           >
             {globalRank}
@@ -243,7 +243,7 @@ function ProductCard({ row, globalRank }: { row: ProductSalesRow; globalRank: nu
         />
         <div className="min-w-0 border-l border-slate-300 pl-4">
           <p className="text-[11px] font-black uppercase tracking-[0.12em] text-slate-950">ยอดขาย</p>
-          <p className="mt-1.5 text-[1.05rem] font-bold leading-none text-[#082A63]">
+          <p className="mt-1.5 text-[1.05rem] font-bold leading-none text-[#8E24AA]">
             {fmtMoney(row.totalRevenue)}
           </p>
         </div>
@@ -298,7 +298,7 @@ function Pagination({ page, total, pageSize, baseUrl }: { page: number; total: n
         p === "..." ? (
           <span key={`e-${i}`} className="px-1 text-base text-slate-400">...</span>
         ) : (
-          <Link key={p} href={`${baseUrl}&page=${p}`} className={`flex h-10 w-10 items-center justify-center rounded-xl text-base font-semibold transition ${p === page ? "bg-[#082A63] text-white shadow-sm" : "text-slate-600 hover:bg-slate-100"}`}>{p}</Link>
+          <Link key={p} href={`${baseUrl}&page=${p}`} className={`flex h-10 w-10 items-center justify-center rounded-xl text-base font-semibold transition ${p === page ? "bg-[#8E24AA] text-white shadow-sm" : "text-slate-600 hover:bg-slate-100"}`}>{p}</Link>
         ),
       )}
       {page < totalPages && (
@@ -376,16 +376,16 @@ async function ProductSalesReportContent({ searchParams }: PageProps) {
 
   return (
     <AppSidebarLayout>
-      <div className="min-h-screen bg-white">
+      <div className="min-h-screen bg-background">
         {/* ─── Screen View (Hidden on Print) ─── */}
         <div className="mx-auto max-w-[1440px] px-4 py-6 sm:px-6 sm:py-8 no-print">
           <header className="mb-6 sm:mb-8">
             <nav className="mb-2 flex items-center gap-1 text-sm font-medium text-slate-400">
               <span>Analytics</span>
               <span className="text-slate-300">›</span>
-              <span className="font-semibold text-[#082A63]">รายงานยอดขายตามอันดับสินค้า</span>
+              <span className="font-semibold text-[#8E24AA]">รายงานยอดขายตามอันดับสินค้า</span>
             </nav>
-            <h1 className="text-2xl font-extrabold tracking-tight text-[#082A63] sm:text-3xl">รายงานยอดขายตามอันดับสินค้า</h1>
+            <h1 className="text-2xl font-extrabold tracking-tight text-[#8E24AA] sm:text-3xl">รายงานยอดขายตามอันดับสินค้า</h1>
           </header>
 
           <MobileSearchDrawer title="ค้นหารายงานยอดขาย">
@@ -395,7 +395,7 @@ async function ProductSalesReportContent({ searchParams }: PageProps) {
                 <select
                   name="warehouse"
                   defaultValue={warehouseId}
-                  className="h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 outline-none focus:border-[#082A63]"
+                  className="h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 outline-none focus:border-[#8E24AA]"
                 >
                   <option value="">ทุกคลังสินค้า</option>
                   {warehouses.map((w) => (
@@ -421,14 +421,14 @@ async function ProductSalesReportContent({ searchParams }: PageProps) {
                   <div className="min-w-0 flex-1"><ThaiDatePicker id="m-ps-to" name="to" defaultValue={toDate} max={today} placeholder="วันสิ้นสุด" compact matchFieldHeight /></div>
                 </div>
               </div>
-              <button type="submit" className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#082A63] py-3.5 text-base font-bold text-white transition hover:bg-[#103B82]"><Filter className="h-4 w-4" strokeWidth={2} />ค้นหา</button>
+              <button type="submit" className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#8E24AA] py-3.5 text-base font-bold text-white transition hover:bg-[#8E24AA]"><Filter className="h-4 w-4" strokeWidth={2} />ค้นหา</button>
             </form>
           </MobileSearchDrawer>
 
           {/* Desktop Filter Card */}
           <section className="hidden md:block bg-white shadow-[0_4px_20px_rgba(27,27,33,0.05)] rounded-2xl mb-6">
             <div className="px-5 py-4 sm:px-6 sm:py-5">
-              <form method="GET" action="/reports/product-sales" className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-end lg:flex-nowrap">
+              <form method="GET" action="/reports/product-sales" className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-end">
                 <div className="w-full sm:min-w-[200px] sm:flex-1 lg:min-w-[260px] lg:max-w-[340px] lg:flex-[1.05]">
                   <label className="mb-1.5 block text-xs font-bold uppercase tracking-widest text-slate-400">สินค้า</label>
                   <ProductFilter products={products} selectedIds={selectedProductIds} />
@@ -442,7 +442,7 @@ async function ProductSalesReportContent({ searchParams }: PageProps) {
                   <select
                     name="warehouse"
                     defaultValue={warehouseId}
-                    className="h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 outline-none focus:border-[#082A63]"
+                    className="h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 outline-none focus:border-[#8E24AA]"
                   >
                     <option value="">ทุกคลังสินค้า</option>
                     {warehouses.map((w) => (
@@ -461,8 +461,8 @@ async function ProductSalesReportContent({ searchParams }: PageProps) {
                   </div>
                 </div>
                 <div className="flex w-full shrink-0 flex-col gap-2 sm:w-auto sm:flex-row">
-                  <button type="submit" className="flex h-10 w-full items-center justify-center gap-2 rounded-xl bg-[#082A63] px-6 text-sm font-bold text-white transition hover:bg-[#103B82] active:scale-95 sm:w-auto"><Filter className="h-4 w-4" strokeWidth={2.2} />ค้นหา</button>
-                  <Link href={`${paginationBase}&pageSize=9999`} className="flex h-10 w-full items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-500 transition hover:border-[#082A63] hover:text-[#082A63] active:scale-95 sm:w-auto">แสดงทั้งหมด</Link>
+                  <button type="submit" className="flex h-10 w-full items-center justify-center gap-2 rounded-xl bg-[#8E24AA] px-6 text-sm font-bold text-white transition hover:bg-[#8E24AA] active:scale-95 sm:w-auto"><Filter className="h-4 w-4" strokeWidth={2.2} />ค้นหา</button>
+                  <Link href={`${paginationBase}&pageSize=9999`} className="flex h-10 w-full items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-500 transition hover:border-[#8E24AA] hover:text-[#8E24AA] active:scale-95 sm:w-auto">แสดงทั้งหมด</Link>
                 </div>
               </form>
             </div>
@@ -473,7 +473,7 @@ async function ProductSalesReportContent({ searchParams }: PageProps) {
 
             <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4 sm:px-6 sm:py-5">
               <div>
-                <h3 className="text-lg font-bold text-[#082A63] sm:text-xl">ยอดขายตามสินค้า</h3>
+                <h3 className="text-lg font-bold text-[#8E24AA] sm:text-xl">ยอดขายตามสินค้า</h3>
                 <p className="mt-0.5 text-sm text-slate-400">{isoToDisplay(fromDate)} — {isoToDisplay(toDate)}{selectedStoreIds.length > 0 && ` · ${selectedStoreIds.length} ร้านค้า`}</p>
               </div>
               <PrintButton targetId="report-print-area" fileName="รายงานยอดขายตามสินค้า" />
@@ -509,14 +509,14 @@ async function ProductSalesReportContent({ searchParams }: PageProps) {
                         ))}
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-[#082A63]/24">
+                    <tbody className="divide-y divide-[#8E24AA]/24">
                       {rows.map((row, i) => <ProductRowScreen key={row.productId} row={row} globalRank={(page - 1) * pageSize + i + 1} />)}
                       <tr className="bg-slate-50/90">
                         <td colSpan={3} className="px-5 py-4 text-right text-base font-black tracking-[0.02em] text-slate-600 whitespace-nowrap">ยอดรวมทั้งหมด</td>
                         <td className="px-4 py-4 text-center text-base font-black text-slate-800 tabular-nums whitespace-nowrap">{fmt(summary.totalQty)}</td>
                         <td className="px-4 py-4 text-center text-base font-black text-slate-500 whitespace-nowrap">—</td>
                         <td className="px-4 py-4 text-center text-base font-black text-slate-700 tabular-nums whitespace-nowrap">{fmtMoney(summary.totalCost)}</td>
-                        <td className="px-4 py-4 text-center tabular-nums whitespace-nowrap" style={{ background: "rgba(212,163,115,0.05)" }}><span className="whitespace-nowrap text-base font-black text-[#082A63]">{fmtMoney(summary.totalRevenue)}</span></td>
+                        <td className="px-4 py-4 text-center tabular-nums whitespace-nowrap" style={{ background: "rgba(212,163,115,0.05)" }}><span className="whitespace-nowrap text-base font-black text-[#8E24AA]">{fmtMoney(summary.totalRevenue)}</span></td>
                         <td className={`px-5 py-4 text-center tabular-nums whitespace-nowrap ${summary.netProfit >= 0 ? "text-emerald-600" : "text-red-500"}`}><span className="inline-flex items-center justify-center whitespace-nowrap text-base font-black">{fmtMoney(summary.netProfit)}</span></td>
                         <td className={`px-5 py-4 text-center tabular-nums whitespace-nowrap ${summary.netProfit >= 0 ? "text-emerald-600" : "text-red-500"}`}><span className="inline-flex items-center justify-center whitespace-nowrap text-base font-black">{fmtPercent(totalMarginPercent)}</span></td>
                       </tr>
@@ -525,7 +525,7 @@ async function ProductSalesReportContent({ searchParams }: PageProps) {
                 </div>
 
                 {/* Mobile View Cards */}
-                <div className="divide-y divide-[#082A63]/20 px-2 sm:px-4 lg:hidden">
+                <div className="divide-y divide-[#8E24AA]/20 px-2 sm:px-4 lg:hidden">
                   {rows.map((row, i) => <ProductCard key={row.productId} row={row} globalRank={(page - 1) * pageSize + i + 1} />)}
                 </div>
               </>
@@ -583,7 +583,7 @@ async function ProductSalesReportContent({ searchParams }: PageProps) {
                       ))}
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-[#082A63]/24">
+                  <tbody className="divide-y divide-[#8E24AA]/24">
                     {pageRows.map((row, i) => <ProductRowPrint key={row.productId} row={row} globalRank={pageIdx * PRINT_PAGE_SIZE + i + 1} />)}
                     {pageIdx === pages.length - 1 && (
                       <tr className="bg-slate-50/90">
@@ -591,7 +591,7 @@ async function ProductSalesReportContent({ searchParams }: PageProps) {
                         <td className="px-2 py-3 text-center text-[11px] font-bold text-slate-700 tabular-nums whitespace-nowrap border-b border-slate-100">{fmt(summary.totalQty)}</td>
                         <td className="px-2 py-3 text-center text-[11px] font-bold text-slate-500 whitespace-nowrap border-b border-slate-100">—</td>
                         <td className="px-2 py-3 text-center text-[11px] font-bold text-slate-700 tabular-nums whitespace-nowrap border-b border-slate-100">{fmtMoney(summary.totalCost)}</td>
-                        <td className="px-2 py-3 text-center tabular-nums whitespace-nowrap border-b border-slate-100" style={{ background: "rgba(212,163,115,0.05)" }}><span className="whitespace-nowrap text-[11px] font-bold text-[#082A63]">{fmtMoney(summary.totalRevenue)}</span></td>
+                        <td className="px-2 py-3 text-center tabular-nums whitespace-nowrap border-b border-slate-100" style={{ background: "rgba(212,163,115,0.05)" }}><span className="whitespace-nowrap text-[11px] font-bold text-[#8E24AA]">{fmtMoney(summary.totalRevenue)}</span></td>
                         <td className={`px-3 py-3 text-center tabular-nums whitespace-nowrap border-b border-slate-100 ${summary.netProfit >= 0 ? "text-emerald-600" : "text-red-500"}`}><span className="inline-flex items-center justify-center whitespace-nowrap text-[11px] font-bold">{fmtMoney(summary.netProfit)}</span></td>
                         <td className={`px-3 py-3 text-center tabular-nums whitespace-nowrap border-b border-slate-100 ${summary.netProfit >= 0 ? "text-emerald-600" : "text-red-500"}`}><span className="inline-flex items-center justify-center whitespace-nowrap text-[11px] font-bold">{fmtPercent(totalMarginPercent)}</span></td>
                       </tr>

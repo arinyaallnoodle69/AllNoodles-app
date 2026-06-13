@@ -39,7 +39,7 @@ function CustomerSearchBox({ onSearch, value }: CustomerSearchBoxProps) {
         value={value}
         onChange={(event) => onSearch(event.target.value)}
         placeholder="ค้นหาชื่อร้าน รหัส หรือที่อยู่..."
-        className="w-full rounded-2xl border border-slate-200 bg-white py-3.5 pl-12 pr-4 text-base font-medium text-slate-900 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-[#D4AF37]/50 focus:ring-4 focus:ring-[#D4AF37]/10"
+        className="w-full rounded-2xl border border-slate-200 bg-white py-3.5 pl-12 pr-4 text-base font-medium text-slate-900 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-[#AA00FF]/50 focus:ring-4 focus:ring-[#AA00FF]/10"
       />
     </label>
   );
@@ -64,10 +64,10 @@ export function SettingsCustomersPageClient({
       floatingSubmit={false}
       hideHeader
       >
-	      <div className="sticky top-0 z-40 -mx-3 mb-4 hidden border-b border-[#E8DCC7] bg-white/95 px-4 py-3 shadow-[0_10px_30px_rgba(31,42,68,0.08)] backdrop-blur lg:block">
+	      <div className="sticky top-0 z-40 -mx-3 mb-4 hidden border-b border-[#E1BEE7] bg-white/95 px-4 py-3 shadow-[0_10px_30px_rgba(31,42,68,0.08)] backdrop-blur lg:block">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div className="min-w-0">
-            <p className="text-lg font-black text-[#082A63]">จัดการร้านค้า</p>
+            <p className="text-lg font-black text-[#8E24AA]">จัดการร้านค้า</p>
             <p className="text-xs font-semibold text-[#667085]">
               แสดง {initialCustomers.length.toLocaleString("th-TH")} ร้านค้า
             </p>
@@ -78,16 +78,16 @@ export function SettingsCustomersPageClient({
             <button
               type="button"
               onClick={() => setIsImportOpen(true)}
-              className="inline-flex h-12 items-center justify-center gap-2 rounded-lg border border-[#D4AF37]/30 bg-white px-4 text-sm font-black text-[#082A63] transition hover:bg-slate-50 active:scale-[0.98]"
+              className="inline-flex h-12 items-center justify-center gap-2 rounded-lg border border-[#AA00FF]/30 bg-white px-4 text-sm font-black text-[#8E24AA] transition hover:bg-slate-50 active:scale-[0.98]"
             >
-              <Upload className="h-4.5 w-4.5 text-[#082A63]" strokeWidth={2.4} />
+              <Upload className="h-4.5 w-4.5 text-[#8E24AA]" strokeWidth={2.4} />
               นำเข้าข้อมูล
             </button>
             <Link
               href="/settings/customers?create=1"
-              className="inline-flex h-12 items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-[#D4AF37] to-[#B68B1F] px-4 text-sm font-black text-[#082A63] shadow-[0_12px_26px_rgba(212,175,55,0.3)] transition hover:brightness-105 active:scale-[0.98]"
+              className="inline-flex h-12 items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-[#AA00FF] to-[#8E24AA] px-4 text-sm font-black text-[#8E24AA] shadow-[0_12px_26px_rgba(170, 0, 255,0.3)] transition hover:brightness-105 active:scale-[0.98]"
             >
-              <PlusCircle className="h-4.5 w-4.5 text-[#082A63]" strokeWidth={2.4} />
+              <PlusCircle className="h-4.5 w-4.5 text-[#8E24AA]" strokeWidth={2.4} />
               เพิ่มร้านค้า
             </Link>
           </div>
@@ -100,7 +100,7 @@ export function SettingsCustomersPageClient({
             <button
               type="button"
               onClick={() => setIsImportOpen(true)}
-              className="w-full flex h-12 items-center justify-center gap-2 rounded-lg border border-[#D4AF37]/30 bg-white px-4 text-sm font-black text-[#082A63] active:scale-95 transition-all"
+              className="w-full flex h-12 items-center justify-center gap-2 rounded-lg border border-[#AA00FF]/30 bg-white px-4 text-sm font-black text-[#8E24AA] active:scale-95 transition-all"
             >
               <Upload className="h-4.5 w-4.5" strokeWidth={2.4} />
               นำเข้าข้อมูลจาก CSV
@@ -111,9 +111,9 @@ export function SettingsCustomersPageClient({
         <Link
           href="/settings/customers?create=1"
           aria-label="เพิ่มร้านค้า"
-          className="fixed bottom-[calc(4.75rem+env(safe-area-inset-bottom)+12px)] left-4 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-r from-[#D4AF37] to-[#B68B1F] text-[#082A63] shadow-[0_14px_32px_rgba(212,175,55,0.4)] transition hover:brightness-105 active:scale-95 lg:hidden"
+          className="fixed bottom-[calc(4.75rem+env(safe-area-inset-bottom)+12px)] left-4 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-r from-[#AA00FF] to-[#8E24AA] text-[#8E24AA] shadow-[0_14px_32px_rgba(170, 0, 255,0.4)] transition hover:brightness-105 active:scale-95 lg:hidden"
         >
-          <PlusCircle className="h-7 w-7 text-[#082A63]" strokeWidth={2.4} />
+          <PlusCircle className="h-7 w-7 text-[#8E24AA]" strokeWidth={2.4} />
         </Link>
 
 		      <div className="-mx-4 flex w-[calc(100%+2rem)] flex-col gap-6 md:mx-0 md:w-full">

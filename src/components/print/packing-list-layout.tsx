@@ -40,11 +40,11 @@ const STANDARD_STORES_PER_PAGE = 25;
 const TRANSPOSED_PRODUCTS_PER_PAGE = 25;
 const TRANSPOSED_STORES_PER_PAGE = 37;
 
-const VEHICLE_COLORS = ["#082A63", "#0f766e", "#9a3412", "#5b21b6", "#1d4ed8"];
+const VEHICLE_COLORS = ["#8E24AA", "#0f766e", "#9a3412", "#5b21b6", "#1d4ed8"];
 const UNASSIGNED_COLOR = "#64748b";
 
 const COLUMN_COLOR_GROUPS = [
-  { header: "#F2E3AE", rowA: "#FAF7F2", rowB: "#FAF7F2" },
+  { header: "#EA80FC", rowA: "#F3E5F5", rowB: "#F3E5F5" },
   { header: "#d7ebd3", rowA: "#eef8eb", rowB: "#f7fcf4" },
   { header: "#f2e6bd", rowA: "#fbf5e6", rowB: "#fefbf1" },
   { header: "#efc9cc", rowA: "#faeaeb", rowB: "#fdf2f3" },
@@ -664,7 +664,7 @@ function PackingListStyles() {
         align-items: center;
         gap: 6mm;
         padding-bottom: 1.2mm;
-        border-bottom: 1.3px solid #082A63;
+        border-bottom: 1.3px solid #8E24AA;
       }
 
       .packing-header__title-block {
@@ -697,7 +697,7 @@ function PackingListStyles() {
         line-height: 1;
         letter-spacing: 0.04em;
         text-transform: uppercase;
-        color: #082A63;
+        color: #8E24AA;
         white-space: nowrap;
       }
 

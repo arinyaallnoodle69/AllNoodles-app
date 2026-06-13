@@ -51,11 +51,11 @@ export default async function SettingsProductsPage({
 
       {activeTab === "categories" ? (
         <>
-          <div className="mb-4 inline-flex rounded-lg border border-[#E8DCC7] bg-white p-1 shadow-sm">
+          <div className="mb-4 inline-flex rounded-lg border border-[#E1BEE7] bg-white p-1 shadow-sm">
             <Link
               href="/settings/products"
               scroll={false}
-              className="inline-flex items-center gap-2 rounded-md px-4 py-2.5 text-sm font-semibold transition text-[#1F2A44] hover:bg-slate-50"
+              className="inline-flex items-center gap-2 rounded-md px-4 py-2.5 text-sm font-semibold transition text-[#8E24AA] hover:bg-slate-50"
             >
               <Package2 className="h-4 w-4" strokeWidth={2.1} />
               จัดการสินค้า
@@ -63,7 +63,7 @@ export default async function SettingsProductsPage({
             <Link
               href="/settings/products?tab=categories"
               scroll={false}
-              className="inline-flex items-center gap-2 rounded-md px-4 py-2.5 text-sm font-semibold transition bg-[#082A63] text-white shadow-[0_10px_24px_rgba(8,42,99,0.18)]"
+              className="inline-flex items-center gap-2 rounded-md px-4 py-2.5 text-sm font-semibold transition bg-[#8E24AA] text-white shadow-[0_10px_24px_rgba(142, 36, 170,0.18)]"
             >
               <FolderTree className="h-4 w-4" strokeWidth={2.1} />
               เพิ่มหมวดหมู่
@@ -77,11 +77,11 @@ export default async function SettingsProductsPage({
             allProducts={data.products}
             baseListHref="/settings/products"
           >
-            <div className="mb-4 inline-flex rounded-lg border border-[#E8DCC7] bg-white p-1 shadow-sm">
+            <div className="mb-4 inline-flex rounded-lg border border-[#E1BEE7] bg-white p-1 shadow-sm">
               <Link
                 href="/settings/products"
                 scroll={false}
-                className="inline-flex items-center gap-2 rounded-md px-4 py-2.5 text-sm font-semibold transition bg-[#082A63] text-white shadow-[0_10px_24px_rgba(8,42,99,0.18)]"
+                className="inline-flex items-center gap-2 rounded-md px-4 py-2.5 text-sm font-semibold transition bg-[#8E24AA] text-white shadow-[0_10px_24px_rgba(142, 36, 170,0.18)]"
               >
                 <Package2 className="h-4 w-4" strokeWidth={2.1} />
                 จัดการสินค้า
@@ -89,7 +89,7 @@ export default async function SettingsProductsPage({
               <Link
                 href="/settings/products?tab=categories"
                 scroll={false}
-                className="inline-flex items-center gap-2 rounded-md px-4 py-2.5 text-sm font-semibold transition text-[#1F2A44] hover:bg-slate-50"
+                className="inline-flex items-center gap-2 rounded-md px-4 py-2.5 text-sm font-semibold transition text-[#8E24AA] hover:bg-slate-50"
               >
                 <FolderTree className="h-4 w-4" strokeWidth={2.1} />
                 เพิ่มหมวดหมู่

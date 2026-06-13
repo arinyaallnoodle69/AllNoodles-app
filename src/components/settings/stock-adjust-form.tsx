@@ -130,7 +130,7 @@ export function StockAdjustForm({
         onClick={handleClose}
         className="absolute inset-0" 
       />
-      <div className={`relative flex h-full w-full max-w-lg flex-col overflow-hidden bg-[#FAF7F2] shadow-2xl rounded-none sm:rounded-[2.8rem] border border-white/40 ${
+      <div className={`relative flex h-full w-full max-w-lg flex-col overflow-hidden bg-[#F3E5F5] shadow-2xl rounded-none sm:rounded-[2.8rem] border border-white/40 ${
         isClosing ? "animate-slide-up-premium" : "animate-slide-down-premium"
       }`}>
         
@@ -144,7 +144,7 @@ export function StockAdjustForm({
             >
               <X className="h-5 w-5" />
             </button>
-            <h2 className="text-xl font-black text-[#082A63]">ปรับปรุงยอดสต็อก</h2>
+            <h2 className="text-xl font-black text-[#8E24AA]">ปรับปรุงยอดสต็อก</h2>
           </div>
         </div>
 
@@ -156,7 +156,7 @@ export function StockAdjustForm({
                 <input
                   type="text"
                   placeholder="ค้นหาชื่อสินค้า หรือ SKU..."
-                  className="w-full h-14 pl-12 pr-4 bg-white border-2 border-slate-100 rounded-2xl outline-none focus:border-[#082A63]/20 transition-all text-lg font-bold"
+                  className="w-full h-14 pl-12 pr-4 bg-white border-2 border-slate-100 rounded-2xl outline-none focus:border-[#8E24AA]/20 transition-all text-lg font-bold"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
@@ -181,7 +181,7 @@ export function StockAdjustForm({
                     <div className="min-w-0 flex-1">
                       <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1.5">{p.sku}</p>
                       <p className="text-base font-black text-slate-950 truncate leading-tight">{p.name}</p>
-                      <p className="mt-1 text-sm font-bold text-[#082A63]">คงเหลือ: {p.onHandQuantity} {p.unit}</p>
+                      <p className="mt-1 text-sm font-bold text-[#8E24AA]">คงเหลือ: {p.onHandQuantity} {p.unit}</p>
                     </div>
                   </button>
                 ))}
@@ -204,7 +204,7 @@ export function StockAdjustForm({
                   <div className="min-w-0 flex-1">
                     <button 
                       onClick={() => setSelectedProductId("")}
-                      className="text-[10px] font-black text-[#082A63] uppercase tracking-widest flex items-center gap-1 mb-1"
+                      className="text-[10px] font-black text-[#8E24AA] uppercase tracking-widest flex items-center gap-1 mb-1"
                     >
                       <ChevronLeft className="h-3 w-3" /> เปลี่ยนสินค้า
                     </button>
@@ -220,7 +220,7 @@ export function StockAdjustForm({
                   <select
                     value={warehouseId}
                     onChange={(event) => setWarehouseId(event.target.value)}
-                    className="h-16 w-full rounded-3xl border-2 border-slate-100 bg-white px-5 text-lg font-black text-[#082A63] outline-none transition-all focus:border-[#082A63]/30"
+                    className="h-16 w-full rounded-3xl border-2 border-slate-100 bg-white px-5 text-lg font-black text-[#8E24AA] outline-none transition-all focus:border-[#8E24AA]/30"
                   >
                     <option value="">เลือกคลัง...</option>
                     {warehouses.map((warehouse) => (
@@ -252,7 +252,7 @@ export function StockAdjustForm({
                     <button
                       type="button"
                       onClick={() => setNewQuantity(String(Number(newQuantity) + 1))}
-                      className="h-16 w-16 flex items-center justify-center rounded-3xl bg-[#082A63] text-white active:scale-90 transition-all shadow-lg shadow-[#082A63]/20"
+                      className="h-16 w-16 flex items-center justify-center rounded-3xl bg-[#8E24AA] text-white active:scale-90 transition-all shadow-lg shadow-[#8E24AA]/20"
                     >
                       <Plus className="h-8 w-8" strokeWidth={3} />
                     </button>
@@ -260,17 +260,17 @@ export function StockAdjustForm({
                 </div>
 
                 {/* Info Card */}
-                <div className="bg-[#FAF7F2]/50 rounded-[2rem] p-6 border border-[#F2E3AE]/50 space-y-4">
+                <div className="bg-[#F3E5F5]/50 rounded-[2rem] p-6 border border-[#EA80FC]/50 space-y-4">
                   <div className="flex justify-between items-center">
-                    <span className="text-sm font-bold text-[#082A63]/60">คงเหลือเดิม</span>
-                    <span className="text-lg font-black text-[#103B82]">
+                    <span className="text-sm font-bold text-[#8E24AA]/60">คงเหลือเดิม</span>
+                    <span className="text-lg font-black text-[#8E24AA]">
                       {warehouseId ? selectedWarehouseQuantity : "-"} {selectedProduct?.unit}
                     </span>
                   </div>
-                  <div className="h-px bg-[#F2E3AE]/50" />
+                  <div className="h-px bg-[#EA80FC]/50" />
                   <div className="flex justify-between items-center">
-                    <span className="text-sm font-bold text-[#082A63]/60">ยอดปรับปรุง</span>
-                    <span className="text-lg font-black text-[#103B82]">
+                    <span className="text-sm font-bold text-[#8E24AA]/60">ยอดปรับปรุง</span>
+                    <span className="text-lg font-black text-[#8E24AA]">
                       {warehouseId && Number.isFinite(Number(newQuantity)) && Number(newQuantity) - selectedWarehouseQuantity > 0 ? "+" : ""}
                       {warehouseId && Number.isFinite(Number(newQuantity)) ? Number(newQuantity) - selectedWarehouseQuantity : "-"} {selectedProduct?.unit}
                     </span>
@@ -284,7 +284,7 @@ export function StockAdjustForm({
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
                     placeholder="ระบุสาเหตุการปรับยอด (ถ้ามี)..."
-                    className="w-full h-32 p-5 rounded-3xl bg-white border-2 border-slate-100 outline-none focus:border-[#082A63]/20 transition-all text-lg font-medium resize-none"
+                    className="w-full h-32 p-5 rounded-3xl bg-white border-2 border-slate-100 outline-none focus:border-[#8E24AA]/20 transition-all text-lg font-medium resize-none"
                   />
                 </div>
               </div>
@@ -307,7 +307,7 @@ export function StockAdjustForm({
                 });
               }}
               disabled={isPending}
-              className="w-full h-16 bg-[#082A63] text-white rounded-[1.5rem] font-black text-xl flex items-center justify-center gap-3 shadow-xl shadow-[#082A63]/20 disabled:opacity-50 active:scale-[0.98] transition-all"
+              className="w-full h-16 bg-[#8E24AA] text-white rounded-[1.5rem] font-black text-xl flex items-center justify-center gap-3 shadow-xl shadow-[#8E24AA]/20 disabled:opacity-50 active:scale-[0.98] transition-all"
             >
               {isPending ? (
                 <Loader2 className="h-6 w-6 animate-spin" />

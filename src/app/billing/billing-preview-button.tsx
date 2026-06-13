@@ -252,7 +252,7 @@ export function BillingPreviewButton({
           setIsOpen(true);
           setZoom(1);
         }}
-        className="inline-flex items-center gap-1.5 rounded-full bg-[#082A63] px-4 py-2 text-xs font-black text-white transition hover:bg-[#103B82] active:scale-95"
+        className="inline-flex items-center gap-1.5 rounded-full bg-[#8E24AA] px-4 py-2 text-xs font-black text-white transition hover:bg-[#8E24AA] active:scale-95"
       >
         <FileText className="h-3.5 w-3.5" />
         ดูใบวางบิล
@@ -452,7 +452,7 @@ export function BillingPreviewButton({
                       type="button"
                       onClick={saveAsImage}
                       disabled={isSaving}
-                      className="inline-flex items-center gap-1.5 rounded-full bg-[#082A63] px-6 py-2.5 text-sm font-bold text-[#1F2A44] shadow-lg transition hover:bg-[#103B82] disabled:opacity-60"
+                      className="inline-flex items-center gap-1.5 rounded-full bg-[#8E24AA] px-6 py-2.5 text-sm font-bold text-[#8E24AA] shadow-lg transition hover:bg-[#8E24AA] disabled:opacity-60"
                     >
                       {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
                       {isSaving ? "กำลังบันทึก..." : totalPages > 1 ? "บันทึกรูปทั้งหมด" : "บันทึกรูป"}

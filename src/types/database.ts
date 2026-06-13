@@ -2397,22 +2397,40 @@ export type Database = {
           total_quantity: number
         }[]
       }
-      get_profit_sales_report: {
-        Args: {
-          p_customer_ids?: string[]
-          p_from_date: string
-          p_organization_id: string
-          p_to_date: string
-        }
-        Returns: {
-          cost: number
-          iso_date: string
-          margin_percent: number
-          net_profit: number
-          order_count: number
-          sales: number
-        }[]
-      }
+      get_profit_sales_report:
+        | {
+            Args: {
+              p_customer_ids?: string[]
+              p_from_date: string
+              p_organization_id: string
+              p_to_date: string
+            }
+            Returns: {
+              cost: number
+              iso_date: string
+              margin_percent: number
+              net_profit: number
+              order_count: number
+              sales: number
+            }[]
+          }
+        | {
+            Args: {
+              p_customer_ids?: string[]
+              p_from_date: string
+              p_organization_id: string
+              p_to_date: string
+              p_warehouse_id?: string
+            }
+            Returns: {
+              cost: number
+              iso_date: string
+              margin_percent: number
+              net_profit: number
+              order_count: number
+              sales: number
+            }[]
+          }
       next_billing_number: {
         Args: { p_billing_date: string; p_organization_id: string }
         Returns: string

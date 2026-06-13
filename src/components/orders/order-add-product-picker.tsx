@@ -302,7 +302,7 @@ export function OrderAddProductPicker({
           className="flex w-full items-center justify-between gap-3 rounded-2xl bg-slate-50 px-4 py-3 text-left transition hover:bg-slate-100 active:scale-[0.99]"
         >
           <span className="inline-flex min-w-0 items-center gap-3">
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[#082A63] text-white">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[#8E24AA] text-white">
               <ShoppingBag className="h-4.5 w-4.5" strokeWidth={2.3} />
             </span>
             <span className="min-w-0">
@@ -314,7 +314,7 @@ export function OrderAddProductPicker({
               ) : null}
             </span>
           </span>
-          <Plus className="h-5 w-5 shrink-0 text-[#082A63]" />
+          <Plus className="h-5 w-5 shrink-0 text-[#8E24AA]" />
         </button>
       </div>
 
@@ -328,7 +328,7 @@ export function OrderAddProductPicker({
           />
           <div className="relative flex h-[92dvh] w-full max-w-[100vw] min-w-0 flex-col overflow-x-hidden overflow-y-hidden rounded-t-[2rem] bg-white shadow-2xl sm:h-[86dvh] sm:max-w-[calc(100vw-2rem)] sm:rounded-[2rem]">
             <div className="flex shrink-0 items-center gap-3 border-b border-slate-200 bg-white px-4 py-4 sm:px-5">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#D4AF37]/30 text-[#1F2A44]">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#AA00FF]/30 text-[#8E24AA]">
                 <ShoppingBag className="h-5 w-5" strokeWidth={2.3} />
               </div>
               <div className="min-w-0 flex-1">
@@ -348,7 +348,7 @@ export function OrderAddProductPicker({
             </div>
 
             <div className="shrink-0 border-b border-slate-100 px-4 py-3 sm:px-5">
-              <label className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 transition focus-within:border-[#082A63]/60 focus-within:bg-white focus-within:ring-2 focus-within:ring-[#082A63]/10">
+              <label className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 transition focus-within:border-[#8E24AA]/60 focus-within:bg-white focus-within:ring-2 focus-within:ring-[#8E24AA]/10">
                 <Search className="h-5 w-5 shrink-0 text-slate-400" strokeWidth={2.1} />
                 <input
                   type="text"
@@ -404,7 +404,7 @@ export function OrderAddProductPicker({
                         draft
                           ? isBelowCost
                             ? "border-[#FF0000]/60 bg-rose-50 ring-1 ring-[#FF0000]/10"
-                            : "border-[#082A63]/40 bg-[#082A63]/15 ring-1 ring-[#082A63]/5"
+                            : "border-[#8E24AA]/40 bg-[#8E24AA]/15 ring-1 ring-[#8E24AA]/5"
                           : "border-slate-200 bg-white hover:border-slate-300"
                       }`}
                     >
@@ -419,7 +419,7 @@ export function OrderAddProductPicker({
                         >
                           <span
                             className={`flex h-5 w-5 items-center justify-center rounded border-2 transition-all ${
-                              draft ? "border-[#082A63] bg-[#082A63]" : "border-slate-300 bg-white"
+                              draft ? "border-[#8E24AA] bg-[#8E24AA]" : "border-slate-300 bg-white"
                             }`}
                           >
                             <Check
@@ -457,7 +457,7 @@ export function OrderAddProductPicker({
                             <span className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-[13.5px] font-black shadow-sm ${
                               getDisplayStockQuantity(product, customerWarehouseId) < 0 
                                 ? "bg-[#FF0000] text-white" 
-                                : "bg-[#082A63] text-white"
+                                : "bg-[#8E24AA] text-white"
                             }`}>
                               <Boxes className="h-4 w-4" strokeWidth={2.5} />
                               สต็อก: {getDisplayStockQuantity(product, customerWarehouseId).toLocaleString("th-TH")} {product.unit}
@@ -473,7 +473,7 @@ export function OrderAddProductPicker({
                       </button>
 
                       {draft && selectedUnit ? (
-                        <div className="bg-[#082A63]/15 px-3 pb-4 pt-2 md:px-4 md:pb-4 md:pt-1">
+                        <div className="bg-[#8E24AA]/15 px-3 pb-4 pt-2 md:px-4 md:pb-4 md:pt-1">
                           {units.length > 1 ? (
                             <div className="mb-3 flex gap-2 overflow-x-auto pb-1 no-scrollbar md:mb-4">
                               {units.map((unit) => (
@@ -483,7 +483,7 @@ export function OrderAddProductPicker({
                                   onClick={() => changeUnit(product, unit.id)}
                                   className={`shrink-0 rounded-xl border-2 px-4 py-2 text-sm font-black transition-all ${
                                     selectedUnit.id === unit.id
-                                      ? "border-[#082A63] bg-[#082A63] text-white shadow-md shadow-[#082A63]/20"
+                                      ? "border-[#8E24AA] bg-[#8E24AA] text-white shadow-md shadow-[#8E24AA]/20"
                                       : "border-slate-200 bg-white text-slate-600 hover:border-slate-300"
                                   }`}
                                 >
@@ -528,7 +528,7 @@ export function OrderAddProductPicker({
                                       ),
                                     }));
                                   }}
-                                  className="h-9 w-full min-w-0 rounded-xl border-2 border-transparent bg-white px-1.5 text-center text-lg font-black text-slate-950 shadow-md outline-none focus:border-[#082A63]/30 md:h-10 md:rounded-2xl md:px-2 md:text-xl"
+                                  className="h-9 w-full min-w-0 rounded-xl border-2 border-transparent bg-white px-1.5 text-center text-lg font-black text-slate-950 shadow-md outline-none focus:border-[#8E24AA]/30 md:h-10 md:rounded-2xl md:px-2 md:text-xl"
                                 />
                                 <button
                                   type="button"
@@ -578,7 +578,7 @@ export function OrderAddProductPicker({
                                   className={`h-9 w-full rounded-xl border-2 pl-3 pr-12 text-lg font-black shadow-md outline-none transition-all md:h-10 md:rounded-2xl md:pl-4 md:pr-16 md:text-xl ${
                                     isBelowCost
                                       ? "!border-[#FF0000] !bg-rose-50 !text-[#FF0000]"
-                                      : "border-transparent bg-white text-slate-950 focus:border-[#082A63]/30"
+                                      : "border-transparent bg-white text-slate-950 focus:border-[#8E24AA]/30"
                                   }`}
                                 />
                                 <span
@@ -631,7 +631,7 @@ export function OrderAddProductPicker({
                   type="button"
                   onClick={addSelectedProducts}
                   disabled={pending || selectedCount === 0}
-                  className="rounded-2xl bg-[#082A63] py-3.5 text-sm font-bold text-white shadow-sm transition hover:bg-[#1F2A44] disabled:opacity-45 active:scale-[0.98]"
+                  className="rounded-2xl bg-[#8E24AA] py-3.5 text-sm font-bold text-white shadow-sm transition hover:bg-[#8E24AA] disabled:opacity-45 active:scale-[0.98]"
                 >
                   เพิ่ม {selectedCount > 0 ? selectedCount.toLocaleString("th-TH") : ""} รายการ
                 </button>

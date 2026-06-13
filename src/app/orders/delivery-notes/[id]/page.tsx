@@ -39,7 +39,7 @@ export default async function DeliveryNotePrintPage({ params, searchParams }: Pr
           href={mergedPrintHref}
           target="_blank"
           rel="noopener noreferrer"
-          className="rounded-xl border border-[#082A63]/20 bg-[#082A63] px-5 py-2.5 text-sm font-medium text-white hover:bg-[#103B82]"
+          className="rounded-xl border border-[#8E24AA]/20 bg-[#8E24AA] px-5 py-2.5 text-sm font-medium text-white hover:bg-[#8E24AA]"
         >
           พิมพ์แบบรวมทั้งร้านในวันเดียวกัน
         </a>

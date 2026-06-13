@@ -80,34 +80,34 @@ const IncomingOrderRow = memo(function IncomingOrderRow({
   return (
     <Fragment key={order.id}>
       {showDivider ? (
-        <tr className="bg-[#FAF7F2]">
-          <td colSpan={7} className="border-y border-[#D4AF37]/25 px-3 py-3 xl:px-6 xl:py-4">
+        <tr className="bg-[#F3E5F5]">
+          <td colSpan={7} className="border-y border-[#AA00FF]/25 px-3 py-3 xl:px-6 xl:py-4">
             <div className="flex items-center gap-4">
-              <div className="h-px flex-1 bg-[#D4AF37]/45" />
-              <span className="rounded-2xl border border-[#D4AF37]/50 bg-white px-3 py-1 text-[11px] font-black uppercase tracking-[0.2em] text-[#082A63] shadow-sm xl:px-5 xl:py-2 xl:text-xs">
+              <div className="h-px flex-1 bg-[#AA00FF]/45" />
+              <span className="rounded-2xl border border-[#AA00FF]/50 bg-white px-3 py-1 text-[11px] font-black uppercase tracking-[0.2em] text-[#8E24AA] shadow-sm xl:px-5 xl:py-2 xl:text-xs">
                 {formatOrderDate(order.orderDate)}
               </span>
-              <div className="h-px flex-1 bg-[#D4AF37]/45" />
+              <div className="h-px flex-1 bg-[#AA00FF]/45" />
             </div>
           </td>
         </tr>
       ) : null}
 
-      <tr className="align-middle transition-colors hover:bg-[#FAF7F2]/70">
+      <tr className="align-middle transition-colors hover:bg-[#F3E5F5]/70">
         <td className="px-2 py-2 xl:px-3 xl:py-3">
           <div className="min-w-0">
             <div className="flex min-w-0 items-center gap-2">
-              <Building2 className="h-4 w-4 shrink-0 text-[#082A63]" strokeWidth={2.2} />
+              <Building2 className="h-4 w-4 shrink-0 text-[#8E24AA]" strokeWidth={2.2} />
               <p className="min-w-0 break-words line-clamp-2 text-sm font-bold leading-tight text-slate-950 xl:text-base">
                 <span translate="no">{order.customerCode}</span> - {order.customerName}
               </p>
             </div>
             <div className="mt-1 flex flex-wrap items-center gap-2 pl-6">
-              <span className="shrink-0 rounded-full bg-[#D4AF37]/18 px-2 py-0.5 text-[10px] font-bold text-[#082A63] ring-1 ring-[#D4AF37]/30">
+              <span className="shrink-0 rounded-full bg-[#AA00FF]/18 px-2 py-0.5 text-[10px] font-bold text-[#8E24AA] ring-1 ring-[#AA00FF]/30">
                 {order.channelLabel}
               </span>
               {order.warehouseName ? (
-                <span className="shrink-0 rounded-full bg-[#082A63]/8 px-2 py-0.5 text-[10px] font-black text-[#082A63] ring-1 ring-[#082A63]/25">
+                <span className="shrink-0 rounded-full bg-[#8E24AA]/8 px-2 py-0.5 text-[10px] font-black text-[#8E24AA] ring-1 ring-[#8E24AA]/25">
                   {order.warehouseName}
                 </span>
               ) : null}
@@ -138,13 +138,13 @@ const IncomingOrderRow = memo(function IncomingOrderRow({
           {hasDisplayDelivery ? (
             <div className="flex min-w-0 flex-col items-start gap-1">
               {displayDeliveryNumbers.map((num) => (
-                <span key={num} className="whitespace-nowrap font-mono text-sm font-bold text-[#D4AF37] xl:text-base">
+                <span key={num} className="whitespace-nowrap font-mono text-sm font-bold text-[#AA00FF] xl:text-base">
                   {num}
                 </span>
               ))}
             </div>
           ) : (
-            <span className="text-sm font-medium text-[#1F2A44] xl:text-base">-</span>
+            <span className="text-sm font-medium text-[#8E24AA] xl:text-base">-</span>
           )}
         </td>
         <td className="min-w-0 px-2 py-2 xl:px-3 xl:py-3">
@@ -175,7 +175,7 @@ const IncomingOrderRow = memo(function IncomingOrderRow({
               aria-busy={isLoading}
               aria-label={isExpanded ? "ซ่อนรายละเอียดออเดอร์" : "แสดงรายละเอียดออเดอร์"}
               title={isExpanded ? "ซ่อนรายละเอียดออเดอร์" : "แสดงรายละเอียดออเดอร์"}
-              className="inline-flex size-10 shrink-0 items-center justify-center rounded-full border border-[#D4AF37]/45 bg-white p-0 leading-none text-[#082A63] shadow-sm transition hover:border-[#D4AF37] hover:bg-[#FAF7F2] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D4AF37]/25 disabled:opacity-85"
+              className="inline-flex size-10 shrink-0 items-center justify-center rounded-full border border-[#AA00FF]/45 bg-white p-0 leading-none text-[#8E24AA] shadow-sm transition hover:border-[#AA00FF] hover:bg-[#F3E5F5] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#AA00FF]/25 disabled:opacity-85"
             >
               {isLoading ? (
                 <Loader2 className="h-4.5 w-4.5 animate-spin" strokeWidth={2.2} />
@@ -205,8 +205,8 @@ const IncomingOrderRow = memo(function IncomingOrderRow({
             {detail ? (
               <DesktopOrderDetail detail={detail} deliveryNumbers={deliveryNumbers} />
             ) : (
-              <div className="flex items-center justify-center gap-3 border-y border-[#D4AF37]/25 bg-white px-6 py-8 text-base font-semibold text-[#1F2A44]">
-                <Loader2 className="h-5 w-5 animate-spin text-[#082A63]" strokeWidth={2.4} />
+              <div className="flex items-center justify-center gap-3 border-y border-[#AA00FF]/25 bg-white px-6 py-8 text-base font-semibold text-[#8E24AA]">
+                <Loader2 className="h-5 w-5 animate-spin text-[#8E24AA]" strokeWidth={2.4} />
                 กำลังโหลดรายละเอียดออเดอร์
               </div>
             )}
@@ -346,20 +346,20 @@ export const IncomingOrdersDesktopTable = memo(function IncomingOrdersDesktopTab
   }
 
   return (
-    <div className="rounded-[1.35rem] border border-[#D4AF37]/35 bg-white shadow-[0_18px_48px_rgba(8,42,99,0.08)] lg:block">
+    <div className="rounded-[1.35rem] border border-[#AA00FF]/35 bg-white shadow-[0_18px_48px_rgba(142, 36, 170,0.08)] lg:block">
       <div className="lg:min-w-0 xl:min-w-[1150px]">
-        <div className="flex items-center justify-between border-b border-[#D4AF37]/30 bg-white px-4 py-3 xl:px-6 xl:py-4">
+        <div className="flex items-center justify-between border-b border-[#AA00FF]/30 bg-white px-4 py-3 xl:px-6 xl:py-4">
           <div>
-            <h3 className="text-lg font-black text-[#082A63] xl:text-xl">ตารางรายการคำสั่งซื้อล่าสุด</h3>
-            <p className="mt-1 text-sm font-semibold text-[#1F2A44] xl:text-base">
+            <h3 className="text-lg font-black text-[#8E24AA] xl:text-xl">ตารางรายการคำสั่งซื้อล่าสุด</h3>
+            <p className="mt-1 text-sm font-semibold text-[#8E24AA] xl:text-base">
               จัดการและติดตามสถานะออเดอร์ในวันที่เลือกจากจุดเดียว
             </p>
-            <p className="mt-1 hidden text-xs font-semibold text-[#1F2A44] lg:block xl:hidden">
+            <p className="mt-1 hidden text-xs font-semibold text-[#8E24AA] lg:block xl:hidden">
               ↔ เลื่อนซ้าย-ขวาเพื่อดูข้อมูลเพิ่มเติม
             </p>
           </div>
-          <div className="flex items-center gap-2 rounded-full border border-[#D4AF37]/45 bg-[#FAF7F2] px-3 py-1.5 text-sm font-black text-[#082A63] xl:text-base">
-            <span className="h-2.5 w-2.5 rounded-full bg-[#D4AF37]" />
+          <div className="flex items-center gap-2 rounded-full border border-[#AA00FF]/45 bg-[#F3E5F5] px-3 py-1.5 text-sm font-black text-[#8E24AA] xl:text-base">
+            <span className="h-2.5 w-2.5 rounded-full bg-[#AA00FF]" />
             รายการทั้งหมด
           </div>
         </div>
@@ -378,8 +378,8 @@ export const IncomingOrdersDesktopTable = memo(function IncomingOrdersDesktopTab
             className="overflow-x-auto touch-pan-x pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
           >
             <table className="w-full min-w-[1180px] border-collapse text-left">
-            <thead className="bg-[#082A63] text-white">
-              <tr className="border-b border-[#D4AF37]/45">
+            <thead className="bg-[#8E24AA] text-white">
+              <tr className="border-b border-[#AA00FF]/45">
                 <th className="w-[20%] px-2 py-2.5 text-xs font-black tracking-[0.04em] text-white xl:px-3 xl:py-3 xl:text-sm">ร้านค้า</th>
                 <th className="w-[11%] px-2 py-2.5 text-center text-xs font-black tracking-[0.04em] text-white xl:px-3 xl:py-3 xl:text-sm">วันที่</th>
                 <th className="w-[9%] px-2 py-2.5 text-center text-xs font-black tracking-[0.04em] text-white xl:px-3 xl:py-3 xl:text-sm">สินค้า</th>
@@ -389,7 +389,7 @@ export const IncomingOrdersDesktopTable = memo(function IncomingOrdersDesktopTab
                 <th className="w-[18%] px-2 py-2.5 text-center text-xs font-black tracking-[0.04em] text-white xl:px-3 xl:py-3 xl:text-sm">จัดการ</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#D4AF37]/18">
+            <tbody className="divide-y divide-[#AA00FF]/18">
               {orders.map((order, index) => {
                 const orderKey = `${order.customerId}_${order.orderDate}`;
                 const isExpanded = expandedOrderId === order.id && visibleOrderIds.has(order.id);
@@ -431,7 +431,7 @@ export const IncomingOrdersDesktopTable = memo(function IncomingOrdersDesktopTab
           <div
             ref={stickyScrollRef}
             aria-label="แถบเลื่อนแนวนอน"
-            className="overflow-x-auto touch-pan-x [scrollbar-color:#082A63_#cbd5e1] [scrollbar-width:auto] [&::-webkit-scrollbar]:h-3 [&::-webkit-scrollbar-track]:rounded-full [&::-webkit-scrollbar-track]:bg-slate-300 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-[#082A63] [&::-webkit-scrollbar-thumb:hover]:bg-[#103B82]"
+            className="overflow-x-auto touch-pan-x [scrollbar-color:#8E24AA_#cbd5e1] [scrollbar-width:auto] [&::-webkit-scrollbar]:h-3 [&::-webkit-scrollbar-track]:rounded-full [&::-webkit-scrollbar-track]:bg-slate-300 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-[#8E24AA] [&::-webkit-scrollbar-thumb:hover]:bg-[#8E24AA]"
           >
             <div ref={stickyScrollInnerRef} className="h-1 min-w-[1180px]" />
           </div>

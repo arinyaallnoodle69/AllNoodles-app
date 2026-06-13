@@ -93,9 +93,9 @@ export function SupplierForm({
             </p>
             <div className="mt-1 flex items-center gap-2 text-slate-950">
               {isEditMode ? (
-                <PencilLine className="h-6 w-6 text-[#082A63]" strokeWidth={2.2} />
+                <PencilLine className="h-6 w-6 text-[#8E24AA]" strokeWidth={2.2} />
               ) : (
-                <CirclePlus className="h-6 w-6 text-[#082A63]" strokeWidth={2.2} />
+                <CirclePlus className="h-6 w-6 text-[#8E24AA]" strokeWidth={2.2} />
               )}
               <h3 className="text-2xl font-semibold tracking-[-0.02em]">
                 {isEditMode ? initialSupplier?.name : "รายการผู้ขายใหม่"}
@@ -195,7 +195,7 @@ export function SupplierForm({
             <button
               type="submit"
               disabled={isPending}
-              className="inline-flex items-center gap-2 rounded-xl bg-[#082A63] px-5 py-3 text-sm font-medium text-white shadow-[0_12px_30px_rgba(8,42,99,0.22)] transition hover:bg-[#103B82] disabled:cursor-not-allowed disabled:opacity-60"
+              className="inline-flex items-center gap-2 rounded-xl bg-[#8E24AA] px-5 py-3 text-sm font-medium text-white shadow-[0_12px_30px_rgba(142, 36, 170,0.22)] transition hover:bg-[#8E24AA] disabled:cursor-not-allowed disabled:opacity-60"
             >
               <Save className="h-4 w-4" strokeWidth={2.2} />
               บันทึกผู้ขาย

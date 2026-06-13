@@ -250,7 +250,7 @@ export function StoreDetailModal({
             <div className="flex items-center justify-between">
               <div className="min-w-0 flex-1 pr-4">
                 <div className="flex items-center gap-2">
-                  <span className="shrink-0 rounded bg-[#082A63]/15 px-1.5 py-0.5 font-mono text-[10px] font-bold uppercase tracking-wider text-[#082A63]">
+                  <span className="shrink-0 rounded bg-[#8E24AA]/15 px-1.5 py-0.5 font-mono text-[10px] font-bold uppercase tracking-wider text-[#8E24AA]">
                     {detail.customerCode}
                   </span>
                   <span className="text-xs font-bold text-slate-400">{positionLabel}</span>
@@ -330,7 +330,7 @@ export function StoreDetailModal({
                     onClick={() => setRoundsOpen((value) => !value)}
                     className="flex w-full items-center gap-3 px-4 py-3.5 transition active:bg-slate-50"
                   >
-                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#FAF7F2] text-[#082A63]">
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#F3E5F5] text-[#8E24AA]">
                       <ClipboardList className="h-4 w-4" strokeWidth={2.5} />
                     </div>
                     <div className="min-w-0 flex-1 text-left">
@@ -360,9 +360,9 @@ export function StoreDetailModal({
                           href={`/orders/incoming?date=${date}&expanded=${round.id}`}
                           className="flex items-center gap-3 px-4 py-3.5 transition active:bg-white"
                         >
-                          <div className="h-1.5 w-1.5 shrink-0 rounded-full bg-[#103B82]" />
+                          <div className="h-1.5 w-1.5 shrink-0 rounded-full bg-[#8E24AA]" />
                           <div className="min-w-0 flex-1">
-                            <p className="font-mono text-xs font-bold text-[#082A63]">
+                            <p className="font-mono text-xs font-bold text-[#8E24AA]">
                               {round.orderNumber}
                             </p>
                             <p className="mt-0.5 text-[10px] font-bold uppercase tracking-wider text-slate-400">
@@ -454,7 +454,7 @@ export function StoreDetailModal({
                         <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
                           จำนวนเงินรวม
                         </p>
-                        <p className="text-[15px] font-black text-[#082A63]">
+                        <p className="text-[15px] font-black text-[#8E24AA]">
                           {formatTHB(item.lineTotal)}
                           <span className="ml-0.5 text-[10px]">฿</span>
                         </p>
@@ -463,7 +463,7 @@ export function StoreDetailModal({
                       {item.shortQuantity > 0 ? (
                         <Link
                           href={`/stock?receive=1&product=${item.productId}`}
-                          className="inline-flex items-center gap-1.5 rounded-xl bg-[#082A63] px-4 py-2 text-[12px] font-bold text-white shadow-sm transition active:scale-95"
+                          className="inline-flex items-center gap-1.5 rounded-xl bg-[#8E24AA] px-4 py-2 text-[12px] font-bold text-white shadow-sm transition active:scale-95"
                         >
                           <PackagePlus className="h-4 w-4" strokeWidth={2.5} />
                           รับเข้าสินค้า
@@ -474,7 +474,7 @@ export function StoreDetailModal({
                 ))}
               </div>
 
-              <div className="sticky bottom-0 mt-6 flex items-center justify-between rounded-2xl border border-[#082A63]/10 bg-[#082A63] px-6 py-4 shadow-[0_-8px_30px_rgba(0,0,0,0.1)]">
+              <div className="sticky bottom-0 mt-6 flex items-center justify-between rounded-2xl border border-[#8E24AA]/10 bg-[#8E24AA] px-6 py-4 shadow-[0_-8px_30px_rgba(0,0,0,0.1)]">
                 <span className="text-sm font-bold text-white/70">รวมยอดทั้งหมด</span>
                 <span className="text-xl font-black tabular-nums text-white">
                   {formatTHB(detail.totalAmount)}
@@ -487,7 +487,7 @@ export function StoreDetailModal({
               <div data-horizontal-scroll="true" className="overflow-x-auto touch-pan-x">
                 <table className="min-w-[860px] border-collapse text-left text-sm">
                   <thead>
-                    <tr className="bg-[#082A63]">
+                    <tr className="bg-[#8E24AA]">
                       {[
                         "รหัสสินค้า",
                         "รายการสินค้า",
@@ -556,7 +556,7 @@ export function StoreDetailModal({
                               </span>
                               <Link
                                 href={`/stock?receive=1&product=${item.productId}`}
-                                className="inline-flex items-center gap-1 rounded-md border border-[#082A63]/25 bg-[#082A63]/15 px-2 py-1 text-[11px] font-semibold text-[#082A63] transition active:bg-[#082A63]/20"
+                                className="inline-flex items-center gap-1 rounded-md border border-[#8E24AA]/25 bg-[#8E24AA]/15 px-2 py-1 text-[11px] font-semibold text-[#8E24AA] transition active:bg-[#8E24AA]/20"
                               >
                                 <PackagePlus className="h-3 w-3" strokeWidth={2.2} />
                                 รับเข้า
@@ -590,7 +590,7 @@ export function StoreDetailModal({
                       >
                         ยอดเงินรวมทุกรายการ
                       </td>
-                      <td className="border-t border-slate-200 px-3 py-3 text-center text-base font-bold tabular-nums text-[#082A63]">
+                      <td className="border-t border-slate-200 px-3 py-3 text-center text-base font-bold tabular-nums text-[#8E24AA]">
                         {formatTHB(detail.totalAmount)}
                       </td>
                     </tr>

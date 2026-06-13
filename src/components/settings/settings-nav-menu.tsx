@@ -71,7 +71,7 @@ export function SettingsNavMenu() {
         onClick={() => setOpen((value) => !value)}
         className={`inline-flex items-center gap-2 rounded-full px-3 py-2 text-sm font-medium transition ${
           isActive
-            ? "bg-[#F2E3AE] text-[#1F2A44] ring-1 ring-[#D4AF37]/40"
+            ? "bg-[#EA80FC] text-[#8E24AA] ring-1 ring-[#AA00FF]/40"
             : "text-slate-600 hover:bg-slate-100 hover:text-slate-950"
         }`}
         aria-expanded={open}
@@ -105,13 +105,13 @@ export function SettingsNavMenu() {
               onClick={() => setOpen(false)}
               className={`flex items-start gap-3 rounded-xl px-3 py-3 transition ${
                 active
-                  ? "bg-[#F2E3AE] text-[#1F2A44]"
+                  ? "bg-[#EA80FC] text-[#8E24AA]"
                   : "text-slate-700 hover:bg-slate-50 hover:text-slate-950"
               }`}
             >
               <span
                 className={`mt-0.5 flex h-9 w-9 items-center justify-center rounded-xl ${
-                  active ? "bg-[#F2E3AE] text-[#082A63]" : "bg-slate-100"
+                  active ? "bg-[#EA80FC] text-[#8E24AA]" : "bg-slate-100"
                 }`}
               >
                 <Icon className="h-4.5 w-4.5" strokeWidth={2.2} />

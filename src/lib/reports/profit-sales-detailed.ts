@@ -57,7 +57,7 @@ export type DetailedProfitReportData = {
   insights: DetailedProfitInsights;
 };
 
-type DeliveryNoteRow = {
+type QueryDeliveryNoteRow = {
   id: string;
   delivery_date: string;
   delivery_number: string;
@@ -68,39 +68,32 @@ type DeliveryNoteRow = {
     customer_code: string | null;
     name: string | null;
   } | null;
-};
-
-type DeliveryNoteItemRow = {
-  id: string;
-  delivery_note_id: string;
-  quantity_delivered: number | string | null;
-  product_sale_unit_id: string | null;
-  line_total: number | string | null;
-  sale_unit_label: string | null;
-  products: {
+  delivery_note_items: Array<{
     id: string;
-    name: string | null;
-    sku: string | null;
-    unit: string | null;
-    cost_price: number | string | null;
-  } | null;
-  order_items: { cost_price: number | string | null } | null;
+    delivery_note_id: string;
+    quantity_delivered: number | string | null;
+    product_sale_unit_id: string | null;
+    line_total: number | string | null;
+    sale_unit_label: string | null;
+    products: {
+      id: string;
+      name: string | null;
+      sku: string | null;
+      unit: string | null;
+      cost_price: number | string | null;
+    } | null;
+    order_items: {
+      cost_price: number | string | null;
+    } | null;
+    product_sale_units: {
+      id: string;
+      product_id: string;
+      base_unit_quantity: number | string | null;
+      cost_mode: string | null;
+      fixed_cost_price: number | string | null;
+    } | null;
+  }>;
 };
-
-type ProductSaleUnitRow = {
-  id: string;
-  product_id: string;
-  base_unit_quantity: number | string | null;
-  cost_mode: string | null;
-  fixed_cost_price: number | string | null;
-};
-
-type ProductRow = {
-  id: string;
-  cost_price: number | string | null;
-};
-
-const QUERY_CHUNK_SIZE = 50;
 
 function toNumber(value: unknown) {
   const parsed = Number(value ?? 0);
@@ -117,8 +110,8 @@ export async function getDetailedProfitSalesReport(params: {
   const { organizationId, fromDate, toDate, customerIds = [], warehouseId } = params;
   const supabase = getSupabaseAdmin();
 
-  // 1. Fetch confirmed delivery notes in date range
-  let notesQuery = supabase
+  // 1. Fetch confirmed delivery notes and all their nested relations in a single query
+  let query = supabase
     .from("delivery_notes")
     .select(`
       id,
@@ -130,45 +123,8 @@ export async function getDetailedProfitSalesReport(params: {
         id,
         customer_code,
         name
-      )
-    `)
-    .eq("organization_id", organizationId)
-    .eq("status", "confirmed")
-    .gte("delivery_date", fromDate)
-    .lte("delivery_date", toDate)
-    .order("delivery_date", { ascending: true })
-    .order("delivery_number", { ascending: true });
-
-  if (customerIds.length > 0) {
-    notesQuery = notesQuery.in("customer_id", customerIds);
-  }
-
-  if (warehouseId) {
-    notesQuery = notesQuery.eq("warehouse_id", warehouseId);
-  }
-
-  const { data: notesData, error: notesError } = await notesQuery;
-  if (notesError) throw new Error(notesError.message);
-
-  const notes = (notesData ?? []) as unknown as DeliveryNoteRow[];
-  if (notes.length === 0) {
-    return {
-      stores: [],
-      summary: { totalSales: 0, totalCost: 0, totalNetProfit: 0, totalItemsCount: 0, totalQuantity: 0, avgMarginPercent: 0 },
-      insights: { topPerformingItem: null, lowestProfitMarginItem: null, topStore: null },
-    };
-  }
-
-  const noteIds = notes.map((n) => n.id);
-  const noteById = new Map<string, DeliveryNoteRow>(notes.map((n) => [n.id, n]));
-
-  // 2. Fetch delivery note items in chunks to avoid oversized request URLs / fetch failures
-  const typedItems: DeliveryNoteItemRow[] = [];
-  for (let i = 0; i < noteIds.length; i += QUERY_CHUNK_SIZE) {
-    const chunk = noteIds.slice(i, i + QUERY_CHUNK_SIZE);
-    const { data: items, error: itemsError } = await supabase
-      .from("delivery_note_items")
-      .select(`
+      ),
+      delivery_note_items(
         id,
         delivery_note_id,
         quantity_delivered,
@@ -184,86 +140,44 @@ export async function getDetailedProfitSalesReport(params: {
         ),
         order_items(
           cost_price
-        )
-      `)
-      .in("delivery_note_id", chunk);
-
-    if (itemsError) throw new Error(itemsError.message);
-    if (items) {
-      typedItems.push(...((items ?? []) as unknown as DeliveryNoteItemRow[]));
-    }
-  }
-
-  // 3. Resolve cost structures for sale units and products
-  const saleUnitIds = [
-    ...new Set(
-      typedItems
-        .map((item) => item.product_sale_unit_id)
-        .filter((value): value is string => Boolean(value)),
-    ),
-  ];
-
-  const typedSaleUnits: ProductSaleUnitRow[] = [];
-  if (saleUnitIds.length > 0) {
-    for (let i = 0; i < saleUnitIds.length; i += QUERY_CHUNK_SIZE) {
-      const chunk = saleUnitIds.slice(i, i + QUERY_CHUNK_SIZE);
-      const { data: saleUnits, error: suError } = await supabase
-        .from("product_sale_units")
-        .select("id, product_id, base_unit_quantity, cost_mode, fixed_cost_price")
-        .in("id", chunk);
-
-      if (suError) throw new Error(suError.message);
-      if (saleUnits) {
-        typedSaleUnits.push(...(saleUnits as ProductSaleUnitRow[]));
-      }
-    }
-  }
-
-  const productIds = [
-    ...new Set(
-      typedSaleUnits
-        .map((unit) => unit.product_id)
-        .concat(
-          typedItems
-            .map((item) => item.products?.id)
-            .filter((v): v is string => Boolean(v)),
         ),
-    ),
-  ];
+        product_sale_units(
+          id,
+          product_id,
+          base_unit_quantity,
+          cost_mode,
+          fixed_cost_price
+        )
+      )
+    `)
+    .eq("organization_id", organizationId)
+    .eq("status", "confirmed")
+    .gte("delivery_date", fromDate)
+    .lte("delivery_date", toDate)
+    .order("delivery_date", { ascending: true })
+    .order("delivery_number", { ascending: true });
 
-  const typedProducts: ProductRow[] = [];
-  if (productIds.length > 0) {
-    for (let i = 0; i < productIds.length; i += QUERY_CHUNK_SIZE) {
-      const chunk = productIds.slice(i, i + QUERY_CHUNK_SIZE);
-      const { data: products, error: pError } = await supabase
-        .from("products")
-        .select("id, cost_price")
-        .in("id", chunk);
-
-      if (pError) throw new Error(pError.message);
-      if (products) {
-        typedProducts.push(...(products as ProductRow[]));
-      }
-    }
+  if (customerIds.length > 0) {
+    query = query.in("customer_id", customerIds);
   }
 
-  const productCostById = new Map(
-    typedProducts.map((product) => [product.id, toNumber(product.cost_price)]),
-  );
+  if (warehouseId) {
+    query = query.eq("warehouse_id", warehouseId);
+  }
 
-  const saleUnitCostById = new Map(
-    typedSaleUnits.map((unit) => {
-      const productCost = productCostById.get(unit.product_id) ?? 0;
-      const baseQuantity = toNumber(unit.base_unit_quantity);
-      const effectiveCost =
-        unit.cost_mode === "fixed" && unit.fixed_cost_price != null
-          ? toNumber(unit.fixed_cost_price)
-          : productCost * baseQuantity;
-      return [unit.id, effectiveCost];
-    }),
-  );
+  const { data: notesData, error: notesError } = await query;
+  if (notesError) throw new Error(notesError.message);
 
-  // 4. Group & aggregate items by delivery note (customer + date + delivery number)
+  const notes = (notesData ?? []) as unknown as QueryDeliveryNoteRow[];
+  if (notes.length === 0) {
+    return {
+      stores: [],
+      summary: { totalSales: 0, totalCost: 0, totalNetProfit: 0, totalItemsCount: 0, totalQuantity: 0, avgMarginPercent: 0 },
+      insights: { topPerformingItem: null, lowestProfitMarginItem: null, topStore: null },
+    };
+  }
+
+  // 2. Group & aggregate items by delivery note (customer + date + delivery number)
   // Map key: delivery_note_id
   const deliveryNoteMap = new Map<
     string,
@@ -293,10 +207,7 @@ export async function getDetailedProfitSalesReport(params: {
   // Global customer sales records for store performance index
   const storeSalesMap = new Map<string, { name: string; sales: number }>();
 
-  for (const item of typedItems) {
-    const note = noteById.get(item.delivery_note_id);
-    if (!note) continue;
-
+  for (const note of notes) {
     const deliveryNoteId = note.id;
     const customerId = note.customer_id;
     const customerCode = note.customers?.customer_code ?? "-";
@@ -304,67 +215,75 @@ export async function getDetailedProfitSalesReport(params: {
     const deliveryDate = note.delivery_date;
     const deliveryNumber = note.delivery_number ?? "";
 
-    const sku = item.products?.sku ?? "-";
-    const name = item.products?.name ?? "-";
-    const unit = item.sale_unit_label ?? item.products?.unit ?? "-";
-    const qty = toNumber(item.quantity_delivered);
-    const lineTotal = toNumber(item.line_total);
+    const items = note.delivery_note_items ?? [];
+    for (const item of items) {
+      const sku = item.products?.sku ?? "-";
+      const name = item.products?.name ?? "-";
+      const unit = item.sale_unit_label ?? item.products?.unit ?? "-";
+      const qty = toNumber(item.quantity_delivered);
+      const lineTotal = toNumber(item.line_total);
 
-    // Cost calculation
-    const orderItemCost = item.order_items ? toNumber(item.order_items.cost_price) : null;
-    const unitCost = (orderItemCost !== null && orderItemCost > 0)
-      ? orderItemCost
-      : (item.product_sale_unit_id
-          ? (saleUnitCostById.get(item.product_sale_unit_id) ?? 0)
-          : (item.products?.id ? (productCostById.get(item.products.id) ?? 0) : 0));
-    const lineCost = unitCost * qty;
+      // Cost calculation
+      const orderItemCost = item.order_items ? toNumber(item.order_items.cost_price) : null;
+      const psu = item.product_sale_units;
+      const productCost = item.products ? toNumber(item.products.cost_price) : 0;
+      
+      const unitCost = (orderItemCost !== null && orderItemCost > 0)
+        ? orderItemCost
+        : (psu
+            ? (psu.cost_mode === "fixed" && psu.fixed_cost_price != null
+                ? toNumber(psu.fixed_cost_price)
+                : productCost * toNumber(psu.base_unit_quantity))
+            : productCost);
+      const lineCost = unitCost * qty;
 
-    // Aggregate globally
-    const globKey = `${sku}::${name}`;
-    const globVal = productGlobalMap.get(globKey) ?? { name, sales: 0, cost: 0 };
-    globVal.sales += lineTotal;
-    globVal.cost += lineCost;
-    productGlobalMap.set(globKey, globVal);
+      // Aggregate globally
+      const globKey = `${sku}::${name}`;
+      const globVal = productGlobalMap.get(globKey) ?? { name, sales: 0, cost: 0 };
+      globVal.sales += lineTotal;
+      globVal.cost += lineCost;
+      productGlobalMap.set(globKey, globVal);
 
-    // Aggregate store sales globally (for Top Store Insight)
-    const stVal = storeSalesMap.get(customerId) ?? { name: customerName, sales: 0 };
-    stVal.sales += lineTotal;
-    storeSalesMap.set(customerId, stVal);
+      // Aggregate store sales globally (for Top Store Insight)
+      const stVal = storeSalesMap.get(customerId) ?? { name: customerName, sales: 0 };
+      stVal.sales += lineTotal;
+      storeSalesMap.set(customerId, stVal);
 
-    // Aggregate inside delivery note group
-    let noteData = deliveryNoteMap.get(deliveryNoteId);
-    if (!noteData) {
-      noteData = {
-        customerId,
-        customerCode,
-        customerName,
-        deliveryDate,
-        deliveryNumber,
-        productMap: new Map(),
-      };
-      deliveryNoteMap.set(deliveryNoteId, noteData);
+      // Aggregate inside delivery note group
+      let noteData = deliveryNoteMap.get(deliveryNoteId);
+      if (!noteData) {
+        noteData = {
+          customerId,
+          customerCode,
+          customerName,
+          deliveryDate,
+          deliveryNumber,
+          productMap: new Map(),
+        };
+        deliveryNoteMap.set(deliveryNoteId, noteData);
+      }
+
+      const prodKey = `${sku}::${unit}`;
+      let prodData = noteData.productMap.get(prodKey);
+      if (!prodData) {
+        prodData = {
+          sku,
+          name,
+          unit,
+          quantity: 0,
+          salesAmount: 0,
+          totalCost: 0,
+        };
+        noteData.productMap.set(prodKey, prodData);
+      }
+
+      prodData.quantity += qty;
+      prodData.salesAmount += lineTotal;
+      prodData.totalCost += lineCost;
     }
-
-    const prodKey = `${sku}::${unit}`;
-    let prodData = noteData.productMap.get(prodKey);
-    if (!prodData) {
-      prodData = {
-        sku,
-        name,
-        unit,
-        quantity: 0,
-        salesAmount: 0,
-        totalCost: 0,
-      };
-      noteData.productMap.set(prodKey, prodData);
-    }
-
-    prodData.quantity += qty;
-    prodData.salesAmount += lineTotal;
-    prodData.totalCost += lineCost;
   }
 
-  // 5. Structure into detailed response types
+  // 3. Structure into detailed response types
   const stores: DetailedProfitStoreGroup[] = [];
   let totalSales = 0;
   let totalCost = 0;
@@ -433,7 +352,7 @@ export async function getDetailedProfitSalesReport(params: {
     return a.deliveryNumber.localeCompare(b.deliveryNumber);
   });
 
-  // 6. Calculate Insights
+  // 4. Calculate Insights
   // A. Top Performing Item (Sales)
   let topPerformingItem: { name: string; sales: number } | null = null;
   let bestSales = 0;
@@ -486,3 +405,4 @@ export async function getDetailedProfitSalesReport(params: {
     },
   };
 }
+

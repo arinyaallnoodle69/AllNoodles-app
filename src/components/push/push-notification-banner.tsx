@@ -204,9 +204,9 @@ export function PushNotificationBanner() {
 
   if (status === "install") {
     return (
-      <div className="mx-4 mt-3 rounded-2xl border border-[#082A63]/15 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm md:mx-6">
+      <div className="mx-4 mt-3 rounded-2xl border border-[#8E24AA]/15 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm md:mx-6">
         <div className="flex items-start gap-3">
-          <Download className="mt-0.5 h-5 w-5 shrink-0 text-[#082A63]" strokeWidth={2.2} />
+          <Download className="mt-0.5 h-5 w-5 shrink-0 text-[#8E24AA]" strokeWidth={2.2} />
           <div className="space-y-1">
             <p className="font-semibold text-slate-900">บน iPhone ต้องติดตั้งเว็บแอปลงหน้าจอก่อน</p>
             <p>เปิดผ่าน Safari แล้วกด Share &gt; Add to Home Screen จากนั้นค่อยกดเปิดแจ้งเตือน</p>
@@ -217,10 +217,10 @@ export function PushNotificationBanner() {
   }
 
   return (
-    <div className="mx-4 mt-3 rounded-2xl border border-[#082A63]/15 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm md:mx-6">
+    <div className="mx-4 mt-3 rounded-2xl border border-[#8E24AA]/15 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm md:mx-6">
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div className="flex items-start gap-3">
-          <Bell className="mt-0.5 h-5 w-5 shrink-0 text-[#082A63]" strokeWidth={2.2} />
+          <Bell className="mt-0.5 h-5 w-5 shrink-0 text-[#8E24AA]" strokeWidth={2.2} />
           <div className="space-y-1">
             <p className="font-semibold text-slate-900">เปิดแจ้งเตือนออเดอร์ใหม่บนมือถือเครื่องนี้</p>
             <p className="text-slate-600">
@@ -237,7 +237,7 @@ export function PushNotificationBanner() {
             type="button"
             onClick={handleEnablePush}
             disabled={isBusy}
-            className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#082A63] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#103B82] disabled:opacity-50"
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#8E24AA] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#8E24AA] disabled:opacity-50"
           >
             <Smartphone className="h-4 w-4" strokeWidth={2.2} />
             {isBusy ? "กำลังเปิด..." : "เปิดแจ้งเตือน"}

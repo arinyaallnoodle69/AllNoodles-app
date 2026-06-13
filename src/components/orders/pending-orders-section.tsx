@@ -220,7 +220,7 @@ function DeliveryModal({
         <div className="sticky top-0 z-10 flex items-start justify-between gap-3 rounded-t-3xl border-b border-slate-100 bg-white px-6 py-5">
           <div>
             <div className="flex items-center gap-2">
-              <Truck className="h-5 w-5 text-[#082A63]" strokeWidth={2.2} />
+              <Truck className="h-5 w-5 text-[#8E24AA]" strokeWidth={2.2} />
               <h2 className="text-lg font-bold text-slate-950">พิมพ์ใบส่งของ</h2>
             </div>
             {formData && (
@@ -304,7 +304,7 @@ function DeliveryModal({
                             }))
                           }
                           className={`w-24 rounded-xl border px-3 py-2 text-right text-base font-bold outline-none transition focus:ring-2 ${
-                            "border-slate-200 bg-white text-slate-950 focus:border-[#082A63] focus:ring-[#082A63]/10"
+                            "border-slate-200 bg-white text-slate-950 focus:border-[#8E24AA] focus:ring-[#8E24AA]/10"
                           }`}
                           placeholder="0"
                         />
@@ -335,7 +335,7 @@ function DeliveryModal({
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
                   placeholder="เช่น ส่งรอบเช้า"
-                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 outline-none transition focus:border-[#082A63] focus:ring-2 focus:ring-[#082A63]/10"
+                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 outline-none transition focus:border-[#8E24AA] focus:ring-2 focus:ring-[#8E24AA]/10"
                 />
               </div>
             </div>
@@ -384,7 +384,7 @@ function DeliveryModal({
             type="button"
             onClick={handleSubmit}
             disabled={!formData || !hasAnyQty || isPending}
-            className="inline-flex items-center gap-2 rounded-xl bg-[#082A63] px-5 py-2.5 text-sm font-bold text-white shadow-[0_14px_30px_rgba(8,42,99,0.16)] transition hover:bg-[#103B82] disabled:cursor-not-allowed disabled:opacity-40"
+            className="inline-flex items-center gap-2 rounded-xl bg-[#8E24AA] px-5 py-2.5 text-sm font-bold text-white shadow-[0_14px_30px_rgba(142, 36, 170,0.16)] transition hover:bg-[#8E24AA] disabled:cursor-not-allowed disabled:opacity-40"
           >
             {isPending ? (
               <>
@@ -573,7 +573,7 @@ function StoreDeliveryModal({
         <div className="sticky top-0 z-10 flex items-start justify-between gap-3 border-b border-slate-200/80 bg-white/95 px-6 py-5 backdrop-blur">
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-3">
-              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#D4AF37]/30 text-[#103B82]">
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#AA00FF]/30 text-[#8E24AA]">
                 <Truck className="h-5 w-5" strokeWidth={2.2} />
               </span>
               <div>
@@ -594,7 +594,7 @@ function StoreDeliveryModal({
               {vehicles.length === 0 ? (
                 <span className="text-sm text-slate-400">ยังไม่มีข้อมูลรถ</span>
               ) : defaultVehicleId && defaultVehicleName ? (
-                <span className="rounded-full border border-[#082A63]/15 bg-[#082A63]/20 px-3 py-1 text-sm font-semibold text-[#082A63]">
+                <span className="rounded-full border border-[#8E24AA]/15 bg-[#8E24AA]/20 px-3 py-1 text-sm font-semibold text-[#8E24AA]">
                   {defaultVehicleName}
                 </span>
               ) : (
@@ -672,7 +672,7 @@ function StoreDeliveryModal({
                         setQtys((prev) => ({ ...prev, [item.groupKey]: e.target.value }))
                       }
                       className={`w-20 rounded-xl border px-2 py-2 text-center text-sm font-bold outline-none transition focus:ring-2 ${
-                        "border-slate-200 bg-white text-slate-950 focus:border-[#082A63] focus:ring-[#082A63]/10"
+                        "border-slate-200 bg-white text-slate-950 focus:border-[#8E24AA] focus:ring-[#8E24AA]/10"
                       }`}
                       placeholder="0"
                     />
@@ -790,7 +790,7 @@ function StoreDeliveryModal({
                             setQtys((prev) => ({ ...prev, [item.groupKey]: e.target.value }))
                           }
                           className={`w-20 rounded-lg border px-2 py-1.5 text-center text-sm font-bold outline-none transition focus:ring-2 ${
-                            "border-slate-200 bg-white text-slate-950 focus:border-[#082A63] focus:ring-[#082A63]/10"
+                            "border-slate-200 bg-white text-slate-950 focus:border-[#8E24AA] focus:ring-[#8E24AA]/10"
                           }`}
                           placeholder="0"
                         />
@@ -841,7 +841,7 @@ function StoreDeliveryModal({
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder="เช่น ส่งรอบเช้า"
-              className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 outline-none transition focus:border-[#082A63] focus:ring-2 focus:ring-[#082A63]/10"
+              className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 outline-none transition focus:border-[#8E24AA] focus:ring-2 focus:ring-[#8E24AA]/10"
             />
           </div>
 
@@ -894,7 +894,7 @@ function StoreDeliveryModal({
               type="button"
               onClick={handleSharePdf}
               disabled={!hasAnyQty || isSubmitting}
-              className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#082A63]/20 bg-white px-5 py-2.5 text-sm font-semibold text-[#082A63] shadow-sm transition hover:bg-[#082A63]/10 disabled:cursor-not-allowed disabled:opacity-40"
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#8E24AA]/20 bg-white px-5 py-2.5 text-sm font-semibold text-[#8E24AA] shadow-sm transition hover:bg-[#8E24AA]/10 disabled:cursor-not-allowed disabled:opacity-40"
             >
               {isSharingPdf ? (
                 <>
@@ -912,7 +912,7 @@ function StoreDeliveryModal({
               type="button"
               onClick={handleSubmit}
               disabled={!hasAnyQty || isSubmitting}
-              className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#082A63] px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#103B82] disabled:cursor-not-allowed disabled:opacity-40"
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#8E24AA] px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#8E24AA] disabled:cursor-not-allowed disabled:opacity-40"
             >
               {isPending ? (
                 <>
@@ -1165,26 +1165,26 @@ function AllStoresDeliveryModal({
   }
 
   return (
-    <div className="fixed inset-0 z-[200] flex items-end justify-center bg-[#001038]/45 p-0 backdrop-blur-[3px] sm:items-center sm:p-5">
-      <div className="flex h-[100dvh] w-full flex-col overflow-hidden border-[#D0A040]/40 bg-white shadow-[0_28px_80px_rgba(0,16,56,0.22)] sm:max-h-[92vh] sm:max-w-6xl sm:border">
+    <div className="fixed inset-0 z-[200] flex items-end justify-center bg-[#8E24AA]/45 p-0 backdrop-blur-[3px] sm:items-center sm:p-5">
+      <div className="flex h-[100dvh] w-full flex-col overflow-hidden border-[#AA00FF]/40 bg-white shadow-[0_28px_80px_rgba(142, 36, 170,0.22)] sm:max-h-[92vh] sm:max-w-6xl sm:border">
         <div className="flex h-1 w-full shrink-0">
-          <div className="h-full flex-1 bg-[#002050]" />
-          <div className="h-full flex-1 bg-[#D0A040]" />
+          <div className="h-full flex-1 bg-[#8E24AA]" />
+          <div className="h-full flex-1 bg-[#AA00FF]" />
         </div>
-        <div className="border-b border-[#D0A040]/30 bg-white px-4 py-3 sm:px-6 sm:py-5">
+        <div className="border-b border-[#AA00FF]/30 bg-white px-4 py-3 sm:px-6 sm:py-5">
           <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-4">
             <div className="flex min-w-0 items-start gap-2.5 sm:gap-3">
-              <span className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center border border-[#D0A040]/45 bg-[#002050] text-white sm:h-12 sm:w-12">
+              <span className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center border border-[#AA00FF]/45 bg-[#8E24AA] text-white sm:h-12 sm:w-12">
                 <Printer className="h-4 w-4 sm:h-5 sm:w-5" strokeWidth={2.5} />
               </span>
               <div className="min-w-0">
-                <p className="mb-1 text-[10px] font-black uppercase tracking-[0.22em] text-[#D0A040]">
+                <p className="mb-1 text-[10px] font-black uppercase tracking-[0.22em] text-[#AA00FF]">
                   ALL NOODLES DELIVERY PRINT
                 </p>
-                <h2 className="text-lg font-black leading-none text-[#002050] sm:whitespace-nowrap sm:text-[2rem]">
+                <h2 className="text-lg font-black leading-none text-[#8E24AA] sm:whitespace-nowrap sm:text-[2rem]">
                   พิมพ์ใบส่งของ
                 </h2>
-                <p className="mt-1 text-[11px] font-black leading-tight text-[#002050] sm:text-sm">
+                <p className="mt-1 text-[11px] font-black leading-tight text-[#8E24AA] sm:text-sm">
                   วันที่ {formatDate(date)} · เลือกร้านก่อนพิมพ์
                 </p>
               </div>
@@ -1192,7 +1192,7 @@ function AllStoresDeliveryModal({
             <button
               type="button"
               onClick={onClose}
-              className="flex h-10 w-10 shrink-0 items-center justify-center self-start rounded-full border border-[#D0A040]/45 bg-white text-[#002050] transition hover:border-[#D0A040] hover:bg-[#D0A040]/10 active:scale-95"
+              className="flex h-10 w-10 shrink-0 items-center justify-center self-start rounded-full border border-[#AA00FF]/45 bg-white text-[#8E24AA] transition hover:border-[#AA00FF] hover:bg-[#AA00FF]/10 active:scale-95"
               aria-label="ปิด"
             >
               <X className="h-4 w-4" strokeWidth={2.4} />
@@ -1202,17 +1202,17 @@ function AllStoresDeliveryModal({
 
         <div className="min-h-0 flex-1 overflow-y-auto bg-[#F7F8FA] px-3 py-3 sm:px-6 sm:py-5">
           <div className="grid grid-cols-3 gap-2 sm:gap-4">
-            <div className="flex flex-col items-center justify-center border border-[#D0A040]/25 bg-white p-2 text-center sm:items-start sm:p-4 sm:text-left">
-              <p className="text-[9px] font-black uppercase tracking-[0.16em] text-[#002050] sm:text-xs">ร้านค้าในแท็บนี้</p>
-              <p className="text-lg font-black text-[#002050] sm:mt-1 sm:text-2xl">{currentTabTotalCount}</p>
+            <div className="flex flex-col items-center justify-center border border-[#AA00FF]/25 bg-white p-2 text-center sm:items-start sm:p-4 sm:text-left">
+              <p className="text-[9px] font-black uppercase tracking-[0.16em] text-[#8E24AA] sm:text-xs">ร้านค้าในแท็บนี้</p>
+              <p className="text-lg font-black text-[#8E24AA] sm:mt-1 sm:text-2xl">{currentTabTotalCount}</p>
             </div>
-            <div className="flex flex-col items-center justify-center border border-[#D0A040]/55 bg-[#D0A040]/10 p-2 text-center sm:items-start sm:p-4 sm:text-left">
-              <p className="text-[9px] font-black uppercase tracking-[0.16em] text-[#002050] sm:text-xs">เลือกพิมพ์ในแท็บนี้</p>
-              <p className="text-lg font-black text-[#D0A040] sm:mt-1 sm:text-2xl">{currentTabSelectedCount}</p>
+            <div className="flex flex-col items-center justify-center border border-[#AA00FF]/55 bg-[#AA00FF]/10 p-2 text-center sm:items-start sm:p-4 sm:text-left">
+              <p className="text-[9px] font-black uppercase tracking-[0.16em] text-[#8E24AA] sm:text-xs">เลือกพิมพ์ในแท็บนี้</p>
+              <p className="text-lg font-black text-[#AA00FF] sm:mt-1 sm:text-2xl">{currentTabSelectedCount}</p>
             </div>
-            <div className="flex flex-col items-center justify-center border border-[#D0A040]/25 bg-white p-2 text-center sm:items-start sm:p-4 sm:text-left">
-              <p className="text-[9px] font-black uppercase tracking-[0.16em] text-[#002050] sm:text-xs">รอบ / ยอดรวมกลุ่มนี้</p>
-              <p className="mt-0.5 text-[10px] font-black text-[#002050] sm:mt-1 sm:text-lg">
+            <div className="flex flex-col items-center justify-center border border-[#AA00FF]/25 bg-white p-2 text-center sm:items-start sm:p-4 sm:text-left">
+              <p className="text-[9px] font-black uppercase tracking-[0.16em] text-[#8E24AA] sm:text-xs">รอบ / ยอดรวมกลุ่มนี้</p>
+              <p className="mt-0.5 text-[10px] font-black text-[#8E24AA] sm:mt-1 sm:text-lg">
                 {selectedRounds} รอบ · {formatMoney(selectedTotal)}
               </p>
             </div>
@@ -1224,14 +1224,14 @@ function AllStoresDeliveryModal({
               onClick={() => setActiveTab("all")}
               className={`relative flex items-center gap-1.5 border px-4 py-2 text-xs font-black uppercase tracking-[0.08em] transition active:scale-95 sm:px-5 sm:py-2.5 sm:text-sm ${
                 activeTab === "all"
-                  ? "border-[#002050] bg-[#002050] text-white"
-                  : "border-[#D0A040]/30 bg-white text-[#002050] hover:border-[#D0A040] hover:bg-[#D0A040]/10"
+                  ? "border-[#8E24AA] bg-[#8E24AA] text-white"
+                  : "border-[#AA00FF]/30 bg-white text-[#8E24AA] hover:border-[#AA00FF] hover:bg-[#AA00FF]/10"
               }`}
             >
               <span>ทั้งหมด</span>
               <span
                 className={`inline-flex items-center justify-center rounded-full px-1.5 py-0.5 text-[10px] font-black ${
-                  activeTab === "all" ? "bg-white/20 text-white" : "bg-[#D0A040]/15 text-[#002050]"
+                  activeTab === "all" ? "bg-white/20 text-white" : "bg-[#AA00FF]/15 text-[#8E24AA]"
                 }`}
               >
                 {tabStats.all.selected > 0 ? `${tabStats.all.selected}/${tabStats.all.total}` : tabStats.all.total}
@@ -1248,8 +1248,8 @@ function AllStoresDeliveryModal({
                   onClick={() => setActiveTab(vehicle.id)}
                   className={`relative flex items-center gap-1.5 border px-4 py-2 text-xs font-black uppercase tracking-[0.08em] transition active:scale-95 sm:px-5 sm:py-2.5 sm:text-sm ${
                     isActive
-                      ? "border-[#002050] bg-[#002050] text-white"
-                      : "border-[#D0A040]/30 bg-white text-[#002050] hover:border-[#D0A040] hover:bg-[#D0A040]/10"
+                      ? "border-[#8E24AA] bg-[#8E24AA] text-white"
+                      : "border-[#AA00FF]/30 bg-white text-[#8E24AA] hover:border-[#AA00FF] hover:bg-[#AA00FF]/10"
                   }`}
                 >
                   <Truck className="h-3.5 w-3.5" strokeWidth={isActive ? 2.5 : 2} />
@@ -1259,8 +1259,8 @@ function AllStoresDeliveryModal({
                       isActive
                       ? "bg-white/20 text-white"
                       : stats.selected > 0
-                          ? "bg-[#D0A040]/20 text-[#002050]"
-                          : "bg-[#D0A040]/15 text-[#002050]"
+                          ? "bg-[#AA00FF]/20 text-[#8E24AA]"
+                          : "bg-[#AA00FF]/15 text-[#8E24AA]"
                     }`}
                   >
                     {stats.selected > 0 ? `${stats.selected}/${stats.total}` : stats.total}
@@ -1275,8 +1275,8 @@ function AllStoresDeliveryModal({
                 onClick={() => setActiveTab("unassigned")}
                 className={`relative flex items-center gap-1.5 border px-4 py-2 text-xs font-black uppercase tracking-[0.08em] transition active:scale-95 sm:px-5 sm:py-2.5 sm:text-sm ${
                   activeTab === "unassigned"
-                    ? "border-[#002050] bg-[#002050] text-white"
-                    : "border-[#D0A040]/30 bg-white text-[#002050] hover:border-[#D0A040] hover:bg-[#D0A040]/10"
+                    ? "border-[#8E24AA] bg-[#8E24AA] text-white"
+                    : "border-[#AA00FF]/30 bg-white text-[#8E24AA] hover:border-[#AA00FF] hover:bg-[#AA00FF]/10"
                 }`}
               >
                 <span>ยังไม่กำหนดรถ</span>
@@ -1285,8 +1285,8 @@ function AllStoresDeliveryModal({
                     activeTab === "unassigned"
                       ? "bg-white/20 text-white"
                       : tabStats.unassigned.selected > 0
-                        ? "bg-[#D0A040]/20 text-[#002050]"
-                        : "bg-[#D0A040]/15 text-[#002050]"
+                        ? "bg-[#AA00FF]/20 text-[#8E24AA]"
+                        : "bg-[#AA00FF]/15 text-[#8E24AA]"
                   }`}
                 >
                   {tabStats.unassigned.selected > 0 ? `${tabStats.unassigned.selected}/${tabStats.unassigned.total}` : tabStats.unassigned.total}
@@ -1295,30 +1295,30 @@ function AllStoresDeliveryModal({
             )}
           </div>
 
-          <div className="mt-3 border border-[#D0A040]/30 bg-white p-2 sm:mt-4 sm:p-3">
+          <div className="mt-3 border border-[#AA00FF]/30 bg-white p-2 sm:mt-4 sm:p-3">
             <div className="flex flex-col gap-2 md:flex-row md:items-center">
               <label className="relative block flex-1">
-                <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#002050] sm:left-4 sm:h-4 sm:w-4" strokeWidth={2.2} />
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#8E24AA] sm:left-4 sm:h-4 sm:w-4" strokeWidth={2.2} />
                 <input
                   type="search"
                   value={query}
                   onChange={(event) => setQuery(event.target.value)}
                   placeholder="ค้นหาร้านค้า..."
-                  className="w-full border border-[#D0A040]/30 bg-white py-2 pl-9 pr-3 text-xs font-black text-[#002050] outline-none transition placeholder:text-[#002050] focus:border-[#D0A040] focus:ring-2 focus:ring-[#D0A040]/20 sm:py-3 sm:pl-11 sm:pr-4 sm:text-sm"
+                  className="w-full border border-[#AA00FF]/30 bg-white py-2 pl-9 pr-3 text-xs font-black text-[#8E24AA] outline-none transition placeholder:text-[#8E24AA] focus:border-[#AA00FF] focus:ring-2 focus:ring-[#AA00FF]/20 sm:py-3 sm:pl-11 sm:pr-4 sm:text-sm"
                 />
               </label>
               <div className="grid grid-cols-2 gap-2 md:flex md:shrink-0">
                 <button
                   type="button"
                   onClick={selectAllStores}
-                  className="bg-[#002050] px-3 py-2 text-[11px] font-black uppercase tracking-[0.08em] text-white transition hover:bg-[#002858] sm:px-4 sm:py-3 sm:text-sm"
+                  className="bg-[#8E24AA] px-3 py-2 text-[11px] font-black uppercase tracking-[0.08em] text-white transition hover:bg-[#8E24AA] sm:px-4 sm:py-3 sm:text-sm"
                 >
                   เลือกทั้งหมดในแท็บ
                 </button>
                 <button
                   type="button"
                   onClick={clearSelection}
-                  className="border border-[#D0A040]/45 bg-white px-3 py-2 text-[11px] font-black uppercase tracking-[0.08em] text-[#002050] transition hover:border-[#D0A040] hover:bg-[#D0A040]/10 sm:px-4 sm:py-3 sm:text-sm"
+                  className="border border-[#AA00FF]/45 bg-white px-3 py-2 text-[11px] font-black uppercase tracking-[0.08em] text-[#8E24AA] transition hover:border-[#AA00FF] hover:bg-[#AA00FF]/10 sm:px-4 sm:py-3 sm:text-sm"
                 >
                   ล้างที่เลือกในแท็บ
                 </button>
@@ -1326,8 +1326,8 @@ function AllStoresDeliveryModal({
             </div>
           </div>
 
-          <div className="mt-4 overflow-hidden border border-[#D0A040]/30 bg-white">
-            <div className="hidden w-full grid-cols-[82px_88px_minmax(120px,1fr)_122px_108px_42px_116px_34px] gap-x-2 border-b border-[#D0A040]/25 bg-[#002050] px-3 py-3 text-xs font-black uppercase tracking-[0.08em] text-white md:grid lg:grid-cols-[96px_104px_minmax(150px,1fr)_136px_124px_48px_132px_38px] lg:gap-x-3 lg:px-4 xl:grid-cols-[104px_112px_minmax(190px,1fr)_148px_136px_56px_144px_44px]">
+          <div className="mt-4 overflow-hidden border border-[#AA00FF]/30 bg-white">
+            <div className="hidden w-full grid-cols-[82px_88px_minmax(120px,1fr)_122px_108px_42px_116px_34px] gap-x-2 border-b border-[#AA00FF]/25 bg-[#8E24AA] px-3 py-3 text-xs font-black uppercase tracking-[0.08em] text-white md:grid lg:grid-cols-[96px_104px_minmax(150px,1fr)_136px_124px_48px_132px_38px] lg:gap-x-3 lg:px-4 xl:grid-cols-[104px_112px_minmax(190px,1fr)_148px_136px_56px_144px_44px]">
               <span>วันที่</span>
               <span>รหัสร้านค้า</span>
               <span>ชื่อร้านค้า</span>
@@ -1337,53 +1337,53 @@ function AllStoresDeliveryModal({
               <span className="text-right">ยอดรวม</span>
               <span className="text-center">เลือก</span>
             </div>
-            <div className="divide-y divide-[#D0A040]/20">
+            <div className="divide-y divide-[#AA00FF]/20">
               {visibleStores.map((store) => {
                 const compositeKey = `${store.customerId}_${store.orderDate}`;
                 const checked = printSelectedIds.has(compositeKey);
                 return (
                   <label
                     key={compositeKey}
-                    className="grid cursor-pointer grid-cols-[minmax(0,1fr)_auto] gap-3 px-4 py-3 transition hover:bg-[#D0A040]/10 md:grid-cols-[82px_88px_minmax(120px,1fr)_122px_108px_42px_116px_34px] md:items-center md:gap-x-2 md:px-3 lg:grid-cols-[96px_104px_minmax(150px,1fr)_136px_124px_48px_132px_38px] lg:gap-x-3 lg:px-4 xl:grid-cols-[104px_112px_minmax(190px,1fr)_148px_136px_56px_144px_44px]"
+                    className="grid cursor-pointer grid-cols-[minmax(0,1fr)_auto] gap-3 px-4 py-3 transition hover:bg-[#AA00FF]/10 md:grid-cols-[82px_88px_minmax(120px,1fr)_122px_108px_42px_116px_34px] md:items-center md:gap-x-2 md:px-3 lg:grid-cols-[96px_104px_minmax(150px,1fr)_136px_124px_48px_132px_38px] lg:gap-x-3 lg:px-4 xl:grid-cols-[104px_112px_minmax(190px,1fr)_148px_136px_56px_144px_44px]"
                   >
-                    <span className="hidden text-sm font-black text-[#002050] md:block">
+                    <span className="hidden text-sm font-black text-[#8E24AA] md:block">
                       {formatDate(store.orderDate)}
                     </span>
-                    <span className="hidden min-w-0 pr-3 font-mono text-sm font-black text-[#002050] md:block">
+                    <span className="hidden min-w-0 pr-3 font-mono text-sm font-black text-[#8E24AA] md:block">
                       {store.customerCode}
                     </span>
                     <span className="min-w-0">
-                      <span className="block text-base font-black leading-snug text-[#002050]">
+                      <span className="block text-base font-black leading-snug text-[#8E24AA]">
                         <span className="md:hidden">{store.customerCode} - </span>
                         {store.customerName}
                       </span>
                       <span className="mt-1 flex flex-wrap items-center gap-1.5 md:hidden">
                         {store.vehicleName ? (
-                          <span className="inline-flex items-center gap-1 border border-[#D0A040]/30 bg-[#D0A040]/10 px-1.5 py-0.5 text-[10px] font-black uppercase text-[#002050]">
+                          <span className="inline-flex items-center gap-1 border border-[#AA00FF]/30 bg-[#AA00FF]/10 px-1.5 py-0.5 text-[10px] font-black uppercase text-[#8E24AA]">
                             <Truck className="h-2.5 w-2.5" strokeWidth={2.5} />
                             {store.vehicleName}
                           </span>
                         ) : null}
                         {endDate ? (
-                          <span className="text-[10px] font-black uppercase text-[#002050]">
+                          <span className="text-[10px] font-black uppercase text-[#8E24AA]">
                             วันที่จัดส่ง: {formatDate(store.orderDate)}
                           </span>
                         ) : null}
                       </span>
-                      <span className="mt-1 block text-xs font-black text-[#002050] md:hidden">
+                      <span className="mt-1 block text-xs font-black text-[#8E24AA] md:hidden">
                         {store.orderRounds} รอบ · {formatMoney(store.totalAmount)} บาท
                       </span>
                     </span>
-                    <span className="hidden min-w-0 pr-3 font-mono text-xs font-black text-[#002050] md:block lg:text-sm">
+                    <span className="hidden min-w-0 pr-3 font-mono text-xs font-black text-[#8E24AA] md:block lg:text-sm">
                       {store.deliveryNumbers?.length ? store.deliveryNumbers.join(", ") : "-"}
                     </span>
-                    <span className="hidden min-w-0 pr-3 text-sm font-black text-[#002050] md:block">
+                    <span className="hidden min-w-0 pr-3 text-sm font-black text-[#8E24AA] md:block">
                       {store.vehicleName ?? "-"}
                     </span>
-                    <span className="hidden text-center text-sm font-black text-[#002050] md:block">
+                    <span className="hidden text-center text-sm font-black text-[#8E24AA] md:block">
                       {store.orderRounds}
                     </span>
-                    <span className="hidden text-right text-sm font-black text-[#002050] md:block">
+                    <span className="hidden text-right text-sm font-black text-[#8E24AA] md:block">
                       {formatMoney(store.totalAmount)} บาท
                     </span>
                     <span className="flex items-center justify-end md:justify-center">
@@ -1391,14 +1391,14 @@ function AllStoresDeliveryModal({
                         type="checkbox"
                         checked={checked}
                         onChange={() => togglePrintStore(compositeKey)}
-                        className="h-5 w-5 rounded border-[#D0A040]/55 text-[#002050] focus:ring-[#D0A040]"
+                        className="h-5 w-5 rounded border-[#AA00FF]/55 text-[#8E24AA] focus:ring-[#AA00FF]"
                       />
                     </span>
                   </label>
                 );
               })}
               {visibleStores.length === 0 ? (
-                <div className="px-4 py-10 text-center text-sm font-black text-[#002050]">
+                <div className="px-4 py-10 text-center text-sm font-black text-[#8E24AA]">
                   ไม่พบร้านค้าที่ตรงกับคำค้นหา
                 </div>
               ) : null}
@@ -1406,9 +1406,9 @@ function AllStoresDeliveryModal({
           </div>
         </div>
 
-        <div className="border-t border-[#D0A040]/30 bg-white px-4 py-4 sm:px-6">
+        <div className="border-t border-[#AA00FF]/30 bg-white px-4 py-4 sm:px-6">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-sm font-black text-[#002050]">
+            <p className="text-sm font-black text-[#8E24AA]">
               เลือกแล้ว {currentTabSelectedCount} ร้าน จากทั้งหมด {currentTabTotalCount} ร้านในกลุ่มนี้ (รวมเลือกทั้งหมด {printSelectedIds.size} ร้าน)
             </p>
             <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-row">
@@ -1416,7 +1416,7 @@ function AllStoresDeliveryModal({
                 type="button"
                 onClick={onClose}
                 disabled={isPrintingSelected || isSharingSelected}
-                className="hidden border border-[#D0A040]/45 bg-white px-5 py-3 text-sm font-black uppercase tracking-[0.08em] text-[#002050] transition hover:border-[#D0A040] hover:bg-[#D0A040]/10 sm:inline-flex sm:min-w-28 sm:items-center sm:justify-center"
+                className="hidden border border-[#AA00FF]/45 bg-white px-5 py-3 text-sm font-black uppercase tracking-[0.08em] text-[#8E24AA] transition hover:border-[#AA00FF] hover:bg-[#AA00FF]/10 sm:inline-flex sm:min-w-28 sm:items-center sm:justify-center"
               >
                 ปิด
               </button>
@@ -1424,7 +1424,7 @@ function AllStoresDeliveryModal({
                 type="button"
                 onClick={handleShareSelected}
                 disabled={currentTabSelectedCount === 0 || isPrintingSelected || isSharingSelected}
-                className="inline-flex min-w-0 items-center justify-center gap-1.5 whitespace-nowrap border border-[#D0A040]/55 bg-white px-2 py-3 text-[13px] font-black uppercase tracking-normal text-[#002050] transition hover:border-[#D0A040] hover:bg-[#D0A040]/10 disabled:cursor-not-allowed disabled:opacity-40 min-[390px]:px-3 min-[390px]:text-sm sm:min-w-44 sm:gap-2 sm:px-5 sm:text-base sm:tracking-[0.08em]"
+                className="inline-flex min-w-0 items-center justify-center gap-1.5 whitespace-nowrap border border-[#AA00FF]/55 bg-white px-2 py-3 text-[13px] font-black uppercase tracking-normal text-[#8E24AA] transition hover:border-[#AA00FF] hover:bg-[#AA00FF]/10 disabled:cursor-not-allowed disabled:opacity-40 min-[390px]:px-3 min-[390px]:text-sm sm:min-w-44 sm:gap-2 sm:px-5 sm:text-base sm:tracking-[0.08em]"
               >
                 {isSharingSelected ? (
                   <>
@@ -1442,7 +1442,7 @@ function AllStoresDeliveryModal({
                 type="button"
                 onClick={handlePrintSelected}
                 disabled={currentTabSelectedCount === 0 || isPrintingSelected || isSharingSelected}
-                className="inline-flex min-w-0 items-center justify-center gap-1.5 whitespace-nowrap bg-[#002050] px-2 py-3 text-[13px] font-black uppercase tracking-normal text-white transition hover:bg-[#002858] disabled:cursor-not-allowed disabled:opacity-40 min-[390px]:px-3 min-[390px]:text-sm sm:min-w-44 sm:gap-2 sm:px-5 sm:text-base sm:tracking-[0.08em]"
+                className="inline-flex min-w-0 items-center justify-center gap-1.5 whitespace-nowrap bg-[#8E24AA] px-2 py-3 text-[13px] font-black uppercase tracking-normal text-white transition hover:bg-[#8E24AA] disabled:cursor-not-allowed disabled:opacity-40 min-[390px]:px-3 min-[390px]:text-sm sm:min-w-44 sm:gap-2 sm:px-5 sm:text-base sm:tracking-[0.08em]"
               >
                 {isPrintingSelected ? (
                   <>
@@ -1488,7 +1488,7 @@ export function AllStoresDeliveryButton({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border border-[#082A63]/20 bg-[#082A63] px-3 py-1.5 text-[13px] font-bold text-white shadow-sm transition hover:bg-[#103B82] hover:shadow-lg active:scale-[0.98] disabled:opacity-50 print:hidden md:gap-2 md:px-6 md:py-2.5 md:text-sm"
+        className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border border-[#8E24AA]/20 bg-[#8E24AA] px-3 py-1.5 text-[13px] font-bold text-white shadow-sm transition hover:bg-[#8E24AA] hover:shadow-lg active:scale-[0.98] disabled:opacity-50 print:hidden md:gap-2 md:px-6 md:py-2.5 md:text-sm"
       >
         <Printer className="h-3.5 w-3.5 md:h-4.5 md:w-4.5" strokeWidth={2.5} />
         พิมพ์ใบส่งของทุกร้านค้า
@@ -1533,7 +1533,7 @@ export function StoreDeliveryButton({
         type="button"
         onClick={handleOpen}
         disabled={loading}
-        className="hidden sm:inline-flex shrink-0 items-center gap-1.5 rounded-xl bg-[#082A63] px-3.5 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-[#103B82] disabled:opacity-60"
+        className="hidden sm:inline-flex shrink-0 items-center gap-1.5 rounded-xl bg-[#8E24AA] px-3.5 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-[#8E24AA] disabled:opacity-60"
       >
         {loading ? (
           <Loader2 className="h-3.5 w-3.5 animate-spin" strokeWidth={2} />
@@ -1573,7 +1573,7 @@ export function CreateDeliveryButton({ orderId }: { orderId: string }) {
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="inline-flex min-h-9 w-full items-center justify-center gap-1.5 rounded-lg bg-[#082A63] px-3 py-2 text-xs font-semibold text-white transition hover:bg-[#103B82] active:scale-[0.98]"
+          className="inline-flex min-h-9 w-full items-center justify-center gap-1.5 rounded-lg bg-[#8E24AA] px-3 py-2 text-xs font-semibold text-white transition hover:bg-[#8E24AA] active:scale-[0.98]"
         >
           <Truck className="h-3.5 w-3.5" strokeWidth={2.4} />
           พิมพ์ใบส่งของ
@@ -1649,7 +1649,7 @@ export function PendingOrdersSection({ orders }: { orders: PendingOrder[] }) {
                   <button
                     type="button"
                     onClick={() => setActiveOrderId(order.id)}
-                    className="inline-flex items-center gap-1.5 rounded-xl bg-[#082A63] px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-[#103B82]"
+                    className="inline-flex items-center gap-1.5 rounded-xl bg-[#8E24AA] px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-[#8E24AA]"
                   >
                     <Truck className="h-3.5 w-3.5" strokeWidth={2.2} />
                     <span className="hidden xs:inline">พิมพ์ใบส่งของ</span>

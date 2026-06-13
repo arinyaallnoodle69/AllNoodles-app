@@ -214,7 +214,7 @@ export function CustomerAddressFields({
       <input type="hidden" name="addressPayload" value={addressPayload} />
 
       <div className="flex items-center gap-2 border-b border-slate-100 px-6 py-4">
-        <MapPin className="h-5 w-5 text-[#082A63]" strokeWidth={2.2} />
+        <MapPin className="h-5 w-5 text-[#8E24AA]" strokeWidth={2.2} />
         <h2 className="text-xl font-semibold text-slate-900">รายละเอียดที่อยู่</h2>
       </div>
 

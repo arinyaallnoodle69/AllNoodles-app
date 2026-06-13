@@ -120,7 +120,7 @@ const MobileStockCard = memo(({
                 {product.isActive ? "พร้อมขาย" : "ปิดใช้งาน"}
               </span>
             </div>
-            <span className="mt-1 inline-flex w-fit items-center gap-1 rounded-full bg-[#FAF7F2] px-2.5 py-1 text-[11px] font-black text-[#082A63]">
+            <span className="mt-1 inline-flex w-fit items-center gap-1 rounded-full bg-[#F3E5F5] px-2.5 py-1 text-[11px] font-black text-[#8E24AA]">
               <Warehouse className="h-3.5 w-3.5" strokeWidth={2.5} />
               {selectedWarehouseName}
             </span>
@@ -137,7 +137,7 @@ const MobileStockCard = memo(({
             <p className="text-[10px] font-black uppercase tracking-widest">คงเหลือปัจจุบัน</p>
           </div>
           <div className="flex items-baseline gap-1.5">
-            <span className={`text-[1.5rem] font-black tracking-tight ${displayStock.onHandQuantity < 0 ? 'text-rose-600' : 'text-[#082A63]'}`}>
+            <span className={`text-[1.5rem] font-black tracking-tight ${displayStock.onHandQuantity < 0 ? 'text-rose-600' : 'text-[#8E24AA]'}`}>
               {formatQuantity(displayStock.onHandQuantity)}
             </span>
             <span className="text-[0.9rem] font-bold text-slate-500">{product.unit}</span>
@@ -151,7 +151,7 @@ const MobileStockCard = memo(({
             <p className="text-[10px] font-black uppercase tracking-widest">ต้นทุน / {defaultUnit?.label ?? product.unit}</p>
           </div>
           <div className="flex items-baseline gap-1">
-            <span className="text-[1.5rem] font-black tracking-tight text-[#082A63]">
+            <span className="text-[1.5rem] font-black tracking-tight text-[#8E24AA]">
               ฿{formatMoney(defaultUnit?.effectiveCostPrice ?? 0)}
             </span>
           </div>
@@ -175,7 +175,7 @@ const MobileStockCard = memo(({
           <button
             type="button"
             onClick={() => onAdjust(product.id)}
-            className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#082A63] px-4 text-xs font-black text-white shadow-lg shadow-[#082A63]/20 transition active:scale-95"
+            className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#8E24AA] px-4 text-xs font-black text-white shadow-lg shadow-[#8E24AA]/20 transition active:scale-95"
           >
             <ClipboardEdit className="h-4 w-4" strokeWidth={2.5} />
             ปรับยอด
@@ -221,10 +221,10 @@ const DesktopStockRow = memo(({
             )}
           </div>
           <div className="min-w-0">
-            <p className="line-clamp-2 text-[15px] font-black leading-tight text-slate-900 group-hover:text-[#082A63]">
+            <p className="line-clamp-2 text-[15px] font-black leading-tight text-slate-900 group-hover:text-[#8E24AA]">
               {product.name}
             </p>
-            <p className="mt-1 inline-flex items-center gap-1 rounded-full bg-[#FAF7F2] px-2 py-0.5 text-[10px] font-black text-[#082A63]">
+            <p className="mt-1 inline-flex items-center gap-1 rounded-full bg-[#F3E5F5] px-2 py-0.5 text-[10px] font-black text-[#8E24AA]">
               <Warehouse className="h-3 w-3" strokeWidth={2.4} />
               {selectedWarehouseName}
             </p>
@@ -255,13 +255,13 @@ const DesktopStockRow = memo(({
       </td>
       <td className="whitespace-nowrap border-b border-r border-slate-300 px-5 py-4 text-center align-middle">
         <div className="flex flex-col items-center gap-1">
-          <span className={`text-base font-bold ${displayStock.onHandQuantity < 0 ? 'text-rose-700' : 'text-[#082A63]'}`}>
+          <span className={`text-base font-bold ${displayStock.onHandQuantity < 0 ? 'text-rose-700' : 'text-[#8E24AA]'}`}>
             {formatQuantity(displayStock.onHandQuantity)}
           </span>
           <button
             type="button"
             onClick={() => onAdjust(product.id)}
-            className="p-1 text-[#103B82] hover:text-[#082A63] transition-colors"
+            className="p-1 text-[#8E24AA] hover:text-[#8E24AA] transition-colors"
             title="ปรับปรุงยอด"
           >
             <ClipboardEdit className="h-4 w-4" strokeWidth={2.5} />
@@ -382,11 +382,11 @@ export function StockList({ products, suppliers = [], warehouses, baseHref = "/s
 
   return (
     <>
-      <div className="sticky top-0 z-40 -mx-3 mb-4 hidden border-b border-[#E8DCC7] bg-white/95 px-4 py-3 shadow-[0_10px_30px_rgba(31,42,68,0.08)] backdrop-blur lg:block">
+      <div className="sticky top-0 z-40 -mx-3 mb-4 hidden border-b border-[#E1BEE7] bg-white/95 px-4 py-3 shadow-[0_10px_30px_rgba(31,42,68,0.08)] backdrop-blur lg:block">
         <div className="flex flex-col gap-3">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <div className="min-w-0">
-              <p className="text-lg font-black text-[#082A63]">จัดการสต็อก</p>
+              <p className="text-lg font-black text-[#8E24AA]">จัดการสต็อก</p>
               <p className="text-xs font-semibold text-[#667085]">
                 แสดง {filteredProducts.length.toLocaleString("th-TH")} จาก {products.length.toLocaleString("th-TH")} รายการ
               </p>
@@ -396,7 +396,7 @@ export function StockList({ products, suppliers = [], warehouses, baseHref = "/s
               <button
                 type="button"
                 onClick={handleReceive}
-                className="inline-flex h-12 items-center justify-center gap-2 rounded-lg bg-[#082A63] px-4 text-sm font-bold text-white shadow-[0_12px_26px_rgba(8,42,99,0.22)] transition hover:bg-[#103B82] active:scale-[0.98]"
+                className="inline-flex h-12 items-center justify-center gap-2 rounded-lg bg-[#8E24AA] px-4 text-sm font-bold text-white shadow-[0_12px_26px_rgba(142, 36, 170,0.22)] transition hover:bg-[#8E24AA] active:scale-[0.98]"
               >
                 <Plus className="h-4.5 w-4.5" strokeWidth={2.4} />
                 รับสินค้าเข้า
@@ -404,7 +404,7 @@ export function StockList({ products, suppliers = [], warehouses, baseHref = "/s
               <button
                 type="button"
                 onClick={() => handleAdjust("")}
-                className="inline-flex h-12 items-center justify-center gap-2 rounded-lg border border-[#082A63]/20 bg-white px-4 text-sm font-bold text-[#082A63] transition hover:border-[#082A63] hover:bg-[#082A63]/[0.04] active:scale-[0.98]"
+                className="inline-flex h-12 items-center justify-center gap-2 rounded-lg border border-[#8E24AA]/20 bg-white px-4 text-sm font-bold text-[#8E24AA] transition hover:border-[#8E24AA] hover:bg-[#8E24AA]/[0.04] active:scale-[0.98]"
               >
                 <ClipboardEdit className="h-4.5 w-4.5" strokeWidth={2.2} />
                 ปรับปรุงสต็อก
@@ -420,7 +420,7 @@ export function StockList({ products, suppliers = [], warehouses, baseHref = "/s
                 value={searchQuery}
                 onChange={(event) => setSearchQuery(event.target.value)}
                 placeholder="ค้นหาสินค้า หรือรหัสสินค้า"
-                className="h-12 w-full rounded-lg border border-[#D7DEE8] bg-white pl-11 pr-4 text-sm font-semibold text-[#1F2A44] outline-none transition placeholder:text-[#667085] focus:border-[#082A63] focus:ring-2 focus:ring-[#082A63]/15"
+                className="h-12 w-full rounded-lg border border-[#D7DEE8] bg-white pl-11 pr-4 text-sm font-semibold text-[#8E24AA] outline-none transition placeholder:text-[#667085] focus:border-[#8E24AA] focus:ring-2 focus:ring-[#8E24AA]/15"
               />
             </label>
 
@@ -429,7 +429,7 @@ export function StockList({ products, suppliers = [], warehouses, baseHref = "/s
               <select
                 value={selectedWarehouseId}
                 onChange={(event) => handleWarehouseChange(event.target.value)}
-                className="h-12 w-full rounded-lg border border-[#D7DEE8] bg-white px-4 text-sm font-bold text-[#1F2A44] outline-none focus:border-[#082A63] focus:ring-2 focus:ring-[#082A63]/15"
+                className="h-12 w-full rounded-lg border border-[#D7DEE8] bg-white px-4 text-sm font-bold text-[#8E24AA] outline-none focus:border-[#8E24AA] focus:ring-2 focus:ring-[#8E24AA]/15"
               >
                 {warehouseOptions.map((warehouse) => (
                   <option key={warehouse.id} value={warehouse.id}>
@@ -453,7 +453,7 @@ export function StockList({ products, suppliers = [], warehouses, baseHref = "/s
               value={searchQuery}
               onChange={(event) => setSearchQuery(event.target.value)}
               placeholder="ค้นหาสินค้า หรือรหัสสินค้า"
-              className="h-12 w-full rounded-lg border border-[#D7DEE8] bg-white pl-11 pr-4 text-sm font-semibold text-[#1F2A44] outline-none transition placeholder:text-[#667085] focus:border-[#082A63] focus:ring-2 focus:ring-[#082A63]/15"
+              className="h-12 w-full rounded-lg border border-[#D7DEE8] bg-white pl-11 pr-4 text-sm font-semibold text-[#8E24AA] outline-none transition placeholder:text-[#667085] focus:border-[#8E24AA] focus:ring-2 focus:ring-[#8E24AA]/15"
             />
           </label>
 
@@ -464,7 +464,7 @@ export function StockList({ products, suppliers = [], warehouses, baseHref = "/s
             <select
               value={selectedWarehouseId}
               onChange={(event) => handleWarehouseChange(event.target.value)}
-              className="h-12 w-full rounded-lg border border-[#D7DEE8] bg-white px-4 text-sm font-bold text-[#1F2A44] outline-none focus:border-[#082A63] focus:ring-2 focus:ring-[#082A63]/15"
+              className="h-12 w-full rounded-lg border border-[#D7DEE8] bg-white px-4 text-sm font-bold text-[#8E24AA] outline-none focus:border-[#8E24AA] focus:ring-2 focus:ring-[#8E24AA]/15"
             >
               {warehouseOptions.map((warehouse) => (
                 <option key={warehouse.id} value={warehouse.id}>
@@ -477,7 +477,7 @@ export function StockList({ products, suppliers = [], warehouses, baseHref = "/s
           <button
             type="button"
             onClick={() => handleAdjust("")}
-            className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-lg border border-[#082A63]/20 bg-white px-4 text-sm font-bold text-[#082A63] transition active:scale-[0.98]"
+            className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-lg border border-[#8E24AA]/20 bg-white px-4 text-sm font-bold text-[#8E24AA] transition active:scale-[0.98]"
           >
             <ClipboardEdit className="h-4.5 w-4.5" strokeWidth={2.2} />
             ปรับยอด
@@ -489,7 +489,7 @@ export function StockList({ products, suppliers = [], warehouses, baseHref = "/s
         type="button"
         onClick={handleReceive}
         aria-label="รับสินค้าเข้า"
-        className="fixed bottom-[calc(4.75rem+env(safe-area-inset-bottom)+12px)] left-4 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-[#082A63] text-white shadow-[0_14px_32px_rgba(8,42,99,0.32)] transition active:scale-95 lg:hidden"
+        className="fixed bottom-[calc(4.75rem+env(safe-area-inset-bottom)+12px)] left-4 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-[#8E24AA] text-white shadow-[0_14px_32px_rgba(142, 36, 170,0.32)] transition active:scale-95 lg:hidden"
       >
         <PackagePlus className="h-7 w-7" strokeWidth={2.4} />
       </button>
@@ -519,7 +519,7 @@ export function StockList({ products, suppliers = [], warehouses, baseHref = "/s
               <div className="hidden overflow-x-auto lg:block">
                 <table className="min-w-full border-collapse border border-slate-300 text-sm">
                   <thead>
-                    <tr style={{ backgroundColor: "#082A63" }}>
+                    <tr style={{ backgroundColor: "#8E24AA" }}>
                       {[
                         "รหัสสินค้า",
                         "ชื่อสินค้า",
@@ -623,7 +623,7 @@ export function StockMobileReceiveButton({ baseHref }: { baseHref: string }) {
     <Link
       href={`${baseHref}?receive=1`}
       aria-label="รับสินค้าเข้า"
-      className="fixed bottom-[calc(4.75rem+env(safe-area-inset-bottom)+12px)] left-4 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-[#082A63] text-white shadow-[0_14px_32px_rgba(8,42,99,0.32)] transition hover:bg-[#103B82] active:scale-95 lg:hidden"
+      className="fixed bottom-[calc(4.75rem+env(safe-area-inset-bottom)+12px)] left-4 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-[#8E24AA] text-white shadow-[0_14px_32px_rgba(142, 36, 170,0.32)] transition hover:bg-[#8E24AA] active:scale-95 lg:hidden"
     >
       <PackagePlus className="h-7 w-7" strokeWidth={2.4} />
     </Link>

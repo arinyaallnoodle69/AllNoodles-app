@@ -33,7 +33,7 @@ export default async function DeliveryNotePreviewPage({ searchParams }: Props) {
     return (
       <div className="p-10 text-center">
         <p className="text-lg font-bold text-slate-900">ไม่มีข้อมูลสำหรับพิมพ์</p>
-        <a href="/orders/incoming" className="mt-4 inline-block font-bold text-[#082A63]">กลับหน้าออเดอร์</a>
+        <a href="/orders/incoming" className="mt-4 inline-block font-bold text-[#8E24AA]">กลับหน้าออเดอร์</a>
       </div>
     );
   }
@@ -56,7 +56,7 @@ export default async function DeliveryNotePreviewPage({ searchParams }: Props) {
         <div className="p-10 text-center">
           <p className="text-lg font-bold text-slate-900">ไม่พบใบส่งของสำหรับร้านที่เลือกในวันที่ {date}</p>
           <p className="mt-2 text-sm text-slate-500">โปรดยืนยันออเดอร์เพื่อสร้างใบส่งของก่อนพิมพ์</p>
-          <a href="/orders/incoming" className="mt-4 inline-block font-bold text-[#082A63]">กลับหน้าออเดอร์</a>
+          <a href="/orders/incoming" className="mt-4 inline-block font-bold text-[#8E24AA]">กลับหน้าออเดอร์</a>
         </div>
       );
     }
@@ -76,7 +76,7 @@ export default async function DeliveryNotePreviewPage({ searchParams }: Props) {
     return (
       <div className="p-10 text-center">
         <p className="text-lg font-bold text-slate-900">ไม่สามารถโหลดข้อมูลการพิมพ์ได้</p>
-        <a href="/orders/incoming" className="mt-4 inline-block font-bold text-[#082A63]">กลับหน้าออเดอร์</a>
+        <a href="/orders/incoming" className="mt-4 inline-block font-bold text-[#8E24AA]">กลับหน้าออเดอร์</a>
       </div>
     );
   }
@@ -84,7 +84,7 @@ export default async function DeliveryNotePreviewPage({ searchParams }: Props) {
   return (
     <>
       <div className="no-print sticky top-0 z-50 flex items-center gap-3 border-b bg-white p-4">
-        <div className="rounded-xl bg-[#082A63]/20 px-4 py-2 text-sm font-bold text-[#082A63]">
+        <div className="rounded-xl bg-[#8E24AA]/20 px-4 py-2 text-sm font-bold text-[#8E24AA]">
           พิมพ์ใบส่งของ - {validPrintData.length} ร้านค้า
         </div>
         <PrintButton />

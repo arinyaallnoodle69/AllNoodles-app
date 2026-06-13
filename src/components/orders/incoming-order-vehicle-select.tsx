@@ -109,7 +109,7 @@ export function IncomingOrderVehicleSelect({
           disabled={pending}
           className={[
             "w-full appearance-none rounded-lg border bg-white py-2 pl-9 pr-8 text-sm font-bold outline-none transition",
-            "focus:border-[#082A63] focus:ring-1 focus:ring-[#082A63]/10 disabled:opacity-60",
+            "focus:border-[#8E24AA] focus:ring-1 focus:ring-[#8E24AA]/10 disabled:opacity-60",
             selectedVehicleId
               ? "border-slate-200 text-slate-700"
               : "border-slate-200 text-slate-400",
@@ -124,7 +124,7 @@ export function IncomingOrderVehicleSelect({
         </select>
         {pending ? (
           <Loader2
-            className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-[#082A63]"
+            className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-[#8E24AA]"
             strokeWidth={2}
           />
         ) : (

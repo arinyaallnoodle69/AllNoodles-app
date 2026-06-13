@@ -730,19 +730,22 @@ export default function OrderClient({
   }, [regProvinceCode, regDistrictCode]);
 
   useEffect(() => {
-    if (!linkedCustomer) {
-      setFrequentProducts([]);
-      setFavorites({});
-      return;
-    }
-
+    const customerId = linkedCustomer?.id ?? "mock_guest";
     try {
-      const savedFavs = localStorage.getItem(`ty_favorites_${linkedCustomer.id}`);
+      const savedFavs = localStorage.getItem(`ty_favorites_${customerId}`);
       if (savedFavs) {
         setFavorites(JSON.parse(savedFavs));
+      } else {
+        setFavorites({});
       }
     } catch (e) {
       console.error(e);
+      setFavorites({});
+    }
+
+    if (!linkedCustomer) {
+      setFrequentProducts([]);
+      return;
     }
 
     let isActive = true;
@@ -784,11 +787,11 @@ export default function OrderClient({
   // Cart helpers
 
   const toggleFavorite = useCallback((productId: string) => {
-    if (!linkedCustomer) return;
+    const customerId = linkedCustomer?.id ?? "mock_guest";
     setFavorites((prev) => {
       const next = { ...prev, [productId]: !prev[productId] };
       try {
-        localStorage.setItem(`ty_favorites_${linkedCustomer.id}`, JSON.stringify(next));
+        localStorage.setItem(`ty_favorites_${customerId}`, JSON.stringify(next));
       } catch (e) {
         console.error(e);
       }
@@ -797,7 +800,10 @@ export default function OrderClient({
   }, [linkedCustomer]);
 
   const updateQuantity = (productId: string, direction: "increase" | "decrease" | "remove") => {
-    if (direction === "increase" && !isOrderOpen) return;
+    if (direction === "increase" && !isOrderOpen) {
+      alert("ร้านปิดรับออเดอร์อยู่");
+      return;
+    }
     setCart((prev) => {
       const currentQty = prev[productId] || 0;
       const product = productsById.get(productId);

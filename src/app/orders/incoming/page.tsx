@@ -453,15 +453,15 @@ export default async function IncomingOrdersPage({ searchParams }: IncomingOrder
       hideHeader
     >
       <div className="space-y-6">
-        <div className="sticky top-0 z-40 -mx-3 hidden border-b border-[#D4AF37]/35 bg-white/95 px-4 py-3 shadow-[0_14px_34px_rgba(8,42,99,0.08)] backdrop-blur lg:block">
+        <div className="sticky top-0 z-40 -mx-3 hidden border-b border-[#AA00FF]/35 bg-white/95 px-4 py-3 shadow-[0_14px_34px_rgba(142, 36, 170,0.08)] backdrop-blur lg:block">
           <div className="flex flex-col gap-3">
             <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
               <div className="min-w-0">
                 <div className="flex items-center gap-3">
-                  <span className="h-8 w-1.5 rounded-full bg-[#D4AF37]" />
-                  <p className="text-lg font-black text-[#082A63]">รายการออเดอร์</p>
+                  <span className="h-8 w-1.5 rounded-full bg-[#AA00FF]" />
+                  <p className="text-lg font-black text-[#8E24AA]">รายการออเดอร์</p>
                 </div>
-                <p className="mt-1 text-xs font-semibold text-[#1F2A44]">
+                <p className="mt-1 text-xs font-semibold text-[#8E24AA]">
                   แสดง {filteredOrders.length.toLocaleString("th-TH")} ออเดอร์
                 </p>
               </div>
@@ -470,13 +470,13 @@ export default async function IncomingOrdersPage({ searchParams }: IncomingOrder
 
             <form action="/orders/incoming" method="get" className="grid grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-[minmax(14rem,1fr)_14rem_12rem_10rem_10rem_auto]">
               <label className="relative block">
-                <Search className="pointer-events-none absolute left-4 top-1/2 h-4.5 w-4.5 -translate-y-1/2 text-[#082A63]" strokeWidth={2} />
+                <Search className="pointer-events-none absolute left-4 top-1/2 h-4.5 w-4.5 -translate-y-1/2 text-[#8E24AA]" strokeWidth={2} />
                 <input
                   type="search"
                   name="q"
                   defaultValue={searchTerm}
                   placeholder="ค้นหาชื่อร้าน หรือเลขออเดอร์"
-                  className="h-12 w-full rounded-xl border border-[#D4AF37]/35 bg-white pl-11 pr-4 text-sm font-semibold text-[#1F2A44] shadow-sm outline-none transition placeholder:text-[#1F2A44]/70 focus:border-[#D4AF37] focus:ring-2 focus:ring-[#D4AF37]/20"
+                  className="h-12 w-full rounded-xl border border-[#AA00FF]/35 bg-white pl-11 pr-4 text-sm font-semibold text-[#8E24AA] shadow-sm outline-none transition placeholder:text-[#8E24AA]/70 focus:border-[#AA00FF] focus:ring-2 focus:ring-[#AA00FF]/20"
                 />
               </label>
 
@@ -490,7 +490,7 @@ export default async function IncomingOrdersPage({ searchParams }: IncomingOrder
                 <select
                   name="warehouse"
                   defaultValue={selectedWarehouseId}
-                  className="h-12 w-full rounded-xl border border-[#D4AF37]/35 bg-white px-3 text-sm font-semibold text-[#1F2A44] shadow-sm outline-none transition focus:border-[#D4AF37] focus:ring-2 focus:ring-[#D4AF37]/20"
+                  className="h-12 w-full rounded-xl border border-[#AA00FF]/35 bg-white px-3 text-sm font-semibold text-[#8E24AA] shadow-sm outline-none transition focus:border-[#AA00FF] focus:ring-2 focus:ring-[#AA00FF]/20"
                 >
                   <option value="">ทุกคลังสินค้า</option>
                   {warehouses.map((w) => (
@@ -517,7 +517,7 @@ export default async function IncomingOrdersPage({ searchParams }: IncomingOrder
 
               <button
                 type="submit"
-                className="inline-flex h-12 items-center justify-center rounded-xl border border-[#D4AF37]/70 bg-[#082A63] px-5 text-sm font-bold text-white shadow-[0_12px_26px_rgba(8,42,99,0.24)] transition hover:bg-[#103B82] active:scale-[0.98]"
+                className="inline-flex h-12 items-center justify-center rounded-xl border border-[#AA00FF]/70 bg-[#8E24AA] px-5 text-sm font-bold text-white shadow-[0_12px_26px_rgba(142, 36, 170,0.24)] transition hover:bg-[#8E24AA] active:scale-[0.98]"
               >
                 ค้นหา
               </button>
@@ -525,8 +525,8 @@ export default async function IncomingOrdersPage({ searchParams }: IncomingOrder
           </div>
         </div>
 
-        <div className="fixed bottom-8 right-8 z-40 hidden lg:block [&_.action-touch-safe]:border [&_.action-touch-safe]:border-[#D4AF37]/85 [&_.action-touch-safe]:bg-[#082A63] [&_.action-touch-safe]:shadow-[0_18px_44px_rgba(8,42,99,0.34)] [&_.action-touch-safe]:hover:bg-[#103B82]">
-          <div className="rounded-full bg-[#D4AF37]/35 p-[2px] shadow-[0_18px_42px_rgba(8,42,99,0.28)]">
+        <div className="fixed bottom-8 right-8 z-40 hidden lg:block [&_.action-touch-safe]:border [&_.action-touch-safe]:border-[#AA00FF]/85 [&_.action-touch-safe]:bg-[#8E24AA] [&_.action-touch-safe]:shadow-[0_18px_44px_rgba(142, 36, 170,0.34)] [&_.action-touch-safe]:hover:bg-[#8E24AA]">
+          <div className="rounded-full bg-[#AA00FF]/35 p-[2px] shadow-[0_18px_42px_rgba(142, 36, 170,0.28)]">
             <CreateOrderModal
               autoOpen={autoOpenCreateModal}
               customerOrderCountsToday={customerOrderCountsToday}
@@ -539,7 +539,7 @@ export default async function IncomingOrdersPage({ searchParams }: IncomingOrder
 
         <MobileSearchDrawer title="ค้นหาออเดอร์">
           <form action="/orders/incoming" method="get" className="flex flex-col gap-4 pb-24">
-            <label htmlFor="m-incoming-date" className="text-sm font-semibold text-[#1F2A44]">
+            <label htmlFor="m-incoming-date" className="text-sm font-semibold text-[#8E24AA]">
               วันที่เริ่มต้น
             </label>
             <IncomingOrderDateFilter
@@ -549,7 +549,7 @@ export default async function IncomingOrdersPage({ searchParams }: IncomingOrder
               noAutoSubmit={true}
             />
 
-            <label htmlFor="m-incoming-endDate" className="text-sm font-semibold text-[#1F2A44]">
+            <label htmlFor="m-incoming-endDate" className="text-sm font-semibold text-[#8E24AA]">
               วันที่สิ้นสุด
             </label>
             <IncomingOrderDateFilter
@@ -560,13 +560,13 @@ export default async function IncomingOrdersPage({ searchParams }: IncomingOrder
             />
 
             <label className="relative block">
-              <Search className="pointer-events-none absolute left-4 top-1/2 h-4.5 w-4.5 -translate-y-1/2 text-[#082A63]" strokeWidth={2} />
+              <Search className="pointer-events-none absolute left-4 top-1/2 h-4.5 w-4.5 -translate-y-1/2 text-[#8E24AA]" strokeWidth={2} />
               <input
                 type="search"
                 name="q"
                 defaultValue={searchTerm}
                 placeholder="ค้นหาชื่อร้าน หรือเลขออเดอร์"
-                className="h-12 w-full rounded-xl border border-[#D4AF37]/35 bg-white pl-11 pr-4 text-sm font-semibold text-[#1F2A44] outline-none transition placeholder:text-[#1F2A44]/70 focus:border-[#D4AF37] focus:ring-2 focus:ring-[#D4AF37]/20"
+                className="h-12 w-full rounded-xl border border-[#AA00FF]/35 bg-white pl-11 pr-4 text-sm font-semibold text-[#8E24AA] outline-none transition placeholder:text-[#8E24AA]/70 focus:border-[#AA00FF] focus:ring-2 focus:ring-[#AA00FF]/20"
               />
             </label>
 
@@ -576,14 +576,14 @@ export default async function IncomingOrdersPage({ searchParams }: IncomingOrder
               placeholder="เลือกร้านค้า"
             />
 
-            <label className="text-sm font-semibold text-[#1F2A44]">
+            <label className="text-sm font-semibold text-[#8E24AA]">
               คลังสินค้า
             </label>
             <div className="w-full">
               <select
                 name="warehouse"
                 defaultValue={selectedWarehouseId}
-                className="h-12 w-full rounded-xl border border-[#D4AF37]/35 bg-white px-3 text-sm font-semibold text-[#1F2A44] outline-none transition focus:border-[#D4AF37] focus:ring-2 focus:ring-[#D4AF37]/20"
+                className="h-12 w-full rounded-xl border border-[#AA00FF]/35 bg-white px-3 text-sm font-semibold text-[#8E24AA] outline-none transition focus:border-[#AA00FF] focus:ring-2 focus:ring-[#AA00FF]/20"
               >
                 <option value="">ทุกคลังสินค้า</option>
                 {warehouses.map((w) => (
@@ -596,7 +596,7 @@ export default async function IncomingOrdersPage({ searchParams }: IncomingOrder
 
             <button
               type="submit"
-              className="inline-flex h-12 items-center justify-center rounded-xl border border-[#D4AF37]/70 bg-[#082A63] px-5 text-sm font-bold text-white shadow-[0_12px_26px_rgba(8,42,99,0.24)] transition active:scale-[0.98]"
+              className="inline-flex h-12 items-center justify-center rounded-xl border border-[#AA00FF]/70 bg-[#8E24AA] px-5 text-sm font-bold text-white shadow-[0_12px_26px_rgba(142, 36, 170,0.24)] transition active:scale-[0.98]"
             >
               ค้นหา
             </button>
@@ -612,10 +612,10 @@ export default async function IncomingOrdersPage({ searchParams }: IncomingOrder
         <section className="relative mt-0 w-full bg-transparent">
           <div className="flex flex-col gap-3 px-1 py-1 sm:py-3">
             <div className="flex items-center justify-center gap-2 w-full">
-              <ClipboardList className="h-5 w-5 text-[#082A63] sm:h-6 sm:w-6" strokeWidth={2.5} />
+              <ClipboardList className="h-5 w-5 text-[#8E24AA] sm:h-6 sm:w-6" strokeWidth={2.5} />
               <h2 className="text-base font-bold text-slate-950 sm:text-xl">รายการออเดอร์เข้า</h2>
               {filteredOrders.length > 0 ? (
-                <span className="rounded-md bg-[#D4AF37]/20 px-1.5 py-0.5 text-[9px] font-black text-[#082A63] ring-1 ring-[#D4AF37]/40 sm:text-xs">
+                <span className="rounded-md bg-[#AA00FF]/20 px-1.5 py-0.5 text-[9px] font-black text-[#8E24AA] ring-1 ring-[#AA00FF]/40 sm:text-xs">
                   {filteredOrders.length}
                 </span>
               ) : null}
@@ -635,7 +635,7 @@ export default async function IncomingOrdersPage({ searchParams }: IncomingOrder
 
             {/* Desktop & Tablet View: 5 Equal Width Action Cards Grid */}
             <div className="hidden sm:block w-full">
-              <div className="grid grid-cols-5 gap-3 w-full [&_button]:w-full [&_button]:h-full [&_button]:justify-center [&_button]:rounded-2xl [&_button]:border-[#D4AF37]/35 [&_button]:py-3.5 [&_button]:px-5">
+              <div className="grid grid-cols-5 gap-3 w-full [&_button]:w-full [&_button]:h-full [&_button]:justify-center [&_button]:rounded-2xl [&_button]:border-[#AA00FF]/35 [&_button]:py-3.5 [&_button]:px-5">
                 <PackingListSummaryButton
                   dateLabel={orderDate === endDate ? formatDisplayDate(orderDate) : `${formatDisplayDate(orderDate)} - ${formatDisplayDate(endDate)}`}
                   products={summaryProducts}

@@ -129,7 +129,7 @@ export function DeliverySearchForm({ from, to, q }: { from: string; to: string; 
               name="q"
               defaultValue={q}
               placeholder="ชื่อร้าน, รหัสร้าน, เลขที่ใบส่งของ"
-              className="w-full rounded-xl border border-slate-300 bg-white py-3 pl-12 pr-4 text-base text-slate-800 outline-none transition focus:border-[#082A63] focus:ring-2 focus:ring-[#082A63]/10"
+              className="w-full rounded-xl border border-slate-300 bg-white py-3 pl-12 pr-4 text-base text-slate-800 outline-none transition focus:border-[#8E24AA] focus:ring-2 focus:ring-[#8E24AA]/10"
             />
           </div>
         </div>
@@ -166,7 +166,7 @@ export function DeliverySearchForm({ from, to, q }: { from: string; to: string; 
         <div className="flex gap-2 xl:justify-end">
           <button
             type="submit"
-            className="inline-flex flex-1 items-center justify-center rounded-xl bg-[#103B82] px-5 py-3 text-base font-semibold text-white transition hover:bg-[#103B82] xl:flex-none"
+            className="inline-flex flex-1 items-center justify-center rounded-xl bg-[#8E24AA] px-5 py-3 text-base font-semibold text-white transition hover:bg-[#8E24AA] xl:flex-none"
           >
             ค้นหา
           </button>
@@ -192,28 +192,28 @@ function SummaryStrip({ summary }: { summary: DeliveryDaySummary }) {
       <div className="grid grid-cols-2 md:grid-cols-4">
         <article className="flex flex-col items-center justify-center border-b border-r border-slate-200 px-4 py-3 text-center md:border-b-0">
           <div className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
-            <Building2 className="h-3.5 w-3.5 text-[#082A63]" strokeWidth={2.1} />
+            <Building2 className="h-3.5 w-3.5 text-[#8E24AA]" strokeWidth={2.1} />
             <span>ร้านค้า</span>
           </div>
           <p className="mt-1 text-xl font-bold text-slate-950">{summary.count.toLocaleString("th-TH")}</p>
         </article>
         <article className="flex flex-col items-center justify-center border-b border-slate-200 px-4 py-3 text-center md:border-b-0 md:border-r">
           <div className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
-            <Package2 className="h-3.5 w-3.5 text-[#082A63]" strokeWidth={2.1} />
+            <Package2 className="h-3.5 w-3.5 text-[#8E24AA]" strokeWidth={2.1} />
             <span>รายการรวม</span>
           </div>
           <p className="mt-1 text-xl font-bold text-slate-950">{summary.totalItemCount.toLocaleString("th-TH")}</p>
         </article>
         <article className="flex flex-col items-center justify-center border-r border-slate-200 px-4 py-3 text-center">
           <div className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
-            <FileText className="h-3.5 w-3.5 text-[#082A63]" strokeWidth={2.1} />
+            <FileText className="h-3.5 w-3.5 text-[#8E24AA]" strokeWidth={2.1} />
             <span>ยอดออเดอร์</span>
           </div>
           <p className="mt-1 text-xl font-bold text-slate-950">{fmtMoneyBaht(summary.totalOrderedAmount)}</p>
         </article>
         <article className="flex flex-col items-center justify-center px-4 py-3 text-center">
           <div className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
-            <Truck className="h-3.5 w-3.5 text-[#082A63]" strokeWidth={2.1} />
+            <Truck className="h-3.5 w-3.5 text-[#8E24AA]" strokeWidth={2.1} />
             <span>ยอดจัดส่ง</span>
           </div>
           <p className="mt-1 text-xl font-bold text-slate-950">{fmtMoneyBaht(summary.totalDeliveredAmount)}</p>
@@ -276,7 +276,7 @@ function LineItemQtyEditor({ item }: { item: DeliveryEditableItem }) {
         <button
           type="button"
           onClick={startEdit}
-          className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-slate-200 text-slate-400 hover:border-[#082A63] hover:text-[#082A63]"
+          className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-slate-200 text-slate-400 hover:border-[#8E24AA] hover:text-[#8E24AA]"
           aria-label="แก้ไขจำนวนส่งจริง"
         >
           <Pencil className="h-3.5 w-3.5" />
@@ -295,12 +295,12 @@ function LineItemQtyEditor({ item }: { item: DeliveryEditableItem }) {
             step="0.001"
             value={qty}
             onChange={(e) => setQty(e.target.value)}
-            className="w-20 rounded-md border border-slate-300 px-2 py-1 text-right text-sm font-semibold focus:border-[#082A63] focus:outline-none"
+            className="w-20 rounded-md border border-slate-300 px-2 py-1 text-right text-sm font-semibold focus:border-[#8E24AA] focus:outline-none"
           />
           <select
             value={mode}
             onChange={(e) => setMode(e.target.value as DeliveryAdjustmentMode)}
-            className="w-32 rounded-md border border-slate-300 bg-white px-2 py-1 text-xs text-slate-700 focus:border-[#082A63] focus:outline-none"
+            className="w-32 rounded-md border border-slate-300 bg-white px-2 py-1 text-xs text-slate-700 focus:border-[#8E24AA] focus:outline-none"
           >
             <option value="return_to_stock">คืนสต็อก</option>
             <option value="lost">ของหาย/เสียหาย</option>
@@ -310,7 +310,7 @@ function LineItemQtyEditor({ item }: { item: DeliveryEditableItem }) {
           type="button"
           onClick={saveEdit}
           disabled={isPending}
-          className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-[#082A63] text-white hover:bg-[#103B82] disabled:opacity-50"
+          className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-[#8E24AA] text-white hover:bg-[#8E24AA] disabled:opacity-50"
           aria-label="บันทึก"
         >
           {isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
@@ -389,7 +389,7 @@ function GroupQtyPopupEditor({
       <button
         type="button"
         onClick={openDialog}
-        className="text-sm font-semibold text-[#103B82] underline decoration-slate-300 underline-offset-2 transition hover:text-[#103B82]"
+        className="text-sm font-semibold text-[#8E24AA] underline decoration-slate-300 underline-offset-2 transition hover:text-[#8E24AA]"
       >
         แก้ไข
       </button>
@@ -422,7 +422,7 @@ function GroupQtyPopupEditor({
                   step="0.001"
                   value={qty}
                   onChange={(e) => setQty(e.target.value)}
-                  className="w-full rounded-2xl border border-slate-300 px-4 py-3 text-right text-lg font-semibold text-slate-900 outline-none transition focus:border-[#082A63] focus:ring-2 focus:ring-[#082A63]/10"
+                  className="w-full rounded-2xl border border-slate-300 px-4 py-3 text-right text-lg font-semibold text-slate-900 outline-none transition focus:border-[#8E24AA] focus:ring-2 focus:ring-[#8E24AA]/10"
                 />
               </label>
 
@@ -431,7 +431,7 @@ function GroupQtyPopupEditor({
                 <select
                   value={mode}
                   onChange={(e) => setMode(e.target.value as DeliveryAdjustmentMode)}
-                  className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-base text-slate-800 outline-none transition focus:border-[#082A63] focus:ring-2 focus:ring-[#082A63]/10"
+                  className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-base text-slate-800 outline-none transition focus:border-[#8E24AA] focus:ring-2 focus:ring-[#8E24AA]/10"
                 >
                   <option value="return_to_stock">คืนสต็อก</option>
                   <option value="lost">ของหาย/เสียหาย</option>
@@ -454,7 +454,7 @@ function GroupQtyPopupEditor({
                 type="button"
                 onClick={saveEdit}
                 disabled={isPending}
-                className="inline-flex flex-1 items-center justify-center gap-2 rounded-2xl bg-[#082A63] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#103B82] disabled:opacity-50"
+                className="inline-flex flex-1 items-center justify-center gap-2 rounded-2xl bg-[#8E24AA] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#8E24AA] disabled:opacity-50"
               >
                 {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                 บันทึก
@@ -509,7 +509,7 @@ function OrderDetailModal({
       {/* Panel */}
       <div className="relative z-10 flex max-h-[95svh] w-full max-w-2xl flex-col overflow-hidden rounded-t-3xl bg-white shadow-2xl sm:max-h-[90vh] sm:rounded-3xl">
         {/* Header */}
-        <div className="flex shrink-0 items-start justify-between bg-[#103B82] px-6 py-5">
+        <div className="flex shrink-0 items-start justify-between bg-[#8E24AA] px-6 py-5">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.12em] text-white/50">
               รายละเอียดใบจัดส่ง
@@ -553,7 +553,7 @@ function OrderDetailModal({
                   {orderNumber && orderDate ? (
                     <a
                       href={`/orders?date=${orderDate}`}
-                      className="inline-flex items-center gap-1.5 font-mono text-sm font-bold text-[#082A63] transition hover:text-[#103B82]"
+                      className="inline-flex items-center gap-1.5 font-mono text-sm font-bold text-[#8E24AA] transition hover:text-[#8E24AA]"
                     >
                       {orderNumber}
                       <ExternalLink className="h-3.5 w-3.5" strokeWidth={2.2} />
@@ -685,7 +685,7 @@ function DeliveryCustomerCard({
   return (
     <div className={`overflow-hidden rounded-2xl border-2 bg-white shadow-sm ${tone.accentClass}`}>
       {/* Card header */}
-      <div className="bg-[#103B82] px-4 py-3">
+      <div className="bg-[#8E24AA] px-4 py-3">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-1.5">
@@ -834,7 +834,7 @@ function DeliveryCustomerSection({
     <>
       {/* Store group header row */}
       <tr>
-        <td colSpan={8} className="border-t-2 border-[#103B82] bg-[#103B82] px-4 py-2">
+        <td colSpan={8} className="border-t-2 border-[#8E24AA] bg-[#8E24AA] px-4 py-2">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex flex-wrap items-center gap-2">
               <span className="inline-flex items-center gap-1.5 text-base font-bold text-white">
@@ -968,8 +968,8 @@ function DeliveryDayTable({
   return (
     <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm md:rounded">
       {/* Day bar — sticky on desktop only; mobile just flows in place */}
-      <div className="z-20 flex items-center gap-x-3 border-b border-l-4 border-slate-200 border-l-[#082A63] bg-slate-50 px-4 py-2.5 md:sticky md:top-0">
-        <span className="text-sm font-bold text-[#082A63]">{fmtDateLabel(date)}</span>
+      <div className="z-20 flex items-center gap-x-3 border-b border-l-4 border-slate-200 border-l-[#8E24AA] bg-slate-50 px-4 py-2.5 md:sticky md:top-0">
+        <span className="text-sm font-bold text-[#8E24AA]">{fmtDateLabel(date)}</span>
         <span className="hidden text-slate-300 sm:inline">·</span>
         <span className="text-xs font-medium text-slate-500">{summary.count.toLocaleString("th-TH")} ร้านค้า</span>
         <div className="ml-auto hidden shrink-0 items-center gap-2 sm:flex">

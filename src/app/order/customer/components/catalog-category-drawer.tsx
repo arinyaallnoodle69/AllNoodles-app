@@ -39,7 +39,7 @@ export function CatalogCategoryDrawer({
         onClick={() => setOpen(true)}
         aria-haspopup="dialog"
         aria-expanded={open}
-        className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-lg bg-[#082A63] px-3 text-[13px] font-bold text-white shadow-[0_7px_16px_rgba(4,53,106,0.2)] transition active:scale-[0.98]"
+        className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-lg bg-[#AA00FF] px-3 text-[13px] font-bold text-white shadow-[0_7px_16px_rgba(4,53,106,0.2)] transition active:scale-[0.98]"
       >
         <ListFilter className="h-4 w-4" strokeWidth={2.3} />
         <span className="max-w-[4.8rem] truncate">{selectedLabel}</span>
@@ -69,7 +69,7 @@ export function CatalogCategoryDrawer({
 
         <div className="flex items-center justify-between border-b border-slate-100 px-4 pb-3 pt-2.5">
           <div className="flex items-center gap-3">
-            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#D4AF37]/30 text-[#103B82] ring-1 ring-[#082A63]/10">
+            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#AA00FF]/30 text-[#AA00FF] ring-1 ring-[#AA00FF]/10">
               <Tags className="h-5 w-5" strokeWidth={2.2} />
             </span>
             <div>
@@ -130,8 +130,8 @@ function CategoryButton({
       tabIndex={tabIndex}
       className={`flex min-h-11 items-center justify-between gap-1.5 rounded-lg border px-2.5 py-2 text-left text-[13px] font-bold transition active:scale-[0.98] ${
         active
-          ? "border-[#082A63]/20 bg-[#D4AF37]/30 text-[#103B82]"
-          : "border-slate-200 bg-white text-slate-700 shadow-sm hover:border-[#082A63]/20 hover:bg-slate-50"
+          ? "border-[#AA00FF]/20 bg-[#AA00FF]/30 text-[#AA00FF]"
+          : "border-slate-200 bg-white text-slate-700 shadow-sm hover:border-[#AA00FF]/20 hover:bg-slate-50"
       }`}
     >
       <span className="min-w-0 flex-1 truncate">{label}</span>

@@ -20,7 +20,6 @@ import {
   Truck,
   UserRound,
   Wallet,
-  Warehouse,
   X,
 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -91,8 +90,8 @@ function DashboardStatCard({
 }) {
   const tone = {
     blue: {
-      value: "text-[#1F2A44]",
-      badge: "bg-[#F2E3AE] text-[#1F2A44]",
+      value: "text-[#8E24AA]",
+      badge: "bg-[#EA80FC] text-[#8E24AA]",
       ghost: "text-[#eadfbe]",
     },
     green: {
@@ -132,7 +131,7 @@ function DashboardStatCard({
         >
           {icon}
         </div>
-        <span className="min-w-0 whitespace-nowrap text-[12.5px] font-bold leading-none text-[#1F2A44] sm:text-[13px] md:text-base">
+        <span className="min-w-0 whitespace-nowrap text-[12.5px] font-bold leading-none text-[#8E24AA] sm:text-[13px] md:text-base">
           {title}
         </span>
       </div>
@@ -275,36 +274,7 @@ export function DashboardClient({
       maximumFractionDigits: 2,
     });
 
-  const warehouseSummaries = useMemo(() => {
-    return stockWarehouses.map((warehouse) => {
-      const summary = stockProducts.reduce(
-        (total, product) => {
-          const stock = product.warehouseStocks.find((item) => item.warehouseId === warehouse.id);
-          const onHandQuantity = stock?.onHandQuantity ?? 0;
-          const reservedQuantity = stock?.reservedQuantity ?? 0;
-          const availableQuantity = onHandQuantity - reservedQuantity;
 
-          return {
-            itemCount: total.itemCount + (onHandQuantity !== 0 || reservedQuantity !== 0 ? 1 : 0),
-            lowStockCount: total.lowStockCount + (product.isActive && availableQuantity <= 5 ? 1 : 0),
-            reservedQuantity: total.reservedQuantity + reservedQuantity,
-            stockValue: total.stockValue + onHandQuantity * product.costPrice,
-          };
-        },
-        {
-          itemCount: 0,
-          lowStockCount: 0,
-          reservedQuantity: 0,
-          stockValue: 0,
-        },
-      );
-
-      return {
-        ...warehouse,
-        ...summary,
-      };
-    });
-  }, [stockProducts, stockWarehouses]);
 
   async function openLineOrderDetail(orderId: string | null) {
     if (!orderId) {
@@ -346,12 +316,12 @@ export function DashboardClient({
   const dailySummaryRows = [...dailyPerformanceRows].reverse().slice(0, 7);
 
   return (
-    <div className="min-h-screen bg-white pb-24 font-apple-ui text-slate-800">
-      <header className="relative mx-auto mb-6 max-w-7xl overflow-hidden px-5 pt-8">
+    <div className="min-h-screen bg-background pb-24 font-apple-ui text-slate-800">
+      <header className="relative mx-auto mb-2 max-w-7xl overflow-hidden px-5 pt-4">
         <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
           <div>
-            <div className="flex items-center gap-3">
-              <div className="relative h-14 w-14 shrink-0 overflow-hidden bg-transparent">
+            <div className="flex items-center gap-4 sm:gap-5">
+              <div className="relative h-24 w-24 sm:h-28 sm:w-28 shrink-0 overflow-hidden bg-transparent transition-transform hover:scale-105">
                 <Image
                   src="/brand/512x512.png"
                   alt="All Noodles"
@@ -359,9 +329,31 @@ export function DashboardClient({
                   className="object-contain mix-blend-multiply"
                 />
               </div>
-              <h1 className="text-3xl font-black leading-tight tracking-tight text-[#082A63] md:text-4xl">
-                ภาพรวมวันนี้
-              </h1>
+              <div>
+                <h1 className="text-4xl font-black leading-none tracking-tight text-[#8E24AA] sm:text-6xl bg-gradient-to-r from-[#8E24AA] via-[#AA00FF] to-[#EA80FC] bg-clip-text text-transparent">
+                  All Noodles
+                </h1>
+                <p className="mt-2 text-[14px] font-bold text-slate-500 md:text-base flex items-center">
+                  {toThaiLongDate(today)} • 
+                  {now ? (
+                    <>
+                      <span className="ml-1.5 tabular-nums">
+                        {String(now.getHours()).padStart(2, "0")}:{String(now.getMinutes()).padStart(2, "0")}:
+                      </span>
+                      <span className="relative inline-block h-[1em] w-[2ch] overflow-hidden tabular-nums leading-none">
+                        <span key={`prev-${prevSs}`} className="absolute left-0 top-0 animate-slide-up-out leading-none">
+                          {prevSs}
+                        </span>
+                        <span key={`curr-${String(now.getSeconds()).padStart(2, "0")}`} className="absolute left-0 top-0 animate-slide-up-in leading-none">
+                          {String(now.getSeconds()).padStart(2, "0")}
+                        </span>
+                      </span>
+                    </>
+                  ) : (
+                    <span className="ml-1.5 tabular-nums">--:--:--</span>
+                  )}
+                </p>
+              </div>
             </div>
             <style>{`
               @keyframes slideUpOut {
@@ -407,26 +399,7 @@ export function DashboardClient({
                 animation: backdropFadeOut 0.4s ease-in forwards;
               }
             `}</style>
-            <p className="mt-1 text-[14px] font-bold text-slate-400 md:text-base flex items-center">
-              สวัสดี All Noodles • {toThaiLongDate(today)}
-              {now ? (
-                <>
-                  <span className="ml-1.5 tabular-nums">
-                    {String(now.getHours()).padStart(2, "0")}:{String(now.getMinutes()).padStart(2, "0")}:
-                  </span>
-                  <span className="relative inline-block h-[1em] w-[2ch] overflow-hidden tabular-nums leading-none">
-                    <span key={`prev-${prevSs}`} className="absolute left-0 top-0 animate-slide-up-out leading-none">
-                      {prevSs}
-                    </span>
-                    <span key={`curr-${String(now.getSeconds()).padStart(2, "0")}`} className="absolute left-0 top-0 animate-slide-up-in leading-none">
-                      {String(now.getSeconds()).padStart(2, "0")}
-                    </span>
-                  </span>
-                </>
-              ) : (
-                <span className="ml-1.5 tabular-nums">--:--:--</span>
-              )}
-            </p>
+
           </div>
           <div className="hidden items-center gap-3 rounded-2xl border border-slate-100 bg-white px-4 py-2 shadow-sm md:flex">
             <div className="h-3 w-3 animate-pulse rounded-full bg-emerald-500" />
@@ -435,12 +408,12 @@ export function DashboardClient({
         </div>
       </header>
 
-      <main className="mx-auto mt-4 max-w-7xl space-y-8 px-5">
+      <main className="mx-auto mt-1 max-w-7xl space-y-8 px-5">
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-12">
           <div className="order-1 grid grid-cols-2 gap-4 xl:order-2 xl:col-span-4 xl:grid-cols-1">
             <button
               onClick={() => openCreateOrder()}
-              className="flex min-h-[4.25rem] flex-row items-center justify-center gap-3 rounded-[1rem] bg-[#082A63] px-4 py-4 text-white shadow-[0_10px_24px_rgba(8,42,99,0.22)] transition-transform active:scale-95"
+              className="flex min-h-[4.25rem] flex-row items-center justify-center gap-3 rounded-[1rem] bg-[#AA00FF] px-4 py-4 text-white shadow-[0_10px_24px_rgba(170,0,255,0.22)] transition-transform active:scale-95"
             >
               <Phone className="h-5 w-5 shrink-0 rotate-90" fill="white" strokeWidth={0} />
               <span className="whitespace-nowrap text-base font-extrabold md:text-lg">
@@ -450,7 +423,7 @@ export function DashboardClient({
 
             <button
               onClick={() => setIsStockModalOpen(true)}
-              className="flex min-h-[4.25rem] flex-row items-center justify-center gap-3 rounded-[1rem] border border-[#D4AF37]/55 bg-[#F2E3AE] px-4 py-4 text-[#1F2A44] shadow-[0_10px_24px_rgba(212,175,55,0.16)] transition-transform active:scale-95"
+              className="flex min-h-[4.25rem] flex-row items-center justify-center gap-3 rounded-[1rem] border border-[#AA00FF]/30 bg-[#EA80FC] px-4 py-4 text-[#8E24AA] shadow-[0_10px_24px_rgba(234,128,252,0.16)] transition-transform active:scale-95"
             >
               <Truck className="h-5 w-5 shrink-0" strokeWidth={2.2} />
               <span className="whitespace-nowrap text-base font-extrabold md:text-lg">
@@ -468,9 +441,9 @@ export function DashboardClient({
                   stores: storeStatusSummary.allStores,
                 });
               }}
-              className="group flex w-full items-center gap-5 rounded-[1.35rem] border border-slate-200 bg-white p-5 text-left shadow-sm transition-all hover:border-[#082A63]/30 hover:shadow-md active:scale-[0.99] md:p-7"
+              className="group flex w-full items-center gap-5 rounded-[1.35rem] border border-slate-200 bg-white p-5 text-left shadow-sm transition-all hover:border-[#8E24AA]/30 hover:shadow-md active:scale-[0.99] md:p-7"
             >
-              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-3xl bg-[#F2E3AE] text-[#1F2A44] transition-colors group-hover:bg-[#D4AF37] group-hover:text-[#1F2A44] md:h-20 md:w-20">
+              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-3xl bg-[#EA80FC] text-[#8E24AA] transition-colors group-hover:bg-[#AA00FF] group-hover:text-[#8E24AA] md:h-20 md:w-20">
                 <Store className="h-7 w-7 md:h-10 md:w-10" strokeWidth={2} />
               </div>
               <div className="min-w-0 flex-1">
@@ -485,7 +458,7 @@ export function DashboardClient({
                 </div>
               </div>
               <ChevronRight
-                className="h-8 w-8 text-slate-200 transition-colors group-hover:text-[#082A63]"
+                className="h-8 w-8 text-slate-200 transition-colors group-hover:text-[#8E24AA]"
                 strokeWidth={3}
               />
             </button>
@@ -612,69 +585,7 @@ export function DashboardClient({
           </Link>
         </section>
 
-        {warehouseSummaries.length > 0 ? (
-          <section className="rounded-[1.8rem] border border-[#E8DCC7] bg-white p-4 shadow-[0_18px_48px_rgba(4,53,106,0.08)] md:p-6">
-            <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <p className="text-[11px] font-black uppercase tracking-[0.22em] text-[#082A63]/55">
-                  Warehouse summary
-                </p>
-                <h3 className="mt-1 text-xl font-black text-[#1F2A44] md:text-2xl">
-                  ภาพรวมสต็อคแยกตามคลัง
-                </h3>
-              </div>
-              <Link
-                href="/stock"
-                className="inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-[#082A63] px-4 text-sm font-black text-white shadow-lg shadow-[#082A63]/20 transition active:scale-[0.98]"
-              >
-                ไปหน้าสต็อค
-                <ChevronRight className="h-4 w-4" strokeWidth={3} />
-              </Link>
-            </div>
 
-            <div className="grid gap-3 md:grid-cols-2">
-              {warehouseSummaries.map((warehouse) => (
-                <Link
-                  key={warehouse.id}
-                  href={`/stock?warehouse=${warehouse.id}`}
-                  className="group overflow-hidden rounded-[1.5rem] border border-[#F2E3AE]/70 bg-gradient-to-br from-[#FAF7F2] via-white to-[#F2E3AE] p-4 transition hover:border-[#103B82]/30 hover:shadow-xl hover:shadow-[#082A63]/10 active:scale-[0.99] md:p-5"
-                >
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-[#082A63] text-white shadow-lg shadow-[#082A63]/20">
-                        <Warehouse className="h-7 w-7" strokeWidth={2.3} />
-                      </div>
-                      <div>
-                        <h4 className="text-xl font-black text-[#1F2A44] md:text-2xl">
-                          {warehouse.name}
-                        </h4>
-                        <p className="mt-1 text-xs font-bold uppercase tracking-widest text-slate-400">
-                          {warehouse.slug}
-                        </p>
-                      </div>
-                    </div>
-                    <ChevronRight className="mt-2 h-5 w-5 text-[#082A63] transition group-hover:translate-x-1" strokeWidth={3} />
-                  </div>
-
-                  <div className="mt-5 grid grid-cols-3 gap-2">
-                    <div className="rounded-2xl bg-white/85 px-3 py-3">
-                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">สินค้า</p>
-                      <p className="mt-1 text-2xl font-black text-[#1F2A44]">{fmtNumber(warehouse.itemCount)}</p>
-                    </div>
-                    <div className="rounded-2xl bg-white/85 px-3 py-3">
-                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">ใกล้หมด</p>
-                      <p className="mt-1 text-2xl font-black text-[#ff7f11]">{fmtNumber(warehouse.lowStockCount)}</p>
-                    </div>
-                    <div className="rounded-2xl bg-white/85 px-3 py-3">
-                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">มูลค่า</p>
-                      <p className="mt-1 text-lg font-black text-[#082A63]">฿{fmtMoney(warehouse.stockValue)}</p>
-                    </div>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          </section>
-        ) : null}
 
         <div className="grid grid-cols-1 gap-8">
 
@@ -754,7 +665,7 @@ export function DashboardClient({
             </div>
             <div className="mb-8 flex items-center justify-between px-8">
               <div>
-                <h3 className="text-2xl font-black tracking-tight text-[#1F2A44]">
+                <h3 className="text-2xl font-black tracking-tight text-[#8E24AA]">
                   {viewingStores?.title}
                 </h3>
                 <p className="mt-1 text-xs font-bold uppercase tracking-widest text-slate-400">
@@ -781,7 +692,7 @@ export function DashboardClient({
                 <div className="relative">
                   {isNavigating ? (
                     <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/60 backdrop-blur-[1px]">
-                      <Loader2 className="h-10 w-10 animate-spin text-[#1F2A44]" strokeWidth={3} />
+                      <Loader2 className="h-10 w-10 animate-spin text-[#8E24AA]" strokeWidth={3} />
                     </div>
                   ) : null}
                   {viewingStores.stores.map((store) => {
@@ -806,7 +717,7 @@ export function DashboardClient({
                         className="group flex w-full items-center gap-5 border-b border-slate-100 bg-white px-6 py-6 text-left transition-colors hover:bg-slate-50 disabled:opacity-50"
                         disabled={isNavigating}
                       >
-                        <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-slate-50 text-[#1F2A44] shadow-sm transition-all group-hover:bg-[#1F2A44] group-hover:text-white">
+                        <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-slate-50 text-[#8E24AA] shadow-sm transition-all group-hover:bg-[#8E24AA] group-hover:text-white">
                           <Store className="h-7 w-7" />
                         </div>
                         <div className="min-w-0 flex-1">
@@ -829,7 +740,7 @@ export function DashboardClient({
                           </div>
                         </div>
                         <ChevronRight
-                          className="h-6 w-6 text-slate-200 transition-all group-hover:translate-x-1 group-hover:text-[#1F2A44]"
+                          className="h-6 w-6 text-slate-200 transition-all group-hover:translate-x-1 group-hover:text-[#8E24AA]"
                           strokeWidth={3}
                         />
                       </button>
@@ -946,7 +857,7 @@ export function DashboardClient({
                               {order.orderNumber ? (
                                 <>
                                   <span className="text-slate-300">•</span>
-                                  <span className="text-[#082A63]">{order.orderNumber}</span>
+                                  <span className="text-[#8E24AA]">{order.orderNumber}</span>
                                 </>
                               ) : null}
                             </div>

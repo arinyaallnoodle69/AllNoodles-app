@@ -361,7 +361,7 @@ async function OrderContent({
       : await getInitialOrderAuth(organizationId);
 
   return (
-    <main className="flex min-h-screen flex-col bg-gray-50">
+    <main className="flex min-h-screen flex-col bg-background">
       <OrderClient
         allowOrderAfterCutoff={allowOrderAfterCutoff}
         initialProducts={catalogProducts}

@@ -121,25 +121,25 @@ export function SettingsShell({
   };
 
   const inner = (
-    <div className="min-h-screen bg-white font-[family:var(--font-sarabun)] text-slate-900">
+    <div className="min-h-screen bg-background font-[family:var(--font-sarabun)] text-slate-900">
       {!hideHeader ? (
-      <div className="relative z-20 hidden overflow-hidden border-b border-[#E8DCC7] bg-white text-[#1F2A44] lg:block">
+      <div className="relative z-20 hidden overflow-hidden border-b border-[#E1BEE7] bg-white text-[#8E24AA] lg:block">
         <div className="relative z-10 mx-auto w-full max-w-[88rem] px-4 py-1.5 lg:px-8 lg:py-4">
           <div className="flex flex-col gap-0.5 lg:flex-row lg:items-center lg:justify-between">
             <div className="flex min-w-0 items-center gap-2 lg:gap-4">
               {resolvedIcon ? (
-                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-[#E8DCC7] bg-white ring-1 ring-[#D4AF37]/15 lg:h-14 lg:w-14 lg:rounded-2xl">
+                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-[#E1BEE7] bg-white ring-1 ring-[#AA00FF]/15 lg:h-14 lg:w-14 lg:rounded-2xl">
                   {React.createElement(resolvedIcon as React.ComponentType<{ className?: string; strokeWidth?: number | string }>, {
-                    className: "h-3.5 w-3.5 text-[#082A63] lg:h-6 lg:w-6",
+                    className: "h-3.5 w-3.5 text-[#8E24AA] lg:h-6 lg:w-6",
                     strokeWidth: 2,
                   })}
                 </span>
               ) : null}
               <div className="min-w-0 flex-1 overflow-hidden">
-                <p className="text-[8px] font-semibold uppercase tracking-[0.15em] text-[#D4AF37] lg:text-xs">
+                <p className="text-[8px] font-semibold uppercase tracking-[0.15em] text-[#AA00FF] lg:text-xs">
                   {current ? "เมนูตั้งค่า" : "ระบบจัดการ"}
                 </p>
-                <h1 className="mt-0 text-base font-bold tracking-tight text-[#082A63] lg:mt-1 lg:text-3xl">
+                <h1 className="mt-0 text-base font-bold tracking-tight text-[#8E24AA] lg:mt-1 lg:text-3xl">
                   {title}
                 </h1>
                 {description ? (
@@ -147,7 +147,7 @@ export function SettingsShell({
                     {description}
                   </p>
                 ) : null}
-                <div className="mt-3 hidden h-px w-52 max-w-full bg-gradient-to-r from-[#D4AF37] via-[#D4AF37] to-transparent lg:block" />
+                <div className="mt-3 hidden h-px w-52 max-w-full bg-gradient-to-r from-[#AA00FF] via-[#AA00FF] to-transparent lg:block" />
               </div>
             </div>
 
@@ -155,8 +155,8 @@ export function SettingsShell({
               {showSearch && (
                 <button
                   onClick={handleSearchToggle}
-                  className={`flex h-10 w-10 items-center justify-center rounded-full border border-[#E8DCC7] bg-white transition ${
-                    isSearchOpen ? "text-[#082A63] ring-2 ring-[#D4AF37]/25" : "text-[#667085] hover:bg-slate-50 hover:text-[#082A63]"
+                  className={`flex h-10 w-10 items-center justify-center rounded-full border border-[#E1BEE7] bg-white transition ${
+                    isSearchOpen ? "text-[#8E24AA] ring-2 ring-[#AA00FF]/25" : "text-[#667085] hover:bg-slate-50 hover:text-[#8E24AA]"
                 }`}
                 >
                   {isSearchOpen ? <X className="h-5 w-5" strokeWidth={2.5} /> : <Search className="h-5 w-5" strokeWidth={2.2} />}
@@ -166,7 +166,7 @@ export function SettingsShell({
               {switchLink ? (
                 <Link
                   href={switchLink.href}
-                  className="inline-flex items-center gap-2 rounded-full border border-[#E8DCC7] bg-white px-4 py-2 text-sm font-medium text-[#082A63] transition hover:border-[#D4AF37]/60 hover:bg-slate-50"
+                  className="inline-flex items-center gap-2 rounded-full border border-[#E1BEE7] bg-white px-4 py-2 text-sm font-medium text-[#8E24AA] transition hover:border-[#AA00FF]/60 hover:bg-slate-50"
                 >
                   <span className="hidden sm:inline">{switchLink.label}</span>
                   <ArrowUpRight className="h-4 w-4" strokeWidth={2.2} />
@@ -190,7 +190,7 @@ export function SettingsShell({
                   placeholder={searchPlaceholder}
                   value={searchTerm}
                   onChange={handleSearchChange}
-                  className="w-full rounded-2xl border border-[#E8DCC7] bg-white py-4 pl-12 pr-4 text-base text-[#1F2A44] placeholder:text-[#667085] outline-none focus:border-[#D4AF37] focus:ring-2 focus:ring-[#D4AF37]/15"
+                  className="w-full rounded-2xl border border-[#E1BEE7] bg-white py-4 pl-12 pr-4 text-base text-[#8E24AA] placeholder:text-[#667085] outline-none focus:border-[#AA00FF] focus:ring-2 focus:ring-[#AA00FF]/15"
                   autoFocus={isSearchOpen}
                 />
               </div>
@@ -206,9 +206,9 @@ export function SettingsShell({
         {/* Mobile Breadcrumb */}
         {current && !hideHeader ? (
           <nav className="mb-4 flex items-center gap-1.5 text-[13px] font-bold lg:hidden">
-            <Link href="/settings" className="text-slate-400 transition hover:text-[#082A63]">ตั้งค่า</Link>
+            <Link href="/settings" className="text-slate-400 transition hover:text-[#8E24AA]">ตั้งค่า</Link>
             <ChevronRight className="h-3.5 w-3.5 text-slate-300" strokeWidth={3} />
-            <span className="text-[#082A63]">{title}</span>
+            <span className="text-[#8E24AA]">{title}</span>
           </nav>
         ) : null}
         {children}
@@ -219,7 +219,7 @@ export function SettingsShell({
           <button
             type="submit"
             form={submitFormId}
-            className="pointer-events-auto inline-flex items-center gap-2 rounded-full bg-[#082A63] px-5 py-3 text-sm font-medium text-white shadow-[0_18px_40px_rgba(8,42,99,0.32)] transition hover:bg-[#103B82] lg:px-6"
+            className="pointer-events-auto inline-flex items-center gap-2 rounded-full bg-[#8E24AA] px-5 py-3 text-sm font-medium text-white shadow-[0_18px_40px_rgba(142, 36, 170,0.32)] transition hover:bg-[#8E24AA] lg:px-6"
           >
             <Save className="h-4 w-4" strokeWidth={2.2} />
             {submitLabel}

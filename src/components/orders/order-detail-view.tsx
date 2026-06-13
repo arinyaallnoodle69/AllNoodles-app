@@ -123,7 +123,7 @@ export function OrderDetailView({ detail }: OrderDetailViewProps) {
             </h1>
             <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-slate-600">
               <span className="inline-flex items-center gap-2">
-                <Clock3 className="h-4 w-4 text-[#082A63]" strokeWidth={2.2} />
+                <Clock3 className="h-4 w-4 text-[#8E24AA]" strokeWidth={2.2} />
                 {formatDateTime(detail.createdAt)}
               </span>
               <span>ช่องทาง: {detail.channelLabel}</span>
@@ -160,7 +160,7 @@ export function OrderDetailView({ detail }: OrderDetailViewProps) {
       <section className="grid gap-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)]">
         <article className="rounded-[1.7rem] border border-slate-200 bg-white p-5 shadow-[0_18px_50px_rgba(15,23,42,0.05)]">
           <div className="flex items-center gap-2">
-            <Store className="h-5 w-5 text-[#082A63]" strokeWidth={2.2} />
+            <Store className="h-5 w-5 text-[#8E24AA]" strokeWidth={2.2} />
             <h2 className="text-lg font-semibold text-slate-950">ข้อมูลร้านค้า</h2>
           </div>
           <div className="mt-4 space-y-3 text-sm text-slate-700">
@@ -175,7 +175,7 @@ export function OrderDetailView({ detail }: OrderDetailViewProps) {
 
         <article className="rounded-[1.7rem] border border-slate-200 bg-white p-5 shadow-[0_18px_50px_rgba(15,23,42,0.05)]">
           <div className="flex items-center gap-2">
-            <FileText className="h-5 w-5 text-[#082A63]" strokeWidth={2.2} />
+            <FileText className="h-5 w-5 text-[#8E24AA]" strokeWidth={2.2} />
             <h2 className="text-lg font-semibold text-slate-950">สรุปออเดอร์</h2>
           </div>
           <div className="mt-4 grid gap-3 sm:grid-cols-2">

@@ -51,7 +51,7 @@ export function ScrollToTopButton({
 
         window.scrollTo({ top: 0, behavior: prefersReducedMotion() ? "auto" : "smooth" });
       }}
-      className="fixed bottom-24 right-4 z-40 flex h-11 w-11 items-center justify-center rounded-full bg-[#082A63] text-white shadow-[0_4px_16px_rgba(8,42,99,0.35)] transition-all active:scale-90 hover:bg-[#103B82] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#082A63]"
+      className="fixed bottom-24 right-4 z-40 flex h-11 w-11 items-center justify-center rounded-full bg-[#8E24AA] text-white shadow-[0_4px_16px_rgba(142, 36, 170,0.35)] transition-all active:scale-90 hover:bg-[#8E24AA] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#8E24AA]"
     >
       <ChevronUp className="h-5 w-5" strokeWidth={2.5} />
     </button>

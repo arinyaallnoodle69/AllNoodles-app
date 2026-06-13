@@ -147,13 +147,13 @@ export function StockReceiptEditModal({ receipt, suppliers, isOpen, onClose, onS
                 <button
                   type="button"
                   onClick={() => setIsSupplierDrawerOpen(true)}
-                  className={`group relative w-full h-14 px-4 flex items-center justify-between bg-slate-50 border transition-all rounded-xl hover:bg-white hover:border-[#082A63]/20 active:scale-[0.98] ${
+                  className={`group relative w-full h-14 px-4 flex items-center justify-between bg-slate-50 border transition-all rounded-xl hover:bg-white hover:border-[#8E24AA]/20 active:scale-[0.98] ${
                     supplierId ? "border-slate-200" : "border-slate-200"
                   }`}
                 >
                   <div className="flex items-center gap-3">
                     <div className={`h-8 w-8 rounded-lg flex items-center justify-center transition-all ${
-                      supplierId ? "bg-[#FAF7F2] text-[#082A63]" : "bg-slate-100 text-slate-400"
+                      supplierId ? "bg-[#F3E5F5] text-[#8E24AA]" : "bg-slate-100 text-slate-400"
                     }`}>
                       <Factory size={18} />
                     </div>
@@ -161,7 +161,7 @@ export function StockReceiptEditModal({ receipt, suppliers, isOpen, onClose, onS
                       {supplierName || "เลือกผู้ขาย..."}
                     </span>
                   </div>
-                  <ChevronRight className={`h-5 w-5 transition-transform group-hover:translate-x-1 ${supplierId ? "text-[#082A63]" : "text-slate-300"}`} strokeWidth={3} />
+                  <ChevronRight className={`h-5 w-5 transition-transform group-hover:translate-x-1 ${supplierId ? "text-[#8E24AA]" : "text-slate-300"}`} strokeWidth={3} />
                 </button>
                 {state.fieldErrors?.supplierId && (
                   <p className="mt-1 text-[12px] text-rose-600 font-medium">{state.fieldErrors.supplierId}</p>
@@ -176,7 +176,7 @@ export function StockReceiptEditModal({ receipt, suppliers, isOpen, onClose, onS
                   <Package className="w-3 h-3" />
                   รายการสินค้า
                 </label>
-                <span className="text-[12px] font-black text-[#082A63]">
+                <span className="text-[12px] font-black text-[#8E24AA]">
                   รวม {calculateTotal().toLocaleString("th-TH", { minimumFractionDigits: 2 })} ฿
                 </span>
               </div>
@@ -192,7 +192,7 @@ export function StockReceiptEditModal({ receipt, suppliers, isOpen, onClose, onS
                       <p className="text-[11px] text-slate-400 font-mono mt-0.5">{item.sku}</p>
                     </div>
                     <div className="text-right shrink-0">
-                      <p className="text-[18px] font-black text-[#082A63]">
+                      <p className="text-[18px] font-black text-[#8E24AA]">
                         {item.lineTotal.toLocaleString("th-TH", { maximumFractionDigits: 2 })} ฿
                       </p>
                       <p className="text-[11px] font-bold text-slate-500 uppercase tracking-widest mt-0.5">
@@ -222,14 +222,14 @@ export function StockReceiptEditModal({ receipt, suppliers, isOpen, onClose, onS
                           min="0"
                           value={item.quantityReceived}
                           onChange={(e) => updateQuantity(item.id, e.target.value)}
-                          className="w-full h-12 rounded-xl bg-slate-50 border border-slate-100 text-center font-black text-lg text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#082A63]/20 focus:border-[#082A63] transition-all"
+                          className="w-full h-12 rounded-xl bg-slate-50 border border-slate-100 text-center font-black text-lg text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#8E24AA]/20 focus:border-[#8E24AA] transition-all"
                         />
                       </div>
 
                       <button
                         type="button"
                         onClick={() => updateQuantity(item.id, (item.quantityReceived + 1).toString())}
-                        className="w-12 h-12 rounded-xl bg-[#082A63]/10 flex items-center justify-center text-[#082A63] active:scale-90 transition-all hover:bg-[#082A63]/20"
+                        className="w-12 h-12 rounded-xl bg-[#8E24AA]/10 flex items-center justify-center text-[#8E24AA] active:scale-90 transition-all hover:bg-[#8E24AA]/20"
                       >
                         <span className="text-2xl font-bold">+</span>
                       </button>
@@ -259,7 +259,7 @@ export function StockReceiptEditModal({ receipt, suppliers, isOpen, onClose, onS
             <button
               type="submit"
               disabled={isPending}
-              className="flex-[2] h-13 rounded-2xl bg-[#082A63] hover:bg-[#103B82] text-[#1F2A44] font-bold text-[15px] transition-all disabled:opacity-50 flex items-center justify-center gap-2 active:scale-95"
+              className="flex-[2] h-13 rounded-2xl bg-[#8E24AA] hover:bg-[#8E24AA] text-[#8E24AA] font-bold text-[15px] transition-all disabled:opacity-50 flex items-center justify-center gap-2 active:scale-95"
             >
               {isPending ? (
                 <>
@@ -288,10 +288,10 @@ export function StockReceiptEditModal({ receipt, suppliers, isOpen, onClose, onS
 
               <div className="shrink-0 p-6 border-b border-slate-50 flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-xl bg-[#FAF7F2] flex items-center justify-center text-[#082A63]">
+                  <div className="h-10 w-10 rounded-xl bg-[#F3E5F5] flex items-center justify-center text-[#8E24AA]">
                     <Factory size={22} />
                   </div>
-                  <h3 className="text-xl font-black text-[#082A63] tracking-tight">เลือกผู้จัดจำหน่าย</h3>
+                  <h3 className="text-xl font-black text-[#8E24AA] tracking-tight">เลือกผู้จัดจำหน่าย</h3>
                 </div>
                 <button
                   type="button"
@@ -316,13 +316,13 @@ export function StockReceiptEditModal({ receipt, suppliers, isOpen, onClose, onS
                       }}
                       className={`group w-full flex items-center justify-between p-5 rounded-2xl border transition-all text-left active:scale-[0.98] ${
                         isSelected
-                          ? "bg-[#FAF7F2]/50 border-[#082A63] shadow-md"
+                          ? "bg-[#F3E5F5]/50 border-[#8E24AA] shadow-md"
                           : "bg-white border-slate-100 hover:border-slate-200"
                       }`}
                     >
                       <div className="flex items-center gap-4">
                         <div className={`h-11 w-11 rounded-xl flex items-center justify-center transition-all ${
-                          isSelected ? "bg-white text-[#082A63] shadow-sm" : "bg-slate-50 text-slate-300 group-hover:text-[#103B82]"
+                          isSelected ? "bg-white text-[#8E24AA] shadow-sm" : "bg-slate-50 text-slate-300 group-hover:text-[#8E24AA]"
                         }`}>
                           <Factory size={20} />
                         </div>
@@ -332,7 +332,7 @@ export function StockReceiptEditModal({ receipt, suppliers, isOpen, onClose, onS
                         </div>
                       </div>
                       <div className={`h-6 w-6 rounded-full border-2 flex items-center justify-center transition-all ${
-                        isSelected ? "bg-[#082A63] border-[#082A63]" : "border-slate-100"
+                        isSelected ? "bg-[#8E24AA] border-[#8E24AA]" : "border-slate-100"
                       }`}>
                         {isSelected && <Check className="h-3 w-3 text-white" strokeWidth={5} />}
                       </div>

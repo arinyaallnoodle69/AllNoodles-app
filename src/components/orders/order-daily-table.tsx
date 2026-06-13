@@ -182,7 +182,7 @@ function StoreDetailPanel({ date, detail }: { date: string; detail: OrderStoreDe
       <div className="hidden overflow-x-auto rounded-[1.25rem] border border-slate-300 md:block">
         <table className="min-w-full border-collapse text-left text-sm">
           <thead>
-            <tr style={{ backgroundColor: "#082A63" }}>
+            <tr style={{ backgroundColor: "#8E24AA" }}>
               {(["รหัสสินค้า", "รายการสินค้า", "ออเดอร์", "หน่วย", "สต็อก", "ราคา/หน่วย", "จำนวนเงินรวม"] as const).map(
                 (col, i, arr) => (
                   <th
@@ -262,14 +262,14 @@ function StoreDetailPanel({ date, detail }: { date: string; detail: OrderStoreDe
             ))}
           </tbody>
           <tfoot>
-            <tr style={{ backgroundColor: "#FAF7F2" }}>
+            <tr style={{ backgroundColor: "#F3E5F5" }}>
               <td
                 colSpan={6}
                 className="border-r border-t border-slate-300 px-4 py-3 text-right text-sm font-semibold text-slate-600"
               >
                 ยอดเงินรวมทุกรายการ
               </td>
-              <td className="border-t border-slate-300 px-4 py-3 text-center text-base font-bold tabular-nums text-[#082A63]">
+              <td className="border-t border-slate-300 px-4 py-3 text-center text-base font-bold tabular-nums text-[#8E24AA]">
                 {formatThaiCurrency(detail.totalAmount)} บาท
               </td>
             </tr>
@@ -290,7 +290,7 @@ export function OrderDailyTable({ data, date, expanded, q, deliveredToday }: Pro
         <div className="min-w-0">
           <h1 className="text-lg font-bold text-slate-950 md:text-xl">
             ออเดอร์ประจำวัน{" "}
-            <span className="text-[#082A63]">{formatThaiDate(date)}</span>
+            <span className="text-[#8E24AA]">{formatThaiDate(date)}</span>
           </h1>
           <p className="mt-1 text-sm text-slate-500">
             {stats.activeStoreCount > 0
@@ -333,7 +333,7 @@ export function OrderDailyTable({ data, date, expanded, q, deliveredToday }: Pro
       <section className="grid grid-cols-2 gap-3 lg:grid-cols-3">
         <article className="rounded-[1.5rem] border border-slate-200 bg-white p-3 shadow-[0_12px_40px_rgba(15,23,42,0.05)] md:p-5">
           <div className="flex items-center gap-2">
-            <Store className="h-4 w-4 shrink-0 text-[#082A63]" strokeWidth={2.2} />
+            <Store className="h-4 w-4 shrink-0 text-[#8E24AA]" strokeWidth={2.2} />
             <span className="truncate text-xs font-semibold uppercase tracking-[0.1em] text-slate-500">
               ร้านค้า
             </span>
@@ -345,7 +345,7 @@ export function OrderDailyTable({ data, date, expanded, q, deliveredToday }: Pro
 
         <article className="rounded-[1.5rem] border border-slate-200 bg-white p-3 shadow-[0_12px_40px_rgba(15,23,42,0.05)] md:p-5">
           <div className="flex items-center gap-2">
-            <ClipboardList className="h-4 w-4 shrink-0 text-[#082A63]" strokeWidth={2.2} />
+            <ClipboardList className="h-4 w-4 shrink-0 text-[#8E24AA]" strokeWidth={2.2} />
             <span className="truncate text-xs font-semibold uppercase tracking-[0.1em] text-slate-500">
               รอบออเดอร์
             </span>
@@ -357,7 +357,7 @@ export function OrderDailyTable({ data, date, expanded, q, deliveredToday }: Pro
 
         <article className="rounded-[1.5rem] border border-slate-200 bg-white p-3 shadow-[0_12px_40px_rgba(15,23,42,0.05)] md:p-5">
           <div className="flex items-center gap-2">
-            <WalletCards className="h-4 w-4 shrink-0 text-[#082A63]" strokeWidth={2.2} />
+            <WalletCards className="h-4 w-4 shrink-0 text-[#8E24AA]" strokeWidth={2.2} />
             <span className="truncate text-xs font-semibold uppercase tracking-[0.1em] text-slate-500">
               ยอดรวมวันนี้
             </span>
@@ -466,7 +466,7 @@ export function OrderDailyTable({ data, date, expanded, q, deliveredToday }: Pro
                   return (
                     <Fragment key={store.customerId}>
                       <tr
-                        className={["transition", isExpanded ? "bg-[#082A63]/[0.10]" : "hover:bg-slate-50/70"].join(" ")}
+                        className={["transition", isExpanded ? "bg-[#8E24AA]/[0.10]" : "hover:bg-slate-50/70"].join(" ")}
                         style={{ contentVisibility: "auto" }}
                       >
                         <td className="px-4 py-4">
@@ -490,7 +490,7 @@ export function OrderDailyTable({ data, date, expanded, q, deliveredToday }: Pro
                         </td>
                         <td className="px-4 py-4">
                           <Link href={toggleHref} scroll={false} className="group block print:pointer-events-none">
-                            <p className="font-semibold text-slate-900 transition group-hover:text-[#082A63]">
+                            <p className="font-semibold text-slate-900 transition group-hover:text-[#8E24AA]">
                               {store.customerName}
                             </p>
                             <p className="mt-0.5 font-mono text-xs text-slate-400">{store.customerCode}</p>

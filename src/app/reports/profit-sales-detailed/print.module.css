@@ -16,7 +16,7 @@
   box-sizing: border-box !important;
   overflow: hidden !important;
   font-family: "SukhumvitSet-SemiBold", var(--font-sukhumvit), sans-serif !important;
-  color: #1F2A44 !important;
+  color: #000000 !important;
   print-color-adjust: exact !important;
   -webkit-print-color-adjust: exact !important;
 }
@@ -37,11 +37,11 @@
   flex-direction: column !important;
 }
 
-.printRankNumber { display: inline !important; font-size: 9pt !important; font-weight: 700 !important; color: #1F2A44 !important; }
+.printRankNumber { display: inline !important; font-size: 9pt !important; font-weight: 700 !important; color: #000000 !important; }
 .printHeader {
   display: block !important;
   margin-bottom: 1.5mm !important;
-  border-bottom: 1pt solid #082A63 !important;
+  border-bottom: 1pt solid #000000 !important;
   padding: 1mm 0 1.5mm 0 !important;
   background: #ffffff !important;
   flex-shrink: 0 !important;
@@ -61,15 +61,15 @@
   width: 10mm !important;
   height: 10mm !important;
 }
-.printCompanyName { font-size: 13pt !important; font-weight: 900 !important; line-height: 1 !important; color: #082A63 !important; margin: 0 !important; }
-.printSubtitle { font-size: 8pt !important; font-weight: 600 !important; color: #475569 !important; margin-top: 0.5mm !important; }
-.printMeta { font-size: 7.5pt !important; font-weight: 500 !important; color: #64748b !important; text-align: right !important; line-height: 1.2 !important; }
-.printReportTitle { font-size: 14pt !important; font-weight: 900 !important; color: #082A63 !important; margin: 1mm 0 0 0 !important; }
+.printCompanyName { font-size: 13pt !important; font-weight: 900 !important; line-height: 1 !important; color: #000000 !important; margin: 0 !important; }
+.printSubtitle { font-size: 8pt !important; font-weight: 600 !important; color: #000000 !important; margin-top: 0.5mm !important; }
+.printMeta { font-size: 7.5pt !important; font-weight: 500 !important; color: #000000 !important; text-align: right !important; line-height: 1.2 !important; }
+.printReportTitle { font-size: 14pt !important; font-weight: 900 !important; color: #000000 !important; margin: 1mm 0 0 0 !important; }
 
 .printFilters { margin-top: 1.2mm !important; padding-top: 0.8mm !important; }
 .printFilterItem { display: inline-flex !important; align-items: center !important; gap: 1mm !important; }
-.printFilterLabel { font-size: 8pt !important; font-weight: 700 !important; color: #64748b !important; }
-.printFilterValue { font-size: 8pt !important; font-weight: 600 !important; color: #1F2A44 !important; }
+.printFilterLabel { font-size: 8pt !important; font-weight: 700 !important; color: #000000 !important; }
+.printFilterValue { font-size: 8pt !important; font-weight: 600 !important; color: #000000 !important; }
 
 .printArea table {
   width: 100% !important;
@@ -89,7 +89,7 @@
 }
 
 .printProductCell { display: flex !important; align-items: center !important; gap: 1mm !important; min-width: 0 !important; }
-.printProductName { font-size: 9pt !important; font-weight: 800 !important; color: #1F2A44 !important; white-space: normal !important; line-height: 1.15 !important; }
+.printProductName { font-size: 9pt !important; font-weight: 800 !important; color: #000000 !important; white-space: normal !important; line-height: 1.15 !important; }
 
 .printFooter {
   display: block !important;
@@ -98,7 +98,7 @@
   border-top: 0.8pt solid #e2e8f0 !important;
   font-size: 8pt !important;
   font-weight: 600 !important;
-  color: #94a3b8 !important;
+  color: #000000 !important;
   text-align: right !important;
   flex-shrink: 0 !important;
 }

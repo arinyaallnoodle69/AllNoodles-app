@@ -100,7 +100,7 @@ export function StockReceiptDetailModal({ detail, onClose, onEdit }: Props) {
 
               <div className="flex items-center justify-between mb-6 px-1">
                  <span className="text-[13px] font-[800]">ยอดรวมทั้งหมด:</span>
-                 <span className="text-[16px] font-[800] text-[#082A63] underline decoration-double decoration-slate-300 underline-offset-4">
+                 <span className="text-[16px] font-[800] text-[#8E24AA] underline decoration-double decoration-slate-300 underline-offset-4">
                     {formatCurrency(detail.totalAmount)}
                  </span>
               </div>
@@ -151,7 +151,7 @@ export function StockReceiptDetailModal({ detail, onClose, onEdit }: Props) {
                 </div>
               </div>
                 <div className="text-left sm:text-right">
-                 <h2 className="text-[18px] font-black text-[#082A63] md:text-[20px]">ใบรับสินค้าเข้า</h2>
+                 <h2 className="text-[18px] font-black text-[#8E24AA] md:text-[20px]">ใบรับสินค้าเข้า</h2>
                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#45464d]">Goods Receipt Voucher</p>
                  <button 
                    onClick={onEdit}
@@ -243,7 +243,7 @@ export function StockReceiptDetailModal({ detail, onClose, onEdit }: Props) {
               <div className="flex items-baseline gap-6">
                 <span className="text-[16px] font-black text-black">รวมทั้งสิ้น / Total:</span>
                 <div className="text-right">
-                  <p className="text-[28px] font-black text-[#082A63] leading-none mb-1">
+                  <p className="text-[28px] font-black text-[#8E24AA] leading-none mb-1">
                     {formatCurrency(detail.totalAmount)}
                   </p>
                 </div>

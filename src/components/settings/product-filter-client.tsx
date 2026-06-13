@@ -236,10 +236,10 @@ export function ProductFilterClient({
 
   return (
     <>
-      <div className="sticky top-0 z-40 -mx-3 mb-4 hidden border-b border-[#E8DCC7] bg-white/95 px-4 py-3 shadow-[0_10px_30px_rgba(31,42,68,0.08)] backdrop-blur lg:block">
+      <div className="sticky top-0 z-40 -mx-3 mb-4 hidden border-b border-[#E1BEE7] bg-white/95 px-4 py-3 shadow-[0_10px_30px_rgba(31,42,68,0.08)] backdrop-blur lg:block">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div className="min-w-0">
-            <p className="text-lg font-black text-[#082A63]">รายการสินค้า</p>
+            <p className="text-lg font-black text-[#8E24AA]">รายการสินค้า</p>
             <p className="text-xs font-semibold text-[#667085]">
               แสดง {filteredProducts.length.toLocaleString("th-TH")} จาก {allProducts.length.toLocaleString("th-TH")} รายการ
             </p>
@@ -253,14 +253,14 @@ export function ProductFilterClient({
                 value={searchQuery}
                 onChange={(event) => setSearchQuery(event.target.value)}
                 placeholder="ค้นหาสินค้า หรือรหัสสินค้า"
-                className="h-12 w-full rounded-lg border border-[#D7DEE8] bg-white pl-11 pr-4 text-sm font-semibold text-[#1F2A44] outline-none transition placeholder:text-[#667085] focus:border-[#082A63] focus:ring-2 focus:ring-[#082A63]/15"
+                className="h-12 w-full rounded-lg border border-[#D7DEE8] bg-white pl-11 pr-4 text-sm font-semibold text-[#8E24AA] outline-none transition placeholder:text-[#667085] focus:border-[#8E24AA] focus:ring-2 focus:ring-[#8E24AA]/15"
               />
             </label>
 
             <Link
               href={`${baseListHref}${baseListHref.includes("?") ? "&" : "?"}create=1`}
               scroll={false}
-              className="inline-flex h-12 items-center justify-center gap-2 rounded-lg bg-[#082A63] px-4 text-sm font-bold text-white shadow-[0_12px_26px_rgba(8,42,99,0.22)] transition hover:bg-[#103B82] active:scale-[0.98]"
+              className="inline-flex h-12 items-center justify-center gap-2 rounded-lg bg-[#8E24AA] px-4 text-sm font-bold text-white shadow-[0_12px_26px_rgba(142, 36, 170,0.22)] transition hover:bg-[#8E24AA] active:scale-[0.98]"
             >
               <Plus className="h-4.5 w-4.5" strokeWidth={2.4} />
               เพิ่มสินค้า
@@ -269,7 +269,7 @@ export function ProductFilterClient({
             <button
               type="button"
               onClick={handleExport}
-              className="inline-flex h-12 items-center justify-center gap-2 rounded-lg border border-[#082A63]/20 bg-white px-4 text-sm font-bold text-[#082A63] transition hover:border-[#082A63] hover:bg-[#082A63]/[0.04] active:scale-[0.98]"
+              className="inline-flex h-12 items-center justify-center gap-2 rounded-lg border border-[#8E24AA]/20 bg-white px-4 text-sm font-bold text-[#8E24AA] transition hover:border-[#8E24AA] hover:bg-[#8E24AA]/[0.04] active:scale-[0.98]"
             >
               <Download className="h-4.5 w-4.5" strokeWidth={2.2} />
               ส่งออกข้อมูล
@@ -289,7 +289,7 @@ export function ProductFilterClient({
               value={searchQuery}
               onChange={(event) => setSearchQuery(event.target.value)}
               placeholder="ค้นหาสินค้า หรือรหัสสินค้า"
-              className="h-12 w-full rounded-lg border border-[#D7DEE8] bg-white pl-11 pr-4 text-sm font-semibold text-[#1F2A44] outline-none transition placeholder:text-[#667085] focus:border-[#082A63] focus:ring-2 focus:ring-[#082A63]/15"
+              className="h-12 w-full rounded-lg border border-[#D7DEE8] bg-white pl-11 pr-4 text-sm font-semibold text-[#8E24AA] outline-none transition placeholder:text-[#667085] focus:border-[#8E24AA] focus:ring-2 focus:ring-[#8E24AA]/15"
             />
           </label>
 
@@ -297,7 +297,7 @@ export function ProductFilterClient({
             <Link
               href={`${baseListHref}${baseListHref.includes("?") ? "&" : "?"}create=1`}
               scroll={false}
-              className="inline-flex h-12 items-center justify-center gap-2 rounded-lg bg-[#082A63] px-4 text-sm font-bold text-white shadow-[0_12px_26px_rgba(8,42,99,0.22)] transition active:scale-[0.98]"
+              className="inline-flex h-12 items-center justify-center gap-2 rounded-lg bg-[#8E24AA] px-4 text-sm font-bold text-white shadow-[0_12px_26px_rgba(142, 36, 170,0.22)] transition active:scale-[0.98]"
             >
               <Plus className="h-4.5 w-4.5" strokeWidth={2.4} />
               เพิ่มสินค้า
@@ -306,7 +306,7 @@ export function ProductFilterClient({
             <button
               type="button"
               onClick={handleExport}
-              className="inline-flex h-12 items-center justify-center gap-2 rounded-lg border border-[#082A63]/20 bg-white px-4 text-sm font-bold text-[#082A63] transition active:scale-[0.98]"
+              className="inline-flex h-12 items-center justify-center gap-2 rounded-lg border border-[#8E24AA]/20 bg-white px-4 text-sm font-bold text-[#8E24AA] transition active:scale-[0.98]"
             >
               <Download className="h-4.5 w-4.5" strokeWidth={2.2} />
               ส่งออกข้อมูล
@@ -319,7 +319,7 @@ export function ProductFilterClient({
         href={`${baseListHref}${baseListHref.includes("?") ? "&" : "?"}create=1`}
         scroll={false}
         aria-label="เพิ่มสินค้า"
-        className="fixed bottom-[calc(4.75rem+env(safe-area-inset-bottom)+12px)] left-4 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-[#082A63] text-white shadow-[0_14px_32px_rgba(8,42,99,0.32)] transition active:scale-95 lg:hidden"
+        className="fixed bottom-[calc(4.75rem+env(safe-area-inset-bottom)+12px)] left-4 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-[#8E24AA] text-white shadow-[0_14px_32px_rgba(142, 36, 170,0.32)] transition active:scale-95 lg:hidden"
       >
         <Plus className="h-7 w-7" strokeWidth={2.6} />
       </Link>

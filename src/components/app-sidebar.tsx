@@ -213,7 +213,7 @@ function SidebarLink({
     <Link
       href={item.href}
       title={collapsed ? item.label : undefined}
-      className={`flex items-center gap-3 rounded-xl px-2.5 py-2.5 text-sm font-black transition-colors ${active ? "bg-[#082A63] text-white shadow-sm shadow-[#082A63]/20" : "text-[#1F2A44] hover:bg-[#FAF7F2] hover:text-[#1F2A44]"
+      className={`flex items-center gap-3 rounded-xl px-2.5 py-2.5 text-sm font-black transition-colors ${active ? "bg-[#8E24AA] text-white shadow-sm shadow-[#8E24AA]/20" : "text-[#8E24AA] hover:bg-[#F3E5F5] hover:text-[#8E24AA]"
         } ${collapsed ? "justify-center" : ""} ${indent && !collapsed ? "pl-9" : ""}`}
     >
       <Icon className="h-4.5 w-4.5 shrink-0" strokeWidth={2.2} />
@@ -301,12 +301,12 @@ export function AppSidebarLayout({
       <MobileSearchProvider>
         {/* ── Desktop sidebar (fixed) ───────────────────────────────────────── */}
         <aside
-          className={`hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-50 lg:flex lg:flex-col lg:overflow-hidden lg:border-r lg:border-[#E8DCC7] lg:bg-white lg:shadow-[2px_0_28px_rgba(0,29,63,0.08)] ${collapsed ? "w-16" : "w-60"
+          className={`hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-50 lg:flex lg:flex-col lg:overflow-hidden lg:border-r lg:border-[#E1BEE7] lg:bg-white lg:shadow-[2px_0_28px_rgba(0,29,63,0.08)] ${collapsed ? "w-16" : "w-60"
             } transition-[width] duration-200 ease-in-out [will-change:width] motion-reduce:transition-none`}
         >
           {/* Logo + toggle */}
           <div
-            className={`relative z-10 flex h-[68px] shrink-0 items-center border-b border-[#E8DCC7] bg-white ${collapsed ? "justify-center px-3" : "justify-between px-4"
+            className={`relative z-10 flex h-[68px] shrink-0 items-center border-b border-[#E1BEE7] bg-white ${collapsed ? "justify-center px-3" : "justify-between px-4"
               }`}
           >
             {!collapsed && (
@@ -319,7 +319,7 @@ export function AppSidebarLayout({
                   priority
                   className="h-12 w-auto object-contain"
                 />
-                <span className="truncate text-base font-bold tracking-tight text-[#1F2A44]">
+                <span className="truncate text-base font-bold tracking-tight text-[#8E24AA]">
                   All Noodles
                 </span>
               </Link>
@@ -327,7 +327,7 @@ export function AppSidebarLayout({
             <button
               type="button"
               onClick={toggleCollapsed}
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-500 transition hover:bg-[#FAF7F2] hover:text-[#1F2A44]"
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-500 transition hover:bg-[#F3E5F5] hover:text-[#8E24AA]"
               aria-label={collapsed ? "ขยาย sidebar" : "ย่อ sidebar"}
             >
               {collapsed ? (
@@ -348,7 +348,7 @@ export function AppSidebarLayout({
             </div>
 
             {/* Divider */}
-            <div className="mx-3 my-3 border-t border-[#E8DCC7]" />
+            <div className="mx-3 my-3 border-t border-[#E1BEE7]" />
 
             {/* Reports collapsible section */}
             <div className="px-2">
@@ -357,8 +357,8 @@ export function AppSidebarLayout({
                   href="/reports/profit-sales"
                   title="Reports"
                   className={`flex items-center justify-center rounded-xl px-2.5 py-2.5 text-sm font-black transition-colors ${anyReportsActive
-                      ? "bg-[#082A63] text-white shadow-sm shadow-[#082A63]/20"
-                      : "text-[#1F2A44] hover:bg-[#FAF7F2] hover:text-[#1F2A44]"
+                      ? "bg-[#8E24AA] text-white shadow-sm shadow-[#8E24AA]/20"
+                      : "text-[#8E24AA] hover:bg-[#F3E5F5] hover:text-[#8E24AA]"
                     }`}
                 >
                   <BarChart2 className="h-4.5 w-4.5 shrink-0" strokeWidth={2.2} />
@@ -372,8 +372,8 @@ export function AppSidebarLayout({
                       setReportsUserToggled(true);
                     }}
                     className={`flex w-full items-center justify-between rounded-xl px-2.5 py-2.5 text-sm font-black transition-colors ${anyReportsActive
-                        ? "bg-[#F2E3AE] text-[#1F2A44]"
-                        : "text-[#1F2A44] hover:bg-[#FAF7F2] hover:text-[#1F2A44]"
+                        ? "bg-[#EA80FC] text-[#8E24AA]"
+                        : "text-[#8E24AA] hover:bg-[#F3E5F5] hover:text-[#8E24AA]"
                       }`}
                   >
                     <span className="flex items-center gap-3">
@@ -407,7 +407,7 @@ export function AppSidebarLayout({
             </div>
 
             {/* Divider */}
-            <div className="mx-3 my-3 border-t border-[#E8DCC7]" />
+            <div className="mx-3 my-3 border-t border-[#E1BEE7]" />
 
             {/* Settings collapsible section */}
             <div className="px-2">
@@ -416,8 +416,8 @@ export function AppSidebarLayout({
                   href="/settings/products"
                   title="Settings"
                   className={`flex items-center justify-center rounded-xl px-2.5 py-2.5 text-sm font-black transition-colors ${anySettingsActive
-                      ? "bg-[#082A63] text-white shadow-sm shadow-[#082A63]/20"
-                      : "text-[#1F2A44] hover:bg-[#FAF7F2] hover:text-[#1F2A44]"
+                      ? "bg-[#8E24AA] text-white shadow-sm shadow-[#8E24AA]/20"
+                      : "text-[#8E24AA] hover:bg-[#F3E5F5] hover:text-[#8E24AA]"
                     }`}
                 >
                   <Settings2 className="h-4.5 w-4.5 shrink-0" strokeWidth={2.2} />
@@ -431,8 +431,8 @@ export function AppSidebarLayout({
                       setSettingsUserToggled(true);
                     }}
                     className={`flex w-full items-center justify-between rounded-xl px-2.5 py-2.5 text-sm font-black transition-colors ${anySettingsActive
-                        ? "bg-[#F2E3AE] text-[#1F2A44]"
-                        : "text-[#1F2A44] hover:bg-[#FAF7F2] hover:text-[#1F2A44]"
+                        ? "bg-[#EA80FC] text-[#8E24AA]"
+                        : "text-[#8E24AA] hover:bg-[#F3E5F5] hover:text-[#8E24AA]"
                       }`}
                   >
                     <span className="flex items-center gap-3">
@@ -468,12 +468,12 @@ export function AppSidebarLayout({
           </nav>
 
           {/* Logout button */}
-          <div className={`relative z-10 shrink-0 border-t border-[#E8DCC7] bg-white/85 p-2 backdrop-blur-[2px] ${collapsed ? "" : "px-2"}`}>
+          <div className={`relative z-10 shrink-0 border-t border-[#E1BEE7] bg-white/85 p-2 backdrop-blur-[2px] ${collapsed ? "" : "px-2"}`}>
             <form action={signOut}>
               <button
                 type="submit"
                 title={collapsed ? "ออกจากระบบ" : undefined}
-                className={`flex w-full items-center gap-3 rounded-xl px-2.5 py-2.5 text-sm font-black text-[#1F2A44] transition-colors hover:bg-[#FAF7F2] hover:text-[#1F2A44] ${collapsed ? "justify-center" : ""}`}
+                className={`flex w-full items-center gap-3 rounded-xl px-2.5 py-2.5 text-sm font-black text-[#8E24AA] transition-colors hover:bg-[#F3E5F5] hover:text-[#8E24AA] ${collapsed ? "justify-center" : ""}`}
               >
                 <LogOut className="h-4.5 w-4.5 shrink-0" strokeWidth={2.2} />
                 {!collapsed && <span>ออกจากระบบ</span>}

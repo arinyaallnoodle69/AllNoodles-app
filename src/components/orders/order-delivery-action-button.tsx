@@ -200,7 +200,7 @@ export function OrderDeliveryActionButton({
         aria-label={label}
         title={label}
         className={[
-          "inline-flex items-center justify-center border border-[#082A63] bg-[#082A63] text-white transition hover:bg-[#103B82] active:scale-95 disabled:opacity-50",
+          "inline-flex items-center justify-center border border-[#8E24AA] bg-[#8E24AA] text-white transition hover:bg-[#8E24AA] active:scale-95 disabled:opacity-50",
           iconOnly ? "size-10 shrink-0 rounded-full p-0 leading-none" : "min-h-9 w-full gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold",
         ].join(" ")}
       >
@@ -238,7 +238,7 @@ export function OrderDeliveryActionButton({
                     type="button"
                     onClick={saveReceiptAsImage}
                     disabled={isSaving}
-                    className="inline-flex items-center gap-2 rounded-full border border-[#D4AF37]/70 bg-[#082A63] px-5 py-2 text-sm font-bold text-white transition-all hover:bg-[#103B82] active:scale-95 disabled:opacity-60 shadow-md shadow-[#082A63]/20"
+                    className="inline-flex items-center gap-2 rounded-full border border-[#AA00FF]/70 bg-[#8E24AA] px-5 py-2 text-sm font-bold text-white transition-all hover:bg-[#8E24AA] active:scale-95 disabled:opacity-60 shadow-md shadow-[#8E24AA]/20"
                   >
                     {isSaving ? (
                       <Loader2 className="h-4.5 w-4.5 animate-spin" />
@@ -315,7 +315,7 @@ export function OrderDeliveryActionButton({
 
                       <div className="mb-6 flex items-center justify-between px-1">
                         <span className="text-[13px] font-black">ยอดรวมทั้งหมด:</span>
-                        <span className="text-[16px] font-black text-[#082A63] underline decoration-double decoration-slate-300 underline-offset-4">
+                        <span className="text-[16px] font-black text-[#8E24AA] underline decoration-double decoration-slate-300 underline-offset-4">
                           {formatCurrency(detail.totalAmount)}
                         </span>
                       </div>

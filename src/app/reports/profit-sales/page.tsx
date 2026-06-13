@@ -186,10 +186,10 @@ async function ProfitSalesContent({ searchParams }: PageProps) {
 
   return (
     <AppSidebarLayout>
-      <div className="min-h-screen bg-slate-50/70 print:min-h-0 print:bg-white">
+      <div className="min-h-screen bg-background print:min-h-0 print:bg-white">
         <div className="mx-auto max-w-[1500px] px-0 py-0 sm:px-4 sm:py-8 no-print">
           <header className="mb-6 hidden sm:block">
-            <h1 className="text-2xl font-extrabold tracking-tight text-[#082A63] sm:text-3xl">รายงานกำไรขาย</h1>
+            <h1 className="text-2xl font-extrabold tracking-tight text-[#8E24AA] sm:text-3xl">รายงานกำไรขาย</h1>
           </header>
 
           <MobileSearchDrawer title="ค้นหารายงานกำไรขาย">
@@ -201,7 +201,7 @@ async function ProfitSalesContent({ searchParams }: PageProps) {
                 <select
                   name="warehouse"
                   defaultValue={warehouseId}
-                  className="h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 outline-none focus:border-[#082A63]"
+                  className="h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 outline-none focus:border-[#8E24AA]"
                 >
                   <option value="">ทุกคลังสินค้า</option>
                   {warehouses.map((w) => (
@@ -220,7 +220,7 @@ async function ProfitSalesContent({ searchParams }: PageProps) {
                   <div className="min-w-0 flex-1"><ThaiDatePicker id="m-profit-to" name="to" defaultValue={toDate} placeholder="วันสิ้นสุด" compact matchFieldHeight /></div>
                 </div>
               </div>
-              <button type="submit" className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#082A63] py-3.5 text-base font-bold text-white transition hover:bg-[#103B82]">
+              <button type="submit" className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#8E24AA] py-3.5 text-base font-bold text-white transition hover:bg-[#8E24AA]">
                 <Filter className="h-4 w-4" strokeWidth={2} />
                 ค้นหา
               </button>
@@ -238,7 +238,7 @@ async function ProfitSalesContent({ searchParams }: PageProps) {
                   <select
                     name="warehouse"
                     defaultValue={warehouseId}
-                    className="h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 outline-none focus:border-[#082A63]"
+                    className="h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 outline-none focus:border-[#8E24AA]"
                   >
                     <option value="">ทุกคลังสินค้า</option>
                     {warehouses.map((w) => (
@@ -258,11 +258,11 @@ async function ProfitSalesContent({ searchParams }: PageProps) {
                   </div>
                 </div>
                 <div className="flex shrink-0 gap-2">
-                  <button type="submit" className="flex h-10 items-center justify-center gap-2 rounded-md bg-[#082A63] px-5 text-sm font-bold text-white transition hover:bg-[#103B82]">
+                  <button type="submit" className="flex h-10 items-center justify-center gap-2 rounded-md bg-[#8E24AA] px-5 text-sm font-bold text-white transition hover:bg-[#8E24AA]">
                     <Filter className="h-4 w-4" strokeWidth={2.2} />
                     ค้นหา
                   </button>
-                  <Link href={`/reports/profit-sales?view=${view}`} className="flex h-10 items-center justify-center rounded-md border border-slate-200 bg-white px-4 text-sm font-bold text-slate-600 transition hover:border-[#082A63] hover:text-[#082A63]">
+                  <Link href={`/reports/profit-sales?view=${view}`} className="flex h-10 items-center justify-center rounded-md border border-slate-200 bg-white px-4 text-sm font-bold text-slate-600 transition hover:border-[#8E24AA] hover:text-[#8E24AA]">
                     ล้างตัวกรอง
                   </Link>
                 </div>
@@ -280,13 +280,13 @@ async function ProfitSalesContent({ searchParams }: PageProps) {
             {totalPages > 0 ? (
               <div className="bg-white shadow-2xl border border-slate-100 p-2 sm:p-8 md:p-12 sm:rounded-sm lg:min-h-[297mm] flex flex-col">
                 {/* Replicated Print Header for Screen */}
-                <div className="mb-4 border-b border-[#082A63] pb-2 p-4 sm:p-0">
+                <div className="mb-4 border-b border-[#8E24AA] pb-2 p-4 sm:p-0">
                   <div className="mb-1 flex items-start justify-between gap-3">
                     <div className="flex items-center gap-2">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src="/brand/512x512.png" alt="All Noodles" width={40} height={40} className="h-10 w-10 object-contain" />
                       <div>
-                        <p className="text-sm font-black leading-tight text-[#082A63]">All Noodles</p>
+                        <p className="text-sm font-black leading-tight text-[#8E24AA]">All Noodles</p>
                         <p className="text-[10px] font-semibold text-slate-500">ระบบรายงานผลกำไรจากการขายสินค้า</p>
                       </div>
                     </div>
@@ -295,14 +295,14 @@ async function ProfitSalesContent({ searchParams }: PageProps) {
                       <div className="flex items-center gap-1 justify-end no-print">
                         <Link
                           href={`/reports/profit-sales?from=${fromDate}&to=${toDate}&warehouse=${warehouseId}&page=${safeCurrentPage - 1}`}
-                          className={`p-0.5 rounded-full text-[#082A63] transition ${safeCurrentPage === 1 ? "pointer-events-none opacity-30" : "hover:bg-slate-100"}`}
+                          className={`p-0.5 rounded-full text-[#8E24AA] transition ${safeCurrentPage === 1 ? "pointer-events-none opacity-30" : "hover:bg-slate-100"}`}
                         >
                           <ChevronLeft className="h-3.5 w-3.5" strokeWidth={2.5} />
                         </Link>
                         <span>หน้า {safeCurrentPage} / {totalPages}</span>
                         <Link
                           href={`/reports/profit-sales?from=${fromDate}&to=${toDate}&warehouse=${warehouseId}&page=${safeCurrentPage + 1}`}
-                          className={`p-0.5 rounded-full text-[#082A63] transition ${safeCurrentPage === totalPages ? "pointer-events-none opacity-30" : "hover:bg-slate-100"}`}
+                          className={`p-0.5 rounded-full text-[#8E24AA] transition ${safeCurrentPage === totalPages ? "pointer-events-none opacity-30" : "hover:bg-slate-100"}`}
                         >
                           <ChevronRight className="h-3.5 w-3.5" strokeWidth={2.5} />
                         </Link>
@@ -312,10 +312,10 @@ async function ProfitSalesContent({ searchParams }: PageProps) {
                     </div>
                   </div>
                   <div className="flex items-center justify-between no-print">
-                    <p className="text-base font-black text-[#082A63]">รายงานกำไรขาย</p>
+                    <p className="text-base font-black text-[#8E24AA]">รายงานกำไรขาย</p>
                     <PrintButton targetId="report-print-area" fileName="รายงานกำไรขาย" hidePrintOnMobile />
                   </div>
-                  <p className="text-base font-black text-[#082A63] hidden print:block">รายงานกำไรขาย</p>
+                  <p className="text-base font-black text-[#8E24AA] hidden print:block">รายงานกำไรขาย</p>
                   <p className="text-xs font-semibold text-slate-600">
                     ช่วงวันที่ {formatDateThai(fromDate)} — {formatDateThai(toDate)}
                   </p>
@@ -332,7 +332,7 @@ async function ProfitSalesContent({ searchParams }: PageProps) {
                       <col style={{ width: "12%" }} />
                     </colgroup>
                     <thead>
-                      <tr className="bg-[#082A63]">
+                      <tr className="bg-[#8E24AA]">
                         {["#", view === 'monthly' ? "เดือน" : "วันที่", "ยอดขาย", "ต้นทุน", "กำไรสุทธิ", "กำไร %"].map((label, idx) => (
                           <th
                             key={label}
@@ -343,7 +343,7 @@ async function ProfitSalesContent({ searchParams }: PageProps) {
                         ))}
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-[#082A63]/25">
+                    <tbody className="divide-y divide-[#8E24AA]/25">
                       {currentPageRows.map((row, index) => {
                         const isNoSales = row.orderCount === 0;
                         return (
@@ -389,7 +389,7 @@ async function ProfitSalesContent({ searchParams }: PageProps) {
                   <div className="mt-6 flex items-center justify-between border-t border-slate-100 pt-4 p-4 sm:p-0 sm:pt-4">
                     <Link
                       href={`/reports/profit-sales?from=${fromDate}&to=${toDate}&page=${safeCurrentPage - 1}`}
-                      className={`flex items-center gap-1 text-sm font-bold text-[#082A63] transition ${safeCurrentPage === 1 ? "pointer-events-none opacity-30" : "hover:text-[#103B82]"}`}
+                      className={`flex items-center gap-1 text-sm font-bold text-[#8E24AA] transition ${safeCurrentPage === 1 ? "pointer-events-none opacity-30" : "hover:text-[#8E24AA]"}`}
                     >
                       <ChevronLeft className="h-4 w-4" />
                       ก่อนหน้า
@@ -399,7 +399,7 @@ async function ProfitSalesContent({ searchParams }: PageProps) {
                     </span>
                     <Link
                       href={`/reports/profit-sales?from=${fromDate}&to=${toDate}&page=${safeCurrentPage + 1}`}
-                      className={`flex items-center gap-1 text-sm font-bold text-[#082A63] transition ${safeCurrentPage === totalPages ? "pointer-events-none opacity-30" : "hover:text-[#103B82]"}`}
+                      className={`flex items-center gap-1 text-sm font-bold text-[#8E24AA] transition ${safeCurrentPage === totalPages ? "pointer-events-none opacity-30" : "hover:text-[#8E24AA]"}`}
                     >
                       ถัดไป
                       <ChevronRight className="h-4 w-4" />
@@ -424,7 +424,7 @@ async function ProfitSalesContent({ searchParams }: PageProps) {
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src="/brand/512x512.png" alt="All Noodles" width={40} height={40} className="h-10 w-10 object-contain" />
                     <div>
-                      <p className="text-sm font-black leading-tight text-[#082A63]">All Noodles</p>
+                      <p className="text-sm font-black leading-tight text-[#8E24AA]">All Noodles</p>
                       <p className="text-[10px] font-semibold text-slate-500">ระบบรายงานผลกำไรจากการขายสินค้า</p>
                     </div>
                   </div>
@@ -434,7 +434,7 @@ async function ProfitSalesContent({ searchParams }: PageProps) {
                     <p>หน้า: {pageIndex + 1} / {pages.length}</p>
                   </div>
                 </div>
-                <p className="text-base font-black text-[#082A63]">รายงานกำไรขาย</p>
+                <p className="text-base font-black text-[#8E24AA]">รายงานกำไรขาย</p>
                 <p className="text-xs font-semibold text-slate-600">
                   ช่วงวันที่ {formatDateThai(fromDate)} — {formatDateThai(toDate)}
                 </p>
@@ -450,7 +450,7 @@ async function ProfitSalesContent({ searchParams }: PageProps) {
                   <col style={{ width: "12%" }} />
                 </colgroup>
                 <thead>
-                  <tr className="bg-[#082A63]">
+                  <tr className="bg-[#8E24AA]">
                     {["#", view === 'monthly' ? "เดือน" : "วันที่", "ยอดขาย", "ต้นทุน", "กำไรสุทธิ", "กำไร %"].map((label, idx) => (
                       <th key={label} className={`px-2 py-1 text-[10px] leading-none font-black tracking-wide text-white ${idx === 0 ? "text-center" : "text-right"} ${idx === 1 ? "!text-left" : ""}`}>
                         {label}

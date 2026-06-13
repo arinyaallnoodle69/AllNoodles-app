@@ -765,7 +765,7 @@ function ProductFormBody({
             type="button"
             onClick={() => setActiveBodyTab("info")}
             className={`flex items-center justify-center gap-1.5 border-b-2 py-3.5 text-sm font-semibold transition ${activeBodyTab === "info"
-                ? "border-[#082A63] text-[#082A63]"
+                ? "border-[#8E24AA] text-[#8E24AA]"
                 : "border-transparent text-slate-500 hover:text-slate-700"
               }`}
           >
@@ -776,7 +776,7 @@ function ProductFormBody({
             type="button"
             onClick={() => setActiveBodyTab("images")}
             className={`flex items-center justify-center gap-1.5 border-b-2 py-3.5 text-sm font-semibold transition ${activeBodyTab === "images"
-                ? "border-[#082A63] text-[#082A63]"
+                ? "border-[#8E24AA] text-[#8E24AA]"
                 : "border-transparent text-slate-500 hover:text-slate-700"
               }`}
           >
@@ -972,7 +972,7 @@ function ProductFormBody({
                               { value: "custom", label: "กำหนดเอง", desc: "เช่น 5, 10, 15..." },
                             ] as { value: OrderPreset; label: string; desc: string }[]
                           ).map((opt) => (
-                            <button key={opt.value} type="button" onClick={() => setOrderPreset(saleUnit.key, opt.value)} className={`rounded-xl border px-2 py-2.5 text-center transition ${saleUnit.orderPreset === opt.value ? "border-[#082A63] bg-[#FAF7F2] text-[#082A63]" : "border-slate-200 text-slate-600 hover:bg-slate-50"}`}>
+                            <button key={opt.value} type="button" onClick={() => setOrderPreset(saleUnit.key, opt.value)} className={`rounded-xl border px-2 py-2.5 text-center transition ${saleUnit.orderPreset === opt.value ? "border-[#8E24AA] bg-[#F3E5F5] text-[#8E24AA]" : "border-slate-200 text-slate-600 hover:bg-slate-50"}`}>
                               <p className="text-xs font-semibold leading-tight">{opt.label}</p>
                               <p className="mt-0.5 text-[10px] opacity-60">{opt.desc}</p>
                             </button>
@@ -1063,9 +1063,9 @@ function ProductFormBody({
                 <div>
                   <label className={settingsFieldLabelClass}>เปลี่ยนรูปสินค้า</label>
                   <div className="grid gap-3 sm:grid-cols-2">
-                    <label className="group relative flex min-h-44 cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50 p-6 text-center transition hover:border-[#082A63]">
+                    <label className="group relative flex min-h-44 cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50 p-6 text-center transition hover:border-[#8E24AA]">
                       <div className="mb-4 rounded-full bg-white p-4 shadow-sm transition-transform group-hover:scale-105">
-                        <ImagePlus className="h-7 w-7 text-[#082A63]" strokeWidth={2.2} />
+                        <ImagePlus className="h-7 w-7 text-[#8E24AA]" strokeWidth={2.2} />
                       </div>
                       <p className="text-base font-semibold text-slate-900">เพิ่มรูปจากเครื่อง</p>
                       <p className="mt-1 text-sm text-slate-500">ได้สูงสุด {MAX_PRODUCT_IMAGES} รูปต่อสินค้า</p>
@@ -1086,7 +1086,7 @@ function ProductFormBody({
                       className="hidden"
                     >
                       <div className="mb-4 rounded-full bg-white p-4 shadow-sm transition-transform group-hover:scale-105">
-                        <Camera className="h-7 w-7 text-[#082A63]" strokeWidth={2.2} />
+                        <Camera className="h-7 w-7 text-[#8E24AA]" strokeWidth={2.2} />
                       </div>
                       <p className="text-base font-semibold text-slate-900">ถ่ายรูปตอนนี้</p>
                       <p className="mt-1 text-sm text-slate-500">
@@ -1106,7 +1106,7 @@ function ProductFormBody({
                           key={`${preview.url}-${index}`}
                           type="button"
                           onClick={() => setActiveIndex(index)}
-                          className={`relative h-20 w-20 shrink-0 overflow-hidden rounded-xl border ${index === activeIndex ? "border-[#082A63]" : "border-slate-200"
+                          className={`relative h-20 w-20 shrink-0 overflow-hidden rounded-xl border ${index === activeIndex ? "border-[#8E24AA]" : "border-slate-200"
                             }`}
                         >
                           <Image
@@ -1117,7 +1117,7 @@ function ProductFormBody({
                             className="object-contain bg-white p-1"
                           />
                           {index === 0 ? (
-                            <span className="absolute bottom-1 left-1 rounded-full bg-[#082A63] px-2 py-0.5 text-[10px] font-bold text-white">
+                            <span className="absolute bottom-1 left-1 rounded-full bg-[#8E24AA] px-2 py-0.5 text-[10px] font-bold text-white">
                               รูปหลัก
                             </span>
                           ) : null}
@@ -1139,7 +1139,7 @@ function ProductFormBody({
                               disabled={activeIndex === keptExistingUrls.length}
                               className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
                             >
-                              <BadgeCheck className="h-4 w-4 text-[#082A63]" strokeWidth={2.2} />
+                              <BadgeCheck className="h-4 w-4 text-[#8E24AA]" strokeWidth={2.2} />
                               ตั้งเป็นรูปหลัก
                             </button>
                             <button
@@ -1187,9 +1187,9 @@ function ProductFormBody({
                 <div>
                   <label className={settingsFieldLabelClass}>รูปสินค้า</label>
                   <div className="grid gap-3 sm:grid-cols-2">
-                    <label className="group relative flex min-h-52 cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50 p-6 text-center transition hover:border-[#082A63]">
+                    <label className="group relative flex min-h-52 cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50 p-6 text-center transition hover:border-[#8E24AA]">
                       <div className="mb-4 rounded-full bg-white p-4 shadow-sm transition-transform group-hover:scale-105">
-                        <ImagePlus className="h-7 w-7 text-[#082A63]" strokeWidth={2.2} />
+                        <ImagePlus className="h-7 w-7 text-[#8E24AA]" strokeWidth={2.2} />
                       </div>
                       <p className="text-base font-semibold text-slate-900">เพิ่มรูปจากเครื่อง</p>
                       <p className="mt-1 text-sm text-slate-500">ได้สูงสุด {MAX_PRODUCT_IMAGES} รูปต่อสินค้า</p>
@@ -1210,7 +1210,7 @@ function ProductFormBody({
                       className="hidden"
                     >
                       <div className="mb-4 rounded-full bg-white p-4 shadow-sm transition-transform group-hover:scale-105">
-                        <Camera className="h-7 w-7 text-[#082A63]" strokeWidth={2.2} />
+                        <Camera className="h-7 w-7 text-[#8E24AA]" strokeWidth={2.2} />
                       </div>
                       <p className="text-base font-semibold text-slate-900">ถ่ายรูปตอนนี้</p>
                       <p className="mt-1 text-sm text-slate-500">
@@ -1239,7 +1239,7 @@ function ProductFormBody({
                           key={`${preview.name}-${index}`}
                           type="button"
                           onClick={() => setActiveIndex(index)}
-                          className={`relative h-20 w-20 shrink-0 overflow-hidden rounded-xl border ${index === activeIndex ? "border-[#082A63]" : "border-slate-200"}`}
+                          className={`relative h-20 w-20 shrink-0 overflow-hidden rounded-xl border ${index === activeIndex ? "border-[#8E24AA]" : "border-slate-200"}`}
                         >
                           <Image
                             src={preview.url}
@@ -1249,7 +1249,7 @@ function ProductFormBody({
                             className="object-contain bg-white p-1"
                           />
                           {index === 0 ? (
-                            <span className="absolute bottom-1 left-1 rounded-full bg-[#082A63] px-2 py-0.5 text-[10px] font-bold text-white">
+                            <span className="absolute bottom-1 left-1 rounded-full bg-[#8E24AA] px-2 py-0.5 text-[10px] font-bold text-white">
                               รูปหลัก
                             </span>
                           ) : null}
@@ -1264,7 +1264,7 @@ function ProductFormBody({
                           disabled={activeIndex === 0}
                           className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
                         >
-                          <BadgeCheck className="h-4 w-4 text-[#082A63]" strokeWidth={2.2} />
+                          <BadgeCheck className="h-4 w-4 text-[#8E24AA]" strokeWidth={2.2} />
                           ตั้งเป็นรูปหลัก
                         </button>
                         <button
@@ -1327,7 +1327,7 @@ function ProductFormBody({
           <button
             type="submit"
             disabled={isSubmitDisabled}
-            className="action-touch-safe inline-flex items-center gap-2 rounded-xl bg-[#082A63] px-5 py-3 text-sm font-medium text-white shadow-[0_12px_30px_rgba(8,42,99,0.22)] transition hover:bg-[#103B82] disabled:cursor-not-allowed disabled:opacity-70"
+            className="action-touch-safe inline-flex items-center gap-2 rounded-xl bg-[#8E24AA] px-5 py-3 text-sm font-medium text-white shadow-[0_12px_30px_rgba(142, 36, 170,0.22)] transition hover:bg-[#8E24AA] disabled:cursor-not-allowed disabled:opacity-70"
           >
             {isPending ? (
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -1342,13 +1342,13 @@ function ProductFormBody({
       {showSuccess ? (
         <>
           <div className="fixed inset-0 z-[70] bg-slate-950/55 backdrop-blur-md" />
-          <div className="fixed left-1/2 top-1/2 z-[80] w-[calc(100%-2rem)] max-w-sm -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-2xl bg-white shadow-[0_20px_56px_rgba(4,53,106,0.28)] ring-1 ring-[#082A63]/15">
+          <div className="fixed left-1/2 top-1/2 z-[80] w-[calc(100%-2rem)] max-w-sm -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-2xl bg-white shadow-[0_20px_56px_rgba(4,53,106,0.28)] ring-1 ring-[#8E24AA]/15">
             <div className="flex items-center gap-3 px-4 py-3.5">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#082A63]/20">
-                <CheckCircle2 className="h-5 w-5 text-[#082A63]" strokeWidth={2} />
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#8E24AA]/20">
+                <CheckCircle2 className="h-5 w-5 text-[#8E24AA]" strokeWidth={2} />
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-bold text-[#082A63]">
+                <p className="text-sm font-bold text-[#8E24AA]">
                   {isEditing ? "แก้ไขสินค้าสำเร็จแล้ว" : "เพิ่มสินค้าสำเร็จแล้ว"}
                 </p>
                 <p className="text-xs text-slate-500">
@@ -1366,7 +1366,7 @@ function ProductFormBody({
             </div>
             <div className="h-1.5 bg-[#dbe7f5]">
               <div
-                className="h-full bg-[#082A63]"
+                className="h-full bg-[#8E24AA]"
                 style={{
                   animation: `successPopupProgress ${SUCCESS_POPUP_DURATION_MS}ms linear forwards`,
                   width: "0%",
@@ -1435,7 +1435,7 @@ function ProductFormBody({
               <button
                 type="button"
                 onClick={capturePhoto}
-                className="inline-flex items-center gap-2 rounded-xl bg-[#082A63] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#103B82]"
+                className="inline-flex items-center gap-2 rounded-xl bg-[#8E24AA] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#8E24AA]"
               >
                 <Camera className="h-4 w-4" strokeWidth={2.2} />
                 ถ่ายรูป
@@ -1548,7 +1548,7 @@ export function ProductForm({
                 onClick={() => setCurrentIndex((i) => i - 1)}
                 disabled={!canGoPrev || isSubmitting}
                 aria-label="สินค้าก่อนหน้า"
-                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#082A63] text-white shadow-md transition hover:bg-[#103B82] disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none"
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#8E24AA] text-white shadow-md transition hover:bg-[#8E24AA] disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none"
               >
                 <ChevronLeft className="h-5 w-5" strokeWidth={2.5} />
               </button>
@@ -1569,7 +1569,7 @@ export function ProductForm({
                 onClick={() => setCurrentIndex((i) => i + 1)}
                 disabled={!canGoNext || isSubmitting}
                 aria-label="สินค้าถัดไป"
-                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#082A63] text-white shadow-md transition hover:bg-[#103B82] disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none"
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#8E24AA] text-white shadow-md transition hover:bg-[#8E24AA] disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none"
               >
                 <ChevronRight className="h-5 w-5" strokeWidth={2.5} />
               </button>
@@ -1589,9 +1589,9 @@ export function ProductForm({
           {/* Row 2: product name - full width, no truncation */}
           <div className="mt-2 flex items-center gap-2">
             {isEditing ? (
-              <Package2 className="h-5 w-5 shrink-0 text-[#082A63]" strokeWidth={2.2} />
+              <Package2 className="h-5 w-5 shrink-0 text-[#8E24AA]" strokeWidth={2.2} />
             ) : (
-              <CirclePlus className="h-5 w-5 shrink-0 text-[#082A63]" strokeWidth={2.2} />
+              <CirclePlus className="h-5 w-5 shrink-0 text-[#8E24AA]" strokeWidth={2.2} />
             )}
             <h3 className="text-xl font-semibold leading-snug tracking-[-0.02em] text-slate-950">
               {isEditing ? (currentProduct?.name ?? "แก้ไขข้อมูลสินค้า") : "รายการสินค้าใหม่"}

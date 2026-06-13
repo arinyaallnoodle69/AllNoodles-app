@@ -82,7 +82,7 @@ export function EditQuantitiesForm({
         {!editing ? (
           <button
             onClick={() => setEditing(true)}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-600 hover:border-[#082A63] hover:text-[#082A63] transition-colors"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-600 hover:border-[#8E24AA] hover:text-[#8E24AA] transition-colors"
           >
             <Pencil className="h-3.5 w-3.5" strokeWidth={2} />
             แก้ไข
@@ -100,7 +100,7 @@ export function EditQuantitiesForm({
             <button
               onClick={handleSave}
               disabled={isPending}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-[#082A63] px-3 py-1.5 text-sm font-semibold text-white hover:bg-[#103B82] disabled:opacity-50 transition-colors"
+              className="inline-flex items-center gap-1.5 rounded-lg bg-[#8E24AA] px-3 py-1.5 text-sm font-semibold text-white hover:bg-[#8E24AA] disabled:opacity-50 transition-colors"
             >
               <Save className="h-3.5 w-3.5" strokeWidth={2} />
               {isPending ? "กำลังบันทึก..." : "บันทึก"}
@@ -124,7 +124,7 @@ export function EditQuantitiesForm({
                 step="0.001"
                 value={quantities[item.id] ?? ""}
                 onChange={(e) => setQuantities((prev) => ({ ...prev, [item.id]: e.target.value }))}
-                className="w-24 rounded-lg border border-slate-300 px-2.5 py-1.5 text-right text-sm font-semibold text-slate-800 focus:border-[#082A63] focus:outline-none"
+                className="w-24 rounded-lg border border-slate-300 px-2.5 py-1.5 text-right text-sm font-semibold text-slate-800 focus:border-[#8E24AA] focus:outline-none"
               />
             ) : (
               <p className="text-sm font-bold text-slate-800">{fmtQty(item.quantityDelivered)}</p>

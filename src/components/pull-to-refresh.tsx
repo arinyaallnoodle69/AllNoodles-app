@@ -140,7 +140,7 @@ export function PullToRefresh({ children }: PullToRefreshProps) {
                   ? "none"
                   : `rotate(${activeDistance * 4.5}deg)`
               }}
-              className={`h-5 w-5 text-[#082A63] ${showSpinner ? "animate-spin" : ""}`}
+              className={`h-5 w-5 text-[#8E24AA] ${showSpinner ? "animate-spin" : ""}`}
             />
           </div>
         </div>

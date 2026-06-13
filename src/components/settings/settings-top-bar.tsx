@@ -18,7 +18,7 @@ type SettingsTopBarProps = {
 
 function getActionClassName(tone: SettingsTopBarAction["tone"]) {
   return tone === "primary"
-    ? "whitespace-nowrap rounded-lg bg-[#082A63] px-4 py-2.5 text-sm font-medium text-white shadow-lg shadow-[#082A63]/20 transition hover:bg-[#103B82] md:px-5"
+    ? "whitespace-nowrap rounded-lg bg-[#8E24AA] px-4 py-2.5 text-sm font-medium text-white shadow-lg shadow-[#8E24AA]/20 transition hover:bg-[#8E24AA] md:px-5"
     : "whitespace-nowrap rounded-lg border border-slate-200 px-3 py-2.5 text-sm font-medium text-slate-600 transition hover:bg-slate-50 md:px-4";
 }
 

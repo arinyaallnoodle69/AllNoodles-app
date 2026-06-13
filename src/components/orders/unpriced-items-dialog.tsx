@@ -295,7 +295,7 @@ export function UnpricedItemsDialog({ customerId, customerName, items }: Props) 
                                       [key]: event.target.value,
                                     }))
                                   }
-                                  className={`w-full rounded-xl border bg-white py-3.5 pl-9 pr-4 text-base font-medium text-slate-900 outline-none transition focus:border-[#082A63] focus:ring-2 focus:ring-[#082A63]/15 ${
+                                  className={`w-full rounded-xl border bg-white py-3.5 pl-9 pr-4 text-base font-medium text-slate-900 outline-none transition focus:border-[#8E24AA] focus:ring-2 focus:ring-[#8E24AA]/15 ${
                                     isBelowCost ? "border-amber-300 bg-amber-50" : "border-slate-200"
                                   }`}
                                   disabled={isPending}
@@ -339,7 +339,7 @@ export function UnpricedItemsDialog({ customerId, customerName, items }: Props) 
                     type="button"
                     disabled={!canSaveAll}
                     onClick={handleSaveAll}
-                    className="w-full rounded-2xl bg-[#082A63] py-3.5 text-base font-semibold text-white shadow-sm transition hover:bg-[#103B82] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
+                    className="w-full rounded-2xl bg-[#8E24AA] py-3.5 text-base font-semibold text-white shadow-sm transition hover:bg-[#8E24AA] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
                   >
                     {isPending
                       ? "กำลังบันทึก..."

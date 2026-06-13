@@ -194,7 +194,7 @@ export function StockMovementTable({ initialMovementRows, warehouses }: StockMov
                   onClick={() => setWarehouseFilter(warehouse.id)}
                   className={`flex h-12 items-center justify-between rounded-xl border-2 px-4 text-sm font-black transition-all ${
                     warehouseFilter === warehouse.id
-                      ? "border-[#082A63] bg-[#082A63] text-white"
+                      ? "border-[#8E24AA] bg-[#8E24AA] text-white"
                       : "border-slate-200 bg-white text-slate-600"
                   }`}
                 >
@@ -301,7 +301,7 @@ export function StockMovementTable({ initialMovementRows, warehouses }: StockMov
                         <span className="font-mono text-slate-500 mr-1.5">{m.sku}</span>
                         <span>- {m.productName}</span>
                       </h4>
-                      <p className="mt-1 inline-flex items-center gap-1 rounded-full bg-[#FAF7F2] px-2 py-0.5 text-[10px] font-black text-[#082A63]">
+                      <p className="mt-1 inline-flex items-center gap-1 rounded-full bg-[#F3E5F5] px-2 py-0.5 text-[10px] font-black text-[#8E24AA]">
                         <Warehouse className="h-3 w-3" strokeWidth={2.4} />
                         {m.warehouseId ? (warehouseNameMap.get(m.warehouseId) ?? "คลังสินค้า") : "ยังไม่ระบุคลัง"}
                       </p>
@@ -310,7 +310,7 @@ export function StockMovementTable({ initialMovementRows, warehouses }: StockMov
                     <div className="flex items-center justify-between pt-2 border-t-2 border-slate-100">
                       <div className="min-w-0 flex items-center gap-2">
                         <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest shrink-0 whitespace-nowrap">REF:</span>
-                        <span className="text-[12px] font-black text-[#082A63] underline decoration-2 decoration-[#FAF7F2] truncate">
+                        <span className="text-[12px] font-black text-[#8E24AA] underline decoration-2 decoration-[#F3E5F5] truncate">
                           {m.referenceNumber || m.notes || "-"}
                         </span>
                       </div>
@@ -363,11 +363,11 @@ export function StockMovementTable({ initialMovementRows, warehouses }: StockMov
                     <div className="text-[11px] text-slate-400 font-bold leading-none mt-0.5 whitespace-nowrap">{formatMovementTime(m.createdAt)}</div>
                   </td>
                   <td className="py-3 px-4 border-l border-slate-100">
-                    <div className="font-black text-[#0f172a] text-[15px] group-hover:text-[#082A63] transition-colors leading-tight">
+                    <div className="font-black text-[#0f172a] text-[15px] group-hover:text-[#8E24AA] transition-colors leading-tight">
                       <span className="font-mono text-slate-500 mr-2 uppercase tracking-tight whitespace-nowrap">{m.sku}</span>
                       <span className="whitespace-normal break-words">- {m.productName}</span>
                     </div>
-                    <div className="mt-1 inline-flex items-center gap-1 rounded-full bg-[#FAF7F2] px-2 py-0.5 text-[10px] font-black text-[#082A63]">
+                    <div className="mt-1 inline-flex items-center gap-1 rounded-full bg-[#F3E5F5] px-2 py-0.5 text-[10px] font-black text-[#8E24AA]">
                       <Warehouse className="h-3 w-3" strokeWidth={2.4} />
                       {m.warehouseId ? (warehouseNameMap.get(m.warehouseId) ?? "คลังสินค้า") : "ยังไม่ระบุคลัง"}
                     </div>
@@ -384,7 +384,7 @@ export function StockMovementTable({ initialMovementRows, warehouses }: StockMov
                     {formatQuantity(m.stockAfter)}
                   </td>
                   <td className="py-3 px-4 border-l border-slate-100">
-                    <span className="text-[#082A63] hover:text-[#103B82] font-black cursor-default underline decoration-2 decoration-[#FAF7F2] transition-colors whitespace-normal break-all line-clamp-2">
+                    <span className="text-[#8E24AA] hover:text-[#8E24AA] font-black cursor-default underline decoration-2 decoration-[#F3E5F5] transition-colors whitespace-normal break-all line-clamp-2">
                       {m.referenceNumber || m.notes || "-"}
                     </span>
                   </td>

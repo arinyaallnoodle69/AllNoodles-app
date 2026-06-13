@@ -37,28 +37,28 @@ export function DeliveryPdfPreviewModal({ file, onClose }: DeliveryPdfPreviewMod
   }
 
   return createPortal(
-    <div className="fixed inset-0 z-[500] bg-[#001038]/40 p-0 text-[#002050] backdrop-blur-sm sm:flex sm:items-center sm:justify-center sm:p-6">
-      <div className="grid h-[100dvh] w-full grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden bg-white sm:h-[92vh] sm:max-w-[1280px] sm:border sm:border-[#D0A040]/40">
+    <div className="fixed inset-0 z-[500] bg-[#8E24AA]/40 p-0 text-[#8E24AA] backdrop-blur-sm sm:flex sm:items-center sm:justify-center sm:p-6">
+      <div className="grid h-[100dvh] w-full grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden bg-white sm:h-[92vh] sm:max-w-[1280px] sm:border sm:border-[#AA00FF]/40">
         <div className="flex h-1 w-full">
-          <div className="h-full flex-1 bg-[#002050]" />
-          <div className="h-full flex-1 bg-[#D0A040]" />
+          <div className="h-full flex-1 bg-[#8E24AA]" />
+          <div className="h-full flex-1 bg-[#AA00FF]" />
         </div>
 
-        <div className="border-b border-[#D0A040]/30 bg-white px-4 py-4 sm:px-6 sm:py-5">
+        <div className="border-b border-[#AA00FF]/30 bg-white px-4 py-4 sm:px-6 sm:py-5">
           <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
             <div className="flex min-w-0 items-center gap-3">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center border border-[#D0A040]/45 bg-white">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center border border-[#AA00FF]/45 bg-white">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src="/brand/512x512.png" alt="All Noodles" className="h-9 w-9 object-contain" />
               </div>
               <div className="min-w-0">
-                <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#D0A040] sm:text-xs">
+                <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#AA00FF] sm:text-xs">
                   ALL NOODLES PDF EXPORT
                 </p>
-                <h3 className="mt-1 truncate text-xl font-black leading-none tracking-[0.01em] text-[#002050] sm:text-2xl">
+                <h3 className="mt-1 truncate text-xl font-black leading-none tracking-[0.01em] text-[#8E24AA] sm:text-2xl">
                   ตัวอย่าง PDF ใบส่งของ
                 </h3>
-                <p className="mt-1 truncate text-[11px] font-semibold text-[#002050]/60 sm:text-xs">
+                <p className="mt-1 truncate text-[11px] font-semibold text-[#8E24AA]/60 sm:text-xs">
                   {file.name}
                 </p>
               </div>
@@ -67,7 +67,7 @@ export function DeliveryPdfPreviewModal({ file, onClose }: DeliveryPdfPreviewMod
             <button
               type="button"
               onClick={onClose}
-              className="flex h-11 w-11 items-center justify-center rounded-full border border-[#D0A040]/45 bg-white text-[#002050] transition hover:border-[#D0A040] hover:bg-[#D0A040]/10 active:scale-95 sm:hidden"
+              className="flex h-11 w-11 items-center justify-center rounded-full border border-[#AA00FF]/45 bg-white text-[#8E24AA] transition hover:border-[#AA00FF] hover:bg-[#AA00FF]/10 active:scale-95 sm:hidden"
               aria-label="ปิดตัวอย่าง PDF"
             >
               <X className="h-5 w-5" strokeWidth={2.5} />
@@ -78,7 +78,7 @@ export function DeliveryPdfPreviewModal({ file, onClose }: DeliveryPdfPreviewMod
             <button
               type="button"
               onClick={() => downloadPreparedDeliveryPdf(file)}
-              className="inline-flex h-12 items-center gap-2 bg-[#D0A040] px-6 text-sm font-black uppercase tracking-[0.14em] text-[#001038] transition hover:bg-[#C89840] active:scale-[0.98]"
+              className="inline-flex h-12 items-center gap-2 bg-[#AA00FF] px-6 text-sm font-black uppercase tracking-[0.14em] text-[#8E24AA] transition hover:bg-[#8E24AA] active:scale-[0.98]"
             >
               <Download className="h-4 w-4" strokeWidth={2.6} />
               ดาวน์โหลด
@@ -87,7 +87,7 @@ export function DeliveryPdfPreviewModal({ file, onClose }: DeliveryPdfPreviewMod
               type="button"
               onClick={handleShare}
               disabled={isSharing}
-              className="inline-flex h-12 items-center gap-2 bg-[#002050] px-6 text-sm font-black uppercase tracking-[0.14em] text-white transition hover:bg-[#002858] active:scale-[0.98] disabled:opacity-60"
+              className="inline-flex h-12 items-center gap-2 bg-[#8E24AA] px-6 text-sm font-black uppercase tracking-[0.14em] text-white transition hover:bg-[#8E24AA] active:scale-[0.98] disabled:opacity-60"
             >
               {isSharing ? (
                 <Loader2 className="h-4 w-4 animate-spin" strokeWidth={2.4} />
@@ -99,7 +99,7 @@ export function DeliveryPdfPreviewModal({ file, onClose }: DeliveryPdfPreviewMod
             <button
               type="button"
               onClick={onClose}
-              className="flex h-12 w-12 items-center justify-center rounded-full border border-[#D0A040]/45 bg-white text-[#002050] transition hover:border-[#D0A040] hover:bg-[#D0A040]/10 active:scale-95"
+              className="flex h-12 w-12 items-center justify-center rounded-full border border-[#AA00FF]/45 bg-white text-[#8E24AA] transition hover:border-[#AA00FF] hover:bg-[#AA00FF]/10 active:scale-95"
               aria-label="ปิดตัวอย่าง PDF"
             >
               <X className="h-5 w-5" strokeWidth={2.5} />
@@ -108,15 +108,15 @@ export function DeliveryPdfPreviewModal({ file, onClose }: DeliveryPdfPreviewMod
         </div>
 
         <div className="min-h-0 bg-[#F6F7FA] p-3 sm:p-5">
-          <div className="mx-auto grid h-full w-full max-w-[1120px] grid-rows-[auto_minmax(0,1fr)] overflow-hidden border border-[#D0A040]/30 bg-white">
-            <div className="flex items-center justify-between border-b border-[#D0A040]/25 bg-white px-3 py-2 sm:px-4">
+          <div className="mx-auto grid h-full w-full max-w-[1120px] grid-rows-[auto_minmax(0,1fr)] overflow-hidden border border-[#AA00FF]/30 bg-white">
+            <div className="flex items-center justify-between border-b border-[#AA00FF]/25 bg-white px-3 py-2 sm:px-4">
               <div className="flex items-center gap-2">
-                <span className="h-2 w-2 bg-[#D0A040]" />
-                <span className="text-[10px] font-black uppercase tracking-[0.18em] text-[#002050]/75">
+                <span className="h-2 w-2 bg-[#AA00FF]" />
+                <span className="text-[10px] font-black uppercase tracking-[0.18em] text-[#8E24AA]/75">
                   PDF PREVIEW
                 </span>
               </div>
-              <span className="hidden text-[10px] font-black uppercase tracking-[0.18em] text-[#002050]/45 sm:inline">
+              <span className="hidden text-[10px] font-black uppercase tracking-[0.18em] text-[#8E24AA]/45 sm:inline">
                 Download or share after review
               </span>
             </div>
@@ -128,11 +128,11 @@ export function DeliveryPdfPreviewModal({ file, onClose }: DeliveryPdfPreviewMod
           </div>
         </div>
 
-        <div className="grid shrink-0 grid-cols-2 gap-3 border-t border-[#D0A040]/30 bg-white p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:hidden">
+        <div className="grid shrink-0 grid-cols-2 gap-3 border-t border-[#AA00FF]/30 bg-white p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:hidden">
           <button
             type="button"
             onClick={() => downloadPreparedDeliveryPdf(file)}
-            className="inline-flex h-14 items-center justify-center gap-2 bg-[#D0A040] text-sm font-black uppercase tracking-[0.12em] text-[#001038] transition active:scale-95"
+            className="inline-flex h-14 items-center justify-center gap-2 bg-[#AA00FF] text-sm font-black uppercase tracking-[0.12em] text-[#8E24AA] transition active:scale-95"
           >
             <Download className="h-5 w-5" strokeWidth={2.8} />
             ดาวน์โหลด
@@ -141,7 +141,7 @@ export function DeliveryPdfPreviewModal({ file, onClose }: DeliveryPdfPreviewMod
             type="button"
             onClick={handleShare}
             disabled={isSharing}
-            className="inline-flex h-14 items-center justify-center gap-2 bg-[#002050] text-sm font-black uppercase tracking-[0.12em] text-white transition active:scale-95 disabled:opacity-60"
+            className="inline-flex h-14 items-center justify-center gap-2 bg-[#8E24AA] text-sm font-black uppercase tracking-[0.12em] text-white transition active:scale-95 disabled:opacity-60"
           >
             {isSharing ? (
               <Loader2 className="h-5 w-5 animate-spin" strokeWidth={2.6} />

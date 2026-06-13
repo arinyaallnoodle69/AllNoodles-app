@@ -90,7 +90,7 @@ function ReprintConfirmDialog({
 
           <div>
             <label className="mb-1.5 block text-sm font-semibold text-slate-700">
-              กรอกคำว่า <span className="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-[#082A63]">ปริ้น</span>
+              กรอกคำว่า <span className="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-[#8E24AA]">ปริ้น</span>
             </label>
             <input
               ref={input1Ref}
@@ -104,7 +104,7 @@ function ReprintConfirmDialog({
                   ? "border-red-300 bg-red-50 text-red-700 focus:border-red-400 focus:ring-red-100"
                   : word1.trim() === "ปริ้น"
                     ? "border-emerald-400 bg-emerald-50 text-emerald-800 focus:ring-emerald-100"
-                    : "border-slate-200 bg-white text-slate-900 focus:border-[#082A63] focus:ring-[#082A63]/10"
+                    : "border-slate-200 bg-white text-slate-900 focus:border-[#8E24AA] focus:ring-[#8E24AA]/10"
               }`}
             />
             {word1.trim() === "ปริ้น" ? (
@@ -114,7 +114,7 @@ function ReprintConfirmDialog({
 
           <div>
             <label className="mb-1.5 block text-sm font-semibold text-slate-700">
-              กรอกคำว่า <span className="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-[#082A63]">ยืนยัน</span>
+              กรอกคำว่า <span className="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-[#8E24AA]">ยืนยัน</span>
             </label>
             <input
               type="text"
@@ -127,7 +127,7 @@ function ReprintConfirmDialog({
                   ? "border-red-300 bg-red-50 text-red-700 focus:border-red-400 focus:ring-red-100"
                   : word2.trim() === "ยืนยัน"
                     ? "border-emerald-400 bg-emerald-50 text-emerald-800 focus:ring-emerald-100"
-                    : "border-slate-200 bg-white text-slate-900 focus:border-[#082A63] focus:ring-[#082A63]/10"
+                    : "border-slate-200 bg-white text-slate-900 focus:border-[#8E24AA] focus:ring-[#8E24AA]/10"
               }`}
             />
             {word2.trim() === "ยืนยัน" ? (
@@ -152,7 +152,7 @@ function ReprintConfirmDialog({
             disabled={!valid}
             className={`flex flex-1 items-center justify-center gap-2 rounded-xl py-3 text-sm font-bold transition ${
               valid
-                ? "bg-[#082A63] text-white shadow-sm hover:bg-[#103B82]"
+                ? "bg-[#8E24AA] text-white shadow-sm hover:bg-[#8E24AA]"
                 : "cursor-not-allowed bg-slate-100 text-slate-400"
             }`}
           >
@@ -240,7 +240,7 @@ export function PrintButton({
       <button
         onClick={handleClick}
         disabled={isSaving}
-        className="flex items-center gap-2 rounded-xl bg-[#082A63] px-6 py-2.5 text-sm font-semibold text-white shadow hover:bg-[#103B82] disabled:opacity-70"
+        className="flex items-center gap-2 rounded-xl bg-[#8E24AA] px-6 py-2.5 text-sm font-semibold text-white shadow hover:bg-[#8E24AA] disabled:opacity-70"
       >
         {isSaving ? (
           <>

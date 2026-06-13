@@ -102,14 +102,14 @@ export default async function SystemPerformancePage() {
   const getTTFBRating = (ms: number) => {
     if (ms === 0) return { label: "ไม่มีข้อมูล", color: "text-slate-500 bg-slate-100 border-slate-200" };
     if (ms < 200) return { label: "ดีเยี่ยม (เร็วมาก)", color: "text-emerald-700 bg-emerald-50 border-emerald-200/50" };
-    if (ms < 500) return { label: "ปกติ (รวดเร็ว)", color: "text-[#082A63] bg-[#FAF7F2] border-[#F2E3AE]/50" };
+    if (ms < 500) return { label: "ปกติ (รวดเร็ว)", color: "text-[#8E24AA] bg-[#F3E5F5] border-[#EA80FC]/50" };
     return { label: "ควรปรับปรุง (เซิร์ฟเวอร์ตอบสนองช้า)", color: "text-amber-700 bg-amber-50 border-amber-200/50" };
   };
 
   const getLCPRating = (ms: number) => {
     if (ms === 0) return { label: "ไม่มีข้อมูล", color: "text-slate-500 bg-slate-100 border-slate-200" };
     if (ms < 2500) return { label: "รวดเร็ว (ผู้ใช้เห็นผลลัพธ์ทันใจ)", color: "text-emerald-700 bg-emerald-50 border-emerald-200/50" };
-    if (ms < 4000) return { label: "ปกติ", color: "text-[#082A63] bg-[#FAF7F2] border-[#F2E3AE]/50" };
+    if (ms < 4000) return { label: "ปกติ", color: "text-[#8E24AA] bg-[#F3E5F5] border-[#EA80FC]/50" };
     return { label: "ช้า (หน้าตาเว็บโหลดเสร็จช้า)", color: "text-amber-700 bg-amber-50 border-amber-200/50" };
   };
 
@@ -125,7 +125,7 @@ export default async function SystemPerformancePage() {
         <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-[0_12px_36px_rgba(15,23,42,0.03)] sm:p-6">
           <div className="flex items-center justify-between">
             <span className="text-sm font-bold text-slate-500">ขนาดหน่วยความจำ DB</span>
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#D4AF37]/30 text-[#103B82]">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#AA00FF]/30 text-[#8E24AA]">
               <HardDrive className="h-5 w-5" strokeWidth={2.2} />
             </div>
           </div>
@@ -161,7 +161,7 @@ export default async function SystemPerformancePage() {
         <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-[0_12px_36px_rgba(15,23,42,0.03)] sm:p-6">
           <div className="flex items-center justify-between">
             <span className="text-sm font-bold text-slate-500">เซิร์ฟเวอร์ตอบสนอง (TTFB)</span>
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#D4AF37]/20 text-[#103B82]">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#AA00FF]/20 text-[#8E24AA]">
               <Activity className="h-5 w-5" strokeWidth={2.2} />
             </div>
           </div>

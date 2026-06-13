@@ -256,7 +256,7 @@ export function PackingListPrintButton({
         type="button"
         onClick={() => handleOpenPreview("print")}
         disabled={isPrinting || isCapturing}
-        className={`${hidePrintOnMobile ? "hidden md:flex" : "flex"} items-center gap-1.5 rounded-lg bg-[#103B82] px-3.5 py-1.5 text-[13px] font-bold text-white shadow-sm transition hover:bg-[#103B82] disabled:cursor-not-allowed disabled:opacity-70`}
+        className={`${hidePrintOnMobile ? "hidden md:flex" : "flex"} items-center gap-1.5 rounded-lg bg-[#8E24AA] px-3.5 py-1.5 text-[13px] font-bold text-white shadow-sm transition hover:bg-[#8E24AA] disabled:cursor-not-allowed disabled:opacity-70`}
         style={{ fontFamily: 'var(--font-sukhumvit), "Sukhumvit Set", "Noto Sans Thai", sans-serif' }}
       >
         {isCapturing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Printer className="h-4 w-4" />}
@@ -279,7 +279,7 @@ export function PackingListPrintButton({
           <div className="fixed inset-0 z-[500] flex flex-col bg-[#0a0c10] animate-in fade-in duration-300">
             <div className="sticky top-0 z-50 flex shrink-0 items-center justify-between border-b border-white/5 bg-[#12151c]/85 px-4 py-3 backdrop-blur-xl sm:px-8 sm:py-5">
               <div className="flex items-center gap-4">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#082A63] text-white shadow-[0_0_20px_rgba(4,53,106,0.4)] sm:h-12 sm:w-12">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#8E24AA] text-white shadow-[0_0_20px_rgba(4,53,106,0.4)] sm:h-12 sm:w-12">
                   <ImageIcon className="h-5 w-5 sm:h-6 sm:w-6" strokeWidth={2.5} />
                 </div>
                 <div className="min-w-0">
@@ -296,7 +296,7 @@ export function PackingListPrintButton({
                     <button
                       type="button"
                       onClick={handlePrintFromPreview}
-                      className="hidden items-center gap-2.5 rounded-xl bg-[#103B82] px-5 py-2.5 text-sm font-black text-white shadow-[0_8px_20px_rgba(82,109,130,0.3)] transition hover:bg-[#103B82] active:scale-95 sm:flex"
+                      className="hidden items-center gap-2.5 rounded-xl bg-[#8E24AA] px-5 py-2.5 text-sm font-black text-white shadow-[0_8px_20px_rgba(82,109,130,0.3)] transition hover:bg-[#8E24AA] active:scale-95 sm:flex"
                     >
                       <Printer className="h-4.5 w-4.5" strokeWidth={3} />
                       พิมพ์
@@ -328,7 +328,7 @@ export function PackingListPrintButton({
                   <div className="flex flex-col items-center justify-center gap-8 py-20 text-slate-500">
                     <div className="relative">
                       <div className="h-28 w-24 rounded-2xl border-2 border-dashed border-slate-800 animate-[pulse_2s_infinite]" />
-                      <Loader2 className="absolute inset-0 m-auto h-10 w-10 animate-spin text-[#082A63]" strokeWidth={3} />
+                      <Loader2 className="absolute inset-0 m-auto h-10 w-10 animate-spin text-[#8E24AA]" strokeWidth={3} />
                     </div>
                     <div className="text-center">
                       <p className="text-xl font-black text-white">{`กำลังสร้างไฟล์ภาพ${documentTitle}`}</p>
@@ -340,7 +340,7 @@ export function PackingListPrintButton({
                 {previewImages.map((image, index) => (
                   <div key={image.name} className="group relative flex w-full flex-col items-center">
                     <div className="mb-4 flex items-center gap-3 self-start sm:absolute sm:-left-20 sm:mb-0 sm:flex-col sm:self-auto">
-                      <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#1a1f26] text-sm font-black text-white ring-1 ring-white/10 shadow-2xl transition group-hover:bg-[#082A63] group-hover:ring-[#082A63]/50">
+                      <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#1a1f26] text-sm font-black text-white ring-1 ring-white/10 shadow-2xl transition group-hover:bg-[#8E24AA] group-hover:ring-[#8E24AA]/50">
                         {index + 1}
                       </span>
                       <div className="h-px w-8 bg-white/10 sm:h-12 sm:w-px" />

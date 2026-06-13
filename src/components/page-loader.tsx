@@ -43,26 +43,26 @@ export function PageLoader() {
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-transparent p-6 font-sans">
-      <section className="relative flex w-full max-w-[22rem] flex-col items-center px-8 py-10">
-        <div className="relative flex h-44 w-44 items-center justify-center">
+      <section className="relative flex w-full max-w-[24rem] flex-col items-center px-8 py-10">
+        <div className="relative flex h-60 w-60 items-center justify-center">
           <Image
             src="/brand/logo1.png"
             alt="All Noodles"
-            width={152}
-            height={152}
+            width={220}
+            height={220}
             priority
-            className="relative z-10 h-[152px] w-[152px] object-contain drop-shadow-[0_10px_24px_rgba(0,29,63,0.12)]"
+            className="relative z-10 h-[220px] w-[220px] object-contain drop-shadow-[0_18px_44px_rgba(142,36,170,0.22)] animate-pulse"
           />
         </div>
 
         <div className="mt-6 flex w-full flex-col items-center">
           <div className="flex w-full items-center justify-between text-xs font-black uppercase tracking-[0.24em] text-[#64748B]">
-            <span>กำลังโหลด</span>
-            <span className="font-mono text-[#082A63]">{percent}%</span>
+            <span></span>
+            <span className="font-mono text-[#8E24AA]">{percent}%</span>
           </div>
-          <div className="mt-3 h-2 w-full overflow-hidden rounded-full border border-[#F2E3AE] bg-[#FAF7F2]">
+          <div className="mt-3 h-2 w-full overflow-hidden rounded-full border border-[#EA80FC] bg-[#F3E5F5]">
             <div
-              className="h-full rounded-full bg-gradient-to-r from-[#082A63] to-[#103B82] transition-[width] duration-300 ease-out"
+              className="h-full rounded-full bg-gradient-to-r from-[#8E24AA] to-[#8E24AA] transition-[width] duration-300 ease-out"
               style={{ width: `${percent}%` }}
             />
           </div>

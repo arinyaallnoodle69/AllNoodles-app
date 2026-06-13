@@ -41,7 +41,7 @@ export function CustomerInquiryModal({ inquiry }: CustomerInquiryModalProps) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4">
       <div className="w-full max-w-md overflow-hidden rounded-[1.75rem] border border-slate-200 bg-white shadow-[0_28px_80px_rgba(15,23,42,0.22)]">
-        <div className="flex items-start justify-between gap-4 border-b border-slate-100 bg-[linear-gradient(160deg,#f0fdfa_0%,#ffffff_100%)] px-5 py-5">
+        <div className="flex items-start justify-between gap-4 border-b border-slate-100 bg-[linear-gradient(160deg,#F3E5F5_0%,#ffffff_100%)] px-5 py-5">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-teal-600">
               ลูกค้าใหม่
@@ -88,7 +88,7 @@ export function CustomerInquiryModal({ inquiry }: CustomerInquiryModalProps) {
               </div>
 
               <div className="flex items-center gap-3 rounded-2xl bg-white px-4 py-3 ring-1 ring-slate-200">
-                <CalendarDays className="h-4 w-4 shrink-0 text-[#082A63]" strokeWidth={2.2} />
+                <CalendarDays className="h-4 w-4 shrink-0 text-[#8E24AA]" strokeWidth={2.2} />
                 <div>
                   <p className="text-xs font-medium uppercase tracking-[0.12em] text-slate-400">
                     เวลาที่ส่งข้อมูล

@@ -207,7 +207,7 @@ export function StockHistoryClient({
             <select
               value={selectedWarehouseId}
               onChange={(event) => handleWarehouseChange(event.target.value)}
-              className="h-14 w-full rounded-2xl border-none bg-slate-100 px-4 text-base font-bold text-black outline-none focus:ring-2 focus:ring-[#082A63]"
+              className="h-14 w-full rounded-2xl border-none bg-slate-100 px-4 text-base font-bold text-black outline-none focus:ring-2 focus:ring-[#8E24AA]"
             >
               {warehouseOptions.map((warehouse) => (
                 <option key={warehouse.id} value={warehouse.id}>
@@ -226,7 +226,7 @@ export function StockHistoryClient({
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 placeholder="เลขที่รายการ หรือผู้ขาย..."
-                className="h-14 w-full rounded-2xl border-none bg-slate-100 pl-12 pr-4 text-base font-bold text-black outline-none transition-all focus:ring-2 focus:ring-[#082A63]"
+                className="h-14 w-full rounded-2xl border-none bg-slate-100 pl-12 pr-4 text-base font-bold text-black outline-none transition-all focus:ring-2 focus:ring-[#8E24AA]"
               />
             </div>
           </div>
@@ -254,18 +254,18 @@ export function StockHistoryClient({
 
           <button
             onClick={closeSearch}
-            className="mt-4 h-14 w-full rounded-2xl bg-[#082A63] text-lg font-black text-[#1F2A44] shadow-lg transition-all active:scale-95"
+            className="mt-4 h-14 w-full rounded-2xl bg-[#8E24AA] text-lg font-black text-[#8E24AA] shadow-lg transition-all active:scale-95"
           >
             แสดง {filteredHistory.length} รายการ
           </button>
         </div>
       </MobileSearchDrawer>
 
-      <div className="sticky top-0 z-40 -mx-3 mb-4 hidden border-b border-[#E8DCC7] bg-white/95 px-4 py-3 shadow-[0_10px_30px_rgba(31,42,68,0.08)] backdrop-blur lg:block">
+      <div className="sticky top-0 z-40 -mx-3 mb-4 hidden border-b border-[#E1BEE7] bg-white/95 px-4 py-3 shadow-[0_10px_30px_rgba(31,42,68,0.08)] backdrop-blur lg:block">
         <div className="flex flex-col gap-3">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <div className="min-w-0">
-              <p className="text-lg font-black text-[#082A63]">ประวัติการรับเข้าสินค้า</p>
+              <p className="text-lg font-black text-[#8E24AA]">ประวัติการรับเข้าสินค้า</p>
               <p className="text-xs font-semibold text-[#667085]">
                 แสดง {filteredHistory.length.toLocaleString("th-TH")} รายการ
               </p>
@@ -280,7 +280,7 @@ export function StockHistoryClient({
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 placeholder="ค้นหาเลขที่รายการ หรือผู้ขาย..."
-                className="h-12 w-full rounded-lg border border-[#D7DEE8] bg-white pl-11 pr-4 text-sm font-semibold text-[#1F2A44] outline-none transition placeholder:text-[#667085] focus:border-[#082A63] focus:ring-2 focus:ring-[#082A63]/15"
+                className="h-12 w-full rounded-lg border border-[#D7DEE8] bg-white pl-11 pr-4 text-sm font-semibold text-[#8E24AA] outline-none transition placeholder:text-[#667085] focus:border-[#8E24AA] focus:ring-2 focus:ring-[#8E24AA]/15"
               />
             </label>
 
@@ -289,7 +289,7 @@ export function StockHistoryClient({
               <select
                 value={selectedWarehouseId}
                 onChange={(event) => handleWarehouseChange(event.target.value)}
-                className="h-12 w-full rounded-lg border border-[#D7DEE8] bg-white px-4 text-sm font-bold text-[#1F2A44] outline-none focus:border-[#082A63] focus:ring-2 focus:ring-[#082A63]/15"
+                className="h-12 w-full rounded-lg border border-[#D7DEE8] bg-white px-4 text-sm font-bold text-[#8E24AA] outline-none focus:border-[#8E24AA] focus:ring-2 focus:ring-[#8E24AA]/15"
               >
                 {warehouseOptions.map((warehouse) => (
                   <option key={warehouse.id} value={warehouse.id}>
@@ -326,7 +326,7 @@ export function StockHistoryClient({
         <div className="mb-6 hidden justify-end sm:flex">
           <div className="text-right">
             <p className="mb-1 text-[11px] font-black uppercase tracking-[0.05em] text-[#45464d]">ยอดรวมทั้งหมด (หน้าปัจจุบัน)</p>
-            <p className="text-[20px] font-black text-[#082A63]">
+            <p className="text-[20px] font-black text-[#8E24AA]">
               {totalAmount.toLocaleString("th-TH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <span className="text-[12px]">THB</span>
             </p>
           </div>
@@ -356,7 +356,7 @@ export function StockHistoryClient({
 
                       <div className="min-w-0 flex-1">
                         <div className="flex items-start justify-between gap-2">
-                          <h3 className="break-words text-[19px] font-black leading-tight text-black transition-colors group-hover:text-[#082A63]">
+                          <h3 className="break-words text-[19px] font-black leading-tight text-black transition-colors group-hover:text-[#8E24AA]">
                             {row.supplierName}
                           </h3>
                           <button
@@ -372,7 +372,7 @@ export function StockHistoryClient({
 
                         <div className="mt-2.5 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                           <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
-                            <p className="whitespace-nowrap text-[20px] font-black text-[#082A63]">
+                            <p className="whitespace-nowrap text-[20px] font-black text-[#8E24AA]">
                               {row.totalAmount.toLocaleString("th-TH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                               <span className="ml-1 text-[12px] font-bold">THB</span>
                             </p>
@@ -399,7 +399,7 @@ export function StockHistoryClient({
                         </div>
                       </div>
 
-                      <ChevronRight className="hidden h-6 w-6 self-center text-[#76777d] transition group-hover:text-[#082A63] sm:block" strokeWidth={3} />
+                      <ChevronRight className="hidden h-6 w-6 self-center text-[#76777d] transition group-hover:text-[#8E24AA] sm:block" strokeWidth={3} />
                     </div>
                   </div>
                 ))}
@@ -421,7 +421,7 @@ export function StockHistoryClient({
             <button
               onClick={handleLoadMore}
               disabled={isLoadingMore}
-              className="mx-auto flex items-center gap-2 font-bold text-[#082A63] hover:underline disabled:opacity-50"
+              className="mx-auto flex items-center gap-2 font-bold text-[#8E24AA] hover:underline disabled:opacity-50"
             >
               {isLoadingMore ? <Loader2 className="h-5 w-5 animate-spin" /> : "ดูรายการย้อนหลังเพิ่มเติม"}
             </button>
@@ -444,8 +444,8 @@ export function StockHistoryClient({
       {isDetailLoading && (
         <div className="fixed inset-0 z-[400] flex items-center justify-center bg-white/60 backdrop-blur-[2px]">
           <div className="flex flex-col items-center">
-            <Loader2 className="h-10 w-10 animate-spin text-[#082A63]" strokeWidth={2.5} />
-            <p className="mt-4 animate-pulse text-[12px] font-black uppercase tracking-widest text-[#082A63]">กำลังดึงข้อมูล...</p>
+            <Loader2 className="h-10 w-10 animate-spin text-[#8E24AA]" strokeWidth={2.5} />
+            <p className="mt-4 animate-pulse text-[12px] font-black uppercase tracking-widest text-[#8E24AA]">กำลังดึงข้อมูล...</p>
           </div>
         </div>
       )}
@@ -472,7 +472,7 @@ export function StockHistoryClient({
               <X />
             </button>
             <div className="relative aspect-[3/4] w-full">
-              {isImageLoading && <Loader2 className="absolute inset-0 m-auto h-10 w-10 animate-spin text-[#082A63]" />}
+              {isImageLoading && <Loader2 className="absolute inset-0 m-auto h-10 w-10 animate-spin text-[#8E24AA]" />}
               <Image src={previewImageUrl} alt="Preview" fill className="object-contain" onLoad={() => setIsImageLoading(false)} unoptimized />
             </div>
           </div>

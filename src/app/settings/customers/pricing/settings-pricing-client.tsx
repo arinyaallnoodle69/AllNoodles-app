@@ -41,7 +41,7 @@ export function SettingsCustomerPricingPageClient({
         <SettingsPanel>
           <div className="border-b border-slate-100 px-5 py-4">
             <div className="flex items-center gap-2">
-              <PackageSearch className="h-5 w-5 text-[#082A63]" strokeWidth={2.2} />
+              <PackageSearch className="h-5 w-5 text-[#8E24AA]" strokeWidth={2.2} />
               <h2 className="text-xl font-semibold text-slate-900">สินค้าที่ผูกราคากับร้าน</h2>
               <span className="ml-1 rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-semibold tabular-nums text-slate-500">
                 {totalPricesCount}

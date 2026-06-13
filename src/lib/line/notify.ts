@@ -98,7 +98,7 @@ function buildFlexMessage(payload: NewOrderPayload): object {
           type: "text",
           text: `× ${item.quantity.toLocaleString("th-TH")}`,
           size: "sm",
-          color: "#082A63",
+          color: "#8E24AA",
           weight: "bold",
           flex: 2,
           align: "end",
@@ -219,7 +219,7 @@ function buildFlexMessage(payload: NewOrderPayload): object {
                 type: "text",
                 text: `฿${total}`,
                 size: "md",
-                color: "#082A63",
+                color: "#8E24AA",
                 weight: "bold",
                 flex: 2,
                 align: "end",
@@ -232,7 +232,7 @@ function buildFlexMessage(payload: NewOrderPayload): object {
         type: "box",
         layout: "vertical",
         paddingAll: "16px",
-        backgroundColor: "#FAF7F2",
+        backgroundColor: "#F3E5F5",
         contents: [
           {
             type: "button",
@@ -242,7 +242,7 @@ function buildFlexMessage(payload: NewOrderPayload): object {
               uri: `${siteUrl}/orders`,
             },
             style: "primary",
-            color: "#082A63",
+            color: "#8E24AA",
             height: "sm",
           },
         ],
@@ -287,7 +287,7 @@ function buildPriceInquiryFlex(payload: PriceInquiryPayload): object {
       header: {
         type: "box",
         layout: "vertical",
-        backgroundColor: "#082A63",
+        backgroundColor: "#8E24AA",
         paddingAll: "16px",
         contents: [
           {
@@ -393,7 +393,7 @@ function buildPriceInquiryFlex(payload: PriceInquiryPayload): object {
             type: "text",
             text: "กรุณาตรวจสอบและแจ้งราคากลับลูกค้า",
             size: "sm",
-            color: "#082A63",
+            color: "#8E24AA",
             weight: "bold",
             wrap: true,
             margin: "sm",

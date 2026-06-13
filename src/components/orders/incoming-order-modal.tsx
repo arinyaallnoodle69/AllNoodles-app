@@ -542,7 +542,7 @@ const EditItemsPanel = memo(({
                             inputMode="decimal"
                             min={0}
                             step="0.01"
-                            value={addedUnitPriceInputs[item.key] ?? String(addedUnitPrice)}
+                            value={(() => { const val = addedUnitPriceInputs[item.key] ?? String(addedUnitPrice); return val === "0" ? "" : val; })()}
                             onChange={(e) => handleAddedUnitPriceInput(item.key, e.target.value)}
                             onBlur={() => commitAddedUnitPriceInput(item.key)}
                             className={`h-9 w-28 rounded-lg border px-2 text-center font-black outline-none transition mx-auto block focus:ring-2 ${
@@ -614,7 +614,7 @@ const EditItemsPanel = memo(({
                             inputMode="decimal"
                             min={0}
                             step="0.01"
-                            value={unitPriceInputs[item.id] ?? String(unitPrice)}
+                            value={(() => { const val = unitPriceInputs[item.id] ?? String(unitPrice); return val === "0" ? "" : val; })()}
                             onChange={(e) => handleUnitPriceInput(item.id, e.target.value)}
                             onBlur={() => commitUnitPriceInput(item.id)}
                             className={`h-9 w-28 rounded-lg border px-2 text-center font-black outline-none transition mx-auto block focus:ring-2 ${

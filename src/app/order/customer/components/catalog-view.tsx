@@ -71,14 +71,14 @@ export function CatalogView({
                     type="button"
                     onClick={onRepeatOrderAll}
                     disabled={!isOrderOpen}
-                    className="mb-4 flex w-full items-center justify-center gap-2 rounded-xl bg-[#082A63] px-4 py-3.5 text-base font-extrabold text-white shadow-[0_10px_24px_rgba(8,42,99,0.22)] transition hover:bg-[#103B82] active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-slate-300 disabled:shadow-none"
+                    className="mb-4 flex w-full items-center justify-center gap-2 rounded-xl bg-[#AA00FF] px-4 py-3.5 text-base font-extrabold text-white shadow-[0_10px_24px_rgba(170, 0, 255,0.22)] transition hover:bg-[#AA00FF] active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-slate-300 disabled:shadow-none"
                   >
                     <ShoppingCart className="h-4 w-4" strokeWidth={2.4} />
                     {isOrderOpen ? "สั่งซ้ำทั้งหมดจากออเดอร์ล่าสุด" : "ปิดรับออเดอร์"}
                   </button>
 
                   <div className="flex items-start gap-3">
-                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#D4AF37]/30 text-[#103B82]">
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#AA00FF]/30 text-[#AA00FF]">
                       <RotateCcw className="h-5 w-5" strokeWidth={2.4} />
                     </span>
                     <div className="min-w-0 flex-1">
@@ -93,7 +93,7 @@ export function CatalogView({
 
                   <div className="mt-4 flex items-center justify-between rounded-xl bg-slate-50 px-3 py-2">
                     <span className="text-xs font-bold text-slate-500">จำนวนรายการ</span>
-                    <span className="text-sm font-extrabold text-[#082A63]">
+                    <span className="text-sm font-extrabold text-[#AA00FF]">
                       {visibleRepeatOrderCards.length.toLocaleString("th-TH")} รายการ
                     </span>
                   </div>
@@ -140,7 +140,7 @@ export function CatalogView({
                   <button
                     type="button"
                     onClick={() => setShowAllRepeatItems((current) => !current)}
-                    className="w-full py-3 text-center text-xs font-bold text-[#082A63] transition hover:text-[#103B82]"
+                    className="w-full py-3 text-center text-xs font-bold text-[#AA00FF] transition hover:text-[#AA00FF]"
                   >
                     {showAllRepeatItems
                       ? "ย่อรายการ"
@@ -171,7 +171,7 @@ export function CatalogView({
                       >
                         <div className="absolute inset-y-0 left-[2.3rem] right-8 rounded-lg bg-slate-100/90 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)]" />
                         <div className="relative z-10 h-[5.1rem] w-[5.1rem] shrink-0 overflow-hidden rounded-lg bg-white p-1.5">
-                          <div className="absolute left-1.5 top-1.5 z-10 inline-flex items-center gap-1 rounded-full bg-[#082A63] px-1.5 py-0.5 text-[8px] font-bold text-white shadow-[0_8px_16px_rgba(8,42,99,0.22)]">
+                          <div className="absolute left-1.5 top-1.5 z-10 inline-flex items-center gap-1 rounded-full bg-[#AA00FF] px-1.5 py-0.5 text-[8px] font-bold text-white shadow-[0_8px_16px_rgba(170, 0, 255,0.22)]">
                             <Star className="h-2.5 w-2.5 fill-current" strokeWidth={2.3} />
                             ซื้อบ่อย
                           </div>
@@ -203,7 +203,7 @@ export function CatalogView({
                               )
                             }
                             aria-label={`เพิ่ม ${product.name} ใส่ตะกร้า`}
-                            className="absolute bottom-2 right-11 flex h-8 w-8 items-center justify-center rounded-lg bg-[#082A63] text-white shadow-[0_8px_18px_rgba(8,42,99,0.22)] transition-all hover:bg-[#103B82] active:scale-[0.95]"
+                            className="absolute bottom-2 right-11 flex h-8 w-8 items-center justify-center rounded-lg bg-[#AA00FF] text-white shadow-[0_8px_18px_rgba(170, 0, 255,0.22)] transition-all hover:bg-[#AA00FF] active:scale-[0.95]"
                           >
                             <svg
                               xmlns="http://www.w3.org/2000/svg"

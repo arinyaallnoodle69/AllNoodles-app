@@ -57,11 +57,11 @@ export function StockTabs({ current, onChangeTab }: StockTabsProps) {
               onClick={() => handleTabClick(tab.href, tab.key)}
               className={`rounded-lg px-1 py-2.5 text-center text-[11px] font-black transition-all duration-200 sm:px-4 sm:py-2.5 sm:text-sm flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-85 ${
                 isActive
-                  ? "bg-[#082A63] text-white shadow-sm scale-[1.02]"
+                  ? "bg-[#8E24AA] text-white shadow-sm scale-[1.02]"
                   : "text-slate-600 hover:text-slate-900"
               }`}
             >
-              {isLoading && <Loader2 className="h-3 w-3 animate-spin text-[#082A63]" />}
+              {isLoading && <Loader2 className="h-3 w-3 animate-spin text-[#8E24AA]" />}
               <span>{tab.label}</span>
             </button>
           );

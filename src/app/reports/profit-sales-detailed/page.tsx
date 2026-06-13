@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import { Filter, FileSpreadsheet, Store } from "lucide-react";
+import { Filter, Store } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { AppSidebarLayout } from "@/components/app-sidebar";
@@ -197,7 +197,23 @@ async function DetailedProfitContent({ searchParams }: PageProps) {
 
   return (
     <AppSidebarLayout>
-      <div className="min-h-screen bg-[#f8f9ff] text-[#0b1c30] print:bg-white print:text-black">
+      <div className="min-h-screen bg-background text-[#0b1c30] print:bg-white print:text-black detailed-report-container">
+        <style>{`
+          .detailed-report-container,
+          .detailed-report-container p:not(.text-\[\#006c49\]):not(.text-\[\#ba1a1a\]):not(.text-emerald-600):not(.text-red-500),
+          .detailed-report-container span:not(.text-\[\#006c49\]):not(.text-\[\#ba1a1a\]):not(.text-emerald-600):not(.text-red-500),
+          .detailed-report-container td:not(.text-\[\#006c49\]):not(.text-\[\#ba1a1a\]):not(.text-emerald-600):not(.text-red-500),
+          .detailed-report-container th,
+          .detailed-report-container div:not(.text-\[\#006c49\]):not(.text-\[\#ba1a1a\]):not(.text-emerald-600):not(.text-red-500) {
+            color: #000000 !important;
+          }
+          .detailed-report-container .text-slate-400,
+          .detailed-report-container .text-slate-500,
+          .detailed-report-container .text-slate-600,
+          .detailed-report-container .text-slate-700 {
+            color: #000000 !important;
+          }
+        `}</style>
         {/* Screen View (Hidden on Print) */}
         <div className="mx-auto max-w-[1600px] px-6 py-8 no-print">
           {/* Header & Sub-title */}
@@ -217,13 +233,6 @@ async function DetailedProfitContent({ searchParams }: PageProps) {
             </div>
             {/* Action Buttons */}
             <div className="flex gap-2 shrink-0">
-              <button
-                disabled
-                className="flex items-center gap-1.5 rounded-[4px] border border-[#c6c6cd] bg-white px-4 py-2 text-[12px] font-semibold uppercase tracking-wider text-[#0b1c30] opacity-50 cursor-not-allowed transition hover:bg-[#eff4ff]"
-              >
-                <FileSpreadsheet className="h-4 w-4 text-[#006c49]" />
-                Export Excel
-              </button>
               <PrintButton targetId="detailed-print-area" fileName={`รายงานสินค้าและกำไรแยกตามสาขา_${fromDate}_${toDate}`} hidePrintOnMobile />
             </div>
           </header>
@@ -240,7 +249,7 @@ async function DetailedProfitContent({ searchParams }: PageProps) {
                 <select
                   name="warehouse"
                   defaultValue={warehouseId}
-                  className="h-10 w-full rounded-[4px] border border-[#c6c6cd] bg-white px-3 text-[14px] font-semibold text-[#1F2A44] outline-none focus:border-[#1F2A44]"
+                  className="h-10 w-full rounded-[4px] border border-[#c6c6cd] bg-white px-3 text-[14px] font-semibold text-[#8E24AA] outline-none focus:border-[#8E24AA]"
                 >
                   <option value="">ทุกคลังสินค้า</option>
                   {warehouses.map((w) => (
@@ -309,7 +318,7 @@ async function DetailedProfitContent({ searchParams }: PageProps) {
                     <Filter className="h-4 w-4" />
                     ค้นหา
                   </button>
-                  <Link href="/reports/profit-sales-detailed" className="flex h-10 items-center justify-center rounded-[4px] border border-[#c6c6cd] bg-white px-4 text-[12px] font-semibold tracking-wider uppercase text-[#0b1c30] transition hover:bg-[#eff4ff]">
+                  <Link href="/reports/profit-sales-detailed" className="flex h-10 items-center justify-center rounded-[4px] border border-[#c6c6cd] bg-white px-4 text-[12px] font-semibold tracking-wider uppercase text-[#0b1c30] transition hover:bg-neutral-100">
                     ล้างตัวกรอง
                   </Link>
                 </div>
@@ -324,7 +333,7 @@ async function DetailedProfitContent({ searchParams }: PageProps) {
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="bg-[#eff4ff] border-b border-[#c6c6cd]">
+                  <tr className="bg-neutral-100 border-b border-[#c6c6cd]">
                     <th className="px-4 py-2.5 text-[14px] font-extrabold text-black w-[10%]">รหัสสินค้า</th>
                     <th className="px-4 py-2.5 text-[14px] font-extrabold text-black w-[22%]">รายการสินค้า</th>
                     <th className="px-4 py-2.5 text-[14px] font-extrabold text-black text-right w-[8%]">จำนวน</th>
@@ -341,7 +350,7 @@ async function DetailedProfitContent({ searchParams }: PageProps) {
                     report.stores.map((store) => (
                       <Suspense key={store.deliveryNumber}>
                         {/* Store Group Row */}
-                        <tr className="bg-[#dce9ff]/30 border-b border-[#c6c6cd]">
+                        <tr className="bg-neutral-50 border-b border-[#c6c6cd]">
                           <td colSpan={9} className="px-4 py-2.5 font-black text-[#0b1c30] text-[14px]">
                             <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                               <span>วันที่: {formatDateThai(store.deliveryDate)}</span>
@@ -357,7 +366,7 @@ async function DetailedProfitContent({ searchParams }: PageProps) {
                         </tr>
                         {/* Products list for this store */}
                         {store.items.map((item) => (
-                          <tr key={item.productSku} className="border-b border-[#c6c6cd]/30 hover:bg-[#eff4ff]/30 transition-colors">
+                          <tr key={item.productSku} className="border-b border-[#c6c6cd]/30 hover:bg-neutral-100/30 transition-colors">
                             <td className="px-4 py-2 font-mono font-medium text-slate-500">{item.productSku}</td>
                             <td className="px-4 py-2 font-semibold text-[#0b1c30]">{item.productName}</td>
                             <td className="px-4 py-2 text-right font-mono font-medium text-[#0b1c30]">{item.quantity.toLocaleString("th-TH")}</td>
@@ -410,18 +419,18 @@ async function DetailedProfitContent({ searchParams }: PageProps) {
                 </tbody>
                 {report.stores.length > 0 && (
                   <tfoot>
-                    <tr className="bg-[#eff4ff] text-[#0b1c30] border-t-2 border-b border-[#c6c6cd]">
+                    <tr className="bg-neutral-100 text-[#0b1c30] border-t-2 border-b border-[#c6c6cd]">
                       <td colSpan={2} className="px-4 py-4 text-right font-black text-black text-[16px] tracking-wider">
                         ยอดรวมทั้งหมด ({reportPeriodThai}):
                       </td>
                       <td className="px-4 py-4 text-right font-mono font-black text-[16px] text-black">
                         {report.summary.totalQuantity.toLocaleString("th-TH")}
                       </td>
-                      <td className="px-4 py-4 bg-[#eff4ff] font-bold text-slate-600 text-[15px]">
+                      <td className="px-4 py-4 bg-neutral-100 font-bold text-black text-[15px]">
                         {Array.from(new Set(report.stores.flatMap(s => s.items.map(item => item.unit)).filter(Boolean))).join(", ") || "หน่วย"}
                       </td>
-                      <td className="px-4 py-4 bg-[#eff4ff]"></td>
-                      <td className="px-4 py-4 text-right font-mono font-black text-[16px] text-slate-600">
+                      <td className="px-4 py-4 bg-neutral-100"></td>
+                      <td className="px-4 py-4 text-right font-mono font-black text-[16px] text-black">
                         {formatMoney(report.summary.totalCost)}
                       </td>
                       <td className="px-4 py-4 text-right font-mono font-black text-[17px] text-black">
@@ -481,9 +490,9 @@ async function DetailedProfitContent({ searchParams }: PageProps) {
                 <div className={styles.printHeader}>
                   <div className="mb-1 flex items-start justify-between gap-3">
                     <div className="flex items-center gap-2">
-                      <Image src="/ty-noodles-logo-cropped.png" alt="T&Y Noodle" width={40} height={40} className="h-10 w-10 object-contain" />
+                      <Image src="/brand/512x512.png" alt="T&Y Noodle" width={40} height={40} className="h-10 w-10 object-contain" />
                       <div>
-                        <p className="text-sm font-black leading-tight text-[#003366]">T&Y Noodle</p>
+                        <p className="text-sm font-black leading-tight text-[#8E24AA]">T&Y Noodle</p>
                         <p className="text-[10px] font-semibold text-slate-500">ระบบรายงานผลกำไรจากการขายสินค้า</p>
                       </div>
                     </div>
@@ -493,12 +502,12 @@ async function DetailedProfitContent({ searchParams }: PageProps) {
                       <p>หน้า: 1 / 1</p>
                     </div>
                   </div>
-                  <p className="text-base font-black text-[#003366] mt-2">รายงานสินค้าและกำไรแยกตามสาขา</p>
+                  <p className="text-base font-black text-[#8E24AA] mt-2">รายงานสินค้าและกำไรแยกตามสาขา</p>
                   <p className="text-xs font-semibold text-slate-600">
                     ช่วงวันที่ {formatDateThai(fromDate)} — {formatDateThai(toDate)} {selectedStoreIds.length > 0 && ` · ${selectedStoreLabel}`}
                   </p>
                 </div>
-                <div className="text-center py-12 text-slate-400 font-medium text-[11px] bg-slate-50/50 rounded-[4px] border border-slate-200/50 mt-8">
+                <div className="text-center py-12 text-black font-medium text-[11px] bg-neutral-50/50 rounded-[4px] border border-neutral-200/50 mt-8">
                   ไม่พบข้อมูลในช่วงวันที่หรือร้านค้าที่เลือก
                 </div>
               </div>
@@ -518,9 +527,9 @@ async function DetailedProfitContent({ searchParams }: PageProps) {
                   <div className={styles.printHeader}>
                     <div className="mb-1 flex items-start justify-between gap-3">
                       <div className="flex items-center gap-2">
-                        <Image src="/ty-noodles-logo-cropped.png" alt="T&Y Noodle" width={40} height={40} className="h-10 w-10 object-contain" />
+                        <Image src="/brand/512x512.png" alt="T&Y Noodle" width={40} height={40} className="h-10 w-10 object-contain" />
                         <div>
-                          <p className="text-sm font-black leading-tight text-[#003366]">T&Y Noodle</p>
+                          <p className="text-sm font-black leading-tight text-[#8E24AA]">T&Y Noodle</p>
                           <p className="text-[10px] font-semibold text-slate-500">ระบบรายงานผลกำไรจากการขายสินค้า</p>
                         </div>
                       </div>
@@ -530,7 +539,7 @@ async function DetailedProfitContent({ searchParams }: PageProps) {
                         <p>หน้า: {pageIndex + 1} / {pages.length}</p>
                       </div>
                     </div>
-                    <p className="text-base font-black text-[#003366] mt-2">รายงานสินค้าและกำไรแยกตามสาขา</p>
+                    <p className="text-base font-black text-[#8E24AA] mt-2">รายงานสินค้าและกำไรแยกตามสาขา</p>
                     <p className="text-xs font-semibold text-slate-600">
                       ช่วงวันที่ {formatDateThai(fromDate)} — {formatDateThai(toDate)} {selectedStoreIds.length > 0 && ` · ${selectedStoreLabel}`}
                     </p>
@@ -538,7 +547,7 @@ async function DetailedProfitContent({ searchParams }: PageProps) {
 
                   <table className="w-full text-left border-collapse text-[10px]">
                     <thead>
-                      <tr className="bg-[#eff4ff] border-b-2 border-[#8ba9db]">
+                      <tr className="bg-neutral-100 border-b-2 border-neutral-300">
                         <th className="px-2 py-2 font-extrabold text-black w-[10%] text-[11px]">รหัสสินค้า</th>
                         <th className="px-2 py-2 font-extrabold text-black w-[22%] text-[11px]">รายการสินค้า</th>
                         <th className="px-2 py-2 font-extrabold text-black text-right w-[8%] text-[11px]">จำนวน</th>
@@ -554,14 +563,14 @@ async function DetailedProfitContent({ searchParams }: PageProps) {
                       {page.groups.map((group, gIdx) => (
                         <Suspense key={`${group.store.deliveryNumber}-${gIdx}`}>
                           {group.isFirstPageOfStore && (
-                            <tr className="bg-[#f0f5ff] border-y border-[#abbfdc]">
-                              <td colSpan={9} className="px-2.5 py-2 font-black text-[#0b1c30] text-[10.5px]">
+                            <tr className="bg-neutral-50 border-y border-neutral-200">
+                              <td colSpan={9} className="px-2.5 py-2 font-black text-black text-[10.5px]">
                                 <div className="flex justify-between items-center">
                                   <div>
                                     วันที่: {formatDateThai(group.store.deliveryDate)}
-                                    <span className="mx-2 text-[#8ba9db] font-normal">|</span>
+                                    <span className="mx-2 text-slate-400 font-normal">|</span>
                                     เลขที่ใบจัดส่ง: {group.store.deliveryNumber}
-                                    <span className="mx-2 text-[#8ba9db] font-normal">|</span>
+                                    <span className="mx-2 text-slate-400 font-normal">|</span>
                                     ร้านค้า: {group.store.customerCode} - {group.store.customerName}
                                   </div>
                                 </div>
@@ -569,7 +578,7 @@ async function DetailedProfitContent({ searchParams }: PageProps) {
                             </tr>
                           )}
                           {group.items.map((item) => (
-                            <tr key={item.productSku} className="hover:bg-slate-50/50">
+                            <tr key={item.productSku} className="hover:bg-neutral-50/50">
                               <td className="px-2 py-1 font-mono text-slate-500">{item.productSku}</td>
                               <td className="px-2 py-1 font-semibold text-[#0b1c30]">{item.productName}</td>
                               <td className="px-2 py-1 text-right font-mono text-[#0b1c30]">{item.quantity.toLocaleString("th-TH")}</td>
@@ -586,27 +595,27 @@ async function DetailedProfitContent({ searchParams }: PageProps) {
                             </tr>
                           ))}
                           {group.isLastPageOfStore && (
-                            <tr className="bg-slate-50 border-b border-[#c6c6cd]">
+                            <tr className="bg-neutral-50 border-b border-[#c6c6cd]">
                               <td colSpan={2} className="px-2 py-1.5 text-right font-black text-black text-[11px]">
                                 ยอดรวม | {group.store.deliveryNumber}:
                               </td>
-                              <td className="px-2 py-1.5 text-right font-mono font-black bg-slate-50 text-slate-900 text-[11px]">
+                              <td className="px-2 py-1.5 text-right font-mono font-black bg-neutral-50 text-black text-[11px]">
                                 {group.store.totalQuantity.toLocaleString("th-TH")}
                               </td>
-                              <td className="px-2 py-1.5 bg-slate-50 font-bold text-slate-600 text-[10px]">
+                              <td className="px-2 py-1.5 bg-neutral-50 font-bold text-black text-[10px]">
                                 {Array.from(new Set(group.store.items.map(item => item.unit).filter(Boolean))).join(", ") || "หน่วย"}
                               </td>
-                              <td className="px-2 py-1.5 bg-slate-50"></td>
-                              <td className="px-2 py-1.5 text-right font-mono font-black text-slate-600 bg-slate-50 text-[11px]">
+                              <td className="px-2 py-1.5 bg-neutral-50"></td>
+                              <td className="px-2 py-1.5 text-right font-mono font-black text-black bg-neutral-50 text-[11px]">
                                 {formatMoney(group.store.totalCost)}
                               </td>
-                              <td className="px-2 py-1.5 text-right font-mono font-black bg-slate-50 text-slate-900 text-[11px]">
+                              <td className="px-2 py-1.5 text-right font-mono font-black bg-neutral-50 text-black text-[11px]">
                                 {formatMoney(group.store.totalSales)}
                               </td>
-                              <td className="px-2 py-1.5 text-right font-mono font-black bg-slate-50 text-[#006c49] text-[11px]">
+                              <td className="px-2 py-1.5 text-right font-mono font-black bg-neutral-50 text-[#006c49] text-[11px]">
                                 {formatMoney(group.store.totalProfit)}
                               </td>
-                              <td className="px-2 py-1.5 text-right font-mono font-black text-[#006c49] bg-slate-50 text-[11px]">
+                              <td className="px-2 py-1.5 text-right font-mono font-black text-[#006c49] bg-neutral-50 text-[11px]">
                                 {formatPercent(group.store.avgMarginPercent)}
                               </td>
                             </tr>
@@ -616,18 +625,18 @@ async function DetailedProfitContent({ searchParams }: PageProps) {
                     </tbody>
                     {pageIndex === pages.length - 1 && (
                       <tfoot>
-                        <tr className="bg-[#eff4ff] text-[#0b1c30] border-t-2 border-b border-[#8ba9db] font-bold text-[11px]">
+                        <tr className="bg-neutral-100 text-black border-t-2 border-b border-neutral-300 font-bold text-[11px]">
                           <td colSpan={2} className="px-2 py-2 text-right font-black text-black text-[11px]">
                             ยอดรวมทั้งหมด ({reportPeriodThai}):
                           </td>
                           <td className="px-2 py-2 text-right font-mono font-black text-black text-[11px]">
                             {report.summary.totalQuantity.toLocaleString("th-TH")}
                           </td>
-                          <td className="px-2 py-2 bg-[#eff4ff] font-bold text-slate-600 text-[10px]">
+                          <td className="px-2 py-2 bg-neutral-100 font-bold text-black text-[10px]">
                             {Array.from(new Set(report.stores.flatMap(s => s.items.map(item => item.unit)).filter(Boolean))).join(", ") || "หน่วย"}
                           </td>
-                          <td className="px-2 py-2 bg-[#eff4ff]"></td>
-                          <td className="px-2 py-2 text-right font-mono font-black text-slate-600 text-[11px]">
+                          <td className="px-2 py-2 bg-neutral-100"></td>
+                          <td className="px-2 py-2 text-right font-mono font-black text-black text-[11px]">
                             {formatMoney(report.summary.totalCost)}
                           </td>
                           <td className="px-2 py-2 text-right font-mono font-black text-black text-[11px]">

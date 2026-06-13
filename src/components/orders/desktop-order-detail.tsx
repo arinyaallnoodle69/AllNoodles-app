@@ -58,14 +58,14 @@ export function DesktopOrderDetail({ detail, deliveryNumbers }: Props) {
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#082A63]/15 text-[#082A63]">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#8E24AA]/15 text-[#8E24AA]">
                 <Building2 className="h-5 w-5" strokeWidth={2.4} />
               </div>
               <div>
                 <h3 className="text-2xl font-bold tracking-tight text-slate-950">
                   {detail.customer.name}
                 </h3>
-                <p className="mt-0.5 font-mono text-base font-bold text-[#082A63]">
+                <p className="mt-0.5 font-mono text-base font-bold text-[#8E24AA]">
                   {detail.customer.code}
                 </p>
               </div>
@@ -114,7 +114,7 @@ export function DesktopOrderDetail({ detail, deliveryNumbers }: Props) {
               <button
                 type="button"
                 onClick={handleEditInModal}
-                className="inline-flex items-center gap-2 rounded-lg bg-[#082A63] px-5 py-2.5 text-sm font-bold text-white shadow-[0_8px_20px_rgba(4,53,106,0.12)] transition hover:bg-[#103B82] active:scale-[0.98]"
+                className="inline-flex items-center gap-2 rounded-lg bg-[#8E24AA] px-5 py-2.5 text-sm font-bold text-white shadow-[0_8px_20px_rgba(4,53,106,0.12)] transition hover:bg-[#8E24AA] active:scale-[0.98]"
               >
                 <Plus className="h-4 w-4" strokeWidth={2.5} />
                 แก้ไขรายการ
@@ -151,7 +151,7 @@ export function DesktopOrderDetail({ detail, deliveryNumbers }: Props) {
           {detail.items.map((item) => (
             <tr key={item.id} className="align-middle transition-colors hover:bg-slate-50/40">
               <td className="px-6 py-4 text-center">
-                <span className="font-mono text-base font-bold text-[#082A63]/80">{item.sku}</span>
+                <span className="font-mono text-base font-bold text-[#8E24AA]/80">{item.sku}</span>
               </td>
 
               <td className="px-6 py-4">
@@ -198,7 +198,7 @@ export function DesktopOrderDetail({ detail, deliveryNumbers }: Props) {
               </td>
 
               <td className="px-6 py-4 text-center">
-                <p className="font-mono text-lg font-bold tabular-nums text-[#082A63]">
+                <p className="font-mono text-lg font-bold tabular-nums text-[#8E24AA]">
                   {formatCurrency(item.lineTotal)}
                 </p>
               </td>
@@ -215,7 +215,7 @@ export function DesktopOrderDetail({ detail, deliveryNumbers }: Props) {
               ยอดรวมทั้งสิ้น
             </td>
             <td className="px-8 py-4 text-center">
-              <p className="font-mono text-xl font-bold tabular-nums text-[#082A63]">
+              <p className="font-mono text-xl font-bold tabular-nums text-[#8E24AA]">
                 {formatCurrency(detail.items.reduce((sum, item) => sum + item.lineTotal, 0))} บาท
               </p>
             </td>

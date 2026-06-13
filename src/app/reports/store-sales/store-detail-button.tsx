@@ -82,7 +82,7 @@ export function StoreDetailButton({
     <>
       <button
         onClick={handleOpen}
-        className="flex shrink-0 items-center gap-1 whitespace-nowrap rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:border-[#082A63] hover:text-[#082A63] active:scale-95"
+        className="flex shrink-0 items-center gap-1 whitespace-nowrap rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:border-[#8E24AA] hover:text-[#8E24AA] active:scale-95"
       >
         ดูเพิ่มเติม
         <ChevronRight className="h-3.5 w-3.5" strokeWidth={2.5} />
@@ -104,7 +104,7 @@ export function StoreDetailButton({
                 <div className="flex items-center gap-2">
                   <span className="font-mono text-xs font-semibold text-slate-400">{customerCode}</span>
                 </div>
-                <h2 className="mt-0.5 truncate text-base font-bold text-[#082A63]">{customerName}</h2>
+                <h2 className="mt-0.5 truncate text-base font-bold text-[#8E24AA]">{customerName}</h2>
                 <p className="mt-0.5 text-xs text-slate-400">สินค้าที่ขายได้ เรียงตามยอดขาย</p>
               </div>
               <button
@@ -119,7 +119,7 @@ export function StoreDetailButton({
             <div className="min-h-0 flex-1 overflow-y-auto">
               {isPending ? (
                 <div className="flex flex-col items-center justify-center gap-3 py-16 text-slate-400">
-                  <Loader2 className="h-8 w-8 animate-spin text-[#082A63]" strokeWidth={2} />
+                  <Loader2 className="h-8 w-8 animate-spin text-[#8E24AA]" strokeWidth={2} />
                   <p className="text-sm">กำลังโหลดข้อมูลสินค้า...</p>
                 </div>
               ) : rows && rows.length === 0 ? (
@@ -161,7 +161,7 @@ export function StoreDetailButton({
 
                         {/* Stats */}
                         <div className="shrink-0 text-right">
-                          <p className="text-sm font-black text-[#082A63] tabular-nums">
+                          <p className="text-sm font-black text-[#8E24AA] tabular-nums">
                             {fmtMoney(row.totalRevenue)}
                           </p>
                           <div className="mt-0.5 flex items-center justify-end gap-1">
@@ -195,7 +195,7 @@ export function StoreDetailButton({
                     {rows.length} สินค้า · ยอดขายรวม
                   </span>
                   <div className="text-right">
-                    <span className="font-black text-[#082A63]">{fmtMoney(totalRevenue)}</span>
+                    <span className="font-black text-[#8E24AA]">{fmtMoney(totalRevenue)}</span>
                     <span
                       className={`ml-3 font-bold ${profitPositive ? "text-emerald-600" : "text-red-500"}`}
                     >

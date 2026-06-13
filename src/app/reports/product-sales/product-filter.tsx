@@ -77,8 +77,8 @@ export function ProductFilter({
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className={`flex w-full items-center gap-2 rounded-xl border-0 bg-white py-2.5 pl-3 pr-3 text-sm shadow-sm transition focus:outline-none focus:ring-2 focus:ring-[#082A63]/20 ${
-          open ? "ring-2 ring-[#082A63]/20" : "ring-1 ring-slate-200"
+        className={`flex w-full items-center gap-2 rounded-xl border-0 bg-white py-2.5 pl-3 pr-3 text-sm shadow-sm transition focus:outline-none focus:ring-2 focus:ring-[#8E24AA]/20 ${
+          open ? "ring-2 ring-[#8E24AA]/20" : "ring-1 ring-slate-200"
         }`}
       >
         <Package className="h-4 w-4 shrink-0 text-slate-400" strokeWidth={2} />
@@ -122,7 +122,7 @@ export function ProductFilter({
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="ค้นหาสินค้า..."
-                className="w-full rounded-lg py-1.5 pl-8 pr-3 text-sm text-slate-700 ring-1 ring-slate-200 focus:outline-none focus:ring-2 focus:ring-[#082A63]/20"
+                className="w-full rounded-lg py-1.5 pl-8 pr-3 text-sm text-slate-700 ring-1 ring-slate-200 focus:outline-none focus:ring-2 focus:ring-[#8E24AA]/20"
               />
             </div>
           </div>
@@ -131,7 +131,7 @@ export function ProductFilter({
             <button
               type="button"
               onClick={selectAll}
-              className="text-xs font-semibold text-[#082A63] hover:underline"
+              className="text-xs font-semibold text-[#8E24AA] hover:underline"
             >
               เลือกทั้งหมด
             </button>
@@ -165,7 +165,7 @@ export function ProductFilter({
                     type="checkbox"
                     checked={selected.has(product.id)}
                     onChange={() => toggle(product.id)}
-                    className="h-4 w-4 rounded border-slate-300 accent-[#082A63]"
+                    className="h-4 w-4 rounded border-slate-300 accent-[#8E24AA]"
                   />
                   {product.imageUrl ? (
                     <Image
@@ -186,13 +186,13 @@ export function ProductFilter({
                     </p>
                     <p className="truncate font-mono text-xs text-slate-400">{product.sku}</p>
                     {product.categoryNames.length > 0 ? (
-                      <p className="truncate text-xs text-[#082A63]">
+                      <p className="truncate text-xs text-[#8E24AA]">
                         หมวดหมู่: {product.categoryNames.join(", ")}
                       </p>
                     ) : null}
                   </div>
                   {selected.has(product.id) && (
-                    <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[#082A63]" />
+                    <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[#8E24AA]" />
                   )}
                 </label>
               ))

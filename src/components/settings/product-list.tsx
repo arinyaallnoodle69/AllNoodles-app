@@ -70,7 +70,7 @@ function SortableMobileCard({
     transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0.5 : (product.isActive ? 1 : 0.7),
-    backgroundColor: isDragging ? "#F8FAFC" : "white",
+    backgroundColor: isDragging ? "#F3E5F5" : "white",
     zIndex: isDragging ? 50 : 1,
   };
 
@@ -100,7 +100,7 @@ function SortableMobileCard({
         </div>
 
         <div className="min-w-0 flex-1">
-          <p className="text-[10px] font-black uppercase tracking-[0.15em] text-[#082A63]/40">
+          <p className="text-[10px] font-black uppercase tracking-[0.15em] text-[#8E24AA]/40">
             {product.sku}
           </p>
           <p className="mt-0.5 text-lg font-black leading-tight text-slate-950">
@@ -109,11 +109,11 @@ function SortableMobileCard({
           
           <div className="mt-3">
             <p className="text-[10px] font-black uppercase tracking-[0.1em] text-slate-400 mb-1.5 ml-1">ต้นทุน / หน่วย</p>
-            <div className="flex items-center justify-between rounded-xl px-3 py-2 text-sm bg-[#082A63]/15 border border-[#082A63]/10">
-              <span className="font-bold text-[#082A63]">
+            <div className="flex items-center justify-between rounded-xl px-3 py-2 text-sm bg-[#8E24AA]/15 border border-[#8E24AA]/10">
+              <span className="font-bold text-[#8E24AA]">
                 {product.baseUnit}
               </span>
-              <span className="font-black text-[#082A63]">
+              <span className="font-black text-[#8E24AA]">
                 {formatCost(defaultUnit ? defaultUnit.effectiveCostPrice : (product.costPrice || 0))} บาท
               </span>
             </div>
@@ -138,7 +138,7 @@ function SortableMobileCard({
             scroll={false}
             className="flex flex-col items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white py-2.5 text-[11px] font-bold text-slate-700 transition hover:bg-slate-50 active:scale-95"
           >
-            <Pencil className="h-4 w-4 text-[#082A63]" strokeWidth={2.5} />
+            <Pencil className="h-4 w-4 text-[#8E24AA]" strokeWidth={2.5} />
             แก้ไข
           </Link>
 
@@ -203,7 +203,7 @@ function SortableDesktopRow({
     transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0.5 : (product.isActive ? 1 : 0.6),
-    backgroundColor: isDragging ? "#F8FAFC" : "transparent",
+    backgroundColor: isDragging ? "#F3E5F5" : "transparent",
     zIndex: isDragging ? 50 : 1,
   };
 
@@ -213,13 +213,13 @@ function SortableDesktopRow({
       style={style}
       className={`${product.isActive ? "bg-white hover:bg-slate-50" : "bg-slate-50/70"} ${isDragging ? "shadow-lg" : ""}`}
     >
-      <td className="border-b border-r border-[#EEF1F5] px-4 py-4 text-center align-middle text-base font-bold tabular-nums text-[#082A63]">
+      <td className="border-b border-r border-[#EEF1F5] px-4 py-4 text-center align-middle text-base font-bold tabular-nums text-[#8E24AA]">
         <span className="inline-flex items-center gap-2">
           <span>{index + 1}</span>
           <span
             {...attributes}
             {...listeners}
-            className="inline-flex cursor-grab text-slate-300 hover:text-[#D4AF37] active:cursor-grabbing"
+            className="inline-flex cursor-grab text-slate-300 hover:text-[#AA00FF] active:cursor-grabbing"
             aria-label="ลากเพื่อย้ายลำดับ"
           >
             <GripVertical className="h-4 w-4" />
@@ -229,7 +229,7 @@ function SortableDesktopRow({
 
       <td className="border-b border-r border-[#EEF1F5] px-6 py-4 align-middle">
         <div className="space-y-1">
-          <p className="font-mono text-base font-black text-[#082A63]">{product.sku}</p>
+          <p className="font-mono text-base font-black text-[#8E24AA]">{product.sku}</p>
         </div>
       </td>
 
@@ -243,7 +243,7 @@ function SortableDesktopRow({
             )}
           </div>
           <div>
-            <p className="text-base font-black text-[#082A63]">{product.name}</p>
+            <p className="text-base font-black text-[#8E24AA]">{product.name}</p>
             <p className="mt-0.5 text-sm font-semibold text-[#667085]">
               {product.categoryNames[0] ?? "ยังไม่ระบุหมวดหมู่"}
             </p>
@@ -253,13 +253,13 @@ function SortableDesktopRow({
 
       <td className="border-b border-r border-[#EEF1F5] px-6 py-4 text-center align-middle">
         <div className="flex min-h-[3rem] items-center justify-center">
-          <span className="text-base font-bold text-[#082A63]">{product.baseUnit}</span>
+          <span className="text-base font-bold text-[#8E24AA]">{product.baseUnit}</span>
         </div>
       </td>
 
       <td className="border-b border-r border-[#EEF1F5] px-6 py-4 text-right align-middle">
         <div className="flex min-h-[3rem] items-center justify-end">
-          <p className="text-base font-black tabular-nums text-[#082A63]">
+          <p className="text-base font-black tabular-nums text-[#8E24AA]">
             {formatCost(defaultUnit ? defaultUnit.effectiveCostPrice : (product.costPrice || 0))}
           </p>
         </div>
@@ -281,7 +281,7 @@ function SortableDesktopRow({
           <Link
             href={editHref}
             scroll={false}
-            className="action-touch-safe inline-flex h-9 w-9 items-center justify-center rounded-lg border border-[#E8DCC7] bg-white text-[#082A63] transition hover:border-[#082A63]/35 hover:bg-[#082A63]/[0.04] active:scale-95"
+            className="action-touch-safe inline-flex h-9 w-9 items-center justify-center rounded-lg border border-[#E1BEE7] bg-white text-[#8E24AA] transition hover:border-[#8E24AA]/35 hover:bg-[#8E24AA]/[0.04] active:scale-95"
             aria-label={`แก้ไข ${product.name}`}
           >
             <Pencil className="h-4 w-4" strokeWidth={2.4} />
@@ -291,7 +291,7 @@ function SortableDesktopRow({
             iconOnly
             productId={product.id}
             productName={product.name}
-            triggerClassName="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-[#E8DCC7] bg-white text-[#082A63] transition hover:border-[#082A63]/35 hover:bg-[#082A63]/[0.04] active:scale-95"
+            triggerClassName="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-[#E1BEE7] bg-white text-[#8E24AA] transition hover:border-[#8E24AA]/35 hover:bg-[#8E24AA]/[0.04] active:scale-95"
           />
 
           <form action={setProductActive}>
@@ -299,7 +299,7 @@ function SortableDesktopRow({
             <input type="hidden" name="nextState" value={product.isActive ? "false" : "true"} />
             <button
               type="submit"
-              className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-[#E8DCC7] bg-white text-[#082A63] transition hover:border-[#082A63]/35 hover:bg-[#082A63]/[0.04] active:scale-95"
+              className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-[#E1BEE7] bg-white text-[#8E24AA] transition hover:border-[#8E24AA]/35 hover:bg-[#8E24AA]/[0.04] active:scale-95"
               aria-label={product.isActive ? `ปิดใช้งาน ${product.name}` : `เปิดใช้งาน ${product.name}`}
             >
               <Power className="h-4 w-4" strokeWidth={2.4} />
@@ -314,7 +314,7 @@ function SortableDesktopRow({
               formId={deleteFormId}
               iconOnly
               productName={product.name}
-              triggerClassName="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-[#E8DCC7] bg-white text-red-600 transition hover:border-red-200 hover:bg-red-50 active:scale-95"
+              triggerClassName="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-[#E1BEE7] bg-white text-red-600 transition hover:border-red-200 hover:bg-red-50 active:scale-95"
             />
           </div>
         </div>
@@ -381,9 +381,9 @@ export function ProductList({ products, baseListHref = "/settings/products" }: P
 
   return (
     <>
-    <SettingsPanel className="rounded-lg border border-[#E8DCC7] bg-white shadow-[0_18px_45px_rgba(31,42,68,0.06)]">
+    <SettingsPanel className="rounded-lg border border-[#E1BEE7] bg-white shadow-[0_18px_45px_rgba(31,42,68,0.06)]">
       {isPending ? (
-        <div className="border-b border-[#EEF1F5] bg-white px-5 py-2 text-xs font-semibold text-[#082A63]">
+        <div className="border-b border-[#EEF1F5] bg-white px-5 py-2 text-xs font-semibold text-[#8E24AA]">
           กำลังบันทึกลำดับ...
         </div>
       ) : null}
@@ -430,26 +430,26 @@ export function ProductList({ products, baseListHref = "/settings/products" }: P
               <div className="hidden overflow-x-auto sm:block">
                 <table className="min-w-full border-collapse text-left">
                   <thead>
-                    <tr className="bg-[#082A63]">
-                      <th className="border-b border-[#082A63] border-r border-white/20 px-4 py-4 text-center text-sm font-black text-white">
+                    <tr className="bg-[#8E24AA]">
+                      <th className="border-b border-[#8E24AA] border-r border-white/20 px-4 py-4 text-center text-sm font-black text-white">
                         ลำดับ
                       </th>
-                      <th className="border-b border-[#082A63] border-r border-white/20 px-6 py-4 text-left text-sm font-black text-white">
+                      <th className="border-b border-[#8E24AA] border-r border-white/20 px-6 py-4 text-left text-sm font-black text-white">
                         รหัสสินค้า
                       </th>
-                      <th className="border-b border-[#082A63] border-r border-white/20 px-6 py-4 text-left text-sm font-black text-white">
+                      <th className="border-b border-[#8E24AA] border-r border-white/20 px-6 py-4 text-left text-sm font-black text-white">
                         ชื่อสินค้า
                       </th>
-                      <th className="border-b border-[#082A63] border-r border-white/20 px-6 py-4 text-center text-sm font-black text-white">
+                      <th className="border-b border-[#8E24AA] border-r border-white/20 px-6 py-4 text-center text-sm font-black text-white">
                         หน่วย
                       </th>
-                      <th className="border-b border-[#082A63] border-r border-white/20 px-6 py-4 text-right text-sm font-black text-white">
+                      <th className="border-b border-[#8E24AA] border-r border-white/20 px-6 py-4 text-right text-sm font-black text-white">
                         ต้นทุนต่อหน่วย
                       </th>
-                      <th className="border-b border-[#082A63] border-r border-white/20 px-6 py-4 text-center text-sm font-black text-white">
+                      <th className="border-b border-[#8E24AA] border-r border-white/20 px-6 py-4 text-center text-sm font-black text-white">
                         สถานะ
                       </th>
-                      <th className="border-b border-[#082A63] px-6 py-4 text-center text-sm font-black text-white">
+                      <th className="border-b border-[#8E24AA] px-6 py-4 text-center text-sm font-black text-white">
                         จัดการ
                       </th>
                     </tr>

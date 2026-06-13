@@ -118,8 +118,8 @@ export function UnifiedStockClient({
     if (isLoadingHistory || !historyData) {
       return (
         <div className="flex flex-col items-center justify-center py-20 min-h-[400px]">
-          <Loader2 className="h-10 w-10 animate-spin text-[#082A63]" strokeWidth={2.5} />
-          <p className="mt-4 text-sm font-black uppercase tracking-widest text-[#082A63] animate-pulse">กำลังโหลดประวัติรับเข้า...</p>
+          <Loader2 className="h-10 w-10 animate-spin text-[#8E24AA]" strokeWidth={2.5} />
+          <p className="mt-4 text-sm font-black uppercase tracking-widest text-[#8E24AA] animate-pulse">กำลังโหลดประวัติรับเข้า...</p>
         </div>
       );
     }
@@ -139,8 +139,8 @@ export function UnifiedStockClient({
     if (isLoadingIssues || !issuesData) {
       return (
         <div className="flex flex-col items-center justify-center py-20 min-h-[400px]">
-          <Loader2 className="h-10 w-10 animate-spin text-[#082A63]" strokeWidth={2.5} />
-          <p className="mt-4 text-sm font-black uppercase tracking-widest text-[#082A63] animate-pulse">กำลังโหลดประวัติเบิกออก...</p>
+          <Loader2 className="h-10 w-10 animate-spin text-[#8E24AA]" strokeWidth={2.5} />
+          <p className="mt-4 text-sm font-black uppercase tracking-widest text-[#8E24AA] animate-pulse">กำลังโหลดประวัติเบิกออก...</p>
         </div>
       );
     }

@@ -77,7 +77,7 @@ function VehicleTabs({
             type="button"
             onClick={() => onSelect(group.vehicleKey)}
             className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-1 text-[11px] font-bold transition md:gap-2 md:px-3.5 md:py-2 md:text-sm ${
-              active ? "bg-[#082A63] text-white shadow-sm" : "bg-slate-100 text-slate-700"
+              active ? "bg-[#8E24AA] text-white shadow-sm" : "bg-slate-100 text-slate-700"
             }`}
           >
             <Truck className="h-3.5 w-3.5 md:h-4 md:w-4" strokeWidth={2.2} />
@@ -190,7 +190,7 @@ export function PackingListSummaryButton({
       <button
         type="button"
         onClick={() => setIsOpen(true)}
-        className="inline-flex items-center gap-2 rounded-full border border-[#082A63]/15 bg-[#FAF7F2] px-3.5 py-1.5 text-[13px] font-bold text-[#082A63] shadow-sm transition hover:bg-[#F2E3AE] active:scale-[0.98]"
+        className="inline-flex items-center gap-2 rounded-full border border-[#8E24AA]/15 bg-[#F3E5F5] px-3.5 py-1.5 text-[13px] font-bold text-[#8E24AA] shadow-sm transition hover:bg-[#EA80FC] active:scale-[0.98]"
       >
         <PackageSearch className="h-4 w-4" strokeWidth={2.4} />
         สรุปสินค้า
@@ -205,12 +205,12 @@ export function PackingListSummaryButton({
             onClick={() => setIsOpen(false)}
           />
 
-          <div className="absolute inset-0 flex flex-col overflow-hidden bg-slate-50 shadow-2xl md:inset-x-[8%] md:inset-y-[6%] md:rounded-[2.5rem] md:border-2 md:border-[#D4AF37]/35 md:shadow-[0_24px_70px_rgba(8,42,99,0.25)] animate-in fade-in zoom-in-95 duration-300">
+          <div className="absolute inset-0 flex flex-col overflow-hidden bg-slate-50 shadow-2xl md:inset-x-[8%] md:inset-y-[6%] md:rounded-[2.5rem] md:border-2 md:border-[#AA00FF]/35 md:shadow-[0_24px_70px_rgba(142, 36, 170,0.25)] animate-in fade-in zoom-in-95 duration-300">
             <div className="flex h-full flex-col">
               {/* Header */}
-              <div className="relative overflow-hidden border-b border-[#D4AF37]/40 bg-gradient-to-r from-[#061F47] to-[#0A3375] text-white">
+              <div className="relative overflow-hidden border-b border-[#AA00FF]/40 bg-gradient-to-r from-[#061F47] to-[#0A3375] text-white">
                 {/* Decorative Gold Top Edge */}
-                <div className="h-1.5 w-full bg-gradient-to-r from-[#D4AF37] via-[#F3E5AB] to-[#D4AF37]" />
+                <div className="h-1.5 w-full bg-gradient-to-r from-[#AA00FF] via-[#F3E5AB] to-[#AA00FF]" />
                 
                 {/* Main Header Content */}
                 <div className="px-4 py-4 md:px-7 md:py-6">
@@ -222,12 +222,12 @@ export function PackingListSummaryButton({
                   <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                     {/* Title & Badge */}
                     <div className="flex items-start gap-3 md:gap-4">
-                      <div className="hidden sm:flex size-12 shrink-0 items-center justify-center rounded-xl border border-[#D4AF37]/30 bg-white/5 text-[#D4AF37] shadow-inner backdrop-blur-md">
+                      <div className="hidden sm:flex size-12 shrink-0 items-center justify-center rounded-xl border border-[#AA00FF]/30 bg-white/5 text-[#AA00FF] shadow-inner backdrop-blur-md">
                         <PackageSearch className="h-6 w-6" strokeWidth={2} />
                       </div>
                       <div className="min-w-0">
-                        <span className="inline-flex items-center gap-1 rounded-md bg-[#D4AF37]/10 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-[#F3E5AB] border border-[#D4AF37]/20">
-                          <span className="h-1 w-1 rounded-full bg-[#D4AF37] animate-pulse" />
+                        <span className="inline-flex items-center gap-1 rounded-md bg-[#AA00FF]/10 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-[#F3E5AB] border border-[#AA00FF]/20">
+                          <span className="h-1 w-1 rounded-full bg-[#AA00FF] animate-pulse" />
                           รายงานสรุปสินค้า
                         </span>
                         <h2 className="mt-1 text-lg font-black tracking-tight text-white md:text-2xl">
@@ -266,7 +266,7 @@ export function PackingListSummaryButton({
                       <button
                         type="button"
                         onClick={() => setIsOpen(false)}
-                        className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg border border-[#D4AF37]/30 bg-white/5 text-[#F3E5AB] shadow-sm transition-all duration-200 hover:border-[#D4AF37] hover:bg-white/10 active:scale-95"
+                        className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg border border-[#AA00FF]/30 bg-white/5 text-[#F3E5AB] shadow-sm transition-all duration-200 hover:border-[#AA00FF] hover:bg-white/10 active:scale-95"
                         aria-label="ปิดหน้าต่าง"
                       >
                         <X className="h-4.5 w-4.5" strokeWidth={2.5} />
@@ -283,7 +283,7 @@ export function PackingListSummaryButton({
                           onClick={() => setActiveTab("products")}
                           className={`flex-grow flex items-center justify-center gap-1.5 rounded-lg py-2 text-xs font-black uppercase tracking-wider transition-all duration-200 ${
                             activeTab === "products"
-                              ? "bg-[#D4AF37] text-[#082A63] shadow-md font-extrabold"
+                              ? "bg-[#AA00FF] text-[#8E24AA] shadow-md font-extrabold"
                               : "text-slate-300 hover:text-white hover:bg-white/5"
                           }`}
                         >
@@ -296,7 +296,7 @@ export function PackingListSummaryButton({
                           onClick={() => setActiveTab("stores")}
                           className={`flex-grow flex items-center justify-center gap-1.5 rounded-lg py-2 text-xs font-black uppercase tracking-wider transition-all duration-200 ${
                             activeTab === "stores"
-                              ? "bg-[#D4AF37] text-[#082A63] shadow-md font-extrabold"
+                              ? "bg-[#AA00FF] text-[#8E24AA] shadow-md font-extrabold"
                               : "text-slate-300 hover:text-white hover:bg-white/5"
                           }`}
                         >
@@ -327,13 +327,13 @@ export function PackingListSummaryButton({
                       />
 
                       {activeProductGroup ? (
-                        <section className="rounded-2xl border border-[#D4AF37]/25 bg-white p-4 shadow-sm md:p-5 animate-in fade-in duration-200">
+                        <section className="rounded-2xl border border-[#AA00FF]/25 bg-white p-4 shadow-sm md:p-5 animate-in fade-in duration-200">
                           <div className="mb-4 flex items-center gap-3 border-b border-slate-100 pb-3">
-                            <span className="inline-flex size-10 items-center justify-center rounded-xl border border-[#D4AF37]/30 bg-[#FAF7F2] text-[#082A63]">
+                            <span className="inline-flex size-10 items-center justify-center rounded-xl border border-[#AA00FF]/30 bg-[#F3E5F5] text-[#8E24AA]">
                               <Truck className="h-5 w-5" strokeWidth={2.2} />
                             </span>
                             <div className="min-w-0">
-                              <p className="text-base font-black text-[#082A63]">{activeProductGroup.vehicleName}</p>
+                              <p className="text-base font-black text-[#8E24AA]">{activeProductGroup.vehicleName}</p>
                               <p className="text-xs font-bold text-slate-500">
                                 {activeProductGroup.products.length.toLocaleString("th-TH")} สินค้า
                               </p>
@@ -344,7 +344,7 @@ export function PackingListSummaryButton({
                             {activeProductGroup.products.map((product) => (
                               <article
                                 key={product.key}
-                                className="group relative flex flex-col overflow-hidden rounded-2xl border border-[#D4AF37]/20 bg-white p-3 shadow-sm transition-all duration-200 hover:border-[#D4AF37]/60 hover:shadow-md"
+                                className="group relative flex flex-col overflow-hidden rounded-2xl border border-[#AA00FF]/20 bg-white p-3 shadow-sm transition-all duration-200 hover:border-[#AA00FF]/60 hover:shadow-md"
                               >
                                 <div className="flex flex-col items-center text-center">
                                   <div className="relative mb-3 h-20 w-full overflow-hidden rounded-xl bg-slate-50/70 p-1 group-hover:scale-102 transition-transform duration-200">
@@ -368,8 +368,8 @@ export function PackingListSummaryButton({
                                     {product.name}
                                   </p>
 
-                                  <div className="mt-3 w-full border-t border-dashed border-[#D4AF37]/25 pt-2">
-                                    <p className="font-mono text-xl font-black text-[#082A63]">
+                                  <div className="mt-3 w-full border-t border-dashed border-[#AA00FF]/25 pt-2">
+                                    <p className="font-mono text-xl font-black text-[#8E24AA]">
                                       {formatQty(product.quantity, product.unit)}
                                     </p>
                                   </div>
@@ -400,10 +400,10 @@ export function PackingListSummaryButton({
                         {activeStoreGroup ? (
                           <section className="space-y-3 px-1">
                             <div className="flex items-center gap-3 border-b border-slate-100 pb-2">
-                              <span className="inline-flex size-9 items-center justify-center rounded-xl border border-[#D4AF37]/30 bg-[#FAF7F2] text-[#082A63]">
+                              <span className="inline-flex size-9 items-center justify-center rounded-xl border border-[#AA00FF]/30 bg-[#F3E5F5] text-[#8E24AA]">
                                 <Truck className="h-4.5 w-4.5" strokeWidth={2.2} />
                               </span>
-                              <p className="text-base font-black text-[#082A63]">{activeStoreGroup.vehicleName}</p>
+                              <p className="text-base font-black text-[#8E24AA]">{activeStoreGroup.vehicleName}</p>
                             </div>
 
                             <div className="space-y-2.5">
@@ -412,14 +412,14 @@ export function PackingListSummaryButton({
                                   key={store.id}
                                   type="button"
                                   onClick={() => setMobileStoreId(store.id)}
-                                  className="w-full rounded-2xl border border-[#D4AF37]/20 bg-white px-4 py-3.5 text-left shadow-sm transition-all duration-200 hover:border-[#D4AF37]/60 active:scale-[0.99]"
+                                  className="w-full rounded-2xl border border-[#AA00FF]/20 bg-white px-4 py-3.5 text-left shadow-sm transition-all duration-200 hover:border-[#AA00FF]/60 active:scale-[0.99]"
                                 >
                                   <p className="text-[15px] font-bold leading-tight text-slate-900">
-                                    <span translate="no" className="font-mono text-[#082A63] font-black">{store.customerCode}</span> - {store.customerName}
+                                    <span translate="no" className="font-mono text-[#8E24AA] font-black">{store.customerCode}</span> - {store.customerName}
                                   </p>
                                   <div className="mt-2 flex items-center justify-between gap-3 text-xs font-semibold text-slate-500">
                                     <span>{store.itemCount.toLocaleString("th-TH")} รายการ</span>
-                                    <span className="text-[#082A63] font-bold">{store.totalQuantity.toLocaleString("th-TH")} หน่วย</span>
+                                    <span className="text-[#8E24AA] font-bold">{store.totalQuantity.toLocaleString("th-TH")} หน่วย</span>
                                   </div>
                                 </button>
                               ))}
@@ -446,11 +446,11 @@ export function PackingListSummaryButton({
 
                           {activeStoreGroup ? (
                             <section className="space-y-3">
-                              <div className="flex items-center gap-3 rounded-xl border border-[#D4AF37]/25 bg-[#FAF7F2] px-3 py-2">
-                                <span className="inline-flex size-8 items-center justify-center rounded-full bg-white text-[#082A63] shadow-sm">
+                              <div className="flex items-center gap-3 rounded-xl border border-[#AA00FF]/25 bg-[#F3E5F5] px-3 py-2">
+                                <span className="inline-flex size-8 items-center justify-center rounded-full bg-white text-[#8E24AA] shadow-sm">
                                   <Truck className="h-4.5 w-4.5" strokeWidth={2.2} />
                                 </span>
-                                <p className="text-sm font-black text-[#082A63]">{activeStoreGroup.vehicleName}</p>
+                                <p className="text-sm font-black text-[#8E24AA]">{activeStoreGroup.vehicleName}</p>
                               </div>
 
                               <div className="space-y-2">
@@ -464,16 +464,16 @@ export function PackingListSummaryButton({
                                       onClick={() => setSelectedStoreId(store.id)}
                                       className={`w-full rounded-2xl border px-4 py-3.5 text-left transition-all duration-200 ${
                                         active
-                                          ? "border-[#D4AF37] bg-[#FAF7F2] shadow-sm"
-                                          : "border-slate-200 bg-white hover:border-[#D4AF37]/35 hover:bg-slate-50"
+                                          ? "border-[#AA00FF] bg-[#F3E5F5] shadow-sm"
+                                          : "border-slate-200 bg-white hover:border-[#AA00FF]/35 hover:bg-slate-50"
                                       }`}
                                     >
                                       <p className="text-[15px] font-bold leading-tight text-slate-900">
-                                        <span translate="no" className="font-mono text-[#082A63] font-black">{store.customerCode}</span> - {store.customerName}
+                                        <span translate="no" className="font-mono text-[#8E24AA] font-black">{store.customerCode}</span> - {store.customerName}
                                       </p>
                                       <div className="mt-2 flex items-center justify-between gap-3 text-xs font-semibold text-slate-500">
                                         <span>{store.itemCount.toLocaleString("th-TH")} รายการ</span>
-                                        <span className="text-[#082A63] font-bold">{store.totalQuantity.toLocaleString("th-TH")} หน่วย</span>
+                                        <span className="text-[#8E24AA] font-bold">{store.totalQuantity.toLocaleString("th-TH")} หน่วย</span>
                                       </div>
                                     </button>
                                   );
@@ -487,30 +487,30 @@ export function PackingListSummaryButton({
                       <div className="overflow-y-auto px-6 py-5">
                         {selectedStore ? (
                           <div className="animate-in fade-in duration-200">
-                            <div className="rounded-2xl border border-[#D4AF37]/35 bg-[#FAF7F2] px-5 py-4 shadow-sm">
-                              <p className="text-[1.1rem] font-black text-[#082A63]">
-                                <span translate="no" className="font-mono text-[#082A63]">{selectedStore.customerCode}</span> - {selectedStore.customerName}
+                            <div className="rounded-2xl border border-[#AA00FF]/35 bg-[#F3E5F5] px-5 py-4 shadow-sm">
+                              <p className="text-[1.1rem] font-black text-[#8E24AA]">
+                                <span translate="no" className="font-mono text-[#8E24AA]">{selectedStore.customerCode}</span> - {selectedStore.customerName}
                               </p>
                               <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs font-bold text-slate-500">
                                 <span>{selectedStore.dateLabel}</span>
-                                <span className="text-[#D4AF37]">|</span>
+                                <span className="text-[#AA00FF]">|</span>
                                 <span>รถ: {resolveVehicleName(selectedStore.vehicleName)}</span>
                               </div>
                             </div>
 
-                            <div className="mt-5 overflow-hidden rounded-2xl border border-[#D4AF37]/20 bg-white shadow-sm">
+                            <div className="mt-5 overflow-hidden rounded-2xl border border-[#AA00FF]/20 bg-white shadow-sm">
                               <table className="w-full border-collapse">
                                 <thead>
-                                  <tr className="bg-[#FAF7F2] border-b border-[#D4AF37]/20">
-                                    <th className="px-5 py-3.5 text-left text-[12px] font-black uppercase tracking-wider text-[#082A63]">ชื่อสินค้า</th>
-                                    <th className="px-5 py-3.5 text-right text-[12px] font-black uppercase tracking-wider text-[#082A63]">จำนวน</th>
+                                  <tr className="bg-[#F3E5F5] border-b border-[#AA00FF]/20">
+                                    <th className="px-5 py-3.5 text-left text-[12px] font-black uppercase tracking-wider text-[#8E24AA]">ชื่อสินค้า</th>
+                                    <th className="px-5 py-3.5 text-right text-[12px] font-black uppercase tracking-wider text-[#8E24AA]">จำนวน</th>
                                   </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-100">
                                   {selectedStore.items.map((item) => (
                                     <tr key={item.key} className="hover:bg-slate-50/60 transition-colors">
                                       <td className="px-5 py-3 text-[14px] font-semibold text-slate-950">{item.name}</td>
-                                      <td className="px-5 py-3 text-right font-mono text-[14px] font-black text-[#082A63]">
+                                      <td className="px-5 py-3 text-right font-mono text-[14px] font-black text-[#8E24AA]">
                                         {formatQty(item.quantity, item.unit)}
                                       </td>
                                     </tr>
@@ -542,23 +542,23 @@ export function PackingListSummaryButton({
                 onClick={() => setMobileStoreId(null)}
               />
 
-              <div className="absolute inset-x-0 bottom-0 top-[15dvh] overflow-hidden rounded-t-[2rem] border-t-2 border-[#D4AF37]/45 bg-white shadow-[0_-20px_50px_rgba(0,29,63,0.25)] animate-in slide-in-from-bottom duration-300">
+              <div className="absolute inset-x-0 bottom-0 top-[15dvh] overflow-hidden rounded-t-[2rem] border-t-2 border-[#AA00FF]/45 bg-white shadow-[0_-20px_50px_rgba(0,29,63,0.25)] animate-in slide-in-from-bottom duration-300">
                 <div className="flex h-full flex-col">
-                  <div className="flex items-start justify-between gap-3 border-b border-[#D4AF37]/25 bg-[#FAF7F2] px-4 pb-3 pt-4">
+                  <div className="flex items-start justify-between gap-3 border-b border-[#AA00FF]/25 bg-[#F3E5F5] px-4 pb-3 pt-4">
                     <div className="min-w-0 flex-1">
-                      <p className="text-[1.05rem] font-black text-[#082A63] leading-tight">
+                      <p className="text-[1.05rem] font-black text-[#8E24AA] leading-tight">
                         <span translate="no" className="font-mono">{mobileStore.customerCode}</span> - {mobileStore.customerName}
                       </p>
                       <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs font-bold text-slate-500">
                         <span>{mobileStore.dateLabel}</span>
-                        <span className="text-[#D4AF37]">|</span>
+                        <span className="text-[#AA00FF]">|</span>
                         <span>รถ: {resolveVehicleName(mobileStore.vehicleName)}</span>
                       </div>
                     </div>
                     <button
                       type="button"
                       onClick={() => setMobileStoreId(null)}
-                      className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-[#D4AF37]/30 bg-white text-slate-600 shadow-sm active:scale-95"
+                      className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-[#AA00FF]/30 bg-white text-slate-600 shadow-sm active:scale-95"
                       aria-label="ปิด"
                     >
                       <X className="h-4.5 w-4.5" strokeWidth={2.5} />
@@ -566,19 +566,19 @@ export function PackingListSummaryButton({
                   </div>
 
                   <div className="flex-1 overflow-y-auto px-4 py-4">
-                    <div className="overflow-hidden rounded-2xl border border-[#D4AF37]/20 bg-white shadow-sm">
+                    <div className="overflow-hidden rounded-2xl border border-[#AA00FF]/20 bg-white shadow-sm">
                       <table className="w-full border-collapse">
                         <thead>
-                          <tr className="bg-[#FAF7F2] border-b border-[#D4AF37]/20">
-                            <th className="px-4 py-3 text-left text-[12px] font-black uppercase tracking-wider text-[#082A63]">ชื่อสินค้า</th>
-                            <th className="px-4 py-3 text-right text-[12px] font-black uppercase tracking-wider text-[#082A63]">จำนวน</th>
+                          <tr className="bg-[#F3E5F5] border-b border-[#AA00FF]/20">
+                            <th className="px-4 py-3 text-left text-[12px] font-black uppercase tracking-wider text-[#8E24AA]">ชื่อสินค้า</th>
+                            <th className="px-4 py-3 text-right text-[12px] font-black uppercase tracking-wider text-[#8E24AA]">จำนวน</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
                           {mobileStore.items.map((item) => (
                             <tr key={item.key}>
                               <td className="px-4 py-3.5 text-[14px] font-semibold leading-snug text-slate-900">{item.name}</td>
-                              <td className="whitespace-nowrap px-4 py-3.5 text-right font-mono text-[14px] font-black text-[#082A63]">
+                              <td className="whitespace-nowrap px-4 py-3.5 text-right font-mono text-[14px] font-black text-[#8E24AA]">
                                 {formatQty(item.quantity, item.unit)}
                               </td>
                             </tr>

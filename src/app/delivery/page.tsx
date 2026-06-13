@@ -40,7 +40,7 @@ export default async function DeliveryPage({ searchParams }: { searchParams: Pro
     return (
       <MobileSearchProvider>
         <header className="sticky top-0 z-30 flex items-center justify-between border-b border-slate-200 bg-white px-4 py-3 shadow-sm">
-          <span className="text-sm font-bold text-[#082A63]">ใบจัดส่ง — All Noodles</span>
+          <span className="text-sm font-bold text-[#8E24AA]">ใบจัดส่ง — All Noodles</span>
           <form action={signOut}>
             <button
               type="submit"
