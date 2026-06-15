@@ -75,6 +75,38 @@ function urlBase64ToUint8Array(base64String: string) {
   return outputArray;
 }
 
+function arraysEqual(left: Uint8Array, right: Uint8Array) {
+  if (left.byteLength !== right.byteLength) return false;
+
+  for (let index = 0; index < left.byteLength; index += 1) {
+    if (left[index] !== right[index]) return false;
+  }
+
+  return true;
+}
+
+function subscriptionMatchesPublicKey(subscription: PushSubscription, publicKey: string) {
+  const applicationServerKey = subscription.options?.applicationServerKey;
+  if (!applicationServerKey) return true;
+
+  return arraysEqual(
+    new Uint8Array(applicationServerKey),
+    urlBase64ToUint8Array(publicKey),
+  );
+}
+
+async function getCurrentPushSubscription(publicKey: string) {
+  const registration = await navigator.serviceWorker.ready;
+  const existing = await registration.pushManager.getSubscription();
+
+  if (existing && !subscriptionMatchesPublicKey(existing, publicKey)) {
+    await existing.unsubscribe();
+    return null;
+  }
+
+  return existing;
+}
+
 async function syncSubscription(subscription: PushSubscription, publicKey: string) {
   const subscriptionJson = subscription.toJSON();
   const p256dh = subscriptionJson.keys?.p256dh ?? "";
@@ -278,8 +310,7 @@ export function OrderWindowSettingsForm({
 
         setPushPublicKey(data.publicKey);
 
-        const registration = await navigator.serviceWorker.ready;
-        const existing = await registration.pushManager.getSubscription();
+        const existing = await getCurrentPushSubscription(data.publicKey);
 
         if (existing) {
           try {
@@ -340,7 +371,7 @@ export function OrderWindowSettingsForm({
 
     try {
       const registration = await navigator.serviceWorker.ready;
-      const existing = await registration.pushManager.getSubscription();
+      const existing = await getCurrentPushSubscription(pushPublicKey);
       const permission = existing ? "granted" : await Notification.requestPermission();
 
       if (permission !== "granted") {

@@ -186,7 +186,7 @@ async function sendOrganizationPushNotification(
 
         console.warn(`[push] Failed to send ${options.warningLabel} notification:`, statusCode || error);
 
-        if (statusCode === 400 || statusCode === 404 || statusCode === 410) {
+        if (statusCode === 400 || statusCode === 403 || statusCode === 404 || statusCode === 410) {
           invalidEndpoints.push(subscription.endpoint);
         }
       }

@@ -32,6 +32,38 @@ function urlBase64ToUint8Array(base64String: string) {
   return outputArray;
 }
 
+function arraysEqual(left: Uint8Array, right: Uint8Array) {
+  if (left.byteLength !== right.byteLength) return false;
+
+  for (let index = 0; index < left.byteLength; index += 1) {
+    if (left[index] !== right[index]) return false;
+  }
+
+  return true;
+}
+
+function subscriptionMatchesPublicKey(subscription: PushSubscription, publicKey: string) {
+  const applicationServerKey = subscription.options?.applicationServerKey;
+  if (!applicationServerKey) return true;
+
+  return arraysEqual(
+    new Uint8Array(applicationServerKey),
+    urlBase64ToUint8Array(publicKey),
+  );
+}
+
+async function getCurrentPushSubscription(publicKey: string) {
+  const registration = await navigator.serviceWorker.ready;
+  const existing = await registration.pushManager.getSubscription();
+
+  if (existing && !subscriptionMatchesPublicKey(existing, publicKey)) {
+    await existing.unsubscribe();
+    return null;
+  }
+
+  return existing;
+}
+
 function detectIOS() {
   return /iphone|ipad|ipod/i.test(window.navigator.userAgent);
 }
@@ -123,7 +155,7 @@ export function PushNotificationBanner() {
           return;
         }
 
-        const existing = await registration.pushManager.getSubscription();
+        const existing = await getCurrentPushSubscription(data.publicKey);
         if (existing) {
           try {
             await syncSubscription(existing, data.publicKey);
@@ -161,7 +193,7 @@ export function PushNotificationBanner() {
 
     try {
       const registration = await navigator.serviceWorker.ready;
-      const existing = await registration.pushManager.getSubscription();
+      const existing = await getCurrentPushSubscription(publicKey);
       const permission = existing ? "granted" : await Notification.requestPermission();
 
       if (permission !== "granted") {

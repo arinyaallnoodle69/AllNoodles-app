@@ -131,7 +131,7 @@ function DashboardStatCard({
         >
           {icon}
         </div>
-        <span className="min-w-0 whitespace-nowrap text-[12.5px] font-bold leading-none text-[#4A148C] sm:text-[13px] md:text-base">
+        <span className="min-w-0 whitespace-nowrap text-[17px] font-extrabold leading-none text-[#4A148C] sm:text-[18px] md:text-[21px]">
           {title}
         </span>
       </div>
@@ -447,7 +447,7 @@ export function DashboardClient({
                 <Store className="h-7 w-7 md:h-10 md:w-10" strokeWidth={2} />
               </div>
               <div className="min-w-0 flex-1">
-                <p className="mb-1 text-[14px] font-bold text-slate-400 md:text-base">
+                <p className="mb-1 text-[18px] font-extrabold text-slate-700 md:text-2xl">
                   ร้านค้าทั้งหมดในระบบ
                 </p>
                 <div className="flex items-baseline gap-2">
@@ -478,7 +478,7 @@ export function DashboardClient({
                   <ShoppingBag className="h-6 w-6 md:h-8 md:w-8" strokeWidth={2} />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="mb-1 whitespace-nowrap text-[12px] font-bold leading-none text-slate-400 md:text-base">
+                  <p className="-ml-1 mb-1 whitespace-nowrap text-[16px] font-extrabold leading-none text-slate-700 md:text-xl">
                     ยังไม่ได้สั่ง
                   </p>
                   <p className="text-2xl font-black leading-none text-rose-600 tabular-nums md:text-4xl">
@@ -501,7 +501,7 @@ export function DashboardClient({
                   <ClipboardList className="h-6 w-6 md:h-8 md:w-8" strokeWidth={2} />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="mb-1 whitespace-nowrap text-[12px] font-bold leading-none text-slate-400 md:text-base">
+                  <p className="-ml-1 mb-1 whitespace-nowrap text-[16px] font-extrabold leading-none text-slate-700 md:text-xl">
                     สั่งแล้ววันนี้
                   </p>
                   <p className="text-2xl font-black leading-none text-emerald-600 tabular-nums md:text-4xl">
@@ -542,7 +542,7 @@ export function DashboardClient({
           />
 
           <DashboardStatCard
-            title="รวมออเดอร์วันนี้"
+            title="ออเดอร์วันนี้"
             value={fmtNumber(kpi.todayOrderCount)}
             unit="รายการ"
             accent="blue"
@@ -556,7 +556,7 @@ export function DashboardClient({
             className="block text-left transition-transform active:scale-[0.98]"
           >
             <DashboardStatCard
-              title="ออเดอร์จากLINE"
+              title="ออเดอร์Line"
               value={fmtNumber(kpi.submittedOrderCount)}
               unit="รายการ"
               accent="line"
