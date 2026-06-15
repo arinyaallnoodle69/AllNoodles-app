@@ -51,12 +51,12 @@ export function OrderDailyMobileCard({
             <span className="shrink-0 rounded bg-slate-100 px-1.5 py-0.5 font-mono text-[10px] font-bold text-slate-500">
               {formatDateShort(orderDate)}
             </span>
-            <span className="shrink-0 rounded bg-[#8E24AA]/20 px-1.5 py-0.5 font-mono text-[10px] font-bold uppercase tracking-wider text-[#8E24AA]">
+            <span className="shrink-0 rounded bg-[#4A148C]/20 px-1.5 py-0.5 font-mono text-[10px] font-bold uppercase tracking-wider text-[#4A148C]">
               {customerCode}
             </span>
           </div>
 
-          <h3 className="text-base font-bold text-slate-900 transition-colors group-active:text-[#8E24AA]">
+          <h3 className="text-base font-bold text-slate-900 transition-colors group-active:text-[#4A148C]">
             {customerName}
           </h3>
 
@@ -74,12 +74,12 @@ export function OrderDailyMobileCard({
           </p>
           <div className="mt-2 flex justify-end">
             {isPending ? (
-              <div className="inline-flex items-center gap-1.5 rounded-full bg-[#8E24AA]/15 px-3 py-1 text-[11px] font-bold text-[#8E24AA]">
+              <div className="inline-flex items-center gap-1.5 rounded-full bg-[#4A148C]/15 px-3 py-1 text-[11px] font-bold text-[#4A148C]">
                 <Loader2 className="h-3 w-3 animate-spin" strokeWidth={2.5} />
                 กำลังโหลด...
               </div>
             ) : (
-              <div className="inline-flex items-center gap-1 rounded-full bg-slate-50 px-3 py-1 text-[11px] font-bold text-slate-500 transition-all group-hover:bg-[#8E24AA]/20 group-hover:text-[#8E24AA]">
+              <div className="inline-flex items-center gap-1 rounded-full bg-slate-50 px-3 py-1 text-[11px] font-bold text-slate-500 transition-all group-hover:bg-[#4A148C]/20 group-hover:text-[#4A148C]">
                 ดูรายละเอียด
                 <ChevronRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" strokeWidth={2.5} />
               </div>

@@ -33,7 +33,7 @@ export function OrderRoundsCollapsible({ date, rounds }: Props) {
         onClick={() => setOpen((value) => !value)}
         className="flex w-full items-center gap-3 bg-slate-50 px-5 py-3.5 transition hover:bg-slate-100 active:bg-slate-100 print:pointer-events-none"
       >
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#8E24AA]/15 text-[#8E24AA]">
+        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#4A148C]/15 text-[#4A148C]">
           <ClipboardList className="h-4 w-4" strokeWidth={2.4} />
         </div>
         <div className="flex flex-col items-start leading-tight">
@@ -63,7 +63,7 @@ export function OrderRoundsCollapsible({ date, rounds }: Props) {
 
                 <Link href={`/orders/incoming?date=${date}&expanded=${round.id}`} className="min-w-0 flex-1 group">
                   <div className="flex items-center gap-2">
-                    <span className="font-mono text-sm font-black text-[#8E24AA] group-hover:underline">
+                    <span className="font-mono text-sm font-black text-[#4A148C] group-hover:underline">
                       {round.orderNumber}
                     </span>
                     {isCancelled ? (
@@ -82,7 +82,7 @@ export function OrderRoundsCollapsible({ date, rounds }: Props) {
                     <Link
                       href={`/orders/incoming?date=${date}&expanded=${round.id}`}
                       className={`flex h-10 w-10 items-center justify-center rounded-xl transition active:scale-90 ${
-                        canManage ? "bg-[#8E24AA]/15 text-[#8E24AA] hover:bg-[#8E24AA]/20" : "cursor-not-allowed bg-slate-100 text-slate-400"
+                        canManage ? "bg-[#4A148C]/15 text-[#4A148C] hover:bg-[#4A148C]/20" : "cursor-not-allowed bg-slate-100 text-slate-400"
                       }`}
                       title="แก้ไข/จัดการ"
                     >

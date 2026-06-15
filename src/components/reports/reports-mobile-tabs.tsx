@@ -27,7 +27,7 @@ export function ReportsMobileTabs() {
               href={href}
               className={`flex flex-1 flex-col items-center justify-center gap-0.5 border-b-2 py-2 transition-colors ${
                 active
-                  ? "border-[#8E24AA] text-[#8E24AA]"
+                  ? "border-[#4A148C] text-[#4A148C]"
                   : "border-transparent text-slate-500 hover:text-slate-900"
               }`}
             >

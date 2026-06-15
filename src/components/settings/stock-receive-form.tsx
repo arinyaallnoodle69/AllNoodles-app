@@ -306,7 +306,7 @@ export function StockReceiveForm({
         <div className="shrink-0 bg-white px-6 py-5 border-b border-[#dbe4f0] flex flex-col gap-4">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-xl sm:text-2xl font-black text-[#8E24AA] tracking-tight">
+              <h2 className="text-xl sm:text-2xl font-black text-[#4A148C] tracking-tight">
                 รับสินค้าเข้าคลัง (Receive Inventory)
               </h2>
               <p className="text-[12px] font-bold text-slate-400 mt-0.5 uppercase tracking-wider">
@@ -338,7 +338,7 @@ export function StockReceiveForm({
                 <div key={s.num} className="flex items-center gap-2 shrink-0">
                   <div className={`h-8 px-3 rounded-full flex items-center gap-1.5 text-xs font-black transition-all ${
                     isActive
-                      ? "bg-[#8E24AA] text-white"
+                      ? "bg-[#4A148C] text-white"
                       : isCompleted
                       ? "bg-[#e9f8ef] text-[#16a34a] border border-[#16a34a]/10"
                       : "bg-slate-100 text-slate-400"
@@ -366,7 +366,7 @@ export function StockReceiveForm({
                 {/* Date Selection */}
                 <div className="space-y-2">
                   <label className="text-xs font-black uppercase tracking-widest text-slate-400 flex items-center gap-2">
-                    <Calendar className="h-4 w-4 text-[#8E24AA]" /> วันที่รับสินค้า
+                    <Calendar className="h-4 w-4 text-[#4A148C]" /> วันที่รับสินค้า
                   </label>
                   <ThaiDatePicker
                     id="receive-date"
@@ -379,12 +379,12 @@ export function StockReceiveForm({
                 {/* Warehouse Selection */}
                 <div className="space-y-2">
                   <label className="text-xs font-black uppercase tracking-widest text-slate-400 flex items-center gap-2">
-                    <Package2 className="h-4 w-4 text-[#8E24AA]" /> คลังสินค้าปลายทาง
+                    <Package2 className="h-4 w-4 text-[#4A148C]" /> คลังสินค้าปลายทาง
                   </label>
                   <select
                     value={warehouseId}
                     onChange={(event) => setWarehouseId(event.target.value)}
-                    className="h-12 w-full rounded-full border border-[#dbe4f0] bg-white px-5 text-sm font-bold text-[#8E24AA] outline-none transition focus:border-[#8E24AA] focus:ring-1 focus:ring-[#8E24AA]/20"
+                    className="h-12 w-full rounded-full border border-[#dbe4f0] bg-white px-5 text-sm font-bold text-[#4A148C] outline-none transition focus:border-[#4A148C] focus:ring-1 focus:ring-[#4A148C]/20"
                   >
                     <option value="">เลือกคลังปลายทาง...</option>
                     {warehouses.map((warehouse) => (
@@ -398,18 +398,18 @@ export function StockReceiveForm({
                 {/* Supplier Selection Button */}
                 <div className="space-y-2">
                   <label className="text-xs font-black uppercase tracking-widest text-slate-400 flex items-center gap-2">
-                    <Factory className="h-4 w-4 text-[#8E24AA]" /> ผู้จัดจำหน่าย
+                    <Factory className="h-4 w-4 text-[#4A148C]" /> ผู้จัดจำหน่าย
                   </label>
                   <button
                     type="button"
                     onClick={() => setIsSupplierDrawerOpen(true)}
                     className={`w-full h-14 px-5 flex items-center justify-between bg-white border border-[#dbe4f0] transition-all rounded-full hover:bg-slate-50 ${
-                      supplierId ? "border-[#8E24AA]/30" : ""
+                      supplierId ? "border-[#4A148C]/30" : ""
                     }`}
                   >
                     <div className="flex items-center gap-3">
-                      <Factory className={`h-5 w-5 ${supplierId ? "text-[#8E24AA]" : "text-slate-400"}`} />
-                      <span className={`text-sm font-bold ${supplierId ? "text-[#8E24AA]" : "text-slate-400"}`}>
+                      <Factory className={`h-5 w-5 ${supplierId ? "text-[#4A148C]" : "text-slate-400"}`} />
+                      <span className={`text-sm font-bold ${supplierId ? "text-[#4A148C]" : "text-slate-400"}`}>
                         {supplierName || "เลือกผู้จัดจำหน่าย..."}
                       </span>
                     </div>
@@ -419,12 +419,12 @@ export function StockReceiveForm({
               </div>
 
               {/* Informative field manual banner */}
-              <div className="bg-[#F3E5F5] border border-[#8E24AA]/10 rounded-[20px] p-5 flex gap-4">
-                <div className="h-10 w-10 shrink-0 rounded-full bg-white flex items-center justify-center text-[#8E24AA] shadow-sm">
+              <div className="bg-[#F3E5F5] border border-[#4A148C]/10 rounded-[20px] p-5 flex gap-4">
+                <div className="h-10 w-10 shrink-0 rounded-full bg-white flex items-center justify-center text-[#4A148C] shadow-sm">
                   <Sparkles size={18} />
                 </div>
                 <div>
-                  <h4 className="text-sm font-black text-[#8E24AA]">กรอกข้อมูลให้ครบถ้วน</h4>
+                  <h4 className="text-sm font-black text-[#4A148C]">กรอกข้อมูลให้ครบถ้วน</h4>
                   <p className="text-xs text-slate-500 mt-1 leading-relaxed">
                     ระบบจะบันทึกรายการรับเข้าสินค้าเข้าคลังที่ระบุ และคำนวณราคาทุนเฉลี่ยของสินค้าแต่ละหน่วยตามจริงโดยอ้างอิงจากข้อมูลผู้จัดจำหน่าย
                   </p>
@@ -444,7 +444,7 @@ export function StockReceiveForm({
                   <input
                     type="text"
                     placeholder="พิมพ์ค้นหาสินค้าเพื่อรับเข้า..."
-                    className="w-full h-11 pl-11 pr-4 bg-slate-50 border border-[#dbe4f0] rounded-full outline-none focus:border-[#8E24AA] transition-all text-sm font-bold placeholder:text-slate-400"
+                    className="w-full h-11 pl-11 pr-4 bg-slate-50 border border-[#dbe4f0] rounded-full outline-none focus:border-[#4A148C] transition-all text-sm font-bold placeholder:text-slate-400"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                   />
@@ -456,7 +456,7 @@ export function StockReceiveForm({
                     onClick={() => setSelectedCategory("all")}
                     className={`px-4 py-1.5 rounded-full text-xs font-black transition ${
                       selectedCategory === "all"
-                        ? "bg-[#8E24AA] text-white"
+                        ? "bg-[#4A148C] text-white"
                         : "bg-slate-50 text-slate-500 border border-[#dbe4f0]/50 hover:bg-slate-100"
                     }`}
                   >
@@ -468,7 +468,7 @@ export function StockReceiveForm({
                       onClick={() => setSelectedCategory(cat)}
                       className={`px-4 py-1.5 rounded-full text-xs font-black transition ${
                         selectedCategory === cat
-                          ? "bg-[#8E24AA] text-white"
+                          ? "bg-[#4A148C] text-white"
                           : "bg-slate-50 text-slate-500 border border-[#dbe4f0]/50 hover:bg-slate-100"
                       }`}
                     >
@@ -487,7 +487,7 @@ export function StockReceiveForm({
                       key={p.id}
                       className={`bg-white border transition-all rounded-[20px] overflow-hidden ${
                         isSelected
-                          ? "border-[#8E24AA]/30 shadow-md shadow-[#8E24AA]/20"
+                          ? "border-[#4A148C]/30 shadow-md shadow-[#4A148C]/20"
                           : "border-[#dbe4f0] hover:border-slate-300 shadow-sm"
                       }`}
                     >
@@ -496,7 +496,7 @@ export function StockReceiveForm({
                         className="flex w-full items-center gap-4 px-5 py-4 text-left"
                       >
                         <div className={`h-6 w-6 shrink-0 flex items-center justify-center rounded-md border transition-all ${
-                          isSelected ? "bg-[#8E24AA] border-[#8E24AA] text-white" : "border-slate-300 text-transparent"
+                          isSelected ? "bg-[#4A148C] border-[#4A148C] text-white" : "border-slate-300 text-transparent"
                         }`}>
                           <Check className="h-4 w-4" strokeWidth={3} />
                         </div>
@@ -525,7 +525,7 @@ export function StockReceiveForm({
                             <div key={unit.id} className="bg-white rounded-2xl p-4 border border-[#dbe4f0] shadow-sm">
                               <div className="flex justify-between items-center mb-2">
                                 <span className="text-xs font-black text-slate-500">{unit.label}</span>
-                                <span className="text-[11px] font-bold text-[#8E24AA] bg-[#F3E5F5] px-2 py-0.5 rounded-full">฿{unit.effectiveCostPrice}</span>
+                                <span className="text-[11px] font-bold text-[#4A148C] bg-[#F3E5F5] px-2 py-0.5 rounded-full">฿{unit.effectiveCostPrice}</span>
                               </div>
                               <div className="flex items-center gap-3">
                                 <button
@@ -544,7 +544,7 @@ export function StockReceiveForm({
                                 />
                                 <button
                                   onClick={() => updateQty(p.id, unit.id, String(Number(selections[p.id]?.[unit.id] ?? 0) + 1))}
-                                  className="h-10 w-10 shrink-0 flex items-center justify-center rounded-xl bg-[#8E24AA] text-white hover:bg-[#8E24AA] transition"
+                                  className="h-10 w-10 shrink-0 flex items-center justify-center rounded-xl bg-[#4A148C] text-white hover:bg-[#4A148C] transition"
                                 >
                                   <Plus className="h-5 w-5" strokeWidth={2.5} />
                                 </button>
@@ -591,14 +591,14 @@ export function StockReceiveForm({
                       <button
                         type="button"
                         onClick={() => cameraInputRef.current?.click()}
-                        className="h-12 w-12 rounded-full bg-white text-[#8E24AA] flex items-center justify-center active:scale-90 transition hover:scale-105"
+                        className="h-12 w-12 rounded-full bg-white text-[#4A148C] flex items-center justify-center active:scale-90 transition hover:scale-105"
                       >
                         <Camera className="h-5 w-5" strokeWidth={2.5} />
                       </button>
                       <button
                         type="button"
                         onClick={() => galleryInputRef.current?.click()}
-                        className="h-12 w-12 rounded-full bg-white text-[#8E24AA] flex items-center justify-center active:scale-90 transition hover:scale-105"
+                        className="h-12 w-12 rounded-full bg-white text-[#4A148C] flex items-center justify-center active:scale-90 transition hover:scale-105"
                       >
                         <ImagePlus className="h-5 w-5" strokeWidth={2.5} />
                       </button>
@@ -621,7 +621,7 @@ export function StockReceiveForm({
                       onClick={() => cameraInputRef.current?.click()}
                       className="w-full h-32 rounded-2xl border border-dashed border-[#dbe4f0] bg-slate-50 hover:bg-slate-100/50 transition flex flex-col items-center justify-center gap-2 group"
                     >
-                      <Camera className="h-6 w-6 text-slate-400 group-hover:text-[#8E24AA]" strokeWidth={2} />
+                      <Camera className="h-6 w-6 text-slate-400 group-hover:text-[#4A148C]" strokeWidth={2} />
                       <div className="text-center">
                         <p className="text-sm font-bold text-slate-800">ถ่ายภาพบิล</p>
                         <p className="text-[10px] text-slate-400">Open Camera</p>
@@ -632,7 +632,7 @@ export function StockReceiveForm({
                       onClick={() => galleryInputRef.current?.click()}
                       className="w-full h-32 rounded-2xl border border-dashed border-[#dbe4f0] bg-slate-50 hover:bg-slate-100/50 transition flex flex-col items-center justify-center gap-2 group"
                     >
-                      <ImagePlus className="h-6 w-6 text-slate-400 group-hover:text-[#8E24AA]" strokeWidth={2} />
+                      <ImagePlus className="h-6 w-6 text-slate-400 group-hover:text-[#4A148C]" strokeWidth={2} />
                       <div className="text-center">
                         <p className="text-sm font-bold text-slate-800">เลือกรูปจากคลังภาพ</p>
                         <p className="text-[10px] text-slate-400">Browse Gallery</p>
@@ -649,7 +649,7 @@ export function StockReceiveForm({
                 <div className="divide-y divide-[#dbe4f0]">
                   <div className="flex justify-between py-3">
                     <span className="text-sm text-slate-500 font-bold">วันที่รับเข้า</span>
-                    <span className="text-sm font-bold text-[#8E24AA]">
+                    <span className="text-sm font-bold text-[#4A148C]">
                       {receiveDate ? (
                         new Date(receiveDate).toLocaleDateString("th-TH", {
                           day: "2-digit",
@@ -661,17 +661,17 @@ export function StockReceiveForm({
                   </div>
                   <div className="flex justify-between py-3">
                     <span className="text-sm text-slate-500 font-bold">ผู้จัดจำหน่าย</span>
-                    <span className="text-sm font-bold text-[#8E24AA]">{supplierName}</span>
+                    <span className="text-sm font-bold text-[#4A148C]">{supplierName}</span>
                   </div>
                   <div className="flex justify-between py-3">
                     <span className="text-sm text-slate-500 font-bold">คลังปลายทาง</span>
-                    <span className="text-sm font-bold text-[#8E24AA]">
+                    <span className="text-sm font-bold text-[#4A148C]">
                       {warehouses.find((warehouse) => warehouse.id === warehouseId)?.name ?? "-"}
                     </span>
                   </div>
                   <div className="flex justify-between py-3">
                     <span className="text-sm text-slate-500 font-bold">จำนวนสินค้าทั้งหมด</span>
-                    <span className="text-sm font-black text-[#8E24AA]">{selectedCount} รายการ</span>
+                    <span className="text-sm font-black text-[#4A148C]">{selectedCount} รายการ</span>
                   </div>
                 </div>
               </div>
@@ -684,7 +684,7 @@ export function StockReceiveForm({
           {step > 1 && (
             <button
               onClick={prevStep}
-              className="h-12 px-6 bg-transparent hover:bg-slate-50 text-[#8E24AA] border border-[#dbe4f0] rounded-full font-bold text-sm flex items-center justify-center gap-1.5 transition active:scale-95"
+              className="h-12 px-6 bg-transparent hover:bg-slate-50 text-[#4A148C] border border-[#dbe4f0] rounded-full font-bold text-sm flex items-center justify-center gap-1.5 transition active:scale-95"
             >
               <ChevronLeft className="h-4 w-4" strokeWidth={2.5} />
               <span>ย้อนกลับ</span>
@@ -694,7 +694,7 @@ export function StockReceiveForm({
           {step < 3 ? (
             <button
               onClick={nextStep}
-              className="flex-1 h-12 bg-[#8E24AA] hover:bg-[#8E24AA] text-white rounded-full font-bold text-sm flex items-center justify-center gap-1.5 shadow-md shadow-[#8E24AA]/10 transition active:scale-95 ml-auto"
+              className="flex-1 h-12 bg-[#4A148C] hover:bg-[#4A148C] text-white rounded-full font-bold text-sm flex items-center justify-center gap-1.5 shadow-md shadow-[#4A148C]/10 transition active:scale-95 ml-auto"
             >
               <span>ต่อไป</span>
               <ChevronRight className="h-4 w-4" strokeWidth={2.5} />
@@ -703,7 +703,7 @@ export function StockReceiveForm({
             <button
               onClick={onSubmit}
               disabled={isPending}
-              className="flex-1 h-12 bg-[#8E24AA] hover:bg-[#8E24AA] text-white rounded-full font-bold text-sm flex items-center justify-center gap-1.5 shadow-md shadow-[#8E24AA]/10 disabled:opacity-50 transition active:scale-95 ml-auto"
+              className="flex-1 h-12 bg-[#4A148C] hover:bg-[#4A148C] text-white rounded-full font-bold text-sm flex items-center justify-center gap-1.5 shadow-md shadow-[#4A148C]/10 disabled:opacity-50 transition active:scale-95 ml-auto"
             >
               {isPending ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -728,7 +728,7 @@ export function StockReceiveForm({
               
               <div className="shrink-0 p-5 bg-white border-b border-[#dbe4f0] flex items-center justify-between">
                 <div>
-                  <h3 className="text-lg font-black text-[#8E24AA]">เลือกผู้จัดจำหน่าย</h3>
+                  <h3 className="text-lg font-black text-[#4A148C]">เลือกผู้จัดจำหน่าย</h3>
                   <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Supplier Directory</p>
                 </div>
                 <button
@@ -752,13 +752,13 @@ export function StockReceiveForm({
                       }}
                       className={`w-full flex items-center justify-between p-5 rounded-[20px] border transition-all text-left bg-white ${
                         isSelected
-                          ? "border-[#8E24AA] shadow-sm shadow-[#8E24AA]/5"
+                          ? "border-[#4A148C] shadow-sm shadow-[#4A148C]/5"
                           : "border-[#dbe4f0] hover:border-slate-300 hover:shadow-sm"
                       }`}
                     >
                       <div className="flex items-center gap-4">
                         <div className={`h-11 w-11 rounded-xl flex items-center justify-center transition-colors ${
-                          isSelected ? "bg-[#F3E5F5] text-[#8E24AA]" : "bg-slate-50 text-slate-400"
+                          isSelected ? "bg-[#F3E5F5] text-[#4A148C]" : "bg-slate-50 text-slate-400"
                         }`}>
                           <Factory size={20} />
                         </div>
@@ -768,7 +768,7 @@ export function StockReceiveForm({
                         </div>
                       </div>
                       <div className={`h-6 w-6 rounded-full border-2 flex items-center justify-center transition-all ${
-                        isSelected ? "bg-[#8E24AA] border-[#8E24AA]" : "border-slate-200"
+                        isSelected ? "bg-[#4A148C] border-[#4A148C]" : "border-slate-200"
                       }`}>
                         {isSelected && <Check className="h-3.5 w-3.5 text-white" strokeWidth={4} />}
                       </div>

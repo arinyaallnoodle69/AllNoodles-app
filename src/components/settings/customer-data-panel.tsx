@@ -213,7 +213,7 @@ export function CustomerDataPanel({ data }: CustomerDataPanelProps) {
                         </td>
                         <td className="px-5 py-4">
                           <div className="flex items-center gap-2">
-                            <Store className="h-4 w-4 text-[#8E24AA]" strokeWidth={2.1} />
+                            <Store className="h-4 w-4 text-[#4A148C]" strokeWidth={2.1} />
                             <span className="font-semibold text-slate-950">{getCustomerLabel(customer)}</span>
                           </div>
                         </td>

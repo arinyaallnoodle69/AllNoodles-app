@@ -58,11 +58,11 @@ export function PageLoader() {
         <div className="mt-6 flex w-full flex-col items-center">
           <div className="flex w-full items-center justify-between text-xs font-black uppercase tracking-[0.24em] text-[#64748B]">
             <span></span>
-            <span className="font-mono text-[#8E24AA]">{percent}%</span>
+            <span className="font-mono text-[#4A148C]">{percent}%</span>
           </div>
           <div className="mt-3 h-2 w-full overflow-hidden rounded-full border border-[#EA80FC] bg-[#F3E5F5]">
             <div
-              className="h-full rounded-full bg-gradient-to-r from-[#8E24AA] to-[#8E24AA] transition-[width] duration-300 ease-out"
+              className="h-full rounded-full bg-gradient-to-r from-[#4A148C] to-[#4A148C] transition-[width] duration-300 ease-out"
               style={{ width: `${percent}%` }}
             />
           </div>

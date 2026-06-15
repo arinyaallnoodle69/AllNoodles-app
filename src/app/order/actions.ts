@@ -391,7 +391,7 @@ async function resolveOrderLineUserId(mockLineUserId?: string | null) {
     return session.lineUserId;
   }
 
-  if (process.env.NEXT_PUBLIC_LIFF_MOCK === "true") {
+  if (process.env.NODE_ENV !== "production" && process.env.NEXT_PUBLIC_LIFF_MOCK === "true") {
     return mockLineUserId?.trim() ?? "";
   }
 

@@ -105,12 +105,12 @@ function KpiCard({
   return (
     <div className="rounded-2xl bg-white p-4 shadow-[0_4px_20px_rgba(27,27,33,0.05)] transition-shadow hover:shadow-[0_12px_40px_rgba(27,27,33,0.09)] sm:p-5">
       <div className="mb-3 flex items-center justify-center gap-2.5 text-center">
-        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-[#8E24AA] sm:h-9 sm:w-9">
+        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-[#4A148C] sm:h-9 sm:w-9">
           <Icon className="h-4.5 w-4.5" strokeWidth={2} />
         </div>
         <p className="text-sm font-semibold text-slate-500 sm:text-base">{label}</p>
       </div>
-      <p className="text-center text-2xl font-black tracking-tight text-[#8E24AA] sm:text-3xl">{value}</p>
+      <p className="text-center text-2xl font-black tracking-tight text-[#4A148C] sm:text-3xl">{value}</p>
     </div>
   );
 }
@@ -118,22 +118,22 @@ function KpiCard({
 function DeliveryNoteRows({ row }: { row: DeliveryNoteReportRow }) {
   return (
     <>
-      <tr className="border-t border-[#8E24AA]/12 bg-slate-50 text-slate-700">
+      <tr className="border-t border-[#4A148C]/12 bg-slate-50 text-slate-700">
         <td colSpan={8} className="px-4 py-2">
           <div className={`flex flex-wrap items-center gap-x-8 gap-y-2 ${styles.noteMetaWrap}`}>
             <p className={`flex min-w-0 items-center gap-2 text-sm font-semibold text-slate-700 ${styles.noteMetaItem}`}>
-              <span className="shrink-0 text-[#8E24AA]">
+              <span className="shrink-0 text-[#4A148C]">
                 <Building2 className="h-4 w-4" strokeWidth={2} />
               </span>
 
               <span className={`text-base font-bold text-slate-800 ${styles.noteMetaValue}`}>{row.customerCode} {row.customerName}</span>
             </p>
             <p className={`flex min-w-0 items-center gap-2 text-sm font-semibold text-slate-700 ${styles.noteMetaItem}`}>
-              <span className="shrink-0 text-[#8E24AA]">
+              <span className="shrink-0 text-[#4A148C]">
                 <ScrollText className="h-4 w-4" strokeWidth={2} />
               </span>
 
-              <span className={`font-mono text-base font-bold text-[#8E24AA] ${styles.noteMetaValue}`}>{row.deliveryNumber}</span>
+              <span className={`font-mono text-base font-bold text-[#4A148C] ${styles.noteMetaValue}`}>{row.deliveryNumber}</span>
             </p>
           </div>
         </td>
@@ -141,7 +141,7 @@ function DeliveryNoteRows({ row }: { row: DeliveryNoteReportRow }) {
       {row.lines.map((line) => (
         <tr key={line.id} className="bg-white">
           <td className="px-4 py-2 font-mono text-sm text-slate-400 whitespace-nowrap">{line.productSku}</td>
-          <td className="border-l border-[#8E24AA]/10 px-4 py-2">
+          <td className="border-l border-[#4A148C]/10 px-4 py-2">
             <div className={`flex min-w-0 items-center gap-3 ${styles.noteProductCell}`}>
               <div className="print:hidden">
                 {line.imageUrl ? (
@@ -161,14 +161,14 @@ function DeliveryNoteRows({ row }: { row: DeliveryNoteReportRow }) {
               <span className={`text-sm font-semibold text-slate-800 ${styles.noteProductName}`}>{line.productName}</span>
             </div>
           </td>
-          <td className="border-l border-[#8E24AA]/10 px-4 py-2 text-center text-sm font-semibold text-slate-700 whitespace-nowrap">{fmt(line.quantityDelivered)}</td>
-          <td className="border-l border-[#8E24AA]/10 px-4 py-2 text-center text-sm text-slate-500 whitespace-nowrap">{line.saleUnitLabel}</td>
-          <td className="border-l border-[#8E24AA]/10 px-4 py-2 text-center text-sm text-slate-600 whitespace-nowrap">{fmtMoney(line.lineCost)}</td>
-          <td className="border-l border-[#8E24AA]/10 px-4 py-2 text-center text-sm font-semibold text-[#8E24AA] whitespace-nowrap">{fmtMoney(line.lineTotal)}</td>
-          <td className={`border-l border-[#8E24AA]/10 px-4 py-2 text-center text-sm font-semibold whitespace-nowrap ${line.profit >= 0 ? "text-emerald-600" : "text-red-500"}`}>
+          <td className="border-l border-[#4A148C]/10 px-4 py-2 text-center text-sm font-semibold text-slate-700 whitespace-nowrap">{fmt(line.quantityDelivered)}</td>
+          <td className="border-l border-[#4A148C]/10 px-4 py-2 text-center text-sm text-slate-500 whitespace-nowrap">{line.saleUnitLabel}</td>
+          <td className="border-l border-[#4A148C]/10 px-4 py-2 text-center text-sm text-slate-600 whitespace-nowrap">{fmtMoney(line.lineCost)}</td>
+          <td className="border-l border-[#4A148C]/10 px-4 py-2 text-center text-sm font-semibold text-[#4A148C] whitespace-nowrap">{fmtMoney(line.lineTotal)}</td>
+          <td className={`border-l border-[#4A148C]/10 px-4 py-2 text-center text-sm font-semibold whitespace-nowrap ${line.profit >= 0 ? "text-emerald-600" : "text-red-500"}`}>
             {fmtMoney(line.profit)}
           </td>
-          <td className={`border-l border-[#8E24AA]/10 px-4 py-2 text-center text-sm font-semibold whitespace-nowrap ${line.lineTotal > 0 && line.profit >= 0 ? "text-emerald-600" : "text-slate-500"}`}>
+          <td className={`border-l border-[#4A148C]/10 px-4 py-2 text-center text-sm font-semibold whitespace-nowrap ${line.lineTotal > 0 && line.profit >= 0 ? "text-emerald-600" : "text-slate-500"}`}>
             {line.lineTotal > 0 ? fmtPercent((line.profit / line.lineTotal) * 100) : "0%"}
           </td>
         </tr>
@@ -177,12 +177,12 @@ function DeliveryNoteRows({ row }: { row: DeliveryNoteReportRow }) {
         <td colSpan={4} className="px-4 py-2 text-right text-sm font-black tracking-[0.02em] text-slate-500 whitespace-nowrap">
           ยอดรวม — {row.customerName}
         </td>
-        <td className="border-l border-[#8E24AA]/10 px-4 py-2 text-center text-sm font-bold text-slate-700 whitespace-nowrap">{fmtMoney(row.totalCost)}</td>
-        <td className="border-l border-[#8E24AA]/10 px-4 py-2 text-center text-sm font-black text-[#8E24AA] whitespace-nowrap">{fmtMoney(row.totalRevenue)}</td>
-        <td className={`border-l border-[#8E24AA]/10 px-4 py-2 text-center text-sm font-black whitespace-nowrap ${row.netProfit >= 0 ? "text-emerald-600" : "text-red-500"}`}>
+        <td className="border-l border-[#4A148C]/10 px-4 py-2 text-center text-sm font-bold text-slate-700 whitespace-nowrap">{fmtMoney(row.totalCost)}</td>
+        <td className="border-l border-[#4A148C]/10 px-4 py-2 text-center text-sm font-black text-[#4A148C] whitespace-nowrap">{fmtMoney(row.totalRevenue)}</td>
+        <td className={`border-l border-[#4A148C]/10 px-4 py-2 text-center text-sm font-black whitespace-nowrap ${row.netProfit >= 0 ? "text-emerald-600" : "text-red-500"}`}>
           {fmtMoney(row.netProfit)}
         </td>
-        <td className={`border-l border-[#8E24AA]/10 px-4 py-2 text-center text-sm font-black whitespace-nowrap ${row.netProfit >= 0 ? "text-emerald-600" : "text-red-500"}`}>
+        <td className={`border-l border-[#4A148C]/10 px-4 py-2 text-center text-sm font-black whitespace-nowrap ${row.netProfit >= 0 ? "text-emerald-600" : "text-red-500"}`}>
           {fmtPercent(row.marginPercent)}
         </td>
       </tr>
@@ -193,7 +193,7 @@ function DeliveryNoteRows({ row }: { row: DeliveryNoteReportRow }) {
 function DeliveryNoteMobileCard({ row }: { row: DeliveryNoteReportRow }) {
   return (
     <div className="bg-white px-3 py-3.5 sm:px-4">
-      <div className="-mx-3 -mt-3.5 flex flex-col items-center gap-2 border-b border-white/15 bg-[#8E24AA] px-3 py-3 text-white sm:-mx-4 sm:px-4">
+      <div className="-mx-3 -mt-3.5 flex flex-col items-center gap-2 border-b border-white/15 bg-[#4A148C] px-3 py-3 text-white sm:-mx-4 sm:px-4">
         <p className="flex min-w-0 items-center justify-center gap-2 text-center text-sm font-semibold text-white">
           <span className="shrink-0 text-white">
             <Building2 className="h-4 w-4" strokeWidth={2} />
@@ -210,7 +210,7 @@ function DeliveryNoteMobileCard({ row }: { row: DeliveryNoteReportRow }) {
         </p>
       </div>
 
-      <div className="mt-3 divide-y divide-[#8E24AA]/18">
+      <div className="mt-3 divide-y divide-[#4A148C]/18">
         {row.lines.map((line) => (
           <div key={line.id} className="py-3 first:pt-0 last:pb-0">
             <div className="flex items-center gap-3">
@@ -249,7 +249,7 @@ function DeliveryNoteMobileCard({ row }: { row: DeliveryNoteReportRow }) {
             <div className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2">
               <div className="bg-white px-3 py-2 text-center shadow-[0_8px_18px_rgba(27,27,33,0.1)]">
                 <p className="text-sm text-slate-500">ยอดขาย</p>
-                <p className="mt-0.5 text-base font-black text-[#8E24AA]">{fmtMoneyCompact(line.lineTotal)}</p>
+                <p className="mt-0.5 text-base font-black text-[#4A148C]">{fmtMoneyCompact(line.lineTotal)}</p>
               </div>
               <div className={`px-3 py-2 text-center shadow-[0_8px_18px_rgba(27,27,33,0.1)] ${line.profit >= 0 ? "bg-emerald-600" : "bg-red-50"}`}>
                 <p className={`text-sm ${line.profit >= 0 ? "text-emerald-100" : "text-slate-500"}`}>กำไร</p>
@@ -265,8 +265,8 @@ function DeliveryNoteMobileCard({ row }: { row: DeliveryNoteReportRow }) {
         ))}
       </div>
 
-      <div className="mt-3 border-t border-[#8E24AA]/10 pt-3">
-        <div className="rounded-xl border border-[#8E24AA]/12 bg-white px-3 py-2.5 shadow-[0_6px_18px_rgba(27,27,33,0.08)]">
+      <div className="mt-3 border-t border-[#4A148C]/10 pt-3">
+        <div className="rounded-xl border border-[#4A148C]/12 bg-white px-3 py-2.5 shadow-[0_6px_18px_rgba(27,27,33,0.08)]">
           <div className="mb-2 flex items-center justify-between gap-2">
             <p className="text-sm font-semibold text-slate-600">ยอดรวมร้าน {row.customerName}</p>
             <p className={`inline-flex items-center gap-1 whitespace-nowrap text-sm font-black tracking-tight ${row.netProfit >= 0 ? "text-emerald-600" : "text-red-500"}`}>
@@ -281,7 +281,7 @@ function DeliveryNoteMobileCard({ row }: { row: DeliveryNoteReportRow }) {
             </div>
             <div className="bg-white px-2.5 py-2 text-center shadow-[0_8px_18px_rgba(27,27,33,0.1)]">
               <p className="text-[11px] font-medium text-slate-500">ยอดขาย</p>
-              <p className="mt-0.5 text-sm font-black text-[#8E24AA]">{fmtMoneyCompact(row.totalRevenue)}</p>
+              <p className="mt-0.5 text-sm font-black text-[#4A148C]">{fmtMoneyCompact(row.totalRevenue)}</p>
             </div>
             <div className={`rounded-md px-2.5 py-2 text-center ${row.netProfit >= 0 ? "bg-emerald-600" : "bg-red-50"}`}>
               <p className={`text-[11px] font-medium ${row.netProfit >= 0 ? "text-emerald-100" : "text-slate-500"}`}>กำไร</p>
@@ -335,7 +335,7 @@ function Pagination({
           <Link
             key={p}
             href={`${baseUrl}&page=${p}`}
-            className={`flex h-10 w-10 items-center justify-center rounded-xl text-base font-semibold transition ${p === page ? "bg-[#8E24AA] text-white shadow-sm" : "text-slate-600 hover:bg-slate-100"
+            className={`flex h-10 w-10 items-center justify-center rounded-xl text-base font-semibold transition ${p === page ? "bg-[#4A148C] text-white shadow-sm" : "text-slate-600 hover:bg-slate-100"
               }`}
           >
             {p}
@@ -421,9 +421,9 @@ async function DeliveryNotesReportContent({ searchParams }: PageProps) {
             <nav className="mb-2 flex items-center gap-1 text-sm font-medium text-slate-400">
               <span>Analytics</span>
               <span className="text-slate-300">›</span>
-              <span className="font-semibold text-[#8E24AA]">รายงานใบจัดส่งรายวัน</span>
+              <span className="font-semibold text-[#4A148C]">รายงานใบจัดส่งรายวัน</span>
             </nav>
-            <h1 className="text-2xl font-extrabold tracking-tight text-[#8E24AA] sm:text-3xl">
+            <h1 className="text-2xl font-extrabold tracking-tight text-[#4A148C] sm:text-3xl">
               รายงานใบจัดส่งรายวัน
             </h1>
           </header>
@@ -446,7 +446,7 @@ async function DeliveryNotesReportContent({ searchParams }: PageProps) {
                     name="q"
                     defaultValue={keyword}
                     placeholder="เลขใบจัดส่ง หรือชื่อร้าน..."
-                    className="w-full rounded-xl border-0 bg-slate-50 py-3.5 pl-9 pr-4 text-base text-slate-800 ring-1 ring-slate-200 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#8E24AA]/20"
+                    className="w-full rounded-xl border-0 bg-slate-50 py-3.5 pl-9 pr-4 text-base text-slate-800 ring-1 ring-slate-200 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#4A148C]/20"
                   />
                 </div>
               </div>
@@ -466,7 +466,7 @@ async function DeliveryNotesReportContent({ searchParams }: PageProps) {
                   </div>
                 </div>
               </div>
-              <button type="submit" className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#8E24AA] py-3.5 text-base font-bold text-white transition hover:bg-[#8E24AA]">
+              <button type="submit" className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#4A148C] py-3.5 text-base font-bold text-white transition hover:bg-[#4A148C]">
                 <Filter className="h-4 w-4" strokeWidth={2} />
                 ค้นหา
               </button>
@@ -486,7 +486,7 @@ async function DeliveryNotesReportContent({ searchParams }: PageProps) {
                       name="q"
                       defaultValue={keyword}
                       placeholder="เลขใบจัดส่ง หรือชื่อร้าน..."
-                      className="w-full rounded-xl border-0 bg-slate-50 py-3 pl-9 pr-4 text-base text-slate-800 ring-1 ring-slate-200 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#8E24AA]/20"
+                      className="w-full rounded-xl border-0 bg-slate-50 py-3 pl-9 pr-4 text-base text-slate-800 ring-1 ring-slate-200 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#4A148C]/20"
                     />
                   </div>
                 </div>
@@ -532,14 +532,14 @@ async function DeliveryNotesReportContent({ searchParams }: PageProps) {
                 <div className="flex w-full shrink-0 flex-col gap-2 sm:w-auto sm:flex-row">
                   <button
                     type="submit"
-                    className="flex h-10 w-full items-center justify-center gap-2 rounded-xl bg-[#8E24AA] px-6 text-sm font-bold text-white transition hover:bg-[#8E24AA] active:scale-95 sm:w-auto"
+                    className="flex h-10 w-full items-center justify-center gap-2 rounded-xl bg-[#4A148C] px-6 text-sm font-bold text-white transition hover:bg-[#4A148C] active:scale-95 sm:w-auto"
                   >
                     <Filter className="h-4 w-4" strokeWidth={2.2} />
                     ค้นหา
                   </button>
                   <Link
                     href={`${paginationBase}&pageSize=9999`}
-                    className="flex h-10 w-full items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-500 transition hover:border-[#8E24AA] hover:text-[#8E24AA] active:scale-95 sm:w-auto"
+                    className="flex h-10 w-full items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-500 transition hover:border-[#4A148C] hover:text-[#4A148C] active:scale-95 sm:w-auto"
                   >
                     แสดงทั้งหมด
                   </Link>
@@ -549,7 +549,7 @@ async function DeliveryNotesReportContent({ searchParams }: PageProps) {
 
             <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4 sm:px-6 sm:py-5">
               <div>
-                <h3 className="text-lg font-bold text-[#8E24AA] sm:text-xl">สรุปรายใบจัดส่งที่วางบิลแล้ว</h3>
+                <h3 className="text-lg font-bold text-[#4A148C] sm:text-xl">สรุปรายใบจัดส่งที่วางบิลแล้ว</h3>
                 <p className="mt-0.5 text-sm text-slate-400">
                   {isoToDisplay(fromDate)} — {isoToDisplay(toDate)}
                   {selectedStoreIds.length > 0 && ` · ${selectedStoreIds.length} ร้านค้า`}
@@ -572,15 +572,15 @@ async function DeliveryNotesReportContent({ searchParams }: PageProps) {
                     return (
                       <section
                         key={group.date}
-                        className="-mx-0 rounded-none border-y border-[#8E24AA]/12 bg-white shadow-[0_4px_18px_rgba(27,27,33,0.05)] sm:mx-0 sm:rounded-2xl sm:border sm:border-[#8E24AA]/12"
+                        className="-mx-0 rounded-none border-y border-[#4A148C]/12 bg-white shadow-[0_4px_18px_rgba(27,27,33,0.05)] sm:mx-0 sm:rounded-2xl sm:border sm:border-[#4A148C]/12"
                       >
                         <div className="lg:hidden">
-                          <div className="border-b border-[#8E24AA]/12 bg-[#8E24AA] px-4 py-2.5">
+                          <div className="border-b border-[#4A148C]/12 bg-[#4A148C] px-4 py-2.5">
                             <p className="text-sm font-semibold uppercase tracking-[0.12em] text-white/85">
                               วันที่ {isoToDisplay(group.date)}
                             </p>
                           </div>
-                          <div className="divide-y divide-[#8E24AA]/16">
+                          <div className="divide-y divide-[#4A148C]/16">
                             {group.items.map((row) => (
                               <DeliveryNoteMobileCard key={row.id} row={row} />
                             ))}
@@ -588,12 +588,12 @@ async function DeliveryNotesReportContent({ searchParams }: PageProps) {
                         </div>
 
                         <div className="hidden lg:block">
-                          <div className="sticky top-0 z-20 border-b border-[#8E24AA]/12 bg-[#8E24AA] px-4 py-2.5 sm:px-5">
+                          <div className="sticky top-0 z-20 border-b border-[#4A148C]/12 bg-[#4A148C] px-4 py-2.5 sm:px-5">
                             <p className="text-sm font-semibold uppercase tracking-[0.12em] text-white/85">
                               วันที่ {isoToDisplay(group.date)}
                             </p>
                           </div>
-                          <div className="sticky top-[41px] z-10 border-b border-[#8E24AA]/12 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/90">
+                          <div className="sticky top-[41px] z-10 border-b border-[#4A148C]/12 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/90">
                             <div className="overflow-x-auto">
                               <table className="min-w-[980px] w-full border-collapse text-left">
                                 <colgroup>
@@ -607,15 +607,15 @@ async function DeliveryNotesReportContent({ searchParams }: PageProps) {
                                   <col className="w-[110px]" />
                                 </colgroup>
                                 <thead>
-                                  <tr className="bg-[#8E24AA]/[0.04]">
+                                  <tr className="bg-[#4A148C]/[0.04]">
                                     <th className="px-4 py-2.5 text-xs font-semibold uppercase tracking-[0.09em] text-slate-600 whitespace-nowrap">รหัสสินค้า</th>
-                                    <th className="border-l border-[#8E24AA]/12 px-4 py-2.5 text-xs font-semibold uppercase tracking-[0.09em] text-slate-600 whitespace-nowrap">สินค้า</th>
-                                    <th className="border-l border-[#8E24AA]/12 px-4 py-2.5 text-center text-xs font-semibold uppercase tracking-[0.09em] text-slate-600 whitespace-nowrap">จำนวน</th>
-                                    <th className="border-l border-[#8E24AA]/12 px-4 py-2.5 text-center text-xs font-semibold uppercase tracking-[0.09em] text-slate-600 whitespace-nowrap">หน่วย</th>
-                                    <th className="border-l border-[#8E24AA]/12 px-4 py-2.5 text-center text-xs font-semibold uppercase tracking-[0.09em] text-slate-600 whitespace-nowrap">ต้นทุน</th>
-                                    <th className="border-l border-[#8E24AA]/12 px-4 py-2.5 text-center text-xs font-semibold uppercase tracking-[0.09em] text-slate-600 whitespace-nowrap">ยอดขาย</th>
-                                    <th className="border-l border-[#8E24AA]/12 px-4 py-2.5 text-center text-xs font-semibold uppercase tracking-[0.09em] text-slate-600 whitespace-nowrap">กำไร</th>
-                                    <th className="border-l border-[#8E24AA]/12 px-4 py-2.5 text-center text-xs font-semibold uppercase tracking-[0.09em] text-slate-600 whitespace-nowrap">กำไร(%)</th>
+                                    <th className="border-l border-[#4A148C]/12 px-4 py-2.5 text-xs font-semibold uppercase tracking-[0.09em] text-slate-600 whitespace-nowrap">สินค้า</th>
+                                    <th className="border-l border-[#4A148C]/12 px-4 py-2.5 text-center text-xs font-semibold uppercase tracking-[0.09em] text-slate-600 whitespace-nowrap">จำนวน</th>
+                                    <th className="border-l border-[#4A148C]/12 px-4 py-2.5 text-center text-xs font-semibold uppercase tracking-[0.09em] text-slate-600 whitespace-nowrap">หน่วย</th>
+                                    <th className="border-l border-[#4A148C]/12 px-4 py-2.5 text-center text-xs font-semibold uppercase tracking-[0.09em] text-slate-600 whitespace-nowrap">ต้นทุน</th>
+                                    <th className="border-l border-[#4A148C]/12 px-4 py-2.5 text-center text-xs font-semibold uppercase tracking-[0.09em] text-slate-600 whitespace-nowrap">ยอดขาย</th>
+                                    <th className="border-l border-[#4A148C]/12 px-4 py-2.5 text-center text-xs font-semibold uppercase tracking-[0.09em] text-slate-600 whitespace-nowrap">กำไร</th>
+                                    <th className="border-l border-[#4A148C]/12 px-4 py-2.5 text-center text-xs font-semibold uppercase tracking-[0.09em] text-slate-600 whitespace-nowrap">กำไร(%)</th>
                                   </tr>
                                 </thead>
                               </table>
@@ -634,24 +634,24 @@ async function DeliveryNotesReportContent({ searchParams }: PageProps) {
                                 <col className="w-[130px]" />
                                 <col className="w-[110px]" />
                               </colgroup>
-                              <tbody className="divide-y divide-[#8E24AA]/10 bg-white">
+                              <tbody className="divide-y divide-[#4A148C]/10 bg-white">
                                 {group.items.map((row) => (
                                   <DeliveryNoteRows key={row.id} row={row} />
                                 ))}
-                                <tr className="bg-[#8E24AA]/[0.04]">
+                                <tr className="bg-[#4A148C]/[0.04]">
                                   <td colSpan={4} className="px-4 py-2 text-right text-sm font-black tracking-[0.02em] text-slate-600">
                                     ยอดรวมของวันที่ — {isoToDisplay(group.date)}
                                   </td>
-                                  <td className="border-l border-[#8E24AA]/10 px-4 py-2 text-center text-sm font-bold text-slate-700">
+                                  <td className="border-l border-[#4A148C]/10 px-4 py-2 text-center text-sm font-bold text-slate-700">
                                     {fmtMoney(totals.totalCost)}
                                   </td>
-                                  <td className="border-l border-[#8E24AA]/10 px-4 py-2 text-center text-sm font-black text-[#8E24AA]">
+                                  <td className="border-l border-[#4A148C]/10 px-4 py-2 text-center text-sm font-black text-[#4A148C]">
                                     {fmtMoney(totals.totalRevenue)}
                                   </td>
-                                  <td className={`border-l border-[#8E24AA]/10 px-4 py-2 text-center text-sm font-black ${totals.netProfit >= 0 ? "text-emerald-600" : "text-red-500"}`}>
+                                  <td className={`border-l border-[#4A148C]/10 px-4 py-2 text-center text-sm font-black ${totals.netProfit >= 0 ? "text-emerald-600" : "text-red-500"}`}>
                                     {fmtMoney(totals.netProfit)}
                                   </td>
-                                  <td className={`border-l border-[#8E24AA]/10 px-4 py-2 text-center text-sm font-black ${totals.netProfit >= 0 ? "text-emerald-600" : "text-red-500"}`}>
+                                  <td className={`border-l border-[#4A148C]/10 px-4 py-2 text-center text-sm font-black ${totals.netProfit >= 0 ? "text-emerald-600" : "text-red-500"}`}>
                                     {fmtPercent(totals.totalRevenue > 0 ? (totals.netProfit / totals.totalRevenue) * 100 : 0)}
                                   </td>
                                 </tr>
@@ -729,35 +729,35 @@ async function DeliveryNotesReportContent({ searchParams }: PageProps) {
                                       <col className="w-[110px]" />
                                     </colgroup>
                                     <thead>
-                                      <tr className="bg-[#8E24AA]/[0.04]">
+                                      <tr className="bg-[#4A148C]/[0.04]">
                                         <th className="px-4 py-2.5 text-xs font-semibold uppercase tracking-[0.09em] text-slate-600">รหัสสินค้า</th>
-                                        <th className="border-l border-[#8E24AA]/12 px-4 py-2.5 text-xs font-semibold uppercase tracking-[0.09em] text-slate-600">สินค้า</th>
-                                        <th className="border-l border-[#8E24AA]/12 px-4 py-2.5 text-center text-xs font-semibold uppercase tracking-[0.09em] text-slate-600">จำนวน</th>
-                                        <th className="border-l border-[#8E24AA]/12 px-4 py-2.5 text-center text-xs font-semibold uppercase tracking-[0.09em] text-slate-600">หน่วย</th>
-                                        <th className="border-l border-[#8E24AA]/12 px-4 py-2.5 text-center text-xs font-semibold uppercase tracking-[0.09em] text-slate-600">ต้นทุน</th>
-                                        <th className="border-l border-[#8E24AA]/12 px-4 py-2.5 text-center text-xs font-semibold uppercase tracking-[0.09em] text-slate-600">ยอดขาย</th>
-                                        <th className="border-l border-[#8E24AA]/12 px-4 py-2.5 text-center text-xs font-semibold uppercase tracking-[0.09em] text-slate-600">กำไร</th>
-                                        <th className="border-l border-[#8E24AA]/12 px-4 py-2.5 text-center text-xs font-semibold uppercase tracking-[0.09em] text-slate-600">กำไร(%)</th>
+                                        <th className="border-l border-[#4A148C]/12 px-4 py-2.5 text-xs font-semibold uppercase tracking-[0.09em] text-slate-600">สินค้า</th>
+                                        <th className="border-l border-[#4A148C]/12 px-4 py-2.5 text-center text-xs font-semibold uppercase tracking-[0.09em] text-slate-600">จำนวน</th>
+                                        <th className="border-l border-[#4A148C]/12 px-4 py-2.5 text-center text-xs font-semibold uppercase tracking-[0.09em] text-slate-600">หน่วย</th>
+                                        <th className="border-l border-[#4A148C]/12 px-4 py-2.5 text-center text-xs font-semibold uppercase tracking-[0.09em] text-slate-600">ต้นทุน</th>
+                                        <th className="border-l border-[#4A148C]/12 px-4 py-2.5 text-center text-xs font-semibold uppercase tracking-[0.09em] text-slate-600">ยอดขาย</th>
+                                        <th className="border-l border-[#4A148C]/12 px-4 py-2.5 text-center text-xs font-semibold uppercase tracking-[0.09em] text-slate-600">กำไร</th>
+                                        <th className="border-l border-[#4A148C]/12 px-4 py-2.5 text-center text-xs font-semibold uppercase tracking-[0.09em] text-slate-600">กำไร(%)</th>
                                       </tr>
                                     </thead>
-                                    <tbody className="divide-y divide-[#8E24AA]/10 bg-white">
+                                    <tbody className="divide-y divide-[#4A148C]/10 bg-white">
                                       {group.items.map((row) => (
                                         <DeliveryNoteRows key={row.id} row={row} />
                                       ))}
-                                      <tr className="bg-[#8E24AA]/[0.04]">
+                                      <tr className="bg-[#4A148C]/[0.04]">
                                         <td colSpan={4} className="px-4 py-2 text-right text-sm font-black">
                                           ยอดรวมของวันที่ — {isoToDisplay(group.date)}
                                         </td>
-                                        <td className="border-l border-[#8E24AA]/10 px-4 py-2 text-center text-sm font-bold">
+                                        <td className="border-l border-[#4A148C]/10 px-4 py-2 text-center text-sm font-bold">
                                           {fmtMoney(totals.totalCost)}
                                         </td>
-                                        <td className="border-l border-[#8E24AA]/10 px-4 py-2 text-center text-sm font-black">
+                                        <td className="border-l border-[#4A148C]/10 px-4 py-2 text-center text-sm font-black">
                                           {fmtMoney(totals.totalRevenue)}
                                         </td>
-                                        <td className="border-l border-[#8E24AA]/10 px-4 py-2 text-center text-sm font-black">
+                                        <td className="border-l border-[#4A148C]/10 px-4 py-2 text-center text-sm font-black">
                                           {fmtMoney(totals.netProfit)}
                                         </td>
-                                        <td className="border-l border-[#8E24AA]/10 px-4 py-2 text-center text-sm font-black">
+                                        <td className="border-l border-[#4A148C]/10 px-4 py-2 text-center text-sm font-black">
                                           {fmtPercent(totals.totalRevenue > 0 ? (totals.netProfit / totals.totalRevenue) * 100 : 0)}
                                         </td>
                                       </tr>
@@ -771,11 +771,11 @@ async function DeliveryNotesReportContent({ searchParams }: PageProps) {
                         
                         {/* Final summary only on last page */}
                         {pageIdx === pages.length - 1 && (
-                          <div className="mt-8 overflow-hidden rounded-xl border border-[#8E24AA]/20 bg-[#8E24AA]/[0.08]">
-                            <div className="bg-[#8E24AA] px-6 py-3 text-white">
+                          <div className="mt-8 overflow-hidden rounded-xl border border-[#4A148C]/20 bg-[#4A148C]/[0.08]">
+                            <div className="bg-[#4A148C] px-6 py-3 text-white">
                               <h3 className="text-base font-bold">สรุปรวมทั้งหมด ({allRows.length} ใบจัดส่ง)</h3>
                             </div>
-                            <div className="grid grid-cols-4 gap-0 divide-x divide-[#8E24AA]/10">
+                            <div className="grid grid-cols-4 gap-0 divide-x divide-[#4A148C]/10">
                               {[
                                 { label: "ต้นทุนรวม", value: fmtMoney(summary.totalCost) },
                                 { label: "ยอดขายรวม", value: fmtMoney(summary.totalRevenue) },
@@ -784,7 +784,7 @@ async function DeliveryNotesReportContent({ searchParams }: PageProps) {
                               ].map((item, idx) => (
                                 <div key={idx} className="p-4 text-center">
                                   <p className="mb-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">{item.label}</p>
-                                  <p className={`text-lg font-black ${item.color || "text-[#8E24AA]"}`}>{item.value}</p>
+                                  <p className={`text-lg font-black ${item.color || "text-[#4A148C]"}`}>{item.value}</p>
                                 </div>
                               ))}
                             </div>

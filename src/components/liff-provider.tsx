@@ -20,6 +20,10 @@ type LiffProfile = {
 
 type LiffSendMessagesParams = Parameters<LiffType["sendMessages"]>[0];
 
+function canUseLiffMock() {
+  return process.env.NODE_ENV !== "production" && process.env.NEXT_PUBLIC_LIFF_MOCK === "true";
+}
+
 type LiffContextType = {
   isReady: boolean;
   isInClient: boolean;
@@ -66,7 +70,7 @@ export function LiffProvider({
 
   const refreshProfile = useCallback(async () => {
     const liff = liffRef.current;
-    const useMock = process.env.NEXT_PUBLIC_LIFF_MOCK === "true";
+    const useMock = canUseLiffMock();
     if (!liff || (!useMock && !liff.isLoggedIn())) return;
 
     try {
@@ -93,7 +97,7 @@ export function LiffProvider({
 
     const initLiff = async () => {
       try {
-        const useMock = process.env.NEXT_PUBLIC_LIFF_MOCK === "true";
+        const useMock = canUseLiffMock();
 
         // Dynamically import LIFF so it is excluded from the initial bundle
         const liffModule = await import("@line/liff");
@@ -151,7 +155,7 @@ export function LiffProvider({
     liff.login();
 
     // In mock mode there is no page redirect — update state manually
-    if (process.env.NEXT_PUBLIC_LIFF_MOCK === "true") {
+    if (canUseLiffMock()) {
       try {
         await refreshProfile();
       } catch (err) {

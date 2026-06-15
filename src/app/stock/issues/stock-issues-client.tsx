@@ -125,7 +125,7 @@ function StockIssueDetailModal({
 
               <div className="flex items-center justify-between mb-6 px-1">
                  <span className="text-[13px] font-black">ยอดรวมทั้งหมด:</span>
-                 <span className="text-[16px] font-black text-[#8E24AA] underline decoration-double decoration-slate-300 underline-offset-4">
+                 <span className="text-[16px] font-black text-[#4A148C] underline decoration-double decoration-slate-300 underline-offset-4">
                     {formatCurrency(issue.totalAmount)}
                  </span>
               </div>
@@ -144,7 +144,7 @@ function StockIssueDetailModal({
                 </div>
               </div>
               <div className="text-left sm:text-right">
-                <h2 className="text-[18px] font-black text-[#8E24AA] md:text-[20px]">ใบจัดส่งสินค้า</h2>
+                <h2 className="text-[18px] font-black text-[#4A148C] md:text-[20px]">ใบจัดส่งสินค้า</h2>
                 <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#45464d]">Goods Issue Voucher</p>
               </div>
             </div>
@@ -200,7 +200,7 @@ function StockIssueDetailModal({
             <div className="relative z-10 mt-6 flex justify-end items-baseline pr-4">
               <div className="flex items-baseline gap-6">
                 <span className="text-[16px] font-black text-black">รวมทั้งสิ้น / Total:</span>
-                <p className="text-[32px] font-black text-[#8E24AA] leading-none mb-1">
+                <p className="text-[32px] font-black text-[#4A148C] leading-none mb-1">
                   {formatCurrency(issue.totalAmount)}
                 </p>
               </div>
@@ -330,7 +330,7 @@ export function StockIssuesClient({
             <select
               value={selectedWarehouseId}
               onChange={(event) => handleWarehouseChange(event.target.value)}
-              className="w-full h-14 rounded-2xl bg-slate-100 border-none px-4 text-base font-bold text-black outline-none focus:ring-2 focus:ring-[#8E24AA]"
+              className="w-full h-14 rounded-2xl bg-slate-100 border-none px-4 text-base font-bold text-black outline-none focus:ring-2 focus:ring-[#4A148C]"
             >
               {warehouseOptions.map((warehouse) => (
                 <option key={warehouse.id} value={warehouse.id}>
@@ -349,7 +349,7 @@ export function StockIssuesClient({
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 placeholder="ชื่อลูกค้า หรือหมายเหตุ..."
-                className="w-full h-14 rounded-2xl bg-slate-100 border-none pl-12 pr-4 text-base font-bold text-black outline-none focus:ring-2 focus:ring-[#8E24AA] transition-all"
+                className="w-full h-14 rounded-2xl bg-slate-100 border-none pl-12 pr-4 text-base font-bold text-black outline-none focus:ring-2 focus:ring-[#4A148C] transition-all"
               />
             </div>
           </div>
@@ -412,7 +412,7 @@ export function StockIssuesClient({
           </div>
           <button
             onClick={closeSearch}
-            className="mt-4 w-full h-14 rounded-2xl bg-[#8E24AA] text-[#8E24AA] font-black text-lg shadow-lg active:scale-95 transition-all"
+            className="mt-4 w-full h-14 rounded-2xl bg-[#4A148C] text-[#4A148C] font-black text-lg shadow-lg active:scale-95 transition-all"
           >
             แสดง {filteredIssues.length} รายการ
           </button>
@@ -423,7 +423,7 @@ export function StockIssuesClient({
         <div className="flex flex-col gap-3">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <div className="min-w-0">
-              <p className="text-lg font-black text-[#8E24AA]">ประวัติการเบิกออกสินค้า</p>
+              <p className="text-lg font-black text-[#4A148C]">ประวัติการเบิกออกสินค้า</p>
               <p className="text-xs font-semibold text-[#667085]">
                 แสดง {filteredIssues.length.toLocaleString("th-TH")} รายการ
               </p>
@@ -438,7 +438,7 @@ export function StockIssuesClient({
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 placeholder="ค้นหาชื่อลูกค้า หรือหมายเหตุ..."
-                className="h-12 w-full rounded-lg border border-[#D7DEE8] bg-white pl-11 pr-4 text-sm font-semibold text-[#8E24AA] outline-none transition placeholder:text-[#667085] focus:border-[#8E24AA] focus:ring-2 focus:ring-[#8E24AA]/15"
+                className="h-12 w-full rounded-lg border border-[#D7DEE8] bg-white pl-11 pr-4 text-sm font-semibold text-[#4A148C] outline-none transition placeholder:text-[#667085] focus:border-[#4A148C] focus:ring-2 focus:ring-[#4A148C]/15"
               />
             </label>
 
@@ -447,7 +447,7 @@ export function StockIssuesClient({
               <select
                 value={selectedWarehouseId}
                 onChange={(event) => handleWarehouseChange(event.target.value)}
-                className="h-12 w-full rounded-lg border border-[#D7DEE8] bg-white px-4 text-sm font-bold text-[#8E24AA] outline-none focus:border-[#8E24AA] focus:ring-2 focus:ring-[#8E24AA]/15"
+                className="h-12 w-full rounded-lg border border-[#D7DEE8] bg-white px-4 text-sm font-bold text-[#4A148C] outline-none focus:border-[#4A148C] focus:ring-2 focus:ring-[#4A148C]/15"
               >
                 {warehouseOptions.map((warehouse) => (
                   <option key={warehouse.id} value={warehouse.id}>
@@ -520,7 +520,7 @@ export function StockIssuesClient({
         <div className="mb-6 flex justify-end hidden sm:flex">
            <div className="text-right">
               <p className="text-[11px] font-black uppercase tracking-[0.05em] text-[#45464d] mb-1">ยอดรวมทั้งหมด (หน้าปัจจุบัน)</p>
-              <p className="text-[20px] font-black text-[#8E24AA]">
+              <p className="text-[20px] font-black text-[#4A148C]">
                  {totalAmount.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <span className="text-[12px]">THB</span>
               </p>
            </div>
@@ -546,7 +546,7 @@ export function StockIssuesClient({
                         <ArrowUpRight className="h-5 w-5 text-rose-500" strokeWidth={3} />
                       </div>
                       <div className="min-w-0">
-                        <h3 className="truncate text-[18px] font-bold text-black group-hover:text-[#8E24AA] transition-colors">
+                        <h3 className="truncate text-[18px] font-bold text-black group-hover:text-[#4A148C] transition-colors">
                           {issue.customerName}
                         </h3>
                         <p className="mt-1 flex flex-wrap items-center gap-2 text-[12px] font-medium text-[#45464d]">
@@ -597,7 +597,7 @@ export function StockIssuesClient({
             <button 
               onClick={handleLoadMore}
               disabled={isLoadingMore}
-              className="text-[#8E24AA] font-bold hover:underline flex items-center gap-2 mx-auto disabled:opacity-50"
+              className="text-[#4A148C] font-bold hover:underline flex items-center gap-2 mx-auto disabled:opacity-50"
             >
               {isLoadingMore ? <Loader2 className="h-5 w-5 animate-spin" /> : <ChevronRight className="h-5 w-5 rotate-90" />}
               {isLoadingMore ? "กำลังโหลด..." : "ดูเพิ่มเติม"}

@@ -199,7 +199,7 @@ export function BillingForm({
                   onClick={() => setStatusFilter(s)}
                   className={`flex-1 rounded-md text-sm font-black transition-all ${
                     statusFilter === s
-                      ? "bg-white text-[#8E24AA] shadow-sm"
+                      ? "bg-white text-[#4A148C] shadow-sm"
                       : "text-slate-400 hover:text-slate-600"
                   }`}
                 >
@@ -227,7 +227,7 @@ export function BillingForm({
           <div className="pt-4">
             <button
               onClick={() => closeSearchDrawer()}
-              className="w-full h-14 rounded-xl bg-[#8E24AA] text-white font-black shadow-lg shadow-[#8E24AA]/20 active:scale-95 transition-transform"
+              className="w-full h-14 rounded-xl bg-[#4A148C] text-white font-black shadow-lg shadow-[#4A148C]/20 active:scale-95 transition-transform"
             >
               ดูผลลัพธ์
             </button>
@@ -270,7 +270,7 @@ export function BillingForm({
                 onClick={() => setStatusFilter(s)}
                 className={`flex-1 rounded-md text-sm font-black transition-all ${
                   statusFilter === s
-                    ? "bg-white text-[#8E24AA] shadow-sm"
+                    ? "bg-white text-[#4A148C] shadow-sm"
                     : "text-slate-400 hover:text-slate-600"
                 }`}
               >
@@ -287,7 +287,7 @@ export function BillingForm({
             <button
               type="button"
               onClick={() => setIsCustomerDialogOpen(true)}
-              className="flex h-14 w-full items-center justify-between rounded-lg border border-slate-200 bg-slate-50/50 px-5 text-left transition-all hover:bg-white hover:border-[#8E24AA]"
+              className="flex h-14 w-full items-center justify-between rounded-lg border border-slate-200 bg-slate-50/50 px-5 text-left transition-all hover:bg-white hover:border-[#4A148C]"
             >
               <div className="flex items-center gap-3 overflow-hidden">
                 <User className="h-5 w-5 shrink-0 text-slate-400" />
@@ -335,7 +335,7 @@ export function BillingForm({
                   value={customerSearch}
                   onChange={(e) => setCustomerSearch(e.target.value)}
                   placeholder="ค้นหาชื่อร้านหรือรหัส..."
-                  className="w-full rounded-2xl border-none bg-slate-100 py-4 pl-12 pr-4 text-base font-bold text-slate-900 focus:ring-2 focus:ring-[#8E24AA]/20 outline-none"
+                  className="w-full rounded-2xl border-none bg-slate-100 py-4 pl-12 pr-4 text-base font-bold text-slate-900 focus:ring-2 focus:ring-[#4A148C]/20 outline-none"
                 />
               </div>
             </div>
@@ -344,7 +344,7 @@ export function BillingForm({
             <div className="flex items-center justify-between border-b border-slate-50 px-6 py-2">
                <button
                 onClick={selectAllFiltered}
-                className="text-[11px] font-black uppercase tracking-widest text-[#8E24AA]"
+                className="text-[11px] font-black uppercase tracking-widest text-[#4A148C]"
               >
                 เลือกที่พบทั้งหมด
               </button>
@@ -371,12 +371,12 @@ export function BillingForm({
                       key={c.id}
                       onClick={() => toggleCustomer(c.id)}
                       className={`flex w-full items-center gap-4 rounded-2xl px-4 py-4 text-left transition-colors active:bg-slate-100 ${
-                        isSelected ? "bg-[#8E24AA]/15" : ""
+                        isSelected ? "bg-[#4A148C]/15" : ""
                       }`}
                     >
                       <div className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-lg border-2 transition-all ${
                         isSelected
-                          ? "bg-[#8E24AA] border-[#8E24AA] text-white"
+                          ? "bg-[#4A148C] border-[#4A148C] text-white"
                           : "border-slate-200 bg-white"
                       }`}>
                         {isSelected ? <Check className="h-4 w-4" strokeWidth={4} /> : null}
@@ -395,7 +395,7 @@ export function BillingForm({
             <div className="border-t border-slate-100 p-6">
               <button
                 onClick={() => setIsCustomerDialogOpen(false)}
-                className="w-full rounded-2xl bg-[#8E24AA] py-4 text-lg font-black text-white shadow-lg shadow-[#8E24AA]/20 active:scale-[0.98]"
+                className="w-full rounded-2xl bg-[#4A148C] py-4 text-lg font-black text-white shadow-lg shadow-[#4A148C]/20 active:scale-[0.98]"
               >
                 เสร็จสิ้น
               </button>
@@ -408,8 +408,8 @@ export function BillingForm({
       <div className="relative min-h-[400px]">
         {isPending && (
           <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-white/80 backdrop-blur-[2px]">
-            <Loader2 className="h-10 w-10 animate-spin text-[#8E24AA]" />
-            <p className="mt-4 text-base font-black text-[#8E24AA]">กำลังอัปเดตข้อมูล...</p>
+            <Loader2 className="h-10 w-10 animate-spin text-[#4A148C]" />
+            <p className="mt-4 text-base font-black text-[#4A148C]">กำลังอัปเดตข้อมูล...</p>
           </div>
         )}
 
@@ -438,7 +438,7 @@ export function BillingForm({
             {visibleCandidates.map((candidate) => (
                 <div key={candidate.customerId} className="overflow-hidden border-y border-slate-200 bg-white shadow-sm md:border md:shadow-md">
                   {/* Table Header / Customer Info */}
-                  <div className="flex items-center gap-4 bg-[#8E24AA] py-2 md:py-2 px-4 md:px-6 text-white">
+                  <div className="flex items-center gap-4 bg-[#4A148C] py-2 md:py-2 px-4 md:px-6 text-white">
                   <div className="flex h-8 w-8 shrink-0 items-center justify-center bg-white/10">
                     <User className="h-4 w-4 text-white" />
                   </div>
@@ -466,7 +466,7 @@ export function BillingForm({
                       {candidate.deliveries.map((d) => (
                         <tr key={d.number} className="group hover:bg-slate-50 transition-colors">
                           <td className="px-6 py-2">
-                            <span className="font-mono text-sm font-black text-[#8E24AA]">{d.number}</span>
+                            <span className="font-mono text-sm font-black text-[#4A148C]">{d.number}</span>
                           </td>
                           <td className="px-6 py-2 text-center">
                             <div className="inline-flex items-center gap-2 text-xs font-bold text-slate-600">
@@ -507,8 +507,8 @@ export function BillingForm({
                     <div key={d.number} className="p-3 space-y-2 bg-white active:bg-slate-50">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                          <FileText className="h-4 w-4 text-[#8E24AA]" />
-                          <span className="font-mono text-[15px] font-black text-[#8E24AA]">{d.number}</span>
+                          <FileText className="h-4 w-4 text-[#4A148C]" />
+                          <span className="font-mono text-[15px] font-black text-[#4A148C]">{d.number}</span>
                         </div>
                         {d.isAlreadyBilled ? (
                           <div className="flex items-center gap-1.5 bg-[#059669] px-2.5 py-1 shadow-sm">
@@ -554,7 +554,7 @@ export function BillingForm({
                   </span>
                   <div className="flex items-center gap-4">
                     <div className="flex items-baseline gap-1.5">
-                      <span className="font-mono text-lg md:text-xl font-black leading-none text-[#8E24AA]">
+                      <span className="font-mono text-lg md:text-xl font-black leading-none text-[#4A148C]">
                         {candidate.deliveries.reduce((sum, d) => sum + d.amount, 0).toLocaleString("th-TH", { minimumFractionDigits: 2 })}
                       </span>
                       <span className="text-[11px] font-bold text-slate-400 uppercase tracking-tight">บาท</span>
@@ -582,7 +582,7 @@ export function BillingForm({
             <div className="flex flex-col">
               <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-[0.1em] text-slate-400">เลือกแล้ว</span>
               <div className="flex items-baseline gap-0.5">
-                <span className="text-lg sm:text-2xl font-black text-[#8E24AA]">{selectedCustomerIds.length}</span>
+                <span className="text-lg sm:text-2xl font-black text-[#4A148C]">{selectedCustomerIds.length}</span>
                 <span className="text-[10px] sm:text-[11px] font-bold text-slate-500 uppercase">ร้าน</span>
               </div>
             </div>
@@ -601,7 +601,7 @@ export function BillingForm({
           <button
             onClick={handlePrint}
             disabled={isPending || isPrinting || visibleCandidates.length === 0}
-            className="group relative hidden md:flex h-11 sm:h-12 min-w-[120px] sm:w-[240px] items-center justify-center gap-2 bg-[#8E24AA] px-4 sm:px-6 text-sm sm:text-base font-black tracking-wide text-white transition-all hover:bg-[#8E24AA] active:scale-95 disabled:opacity-50 disabled:grayscale disabled:pointer-events-none rounded-xl sm:rounded-none"
+            className="group relative hidden md:flex h-11 sm:h-12 min-w-[120px] sm:w-[240px] items-center justify-center gap-2 bg-[#4A148C] px-4 sm:px-6 text-sm sm:text-base font-black tracking-wide text-white transition-all hover:bg-[#4A148C] active:scale-95 disabled:opacity-50 disabled:grayscale disabled:pointer-events-none rounded-xl sm:rounded-none"
           >
             {isPrinting ? (
               <Loader2 className="h-4 w-4 sm:h-5 sm:w-5 animate-spin" />
@@ -620,8 +620,8 @@ export function BillingForm({
         <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-300">
           <div className="flex flex-col items-center bg-white p-16 shadow-2xl animate-in zoom-in-95 duration-300">
             <div className="relative mb-10">
-              <div className="h-24 w-24 animate-spin rounded-full border-4 border-slate-100 border-t-[#8E24AA]"></div>
-              <Printer className="absolute left-1/2 top-1/2 h-10 w-10 -translate-x-1/2 -translate-y-1/2 text-[#8E24AA]" />
+              <div className="h-24 w-24 animate-spin rounded-full border-4 border-slate-100 border-t-[#4A148C]"></div>
+              <Printer className="absolute left-1/2 top-1/2 h-10 w-10 -translate-x-1/2 -translate-y-1/2 text-[#4A148C]" />
             </div>
             <h3 className="mb-4 text-3xl font-black text-slate-900 text-center">กำลังเตรียมข้อมูลพิมพ์</h3>
             <p className="max-w-[320px] text-center text-lg font-bold text-slate-500 leading-relaxed">

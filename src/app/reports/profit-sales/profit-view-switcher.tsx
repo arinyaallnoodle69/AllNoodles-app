@@ -38,9 +38,9 @@ export function ProfitViewSwitcher({
   }
 
   return (
-    <div className="relative flex w-full border-y border-[#8E24AA] bg-white text-base font-bold shadow-sm sm:w-auto sm:overflow-hidden sm:rounded-md sm:border sm:text-xs">
+    <div className="relative flex w-full border-y border-[#4A148C] bg-white text-base font-bold shadow-sm sm:w-auto sm:overflow-hidden sm:rounded-md sm:border sm:text-xs">
       {isPending ? (
-        <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/70 text-[#8E24AA] backdrop-blur-[1px]">
+        <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/70 text-[#4A148C] backdrop-blur-[1px]">
           <Loader2 className="h-5 w-5 animate-spin" strokeWidth={2.4} />
         </div>
       ) : null}
@@ -49,7 +49,7 @@ export function ProfitViewSwitcher({
         onClick={() => changeView("daily")}
         disabled={isPending}
         className={`flex min-h-11 flex-1 items-center justify-center px-4 py-2.5 text-center transition sm:min-h-0 sm:flex-initial sm:py-2 ${
-          view === "daily" ? "bg-[#8E24AA] text-white" : "text-[#8E24AA] hover:bg-slate-50"
+          view === "daily" ? "bg-[#4A148C] text-white" : "text-[#4A148C] hover:bg-slate-50"
         }`}
       >
         รายวัน
@@ -58,8 +58,8 @@ export function ProfitViewSwitcher({
         type="button"
         onClick={() => changeView("monthly")}
         disabled={isPending}
-        className={`flex min-h-11 flex-1 items-center justify-center border-l border-[#8E24AA] px-4 py-2.5 text-center transition sm:min-h-0 sm:flex-initial sm:py-2 ${
-          view === "monthly" ? "bg-[#8E24AA] text-white" : "text-[#8E24AA] hover:bg-slate-50"
+        className={`flex min-h-11 flex-1 items-center justify-center border-l border-[#4A148C] px-4 py-2.5 text-center transition sm:min-h-0 sm:flex-initial sm:py-2 ${
+          view === "monthly" ? "bg-[#4A148C] text-white" : "text-[#4A148C] hover:bg-slate-50"
         }`}
       >
         รายเดือน

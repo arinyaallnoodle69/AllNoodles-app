@@ -65,7 +65,7 @@ export function CustomerImportModal({ isOpen, onClose }: CustomerImportModalProp
               นำเข้าข้อมูลร้านค้า
             </p>
             <div className="mt-1 flex items-center gap-2 text-slate-950">
-              <Upload className="h-6 w-6 text-[#8E24AA]" strokeWidth={2.2} />
+              <Upload className="h-6 w-6 text-[#4A148C]" strokeWidth={2.2} />
               <h3 className="text-2xl font-semibold tracking-[-0.02em]">นำเข้าร้านค้าจากไฟล์ CSV</h3>
             </div>
           </div>
@@ -83,7 +83,7 @@ export function CustomerImportModal({ isOpen, onClose }: CustomerImportModalProp
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
           {/* Download Template Section */}
           <div className="rounded-2xl border border-amber-200 bg-amber-50/50 p-4 space-y-3">
-            <h4 className="font-bold text-[#8E24AA] text-sm flex items-center gap-2">
+            <h4 className="font-bold text-[#4A148C] text-sm flex items-center gap-2">
               <Download className="h-4.5 w-4.5" /> แนะนำ: ใช้ไฟล์เทมเพลตมาตรฐาน
             </h4>
             <p className="text-xs text-slate-600 leading-relaxed">
@@ -92,7 +92,7 @@ export function CustomerImportModal({ isOpen, onClose }: CustomerImportModalProp
             <a
               href="/templates/import_customers_template.csv"
               download="เทมเพลตนำเข้าร้านค้า.csv"
-              className="inline-flex items-center gap-2 rounded-lg bg-white border border-[#AA00FF] px-3.5 py-2 text-xs font-bold text-[#8E24AA] shadow-sm hover:bg-slate-50 transition active:scale-95"
+              className="inline-flex items-center gap-2 rounded-lg bg-white border border-[#EA80FC] px-3.5 py-2 text-xs font-bold text-[#4A148C] shadow-sm hover:bg-slate-50 transition active:scale-95"
             >
               <Download className="h-3.5 w-3.5" /> ดาวน์โหลดเทมเพลต (.csv)
             </a>
@@ -104,7 +104,7 @@ export function CustomerImportModal({ isOpen, onClose }: CustomerImportModalProp
               <div 
                 onClick={() => !isPending && fileInputRef.current?.click()}
                 className={`border-2 border-dashed rounded-2xl p-6 text-center cursor-pointer transition-colors ${
-                  file ? "border-emerald-300 bg-emerald-50/10" : "border-slate-300 hover:border-[#AA00FF]"
+                  file ? "border-emerald-300 bg-emerald-50/10" : "border-slate-300 hover:border-[#EA80FC]"
                 } ${isPending ? "pointer-events-none opacity-50" : ""}`}
               >
                 <input
@@ -172,7 +172,7 @@ export function CustomerImportModal({ isOpen, onClose }: CustomerImportModalProp
               <button
                 type="submit"
                 disabled={isPending || !file}
-                className="h-12 rounded-xl bg-gradient-to-r from-[#AA00FF] to-[#8E24AA] px-8 text-sm font-black text-[#8E24AA] shadow-[0_12px_26px_rgba(170, 0, 255,0.2)] transition hover:brightness-105 active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none flex items-center justify-center gap-2"
+                className="h-12 rounded-xl bg-gradient-to-r from-[#EA80FC] to-[#4A148C] px-8 text-sm font-black text-[#4A148C] shadow-[0_12px_26px_rgba(170, 0, 255,0.2)] transition hover:brightness-105 active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none flex items-center justify-center gap-2"
               >
                 {isPending ? (
                   <>

@@ -15,7 +15,7 @@ export function CustomerCreateCard() {
 
         <Link
           href="/settings/customers?create=1"
-          className="inline-flex items-center gap-2 rounded-full bg-[#8E24AA] px-4 py-2.5 text-sm font-medium text-white shadow-[0_12px_28px_rgba(142, 36, 170,0.22)] transition hover:bg-[#8E24AA]"
+          className="inline-flex items-center gap-2 rounded-full bg-[#4A148C] px-4 py-2.5 text-sm font-medium text-white shadow-[0_12px_28px_rgba(142, 36, 170,0.22)] transition hover:bg-[#4A148C]"
         >
           <Plus className="h-4 w-4" strokeWidth={2.2} />
           เพิ่มร้านค้า

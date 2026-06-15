@@ -132,9 +132,9 @@ export function WarehouseForm({ initialWarehouse, returnHref }: WarehouseFormPro
             </p>
             <div className="mt-1.5 flex items-center gap-2.5 text-[#1a1a1a]">
               {isEditMode ? (
-                <PencilLine className="h-6 w-6 text-[#8E24AA]" strokeWidth={2} />
+                <PencilLine className="h-6 w-6 text-[#4A148C]" strokeWidth={2} />
               ) : (
-                <CirclePlus className="h-6 w-6 text-[#8E24AA]" strokeWidth={2} />
+                <CirclePlus className="h-6 w-6 text-[#4A148C]" strokeWidth={2} />
               )}
               <h3 className="text-2xl font-semibold tracking-tight">
                 {isEditMode ? "แก้ไขข้อมูลคลัง" : "คลังใหม่"}
@@ -199,7 +199,7 @@ export function WarehouseForm({ initialWarehouse, returnHref }: WarehouseFormPro
                         required
                         defaultValue={initialWarehouse?.name ?? ""}
                         placeholder="เช่น คลังหลัก, คลังต่างจังหวัด"
-                        className={`pl-10 h-11 rounded-md bg-white border-[#e8e8e8] focus-visible:ring-2 focus-visible:ring-[#8E24AA]/20 focus-visible:border-[#8E24AA] text-sm text-[#1a1a1a] placeholder:text-[#c2c2c2] ${
+                        className={`pl-10 h-11 rounded-md bg-white border-[#e8e8e8] focus-visible:ring-2 focus-visible:ring-[#4A148C]/20 focus-visible:border-[#4A148C] text-sm text-[#1a1a1a] placeholder:text-[#c2c2c2] ${
                           showFieldErrors && fieldErrors?.name ? "border-red-300 focus-visible:ring-red-200 focus-visible:border-red-500" : ""
                         }`}
                       />
@@ -235,7 +235,7 @@ export function WarehouseForm({ initialWarehouse, returnHref }: WarehouseFormPro
               type="submit"
               size="lg"
               disabled={isPending}
-              className="h-11 inline-flex items-center gap-2 rounded-md bg-[#8E24AA] hover:bg-[#8E24AA] text-white px-6 font-semibold text-sm tracking-[0.7px] uppercase shadow-[0_2px_8px_rgba(142, 36, 170,0.18)] transition disabled:cursor-not-allowed disabled:opacity-60"
+              className="h-11 inline-flex items-center gap-2 rounded-md bg-[#4A148C] hover:bg-[#4A148C] text-white px-6 font-semibold text-sm tracking-[0.7px] uppercase shadow-[0_2px_8px_rgba(142, 36, 170,0.18)] transition disabled:cursor-not-allowed disabled:opacity-60"
             >
               <Save className="h-4.5 w-4.5" strokeWidth={2} />
               {isEditMode ? "บันทึกการแก้ไข" : "บันทึกคลัง"}

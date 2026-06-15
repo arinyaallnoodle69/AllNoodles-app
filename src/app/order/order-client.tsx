@@ -625,6 +625,7 @@ export default function OrderClient({
 
     const lineUserId = profile?.userId ?? sessionLineUserId;
     const shouldResolveAgainFromMockLogin =
+      process.env.NODE_ENV !== "production" &&
       process.env.NEXT_PUBLIC_LIFF_MOCK === "true" &&
       currentView === "login" &&
       Boolean(lineUserId);

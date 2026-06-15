@@ -39,7 +39,7 @@ const ModalQuantityStepper = memo(function ModalQuantityStepper({
 
       <button
         onClick={onIncrease}
-        className="flex h-10 w-10 items-center justify-center rounded-lg bg-white text-[#AA00FF] shadow-sm transition-all active:scale-95 touch-manipulation hover:bg-white/90"
+        className="flex h-10 w-10 items-center justify-center rounded-lg bg-white text-[#EA80FC] shadow-sm transition-all active:scale-95 touch-manipulation hover:bg-white/90"
         aria-label="increase quantity"
       >
         <Plus className="h-4.5 w-4.5" strokeWidth={3} />
@@ -125,7 +125,7 @@ export const ModalAddToCartFooter = memo(function ModalAddToCartFooter({
     const endY = cartRect.top + cartRect.height / 2;
 
     const flyEl = document.createElement("div");
-    flyEl.className = "fixed z-[600] pointer-events-none rounded-full overflow-hidden border-2 border-[#AA00FF] shadow-lg bg-white";
+    flyEl.className = "fixed z-[600] pointer-events-none rounded-full overflow-hidden border-2 border-[#EA80FC] shadow-lg bg-white";
     flyEl.style.width = "48px";
     flyEl.style.height = "48px";
     flyEl.style.left = `${startX - 24}px`;
@@ -165,7 +165,7 @@ export const ModalAddToCartFooter = memo(function ModalAddToCartFooter({
   }, [isOrderOpen, modalCartBtnRef, modalStepperRef, onAddToCart, onCloseModal, pendingQty, primaryImageUrl, productId]);
 
   return (
-    <div className="z-30 border-t border-white/10 bg-[#8E24AA] px-4 pb-[max(0.6rem,env(safe-area-inset-bottom))] pt-2.5 shadow-[0_-10px_40px_rgba(0,0,0,0.3)]">
+    <div className="z-30 border-t border-white/10 bg-[#4A148C] px-4 pb-[max(0.6rem,env(safe-area-inset-bottom))] pt-2.5 shadow-[0_-10px_40px_rgba(0,0,0,0.3)]">
       <div className="mx-auto max-w-lg flex flex-row items-center gap-3">
         {/* Quantity Stepper Line */}
         <div ref={modalStepperRef} className="flex-shrink-0">
@@ -185,7 +185,7 @@ export const ModalAddToCartFooter = memo(function ModalAddToCartFooter({
             !isOrderOpen
               ? "bg-white/10 text-white/30 cursor-not-allowed"
               : pendingQty > 0
-                ? "bg-white text-[#AA00FF] shadow-[0_8px_20px_rgba(255,255,255,0.15)] hover:bg-white/95"
+                ? "bg-white text-[#EA80FC] shadow-[0_8px_20px_rgba(255,255,255,0.15)] hover:bg-white/95"
                 : "bg-white/10 text-white/40 cursor-not-allowed"
           }`}
         >

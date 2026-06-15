@@ -139,7 +139,7 @@ export function PrintDocHeader({
   return (
     <div style={headerStyle}>
       <div>
-        <p style={{ fontWeight: 800, fontSize: "13pt", color: hideOrgDetails ? "black" : "#8E24AA", lineHeight: 1.2 }}>
+        <p style={{ fontWeight: 800, fontSize: "13pt", color: hideOrgDetails ? "black" : "#4A148C", lineHeight: 1.2 }}>
           {orgName}
         </p>
         {!hideOrgDetails && orgAddress ? (
@@ -159,7 +159,7 @@ export function PrintDocHeader({
           pointerEvents: "none",
         }}
       >
-        <p style={{ fontSize: "16pt", fontWeight: 900, color: hideOrgDetails ? "black" : "#8E24AA", letterSpacing: "0.05em" }}>
+        <p style={{ fontSize: "16pt", fontWeight: 900, color: hideOrgDetails ? "black" : "#4A148C", letterSpacing: "0.05em" }}>
           {title}
         </p>
       </div>
@@ -356,14 +356,14 @@ export function PrintSignatureBlock({
       )}
       <div style={{ flex: 1, display: "flex", gap: "4mm" }}>
         <div style={{ flex: 1, textAlign: "center" }}>
-          <p style={{ fontSize: "8.8pt", fontWeight: 700, color: "#8E24AA", marginBottom: "6mm" }}>
+          <p style={{ fontSize: "8.8pt", fontWeight: 700, color: "#4A148C", marginBottom: "6mm" }}>
             {leftLabel}
           </p>
           <div style={signatureLineStyle} />
         </div>
         <div style={{ width: "1px", background: "#e2e8f0" }} />
         <div style={{ flex: 1, textAlign: "center" }}>
-          <p style={{ fontSize: "8.8pt", fontWeight: 700, color: "#8E24AA", marginBottom: "6mm" }}>
+          <p style={{ fontSize: "8.8pt", fontWeight: 700, color: "#4A148C", marginBottom: "6mm" }}>
             {rightLabel}
           </p>
           <div style={signatureLineStyle} />

@@ -130,8 +130,8 @@ function ModernToggle({
       aria-checked={checked}
       onClick={onChange}
       disabled={loading}
-      className={`relative inline-flex h-[52px] w-[104px] shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-4 focus:ring-[#8E24AA]/20 disabled:cursor-not-allowed disabled:opacity-70 ${
-        checked ? "bg-[#8E24AA]" : "bg-slate-300"
+      className={`relative inline-flex h-[52px] w-[104px] shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-4 focus:ring-[#4A148C]/20 disabled:cursor-not-allowed disabled:opacity-70 ${
+        checked ? "bg-[#4A148C]" : "bg-slate-300"
       }`}
     >
       <span className="sr-only">{label}</span>
@@ -143,10 +143,10 @@ function ModernToggle({
       >
         {loading ? (
           <Loader2
-            className={`h-5 w-5 animate-spin ${checked ? "text-[#8E24AA]" : "text-slate-400"}`}
+            className={`h-5 w-5 animate-spin ${checked ? "text-[#4A148C]" : "text-slate-400"}`}
           />
         ) : (
-          <span className={`text-base font-bold ${checked ? "text-[#8E24AA]" : "text-slate-500"}`}>
+          <span className={`text-base font-bold ${checked ? "text-[#4A148C]" : "text-slate-500"}`}>
             {checked ? "เปิด" : "ปิด"}
           </span>
         )}
@@ -172,7 +172,7 @@ function TimeSelector({
         <select
           value={h || "00"}
           onChange={(e) => onChange(`${e.target.value}:${m || "00"}`)}
-          className="block w-[88px] appearance-none rounded-[1rem] border-0 bg-slate-100 py-3 pl-5 pr-8 text-center text-xl font-bold text-[#8E24AA] shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)] focus:outline-none focus:ring-2 focus:ring-[#8E24AA]/30 sm:w-24 sm:pl-6 sm:text-2xl"
+          className="block w-[88px] appearance-none rounded-[1rem] border-0 bg-slate-100 py-3 pl-5 pr-8 text-center text-xl font-bold text-[#4A148C] shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)] focus:outline-none focus:ring-2 focus:ring-[#4A148C]/30 sm:w-24 sm:pl-6 sm:text-2xl"
         >
           {HOURS.map((hour) => (
             <option key={hour} value={hour}>
@@ -187,7 +187,7 @@ function TimeSelector({
         <select
           value={m || "00"}
           onChange={(e) => onChange(`${h || "00"}:${e.target.value}`)}
-          className="block w-[88px] appearance-none rounded-[1rem] border-0 bg-slate-100 py-3 pl-5 pr-8 text-center text-xl font-bold text-[#8E24AA] shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)] focus:outline-none focus:ring-2 focus:ring-[#8E24AA]/30 sm:w-24 sm:pl-6 sm:text-2xl"
+          className="block w-[88px] appearance-none rounded-[1rem] border-0 bg-slate-100 py-3 pl-5 pr-8 text-center text-xl font-bold text-[#4A148C] shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)] focus:outline-none focus:ring-2 focus:ring-[#4A148C]/30 sm:w-24 sm:pl-6 sm:text-2xl"
         >
           {MINUTES.map((minute) => (
             <option key={minute} value={minute}>
@@ -402,9 +402,9 @@ export function OrderWindowSettingsForm({
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-8">
       {/* การตั้งค่าเวลาเปิด-ปิดร้าน */}
       <section className="overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-md transition-shadow hover:shadow-lg">
-        <div className="border-b border-slate-100 bg-[#8E24AA]/[0.08] px-6 py-6 sm:px-8 sm:py-8">
+        <div className="border-b border-slate-100 bg-[#4A148C]/[0.08] px-6 py-6 sm:px-8 sm:py-8">
           <div className="flex items-center gap-4">
-            <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-[#8E24AA] text-white shadow-lg shadow-[#8E24AA]/20">
+            <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-[#4A148C] text-white shadow-lg shadow-[#4A148C]/20">
               <Clock className="h-8 w-8" strokeWidth={2} />
             </div>
             <div>
@@ -442,9 +442,9 @@ export function OrderWindowSettingsForm({
             </div>
           </div>
 
-          <div className="mb-10 flex flex-col items-center justify-between gap-6 rounded-2xl border border-[#8E24AA]/10 bg-[#8E24AA]/[0.10] p-6 lg:flex-row lg:p-8">
+          <div className="mb-10 flex flex-col items-center justify-between gap-6 rounded-2xl border border-[#4A148C]/10 bg-[#4A148C]/[0.10] p-6 lg:flex-row lg:p-8">
             <div className="flex items-start gap-4">
-              <div className="mt-1 flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-white text-[#8E24AA] shadow-sm">
+              <div className="mt-1 flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-white text-[#4A148C] shadow-sm">
                 <Settings2 className="h-6 w-6" strokeWidth={2} />
               </div>
               <div>
@@ -496,7 +496,7 @@ export function OrderWindowSettingsForm({
             <button
               type="submit"
               disabled={!hasChanges || isPending}
-              className="inline-flex items-center justify-center gap-3 rounded-2xl bg-[#8E24AA] px-10 py-4 text-lg font-bold text-white shadow-lg shadow-[#8E24AA]/20 transition hover:bg-[#8E24AA] disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500 disabled:shadow-none"
+              className="inline-flex items-center justify-center gap-3 rounded-2xl bg-[#4A148C] px-10 py-4 text-lg font-bold text-white shadow-lg shadow-[#4A148C]/20 transition hover:bg-[#4A148C] disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500 disabled:shadow-none"
             >
               {isPending ? <Loader2 className="h-6 w-6 animate-spin" strokeWidth={2} /> : null}
               {isPending ? "กำลังบันทึก..." : "บันทึกการตั้งค่าเวลา"}
@@ -507,7 +507,7 @@ export function OrderWindowSettingsForm({
 
       {/* การตั้งค่าระบบแจ้งเตือน */}
       <section className="overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-md transition-shadow hover:shadow-lg">
-        <div className="border-b border-slate-100 bg-[#8E24AA]/[0.08] px-6 py-6 sm:px-8 sm:py-8">
+        <div className="border-b border-slate-100 bg-[#4A148C]/[0.08] px-6 py-6 sm:px-8 sm:py-8">
           <div className="flex items-center gap-4">
             <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-amber-500 text-white shadow-lg shadow-amber-500/20">
               <Bell className="h-8 w-8" strokeWidth={2} />

@@ -17,19 +17,19 @@ export function OrderStatusBanner({
     return (
       <div
         className="flex items-center gap-3 border-b px-4 py-3"
-        style={{ background: "#F3E5F5", borderColor: "#EA80FC", borderLeft: "4px solid #AA00FF" }}
+        style={{ background: "#F3E5F5", borderColor: "#EA80FC", borderLeft: "4px solid #EA80FC" }}
       >
         <div
           className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl"
-          style={{ background: "#AA00FF" }}
+          style={{ background: "#EA80FC" }}
         >
           <Clock className="h-5 w-5 text-white" strokeWidth={2} />
         </div>
         <div className="min-w-0 flex-1">
-          <p className="text-base font-bold leading-snug" style={{ color: "#AA00FF" }}>
+          <p className="text-base font-bold leading-snug" style={{ color: "#EA80FC" }}>
             {allowOrderAfterCutoff ? "เปิดรับออเดอร์รอบพิเศษ" : "เปิดรับออเดอร์อยู่"}
           </p>
-          <p className="text-sm font-medium" style={{ color: "#AA00FF" }}>
+          <p className="text-sm font-medium" style={{ color: "#EA80FC" }}>
             {allowOrderAfterCutoff
               ? `เวลาปกติ ${openTime} - ${closeTime} น.`
               : `รับออเดอร์ถึง ${closeTime} น. วันนี้`}
@@ -39,13 +39,13 @@ export function OrderStatusBanner({
           className="flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-bold"
           style={{
             background: allowOrderAfterCutoff ? "#EA80FC" : "#dcfce7",
-            color: allowOrderAfterCutoff ? "#AA00FF" : "#15803d",
+            color: allowOrderAfterCutoff ? "#EA80FC" : "#15803d",
           }}
         >
           <span
-            className={`h-2.5 w-2.5 rounded-full ${allowOrderAfterCutoff ? "bg-[#AA00FF]" : "bg-emerald-500"}`}
+            className={`h-2.5 w-2.5 rounded-full ${allowOrderAfterCutoff ? "bg-[#EA80FC]" : "bg-emerald-500"}`}
             style={{
-              boxShadow: allowOrderAfterCutoff ? "0 0 6px #AA00FF" : "0 0 6px #22c55e",
+              boxShadow: allowOrderAfterCutoff ? "0 0 6px #EA80FC" : "0 0 6px #22c55e",
               willChange: "transform",
             }}
           />

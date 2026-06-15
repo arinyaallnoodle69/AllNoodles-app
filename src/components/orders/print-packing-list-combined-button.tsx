@@ -35,7 +35,7 @@ export function PrintPackingListCombinedButton({
       <button
         type="button"
         onClick={() => setIsOpen(true)}
-        className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border border-[#8E24AA]/20 bg-white px-3 py-1.5 text-[13px] font-bold text-[#8E24AA] shadow-sm transition hover:bg-[#8E24AA]/15 hover:shadow-md active:scale-[0.98] md:gap-2 md:px-6 md:py-2.5 md:text-sm"
+        className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border border-[#4A148C]/20 bg-white px-3 py-1.5 text-[13px] font-bold text-[#4A148C] shadow-sm transition hover:bg-[#4A148C]/15 hover:shadow-md active:scale-[0.98] md:gap-2 md:px-6 md:py-2.5 md:text-sm"
       >
         <LayoutList className="h-3.5 w-3.5 md:h-4.5 md:w-4.5" strokeWidth={2.5} />
         {label}
@@ -73,16 +73,16 @@ export function PrintPackingListCombinedButton({
                     type="button"
                     onClick={() => handlePrint("standard")}
                     disabled={loadingType !== null}
-                    className="flex w-full items-start gap-4 rounded-2xl border border-slate-100 bg-slate-50/50 p-4 text-left transition-all hover:bg-slate-50 hover:border-[#8E24AA]/20 active:scale-[0.99] disabled:opacity-50"
+                    className="flex w-full items-start gap-4 rounded-2xl border border-slate-100 bg-slate-50/50 p-4 text-left transition-all hover:bg-slate-50 hover:border-[#4A148C]/20 active:scale-[0.99] disabled:opacity-50"
                   >
-                    <div className="flex shrink-0 items-center justify-center rounded-xl bg-[#F3E5F5] p-3 text-[#8E24AA]">
+                    <div className="flex shrink-0 items-center justify-center rounded-xl bg-[#F3E5F5] p-3 text-[#4A148C]">
                       <FileText className="h-6 w-6" strokeWidth={2.2} />
                     </div>
                     <div className="flex-1">
                       <div className="flex items-center justify-between">
                         <span className="text-sm font-black text-slate-900">ตารางมาตรฐาน (ดั้งเดิม)</span>
                         {loadingType === "standard" && (
-                          <span className="text-[10px] bg-[#8E24AA] text-white px-2 py-0.5 rounded-md font-bold animate-pulse">กำลังเปิด...</span>
+                          <span className="text-[10px] bg-[#4A148C] text-white px-2 py-0.5 rounded-md font-bold animate-pulse">กำลังเปิด...</span>
                         )}
                       </div>
                       <p className="text-[11px] font-semibold text-slate-500 mt-0.5 leading-relaxed">
@@ -96,7 +96,7 @@ export function PrintPackingListCombinedButton({
                     type="button"
                     onClick={() => handlePrint("transposed")}
                     disabled={loadingType !== null}
-                    className="flex w-full items-start gap-4 rounded-2xl border border-slate-100 bg-slate-50/50 p-4 text-left transition-all hover:bg-slate-50 hover:border-[#8E24AA]/20 active:scale-[0.99] disabled:opacity-50"
+                    className="flex w-full items-start gap-4 rounded-2xl border border-slate-100 bg-slate-50/50 p-4 text-left transition-all hover:bg-slate-50 hover:border-[#4A148C]/20 active:scale-[0.99] disabled:opacity-50"
                   >
                     <div className="flex shrink-0 items-center justify-center rounded-xl bg-violet-50 p-3 text-violet-600">
                       <Layers className="h-6 w-6" strokeWidth={2.2} />

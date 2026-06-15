@@ -128,7 +128,7 @@ export function HistorySearchForm({
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="ระบุเลขใบวางบิล..."
-                className="h-12 w-full rounded-lg border border-slate-200 bg-slate-50/50 pl-10 pr-4 text-sm font-bold text-slate-900 outline-none focus:ring-2 focus:ring-[#8E24AA]/10 focus:border-[#8E24AA]/40"
+                className="h-12 w-full rounded-lg border border-slate-200 bg-slate-50/50 pl-10 pr-4 text-sm font-bold text-slate-900 outline-none focus:ring-2 focus:ring-[#4A148C]/10 focus:border-[#4A148C]/40"
               />
             </div>
           </div>
@@ -139,7 +139,7 @@ export function HistorySearchForm({
                 handleSearch();
                 closeSearchDrawer();
               }}
-              className="w-full h-14 rounded-xl bg-[#8E24AA] text-white font-black shadow-lg shadow-[#8E24AA]/20 active:scale-95 transition-transform"
+              className="w-full h-14 rounded-xl bg-[#4A148C] text-white font-black shadow-lg shadow-[#4A148C]/20 active:scale-95 transition-transform"
             >
               ค้นหาประวัติ
             </button>
@@ -177,7 +177,7 @@ export function HistorySearchForm({
             <button
               type="button"
               onClick={() => setIsCustomerDialogOpen(true)}
-              className="flex h-12 w-full items-center justify-between rounded-lg border border-slate-200 bg-white px-4 text-left transition-all hover:bg-slate-50 hover:border-[#8E24AA]"
+              className="flex h-12 w-full items-center justify-between rounded-lg border border-slate-200 bg-white px-4 text-left transition-all hover:bg-slate-50 hover:border-[#4A148C]"
             >
               <div className="flex items-center gap-2 overflow-hidden">
                 <User className="h-4 w-4 shrink-0 text-slate-400" />
@@ -202,7 +202,7 @@ export function HistorySearchForm({
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="เลขใบวางบิล..."
-              className="h-12 w-full border border-slate-200 bg-white pl-10 pr-4 text-sm font-bold text-slate-900 outline-none focus:ring-2 focus:ring-[#8E24AA]/10 focus:border-[#8E24AA]/40"
+              className="h-12 w-full border border-slate-200 bg-white pl-10 pr-4 text-sm font-bold text-slate-900 outline-none focus:ring-2 focus:ring-[#4A148C]/10 focus:border-[#4A148C]/40"
             />
           </div>
         </div>
@@ -213,7 +213,7 @@ export function HistorySearchForm({
         <button
           onClick={handleSearch}
           disabled={activePending}
-          className="flex h-14 w-full items-center justify-center gap-3 bg-[#8E24AA] px-10 text-base font-black text-white shadow-lg shadow-[#8E24AA]/20 transition-all hover:bg-[#8E24AA] disabled:opacity-50 active:scale-95 md:w-auto"
+          className="flex h-14 w-full items-center justify-center gap-3 bg-[#4A148C] px-10 text-base font-black text-white shadow-lg shadow-[#4A148C]/20 transition-all hover:bg-[#4A148C] disabled:opacity-50 active:scale-95 md:w-auto"
         >
           {activePending ? <Loader2 className="h-5 w-5 animate-spin" /> : <Search className="h-5 w-5" />}
           ค้นหาประวัติ
@@ -252,7 +252,7 @@ export function HistorySearchForm({
                   value={customerSearch}
                   onChange={(e) => setCustomerSearch(e.target.value)}
                   placeholder="ค้นหาชื่อร้านหรือรหัส..."
-                  className="w-full rounded-2xl border-none bg-slate-100 py-4 pl-12 pr-4 text-base font-bold text-slate-900 focus:ring-2 focus:ring-[#8E24AA]/20 outline-none"
+                  className="w-full rounded-2xl border-none bg-slate-100 py-4 pl-12 pr-4 text-base font-bold text-slate-900 focus:ring-2 focus:ring-[#4A148C]/20 outline-none"
                 />
               </div>
             </div>
@@ -264,7 +264,7 @@ export function HistorySearchForm({
                   const ids = filteredCustomers.map(c => c.id);
                   setSelectedIds(prev => Array.from(new Set([...prev, ...ids])));
                 }}
-                className="text-[11px] font-black uppercase tracking-widest text-[#8E24AA]"
+                className="text-[11px] font-black uppercase tracking-widest text-[#4A148C]"
               >
                 เลือกที่พบทั้งหมด
               </button>
@@ -291,12 +291,12 @@ export function HistorySearchForm({
                       key={c.id}
                       onClick={() => toggleCustomer(c.id)}
                       className={`flex w-full items-center gap-4 rounded-2xl px-4 py-4 text-left transition-colors active:bg-slate-100 ${
-                        isSelected ? "bg-[#8E24AA]/15" : ""
+                        isSelected ? "bg-[#4A148C]/15" : ""
                       }`}
                     >
                       <div className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-lg border-2 transition-all ${
                         isSelected
-                          ? "bg-[#8E24AA] border-[#8E24AA] text-white"
+                          ? "bg-[#4A148C] border-[#4A148C] text-white"
                           : "border-slate-200 bg-white"
                       }`}>
                         {isSelected ? <Check className="h-4 w-4" strokeWidth={4} /> : null}
@@ -315,7 +315,7 @@ export function HistorySearchForm({
             <div className="border-t border-slate-100 p-6">
               <button
                 onClick={() => setIsCustomerDialogOpen(false)}
-                className="w-full rounded-2xl bg-[#8E24AA] py-4 text-lg font-black text-white shadow-lg shadow-[#8E24AA]/20 active:scale-[0.98]"
+                className="w-full rounded-2xl bg-[#4A148C] py-4 text-lg font-black text-white shadow-lg shadow-[#4A148C]/20 active:scale-[0.98]"
               >
                 เสร็จสิ้น
               </button>

@@ -38,7 +38,7 @@ export function OrderBottomShell({
               <button
                 onClick={onCheckout}
                 disabled={isPending}
-                className="flex w-full items-center justify-center gap-2 rounded-[2rem] bg-[#AA00FF] py-4 text-lg font-extrabold text-white shadow-[0_8px_30px_rgba(170,0,255,0.22)] transition-all hover:bg-[#AA00FF]/90 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
+                className="flex w-full items-center justify-center gap-2 rounded-[2rem] bg-[#EA80FC] py-4 text-lg font-extrabold text-white shadow-[0_8px_30px_rgba(170,0,255,0.22)] transition-all hover:bg-[#EA80FC]/90 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {isPending ? (
                   <>
@@ -61,7 +61,7 @@ export function OrderBottomShell({
           <div className="mx-auto flex max-w-md items-center justify-between">
             <button
               onClick={onGoCatalog}
-              className={`flex flex-1 flex-col items-center gap-1.5 transition-colors ${currentView === "catalog" ? "text-[#AA00FF]" : "text-slate-400 hover:text-[#AA00FF]/70"}`}
+              className={`flex flex-1 flex-col items-center gap-1.5 transition-colors ${currentView === "catalog" ? "text-[#EA80FC]" : "text-slate-400 hover:text-[#EA80FC]/70"}`}
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
@@ -70,7 +70,7 @@ export function OrderBottomShell({
             </button>
             <button
               onClick={onGoCart}
-              className={`flex flex-1 flex-col items-center gap-1.5 transition-colors ${currentView === "cart" ? "text-[#AA00FF]" : "text-slate-400 hover:text-[#AA00FF]/70"}`}
+              className={`flex flex-1 flex-col items-center gap-1.5 transition-colors ${currentView === "cart" ? "text-[#EA80FC]" : "text-slate-400 hover:text-[#EA80FC]/70"}`}
             >
               <div className="relative">
                 <ShoppingCart className="h-6 w-6" />
@@ -82,7 +82,7 @@ export function OrderBottomShell({
             </button>
             <button
               onClick={onGoHistory}
-              className={`flex flex-1 flex-col items-center gap-1.5 transition-colors ${currentView === "history" || currentView === "edit_order" ? "text-[#AA00FF]" : "text-slate-400 hover:text-[#AA00FF]/70"}`}
+              className={`flex flex-1 flex-col items-center gap-1.5 transition-colors ${currentView === "history" || currentView === "edit_order" ? "text-[#EA80FC]" : "text-slate-400 hover:text-[#EA80FC]/70"}`}
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -91,7 +91,7 @@ export function OrderBottomShell({
             </button>
             <button
               onClick={onGoProfile}
-              className={`flex flex-1 flex-col items-center gap-1.5 transition-colors ${currentView === "profile" ? "text-[#AA00FF]" : "text-slate-400 hover:text-[#AA00FF]/70"}`}
+              className={`flex flex-1 flex-col items-center gap-1.5 transition-colors ${currentView === "profile" ? "text-[#EA80FC]" : "text-slate-400 hover:text-[#EA80FC]/70"}`}
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />

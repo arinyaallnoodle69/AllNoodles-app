@@ -51,14 +51,14 @@ function LoginShell({
   return (
     <main className="relative flex min-h-[100dvh] w-full items-center justify-center overflow-x-hidden bg-white px-4 py-3 select-none">
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute left-1/2 top-[-18rem] h-[34rem] w-[34rem] -translate-x-1/2 rounded-full bg-[#8E24AA]/[0.07] blur-3xl" />
-        <div className="absolute bottom-[-16rem] right-[-10rem] h-[30rem] w-[30rem] rounded-full bg-[#AA00FF]/[0.14] blur-3xl" />
-        <div className="absolute left-[-12rem] top-1/3 h-[26rem] w-[26rem] rounded-full bg-[#8E24AA]/[0.05] blur-3xl" />
+        <div className="absolute left-1/2 top-[-18rem] h-[34rem] w-[34rem] -translate-x-1/2 rounded-full bg-[#4A148C]/[0.07] blur-3xl" />
+        <div className="absolute bottom-[-16rem] right-[-10rem] h-[30rem] w-[30rem] rounded-full bg-[#EA80FC]/[0.14] blur-3xl" />
+        <div className="absolute left-[-12rem] top-1/3 h-[26rem] w-[26rem] rounded-full bg-[#4A148C]/[0.05] blur-3xl" />
       </div>
 
-      <section className="relative w-full max-w-[22rem] overflow-hidden rounded-[2rem] border border-[#AA00FF]/35 bg-white px-5 pb-5 pt-5 shadow-[0_30px_90px_rgba(0,29,63,0.18)] ring-1 ring-white sm:max-w-[23rem]">
-        <div className="pointer-events-none absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-[#AA00FF] to-transparent" />
-        <div className="pointer-events-none absolute -right-20 -top-24 h-44 w-44 rounded-full bg-[#AA00FF]/10 blur-2xl" />
+      <section className="relative w-full max-w-[22rem] overflow-hidden rounded-[2rem] border border-[#EA80FC]/35 bg-white px-5 pb-5 pt-5 shadow-[0_30px_90px_rgba(0,29,63,0.18)] ring-1 ring-white sm:max-w-[23rem]">
+        <div className="pointer-events-none absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-[#EA80FC] to-transparent" />
+        <div className="pointer-events-none absolute -right-20 -top-24 h-44 w-44 rounded-full bg-[#EA80FC]/10 blur-2xl" />
         <div className="relative mx-auto w-full">
           <div className="mb-3 flex justify-center">
             <Image
@@ -72,7 +72,7 @@ function LoginShell({
           </div>
 
           <div className="mb-3 text-center">
-            <h1 className="text-[1.65rem] font-black tracking-tight text-[#8E24AA]">
+            <h1 className="text-[1.65rem] font-black tracking-tight text-[#4A148C]">
               เข้าสู่ระบบ
             </h1>
             <p className="mt-1 text-sm font-semibold text-[#667085]">

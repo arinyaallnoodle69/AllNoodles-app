@@ -107,7 +107,7 @@ export function CustomerPricePanel({
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="ค้นหาร้านค้า หรือ ชื่อสินค้า, SKU..."
-          className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-9 pr-4 text-sm text-slate-900 outline-none transition focus:border-transparent focus:ring-2 focus:ring-[#8E24AA] placeholder:text-slate-400"
+          className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-9 pr-4 text-sm text-slate-900 outline-none transition focus:border-transparent focus:ring-2 focus:ring-[#4A148C] placeholder:text-slate-400"
         />
       </div>
 
@@ -204,15 +204,15 @@ function CustomerGroup({
           onKeyDown={(e) => e.key === "Enter" && onOpenSheet()}
           className="flex min-w-0 flex-1 cursor-pointer select-none items-center gap-2.5 active:opacity-70 sm:hidden"
         >
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#8E24AA]/20">
-            <Store className="h-4 w-4 text-[#8E24AA]" strokeWidth={2.2} />
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#4A148C]/20">
+            <Store className="h-4 w-4 text-[#4A148C]" strokeWidth={2.2} />
           </span>
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-semibold text-slate-900">{group.customerName}</p>
             <p className="text-xs text-slate-400">
               {group.customerCode}
               {" · "}
-              <span className={hasPrices ? "font-semibold text-[#8E24AA]" : ""}>
+              <span className={hasPrices ? "font-semibold text-[#4A148C]" : ""}>
                 {group.prices.length} รายการ
               </span>
             </p>
@@ -227,7 +227,7 @@ function CustomerGroup({
           aria-expanded={isExpanded}
           className="hidden min-w-0 flex-1 items-center gap-3 text-left transition hover:opacity-80 sm:flex"
         >
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#AA00FF]/30 text-[#8E24AA]">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#EA80FC]/30 text-[#4A148C]">
             <Store className="h-4 w-4" strokeWidth={2.2} />
           </span>
           <div className="min-w-0 flex-1">
@@ -236,7 +236,7 @@ function CustomerGroup({
           </div>
           <span
             className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold tabular-nums ${
-              hasPrices ? "bg-[#AA00FF]/30 text-[#8E24AA]" : "bg-slate-100 text-slate-400"
+              hasPrices ? "bg-[#EA80FC]/30 text-[#4A148C]" : "bg-slate-100 text-slate-400"
             }`}
           >
             {group.prices.length} รายการ
@@ -252,7 +252,7 @@ function CustomerGroup({
         <button
           type="button"
           onClick={onOpenSheetWithAdd}
-          className="shrink-0 rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs font-medium text-slate-600 transition hover:border-[#8E24AA]/30 hover:bg-[#8E24AA]/15 hover:text-[#8E24AA] sm:hidden"
+          className="shrink-0 rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs font-medium text-slate-600 transition hover:border-[#4A148C]/30 hover:bg-[#4A148C]/15 hover:text-[#4A148C] sm:hidden"
         >
           <span className="flex items-center gap-1">
             <Plus className="h-3 w-3" strokeWidth={2.5} />
@@ -264,7 +264,7 @@ function CustomerGroup({
         <button
           type="button"
           onClick={onStartAdd}
-          className="hidden shrink-0 rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs font-medium text-slate-600 transition hover:border-[#8E24AA]/30 hover:bg-[#8E24AA]/15 hover:text-[#8E24AA] sm:inline-flex"
+          className="hidden shrink-0 rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs font-medium text-slate-600 transition hover:border-[#4A148C]/30 hover:bg-[#4A148C]/15 hover:text-[#4A148C] sm:inline-flex"
         >
           <span className="flex items-center gap-1">
             <Plus className="h-3 w-3" strokeWidth={2.5} />
@@ -282,7 +282,7 @@ function CustomerGroup({
               <button
                 type="button"
                 onClick={onStartAdd}
-                className="font-medium text-[#8E24AA] hover:underline"
+                className="font-medium text-[#4A148C] hover:underline"
               >
                 เพิ่มเลย
               </button>
@@ -418,7 +418,7 @@ function MobileSheet({ groups, initialCustomerId, saleUnits, startAdding, onClos
         className="fixed inset-0 z-[100] flex flex-col bg-slate-50"
       >
         {/* ── Header ─────────────────────────────────────────── */}
-        <div className="shrink-0 bg-[#8E24AA] shadow-md">
+        <div className="shrink-0 bg-[#4A148C] shadow-md">
           {/* Row 1: store name + close */}
           <div className="flex items-center gap-3 px-4 pb-2 pt-[max(1rem,env(safe-area-inset-top))]">
             <div className="min-w-0 flex-1">
@@ -504,7 +504,7 @@ function MobileSheet({ groups, initialCustomerId, saleUnits, startAdding, onClos
             type="button"
             onClick={() => setIsAddingPrice(true)}
             disabled={availableSaleUnits.length === 0}
-            className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[#8E24AA] py-3.5 text-sm font-semibold text-white shadow-[0_8px_24px_rgba(4,53,106,0.25)] transition hover:bg-[#8E24AA] disabled:cursor-not-allowed disabled:opacity-50"
+            className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[#4A148C] py-3.5 text-sm font-semibold text-white shadow-[0_8px_24px_rgba(4,53,106,0.25)] transition hover:bg-[#4A148C] disabled:cursor-not-allowed disabled:opacity-50"
           >
             <Plus className="h-4 w-4" strokeWidth={2.5} />
             {availableSaleUnits.length === 0
@@ -605,8 +605,8 @@ function PriceRowDesktop({ price }: { price: SettingsPriceRow }) {
                   required
                   value={editPrice}
                   onChange={(e) => setEditPrice(e.target.value)}
-                  className={`w-full rounded-lg border bg-white py-1.5 pl-6 pr-2 text-sm font-bold text-slate-900 outline-none focus:ring-2 focus:ring-[#8E24AA]/30 ${
-                    isBelowCost ? "border-amber-300 bg-amber-50" : "border-[#8E24AA]"
+                  className={`w-full rounded-lg border bg-white py-1.5 pl-6 pr-2 text-sm font-bold text-slate-900 outline-none focus:ring-2 focus:ring-[#4A148C]/30 ${
+                    isBelowCost ? "border-amber-300 bg-amber-50" : "border-[#4A148C]"
                   }`}
                   autoFocus
                 />
@@ -624,7 +624,7 @@ function PriceRowDesktop({ price }: { price: SettingsPriceRow }) {
                 type="submit"
                 disabled={isPending}
                 aria-label="บันทึก"
-                className="rounded-lg bg-[#8E24AA] p-1.5 text-white transition disabled:opacity-60"
+                className="rounded-lg bg-[#4A148C] p-1.5 text-white transition disabled:opacity-60"
               >
                 <Check className="h-3.5 w-3.5" strokeWidth={2.5} />
               </button>
@@ -699,7 +699,7 @@ function PriceRowDesktop({ price }: { price: SettingsPriceRow }) {
                 setIsEditing(true);
               }}
               aria-label="แก้ไข"
-              className="rounded-lg p-1.5 text-slate-300 transition hover:bg-[#F3E5F5] hover:text-[#8E24AA] group-hover:text-slate-400"
+              className="rounded-lg p-1.5 text-slate-300 transition hover:bg-[#F3E5F5] hover:text-[#4A148C] group-hover:text-slate-400"
             >
               <Pencil className="h-3.5 w-3.5" strokeWidth={2} />
             </button>
@@ -765,7 +765,7 @@ function PriceRowMobile({ price }: { price: SettingsPriceRow }) {
   // ── Edit mode ──────────────────────────────────────
   if (isEditing) {
     return (
-      <div className="border-b border-slate-100 bg-[#8E24AA]/[0.10] px-4 py-4">
+      <div className="border-b border-slate-100 bg-[#4A148C]/[0.10] px-4 py-4">
         {/* Product info */}
         <div className="mb-4 flex items-start gap-3">
           <div className="relative flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden bg-white">
@@ -801,8 +801,8 @@ function PriceRowMobile({ price }: { price: SettingsPriceRow }) {
                 required
                 value={editPrice}
                 onChange={(e) => setEditPrice(e.target.value)}
-                className={`w-full rounded-xl border py-4 pl-9 pr-4 text-xl font-bold text-slate-900 outline-none focus:ring-2 focus:ring-[#8E24AA]/30 ${
-                  isBelowCost ? "border-amber-300 bg-amber-50" : "border-[#8E24AA] bg-white"
+                className={`w-full rounded-xl border py-4 pl-9 pr-4 text-xl font-bold text-slate-900 outline-none focus:ring-2 focus:ring-[#4A148C]/30 ${
+                  isBelowCost ? "border-amber-300 bg-amber-50" : "border-[#4A148C] bg-white"
                 }`}
                 autoFocus
               />
@@ -822,7 +822,7 @@ function PriceRowMobile({ price }: { price: SettingsPriceRow }) {
             <button
               type="submit"
               disabled={isPending}
-              className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-[#8E24AA] py-3.5 text-base font-semibold text-white shadow-sm transition disabled:opacity-60"
+              className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-[#4A148C] py-3.5 text-base font-semibold text-white shadow-sm transition disabled:opacity-60"
             >
               <Check className="h-5 w-5" strokeWidth={2.5} />
               {isPending ? "กำลังบันทึก..." : "บันทึก"}

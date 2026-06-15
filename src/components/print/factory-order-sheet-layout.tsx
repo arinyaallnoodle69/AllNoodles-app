@@ -236,7 +236,7 @@ function FactoryOrderStyles() {
         font-weight: 800;
         line-height: 1.25;
         letter-spacing: 0.04em;
-        color: #8E24AA;
+        color: #4A148C;
       }
 
       .vehicle-summary-header__line {

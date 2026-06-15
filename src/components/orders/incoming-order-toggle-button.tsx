@@ -36,7 +36,7 @@ export function IncomingOrderToggleButton({
       aria-label={expanded ? "ซ่อนรายละเอียดออเดอร์" : "แสดงรายละเอียดออเดอร์"}
       title={expanded ? "ซ่อนรายละเอียดออเดอร์" : "แสดงรายละเอียดออเดอร์"}
       className={[
-        "inline-flex items-center justify-center border border-slate-200 bg-white text-slate-900 shadow-sm transition hover:border-[#8E24AA]/30 hover:bg-slate-50 hover:text-[#8E24AA] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#8E24AA]/20 disabled:opacity-85",
+        "inline-flex items-center justify-center border border-slate-200 bg-white text-slate-900 shadow-sm transition hover:border-[#4A148C]/30 hover:bg-slate-50 hover:text-[#4A148C] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4A148C]/20 disabled:opacity-85",
         iconOnly ? "size-10 shrink-0 rounded-full p-0 leading-none" : "min-h-9 w-full gap-2 rounded-lg px-3 py-2 text-xs font-semibold",
       ].join(" ")}
     >

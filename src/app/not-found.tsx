@@ -15,7 +15,7 @@ export default function NotFound() {
         </p>
         <Link
           href="/dashboard"
-          className="mt-6 inline-flex rounded-2xl bg-[#8E24AA] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#8E24AA]"
+          className="mt-6 inline-flex rounded-2xl bg-[#4A148C] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#4A148C]"
         >
           กลับหน้าแดชบอร์ด
         </Link>

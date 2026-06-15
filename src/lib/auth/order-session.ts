@@ -6,6 +6,7 @@ import { getSessionSecret } from "@/lib/supabase/env";
 
 export const ORDER_CUSTOMER_SESSION_COOKIE = "allnoodles_order_session";
 const ORDER_CUSTOMER_SESSION_TTL_MS = 1000 * 60 * 60 * 24 * 30; // 30 days
+const MOCK_LINE_USER_ID_PREFIX = "U-MOCK-USER";
 
 export type OrderCustomerSessionPayload = {
   customerId: string | null;
@@ -75,6 +76,13 @@ export function readOrderCustomerSessionValue(value: string | undefined) {
     return null;
   }
 
+  if (
+    process.env.NODE_ENV === "production" &&
+    payload.lineUserId.startsWith(MOCK_LINE_USER_ID_PREFIX)
+  ) {
+    return null;
+  }
+
   if (Date.parse(payload.expiresAt) <= Date.now()) {
     return null;
   }
@@ -88,4 +96,3 @@ export async function getOrderCustomerSession() {
     cookieStore.get(ORDER_CUSTOMER_SESSION_COOKIE)?.value,
   );
 }
-

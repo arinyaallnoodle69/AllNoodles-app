@@ -28,7 +28,7 @@ export function CustomerSettingsTabs({ current }: CustomerSettingsTabsProps) {
             href={tab.href}
             className={`flex-1 rounded-[1rem] px-4 py-2.5 text-center text-sm font-medium transition ${
               isActive
-                ? "bg-[#8E24AA] text-white shadow-[0_10px_24px_rgba(142, 36, 170,0.24)]"
+                ? "bg-[#4A148C] text-white shadow-[0_10px_24px_rgba(142, 36, 170,0.24)]"
                 : "text-slate-600 hover:bg-slate-50 hover:text-slate-950"
             }`}
           >

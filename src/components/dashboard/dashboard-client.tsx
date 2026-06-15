@@ -90,8 +90,8 @@ function DashboardStatCard({
 }) {
   const tone = {
     blue: {
-      value: "text-[#8E24AA]",
-      badge: "bg-[#EA80FC] text-[#8E24AA]",
+      value: "text-[#4A148C]",
+      badge: "bg-[#EA80FC] text-[#4A148C]",
       ghost: "text-[#eadfbe]",
     },
     green: {
@@ -131,7 +131,7 @@ function DashboardStatCard({
         >
           {icon}
         </div>
-        <span className="min-w-0 whitespace-nowrap text-[12.5px] font-bold leading-none text-[#8E24AA] sm:text-[13px] md:text-base">
+        <span className="min-w-0 whitespace-nowrap text-[12.5px] font-bold leading-none text-[#4A148C] sm:text-[13px] md:text-base">
           {title}
         </span>
       </div>
@@ -330,7 +330,7 @@ export function DashboardClient({
                 />
               </div>
               <div>
-                <h1 className="text-4xl font-black leading-none tracking-tight text-[#8E24AA] sm:text-6xl bg-gradient-to-r from-[#8E24AA] via-[#AA00FF] to-[#EA80FC] bg-clip-text text-transparent">
+                <h1 className="text-4xl font-black leading-none tracking-tight text-[#4A148C] sm:text-6xl bg-gradient-to-r from-[#4A148C] via-[#EA80FC] to-[#EA80FC] bg-clip-text text-transparent">
                   All Noodles
                 </h1>
                 <p className="mt-2 text-[14px] font-bold text-slate-500 md:text-base flex items-center">
@@ -413,7 +413,7 @@ export function DashboardClient({
           <div className="order-1 grid grid-cols-2 gap-4 xl:order-2 xl:col-span-4 xl:grid-cols-1">
             <button
               onClick={() => openCreateOrder()}
-              className="flex min-h-[4.25rem] flex-row items-center justify-center gap-3 rounded-[1rem] bg-[#AA00FF] px-4 py-4 text-white shadow-[0_10px_24px_rgba(170,0,255,0.22)] transition-transform active:scale-95"
+              className="flex min-h-[4.25rem] flex-row items-center justify-center gap-3 rounded-[1rem] bg-[#4A148C] px-4 py-4 text-white shadow-[0_10px_24px_rgba(74,20,140,0.32)] transition-transform active:scale-95"
             >
               <Phone className="h-5 w-5 shrink-0 rotate-90" fill="white" strokeWidth={0} />
               <span className="whitespace-nowrap text-base font-extrabold md:text-lg">
@@ -423,7 +423,7 @@ export function DashboardClient({
 
             <button
               onClick={() => setIsStockModalOpen(true)}
-              className="flex min-h-[4.25rem] flex-row items-center justify-center gap-3 rounded-[1rem] border border-[#AA00FF]/30 bg-[#EA80FC] px-4 py-4 text-[#8E24AA] shadow-[0_10px_24px_rgba(234,128,252,0.16)] transition-transform active:scale-95"
+              className="flex min-h-[4.25rem] flex-row items-center justify-center gap-3 rounded-[1rem] border border-[#EA80FC]/30 bg-[#EA80FC] px-4 py-4 text-[#4A148C] shadow-[0_10px_24px_rgba(234,128,252,0.22)] transition-transform active:scale-95"
             >
               <Truck className="h-5 w-5 shrink-0" strokeWidth={2.2} />
               <span className="whitespace-nowrap text-base font-extrabold md:text-lg">
@@ -441,9 +441,9 @@ export function DashboardClient({
                   stores: storeStatusSummary.allStores,
                 });
               }}
-              className="group flex w-full items-center gap-5 rounded-[1.35rem] border border-slate-200 bg-white p-5 text-left shadow-sm transition-all hover:border-[#8E24AA]/30 hover:shadow-md active:scale-[0.99] md:p-7"
+              className="group flex w-full items-center gap-5 rounded-[1.35rem] border border-slate-200 bg-white p-5 text-left shadow-sm transition-all hover:border-[#4A148C]/30 hover:shadow-md active:scale-[0.99] md:p-7"
             >
-              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-3xl bg-[#EA80FC] text-[#8E24AA] transition-colors group-hover:bg-[#AA00FF] group-hover:text-[#8E24AA] md:h-20 md:w-20">
+              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-3xl bg-[#EA80FC] text-[#4A148C] transition-colors group-hover:bg-[#EA80FC] group-hover:text-[#4A148C] md:h-20 md:w-20">
                 <Store className="h-7 w-7 md:h-10 md:w-10" strokeWidth={2} />
               </div>
               <div className="min-w-0 flex-1">
@@ -458,7 +458,7 @@ export function DashboardClient({
                 </div>
               </div>
               <ChevronRight
-                className="h-8 w-8 text-slate-200 transition-colors group-hover:text-[#8E24AA]"
+                className="h-8 w-8 text-slate-200 transition-colors group-hover:text-[#4A148C]"
                 strokeWidth={3}
               />
             </button>
@@ -665,7 +665,7 @@ export function DashboardClient({
             </div>
             <div className="mb-8 flex items-center justify-between px-8">
               <div>
-                <h3 className="text-2xl font-black tracking-tight text-[#8E24AA]">
+                <h3 className="text-2xl font-black tracking-tight text-[#4A148C]">
                   {viewingStores?.title}
                 </h3>
                 <p className="mt-1 text-xs font-bold uppercase tracking-widest text-slate-400">
@@ -692,7 +692,7 @@ export function DashboardClient({
                 <div className="relative">
                   {isNavigating ? (
                     <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/60 backdrop-blur-[1px]">
-                      <Loader2 className="h-10 w-10 animate-spin text-[#8E24AA]" strokeWidth={3} />
+                      <Loader2 className="h-10 w-10 animate-spin text-[#4A148C]" strokeWidth={3} />
                     </div>
                   ) : null}
                   {viewingStores.stores.map((store) => {
@@ -717,7 +717,7 @@ export function DashboardClient({
                         className="group flex w-full items-center gap-5 border-b border-slate-100 bg-white px-6 py-6 text-left transition-colors hover:bg-slate-50 disabled:opacity-50"
                         disabled={isNavigating}
                       >
-                        <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-slate-50 text-[#8E24AA] shadow-sm transition-all group-hover:bg-[#8E24AA] group-hover:text-white">
+                        <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-slate-50 text-[#4A148C] shadow-sm transition-all group-hover:bg-[#4A148C] group-hover:text-white">
                           <Store className="h-7 w-7" />
                         </div>
                         <div className="min-w-0 flex-1">
@@ -740,7 +740,7 @@ export function DashboardClient({
                           </div>
                         </div>
                         <ChevronRight
-                          className="h-6 w-6 text-slate-200 transition-all group-hover:translate-x-1 group-hover:text-[#8E24AA]"
+                          className="h-6 w-6 text-slate-200 transition-all group-hover:translate-x-1 group-hover:text-[#4A148C]"
                           strokeWidth={3}
                         />
                       </button>
@@ -857,7 +857,7 @@ export function DashboardClient({
                               {order.orderNumber ? (
                                 <>
                                   <span className="text-slate-300">•</span>
-                                  <span className="text-[#8E24AA]">{order.orderNumber}</span>
+                                  <span className="text-[#4A148C]">{order.orderNumber}</span>
                                 </>
                               ) : null}
                             </div>

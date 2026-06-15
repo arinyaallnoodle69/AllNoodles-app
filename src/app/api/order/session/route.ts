@@ -12,6 +12,15 @@ import { getLinkedCustomerByLineUserId } from "@/lib/orders/line-pending";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
 const SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 30; // 30 days
+const MOCK_LINE_USER_ID_PREFIX = "U-MOCK-USER";
+
+function isMockLineUserId(lineUserId: string) {
+  return lineUserId.startsWith(MOCK_LINE_USER_ID_PREFIX);
+}
+
+function canUseMockLineUser() {
+  return process.env.NODE_ENV !== "production" && process.env.NEXT_PUBLIC_LIFF_MOCK === "true";
+}
 
 function setOrderSessionCookie(response: NextResponse, payload: OrderCustomerSessionPayload) {
   response.cookies.set({
@@ -123,7 +132,11 @@ async function findActiveCustomerByLineUserIdForOrganization(
   organizationId: string | null,
   lineUserId: string,
 ) {
-  if (lineUserId.startsWith("U-MOCK-USER")) {
+  if (isMockLineUserId(lineUserId)) {
+    if (!canUseMockLineUser()) {
+      return null;
+    }
+
     const supabase = getSupabaseAdmin();
     const { data: mockCustomer } = await supabase
       .from("customers")
@@ -232,7 +245,11 @@ export async function POST(request: NextRequest) {
   }
 
   let verified;
-  if (lineUserId.startsWith("U-MOCK-USER")) {
+  if (isMockLineUserId(lineUserId)) {
+    if (!canUseMockLineUser()) {
+      return NextResponse.json({ error: "Mock LINE user is disabled." }, { status: 403 });
+    }
+
     verified = {
       lineUserId,
       displayName: body?.displayName?.trim() ?? "Mock User (Tester)",

@@ -125,7 +125,7 @@ export function ProductPriceSelectorModal({
               placeholder="ค้นหาสินค้า หรือ SKU..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3 pl-10 pr-4 text-sm outline-none transition-all focus:border-transparent focus:ring-2 focus:ring-[#8E24AA]"
+              className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3 pl-10 pr-4 text-sm outline-none transition-all focus:border-transparent focus:ring-2 focus:ring-[#4A148C]"
             />
           </div>
         </div>
@@ -150,7 +150,7 @@ export function ProductPriceSelectorModal({
                     key={unit.id}
                     className={`flex flex-col overflow-hidden rounded-2xl border-2 transition-all duration-300 ${
                       isSelected
-                        ? "border-[#8E24AA] bg-white shadow-lg ring-4 ring-[#8E24AA]/5"
+                        ? "border-[#4A148C] bg-white shadow-lg ring-4 ring-[#4A148C]/5"
                         : "border-white bg-white shadow-sm hover:border-slate-200"
                     }`}
                   >
@@ -175,7 +175,7 @@ export function ProductPriceSelectorModal({
                       </div>
 
                       <div className="min-w-0 flex-1">
-                        <p className="mb-0.5 font-mono text-[10px] font-extrabold tracking-wider text-[#8E24AA]/60">
+                        <p className="mb-0.5 font-mono text-[10px] font-extrabold tracking-wider text-[#4A148C]/60">
                           {unit.sku}
                         </p>
                         <p className="text-sm font-bold leading-tight text-slate-900">
@@ -189,7 +189,7 @@ export function ProductPriceSelectorModal({
                       <div
                         className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 transition-all duration-300 ${
                           isSelected
-                            ? "border-[#8E24AA] bg-[#8E24AA] text-white rotate-0"
+                            ? "border-[#4A148C] bg-[#4A148C] text-white rotate-0"
                             : "border-slate-200 bg-white rotate-[-90deg]"
                         }`}
                       >
@@ -219,10 +219,10 @@ export function ProductPriceSelectorModal({
                               onChange={(e) => updatePrice(unit.id, e.target.value)}
                               onClick={(e) => e.stopPropagation()}
                               placeholder="0.00"
-                              className={`w-full rounded-xl border py-3 pl-9 pr-4 text-lg font-bold outline-none transition-all focus:ring-4 focus:ring-[#8E24AA]/10 ${
+                              className={`w-full rounded-xl border py-3 pl-9 pr-4 text-lg font-bold outline-none transition-all focus:ring-4 focus:ring-[#4A148C]/10 ${
                                 isBelowCost
                                   ? "border-amber-300 bg-amber-50 text-amber-700"
-                                  : "border-slate-200 bg-slate-50 text-slate-900 focus:border-[#8E24AA] focus:bg-white"
+                                  : "border-slate-200 bg-slate-50 text-slate-900 focus:border-[#4A148C] focus:bg-white"
                               }`}
                             />
                           </div>
@@ -259,7 +259,7 @@ export function ProductPriceSelectorModal({
             <button
               onClick={handleSave}
               disabled={isPending || selections.size === 0}
-              className="flex-[2] rounded-2xl bg-[#8E24AA] py-4 text-sm font-bold text-white shadow-xl shadow-[#8E24AA]/20 transition enabled:hover:bg-[#8E24AA] enabled:active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
+              className="flex-[2] rounded-2xl bg-[#4A148C] py-4 text-sm font-bold text-white shadow-xl shadow-[#4A148C]/20 transition enabled:hover:bg-[#4A148C] enabled:active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
             >
               {isPending ? "กำลังบันทึก..." : `บันทึก ${selections.size} รายการ`}
             </button>

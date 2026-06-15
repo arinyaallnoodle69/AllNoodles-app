@@ -10,32 +10,32 @@
   --accent-50: #F3E5F5;
   --accent-100: #E1BEE7;
   --accent-200: #CE93D8;
-  --accent-300: #BA68C8;
-  --accent-400: #AB47BC;
-  --accent-500: #8E24AA;
-  --accent-600: #8E24AA;
-  --accent-700: #8E24AA;
-  --secondary-500: #AA00FF;
-  --secondary-700: #8E24AA;
+  --accent-300: #EA80FC;
+  --accent-400: #BA68C8;
+  --accent-500: #7B1FA2;
+  --accent-600: #6A1B9A;
+  --accent-700: #4A148C;
+  --secondary-500: #EA80FC;
+  --secondary-700: #4A148C;
   --stone-650: #7B7585;
   --background: #F3E5F5;
-  --foreground: #8E24AA;
+  --foreground: #4A148C;
   --card: #ffffff;
-  --card-foreground: #8E24AA;
+  --card-foreground: #4A148C;
   --popover: #ffffff;
-  --popover-foreground: #8E24AA;
-  --primary: #8E24AA;
+  --popover-foreground: #4A148C;
+  --primary: #4A148C;
   --primary-foreground: #ffffff;
   --secondary: #EA80FC;
-  --secondary-foreground: #8E24AA;
+  --secondary-foreground: #4A148C;
   --muted: #F3E5F5;
   --muted-foreground: #7B7585;
   --accent: #E1BEE7;
-  --accent-foreground: #8E24AA;
+  --accent-foreground: #4A148C;
   --destructive: oklch(0.577 0.245 27.325);
   --border: #E1BEE7;
   --input: #E1BEE7;
-  --ring: #AA00FF;
+  --ring: #EA80FC;
   --chart-1: oklch(0.87 0 0);
   --chart-2: oklch(0.556 0 0);
   --chart-3: oklch(0.439 0 0);
@@ -43,13 +43,13 @@
   --chart-5: oklch(0.269 0 0);
   --radius: 0.625rem;
   --sidebar: #ffffff;
-  --sidebar-foreground: #8E24AA;
-  --sidebar-primary: #8E24AA;
+  --sidebar-foreground: #4A148C;
+  --sidebar-primary: #4A148C;
   --sidebar-primary-foreground: #ffffff;
   --sidebar-accent: #F3E5F5;
-  --sidebar-accent-foreground: #8E24AA;
+  --sidebar-accent-foreground: #4A148C;
   --sidebar-border: #E1BEE7;
-  --sidebar-ring: #AA00FF;
+  --sidebar-ring: #EA80FC;
 }
 
 @theme inline {
@@ -176,7 +176,7 @@
   }
 
   ::selection {
-  background: rgba(170, 0, 255, 0.28);
+  background: rgba(234, 128, 252, 0.28);
   }
 
   .font-apple-ui {
@@ -383,20 +383,20 @@
     border-color: #000000 !important;
   }
 
-  /* Force elements that had text-[#8E24AA] or text-purple-like inline colors to black */
-  .text-\[\#8E24AA\],
+  /* Force elements that had text-[#4A148C] or text-purple-like inline colors to black */
+  .text-\[\#4A148C\],
   .text-purple-600,
   .text-purple-700,
   .text-violet-700,
-  [class*="text-[#8e24aa]"],
-  [class*="text-[#8E24AA]"] {
+  [class*="text-[#4A148C]"],
+  [class*="text-[#4A148C]"] {
     color: #000000 !important;
   }
 
-  /* Force backgrounds like bg-[#8E24AA] to black on paper */
-  .bg-\[\#8E24AA\],
-  [class*="bg-[#8e24aa]"],
-  [class*="bg-[#8E24AA]"] {
+  /* Force backgrounds like bg-[#4A148C] to black on paper */
+  .bg-\[\#4A148C\],
+  [class*="bg-[#4A148C]"],
+  [class*="bg-[#4A148C]"] {
     background-color: #000000 !important;
     color: #ffffff !important;
   }
@@ -411,14 +411,14 @@
   }
 
   /* Force borders and divide borders to subtle dark gray instead of purple */
-  .divide-\[\#8E24AA\]\/25,
-  .divide-\[\#8E24AA\]\/16,
-  .border-\[\#8E24AA\]\/12,
-  .border-l-\[\#8E24AA\]\/10,
-  [class*="divide-[#8e24aa]"],
-  [class*="divide-[#8E24AA]"],
-  [class*="border-[#8e24aa]"],
-  [class*="border-[#8E24AA]"] {
+  .divide-\[\#4A148C\]\/25,
+  .divide-\[\#4A148C\]\/16,
+  .border-\[\#4A148C\]\/12,
+  .border-l-\[\#4A148C\]\/10,
+  [class*="divide-[#4A148C]"],
+  [class*="divide-[#4A148C]"],
+  [class*="border-[#4A148C]"],
+  [class*="border-[#4A148C]"] {
     border-color: rgba(0, 0, 0, 0.15) !important;
   }
 }

@@ -28,7 +28,7 @@ export function PrintButton() {
     <button
       onClick={handlePrint}
       disabled={isPrinting}
-      className="rounded-xl bg-[#8E24AA] px-5 py-2.5 text-sm font-semibold text-white shadow hover:bg-[#8E24AA] disabled:cursor-not-allowed disabled:opacity-70"
+      className="rounded-xl bg-[#4A148C] px-5 py-2.5 text-sm font-semibold text-white shadow hover:bg-[#4A148C] disabled:cursor-not-allowed disabled:opacity-70"
     >
       {isPrinting ? "กำลังพิมพ์..." : "พิมพ์ใบส่งของ"}
     </button>

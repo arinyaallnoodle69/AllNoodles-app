@@ -51,7 +51,7 @@ export function SettingsSuppliersPageClient({
       <div className="sticky top-0 z-40 -mx-3 mb-4 hidden border-b border-[#E1BEE7] bg-white/95 px-4 py-3 shadow-[0_10px_30px_rgba(31,42,68,0.08)] backdrop-blur lg:block">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div className="min-w-0">
-            <p className="text-lg font-black text-[#8E24AA]">จัดการผู้ขาย</p>
+            <p className="text-lg font-black text-[#4A148C]">จัดการผู้ขาย</p>
             <p className="text-xs font-semibold text-[#667085]">
               แสดง {filteredSuppliers.length.toLocaleString("th-TH")} จาก {initialSuppliers.length.toLocaleString("th-TH")} รายการ
             </p>
@@ -65,13 +65,13 @@ export function SettingsSuppliersPageClient({
                 value={searchTerm}
                 onChange={(event) => setSearchTerm(event.target.value)}
                 placeholder="ค้นหาชื่อผู้ขายหรือรหัส"
-                className="h-12 w-full rounded-lg border border-[#D7DEE8] bg-white pl-11 pr-4 text-sm font-semibold text-[#8E24AA] outline-none transition placeholder:text-[#667085] focus:border-[#8E24AA] focus:ring-2 focus:ring-[#8E24AA]/15"
+                className="h-12 w-full rounded-lg border border-[#D7DEE8] bg-white pl-11 pr-4 text-sm font-semibold text-[#4A148C] outline-none transition placeholder:text-[#667085] focus:border-[#4A148C] focus:ring-2 focus:ring-[#4A148C]/15"
               />
             </label>
 
             <Link
               href="/settings/suppliers?create"
-              className="inline-flex h-12 items-center justify-center gap-2 rounded-lg bg-[#8E24AA] px-4 text-sm font-bold text-white shadow-[0_12px_26px_rgba(142, 36, 170,0.22)] transition hover:bg-[#8E24AA] active:scale-[0.98]"
+              className="inline-flex h-12 items-center justify-center gap-2 rounded-lg bg-[#4A148C] px-4 text-sm font-bold text-white shadow-[0_12px_26px_rgba(142, 36, 170,0.22)] transition hover:bg-[#4A148C] active:scale-[0.98]"
             >
               <Plus className="h-4.5 w-4.5" strokeWidth={2.4} />
               เพิ่มผู้ขาย
@@ -88,7 +88,7 @@ export function SettingsSuppliersPageClient({
             value={searchTerm}
             onChange={(event) => setSearchTerm(event.target.value)}
             placeholder="ค้นหาชื่อผู้ขายหรือรหัส"
-            className="h-12 w-full rounded-lg border border-[#D7DEE8] bg-white pl-11 pr-4 text-sm font-semibold text-[#8E24AA] outline-none transition placeholder:text-[#667085] focus:border-[#8E24AA] focus:ring-2 focus:ring-[#8E24AA]/15"
+            className="h-12 w-full rounded-lg border border-[#D7DEE8] bg-white pl-11 pr-4 text-sm font-semibold text-[#4A148C] outline-none transition placeholder:text-[#667085] focus:border-[#4A148C] focus:ring-2 focus:ring-[#4A148C]/15"
           />
         </label>
       </MobileSearchDrawer>
@@ -96,7 +96,7 @@ export function SettingsSuppliersPageClient({
       <Link
         href="/settings/suppliers?create"
         aria-label="เพิ่มผู้ขาย"
-        className="fixed bottom-[calc(4.75rem+env(safe-area-inset-bottom)+12px)] left-4 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-[#8E24AA] text-white shadow-[0_14px_32px_rgba(142, 36, 170,0.32)] transition active:scale-95 lg:hidden"
+        className="fixed bottom-[calc(4.75rem+env(safe-area-inset-bottom)+12px)] left-4 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-[#4A148C] text-white shadow-[0_14px_32px_rgba(142, 36, 170,0.32)] transition active:scale-95 lg:hidden"
       >
         <Plus className="h-7 w-7" strokeWidth={2.6} />
       </Link>
@@ -107,7 +107,7 @@ export function SettingsSuppliersPageClient({
           {filteredSuppliers.map((supplier) => (
             <div
               key={supplier.id}
-              className="group relative flex flex-col overflow-hidden rounded-[2rem] border border-slate-200 bg-white transition-all hover:border-[#8E24AA]/30 hover:shadow-xl hover:shadow-slate-200/50"
+              className="group relative flex flex-col overflow-hidden rounded-[2rem] border border-slate-200 bg-white transition-all hover:border-[#4A148C]/30 hover:shadow-xl hover:shadow-slate-200/50"
             >
               <div className="p-6">
                 <div className="flex items-start justify-between gap-4">
@@ -117,7 +117,7 @@ export function SettingsSuppliersPageClient({
                         {supplier.code}
                       </span>
                     </div>
-                    <h3 className="mt-1 truncate text-lg font-bold text-slate-900 group-hover:text-[#8E24AA]">
+                    <h3 className="mt-1 truncate text-lg font-bold text-slate-900 group-hover:text-[#4A148C]">
                       {supplier.name}
                     </h3>
                   </div>
@@ -125,7 +125,7 @@ export function SettingsSuppliersPageClient({
                   <div className="flex gap-1 opacity-0 transition-opacity group-hover:opacity-100 max-lg:opacity-100">
                     <Link
                       href={`/settings/suppliers?edit=${supplier.id}`}
-                      className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-50 text-slate-400 transition hover:bg-[#8E24AA]/20 hover:text-[#8E24AA]"
+                      className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-50 text-slate-400 transition hover:bg-[#4A148C]/20 hover:text-[#4A148C]"
                       title="แก้ไข"
                     >
                       <PencilLine className="h-4.5 w-4.5" />

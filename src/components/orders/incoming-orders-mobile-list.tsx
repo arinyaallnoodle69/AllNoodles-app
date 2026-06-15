@@ -79,7 +79,7 @@ export function IncomingOrdersMobileList({
   const hasMore = visibleCount < orders.length;
 
   return (
-    <div className="grid grid-cols-1 gap-3 border-t border-[#AA00FF]/25 bg-white px-3 py-3 sm:grid-cols-2 sm:gap-3">
+    <div className="grid grid-cols-1 gap-3 border-t border-[#EA80FC]/25 bg-white px-3 py-3 sm:grid-cols-2 sm:gap-3">
       {visibleOrders.map((order, index) => {
         const showDivider = index === 0 || order.orderDate !== visibleOrders[index - 1].orderDate;
 
@@ -87,13 +87,13 @@ export function IncomingOrdersMobileList({
           <Fragment key={order.id}>
             {showDivider ? (
               <div className="col-span-full flex items-center gap-3 bg-white px-1 py-2">
-                <div className="h-[2px] flex-1 bg-[#AA00FF]/35" />
-                <div className="shrink-0 rounded-2xl border border-[#AA00FF]/50 bg-[#F3E5F5] px-4 py-1.5 shadow-sm">
-                  <span className="text-[13px] font-black uppercase tracking-wider text-[#8E24AA]">
+                <div className="h-[2px] flex-1 bg-[#EA80FC]/35" />
+                <div className="shrink-0 rounded-2xl border border-[#EA80FC]/50 bg-[#F3E5F5] px-4 py-1.5 shadow-sm">
+                  <span className="text-[13px] font-black uppercase tracking-wider text-[#4A148C]">
                     {formatDisplayDate(order.orderDate)}
                   </span>
                 </div>
-                <div className="h-[2px] flex-1 bg-[#AA00FF]/35" />
+                <div className="h-[2px] flex-1 bg-[#EA80FC]/35" />
               </div>
             ) : null}
 
@@ -126,9 +126,9 @@ export function IncomingOrdersMobileList({
 
       {/* Sensor for Infinite Scrolling */}
       {hasMore && (
-        <div ref={sensorRef} className="col-span-full flex items-center justify-center gap-2 rounded-2xl border border-[#AA00FF]/25 bg-white py-6">
-          <Loader2 className="h-5 w-5 animate-spin text-[#8E24AA]" strokeWidth={2.4} />
-          <span className="text-sm font-semibold text-[#8E24AA]">กำลังโหลดออเดอร์เพิ่ม...</span>
+        <div ref={sensorRef} className="col-span-full flex items-center justify-center gap-2 rounded-2xl border border-[#EA80FC]/25 bg-white py-6">
+          <Loader2 className="h-5 w-5 animate-spin text-[#4A148C]" strokeWidth={2.4} />
+          <span className="text-sm font-semibold text-[#4A148C]">กำลังโหลดออเดอร์เพิ่ม...</span>
         </div>
       )}
     </div>

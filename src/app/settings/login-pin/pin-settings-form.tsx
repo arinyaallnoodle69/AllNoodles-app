@@ -27,7 +27,7 @@ function PinInput({
         autoComplete="new-password"
         maxLength={6}
         pattern="[0-9]*"
-        className="h-16 w-full rounded-2xl border border-slate-200 bg-white px-5 text-center text-3xl font-black tracking-[0.45em] text-[#8E24AA] shadow-sm outline-none transition placeholder:tracking-normal placeholder:text-slate-300 focus:border-[#8E24AA] focus:ring-4 focus:ring-[#8E24AA]/10"
+        className="h-16 w-full rounded-2xl border border-slate-200 bg-white px-5 text-center text-3xl font-black tracking-[0.45em] text-[#4A148C] shadow-sm outline-none transition placeholder:tracking-normal placeholder:text-slate-300 focus:border-[#4A148C] focus:ring-4 focus:ring-[#4A148C]/10"
         placeholder="000000"
       />
     </label>
@@ -50,7 +50,7 @@ export function PinSettingsForm() {
     <>
       <section className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-[0_18px_55px_rgba(15,23,42,0.05)] sm:p-7">
         <div className="flex items-center gap-4">
-          <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#AA00FF]/30 text-[#8E24AA]">
+          <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#EA80FC]/30 text-[#4A148C]">
             <KeyRound className="h-6 w-6" strokeWidth={2.4} />
           </span>
           <div className="min-w-0">
@@ -72,7 +72,7 @@ export function PinSettingsForm() {
           <button
             type="submit"
             disabled={isPending}
-            className="inline-flex h-14 items-center justify-center gap-2 rounded-2xl bg-[#8E24AA] px-6 text-base font-black text-white shadow-[0_18px_42px_rgba(142, 36, 170,0.24)] transition active:scale-[0.99] disabled:cursor-not-allowed disabled:bg-slate-300"
+            className="inline-flex h-14 items-center justify-center gap-2 rounded-2xl bg-[#4A148C] px-6 text-base font-black text-white shadow-[0_18px_42px_rgba(142, 36, 170,0.24)] transition active:scale-[0.99] disabled:cursor-not-allowed disabled:bg-slate-300"
           >
             {isPending ? (
               <Loader2 className="h-5 w-5 animate-spin" strokeWidth={2.5} />
@@ -113,7 +113,7 @@ export function PinSettingsForm() {
               <form action={signOut}>
                 <button
                   type="submit"
-                  className="inline-flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-[#8E24AA] px-4 text-sm font-black text-white transition hover:bg-[#8E24AA]"
+                  className="inline-flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-[#4A148C] px-4 text-sm font-black text-white transition hover:bg-[#4A148C]"
                 >
                   <LogOut className="h-4 w-4" strokeWidth={2.4} />
                   ออกจากระบบ

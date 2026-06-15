@@ -42,8 +42,8 @@ export const OrderEditView = memo(function OrderEditView({
 }: OrderEditViewProps) {
   return (
     <section className="space-y-4 p-4">
-      <div className="rounded-[2rem] border border-[#AA00FF]/10 bg-[linear-gradient(180deg,#ffffff_0%,#F3E5F5_100%)] p-5 shadow-[0_10px_30px_-5px_rgba(0,0,0,0.04)]">
-        <div className="text-xs font-semibold uppercase tracking-[0.18em] text-[#AA00FF]/60">
+      <div className="rounded-[2rem] border border-[#EA80FC]/10 bg-[linear-gradient(180deg,#ffffff_0%,#F3E5F5_100%)] p-5 shadow-[0_10px_30px_-5px_rgba(0,0,0,0.04)]">
+        <div className="text-xs font-semibold uppercase tracking-[0.18em] text-[#EA80FC]/60">
           แก้ไขคำสั่งซื้อ
         </div>
         <h2 className="mt-2 text-xl font-bold text-slate-900">
@@ -58,7 +58,7 @@ export const OrderEditView = memo(function OrderEditView({
       <div className="grid grid-cols-2 gap-3">
         <button
           onClick={onBackToHistory}
-          className="flex items-center justify-center gap-2 rounded-2xl border border-[#AA00FF]/15 bg-[#F3E5F5] px-4 py-3 text-sm font-bold text-[#AA00FF] transition-all active:scale-[0.98]"
+          className="flex items-center justify-center gap-2 rounded-2xl border border-[#EA80FC]/15 bg-[#F3E5F5] px-4 py-3 text-sm font-bold text-[#EA80FC] transition-all active:scale-[0.98]"
         >
           <X className="h-4 w-4" />
           ยกเลิก
@@ -66,13 +66,13 @@ export const OrderEditView = memo(function OrderEditView({
         <button
           onClick={onSaveEditedOrder}
           disabled={isPending}
-          className="flex items-center justify-center gap-2 rounded-2xl bg-[#AA00FF] px-4 py-3 text-sm font-bold text-white shadow-[0_8px_16px_rgba(170, 0, 255,0.15)] transition-all active:scale-[0.98] disabled:opacity-60"
+          className="flex items-center justify-center gap-2 rounded-2xl bg-[#EA80FC] px-4 py-3 text-sm font-bold text-white shadow-[0_8px_16px_rgba(170, 0, 255,0.15)] transition-all active:scale-[0.98] disabled:opacity-60"
         >
           {isPending ? "กำลังบันทึก..." : "บันทึกการแก้ไข"}
         </button>
         <button
           onClick={onOpenAddProductSheet}
-          className="col-span-2 flex items-center justify-center gap-2 rounded-2xl border border-[#AA00FF]/20 bg-white px-4 py-3 text-sm font-bold text-[#AA00FF] shadow-[0_4px_12px_rgba(4,53,106,0.06)] transition-all active:scale-[0.98]"
+          className="col-span-2 flex items-center justify-center gap-2 rounded-2xl border border-[#EA80FC]/20 bg-white px-4 py-3 text-sm font-bold text-[#EA80FC] shadow-[0_4px_12px_rgba(4,53,106,0.06)] transition-all active:scale-[0.98]"
         >
           <Plus className="h-4 w-4" />
           เพิ่มสินค้าใหม่เข้าในออเดอร์นี้
@@ -206,7 +206,7 @@ export const EditOrderProductSheet = memo(function EditOrderProductSheet({
               value={addProductSearch}
               onChange={(e) => onSetAddProductSearch(e.target.value)}
               placeholder="ค้นหาสินค้า..."
-              className="w-full rounded-2xl border border-slate-200 bg-slate-50 py-2.5 pl-10 pr-4 text-sm outline-none transition-all focus:border-[#AA00FF] focus:bg-white focus:ring-2 focus:ring-[#AA00FF]/10"
+              className="w-full rounded-2xl border border-slate-200 bg-slate-50 py-2.5 pl-10 pr-4 text-sm outline-none transition-all focus:border-[#EA80FC] focus:bg-white focus:ring-2 focus:ring-[#EA80FC]/10"
             />
           </div>
         </div>
@@ -267,7 +267,7 @@ export const EditOrderProductSheet = memo(function EditOrderProductSheet({
                     ) : (
                       <button
                         onClick={() => onUpdateEditQuantity(product.id, minQty)}
-                        className="flex h-9 items-center gap-1 rounded-full bg-[#AA00FF] px-4 text-xs font-bold text-white transition-all active:scale-95"
+                        className="flex h-9 items-center gap-1 rounded-full bg-[#EA80FC] px-4 text-xs font-bold text-white transition-all active:scale-95"
                       >
                         <Plus className="h-3.5 w-3.5" />
                         เพิ่ม
@@ -282,7 +282,7 @@ export const EditOrderProductSheet = memo(function EditOrderProductSheet({
         <div className="border-t border-slate-100 px-4 pb-6 pt-3">
           <button
             onClick={onClose}
-            className="w-full rounded-2xl bg-[#AA00FF] px-6 py-4 text-base font-bold text-white shadow-[0_12px_24px_rgba(4,53,106,0.2)] transition-all active:scale-[0.98]"
+            className="w-full rounded-2xl bg-[#EA80FC] px-6 py-4 text-base font-bold text-white shadow-[0_12px_24px_rgba(4,53,106,0.2)] transition-all active:scale-[0.98]"
           >
             ยืนยันรายการที่เลือก
           </button>

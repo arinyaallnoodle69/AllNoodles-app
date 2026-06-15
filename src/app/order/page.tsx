@@ -354,7 +354,8 @@ async function OrderContent({
     await getCatalogData();
   const resolvedSearchParams = (await searchParams) ?? {};
   const previewView = getSearchParamValue(resolvedSearchParams.preview);
-  const isMock = process.env.NEXT_PUBLIC_LIFF_MOCK === "true";
+  const isMock =
+    process.env.NODE_ENV !== "production" && process.env.NEXT_PUBLIC_LIFF_MOCK === "true";
   const initialAuth =
     isMock && previewView
       ? { customer: null, lineUserId: null }

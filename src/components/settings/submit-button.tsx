@@ -17,7 +17,7 @@ export function SubmitButton({ children, className, id }: SubmitButtonProps) {
       id={id}
       type="submit"
       disabled={pending}
-      className={`w-full rounded-lg bg-[#8E24AA] px-6 py-2.5 text-sm font-semibold text-white shadow-lg shadow-[#8E24AA]/20 transition hover:bg-[#8E24AA] disabled:cursor-not-allowed disabled:opacity-60 ${className ?? ""}`}
+      className={`w-full rounded-lg bg-[#4A148C] px-6 py-2.5 text-sm font-semibold text-white shadow-lg shadow-[#4A148C]/20 transition hover:bg-[#4A148C] disabled:cursor-not-allowed disabled:opacity-60 ${className ?? ""}`}
     >
       {pending ? "Saving..." : children}
     </button>

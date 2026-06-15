@@ -268,14 +268,14 @@ export function ThaiDatePicker({
       <button
         type="button"
         onClick={() => (isOpen ? closePicker() : openPicker())}
-        className={`flex w-full min-w-0 items-center justify-between rounded-xl border bg-white text-left shadow-sm transition focus:outline-none focus:ring-2 focus:ring-[#8E24AA]/10 ${
+        className={`flex w-full min-w-0 items-center justify-between rounded-xl border bg-white text-left shadow-sm transition focus:outline-none focus:ring-2 focus:ring-[#4A148C]/10 ${
           compact
             ? matchFieldHeight
               ? "gap-2 px-3 py-2.5 text-sm"
               : "gap-1.5 px-2.5 py-2 text-[13px]"
             : "gap-1.5 px-2.5 py-3 sm:gap-2 sm:px-4"
         } ${
-          isOpen ? "border-[#8E24AA]" : "border-slate-300 hover:border-[#8E24AA]/40"
+          isOpen ? "border-[#4A148C]" : "border-slate-300 hover:border-[#4A148C]/40"
         }`}
         aria-haspopup="dialog"
         aria-expanded={isOpen}
@@ -292,7 +292,7 @@ export function ThaiDatePicker({
         </span>
         {loading ? (
           <Loader2
-            className={`shrink-0 animate-spin text-[#8E24AA] ${
+            className={`shrink-0 animate-spin text-[#4A148C] ${
               compact ? (matchFieldHeight ? "h-4 w-4" : "h-3.5 w-3.5") : "h-[15px] w-[15px] sm:h-5 sm:w-5"
             }`}
             strokeWidth={2.5}
@@ -317,7 +317,7 @@ export function ThaiDatePicker({
               style={panelStyle}
               className="w-[15.75rem] max-w-[calc(100vw-2rem)] overflow-hidden rounded-[0.8rem] border border-slate-200 bg-white shadow-[0_12px_48px_rgba(15,23,42,0.25)] animate-in fade-in zoom-in-95 duration-200"
             >
-              <div className="border-b border-slate-200 bg-[#8E24AA] px-2 py-1.5 text-white">
+              <div className="border-b border-slate-200 bg-[#4A148C] px-2 py-1.5 text-white">
                 <div className="grid grid-cols-[24px_1fr_24px] items-center gap-1">
                   <button
                     type="button"
@@ -350,7 +350,7 @@ export function ThaiDatePicker({
                   <select
                     value={viewMonth.getMonth()}
                     onChange={(event) => updateViewMonth(viewMonth.getFullYear(), Number(event.target.value))}
-                    className="h-6 rounded-md border border-slate-200 bg-white px-1.5 text-[11px] font-semibold text-slate-800 outline-none transition focus:border-[#8E24AA] focus:ring-2 focus:ring-[#8E24AA]/10"
+                    className="h-6 rounded-md border border-slate-200 bg-white px-1.5 text-[11px] font-semibold text-slate-800 outline-none transition focus:border-[#4A148C] focus:ring-2 focus:ring-[#4A148C]/10"
                     aria-label="เลือกเดือน"
                   >
                     {THAI_MONTHS_FULL.map((month, index) => (
@@ -363,7 +363,7 @@ export function ThaiDatePicker({
                   <select
                     value={viewMonth.getFullYear()}
                     onChange={(event) => updateViewMonth(Number(event.target.value), viewMonth.getMonth())}
-                    className="h-6 rounded-md border border-slate-200 bg-white px-1.5 text-[11px] font-semibold text-slate-800 outline-none transition focus:border-[#8E24AA] focus:ring-2 focus:ring-[#8E24AA]/10"
+                    className="h-6 rounded-md border border-slate-200 bg-white px-1.5 text-[11px] font-semibold text-slate-800 outline-none transition focus:border-[#4A148C] focus:ring-2 focus:ring-[#4A148C]/10"
                     aria-label="เลือกปี"
                   >
                     {yearOptions.map((year) => (
@@ -393,9 +393,9 @@ export function ThaiDatePicker({
                         className={[
                           "flex h-6 items-center justify-center rounded-md text-[11px] font-semibold transition",
                           isSelected
-                            ? "bg-[#8E24AA] text-white shadow-[0_12px_24px_rgba(142, 36, 170,0.24)]"
+                            ? "bg-[#4A148C] text-white shadow-[0_12px_24px_rgba(142, 36, 170,0.24)]"
                             : isToday
-                              ? "border border-[#8E24AA]/30 bg-[#8E24AA]/15 text-[#8E24AA]"
+                              ? "border border-[#4A148C]/30 bg-[#4A148C]/15 text-[#4A148C]"
                               : isCurrentMonth
                                 ? "text-slate-700 hover:bg-slate-100"
                                 : "text-slate-300 hover:bg-slate-50",
@@ -419,7 +419,7 @@ export function ThaiDatePicker({
                   <button
                     type="button"
                     onClick={closePicker}
-                    className="flex-1 rounded-md bg-[#8E24AA] px-2 py-1 text-[11px] font-semibold text-white transition hover:bg-[#8E24AA]"
+                    className="flex-1 rounded-md bg-[#4A148C] px-2 py-1 text-[11px] font-semibold text-white transition hover:bg-[#4A148C]"
                   >
                     ปิด
                   </button>

@@ -20,7 +20,7 @@ function cx(...parts: Array<string | false | null | undefined>) {
 export const settingsFieldLabelClass = "mb-2 block text-sm font-medium text-slate-700";
 
 export const settingsInputClass =
-  "w-full rounded-lg border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-900 outline-none transition-all focus:border-transparent focus:ring-2 focus:ring-[#8E24AA] placeholder:text-slate-400";
+  "w-full rounded-lg border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-900 outline-none transition-all focus:border-transparent focus:ring-2 focus:ring-[#4A148C] placeholder:text-slate-400";
 
 export const settingsSelectClass = cx(settingsInputClass, "appearance-none");
 
@@ -78,7 +78,7 @@ export function SettingsPanelHeader({
   return (
     <div className="border-b border-slate-100 px-6 py-4">
       <div className="flex items-start gap-3">
-        {Icon ? <Icon className="mt-0.5 h-5 w-5 text-[#8E24AA]" strokeWidth={2.2} /> : null}
+        {Icon ? <Icon className="mt-0.5 h-5 w-5 text-[#4A148C]" strokeWidth={2.2} /> : null}
         <div>
           <h2 className="text-lg font-semibold tracking-[-0.01em] text-slate-950">{title}</h2>
           {description ? (

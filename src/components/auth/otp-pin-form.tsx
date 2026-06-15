@@ -96,7 +96,7 @@ export function OtpPinForm({ disabled, error, next, action }: OtpPinFormProps) {
 
       <div className="mt-3 h-5 text-center">
         {isSubmitting ? (
-          <p className="text-sm font-semibold text-[#8E24AA]">กำลังเข้า...</p>
+          <p className="text-sm font-semibold text-[#4A148C]">กำลังเข้า...</p>
         ) : error ? (
           <p className="text-sm font-semibold text-rose-600">{error}</p>
         ) : null}

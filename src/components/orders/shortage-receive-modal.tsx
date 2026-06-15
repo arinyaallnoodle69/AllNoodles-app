@@ -152,7 +152,7 @@ export function ShortageReceiveModal({ orderDate, active }: ShortageReceiveModal
         <div className="min-h-0 flex-1 overflow-y-auto bg-slate-50/50 p-4 md:p-6">
           {isLoadingData ? (
             <div className="flex h-40 flex-col items-center justify-center gap-3">
-              <Loader2 className="h-8 w-8 animate-spin text-[#8E24AA]" />
+              <Loader2 className="h-8 w-8 animate-spin text-[#4A148C]" />
               <p className="text-sm font-medium text-slate-500">กำลังโหลดรายการ...</p>
             </div>
           ) : stores.length === 0 ? (
@@ -187,7 +187,7 @@ export function ShortageReceiveModal({ orderDate, active }: ShortageReceiveModal
                     {/* Store Header */}
                     <div className="border-b border-slate-100 bg-slate-50/80 px-4 py-3">
                       <div className="flex items-center gap-2">
-                         <span className="font-mono text-xs font-bold text-[#8E24AA]/70 bg-[#8E24AA]/15 border border-[#8E24AA]/10 px-1.5 py-0.5 rounded-md">
+                         <span className="font-mono text-xs font-bold text-[#4A148C]/70 bg-[#4A148C]/15 border border-[#4A148C]/10 px-1.5 py-0.5 rounded-md">
                            {store.customerCode}
                          </span>
                          <span className="text-[15px] font-bold text-slate-900">{store.customerName}</span>
@@ -232,8 +232,8 @@ export function ShortageReceiveModal({ orderDate, active }: ShortageReceiveModal
 
                             {/* Counter Input */}
                             <div className="mt-4 flex items-center justify-between gap-3 md:mt-0 md:justify-end">
-                              <span className="text-xs font-bold text-[#8E24AA] md:hidden">รับเข้า (หน่วย)</span>
-                              <div className="flex h-11 w-32 shrink-0 items-center justify-between rounded-xl border border-[#8E24AA]/20 bg-[#8E24AA]/15 p-1 shadow-sm">
+                              <span className="text-xs font-bold text-[#4A148C] md:hidden">รับเข้า (หน่วย)</span>
+                              <div className="flex h-11 w-32 shrink-0 items-center justify-between rounded-xl border border-[#4A148C]/20 bg-[#4A148C]/15 p-1 shadow-sm">
                                 <button
                                   type="button"
                                   onClick={() => adjustQty(key, -1)}
@@ -242,7 +242,7 @@ export function ShortageReceiveModal({ orderDate, active }: ShortageReceiveModal
                                 >
                                   <Minus className="h-4 w-4" strokeWidth={2.5} />
                                 </button>
-                                <span className="flex-1 text-center font-mono text-base font-bold text-[#8E24AA]">
+                                <span className="flex-1 text-center font-mono text-base font-bold text-[#4A148C]">
                                   {qty}
                                 </span>
                                 <button
@@ -277,13 +277,13 @@ export function ShortageReceiveModal({ orderDate, active }: ShortageReceiveModal
             <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
               <div className="hidden md:block">
                 <p className="text-sm font-semibold text-slate-500">จำนวนที่เลือกรวม</p>
-                <p className="text-xl font-bold text-[#8E24AA]">{totalToReceive.toLocaleString()} หน่วย</p>
+                <p className="text-xl font-bold text-[#4A148C]">{totalToReceive.toLocaleString()} หน่วย</p>
               </div>
               <button
                 type="button"
                 onClick={handleSave}
                 disabled={isPending || isLoadingData || stores.length === 0 || totalToReceive === 0}
-                className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[#8E24AA] px-4 py-4 text-[15px] font-bold tracking-wide text-white shadow-lg transition hover:bg-[#8E24AA] active:scale-95 disabled:opacity-50 disabled:shadow-none md:w-auto md:min-w-[200px]"
+                className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[#4A148C] px-4 py-4 text-[15px] font-bold tracking-wide text-white shadow-lg transition hover:bg-[#4A148C] active:scale-95 disabled:opacity-50 disabled:shadow-none md:w-auto md:min-w-[200px]"
               >
                 {isPending ? (
                   <>

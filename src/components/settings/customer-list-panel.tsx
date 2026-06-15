@@ -41,7 +41,7 @@ export function CustomerListPanel({
     <SettingsPanel>
       <div className="border-b border-slate-100 px-5 py-4 md:px-6 md:py-5">
         <div className="flex items-center gap-2">
-          <ListTree className="h-5 w-5 text-[#8E24AA]" strokeWidth={2.2} />
+          <ListTree className="h-5 w-5 text-[#4A148C]" strokeWidth={2.2} />
           <h2 className="text-xl font-bold text-slate-950">รายการร้านค้า</h2>
           {filtered.length > 0 ? (
             <span className="ml-1 rounded-full bg-slate-100 px-2.5 py-0.5 text-sm font-semibold tabular-nums text-slate-500">
@@ -69,8 +69,8 @@ export function CustomerListPanel({
               {filtered.map((customer) => (
                 <div key={customer.id} className="px-4 py-5">
                   <div className="flex items-start gap-3">
-                    <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-[#8E24AA]/20">
-                      <Store className="h-6 w-6 text-[#8E24AA]" strokeWidth={2.2} />
+                    <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-[#4A148C]/20">
+                      <Store className="h-6 w-6 text-[#4A148C]" strokeWidth={2.2} />
                     </div>
 
                     <div className="min-w-0 flex-1">
@@ -86,7 +86,7 @@ export function CustomerListPanel({
                       <Link
                         href={`/settings/customers?edit=${customer.id}`}
                         scroll={false}
-                        className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-[#E1BEE7] bg-white text-[#8E24AA] transition hover:border-[#AA00FF] hover:bg-[#F3E5F5] active:scale-95"
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-[#E1BEE7] bg-white text-[#4A148C] transition hover:border-[#EA80FC] hover:bg-[#F3E5F5] active:scale-95"
                         aria-label={`แก้ไข ${customer.name}`}
                       >
                         <PencilLine className="h-3.5 w-3.5" strokeWidth={2.2} />
@@ -106,7 +106,7 @@ export function CustomerListPanel({
                   ) : null}
 
                   <div className="mt-3 flex flex-wrap items-center gap-2">
-                    <span className="inline-flex items-center rounded-full bg-[#F3E5F5] px-3 py-1 text-sm font-bold text-[#8E24AA] border border-[#EA80FC]">
+                    <span className="inline-flex items-center rounded-full bg-[#F3E5F5] px-3 py-1 text-sm font-bold text-[#4A148C] border border-[#EA80FC]">
                       ผูกราคา {customer.pricingCount} รายการ
                     </span>
                   </div>
@@ -137,29 +137,29 @@ export function CustomerListPanel({
             <div className="hidden overflow-x-auto sm:block">
               <table className="min-w-full border-collapse text-left">
                 <thead>
-                  <tr className="bg-[#8E24AA]">
-                    <th className="w-16 border-b border-[#8E24AA] border-r border-white/20 px-4 py-4 text-center text-xs font-bold uppercase tracking-[0.14em] text-white">
+                  <tr className="bg-[#4A148C]">
+                    <th className="w-16 border-b border-[#4A148C] border-r border-white/20 px-4 py-4 text-center text-xs font-bold uppercase tracking-[0.14em] text-white">
                       ลำดับ
                     </th>
-                    <th className="border-b border-[#8E24AA] border-r border-white/20 px-5 py-4 text-xs font-bold uppercase tracking-[0.14em] text-white md:px-6">
+                    <th className="border-b border-[#4A148C] border-r border-white/20 px-5 py-4 text-xs font-bold uppercase tracking-[0.14em] text-white md:px-6">
                       ร้านค้า
                     </th>
-                    <th className="border-b border-[#8E24AA] border-r border-white/20 px-5 py-4 text-xs font-bold uppercase tracking-[0.14em] text-white">
+                    <th className="border-b border-[#4A148C] border-r border-white/20 px-5 py-4 text-xs font-bold uppercase tracking-[0.14em] text-white">
                       รหัสร้าน
                     </th>
-                    <th className="border-b border-[#8E24AA] border-r border-white/20 px-5 py-4 text-xs font-bold uppercase tracking-[0.14em] text-white">
+                    <th className="border-b border-[#4A148C] border-r border-white/20 px-5 py-4 text-xs font-bold uppercase tracking-[0.14em] text-white">
                       ที่อยู่
                     </th>
-                    <th className="border-b border-[#8E24AA] border-r border-white/20 px-5 py-4 text-xs font-bold uppercase tracking-[0.14em] text-white">
+                    <th className="border-b border-[#4A148C] border-r border-white/20 px-5 py-4 text-xs font-bold uppercase tracking-[0.14em] text-white">
                       ราคาที่ผูก
                     </th>
-                    <th className="border-b border-[#8E24AA] border-r border-white/20 px-5 py-4 text-xs font-bold uppercase tracking-[0.14em] text-white">
+                    <th className="border-b border-[#4A148C] border-r border-white/20 px-5 py-4 text-xs font-bold uppercase tracking-[0.14em] text-white">
                       คลังประจำ
                     </th>
-                    <th className="border-b border-[#8E24AA] border-r border-white/20 px-5 py-4 text-xs font-bold uppercase tracking-[0.14em] text-white">
+                    <th className="border-b border-[#4A148C] border-r border-white/20 px-5 py-4 text-xs font-bold uppercase tracking-[0.14em] text-white">
                       รถประจำร้าน
                     </th>
-                    <th className="border-b border-[#8E24AA] px-4 py-4" />
+                    <th className="border-b border-[#4A148C] px-4 py-4" />
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -170,8 +170,8 @@ export function CustomerListPanel({
                       </td>
                       <td className="px-5 py-4 md:px-6">
                         <div className="flex items-center gap-3">
-                          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#8E24AA]/20">
-                            <Store className="h-5 w-5 text-[#8E24AA]" strokeWidth={2.2} />
+                          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#4A148C]/20">
+                            <Store className="h-5 w-5 text-[#4A148C]" strokeWidth={2.2} />
                           </div>
                           <p className="text-base font-bold text-slate-950">{customer.name}</p>
                         </div>
@@ -183,7 +183,7 @@ export function CustomerListPanel({
                         {customer.address || <span className="text-slate-300">-</span>}
                       </td>
                       <td className="px-5 py-4">
-                        <span className="inline-flex rounded-full bg-[#F3E5F5] px-3 py-1 text-sm font-bold text-[#8E24AA] border border-[#EA80FC]">
+                        <span className="inline-flex rounded-full bg-[#F3E5F5] px-3 py-1 text-sm font-bold text-[#4A148C] border border-[#EA80FC]">
                           {customer.pricingCount} รายการ
                         </span>
                       </td>
@@ -208,7 +208,7 @@ export function CustomerListPanel({
                           <Link
                             href={`/settings/customers?edit=${customer.id}`}
                             scroll={false}
-                            className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-[#E1BEE7] bg-white text-[#8E24AA] transition hover:border-[#AA00FF] hover:bg-[#F3E5F5] active:scale-95"
+                            className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-[#E1BEE7] bg-white text-[#4A148C] transition hover:border-[#EA80FC] hover:bg-[#F3E5F5] active:scale-95"
                             aria-label={`แก้ไข ${customer.name}`}
                           >
                             <PencilLine className="h-3.5 w-3.5" strokeWidth={2.2} />

@@ -82,7 +82,7 @@ export function MobilePrintActions({
       <button
         type="button"
         onClick={() => setIsOpen(true)}
-        className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-[#8E24AA] px-5 py-4 text-base font-black text-white shadow-[0_12px_24px_rgba(4,53,106,0.2)] transition active:scale-[0.98] sm:hidden"
+        className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-[#4A148C] px-5 py-4 text-base font-black text-white shadow-[0_12px_24px_rgba(4,53,106,0.2)] transition active:scale-[0.98] sm:hidden"
       >
         <Printer className="h-5 w-5" strokeWidth={2.5} />
         พิมพ์และจัดการเอกสารออเดอร์
@@ -118,7 +118,7 @@ export function MobilePrintActions({
                 <div className="scrollbar-hide flex-1 space-y-4 overflow-y-auto px-5 py-6 pb-12">
                   <ActionCard
                     icon={
-                      <div className="flex shrink-0 items-center justify-center rounded-xl bg-[#F3E5F5] p-2.5 text-[#8E24AA]">
+                      <div className="flex shrink-0 items-center justify-center rounded-xl bg-[#F3E5F5] p-2.5 text-[#4A148C]">
                         <BarChart3 className="h-5 w-5" strokeWidth={2.5} />
                       </div>
                     }
@@ -135,7 +135,7 @@ export function MobilePrintActions({
 
                   <ActionCard
                     icon={
-                      <div className="flex shrink-0 items-center justify-center rounded-xl bg-[#F3E5F5] p-2.5 text-[#8E24AA]">
+                      <div className="flex shrink-0 items-center justify-center rounded-xl bg-[#F3E5F5] p-2.5 text-[#4A148C]">
                         <FileText className="h-5 w-5" strokeWidth={2.5} />
                       </div>
                     }

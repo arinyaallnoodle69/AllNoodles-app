@@ -79,7 +79,7 @@ export function IncomingOrderDateButton({
       <button
         type="button"
         onClick={openModal}
-        className="inline-flex size-10 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-900 shadow-sm transition hover:border-[#8E24AA]/30 hover:bg-slate-50 hover:text-[#8E24AA] active:scale-95"
+        className="inline-flex size-10 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-900 shadow-sm transition hover:border-[#4A148C]/30 hover:bg-slate-50 hover:text-[#4A148C] active:scale-95"
         aria-label="แก้ไขวันที่ออเดอร์"
         title="แก้ไขวันที่ออเดอร์"
       >
@@ -92,7 +92,7 @@ export function IncomingOrderDateButton({
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <p className="text-lg font-bold text-slate-950">แก้ไขวันที่ออเดอร์</p>
-                <p className="mt-1 font-mono text-sm font-semibold text-[#8E24AA]" translate="no">
+                <p className="mt-1 font-mono text-sm font-semibold text-[#4A148C]" translate="no">
                   {orderNumber}
                 </p>
               </div>
@@ -138,7 +138,7 @@ export function IncomingOrderDateButton({
                 type="button"
                 onClick={handleSave}
                 disabled={isPending}
-                className="inline-flex flex-1 items-center justify-center gap-2 rounded-2xl bg-[#8E24AA] py-3 text-sm font-semibold text-white transition active:scale-[0.98] disabled:opacity-50"
+                className="inline-flex flex-1 items-center justify-center gap-2 rounded-2xl bg-[#4A148C] py-3 text-sm font-semibold text-white transition active:scale-[0.98] disabled:opacity-50"
               >
                 {isPending ? (
                   <>

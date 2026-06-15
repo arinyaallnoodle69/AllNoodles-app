@@ -380,7 +380,7 @@ async function PackingListPage({ searchParams }: Props) {
         }}
       >
         <div className="flex items-center gap-2">
-          <span style={{ fontSize: "14px", fontWeight: 800, color: "#8E24AA" }}>
+          <span style={{ fontSize: "14px", fontWeight: 800, color: "#4A148C" }}>
             {layout === "transposed" ? "ใบจัดของ (สลับตาราง)" : "ใบจัดของ"}
           </span>
           <span
@@ -442,7 +442,7 @@ async function PackingListPage({ searchParams }: Props) {
           </p>
           <a
             href="/orders/incoming"
-            style={{ marginTop: "8px", color: "#8E24AA", fontSize: "14px" }}
+            style={{ marginTop: "8px", color: "#4A148C", fontSize: "14px" }}
           >
             กลับหน้าออเดอร์
           </a>

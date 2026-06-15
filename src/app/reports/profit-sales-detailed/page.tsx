@@ -249,7 +249,7 @@ async function DetailedProfitContent({ searchParams }: PageProps) {
                 <select
                   name="warehouse"
                   defaultValue={warehouseId}
-                  className="h-10 w-full rounded-[4px] border border-[#c6c6cd] bg-white px-3 text-[14px] font-semibold text-[#8E24AA] outline-none focus:border-[#8E24AA]"
+                  className="h-10 w-full rounded-[4px] border border-[#c6c6cd] bg-white px-3 text-[14px] font-semibold text-[#4A148C] outline-none focus:border-[#4A148C]"
                 >
                   <option value="">ทุกคลังสินค้า</option>
                   {warehouses.map((w) => (
@@ -492,7 +492,7 @@ async function DetailedProfitContent({ searchParams }: PageProps) {
                     <div className="flex items-center gap-2">
                       <Image src="/brand/512x512.png" alt="T&Y Noodle" width={40} height={40} className="h-10 w-10 object-contain" />
                       <div>
-                        <p className="text-sm font-black leading-tight text-[#8E24AA]">T&Y Noodle</p>
+                        <p className="text-sm font-black leading-tight text-[#4A148C]">T&Y Noodle</p>
                         <p className="text-[10px] font-semibold text-slate-500">ระบบรายงานผลกำไรจากการขายสินค้า</p>
                       </div>
                     </div>
@@ -502,7 +502,7 @@ async function DetailedProfitContent({ searchParams }: PageProps) {
                       <p>หน้า: 1 / 1</p>
                     </div>
                   </div>
-                  <p className="text-base font-black text-[#8E24AA] mt-2">รายงานสินค้าและกำไรแยกตามสาขา</p>
+                  <p className="text-base font-black text-[#4A148C] mt-2">รายงานสินค้าและกำไรแยกตามสาขา</p>
                   <p className="text-xs font-semibold text-slate-600">
                     ช่วงวันที่ {formatDateThai(fromDate)} — {formatDateThai(toDate)} {selectedStoreIds.length > 0 && ` · ${selectedStoreLabel}`}
                   </p>
@@ -529,7 +529,7 @@ async function DetailedProfitContent({ searchParams }: PageProps) {
                       <div className="flex items-center gap-2">
                         <Image src="/brand/512x512.png" alt="T&Y Noodle" width={40} height={40} className="h-10 w-10 object-contain" />
                         <div>
-                          <p className="text-sm font-black leading-tight text-[#8E24AA]">T&Y Noodle</p>
+                          <p className="text-sm font-black leading-tight text-[#4A148C]">T&Y Noodle</p>
                           <p className="text-[10px] font-semibold text-slate-500">ระบบรายงานผลกำไรจากการขายสินค้า</p>
                         </div>
                       </div>
@@ -539,7 +539,7 @@ async function DetailedProfitContent({ searchParams }: PageProps) {
                         <p>หน้า: {pageIndex + 1} / {pages.length}</p>
                       </div>
                     </div>
-                    <p className="text-base font-black text-[#8E24AA] mt-2">รายงานสินค้าและกำไรแยกตามสาขา</p>
+                    <p className="text-base font-black text-[#4A148C] mt-2">รายงานสินค้าและกำไรแยกตามสาขา</p>
                     <p className="text-xs font-semibold text-slate-600">
                       ช่วงวันที่ {formatDateThai(fromDate)} — {formatDateThai(toDate)} {selectedStoreIds.length > 0 && ` · ${selectedStoreLabel}`}
                     </p>

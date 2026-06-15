@@ -36,7 +36,7 @@ export function PrintPackingListButton({
       type="button"
       onClick={handlePrint}
       disabled={loading}
-      className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border border-[#8E24AA]/20 bg-white px-3 py-1.5 text-[13px] font-bold text-[#8E24AA] shadow-sm transition hover:bg-[#8E24AA]/15 hover:shadow-md active:scale-[0.98] disabled:opacity-50 print:hidden md:gap-2 md:px-6 md:py-2.5 md:text-sm"
+      className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border border-[#4A148C]/20 bg-white px-3 py-1.5 text-[13px] font-bold text-[#4A148C] shadow-sm transition hover:bg-[#4A148C]/15 hover:shadow-md active:scale-[0.98] disabled:opacity-50 print:hidden md:gap-2 md:px-6 md:py-2.5 md:text-sm"
     >
       <LayoutList className="h-3.5 w-3.5 md:h-4.5 md:w-4.5" strokeWidth={2.5} />
       {loading ? "กำลังโหลด..." : label}

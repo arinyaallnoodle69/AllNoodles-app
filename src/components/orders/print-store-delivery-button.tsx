@@ -41,7 +41,7 @@ export function PrintStoreDeliveryButton({
       aria-label={label}
       title={label}
       className={[
-        "inline-flex items-center justify-center border border-[#8E24AA] bg-[#8E24AA] text-white transition hover:bg-[#8E24AA] active:scale-95 disabled:opacity-50",
+        "inline-flex items-center justify-center border border-[#4A148C] bg-[#4A148C] text-white transition hover:bg-[#4A148C] active:scale-95 disabled:opacity-50",
         iconOnly ? "size-10 shrink-0 rounded-full p-0 leading-none" : "min-h-9 w-full gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold",
       ].join(" ")}
     >

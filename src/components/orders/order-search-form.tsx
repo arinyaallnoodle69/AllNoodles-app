@@ -27,11 +27,11 @@ export function OrderSearchForm({ date, expanded, q }: Props) {
         name="q"
         defaultValue={q}
         placeholder="ค้นหาร้านค้า…"
-        className="min-w-0 flex-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm outline-none transition focus:border-[#8E24AA]/50 focus:ring-2 focus:ring-[#8E24AA]/10"
+        className="min-w-0 flex-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm outline-none transition focus:border-[#4A148C]/50 focus:ring-2 focus:ring-[#4A148C]/10"
       />
       <button
         type="submit"
-        className="shrink-0 rounded-xl bg-[#8E24AA] px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-[#8E24AA]"
+        className="shrink-0 rounded-xl bg-[#4A148C] px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-[#4A148C]"
       >
         ค้นหา
       </button>

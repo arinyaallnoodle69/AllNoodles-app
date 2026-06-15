@@ -25,8 +25,8 @@ const statusConfig: Record<
   }
 > = {
   all: {
-    accentClass: "text-[#8E24AA]",
-    cardClass: "border-[#EA80FC] bg-[linear-gradient(135deg,#ffffff,#F3E5F5)] hover:border-[#8E24AA]/30",
+    accentClass: "text-[#4A148C]",
+    cardClass: "border-[#EA80FC] bg-[linear-gradient(135deg,#ffffff,#F3E5F5)] hover:border-[#4A148C]/30",
     description: "ร้านค้าที่เปิดใช้งาน",
     icon: Building2,
     iconClass: "bg-[#F3E5F5] ring-[#EA80FC]",
@@ -83,12 +83,12 @@ function StoreRow({ store }: { store: OrderStoreStatusItem }) {
 
   return (
     <li className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-3 py-3 shadow-sm">
-      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-slate-100 text-[#8E24AA]">
+      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-slate-100 text-[#4A148C]">
         <Store className="h-5 w-5" strokeWidth={2.2} />
       </div>
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-          <p className="text-sm font-extrabold text-[#8E24AA]">{store.code}</p>
+          <p className="text-sm font-extrabold text-[#4A148C]">{store.code}</p>
           {store.orderCount > 0 ? (
             <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-bold text-emerald-700 ring-1 ring-emerald-100">
               {store.orderCount.toLocaleString("th-TH")} ออเดอร์
@@ -178,7 +178,7 @@ export function OrderStoreStatusSummary({ orderDate, summary }: OrderStoreStatus
             <div className="shrink-0 border-b border-slate-100 px-5 pb-4 pt-5">
               <div className="flex items-start justify-between gap-4">
                 <div className="min-w-0">
-                  <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#8E24AA]">
+                  <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#4A148C]">
                     {formatThaiDate(orderDate)}
                   </p>
                   <h3 className="mt-1 text-xl font-extrabold tracking-tight text-slate-950">
@@ -203,7 +203,7 @@ export function OrderStoreStatusSummary({ orderDate, summary }: OrderStoreStatus
                 <input
                   value={query}
                   onChange={(event) => setQuery(event.target.value)}
-                  className="h-12 w-full rounded-2xl border border-slate-200 bg-slate-50 pl-12 pr-4 text-base font-semibold text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-[#8E24AA] focus:bg-white focus:ring-4 focus:ring-[#8E24AA]/10"
+                  className="h-12 w-full rounded-2xl border border-slate-200 bg-slate-50 pl-12 pr-4 text-base font-semibold text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-[#4A148C] focus:bg-white focus:ring-4 focus:ring-[#4A148C]/10"
                   placeholder="ค้นหารหัสหรือชื่อร้านค้า"
                 />
               </div>

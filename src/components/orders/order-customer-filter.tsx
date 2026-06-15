@@ -46,7 +46,7 @@ function FilterPanel({
             value={query}
             onChange={(event) => onChangeQuery(event.target.value)}
             placeholder="ค้นหาร้านค้า"
-            className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-10 pr-10 text-sm font-medium text-slate-950 outline-none transition focus:border-[#8E24AA] focus:bg-white"
+            className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-10 pr-10 text-sm font-medium text-slate-950 outline-none transition focus:border-[#4A148C] focus:bg-white"
           />
           {query ? (
             <button
@@ -91,7 +91,7 @@ function FilterPanel({
                   type="checkbox"
                   checked={isChecked}
                   onChange={() => onToggleOption(option.id)}
-                  className="mt-0.5 h-4 w-4 rounded border-slate-300 text-[#8E24AA] focus:ring-[#8E24AA]"
+                  className="mt-0.5 h-4 w-4 rounded border-slate-300 text-[#4A148C] focus:ring-[#4A148C]"
                 />
                 <span className="min-w-0 flex-1">
                   <span className="block text-sm font-bold text-slate-950">
@@ -99,7 +99,7 @@ function FilterPanel({
                   </span>
                 </span>
                 {isChecked ? (
-                  <Check className="mt-0.5 h-4 w-4 shrink-0 text-[#8E24AA]" strokeWidth={3} />
+                  <Check className="mt-0.5 h-4 w-4 shrink-0 text-[#4A148C]" strokeWidth={3} />
                 ) : null}
               </label>
             );
@@ -201,10 +201,10 @@ export function OrderCustomerFilter({
       <button
         type="button"
         onClick={() => setIsOpen((current) => !current)}
-        className="inline-flex w-full items-center justify-between gap-3 rounded-lg border border-white/25 bg-white px-3 py-2.5 text-left text-sm font-medium text-slate-950 shadow-sm outline-none transition hover:border-[#8E24AA]/25 focus-visible:ring-2 focus-visible:ring-[#8E24AA]/15"
+        className="inline-flex w-full items-center justify-between gap-3 rounded-lg border border-white/25 bg-white px-3 py-2.5 text-left text-sm font-medium text-slate-950 shadow-sm outline-none transition hover:border-[#4A148C]/25 focus-visible:ring-2 focus-visible:ring-[#4A148C]/15"
       >
         <span className="flex min-w-0 items-center gap-2">
-          <Store className="h-4 w-4 shrink-0 text-[#8E24AA]" strokeWidth={2.2} />
+          <Store className="h-4 w-4 shrink-0 text-[#4A148C]" strokeWidth={2.2} />
           <span className="truncate">{selectedLabel}</span>
         </span>
         <ChevronDown

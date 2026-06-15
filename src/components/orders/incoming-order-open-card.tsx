@@ -48,7 +48,7 @@ function InfoBlock({
       <p className="text-[11px] font-black uppercase tracking-[0.12em] text-slate-950">{label}</p>
       <div className="mt-1.5 flex items-center justify-between gap-2">
         <div className="flex min-w-0 items-center gap-2 text-[15px] font-semibold text-slate-950">
-          <span className="shrink-0 text-[#8E24AA]">{icon}</span>
+          <span className="shrink-0 text-[#4A148C]">{icon}</span>
           <span className="truncate">{value}</span>
         </div>
         {trailing}
@@ -100,9 +100,9 @@ export const IncomingOrderOpenCard = memo(function IncomingOrderOpenCard({
   }
 
   return (
-    <article className="relative overflow-hidden rounded-[1.35rem] border border-[#AA00FF]/35 bg-white px-5 py-4 shadow-[0_14px_34px_rgba(142, 36, 170,0.08)]">
-      <div className="pointer-events-none absolute inset-x-5 top-0 h-px bg-gradient-to-r from-transparent via-[#AA00FF]/70 to-transparent" />
-      <div className="pointer-events-none absolute bottom-0 left-0 top-0 w-1 bg-[#8E24AA]" />
+    <article className="relative overflow-hidden rounded-[1.35rem] border border-[#EA80FC]/35 bg-white px-5 py-4 shadow-[0_14px_34px_rgba(142, 36, 170,0.08)]">
+      <div className="pointer-events-none absolute inset-x-5 top-0 h-px bg-gradient-to-r from-transparent via-[#EA80FC]/70 to-transparent" />
+      <div className="pointer-events-none absolute bottom-0 left-0 top-0 w-1 bg-[#4A148C]" />
       <div className="flex items-start gap-3">
         <div className="min-w-0 flex-1">
           <p className="line-clamp-2 text-[1.18rem] font-bold leading-tight text-slate-950">
@@ -110,7 +110,7 @@ export const IncomingOrderOpenCard = memo(function IncomingOrderOpenCard({
           </p>
           <div className="mt-1.5 flex flex-wrap items-center gap-2">
             {warehouseName ? (
-              <span className="shrink-0 rounded-full bg-[#8E24AA]/8 px-2 py-0.5 text-[10px] font-black text-[#8E24AA] ring-1 ring-[#8E24AA]/25">
+              <span className="shrink-0 rounded-full bg-[#4A148C]/8 px-2 py-0.5 text-[10px] font-black text-[#4A148C] ring-1 ring-[#4A148C]/25">
                 {warehouseName}
               </span>
             ) : null}
@@ -154,7 +154,7 @@ export const IncomingOrderOpenCard = memo(function IncomingOrderOpenCard({
           icon={<CalendarDays className="h-4 w-4" strokeWidth={2.2} />}
           value={displayDate}
         />
-        <div className="min-w-0 border-l border-[#AA00FF]/30 pl-4">
+        <div className="min-w-0 border-l border-[#EA80FC]/30 pl-4">
           <p className="text-[11px] font-black uppercase tracking-[0.12em] text-slate-950">ช่องทาง</p>
           <div className="mt-1.5 flex items-center justify-between gap-2">
             <span className="inline-flex min-h-8 items-center py-1 text-sm font-semibold text-slate-950">
@@ -168,7 +168,7 @@ export const IncomingOrderOpenCard = memo(function IncomingOrderOpenCard({
           icon={<Package2 className="h-4 w-4" strokeWidth={2.2} />}
           value={`${productCount.toLocaleString("th-TH")} รายการ`}
         />
-        <div className="min-w-0 border-l border-[#AA00FF]/30 pl-4">
+        <div className="min-w-0 border-l border-[#EA80FC]/30 pl-4">
           <p className="text-[11px] font-black uppercase tracking-[0.12em] text-slate-950">ยอดรวม</p>
           <p className="mt-1.5 text-[1.05rem] font-bold leading-none text-slate-950">
             {totalAmountText}
@@ -176,11 +176,11 @@ export const IncomingOrderOpenCard = memo(function IncomingOrderOpenCard({
         </div>
       </div>
 
-      <div className="mt-4 grid grid-cols-2 gap-4 border-t border-[#AA00FF]/25 pt-4">
+      <div className="mt-4 grid grid-cols-2 gap-4 border-t border-[#EA80FC]/25 pt-4">
         <div className="min-w-0">
           <p className="text-[11px] font-black uppercase tracking-[0.12em] text-slate-950">การจัดส่ง</p>
           <div className="mt-2 flex items-center gap-2">
-            <Truck className="h-4 w-4 shrink-0 text-[#8E24AA]" strokeWidth={2.2} />
+            <Truck className="h-4 w-4 shrink-0 text-[#4A148C]" strokeWidth={2.2} />
             <div className="min-w-0 flex-1">
               <IncomingOrderVehicleSelect
                 customerId={customerId}
@@ -194,7 +194,7 @@ export const IncomingOrderOpenCard = memo(function IncomingOrderOpenCard({
           </div>
         </div>
 
-        <div className="min-w-0 border-l border-[#AA00FF]/30 pl-4">
+        <div className="min-w-0 border-l border-[#EA80FC]/30 pl-4">
           <p className="text-[11px] font-black uppercase tracking-[0.12em] text-slate-950">เลขจัดส่ง</p>
           <div className="mt-1.5 min-w-0">
             {hasDisplayDelivery ? (
@@ -202,21 +202,21 @@ export const IncomingOrderOpenCard = memo(function IncomingOrderOpenCard({
                 {displayDeliveryNumbers.map((num) => (
                   <span
                     key={num}
-                    className="truncate py-0.5 font-mono text-[1.05rem] font-bold leading-none text-[#AA00FF]"
+                    className="truncate py-0.5 font-mono text-[1.05rem] font-bold leading-none text-[#EA80FC]"
                   >
                     {num}
                   </span>
                 ))}
               </div>
             ) : (
-              <span className="text-[1.05rem] font-medium text-[#8E24AA]">-</span>
+              <span className="text-[1.05rem] font-medium text-[#4A148C]">-</span>
             )}
           </div>
         </div>
       </div>
 
-      <div className="mt-4 border-t border-[#AA00FF]/25 pt-3">
-        <p className="text-sm font-semibold leading-6 text-[#8E24AA]">
+      <div className="mt-4 border-t border-[#EA80FC]/25 pt-3">
+        <p className="text-sm font-semibold leading-6 text-[#4A148C]">
           <span className="mr-2 text-[11px] font-black uppercase tracking-[0.12em] text-slate-950">
             หมายเหตุ:
           </span>
@@ -229,11 +229,11 @@ export const IncomingOrderOpenCard = memo(function IncomingOrderOpenCard({
           type="button"
           onClick={openDetail}
           disabled={isPending}
-          className="inline-flex min-h-11 flex-1 items-center justify-between rounded-2xl border border-[#AA00FF]/55 bg-[#8E24AA] px-4 py-3 text-sm font-bold text-white shadow-[0_12px_26px_rgba(142, 36, 170,0.22)] transition hover:bg-[#8E24AA] active:scale-[0.99] disabled:opacity-60"
+          className="inline-flex min-h-11 flex-1 items-center justify-between rounded-2xl border border-[#EA80FC]/55 bg-[#4A148C] px-4 py-3 text-sm font-bold text-white shadow-[0_12px_26px_rgba(142, 36, 170,0.22)] transition hover:bg-[#4A148C] active:scale-[0.99] disabled:opacity-60"
         >
           <span>{isPending ? "กำลังเปิดรายละเอียด..." : "เปิดรายละเอียดออเดอร์"}</span>
           {isPending ? (
-            <Loader2 className="h-4 w-4 animate-spin text-[#8E24AA]" strokeWidth={2.5} />
+            <Loader2 className="h-4 w-4 animate-spin text-[#4A148C]" strokeWidth={2.5} />
           ) : (
             <ChevronRight className="h-4 w-4 text-white" strokeWidth={2.6} />
           )}

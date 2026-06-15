@@ -49,8 +49,8 @@ export default async function SettingsVehiclesPage({
       <div className="sticky top-0 z-40 -mx-3 mb-4 hidden border-b border-[#E1BEE7] bg-white/95 px-4 py-3 shadow-[0_10px_30px_rgba(31,42,68,0.08)] backdrop-blur lg:block">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div className="min-w-0">
-            <p className="text-lg font-black text-[#8E24AA]">จัดการรถ</p>
-            <p className="text-xs font-semibold text-[#8E24AA]">
+            <p className="text-lg font-black text-[#4A148C]">จัดการรถ</p>
+            <p className="text-xs font-semibold text-[#4A148C]">
               แสดง {filteredVehicles.length.toLocaleString("th-TH")} จาก {data.vehicles.length.toLocaleString("th-TH")} คัน
             </p>
           </div>
@@ -63,18 +63,18 @@ export default async function SettingsVehiclesPage({
                 name="q"
                 defaultValue={searchTerm}
                 placeholder="ค้นหาชื่อรถ ทะเบียน หรือคนขับ"
-                className="h-12 w-full rounded-lg border border-[#D7DEE8] bg-white pl-11 pr-4 text-sm font-semibold text-[#8E24AA] outline-none transition placeholder:text-[#8E24AA] focus:border-[#8E24AA] focus:ring-2 focus:ring-[#8E24AA]/15"
+                className="h-12 w-full rounded-lg border border-[#D7DEE8] bg-white pl-11 pr-4 text-sm font-semibold text-[#4A148C] outline-none transition placeholder:text-[#4A148C] focus:border-[#4A148C] focus:ring-2 focus:ring-[#4A148C]/15"
               />
             </label>
             <button
               type="submit"
-              className="inline-flex h-12 items-center justify-center rounded-lg border border-[#8E24AA]/20 bg-white px-4 text-sm font-bold text-[#8E24AA] transition hover:border-[#8E24AA] hover:bg-[#8E24AA]/[0.04] active:scale-[0.98]"
+              className="inline-flex h-12 items-center justify-center rounded-lg border border-[#4A148C]/20 bg-white px-4 text-sm font-bold text-[#4A148C] transition hover:border-[#4A148C] hover:bg-[#4A148C]/[0.04] active:scale-[0.98]"
             >
               ค้นหา
             </button>
             <Link
               href="/settings/vehicles?create=1"
-              className="inline-flex h-12 items-center justify-center gap-2 rounded-lg bg-[#8E24AA] px-4 text-sm font-bold text-white shadow-[0_12px_26px_rgba(142, 36, 170,0.22)] transition hover:bg-[#8E24AA] active:scale-[0.98]"
+              className="inline-flex h-12 items-center justify-center gap-2 rounded-lg bg-[#4A148C] px-4 text-sm font-bold text-white shadow-[0_12px_26px_rgba(142, 36, 170,0.22)] transition hover:bg-[#4A148C] active:scale-[0.98]"
             >
               <Plus className="h-4.5 w-4.5" strokeWidth={2.4} />
               เพิ่มรถ
@@ -92,12 +92,12 @@ export default async function SettingsVehiclesPage({
               name="q"
               defaultValue={searchTerm}
               placeholder="ค้นหาชื่อรถ ทะเบียน หรือคนขับ"
-              className="h-12 w-full rounded-lg border border-[#D7DEE8] bg-white pl-11 pr-4 text-sm font-semibold text-[#8E24AA] outline-none transition placeholder:text-[#8E24AA] focus:border-[#8E24AA] focus:ring-2 focus:ring-[#8E24AA]/15"
+              className="h-12 w-full rounded-lg border border-[#D7DEE8] bg-white pl-11 pr-4 text-sm font-semibold text-[#4A148C] outline-none transition placeholder:text-[#4A148C] focus:border-[#4A148C] focus:ring-2 focus:ring-[#4A148C]/15"
             />
           </label>
           <button
             type="submit"
-            className="inline-flex h-12 w-full items-center justify-center rounded-lg bg-[#8E24AA] px-4 text-sm font-bold text-white shadow-[0_12px_26px_rgba(142, 36, 170,0.22)] transition active:scale-[0.98]"
+            className="inline-flex h-12 w-full items-center justify-center rounded-lg bg-[#4A148C] px-4 text-sm font-bold text-white shadow-[0_12px_26px_rgba(142, 36, 170,0.22)] transition active:scale-[0.98]"
           >
             ค้นหา
           </button>
@@ -107,7 +107,7 @@ export default async function SettingsVehiclesPage({
       <Link
         href="/settings/vehicles?create=1"
         aria-label="เพิ่มรถ"
-        className="fixed bottom-[calc(4.75rem+env(safe-area-inset-bottom)+12px)] left-4 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-[#8E24AA] text-white shadow-[0_14px_32px_rgba(142, 36, 170,0.32)] transition active:scale-95 lg:hidden"
+        className="fixed bottom-[calc(4.75rem+env(safe-area-inset-bottom)+12px)] left-4 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-[#4A148C] text-white shadow-[0_14px_32px_rgba(142, 36, 170,0.32)] transition active:scale-95 lg:hidden"
       >
         <Plus className="h-7 w-7" strokeWidth={2.6} />
       </Link>

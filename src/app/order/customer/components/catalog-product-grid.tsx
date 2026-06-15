@@ -57,7 +57,7 @@ const CatalogProductCard = memo(function CatalogProductCard({
         </div>
 
         {qty > 0 && (
-          <div className="absolute left-2 top-2 flex h-6 min-w-6 items-center justify-center rounded-full bg-[#AA00FF] px-1.5 text-[10px] font-bold text-white shadow-lg ring-2 ring-white md:h-[1.65rem] md:min-w-[1.65rem]">
+          <div className="absolute left-2 top-2 flex h-6 min-w-6 items-center justify-center rounded-full bg-[#EA80FC] px-1.5 text-[10px] font-bold text-white shadow-lg ring-2 ring-white md:h-[1.65rem] md:min-w-[1.65rem]">
             {qty}
           </div>
         )}
@@ -86,7 +86,7 @@ const CatalogProductCard = memo(function CatalogProductCard({
             {product.name}
           </h3>
         </div>
-        <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#AA00FF] text-white shadow-md transition-transform active:scale-90 md:h-8 md:w-8">
+        <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#EA80FC] text-white shadow-md transition-transform active:scale-90 md:h-8 md:w-8">
           <Plus className="h-4 w-4 md:h-4 md:w-4" strokeWidth={3} />
         </div>
       </div>

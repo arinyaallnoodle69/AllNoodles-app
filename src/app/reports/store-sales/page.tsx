@@ -124,7 +124,7 @@ function StoreRowScreen({
         className={`whitespace-nowrap px-4 py-4 text-center tabular-nums ${styles.printRevenueCell}`}
         style={{ background: "rgba(142, 36, 170,0.03)" }}
       >
-        <span className="text-base font-bold text-[#8E24AA]">{fmtMoney(row.totalRevenue)}</span>
+        <span className="text-base font-bold text-[#4A148C]">{fmtMoney(row.totalRevenue)}</span>
       </td>
       <td className="whitespace-nowrap px-4 py-4 text-center text-base font-bold text-slate-500 tabular-nums">
         {fmtMoney(row.totalCost)}
@@ -172,7 +172,7 @@ function StoreRowPrint({
         {fmt(row.totalOrders)}
       </td>
       <td className="px-2 py-2 text-center tabular-nums border-b border-slate-100" style={{ background: "rgba(142, 36, 170,0.03)" }}>
-        <span className="text-[11px] font-bold text-[#8E24AA]">{fmtMoney(row.totalRevenue)}</span>
+        <span className="text-[11px] font-bold text-[#4A148C]">{fmtMoney(row.totalRevenue)}</span>
       </td>
       <td className="px-2 py-2 text-center text-[11px] font-bold text-slate-500 tabular-nums border-b border-slate-100">
         {fmtMoney(row.totalCost)}
@@ -250,7 +250,7 @@ function StoreCard({
 
         <div className="shrink-0">
           <span
-            className={`flex h-9 w-9 items-center justify-center rounded-xl text-xs font-black text-white shadow-md ${rankBadgeStyle ? "" : "bg-[#8E24AA]"}`}
+            className={`flex h-9 w-9 items-center justify-center rounded-xl text-xs font-black text-white shadow-md ${rankBadgeStyle ? "" : "bg-[#4A148C]"}`}
             style={rankBadgeStyle}
           >
             {rank}
@@ -266,7 +266,7 @@ function StoreCard({
         />
         <div className="min-w-0 border-l border-slate-300 pl-4">
           <p className="text-[11px] font-black uppercase tracking-[0.12em] text-slate-950">ยอดขาย</p>
-          <p className="mt-1.5 text-[1.05rem] font-bold leading-none text-[#8E24AA]">
+          <p className="mt-1.5 text-[1.05rem] font-bold leading-none text-[#4A148C]">
             {fmtMoney(row.totalRevenue)}
           </p>
         </div>
@@ -330,7 +330,7 @@ function Pagination({ page, total, pageSize, baseUrl }: { page: number; total: n
         p === "..." ? (
           <span key={`e-${i}`} className="px-1 text-base text-slate-400">...</span>
         ) : (
-          <Link key={p} href={`${baseUrl}&page=${p}`} className={`flex h-10 w-10 items-center justify-center rounded-xl text-base font-semibold transition ${p === page ? "bg-[#8E24AA] text-white shadow-sm" : "text-slate-600 hover:bg-slate-100"}`}>{p}</Link>
+          <Link key={p} href={`${baseUrl}&page=${p}`} className={`flex h-10 w-10 items-center justify-center rounded-xl text-base font-semibold transition ${p === page ? "bg-[#4A148C] text-white shadow-sm" : "text-slate-600 hover:bg-slate-100"}`}>{p}</Link>
         ),
       )}
       {page < totalPages && (
@@ -407,9 +407,9 @@ async function StoreSalesReportContent({ searchParams }: PageProps) {
             <nav className="mb-2 flex items-center gap-1 text-sm font-medium text-slate-400">
               <span>Analytics</span>
               <span className="text-slate-300">›</span>
-              <span className="font-semibold text-[#8E24AA]">รายงานยอดขายตามร้านค้า</span>
+              <span className="font-semibold text-[#4A148C]">รายงานยอดขายตามร้านค้า</span>
             </nav>
-            <h1 className="text-2xl font-extrabold tracking-tight text-[#8E24AA] sm:text-3xl">รายงานยอดขายตามร้านค้า</h1>
+            <h1 className="text-2xl font-extrabold tracking-tight text-[#4A148C] sm:text-3xl">รายงานยอดขายตามร้านค้า</h1>
           </header>
 
           <MobileSearchDrawer title="ค้นหารายงานยอดขาย">
@@ -426,7 +426,7 @@ async function StoreSalesReportContent({ searchParams }: PageProps) {
                   <div className="min-w-0 flex-1"><ThaiDatePicker id="m-ss-to" name="to" defaultValue={toDate} max={today} placeholder="วันสิ้นสุด" compact matchFieldHeight /></div>
                 </div>
               </div>
-              <button type="submit" className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#8E24AA] py-3.5 text-base font-bold text-white transition hover:bg-[#1a237e]"><Filter className="h-4 w-4" strokeWidth={2} />ค้นหา</button>
+              <button type="submit" className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#4A148C] py-3.5 text-base font-bold text-white transition hover:bg-[#1a237e]"><Filter className="h-4 w-4" strokeWidth={2} />ค้นหา</button>
             </form>
           </MobileSearchDrawer>
 
@@ -445,13 +445,13 @@ async function StoreSalesReportContent({ searchParams }: PageProps) {
                     <div className="min-w-0 flex-1"><ThaiDatePicker id="ss-to" name="to" defaultValue={toDate} max={today} placeholder="วันสิ้นสุด" compact matchFieldHeight /></div>
                   </div>
                 </div>
-                <button type="submit" className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#8E24AA] px-6 py-2.5 text-sm font-bold text-white transition hover:bg-[#1a237e] active:scale-95 sm:w-auto"><Filter className="h-4 w-4" strokeWidth={2} />ค้นหา</button>
+                <button type="submit" className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#4A148C] px-6 py-2.5 text-sm font-bold text-white transition hover:bg-[#1a237e] active:scale-95 sm:w-auto"><Filter className="h-4 w-4" strokeWidth={2} />ค้นหา</button>
               </form>
             </div>
 
             <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4 sm:px-6 sm:py-5">
               <div>
-                <h3 className="text-lg font-bold text-[#8E24AA] sm:text-xl">ยอดขายตามร้านค้า</h3>
+                <h3 className="text-lg font-bold text-[#4A148C] sm:text-xl">ยอดขายตามร้านค้า</h3>
                 <p className="mt-0.5 text-sm text-slate-400">{isoToDisplay(fromDate)} — {isoToDisplay(toDate)}{selectedStoreIds.length > 0 && ` · ${selectedStoreLabel}`}</p>
               </div>
               <PrintButton targetId="report-print-area" fileName="รายงานยอดขายตามร้านค้า" />
@@ -486,13 +486,13 @@ async function StoreSalesReportContent({ searchParams }: PageProps) {
                         ))}
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-[#8E24AA]/24">
+                    <tbody className="divide-y divide-[#4A148C]/24">
                       {rows.map((row, i) => <StoreRowScreen key={row.customerId} row={row} rank={(page - 1) * PAGE_SIZE + i + 1} fromDate={fromDate} toDate={toDate} />)}
                       <tr className="bg-slate-50/90">
                         <td /><td />
                         <td className="px-4 py-4 text-right text-base font-black tracking-[0.02em] text-slate-600 whitespace-nowrap">ยอดรวมทั้งหมด</td>
                         <td className="px-4 py-4 text-center text-base font-black text-slate-700 tabular-nums">{fmt(summary.totalOrders)} ออเดอร์</td>
-                        <td className={`px-4 py-4 text-center tabular-nums whitespace-nowrap ${styles.printRevenueCell}`} style={{ background: "rgba(142, 36, 170,0.05)" }}><span className="text-base font-black text-[#8E24AA]">{fmtMoney(summary.totalRevenue)}</span></td>
+                        <td className={`px-4 py-4 text-center tabular-nums whitespace-nowrap ${styles.printRevenueCell}`} style={{ background: "rgba(142, 36, 170,0.05)" }}><span className="text-base font-black text-[#4A148C]">{fmtMoney(summary.totalRevenue)}</span></td>
                         <td className="px-4 py-4 text-center text-base font-black text-slate-700 tabular-nums whitespace-nowrap">{fmtMoney(summary.totalCost)}</td>
                         <td className={`px-4 py-4 text-center tabular-nums whitespace-nowrap ${profitPositive ? "text-emerald-600" : "text-red-500"}`}><span className="text-base font-black">{fmtMoney(summary.totalRevenue - summary.totalCost)}</span></td>
                         <td className={`px-5 py-4 text-center tabular-nums whitespace-nowrap ${profitPositive ? "text-emerald-600" : "text-red-500"}`}><span className="text-base font-black">{summary.totalRevenue > 0 ? fmtPercent(marginPercent) : "—"}</span></td>
@@ -502,7 +502,7 @@ async function StoreSalesReportContent({ searchParams }: PageProps) {
                 </div>
 
                 {/* Mobile View Cards */}
-                <div className="divide-y divide-[#8E24AA]/20 px-2 sm:px-4 lg:hidden">
+                <div className="divide-y divide-[#4A148C]/20 px-2 sm:px-4 lg:hidden">
                   {rows.map((row, i) => <StoreCard key={row.customerId} row={row} rank={(page - 1) * PAGE_SIZE + i + 1} fromDate={fromDate} toDate={toDate} />)}
                 </div>
               </>
@@ -559,14 +559,14 @@ async function StoreSalesReportContent({ searchParams }: PageProps) {
                       ))}
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-[#8E24AA]/24">
+                  <tbody className="divide-y divide-[#4A148C]/24">
                     {pageRows.map((row, i) => <StoreRowPrint key={row.customerId} row={row} rank={pageIdx * PRINT_PAGE_SIZE + i + 1} />)}
                     {pageIdx === pages.length - 1 && (
                       <tr className="bg-slate-50/90">
                         <td /><td />
                         <td className="px-4 py-3 text-right text-[11px] font-bold tracking-[0.02em] text-slate-600 whitespace-nowrap border-b border-slate-100">ยอดรวมทั้งหมด</td>
                         <td className="px-2 py-3 text-center text-[11px] font-bold text-slate-700 tabular-nums border-b border-slate-100">{fmt(summary.totalOrders)} ออเดอร์</td>
-                        <td className={`px-2 py-3 text-center tabular-nums whitespace-nowrap border-b border-slate-100 ${styles.printRevenueCell}`} style={{ background: "rgba(142, 36, 170,0.05)" }}><span className="text-[11px] font-bold text-[#8E24AA]">{fmtMoney(summary.totalRevenue)}</span></td>
+                        <td className={`px-2 py-3 text-center tabular-nums whitespace-nowrap border-b border-slate-100 ${styles.printRevenueCell}`} style={{ background: "rgba(142, 36, 170,0.05)" }}><span className="text-[11px] font-bold text-[#4A148C]">{fmtMoney(summary.totalRevenue)}</span></td>
                         <td className="px-2 py-3 text-center text-[11px] font-bold text-slate-700 tabular-nums whitespace-nowrap border-b border-slate-100">{fmtMoney(summary.totalCost)}</td>
                         <td className={`px-2 py-3 text-center tabular-nums whitespace-nowrap border-b border-slate-100 ${profitPositive ? "text-emerald-600" : "text-red-500"}`}><span className="text-[11px] font-bold">{fmtMoney(summary.totalRevenue - summary.totalCost)}</span></td>
                         <td className={`px-3 py-3 text-center tabular-nums whitespace-nowrap border-b border-slate-100 ${profitPositive ? "text-emerald-600" : "text-red-500"}`}><span className="text-[11px] font-bold">{summary.totalRevenue > 0 ? fmtPercent(marginPercent) : "—"}</span></td>

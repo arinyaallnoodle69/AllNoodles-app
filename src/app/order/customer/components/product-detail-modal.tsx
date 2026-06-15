@@ -184,8 +184,8 @@ export function ProductDetailModal({
           >
             <Star
               className="h-5.5 w-5.5"
-              fill={favorites[selectedProduct.id] ? "#AA00FF" : "none"}
-              stroke={favorites[selectedProduct.id] ? "#AA00FF" : "currentColor"}
+              fill={favorites[selectedProduct.id] ? "#EA80FC" : "none"}
+              stroke={favorites[selectedProduct.id] ? "#EA80FC" : "currentColor"}
               strokeWidth={2}
             />
           </button>
@@ -196,7 +196,7 @@ export function ProductDetailModal({
           >
             <ShoppingCart className="h-5.5 w-5.5" strokeWidth={2} />
             {totalItems > 0 && (
-              <span className="absolute top-1 right-1 flex h-4.5 w-4.5 items-center justify-center rounded-full bg-[#AA00FF] text-[9px] font-black text-white shadow-sm ring-2 ring-white">
+              <span className="absolute top-1 right-1 flex h-4.5 w-4.5 items-center justify-center rounded-full bg-[#EA80FC] text-[9px] font-black text-white shadow-sm ring-2 ring-white">
                 {totalItems}
               </span>
             )}
@@ -208,7 +208,7 @@ export function ProductDetailModal({
                 onClick={onCopyShareLink}
                 className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-semibold transition hover:bg-slate-50"
               >
-                <Link2 className="h-4.5 w-4.5 text-[#AA00FF]" strokeWidth={2} />
+                <Link2 className="h-4.5 w-4.5 text-[#EA80FC]" strokeWidth={2} />
                 <span>คัดลอกลิงก์</span>
               </button>
               <button
@@ -236,7 +236,7 @@ export function ProductDetailModal({
         </div>
       </div>
       {shareFeedback ? (
-        <div className="border-b border-[#EA80FC] bg-[#F3E5F5] px-4 py-2 text-center text-xs font-semibold text-[#AA00FF]">
+        <div className="border-b border-[#EA80FC] bg-[#F3E5F5] px-4 py-2 text-center text-xs font-semibold text-[#EA80FC]">
           {shareFeedback}
         </div>
       ) : null}
@@ -321,7 +321,7 @@ export function ProductDetailModal({
                         onClick={() => onSelectImage(imageIndex)}
                         className={`relative h-[72px] w-[72px] shrink-0 overflow-hidden rounded-2xl border-2 bg-white transition ${
                           isActiveImage
-                            ? "border-[#AA00FF] shadow-[0_12px_24px_rgba(170,0,255,0.12)]"
+                            ? "border-[#EA80FC] shadow-[0_12px_24px_rgba(170,0,255,0.12)]"
                             : "border-slate-200"
                         }`}
                         aria-label={`ดูรูปที่ ${imageIndex + 1}`}
@@ -341,7 +341,7 @@ export function ProductDetailModal({
 
               <div className="flex flex-col gap-2 pt-1">
                 <div className="flex flex-wrap items-center gap-2 text-[13px] font-bold text-slate-800">
-                  <Package className="h-4 w-4 text-[#AA00FF]" strokeWidth={2.2} />
+                  <Package className="h-4 w-4 text-[#EA80FC]" strokeWidth={2.2} />
                   <span>ชื่อสินค้า</span>
                   <span className="h-4 w-px bg-slate-300" aria-hidden="true" />
                   <span className="text-[12px] font-semibold text-slate-500">
@@ -361,16 +361,16 @@ export function ProductDetailModal({
                     className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-bold animate-pulse-subtle"
                     style={{
                       backgroundColor: isOrderOpen ? "#F3E5F5" : "#fee2e2",
-                      color: isOrderOpen ? "#AA00FF" : "#b91c1c",
+                      color: isOrderOpen ? "#EA80FC" : "#b91c1c",
                       border: `1px solid ${isOrderOpen ? "#EA80FC" : "#fca5a5"}`,
                     }}
                   >
                     <span
                       className={`h-1.5 w-1.5 rounded-full ${
-                        isOrderOpen ? "bg-[#AA00FF]" : "bg-red-500"
+                        isOrderOpen ? "bg-[#EA80FC]" : "bg-red-500"
                       }`}
                       style={{
-                        boxShadow: isOrderOpen ? "0 0 4px #AA00FF" : "0 0 4px #ef4444",
+                        boxShadow: isOrderOpen ? "0 0 4px #EA80FC" : "0 0 4px #ef4444",
                       }}
                     />
                     {isOrderOpen ? "เปิดรับออเดอร์" : "ปิดรับออเดอร์แล้ว"}
@@ -417,23 +417,23 @@ export function ProductDetailModal({
           {hasContent ? (
             <div className="mt-2 bg-white px-6 py-5 shadow-[0_16px_38px_rgba(15,23,42,0.10)]">
               <h3 className="mb-3 flex items-center gap-2 text-[13px] font-bold text-slate-800">
-                <Info className="h-4 w-4 text-[#AA00FF]" strokeWidth={2.2} />
+                <Info className="h-4 w-4 text-[#EA80FC]" strokeWidth={2.2} />
                 <span>รายละเอียดสินค้า</span>
               </h3>
               <div className="space-y-3">
                 {(brand || category) && (
                   <div className="flex flex-wrap items-center gap-x-2.5 gap-y-2">
                     {brand && (
-                      <p className="text-[13px] font-semibold text-[#AA00FF] underline decoration-[#AA00FF] decoration-1 underline-offset-1 [text-decoration-skip-ink:auto]">
+                      <p className="text-[13px] font-semibold text-[#EA80FC] underline decoration-[#EA80FC] decoration-1 underline-offset-1 [text-decoration-skip-ink:auto]">
                         <span>แบรนด์:</span>{" "}
                         {brand}
                       </p>
                     )}
                     {brand && category ? (
-                      <span className="h-4 w-px bg-[#AA00FF]/55" aria-hidden="true" />
+                      <span className="h-4 w-px bg-[#EA80FC]/55" aria-hidden="true" />
                     ) : null}
                     {category && (
-                      <p className="text-[13px] font-semibold text-[#AA00FF] underline decoration-[#AA00FF] decoration-1 underline-offset-1 [text-decoration-skip-ink:auto]">
+                      <p className="text-[13px] font-semibold text-[#EA80FC] underline decoration-[#EA80FC] decoration-1 underline-offset-1 [text-decoration-skip-ink:auto]">
                         <span>หมวดหมู่:</span>{" "}
                         {category}
                       </p>
@@ -454,7 +454,7 @@ export function ProductDetailModal({
           {modalRecommendations.length > 0 && (
             <div className="mt-2 bg-white px-6 py-5 shadow-[0_16px_38px_rgba(15,23,42,0.10)]">
               <h3 className="mb-5 flex items-center gap-2 text-[13px] font-bold text-slate-800">
-                <Package className="h-4 w-4 text-[#AA00FF]" strokeWidth={2.2} />
+                <Package className="h-4 w-4 text-[#EA80FC]" strokeWidth={2.2} />
                 <span>สินค้าเพิ่มเติม</span>
               </h3>
               <div
@@ -498,7 +498,7 @@ export function ProductDetailModal({
                         key={`recommendation-page-${index}`}
                         aria-hidden="true"
                         className={`h-1.5 rounded-full transition-all ${
-                          isActive ? "w-6 bg-[#AA00FF]" : "w-3 bg-[#AA00FF]/25"
+                          isActive ? "w-6 bg-[#EA80FC]" : "w-3 bg-[#EA80FC]/25"
                         }`}
                       />
                     );
@@ -543,7 +543,7 @@ function TrustBadge({
 }) {
   return (
     <span className="inline-flex h-8 min-w-0 items-center gap-1.5 rounded-md border border-slate-200 bg-white px-2.5 text-[11px] font-bold leading-none text-slate-700 shadow-[0_5px_14px_rgba(15,23,42,0.05)]">
-      <span className="flex h-[18px] w-[18px] items-center justify-center rounded-[5px] bg-[#AA00FF]/10 text-[#AA00FF]">
+      <span className="flex h-[18px] w-[18px] items-center justify-center rounded-[5px] bg-[#EA80FC]/10 text-[#EA80FC]">
         <Icon className="h-3 w-3" strokeWidth={2.4} />
       </span>
       <span className="min-w-0 whitespace-nowrap">{label}</span>

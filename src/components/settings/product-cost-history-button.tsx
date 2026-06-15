@@ -30,7 +30,7 @@ function CostChangeRow({ row }: { row: ProductCostHistoryRow }) {
     <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
       <div className="mb-3 flex items-start justify-between gap-2">
         <div>
-          <span className="inline-flex items-center rounded-full bg-[#8E24AA]/20 px-3 py-1 text-sm font-bold text-[#8E24AA]">
+          <span className="inline-flex items-center rounded-full bg-[#4A148C]/20 px-3 py-1 text-sm font-bold text-[#4A148C]">
             {row.unit_label}
           </span>
         </div>
@@ -128,7 +128,7 @@ export function ProductCostHistoryButton({
             <div className="flex shrink-0 items-center justify-between border-b border-slate-200 bg-white px-5 py-4 sm:rounded-t-2xl">
               <div>
                 <div className="flex items-center gap-2">
-                  <History className="h-5 w-5 text-[#8E24AA]" strokeWidth={2} />
+                  <History className="h-5 w-5 text-[#4A148C]" strokeWidth={2} />
                   <h2 className="text-base font-bold text-slate-900">ประวัติต้นทุน</h2>
                 </div>
                 <p className="mt-0.5 text-sm text-slate-500">{productName}</p>
@@ -146,7 +146,7 @@ export function ProductCostHistoryButton({
             <div className="flex-1 overflow-y-auto p-4 space-y-3">
               {isPending && (
                 <div className="flex items-center justify-center py-12">
-                  <div className="h-8 w-8 animate-spin rounded-full border-4 border-slate-200 border-t-[#8E24AA]" />
+                  <div className="h-8 w-8 animate-spin rounded-full border-4 border-slate-200 border-t-[#4A148C]" />
                 </div>
               )}
 
