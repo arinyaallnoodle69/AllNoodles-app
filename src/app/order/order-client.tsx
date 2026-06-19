@@ -2082,7 +2082,7 @@ export default function OrderClient({
     return (
       <div className="flex min-h-screen w-full items-center justify-center bg-white px-6">
         <div className="flex items-center gap-3 rounded-2xl border border-slate-100 bg-slate-50 px-5 py-4 text-slate-600">
-          <Loader2 className="h-5 w-5 animate-spin text-[#003366]" />
+          <Loader2 className="h-5 w-5 animate-spin text-[#4A148C]" />
           <span className="text-sm font-semibold">กำลังตรวจสอบข้อมูลการเข้าสู่ระบบ...</span>
         </div>
       </div>
@@ -2128,18 +2128,18 @@ export default function OrderClient({
   // ─── 3. Self-registration / choice screen ─────────────────────────────────
   if (currentView === "register") {
     const selectClass =
-      "w-full appearance-none rounded-2xl border border-slate-200 bg-white px-4 py-3.5 pr-10 text-base text-slate-800 outline-none transition focus:border-[#003366] focus:ring-2 focus:ring-[#003366]/10 disabled:bg-slate-50 disabled:text-slate-400";
+      "w-full appearance-none rounded-2xl border border-slate-200 bg-white px-4 py-3.5 pr-10 text-base text-slate-800 outline-none transition focus:border-[#4A148C] focus:ring-2 focus:ring-[#4A148C]/15 disabled:bg-slate-50 disabled:text-slate-400";
     const inputClass =
-      "w-full rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-base text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-[#003366] focus:ring-2 focus:ring-[#003366]/10";
+      "w-full rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-base text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-[#4A148C] focus:ring-2 focus:ring-[#4A148C]/15";
 
     return (
-      <div className="min-h-screen bg-[linear-gradient(160deg,#eef4fa_0%,#f8fafc_60%,#fff_100%)]">
+      <div className="min-h-screen bg-[linear-gradient(160deg,#F3E5F5_0%,#ffffff_58%,#fff_100%)]">
         {/* Header */}
         <header className="border-b border-slate-100 bg-white/95 px-5 py-6 text-center backdrop-blur-sm">
-          <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-[#0f2f56] shadow-md">
+          <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-[#4A148C] shadow-md shadow-[#4A148C]/20">
             <Store className="h-7 w-7 text-white" strokeWidth={1.8} />
           </div>
-          <h1 className="text-xl font-extrabold tracking-tight text-[#003366]">ยินดีต้อนรับ</h1>
+          <h1 className="text-xl font-extrabold tracking-tight text-[#4A148C]">ยินดีต้อนรับ</h1>
           <p className="mt-1 text-sm text-slate-500">กรุณาเลือกประเภทการเริ่มต้นใช้งาน</p>
         </header>
 
@@ -2154,16 +2154,16 @@ export default function OrderClient({
                 disabled={isPending}
                 className={`flex w-full items-center gap-4 rounded-2xl border-2 px-5 py-4 transition active:scale-[0.98] ${
                   canSubmitPendingLineOrder
-                    ? "border-[#003366] bg-[#003366] text-white shadow-lg"
-                    : "border-slate-200 bg-white text-slate-700 shadow-sm hover:border-[#003366]/40"
+                    ? "border-[#4A148C] bg-[#4A148C] text-white shadow-lg shadow-[#4A148C]/20"
+                    : "border-slate-200 bg-white text-slate-700 shadow-sm hover:border-[#EA80FC]/60"
                 }`}
               >
                 <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${canSubmitPendingLineOrder ? "bg-white/15" : "bg-slate-100"}`}>
-                  <Store className={`h-5 w-5 ${canSubmitPendingLineOrder ? "text-white" : "text-[#003366]"}`} strokeWidth={1.8} />
+                  <Store className={`h-5 w-5 ${canSubmitPendingLineOrder ? "text-white" : "text-[#4A148C]"}`} strokeWidth={1.8} />
                 </div>
                 <div className="text-left">
                   <div className="text-base font-extrabold">ลูกค้าเก่า / เคยสั่งซื้อแล้ว</div>
-                  <div className={`text-xs font-normal ${canSubmitPendingLineOrder ? "text-blue-200" : "text-slate-400"}`}>สำหรับลูกค้าที่เคยติดต่อหรือสั่งซื้อกับทางเรามาก่อน</div>
+                  <div className={`text-xs font-normal ${canSubmitPendingLineOrder ? "text-[#F3E5F5]" : "text-slate-400"}`}>สำหรับลูกค้าที่เคยติดต่อหรือสั่งซื้อกับทางเรามาก่อน</div>
                 </div>
                 {isPending ? (
                   <Loader2 className="ml-auto h-4 w-4 shrink-0 animate-spin text-slate-300" />
@@ -2176,10 +2176,10 @@ export default function OrderClient({
             <button
               type="button"
               onClick={() => setCurrentView("new_inquiry")}
-              className="flex w-full items-center gap-4 rounded-2xl border-2 border-slate-200 bg-white px-5 py-4 text-slate-700 shadow-sm transition hover:border-amber-300 active:scale-[0.98]"
+              className="flex w-full items-center gap-4 rounded-2xl border-2 border-slate-200 bg-white px-5 py-4 text-slate-700 shadow-sm transition hover:border-[#EA80FC]/60 active:scale-[0.98]"
             >
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-amber-50">
-                <UserPlus className="h-5 w-5 text-amber-500" strokeWidth={1.8} />
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#F3E5F5]">
+                <UserPlus className="h-5 w-5 text-[#4A148C]" strokeWidth={1.8} />
               </div>
               <div className="text-left">
                 <div className="text-base font-extrabold">ลูกค้าใหม่</div>
@@ -2363,7 +2363,7 @@ export default function OrderClient({
                   type="button"
                   disabled={isPending}
                   onClick={handleRegister}
-                  className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[#0f2f56] px-6 py-4 text-base font-bold text-white shadow-md transition active:scale-[0.97] disabled:opacity-60"
+                  className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[#4A148C] px-6 py-4 text-base font-bold text-white shadow-md shadow-[#4A148C]/20 transition active:scale-[0.97] disabled:opacity-60"
                 >
                   {isPending ? <Loader2 className="h-5 w-5 animate-spin" /> : <BadgeCheck className="h-5 w-5" strokeWidth={2} />}
                   {isPending ? "กำลังบันทึก..." : "ยืนยันข้อมูลร้านค้า"}
@@ -2380,10 +2380,10 @@ export default function OrderClient({
   // ─── 4. New customer inquiry ────────────────────────────────────────────────
   if (currentView === "new_inquiry") {
     const inputClass =
-      "w-full rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-base text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-teal-500 focus:ring-2 focus:ring-teal-500/10";
+      "w-full rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-base text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-[#4A148C] focus:ring-2 focus:ring-[#4A148C]/15";
 
     return (
-      <div className="min-h-screen bg-[linear-gradient(160deg,#f0fdfa_0%,#f8fafc_60%,#fff_100%)]">
+      <div className="min-h-screen bg-[linear-gradient(160deg,#F3E5F5_0%,#ffffff_58%,#fff_100%)]">
         <header className="border-b border-slate-100 bg-white/95 px-5 py-5 backdrop-blur-sm">
           <button
             type="button"
@@ -2394,7 +2394,7 @@ export default function OrderClient({
             กลับ
           </button>
           <div className="text-center">
-            <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-teal-500 shadow-md shadow-teal-200">
+            <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-[#4A148C] shadow-md shadow-[#4A148C]/20">
               <UserPlus className="h-7 w-7 text-white" strokeWidth={1.8} />
             </div>
             <h1 className="text-xl font-extrabold tracking-tight text-slate-800">สมัครเป็นลูกค้าใหม่</h1>
@@ -2434,7 +2434,7 @@ export default function OrderClient({
               type="button"
               disabled={isPending || !inquiryName.trim() || !inquiryPhone.trim()}
               onClick={handleNewInquiry}
-              className="flex w-full items-center justify-center gap-2 rounded-2xl bg-teal-500 px-6 py-4 text-base font-bold text-white shadow-md shadow-teal-200 transition active:scale-[0.97] disabled:opacity-50"
+              className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[#4A148C] px-6 py-4 text-base font-bold text-white shadow-md shadow-[#4A148C]/20 transition active:scale-[0.97] disabled:opacity-50"
             >
               {isPending ? <Loader2 className="h-5 w-5 animate-spin" /> : <UserPlus className="h-5 w-5" strokeWidth={2} />}
               {isPending ? "กำลังส่งข้อมูล..." : "ส่งข้อมูลให้ทีมงาน"}
@@ -2444,16 +2444,16 @@ export default function OrderClient({
           {/* Shop contact */}
           <a
             href={`tel:${(orgPhone || "0819034686").replace(/[-\s]/g, "")}`}
-            className="mt-5 flex items-center gap-4 rounded-3xl border border-teal-100 bg-gradient-to-br from-teal-50 to-cyan-50 px-5 py-4 shadow-sm transition active:scale-[0.98]"
+            className="mt-5 flex items-center gap-4 rounded-3xl border border-[#EA80FC]/25 bg-gradient-to-br from-[#F3E5F5] to-white px-5 py-4 shadow-sm transition active:scale-[0.98]"
           >
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-teal-500 shadow-md shadow-teal-200">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#4A148C] shadow-md shadow-[#4A148C]/20">
               <Phone className="h-5 w-5 text-white" strokeWidth={2} />
             </div>
             <div>
-              <p className="text-xs font-bold uppercase tracking-widest text-teal-700">สามารถติดต่อเราได้ที่</p>
-              <p className="mt-0.5 text-xl font-extrabold tracking-wide text-teal-900">{orgPhone || "099-356-4653"}</p>
+              <p className="text-xs font-bold uppercase tracking-widest text-[#4A148C]">สามารถติดต่อเราได้ที่</p>
+              <p className="mt-0.5 text-xl font-extrabold tracking-wide text-[#4A148C]">{orgPhone || "099-356-4653"}</p>
             </div>
-            <ChevronRight className="ml-auto h-5 w-5 shrink-0 text-teal-400" strokeWidth={2.5} />
+            <ChevronRight className="ml-auto h-5 w-5 shrink-0 text-[#EA80FC]" strokeWidth={2.5} />
           </a>
         </main>
       </div>
@@ -2464,9 +2464,9 @@ export default function OrderClient({
     if (currentView === "inquiry_done") {
       const contactPhone = orgPhone || "099-356-4653";
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center bg-[linear-gradient(160deg,#f0fdfa_0%,#fff_100%)] px-5 text-center">
+      <div className="flex min-h-screen flex-col items-center justify-center bg-[linear-gradient(160deg,#F3E5F5_0%,#fff_100%)] px-5 text-center">
         {/* Success icon */}
-        <div className="mb-6 flex h-24 w-24 items-center justify-center rounded-[2rem] bg-teal-500 shadow-[0_12px_32px_rgba(20,184,166,0.35)]">
+        <div className="mb-6 flex h-24 w-24 items-center justify-center rounded-[2rem] bg-[#4A148C] shadow-[0_12px_32px_rgba(74,20,140,0.28)]">
           <BadgeCheck className="h-12 w-12 text-white" strokeWidth={1.8} />
         </div>
 
@@ -2477,23 +2477,23 @@ export default function OrderClient({
         {/* Contact card */}
         <a
           href={`tel:${contactPhone.replace(/[-\s]/g, "")}`}
-          className="mt-8 flex w-full max-w-xs items-center gap-4 rounded-3xl border border-teal-100 bg-gradient-to-br from-teal-50 to-cyan-50 px-5 py-4 shadow-sm transition active:scale-[0.98]"
+          className="mt-8 flex w-full max-w-xs items-center gap-4 rounded-3xl border border-[#EA80FC]/25 bg-gradient-to-br from-[#F3E5F5] to-white px-5 py-4 shadow-sm transition active:scale-[0.98]"
         >
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-teal-500 shadow-md shadow-teal-200">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#4A148C] shadow-md shadow-[#4A148C]/20">
             <Phone className="h-5 w-5 text-white" strokeWidth={2} />
           </div>
           <div className="text-left">
-            <p className="text-xs font-bold uppercase tracking-widest text-teal-700">หรือโทรหาเราได้เลย</p>
-            <p className="mt-0.5 text-xl font-extrabold tracking-wide text-teal-900">{contactPhone}</p>
+            <p className="text-xs font-bold uppercase tracking-widest text-[#4A148C]">หรือโทรหาเราได้เลย</p>
+            <p className="mt-0.5 text-xl font-extrabold tracking-wide text-[#4A148C]">{contactPhone}</p>
           </div>
-          <ChevronRight className="ml-auto h-5 w-5 shrink-0 text-teal-400" strokeWidth={2.5} />
+          <ChevronRight className="ml-auto h-5 w-5 shrink-0 text-[#EA80FC]" strokeWidth={2.5} />
         </a>
 
         {/* Close button */}
         <button
           type="button"
           onClick={handleReturnToLine}
-          className="mt-4 flex w-full max-w-xs items-center justify-center gap-2 rounded-2xl bg-[#003366] px-6 py-4 text-base font-bold text-white shadow-md transition active:scale-[0.97]"
+          className="mt-4 flex w-full max-w-xs items-center justify-center gap-2 rounded-2xl bg-[#4A148C] px-6 py-4 text-base font-bold text-white shadow-md shadow-[#4A148C]/20 transition active:scale-[0.97]"
         >
           กลับไปยัง LINE
         </button>
@@ -2503,8 +2503,8 @@ export default function OrderClient({
 
     if (currentView === "pending_success") {
       return (
-        <div className="flex min-h-screen flex-col items-center justify-center bg-[linear-gradient(160deg,#eff6ff_0%,#ffffff_100%)] px-5 text-center">
-          <div className="mb-6 flex h-24 w-24 items-center justify-center rounded-[2rem] bg-[#003366] shadow-[0_12px_32px_rgba(0,51,102,0.28)]">
+        <div className="flex min-h-screen flex-col items-center justify-center bg-[linear-gradient(160deg,#F3E5F5_0%,#ffffff_100%)] px-5 text-center">
+          <div className="mb-6 flex h-24 w-24 items-center justify-center rounded-[2rem] bg-[#4A148C] shadow-[0_12px_32px_rgba(74,20,140,0.28)]">
             <BadgeCheck className="h-12 w-12 text-white" strokeWidth={1.8} />
           </div>
           <h1 className="mb-2 text-2xl font-extrabold text-slate-900">รับรายการสั่งซื้อแล้ว</h1>
@@ -2519,7 +2519,7 @@ export default function OrderClient({
           <button
             type="button"
             onClick={() => setCurrentView("catalog")}
-            className="mt-8 flex w-full max-w-xs items-center justify-center gap-2 rounded-2xl bg-[#003366] px-6 py-4 text-base font-bold text-white shadow-md transition active:scale-[0.97]"
+            className="mt-8 flex w-full max-w-xs items-center justify-center gap-2 rounded-2xl bg-[#4A148C] px-6 py-4 text-base font-bold text-white shadow-md shadow-[#4A148C]/20 transition active:scale-[0.97]"
           >
             กลับไปหน้ารายการสินค้า
           </button>
@@ -2530,7 +2530,7 @@ export default function OrderClient({
     // Catalog + Cart + Success
 
   return (
-    <div className="flex flex-col min-h-screen bg-[#F8FAFC] text-slate-900 font-sans pb-32 overflow-x-clip">
+    <div className="flex flex-col min-h-screen bg-[#F3E5F5] text-slate-900 font-sans pb-32 overflow-x-clip">
       <style>{`
         @keyframes slideInRight {
           0% { opacity: 0.72; transform: translate3d(100vw, 0, 0); }
@@ -2577,7 +2577,7 @@ export default function OrderClient({
                 priority
               />
               {/* fallback color in case logo hasn't loaded */}
-              <div className="absolute inset-0 -z-10 bg-[#003366]" />
+              <div className="absolute inset-0 -z-10 bg-[#4A148C]" />
 
               {/* Layer 2: dark vignette overlay */}
               <div className="absolute inset-0 bg-black/45" />
@@ -2622,7 +2622,7 @@ export default function OrderClient({
                     priority
                   />
                 ) : (
-                  <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-[#003d7a] to-[#003366]">
+                  <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-[#EA80FC] to-[#4A148C]">
                     <svg viewBox="0 0 24 24" className="h-12 w-12 text-white/80" fill="currentColor">
                       <path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/>
                     </svg>
@@ -2651,10 +2651,10 @@ export default function OrderClient({
 
                   <div className="mt-3.5 flex items-center justify-center gap-1.5 text-[13px] font-bold text-slate-500 md:text-sm">
                     <span>ติดต่อสอบถามราคาได้ที่ :</span>
-                    <Phone className="h-4 w-4 text-[#003366] shrink-0" strokeWidth={2.5} />
+                    <Phone className="h-4 w-4 text-[#4A148C] shrink-0" strokeWidth={2.5} />
                     <a
                       href="tel:099-356-4653"
-                      className="text-[#003366] hover:underline font-extrabold tracking-tight"
+                      className="text-[#4A148C] hover:underline font-extrabold tracking-tight"
                     >
                       099-356-4653
                     </a>
@@ -2726,11 +2726,11 @@ export default function OrderClient({
             <div className="flex items-center gap-2">
               <div className="relative min-w-0 flex-1 rounded-lg border border-slate-200 bg-white shadow-sm">
                 <span className="absolute inset-y-0 left-0 flex items-center pl-3.5">
-                  <Search className="h-[17px] w-[17px] text-[#003366]/55" />
+                  <Search className="h-[17px] w-[17px] text-[#4A148C]/55" />
                 </span>
                 <input
                   aria-label="Search products"
-                  className="w-full rounded-lg border border-transparent bg-transparent py-1.5 pl-10 pr-9 text-sm font-medium text-slate-800 outline-none transition-all placeholder:text-slate-400 focus:border-[#003366]/20 focus:ring-2 focus:ring-[#003366]/10 md:text-base"
+                  className="w-full rounded-lg border border-transparent bg-transparent py-1.5 pl-10 pr-9 text-sm font-medium text-slate-800 outline-none transition-all placeholder:text-slate-400 focus:border-[#4A148C]/20 focus:ring-2 focus:ring-[#4A148C]/10 md:text-base"
                   placeholder="ค้นหาสินค้า..."
                   type="text"
                   value={searchQuery}
@@ -2761,7 +2761,7 @@ export default function OrderClient({
               <button
                 onClick={() => setActiveCategory("all")}
                 className={`relative flex-1 pb-3 pt-2.5 text-center text-[13px] font-bold transition-colors flex items-center justify-center gap-1.5 ${
-                  activeCategory === "all" ? "text-[#003366] drop-shadow-sm" : "text-slate-400 hover:text-slate-600"
+                  activeCategory === "all" ? "text-[#4A148C] drop-shadow-sm" : "text-slate-400 hover:text-slate-600"
                 }`}
               >
                 <Package className="h-4 w-4" />
@@ -2770,7 +2770,7 @@ export default function OrderClient({
               <button
                 onClick={() => setActiveCategory("favorites")}
                 className={`relative flex-1 pb-3 pt-2.5 text-center text-[13px] font-bold transition-colors flex items-center justify-center gap-1.5 ${
-                  activeCategory === "favorites" ? "text-[#003366] drop-shadow-sm" : "text-slate-400 hover:text-slate-600"
+                  activeCategory === "favorites" ? "text-[#4A148C] drop-shadow-sm" : "text-slate-400 hover:text-slate-600"
                 }`}
               >
                 <Star className="h-4 w-4" />
@@ -2779,7 +2779,7 @@ export default function OrderClient({
               <button
                 onClick={() => setActiveCategory("recent")}
                 className={`relative flex-1 pb-3 pt-2.5 text-center text-[13px] font-bold transition-colors flex items-center justify-center gap-1.5 ${
-                  activeCategory === "recent" ? "text-[#003366] drop-shadow-sm" : "text-slate-400 hover:text-slate-600"
+                  activeCategory === "recent" ? "text-[#4A148C] drop-shadow-sm" : "text-slate-400 hover:text-slate-600"
                 }`}
               >
                 <RotateCcw className="h-4 w-4" />
@@ -2796,7 +2796,7 @@ export default function OrderClient({
                 }}
               >
                 <div
-                  className="mx-auto h-full w-[80%] bg-[#003366] shadow-[0_-1px_15px_rgba(0,51,102,0.6),0_0_25px_rgba(0,51,102,0.35)]"
+                  className="mx-auto h-full w-[80%] bg-[#4A148C] shadow-[0_-1px_15px_rgba(74,20,140,0.42),0_0_25px_rgba(234,128,252,0.32)]"
                   style={{ clipPath: "polygon(4% 0, 96% 0, 100% 100%, 0 100%)" }}
                 />
               </div>
@@ -2992,7 +2992,7 @@ export default function OrderClient({
           {/* ─── Premium Glassmorphism Header ─── */}
           <div className="sticky top-0 z-50 flex shrink-0 items-center justify-between border-b border-white/5 bg-[#12151c]/80 px-4 py-3 backdrop-blur-xl sm:px-8 sm:py-5">
             <div className="flex items-center gap-4">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#003366] text-white shadow-[0_0_20px_rgba(0,51,102,0.4)] sm:h-12 sm:w-12">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#4A148C] text-white shadow-[0_0_20px_rgba(74,20,140,0.28)] sm:h-12 sm:w-12">
                 <ImageIcon className="h-5 w-5 sm:h-6 sm:w-6" strokeWidth={2.5} />
               </div>
               <div className="min-w-0">

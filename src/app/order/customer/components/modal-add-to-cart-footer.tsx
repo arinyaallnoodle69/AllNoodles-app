@@ -39,7 +39,7 @@ const ModalQuantityStepper = memo(function ModalQuantityStepper({
 
       <button
         onClick={onIncrease}
-        className="flex h-10 w-10 items-center justify-center rounded-lg bg-white text-[#EA80FC] shadow-sm transition-all active:scale-95 touch-manipulation hover:bg-white/90"
+        className="flex h-10 w-10 items-center justify-center rounded-lg bg-white text-[#4A148C] shadow-sm transition-all active:scale-95 touch-manipulation hover:bg-white/90"
         aria-label="increase quantity"
       >
         <Plus className="h-4.5 w-4.5" strokeWidth={3} />
@@ -185,7 +185,7 @@ export const ModalAddToCartFooter = memo(function ModalAddToCartFooter({
             !isOrderOpen
               ? "bg-white/10 text-white/30 cursor-not-allowed"
               : pendingQty > 0
-                ? "bg-white text-[#EA80FC] shadow-[0_8px_20px_rgba(255,255,255,0.15)] hover:bg-white/95"
+                ? "bg-white text-[#4A148C] shadow-[0_8px_20px_rgba(255,255,255,0.15)] hover:bg-white/95"
                 : "bg-white/10 text-white/40 cursor-not-allowed"
           }`}
         >

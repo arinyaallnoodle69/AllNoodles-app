@@ -110,66 +110,84 @@ export async function getDetailedProfitSalesReport(params: {
   const { organizationId, fromDate, toDate, customerIds = [], warehouseId } = params;
   const supabase = getSupabaseAdmin();
 
-  // 1. Fetch confirmed delivery notes and all their nested relations in a single query
-  let query = supabase
-    .from("delivery_notes")
-    .select(`
-      id,
-      delivery_date,
-      delivery_number,
-      total_amount,
-      customer_id,
-      customers(
+  // 1. Fetch confirmed delivery notes and all their nested relations in batches to bypass the 1000-row limit
+  const batchSize = 1000;
+  const allNotes: QueryDeliveryNoteRow[] = [];
+  let from = 0;
+  let to = batchSize - 1;
+  let hasMore = true;
+
+  while (hasMore) {
+    let query = supabase
+      .from("delivery_notes")
+      .select(`
         id,
-        customer_code,
-        name
-      ),
-      delivery_note_items(
-        id,
-        delivery_note_id,
-        quantity_delivered,
-        product_sale_unit_id,
-        line_total,
-        sale_unit_label,
-        products(
+        delivery_date,
+        delivery_number,
+        total_amount,
+        customer_id,
+        customers(
           id,
-          name,
-          sku,
-          unit,
-          cost_price
+          customer_code,
+          name
         ),
-        order_items(
-          cost_price
-        ),
-        product_sale_units(
+        delivery_note_items(
           id,
-          product_id,
-          base_unit_quantity,
-          cost_mode,
-          fixed_cost_price
+          delivery_note_id,
+          quantity_delivered,
+          product_sale_unit_id,
+          line_total,
+          sale_unit_label,
+          products(
+            id,
+            name,
+            sku,
+            unit,
+            cost_price
+          ),
+          order_items(
+            cost_price
+          ),
+          product_sale_units(
+            id,
+            product_id,
+            base_unit_quantity,
+            cost_mode,
+            fixed_cost_price
+          )
         )
-      )
-    `)
-    .eq("organization_id", organizationId)
-    .eq("status", "confirmed")
-    .gte("delivery_date", fromDate)
-    .lte("delivery_date", toDate)
-    .order("delivery_date", { ascending: true })
-    .order("delivery_number", { ascending: true });
+      `)
+      .eq("organization_id", organizationId)
+      .eq("status", "confirmed")
+      .gte("delivery_date", fromDate)
+      .lte("delivery_date", toDate)
+      .order("delivery_date", { ascending: true })
+      .order("delivery_number", { ascending: true })
+      .range(from, to);
 
-  if (customerIds.length > 0) {
-    query = query.in("customer_id", customerIds);
+    if (customerIds.length > 0) {
+      query = query.in("customer_id", customerIds);
+    }
+
+    if (warehouseId) {
+      query = query.eq("warehouse_id", warehouseId);
+    }
+
+    const { data: notesData, error: notesError } = await query;
+    if (notesError) throw new Error(notesError.message);
+
+    const notes = (notesData ?? []) as unknown as QueryDeliveryNoteRow[];
+    allNotes.push(...notes);
+
+    if (notes.length < batchSize) {
+      hasMore = false;
+    } else {
+      from += batchSize;
+      to += batchSize;
+    }
   }
 
-  if (warehouseId) {
-    query = query.eq("warehouse_id", warehouseId);
-  }
-
-  const { data: notesData, error: notesError } = await query;
-  if (notesError) throw new Error(notesError.message);
-
-  const notes = (notesData ?? []) as unknown as QueryDeliveryNoteRow[];
-  if (notes.length === 0) {
+  if (allNotes.length === 0) {
     return {
       stores: [],
       summary: { totalSales: 0, totalCost: 0, totalNetProfit: 0, totalItemsCount: 0, totalQuantity: 0, avgMarginPercent: 0 },
@@ -187,6 +205,7 @@ export async function getDetailedProfitSalesReport(params: {
       customerName: string;
       deliveryDate: string;
       deliveryNumber: string;
+      totalAmount: number;
       // Map key: product_sku + "::" + sale_unit_label
       productMap: Map<
         string,
@@ -207,13 +226,19 @@ export async function getDetailedProfitSalesReport(params: {
   // Global customer sales records for store performance index
   const storeSalesMap = new Map<string, { name: string; sales: number }>();
 
-  for (const note of notes) {
+  for (const note of allNotes) {
     const deliveryNoteId = note.id;
     const customerId = note.customer_id;
     const customerCode = note.customers?.customer_code ?? "-";
     const customerName = note.customers?.name ?? "ไม่ระบุชื่อร้าน";
     const deliveryDate = note.delivery_date;
     const deliveryNumber = note.delivery_number ?? "";
+    const noteTotalAmount = toNumber(note.total_amount);
+
+    // Aggregate store sales globally using the delivery note's total_amount (for Top Store Insight)
+    const stVal = storeSalesMap.get(customerId) ?? { name: customerName, sales: 0 };
+    stVal.sales += noteTotalAmount;
+    storeSalesMap.set(customerId, stVal);
 
     const items = note.delivery_note_items ?? [];
     for (const item of items) {
@@ -223,7 +248,7 @@ export async function getDetailedProfitSalesReport(params: {
       const qty = toNumber(item.quantity_delivered);
       const lineTotal = toNumber(item.line_total);
 
-      // Cost calculation
+      // Cost calculation aligned with the main report's SQL RPC calculation
       const orderItemCost = item.order_items ? toNumber(item.order_items.cost_price) : null;
       const psu = item.product_sale_units;
       const productCost = item.products ? toNumber(item.products.cost_price) : 0;
@@ -234,7 +259,7 @@ export async function getDetailedProfitSalesReport(params: {
             ? (psu.cost_mode === "fixed" && psu.fixed_cost_price != null
                 ? toNumber(psu.fixed_cost_price)
                 : productCost * toNumber(psu.base_unit_quantity))
-            : productCost);
+            : 0); // Defaults to 0 when psu is null to match get_profit_sales_report RPC
       const lineCost = unitCost * qty;
 
       // Aggregate globally
@@ -243,11 +268,6 @@ export async function getDetailedProfitSalesReport(params: {
       globVal.sales += lineTotal;
       globVal.cost += lineCost;
       productGlobalMap.set(globKey, globVal);
-
-      // Aggregate store sales globally (for Top Store Insight)
-      const stVal = storeSalesMap.get(customerId) ?? { name: customerName, sales: 0 };
-      stVal.sales += lineTotal;
-      storeSalesMap.set(customerId, stVal);
 
       // Aggregate inside delivery note group
       let noteData = deliveryNoteMap.get(deliveryNoteId);
@@ -258,6 +278,7 @@ export async function getDetailedProfitSalesReport(params: {
           customerName,
           deliveryDate,
           deliveryNumber,
+          totalAmount: noteTotalAmount,
           productMap: new Map(),
         };
         deliveryNoteMap.set(deliveryNoteId, noteData);
@@ -293,9 +314,7 @@ export async function getDetailedProfitSalesReport(params: {
 
   for (const noteData of deliveryNoteMap.values()) {
     const items: DetailedProfitProductItem[] = [];
-    let storeSales = 0;
     let storeCost = 0;
-    let storeProfit = 0;
     let storeQuantity = 0;
 
     for (const prod of noteData.productMap.values()) {
@@ -314,14 +333,16 @@ export async function getDetailedProfitSalesReport(params: {
         marginPercent,
       });
 
-      storeSales += prod.salesAmount;
       storeCost += prod.totalCost;
-      storeProfit += profit;
       storeQuantity += prod.quantity;
     }
 
     // Sort products by sku
     items.sort((a, b) => a.productSku.localeCompare(b.productSku));
+
+    const storeSales = noteData.totalAmount; // Align sales to delivery_notes.total_amount
+    const storeProfit = storeSales - storeCost;
+    const avgMarginPercent = storeSales > 0 ? (storeProfit / storeSales) * 100 : 0;
 
     totalSales += storeSales;
     totalCost += storeCost;
@@ -339,7 +360,7 @@ export async function getDetailedProfitSalesReport(params: {
       totalSales: storeSales,
       totalCost: storeCost,
       totalProfit: storeProfit,
-      avgMarginPercent: storeSales > 0 ? (storeProfit / storeSales) * 100 : 0,
+      avgMarginPercent,
     });
   }
 
@@ -405,4 +426,3 @@ export async function getDetailedProfitSalesReport(params: {
     },
   };
 }
-

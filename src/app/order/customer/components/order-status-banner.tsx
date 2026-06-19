@@ -21,15 +21,15 @@ export function OrderStatusBanner({
       >
         <div
           className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl"
-          style={{ background: "#EA80FC" }}
+          style={{ background: "#4A148C" }}
         >
           <Clock className="h-5 w-5 text-white" strokeWidth={2} />
         </div>
         <div className="min-w-0 flex-1">
-          <p className="text-base font-bold leading-snug" style={{ color: "#EA80FC" }}>
+          <p className="text-base font-bold leading-snug" style={{ color: "#4A148C" }}>
             {allowOrderAfterCutoff ? "เปิดรับออเดอร์รอบพิเศษ" : "เปิดรับออเดอร์อยู่"}
           </p>
-          <p className="text-sm font-medium" style={{ color: "#EA80FC" }}>
+          <p className="text-sm font-medium" style={{ color: "#4A148C" }}>
             {allowOrderAfterCutoff
               ? `เวลาปกติ ${openTime} - ${closeTime} น.`
               : `รับออเดอร์ถึง ${closeTime} น. วันนี้`}
@@ -38,14 +38,14 @@ export function OrderStatusBanner({
         <span
           className="flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-bold"
           style={{
-            background: allowOrderAfterCutoff ? "#EA80FC" : "#dcfce7",
-            color: allowOrderAfterCutoff ? "#EA80FC" : "#15803d",
+            background: allowOrderAfterCutoff ? "#F3E5F5" : "#dcfce7",
+            color: allowOrderAfterCutoff ? "#4A148C" : "#15803d",
           }}
         >
           <span
-            className={`h-2.5 w-2.5 rounded-full ${allowOrderAfterCutoff ? "bg-[#EA80FC]" : "bg-emerald-500"}`}
+            className={`h-2.5 w-2.5 rounded-full ${allowOrderAfterCutoff ? "bg-[#4A148C]" : "bg-emerald-500"}`}
             style={{
-              boxShadow: allowOrderAfterCutoff ? "0 0 6px #EA80FC" : "0 0 6px #22c55e",
+              boxShadow: allowOrderAfterCutoff ? "0 0 6px #4A148C" : "0 0 6px #22c55e",
               willChange: "transform",
             }}
           />

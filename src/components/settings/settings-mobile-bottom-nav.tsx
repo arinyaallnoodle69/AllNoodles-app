@@ -87,12 +87,18 @@ export function SettingsMobileBottomNav() {
   const moreActive = moreItems.some((item) => pathname.startsWith(item.href));
   const settingsModalOpen = settingsOpen && navigatingHref !== pathname;
 
+  function resetNavigationState() {
+    setMoreOpen(false);
+    setSettingsOpen(false);
+    setNavigatingHref(null);
+  }
+
   const nav = (
     <>
       {moreOpen ? (
         <div
           className="fixed inset-0 z-[100] bg-black/40 backdrop-blur-sm lg:hidden"
-          onClick={() => setMoreOpen(false)}
+          onClick={resetNavigationState}
         />
       ) : null}
 
@@ -106,7 +112,7 @@ export function SettingsMobileBottomNav() {
           <span className="text-base font-bold text-[#4A148C]">เมนูเพิ่มเติม</span>
           <button
             type="button"
-            onClick={() => setMoreOpen(false)}
+            onClick={resetNavigationState}
             className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-200/50 text-[#4A148C] transition active:scale-90"
             aria-label="ปิด"
           >
@@ -139,7 +145,7 @@ export function SettingsMobileBottomNav() {
               <Link
                 key={href}
                 href={href}
-                onClick={() => setMoreOpen(false)}
+                onClick={resetNavigationState}
                 className={`flex flex-col items-center gap-2.5 rounded-2xl border px-3 py-5 text-sm font-semibold transition active:scale-[0.98] ${
                   active
                     ? "border-[#EA80FC]/45 bg-[#4A148C] text-white shadow-lg shadow-[#4A148C]/25"
@@ -157,7 +163,7 @@ export function SettingsMobileBottomNav() {
           <form action={signOut}>
             <button
               type="submit"
-              onClick={() => setMoreOpen(false)}
+              onClick={resetNavigationState}
               className="flex w-full items-center justify-center gap-2 rounded-2xl bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-600 transition active:bg-rose-100"
             >
               <LogOut className="h-5 w-5" strokeWidth={2.2} />
@@ -193,6 +199,7 @@ export function SettingsMobileBottomNav() {
                   <Link
                     key={href}
                     href={href}
+                    onClick={resetNavigationState}
                     className={`flex flex-col items-center justify-center gap-1 rounded-2xl px-1 py-2 text-[10px] font-medium transition ${
                       active
                         ? "text-[#4A148C]"
@@ -216,6 +223,7 @@ export function SettingsMobileBottomNav() {
                   <Link
                     key={href}
                     href={href}
+                    onClick={resetNavigationState}
                     className={`flex flex-col items-center justify-center gap-1 rounded-2xl px-1 py-2 text-[10px] font-medium transition ${
                       active
                         ? "text-[#4A148C]"
@@ -230,7 +238,11 @@ export function SettingsMobileBottomNav() {
 
               <button
                 type="button"
-                onClick={() => setMoreOpen(true)}
+                onClick={() => {
+                  setSettingsOpen(false);
+                  setNavigatingHref(null);
+                  setMoreOpen(true);
+                }}
                 className={`flex flex-col items-center justify-center gap-1 rounded-2xl px-1 py-2 text-[10px] font-medium transition ${
                   moreActive
                     ? "text-[#4A148C]"
@@ -245,7 +257,10 @@ export function SettingsMobileBottomNav() {
 
           <button
             type="button"
-            onClick={() => openCreateOrder()}
+            onClick={() => {
+              resetNavigationState();
+              openCreateOrder();
+            }}
             className={`absolute -top-3 left-1/2 z-50 flex h-16 w-16 -translate-x-1/2 items-center justify-center rounded-full border-[3px] border-[#EA80FC] bg-white shadow-[0_12px_24px_rgba(142, 36, 170,0.18),0_8px_18px_rgba(170, 0, 255,0.22)] ring-2 ring-white transition-all duration-300 active:scale-90 ${
               isCreateModalOpen
                 ? "rotate-45"
@@ -274,7 +289,7 @@ export function SettingsMobileBottomNav() {
           <div className="flex h-[68px] items-center justify-between border-b border-[#EA80FC]/70 bg-[#4A148C] px-4 text-white">
             <span className="text-lg font-black tracking-wide text-white">ตั้งค่า</span>
             <button
-              onClick={() => setSettingsOpen(false)}
+              onClick={resetNavigationState}
               disabled={Boolean(navigatingHref)}
               className="flex h-9 w-9 items-center justify-center rounded-full bg-white/12 text-white/90 hover:bg-white/20 transition active:scale-95"
             >
@@ -342,7 +357,7 @@ export function SettingsMobileBottomNav() {
                       return;
                     }
                     if (option.href === pathname) {
-                      setSettingsOpen(false);
+                      resetNavigationState();
                       return;
                     }
                     setNavigatingHref(option.href);

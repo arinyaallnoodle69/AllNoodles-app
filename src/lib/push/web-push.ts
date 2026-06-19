@@ -244,6 +244,31 @@ export async function sendNewOrderPushNotification({
   });
 }
 
+export async function sendPendingLineOrderPushNotification({
+  organizationId,
+  displayName,
+  pendingOrderId,
+}: {
+  organizationId: string;
+  displayName: string;
+  pendingOrderId: string;
+}) {
+  await sendOrganizationPushNotification(organizationId, {
+    payload: {
+      title: "มีออเดอร์ LINE ใหม่",
+      body: `${displayName || "ลูกค้า LINE"} - รอผูกร้านค้า`,
+      badgeCount: 1,
+      icon: "/brand/192x192.png",
+      badge: "/brand/192x192.png",
+      tag: "pending-line-order",
+      url: `${getSiteUrl()}/orders/incoming?pendingLineOrderId=${encodeURIComponent(pendingOrderId)}`,
+    },
+    ttl: 60 * 60,
+    topic: `line-${pendingOrderId}`,
+    warningLabel: "pending LINE order",
+  });
+}
+
 export async function sendNewCustomerInquiryPushNotification({
   inquiryId,
   organizationId,

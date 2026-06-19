@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import { Filter, Store } from "lucide-react";
+import { Filter, Store, ChevronLeft, ChevronRight } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { AppSidebarLayout } from "@/components/app-sidebar";
@@ -26,6 +26,7 @@ type PageProps = {
     to?: string;
     warehouse?: string;
     stores?: string;
+    page?: string;
   }>;
 };
 
@@ -177,6 +178,7 @@ async function DetailedProfitContent({ searchParams }: PageProps) {
   const toDate = params.to && /^\d{4}-\d{2}-\d{2}$/.test(params.to) ? params.to : today;
   const warehouseId = params.warehouse || "";
   const selectedStoreIds = params.stores ? params.stores.split(",").filter(Boolean) : [];
+  const currentPage = params.page ? parseInt(params.page, 10) : 1;
 
   const [report, customers, warehouses] = await Promise.all([
     getDetailedProfitSalesReport({
@@ -193,6 +195,33 @@ async function DetailedProfitContent({ searchParams }: PageProps) {
   const selectedStoreLabel = summarizeSelection(customers, selectedStoreIds, "ทุกร้านค้า");
   const printedAt = formatPrintedAt(new Date());
   const reportPeriodThai = formatMonthYearThai(fromDate);
+
+  // Group stores by deliveryDate for 1-day-per-page screen pagination
+  const dateGroupsMap = new Map<string, DetailedProfitStoreGroup[]>();
+  for (const store of report.stores) {
+    const date = store.deliveryDate;
+    const current = dateGroupsMap.get(date) ?? [];
+    current.push(store);
+    dateGroupsMap.set(date, current);
+  }
+
+  // Generate sorted date pages
+  const sortedDates = Array.from(dateGroupsMap.keys()).sort((a, b) => a.localeCompare(b));
+  const totalPages = sortedDates.length;
+  const safeCurrentPage = Math.min(Math.max(1, currentPage), totalPages || 1);
+  const currentDate = sortedDates[safeCurrentPage - 1];
+  const currentPageStores = currentDate ? (dateGroupsMap.get(currentDate) ?? []) : [];
+
+  const pageLink = (p: number) => {
+    const paramsList = [];
+    if (fromDate) paramsList.push(`from=${fromDate}`);
+    if (toDate) paramsList.push(`to=${toDate}`);
+    if (warehouseId) paramsList.push(`warehouse=${warehouseId}`);
+    if (selectedStoreIds.length > 0) paramsList.push(`stores=${selectedStoreIds.join(",")}`);
+    paramsList.push(`page=${p}`);
+    return `/reports/profit-sales-detailed?${paramsList.join("&")}`;
+  };
+
   const pages = report.stores.length > 0 ? paginateDetailedReport(report.stores, 38) : [];
 
   return (
@@ -231,8 +260,25 @@ async function DetailedProfitContent({ searchParams }: PageProps) {
                 สรุปความเคลื่อนไหวสินค้าและอัตรากำไรประจำเดือน {reportPeriodThai}
               </p>
             </div>
-            {/* Action Buttons */}
-            <div className="flex gap-2 shrink-0">
+            {/* Action Buttons & Top Pagination */}
+            <div className="flex items-center gap-3 shrink-0">
+              {totalPages > 1 && (
+                <div className="flex items-center gap-2 bg-white border border-[#c6c6cd] rounded-[4px] px-2 py-1 text-xs font-bold shadow-sm">
+                  <Link
+                    href={pageLink(safeCurrentPage - 1)}
+                    className={`p-1 rounded text-[#4A148C] transition hover:bg-neutral-100 ${safeCurrentPage === 1 ? "pointer-events-none opacity-30" : ""}`}
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Link>
+                  <span className="text-[#0b1c30]">หน้า {safeCurrentPage} / {totalPages}</span>
+                  <Link
+                    href={pageLink(safeCurrentPage + 1)}
+                    className={`p-1 rounded text-[#4A148C] transition hover:bg-neutral-100 ${safeCurrentPage === totalPages ? "pointer-events-none opacity-30" : ""}`}
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Link>
+                </div>
+              )}
               <PrintButton targetId="detailed-print-area" fileName={`รายงานสินค้าและกำไรแยกตามสาขา_${fromDate}_${toDate}`} hidePrintOnMobile />
             </div>
           </header>
@@ -326,8 +372,6 @@ async function DetailedProfitContent({ searchParams }: PageProps) {
             </div>
           </section>
 
-
-
           {/* Main Data Table Card (Desktop only) */}
           <div className="hidden md:block bg-white border border-[#c6c6cd] rounded-[4px] overflow-hidden mb-6">
             <div className="overflow-x-auto">
@@ -346,8 +390,8 @@ async function DetailedProfitContent({ searchParams }: PageProps) {
                   </tr>
                 </thead>
                 <tbody className="text-[14px] font-normal divide-y divide-[#c6c6cd]/50">
-                  {report.stores.length > 0 ? (
-                    report.stores.map((store) => (
+                  {currentPageStores.length > 0 ? (
+                    currentPageStores.map((store) => (
                       <Suspense key={store.deliveryNumber}>
                         {/* Store Group Row */}
                         <tr className="bg-neutral-50 border-b border-[#c6c6cd]">
@@ -411,7 +455,7 @@ async function DetailedProfitContent({ searchParams }: PageProps) {
                     ))
                   ) : (
                     <tr>
-                      <td colSpan={8} className="px-4 py-8 text-center text-slate-400 font-medium bg-white">
+                      <td colSpan={9} className="px-4 py-8 text-center text-slate-400 font-medium bg-white">
                         ไม่พบข้อมูลในช่วงวันที่หรือร้านค้าที่เลือก
                       </td>
                     </tr>
@@ -451,8 +495,8 @@ async function DetailedProfitContent({ searchParams }: PageProps) {
 
           {/* Mobile Card-based List (Visible on Mobile only, Hidden on Desktop) */}
           <div className="md:hidden mb-6">
-            {report.stores.length > 0 ? (
-              report.stores.map((store) => {
+            {currentPageStores.length > 0 ? (
+              currentPageStores.map((store) => {
                 const storeUnits = Array.from(
                   new Set(store.items.map((item) => item.unit).filter(Boolean)),
                 ).join(", ") || "หน่วย";
@@ -471,6 +515,36 @@ async function DetailedProfitContent({ searchParams }: PageProps) {
               </div>
             )}
           </div>
+
+          {/* Pagination Controls */}
+          {totalPages > 1 && (
+            <div className="mt-4 mb-6 flex items-center justify-between border-t border-[#c6c6cd] pt-4 px-4 sm:px-0">
+              <Link
+                href={pageLink(safeCurrentPage - 1)}
+                className={`flex items-center gap-1 text-sm font-bold text-[#4A148C] transition ${safeCurrentPage === 1 ? "pointer-events-none opacity-30" : "hover:opacity-85"}`}
+              >
+                <ChevronLeft className="h-4 w-4" />
+                ก่อนหน้า
+              </Link>
+              <div className="text-center">
+                <span className="text-sm font-bold text-[#0b1c30]">
+                  หน้า {safeCurrentPage} / {totalPages}
+                </span>
+                {currentDate && (
+                  <p className="text-[11px] text-slate-500 font-semibold mt-0.5">
+                    (ข้อมูลประจำวันที่ {formatDateThai(currentDate)})
+                  </p>
+                )}
+              </div>
+              <Link
+                href={pageLink(safeCurrentPage + 1)}
+                className={`flex items-center gap-1 text-sm font-bold text-[#4A148C] transition ${safeCurrentPage === totalPages ? "pointer-events-none opacity-30" : "hover:opacity-85"}`}
+              >
+                ถัดไป
+                <ChevronRight className="h-4 w-4" />
+              </Link>
+            </div>
+          )}
 
           {/* Footer Compliance Tag */}
           <footer className="mt-8 flex flex-col gap-3 justify-between sm:flex-row sm:items-center text-[#45464d] text-[12px] font-semibold">

@@ -54,7 +54,7 @@ export function OrderHistoryView({
             onClick={() => handleTabChange("history")}
             className={`flex flex-1 items-center justify-center gap-1.5 rounded-xl py-2.5 text-sm font-bold transition-colors ${
               activeTab === "history"
-                ? "bg-white text-[#EA80FC] shadow-sm"
+                ? "bg-white text-[#4A148C] shadow-sm"
                 : "text-slate-500"
             }`}
           >
@@ -65,7 +65,7 @@ export function OrderHistoryView({
             onClick={() => handleTabChange("summary")}
             className={`flex flex-1 items-center justify-center gap-1.5 rounded-xl py-2.5 text-sm font-bold transition-colors ${
               activeTab === "summary"
-                ? "bg-white text-[#EA80FC] shadow-sm"
+                ? "bg-white text-[#4A148C] shadow-sm"
                 : "text-slate-500"
             }`}
           >
@@ -119,7 +119,7 @@ export function OrderHistoryView({
                             })()}
                       </p>
                     )}
-                    <p className="mt-1 text-xs font-medium text-[#EA80FC]/70">
+                    <p className="mt-1 text-xs font-medium text-[#4A148C]/70">
                       รายการทั้งหมด {(order.order_items ?? []).length} รายการ
                     </p>
                   </div>
@@ -135,7 +135,7 @@ export function OrderHistoryView({
                       disabled={!isOrderOpen}
                       className={`inline-flex items-center rounded-full px-3 py-2 text-xs font-bold transition-all active:scale-[0.98] ${
                         isOrderOpen
-                          ? "bg-[#F3E5F5] text-[#EA80FC] hover:bg-[#EA80FC]"
+                          ? "bg-[#F3E5F5] text-[#4A148C] hover:bg-[#EA80FC]/20"
                           : "cursor-not-allowed bg-slate-100 text-slate-400"
                       }`}
                     >
@@ -147,7 +147,7 @@ export function OrderHistoryView({
                   {editMeta.isEditable ? (
                     <button
                       onClick={() => onOpenEditOrder(order)}
-                      className="w-full rounded-2xl border border-[#EA80FC]/15 bg-[#F3E5F5] px-4 py-3 text-sm font-bold text-[#EA80FC] transition-all hover:bg-[#EA80FC] active:scale-[0.98]"
+                      className="w-full rounded-2xl border border-[#EA80FC]/15 bg-[#F3E5F5] px-4 py-3 text-sm font-bold text-[#4A148C] transition-all hover:bg-[#EA80FC]/20 active:scale-[0.98]"
                     >
                       แก้ไขคำสั่งซื้อนี้
                     </button>
@@ -187,7 +187,7 @@ export function OrderHistoryView({
                         </div>
                         <div className="min-w-0 flex-1">
                           <p className="truncate text-sm font-semibold text-slate-900">{itemName}</p>
-                          <p className="mt-1.5 flex items-center gap-1 text-xs font-bold text-[#EA80FC]">
+                          <p className="mt-1.5 flex items-center gap-1 text-xs font-bold text-[#4A148C]">
                             <Package className="h-3.5 w-3.5 shrink-0 opacity-70" />
                             {Number(item.quantity) || 0} {itemUnit}
                           </p>

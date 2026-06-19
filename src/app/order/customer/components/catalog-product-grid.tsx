@@ -86,7 +86,7 @@ const CatalogProductCard = memo(function CatalogProductCard({
             {product.name}
           </h3>
         </div>
-        <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#EA80FC] text-white shadow-md transition-transform active:scale-90 md:h-8 md:w-8">
+        <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#4A148C] text-white shadow-md shadow-[#4A148C]/20 transition-transform active:scale-90 md:h-8 md:w-8">
           <Plus className="h-4 w-4 md:h-4 md:w-4" strokeWidth={3} />
         </div>
       </div>

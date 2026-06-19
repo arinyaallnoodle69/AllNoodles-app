@@ -12,7 +12,11 @@ import { notifyNewCustomerInquiry, notifyNewOrder, notifyPriceInquiry } from "@/
 import { uploadAndNotifyCustomerReceiptImage } from "@/lib/line/customer-receipt-image";
 import { syncDeliveryNoteForOrder } from "@/lib/orders/sync-delivery-note";
 import { notifyUpdatedCustomerReceiptForOrder } from "@/lib/orders/notify-customer-receipt";
-import { sendNewCustomerInquiryPushNotification, sendNewOrderPushNotification } from "@/lib/push/web-push";
+import {
+  sendNewCustomerInquiryPushNotification,
+  sendNewOrderPushNotification,
+  sendPendingLineOrderPushNotification,
+} from "@/lib/push/web-push";
 import { createCustomerInquiry } from "@/lib/customer-inquiries";
 import { getOrderCustomerSession } from "@/lib/auth/order-session";
 import {
@@ -599,6 +603,14 @@ export async function createPendingLineOrderAction(input: {
     if (result.linkedCustomer) {
       return { success: false, error: "บัญชีนี้ถูกผูกลูกค้าแล้ว กรุณาลองสั่งซื้ออีกครั้ง" };
     }
+
+    after(async () => {
+      await sendPendingLineOrderPushNotification({
+        organizationId: input.organizationId,
+        displayName: getOptionalTrimmedText(input.displayName) ?? getOptionalTrimmedText(orderSession?.displayName) ?? "ลูกค้า LINE",
+        pendingOrderId: result.pendingOrderId ?? "",
+      });
+    });
 
     return {
       success: true,

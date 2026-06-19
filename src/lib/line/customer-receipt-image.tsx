@@ -83,7 +83,7 @@ function toArrayBuffer(buffer: Buffer) {
 
 async function getReceiptAssets() {
   receiptAssetsPromise ??= Promise.all([
-    readFile(join(process.cwd(), "public", "brand", "512x512.png")),
+    readFile(join(process.cwd(), "public", "brand", "logo1.png")),
     readFile(join(process.cwd(), "public", "fonts", "NotoSansThai-Regular.ttf")),
     readFile(join(process.cwd(), "public", "fonts", "NotoSansThai-Bold.ttf")),
   ]).then(([logo, regularFont, boldFont]) => ({
