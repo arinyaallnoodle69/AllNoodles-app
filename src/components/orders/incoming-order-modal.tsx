@@ -99,7 +99,7 @@ const ItemsViewList = memo(({ detail }: { detail: OrderDetailData }) => {
 
               <div className="mt-3 flex h-8 items-center gap-2.5">
                 <div
-                  className={`flex h-full shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg border-2 px-2 ${item.stockQuantity < 0 ? "bg-[#FF0000] border-[#FF0000] text-white shadow-sm" : "bg-[#082A63] border-[#082A63] text-white shadow-sm"}`}
+                  className={`flex h-full shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg border-2 px-2 ${item.stockQuantity < 0 ? "bg-[#FF0000] border-[#FF0000] text-white shadow-sm" : "bg-[#4A148C] border-[#4A148C] text-white shadow-sm"}`}
                 >
                   <Boxes className="h-4 w-4" />
                   <span className="text-[11px] font-black uppercase tracking-[0.08em]">สต็อก:</span>
@@ -413,11 +413,11 @@ const EditItemsPanel = memo(({
         <div className="absolute inset-0 z-50 flex items-center justify-center bg-white/78 backdrop-blur-[1px]">
           <div className="flex flex-col items-center gap-4 rounded-3xl border border-slate-100 bg-white/95 px-8 py-7 shadow-[0_24px_80px_rgba(15,23,42,0.18)]">
             <div className="relative flex items-center justify-center">
-              <div className="absolute h-12 w-12 rounded-full border-2 border-[#082A63]/10" />
-              <Loader2 className="h-12 w-12 animate-spin text-[#082A63]" strokeWidth={1.5} />
+              <div className="absolute h-12 w-12 rounded-full border-2 border-[#4A148C]/10" />
+              <Loader2 className="h-12 w-12 animate-spin text-[#4A148C]" strokeWidth={1.5} />
             </div>
             <div className="text-center">
-              <p className="text-[10px] font-black uppercase tracking-[0.3em] text-[#082A63]">กำลังบันทึกรายการ</p>
+              <p className="text-[10px] font-black uppercase tracking-[0.3em] text-[#4A148C]">กำลังบันทึกรายการ</p>
               <p className="mt-2 text-sm font-bold text-slate-500">ระบบกำลังอัปเดตออเดอร์และใบจัดส่ง</p>
             </div>
           </div>
@@ -435,7 +435,7 @@ const EditItemsPanel = memo(({
             value={notes}
             onChange={(event) => setNotes(event.target.value)}
             placeholder="ใส่หมายเหตุสำหรับออเดอร์นี้"
-            className="min-h-[88px] w-full resize-none rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-[#082A63]/40 focus:ring-2 focus:ring-[#082A63]/10"
+            className="min-h-[88px] w-full resize-none rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-[#4A148C]/40 focus:ring-2 focus:ring-[#4A148C]/10"
           />
         </div>
 
@@ -503,7 +503,7 @@ const EditItemsPanel = memo(({
             <div className="hidden overflow-x-auto border-b border-slate-300 md:block">
               <table className="min-w-full border-collapse text-left">
                 <thead>
-                  <tr className="bg-[#082A63]">
+                  <tr className="bg-[#4A148C]">
                     <th className="px-5 py-4 text-[13px] font-black uppercase tracking-widest border-r border-white/5 text-white">สินค้า</th>
                     <th className="px-5 py-4 text-[13px] font-black uppercase tracking-widest border-r border-white/5 text-center text-white">ราคา/หน่วย</th>
                     <th className="px-5 py-4 text-[13px] font-black uppercase tracking-widest border-r border-white/5 text-center text-white">ยอดรวม</th>
@@ -548,7 +548,7 @@ const EditItemsPanel = memo(({
                             className={`h-9 w-28 rounded-lg border px-2 text-center font-black outline-none transition mx-auto block focus:ring-2 ${
                               addedUnitPrice <= 0
                                 ? "border-red-500 bg-red-50 text-red-700 focus:border-red-600 focus:ring-red-600/10"
-                                : "border-slate-200 bg-white text-slate-950 focus:border-[#082A63] focus:ring-[#082A63]/10"
+                                : "border-slate-200 bg-white text-slate-950 focus:border-[#4A148C] focus:ring-[#4A148C]/10"
                             }`}
                           />
                           {addedUnitPrice <= 0 ? (
@@ -560,7 +560,7 @@ const EditItemsPanel = memo(({
                         </td>
                         <td className="px-5 py-4 text-center font-black text-slate-950 border-r border-slate-100">฿{formatTHB(item.quantity * addedUnitPrice)}</td>
                         <td className="px-5 py-4 text-center border-r border-slate-100">
-                          <span className={`inline-flex min-w-[60px] justify-center rounded-lg px-2 py-1 text-xs font-black shadow-sm ${stock < 0 ? "bg-[#FF0000] text-white" : "bg-[#082A63] text-white"}`}>
+                          <span className={`inline-flex min-w-[60px] justify-center rounded-lg px-2 py-1 text-xs font-black shadow-sm ${stock < 0 ? "bg-[#FF0000] text-white" : "bg-[#4A148C] text-white"}`}>
                             {stock.toLocaleString("th-TH")}
                           </span>
                         </td>
@@ -575,9 +575,9 @@ const EditItemsPanel = memo(({
                               value={addedQuantityInputs[item.key] ?? String(item.quantity)}
                               onChange={(e) => handleAddedQuantityInput(item.key, e.target.value)}
                               onBlur={() => commitAddedQuantityInput(item.key)}
-                              className="h-9 w-24 rounded-lg border border-slate-200 bg-white px-2 text-center font-black text-slate-950 outline-none transition focus:border-[#082A63] focus:ring-2 focus:ring-[#082A63]/10"
+                              className="h-9 w-24 rounded-lg border border-slate-200 bg-white px-2 text-center font-black text-slate-950 outline-none transition focus:border-[#4A148C] focus:ring-2 focus:ring-[#4A148C]/10"
                             />
-                            <button onClick={() => handleAddedQty(item.key, +1)} className="h-8 w-8 rounded-lg bg-[#082A63] text-white flex items-center justify-center active:scale-90"><Plus className="h-4 w-4" strokeWidth={3} /></button>
+                            <button onClick={() => handleAddedQty(item.key, +1)} className="h-8 w-8 rounded-lg bg-[#4A148C] text-white flex items-center justify-center active:scale-90"><Plus className="h-4 w-4" strokeWidth={3} /></button>
                           </div>
                         </td>
                         <td className="px-5 py-4 text-center">
@@ -620,7 +620,7 @@ const EditItemsPanel = memo(({
                             className={`h-9 w-28 rounded-lg border px-2 text-center font-black outline-none transition mx-auto block focus:ring-2 ${
                               unitPrice <= 0
                                 ? "border-red-500 bg-red-50 text-red-700 focus:border-red-600 focus:ring-red-600/10"
-                                : "border-slate-200 bg-white text-slate-950 focus:border-[#082A63] focus:ring-[#082A63]/10"
+                                : "border-slate-200 bg-white text-slate-950 focus:border-[#4A148C] focus:ring-[#4A148C]/10"
                             }`}
                           />
                           {unitPrice <= 0 ? (
@@ -632,7 +632,7 @@ const EditItemsPanel = memo(({
                         </td>
                         <td className="px-5 py-4 text-center font-black text-slate-950 border-r border-slate-100">฿{formatTHB(qty * unitPrice)}</td>
                         <td className="px-5 py-4 text-center border-r border-slate-100">
-                          <span className={`inline-flex min-w-[60px] justify-center rounded-lg px-2 py-1 text-xs font-black shadow-sm ${item.stockQuantity < 0 ? "bg-[#FF0000] text-white" : "bg-[#082A63] text-white"}`}>
+                          <span className={`inline-flex min-w-[60px] justify-center rounded-lg px-2 py-1 text-xs font-black shadow-sm ${item.stockQuantity < 0 ? "bg-[#FF0000] text-white" : "bg-[#4A148C] text-white"}`}>
                             {item.stockQuantity.toLocaleString("th-TH")}
                           </span>
                         </td>
@@ -648,9 +648,9 @@ const EditItemsPanel = memo(({
                                 value={quantityInputs[item.id] ?? String(qty)}
                                 onChange={(e) => handleQuantityInput(item.id, e.target.value)}
                                 onBlur={() => commitQuantityInput(item.id)}
-                                className="h-9 w-24 rounded-lg border border-slate-200 bg-white px-2 text-center font-black text-slate-950 outline-none transition focus:border-[#082A63] focus:ring-2 focus:ring-[#082A63]/10"
+                                className="h-9 w-24 rounded-lg border border-slate-200 bg-white px-2 text-center font-black text-slate-950 outline-none transition focus:border-[#4A148C] focus:ring-2 focus:ring-[#4A148C]/10"
                               />
-                              <button onClick={() => handleQty(item.id, +1)} className="h-8 w-8 rounded-lg bg-[#082A63] text-white flex items-center justify-center active:scale-90"><Plus className="h-4 w-4" strokeWidth={3} /></button>
+                              <button onClick={() => handleQty(item.id, +1)} className="h-8 w-8 rounded-lg bg-[#4A148C] text-white flex items-center justify-center active:scale-90"><Plus className="h-4 w-4" strokeWidth={3} /></button>
                             </div>
                             {isQuantityReduced(item.id, qty) ? (
                               <div className="inline-flex items-center rounded-xl border border-slate-200 bg-white p-1">
@@ -659,7 +659,7 @@ const EditItemsPanel = memo(({
                                   onClick={() => setReductionModes((current) => ({ ...current, [item.id]: "return" }))}
                                   className={`rounded-lg px-2.5 py-1 text-[10px] font-black transition ${
                                     (reductionModes[item.id] ?? "return") === "return"
-                                      ? "bg-[#082A63] text-white"
+                                      ? "bg-[#4A148C] text-white"
                                       : "text-slate-500"
                                   }`}
                                 >
@@ -720,7 +720,7 @@ const EditItemsPanel = memo(({
                           <div>
                             <p className="text-[10px] font-black uppercase tracking-[0.12em] text-slate-400">สต็อกสินค้า</p>
                             <div className="mt-1.5 flex items-center">
-                              <span className={`inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-[13.5px] font-black shadow-sm ${stock < 0 ? "bg-[#FF0000] text-white" : "bg-[#082A63] text-white"}`}>
+                              <span className={`inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-[13.5px] font-black shadow-sm ${stock < 0 ? "bg-[#FF0000] text-white" : "bg-[#4A148C] text-white"}`}>
                                 <Boxes className="h-3.5 w-3.5" />
                                 {stock.toLocaleString("th-TH")}
                               </span>
@@ -739,7 +739,7 @@ const EditItemsPanel = memo(({
                               className={`mt-1 h-9 w-full rounded-lg border px-2 text-right text-[15px] font-black outline-none transition focus:ring-2 ${
                                 addedUnitPrice <= 0
                                   ? "border-red-500 bg-red-50 text-red-700 focus:border-red-600 focus:ring-red-600/10"
-                                  : "border-slate-200 bg-white text-slate-950 focus:border-[#082A63] focus:ring-[#082A63]/10"
+                                  : "border-slate-200 bg-white text-slate-950 focus:border-[#4A148C] focus:ring-[#4A148C]/10"
                               }`}
                             />
                             {addedUnitPrice <= 0 ? (
@@ -763,14 +763,14 @@ const EditItemsPanel = memo(({
                           value={addedQuantityInputs[item.key] ?? String(item.quantity)}
                           onChange={(e) => handleAddedQuantityInput(item.key, e.target.value)}
                           onBlur={() => commitAddedQuantityInput(item.key)}
-                          className="h-11 w-24 rounded-2xl border border-slate-200 bg-white px-3 text-center text-2xl font-black text-slate-950 tabular-nums outline-none transition focus:border-[#082A63] focus:ring-2 focus:ring-[#082A63]/10"
+                          className="h-11 w-24 rounded-2xl border border-slate-200 bg-white px-3 text-center text-2xl font-black text-slate-950 tabular-nums outline-none transition focus:border-[#4A148C] focus:ring-2 focus:ring-[#4A148C]/10"
                         />
-                        <button onClick={() => handleAddedQty(item.key, +1)} className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#082A63] text-white shadow-md active:scale-95"><Plus className="h-6 w-6" strokeWidth={3} /></button>
+                        <button onClick={() => handleAddedQty(item.key, +1)} className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#4A148C] text-white shadow-md active:scale-95"><Plus className="h-6 w-6" strokeWidth={3} /></button>
                       </div>
                       <div className="h-10 border-l border-slate-200" />
                       <div className="text-right flex-1">
                         <p className="mb-1 text-[10px] font-black uppercase tracking-widest text-slate-400">ยอดรวมสินค้า</p>
-                        <p className="text-[1.3rem] font-black text-[#082A63] tabular-nums leading-none">฿{formatTHB(item.quantity * addedUnitPrice)}</p>
+                        <p className="text-[1.3rem] font-black text-[#4A148C] tabular-nums leading-none">฿{formatTHB(item.quantity * addedUnitPrice)}</p>
                       </div>
                     </div>
                   </article>
@@ -801,7 +801,7 @@ const EditItemsPanel = memo(({
                           <div>
                             <p className="text-[10px] font-black uppercase tracking-[0.12em] text-slate-400">สต็อกสินค้า</p>
                             <div className="mt-1.5 flex items-center">
-                              <span className={`inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-[13.5px] font-black shadow-sm ${item.stockQuantity < 0 ? "bg-[#FF0000] text-white" : "bg-[#082A63] text-white"}`}>
+                              <span className={`inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-[13.5px] font-black shadow-sm ${item.stockQuantity < 0 ? "bg-[#FF0000] text-white" : "bg-[#4A148C] text-white"}`}>
                                 <Boxes className="h-3.5 w-3.5" />
                                 {item.stockQuantity.toLocaleString("th-TH")}
                               </span>
@@ -820,7 +820,7 @@ const EditItemsPanel = memo(({
                               className={`mt-1 h-9 w-full rounded-lg border px-2 text-right text-[15px] font-black outline-none transition focus:ring-2 ${
                                 unitPrice <= 0
                                   ? "border-red-500 bg-red-50 text-red-700 focus:border-red-600 focus:ring-red-600/10"
-                                  : "border-slate-200 bg-white text-slate-950 focus:border-[#082A63] focus:ring-[#082A63]/10"
+                                  : "border-slate-200 bg-white text-slate-950 focus:border-[#4A148C] focus:ring-[#4A148C]/10"
                               }`}
                             />
                             {unitPrice <= 0 ? (
@@ -845,9 +845,9 @@ const EditItemsPanel = memo(({
                             value={quantityInputs[item.id] ?? String(qty)}
                             onChange={(e) => handleQuantityInput(item.id, e.target.value)}
                             onBlur={() => commitQuantityInput(item.id)}
-                            className="h-11 w-24 rounded-2xl border border-slate-200 bg-white px-3 text-center text-2xl font-black text-slate-950 tabular-nums outline-none transition focus:border-[#082A63] focus:ring-2 focus:ring-[#082A63]/10"
+                            className="h-11 w-24 rounded-2xl border border-slate-200 bg-white px-3 text-center text-2xl font-black text-slate-950 tabular-nums outline-none transition focus:border-[#4A148C] focus:ring-2 focus:ring-[#4A148C]/10"
                           />
-                          <button onClick={() => handleQty(item.id, +1)} className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#082A63] text-white shadow-md active:scale-95"><Plus className="h-6 w-6" strokeWidth={3} /></button>
+                          <button onClick={() => handleQty(item.id, +1)} className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#4A148C] text-white shadow-md active:scale-95"><Plus className="h-6 w-6" strokeWidth={3} /></button>
                         </div>
                         {isQuantityReduced(item.id, qty) ? (
                           <div className="inline-flex items-center self-start rounded-2xl border border-slate-200 bg-white p-1">
@@ -856,7 +856,7 @@ const EditItemsPanel = memo(({
                               onClick={() => setReductionModes((current) => ({ ...current, [item.id]: "return" }))}
                               className={`rounded-xl px-3 py-1.5 text-[11px] font-black transition ${
                                 (reductionModes[item.id] ?? "return") === "return"
-                                  ? "bg-[#082A63] text-white"
+                                  ? "bg-[#4A148C] text-white"
                                   : "text-slate-500"
                               }`}
                             >
@@ -879,7 +879,7 @@ const EditItemsPanel = memo(({
                       <div className="h-10 border-l border-slate-200" />
                       <div className="text-right flex-1">
                         <p className="mb-1 text-[10px] font-black uppercase tracking-widest text-slate-400">ยอดรวมสินค้า</p>
-                        <p className="text-[1.3rem] font-black text-[#082A63] tabular-nums leading-none">฿{formatTHB(qty * unitPrice)}</p>
+                        <p className="text-[1.3rem] font-black text-[#4A148C] tabular-nums leading-none">฿{formatTHB(qty * unitPrice)}</p>
                       </div>
                     </div>
                   </article>
@@ -894,13 +894,13 @@ const EditItemsPanel = memo(({
         <div className="flex items-center justify-between gap-4">
           <div className="min-w-0">
             <p className="text-[9px] font-black uppercase text-slate-400 tracking-[0.1em] leading-none">ยอดรวมสุทธิ</p>
-            <p className="mt-1 text-xl font-black text-[#082A63] tabular-nums tracking-tighter leading-none">
+            <p className="mt-1 text-xl font-black text-[#4A148C] tabular-nums tracking-tighter leading-none">
               {formatTHB(totalAmount)} <span className="text-[10px] font-bold opacity-40">บาท</span>
             </p>
           </div>
           <div className="flex items-center gap-3">
             <button onClick={() => onDone()} disabled={isSaving} className="rounded-xl bg-slate-50 px-6 py-3 text-sm font-black text-slate-500 uppercase tracking-widest active:scale-95 disabled:opacity-50">ยกเลิก</button>
-            <button onClick={handleSave} disabled={isSaving} className="rounded-xl bg-[#082A63] px-8 py-3 text-sm font-black text-white shadow-lg uppercase tracking-widest active:scale-95 disabled:opacity-50 flex items-center gap-2">
+            <button onClick={handleSave} disabled={isSaving} className="rounded-xl bg-[#4A148C] px-8 py-3 text-sm font-black text-white shadow-lg uppercase tracking-widest active:scale-95 disabled:opacity-50 flex items-center gap-2">
               {isSaving ? <Loader2 className="h-4.5 w-4.5 animate-spin" /> : null}
               {isSaving ? "กำลังบันทึก..." : "บันทึก"}
             </button>
@@ -1132,7 +1132,7 @@ export function IncomingOrderModal({ allOrders, detail, expandedId, onAfterClose
         ) : null}
 
         {/* Modern Navy Header */}
-        <div className="shrink-0 bg-[#082A63] px-6 py-4 pt-[max(1rem,env(safe-area-inset-top))] lg:pt-6 relative">
+        <div className="shrink-0 bg-[#4A148C] px-6 py-4 pt-[max(1rem,env(safe-area-inset-top))] lg:pt-6 relative">
           <div className="flex items-center justify-between gap-4 relative z-10">
             <div className="min-w-0 flex-1">
               <h2 className="text-2xl font-black text-white leading-normal line-clamp-1">
@@ -1178,7 +1178,7 @@ export function IncomingOrderModal({ allOrders, detail, expandedId, onAfterClose
                 <button
                   onClick={() => void openEditMode()}
                   disabled={isPreparingEdit || editModePending}
-                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-white/15 px-4 py-2 text-[12px] font-black uppercase tracking-[0.14em] text-white shadow-xl shadow-[#082A63]/20 transition-all active:scale-95 disabled:opacity-75"
+                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-white/15 px-4 py-2 text-[12px] font-black uppercase tracking-[0.14em] text-white shadow-xl shadow-[#4A148C]/20 transition-all active:scale-95 disabled:opacity-75"
                 >
                   {isPreparingEdit || editModePending ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
@@ -1223,10 +1223,10 @@ export function IncomingOrderModal({ allOrders, detail, expandedId, onAfterClose
           {!detail ? (
             <div className="absolute inset-0 flex flex-col items-center justify-center bg-white z-50">
               <div className="relative flex items-center justify-center">
-                <div className="absolute h-14 w-14 rounded-full border-4 border-[#082A63]/10" />
-                <Loader2 className="h-14 w-14 animate-spin text-[#082A63]" strokeWidth={2} />
+                <div className="absolute h-14 w-14 rounded-full border-4 border-[#4A148C]/10" />
+                <Loader2 className="h-14 w-14 animate-spin text-[#4A148C]" strokeWidth={2} />
               </div>
-              <p className="mt-4 text-[11px] font-black uppercase tracking-[0.25em] text-[#082A63] animate-pulse">
+              <p className="mt-4 text-[11px] font-black uppercase tracking-[0.25em] text-[#4A148C] animate-pulse">
                 กำลังโหลดข้อมูลออเดอร์...
               </p>
             </div>
@@ -1236,10 +1236,10 @@ export function IncomingOrderModal({ allOrders, detail, expandedId, onAfterClose
             <div className="absolute inset-0 z-50 flex items-center justify-center bg-white/70 backdrop-blur-[1px]">
               <div className="flex flex-col items-center gap-4">
                 <div className="relative flex items-center justify-center">
-                  <div className="absolute h-12 w-12 rounded-full border-2 border-[#082A63]/10" />
-                  <Loader2 className="h-12 w-12 animate-spin text-[#082A63]" strokeWidth={1.5} />
+                  <div className="absolute h-12 w-12 rounded-full border-2 border-[#4A148C]/10" />
+                  <Loader2 className="h-12 w-12 animate-spin text-[#4A148C]" strokeWidth={1.5} />
                 </div>
-                <p className="text-[10px] font-black text-[#082A63] uppercase tracking-[0.3em] animate-pulse">กำลังเปลี่ยนออเดอร์</p>
+                <p className="text-[10px] font-black text-[#4A148C] uppercase tracking-[0.3em] animate-pulse">กำลังเปลี่ยนออเดอร์</p>
               </div>
             </div>
           )}
@@ -1248,10 +1248,10 @@ export function IncomingOrderModal({ allOrders, detail, expandedId, onAfterClose
             <div className="absolute inset-0 z-50 flex items-center justify-center bg-white/78 backdrop-blur-[1px]">
               <div className="flex flex-col items-center gap-4">
                 <div className="relative flex items-center justify-center">
-                  <div className="absolute h-12 w-12 rounded-full border-2 border-[#082A63]/10" />
-                  <Loader2 className="h-12 w-12 animate-spin text-[#082A63]" strokeWidth={1.5} />
+                  <div className="absolute h-12 w-12 rounded-full border-2 border-[#4A148C]/10" />
+                  <Loader2 className="h-12 w-12 animate-spin text-[#4A148C]" strokeWidth={1.5} />
                 </div>
-                <p className="text-[10px] font-black uppercase tracking-[0.3em] text-[#082A63] animate-pulse">
+                <p className="text-[10px] font-black uppercase tracking-[0.3em] text-[#4A148C] animate-pulse">
                   กำลังเปิดโหมดแก้ไข
                 </p>
               </div>
@@ -1340,7 +1340,7 @@ export function IncomingOrderModal({ allOrders, detail, expandedId, onAfterClose
                   <button
                     onClick={() => void openEditMode()}
                     disabled={isPreparingEdit || editModePending}
-                    className="flex-[2] flex items-center justify-center gap-2 rounded-2xl bg-[#082A63] py-4 text-[14px] font-black text-white shadow-xl shadow-[#082A63]/20 uppercase tracking-widest active:scale-95 transition-all disabled:opacity-75"
+                    className="flex-[2] flex items-center justify-center gap-2 rounded-2xl bg-[#4A148C] py-4 text-[14px] font-black text-white shadow-xl shadow-[#4A148C]/20 uppercase tracking-widest active:scale-95 transition-all disabled:opacity-75"
                   >
                     {isPreparingEdit || editModePending ? (
                       <Loader2 className="h-5 w-5 animate-spin" />

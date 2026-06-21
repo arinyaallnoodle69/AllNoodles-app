@@ -149,7 +149,7 @@ function ProductFormBody({
   const [isStartingCamera, setIsStartingCamera] = useState(false);
   const [baseUnit, setBaseUnit] = useState(editingProduct?.baseUnit ?? "kg");
   const [baseCostPrice, setBaseCostPrice] = useState(
-    editingProduct ? String(editingProduct.costPrice) : "",
+    editingProduct ? (Number(editingProduct.costPrice) === 0 ? "" : String(editingProduct.costPrice)) : "",
   );
   const [saleUnits, setSaleUnits] = useState<SaleUnitDraft[]>(
     editingProduct?.saleUnits.length
@@ -157,7 +157,9 @@ function ProductFormBody({
         baseUnitQuantity: String(saleUnit.baseUnitQuantity),
         costMode: saleUnit.costMode,
         fixedCostPrice:
-          saleUnit.fixedCostPrice === null ? "" : String(saleUnit.fixedCostPrice),
+          saleUnit.fixedCostPrice === null || Number(saleUnit.fixedCostPrice) === 0
+            ? ""
+            : String(saleUnit.fixedCostPrice),
         id: saleUnit.id,
         key: saleUnit.id,
         label: saleUnit.label,
