@@ -188,22 +188,7 @@ async function getFallbackAppUserId(
   return data?.id ?? null;
 }
 
-async function isCustomerOrderEditable(
-  organizationId: string,
-  orderDate: string,
-  status: string | null | undefined,
-) {
-  const bangkokNow = getBangkokNowParts();
-  const orderWindowSettings = await getOrderWindowSettings(organizationId);
-  return isCustomerOrderEditableAtTime({
-    allowOrderAfterCutoff: orderWindowSettings.allowOrderAfterCutoff,
-    closeTime: orderWindowSettings.closeTime,
-    currentDate: bangkokNow.date,
-    currentMinutes: bangkokNow.minutes,
-    orderDate,
-    status,
-  });
-}
+
 
 async function buildOrderItemData(
   supabase: ReturnType<typeof getSupabaseAdmin>,
@@ -957,8 +942,41 @@ export async function createOrder(
     return { success: false, error: "ข้อมูลไม่ครบถ้วน หรือไม่มีสินค้าในตะกร้า" };
   }
 
-  const orderWindowSettings = await getOrderWindowSettings(organizationId);
   const bangkokNow = getBangkokNowParts();
+  const orderDate = bangkokNow.date;
+  const supabase = getSupabaseAdmin();
+
+  // Parallel Fetching:
+  // 1. orderWindowSettings
+  // 2. warehouseResult
+  // 3. rawExistingOrderRows (including order_items in a single query)
+  // 4. actorUserId
+  const [orderWindowSettings, warehouseResult, rawExistingOrderRows, actorUserId] = await Promise.all([
+    getOrderWindowSettings(organizationId),
+    getCustomerRequiredWarehouse(organizationId, customerId),
+    supabase
+      .from("orders")
+      .select(`
+        id,
+        order_number,
+        status,
+        created_at,
+        metadata,
+        warehouse_id,
+        order_items (
+          product_id,
+          product_sale_unit_id,
+          quantity
+        )
+      `)
+      .eq("organization_id", organizationId)
+      .eq("customer_id", customerId)
+      .eq("order_date", orderDate)
+      .neq("status", "cancelled")
+      .order("created_at", { ascending: true }),
+    getFallbackAppUserId(supabase, organizationId),
+  ]);
+
   if (
     !isOrderOpenAtMinutes({
       allowOrderAfterCutoff: orderWindowSettings.allowOrderAfterCutoff,
@@ -970,10 +988,6 @@ export async function createOrder(
     return { success: false, error: "ขณะนี้ปิดรับออเดอร์แล้ว" };
   }
 
-  const supabase = getSupabaseAdmin();
-  const orderDate = bangkokNow.date;
-  const warehouseResult = await getCustomerRequiredWarehouse(organizationId, customerId);
-
   if (warehouseResult.error || !warehouseResult.warehouse) {
     return { success: false, error: warehouseResult.error ?? "ไม่พบคลังสินค้าประจำสำหรับร้านค้า" };
   }
@@ -981,19 +995,14 @@ export async function createOrder(
   const warehouseId = warehouseResult.warehouse.id;
 
   console.log(`[createOrder] Searching for orders for customer: ${customerId}, date: ${orderDate}`);
-  const { data: existingOrderRows } = await supabase
-    .from("orders")
-    .select("id, order_number, status, created_at, metadata, warehouse_id")
-    .eq("organization_id", organizationId)
-    .eq("customer_id", customerId)
-    .eq("order_date", orderDate)
-    .or(`warehouse_id.eq.${warehouseId},warehouse_id.is.null`)
-    .neq("status", "cancelled")
-    .order("created_at", { ascending: true });
+  // filter existing orders by warehouseId or null in memory
+  const existingOrderRows = (rawExistingOrderRows.data ?? []).filter(
+    (order) => order.warehouse_id === warehouseId || order.warehouse_id === null
+  );
 
-  console.log(`[createOrder] Found ${existingOrderRows?.length ?? 0} existing orders`);
+  console.log(`[createOrder] Found ${existingOrderRows.length} existing orders`);
 
-  const existingOrder = (existingOrderRows ?? [])[0] ?? null;
+  const existingOrder = existingOrderRows[0] ?? null;
 
   let isUpdating = false;
   let orderIdToUse = "";
@@ -1005,10 +1014,7 @@ export async function createOrder(
     orderIdToUse = existingOrder.id;
     orderNumberToUse = existingOrder.order_number ?? "";
 
-    const { data: existingItems } = await supabase
-      .from("order_items")
-      .select("product_id, product_sale_unit_id, quantity")
-      .eq("order_id", existingOrder.id);
+    const existingItems = existingOrder.order_items;
 
     if (existingItems) {
       const mergedMap = new Map<string, OrderMutationItemInput>();
@@ -1123,7 +1129,6 @@ export async function createOrder(
     return { success: false, error: "ไม่สามารถบันทึกรายการสินค้าได้" };
   }
 
-  const actorUserId = await getFallbackAppUserId(supabase, organizationId);
   const syncResult = await syncDeliveryNoteForOrder(supabase as never, {
     orderId: order.id,
     organizationId,
@@ -1288,20 +1293,40 @@ export async function updateCustomerOrder(
   }
 
   const supabase = getSupabaseAdmin();
-  const { data: order, error: orderError } = await supabase
-    .from("orders")
-    .select("id, order_date, order_number, status")
-    .eq("id", orderId)
-    .eq("organization_id", organizationId)
-    .eq("customer_id", customerId)
-    .single();
 
-  if (orderError || !order) {
-    console.error("[updateCustomerOrder:loadOrder]", orderError);
+  // Parallel Fetching:
+  // 1. orderWindowSettings
+  // 2. order row
+  // 3. actorUserId
+  const [orderWindowSettings, orderResult, actorUserId] = await Promise.all([
+    getOrderWindowSettings(organizationId),
+    supabase
+      .from("orders")
+      .select("id, order_date, order_number, status")
+      .eq("id", orderId)
+      .eq("organization_id", organizationId)
+      .eq("customer_id", customerId)
+      .maybeSingle(),
+    getFallbackAppUserId(supabase, organizationId),
+  ]);
+
+  const order = orderResult.data;
+  if (orderResult.error || !order) {
+    console.error("[updateCustomerOrder:loadOrder]", orderResult.error);
     return { success: false, error: "ORDER_NOT_FOUND" };
   }
 
-  if (!(await isCustomerOrderEditable(organizationId, order.order_date, order.status))) {
+  const bangkokNow = getBangkokNowParts();
+  const isEditable = isCustomerOrderEditableAtTime({
+    allowOrderAfterCutoff: orderWindowSettings.allowOrderAfterCutoff,
+    closeTime: orderWindowSettings.closeTime,
+    currentDate: bangkokNow.date,
+    currentMinutes: bangkokNow.minutes,
+    orderDate: order.order_date,
+    status: order.status,
+  });
+
+  if (!isEditable) {
     return { success: false, error: "EDIT_TIMEOUT" };
   }
 
@@ -1371,7 +1396,6 @@ export async function updateCustomerOrder(
     return { success: false, error: "UPDATE_ORDER_FAILED" };
   }
 
-  const actorUserId = await getFallbackAppUserId(supabase, organizationId);
   const syncResult = await syncDeliveryNoteForOrder(supabase as never, {
     orderId,
     organizationId,
