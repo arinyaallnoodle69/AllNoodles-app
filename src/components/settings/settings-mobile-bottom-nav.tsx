@@ -2,7 +2,7 @@
 
 import Link, { useLinkStatus } from "next/link";
 import { usePathname } from "next/navigation";
-import { useState, useSyncExternalStore } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import {
   ArrowRight,
@@ -92,6 +92,16 @@ export function SettingsMobileBottomNav() {
     setSettingsOpen(false);
     setNavigatingHref(null);
   }
+
+  // รีเซ็ตสถานะการนำทางและปิด Modal เมื่อนำทางไปยังหน้าปลายทางสำเร็จแล้ว
+  useEffect(() => {
+    if (navigatingHref && pathname === navigatingHref) {
+      const timer = setTimeout(() => {
+        resetNavigationState();
+      }, 0);
+      return () => clearTimeout(timer);
+    }
+  }, [pathname, navigatingHref]);
 
   const nav = (
     <>

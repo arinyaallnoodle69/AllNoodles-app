@@ -381,7 +381,7 @@ export function ProductList({ products, baseListHref = "/settings/products" }: P
 
   return (
     <>
-    <SettingsPanel className="rounded-lg border border-[#E1BEE7] bg-white shadow-[0_18px_45px_rgba(31,42,68,0.06)]">
+    <SettingsPanel className="rounded-none border-x-0 shadow-none sm:rounded-lg sm:border sm:border-[#E1BEE7] sm:shadow-[0_18px_45px_rgba(31,42,68,0.06)] bg-white">
       {isPending ? (
         <div className="border-b border-[#EEF1F5] bg-white px-5 py-2 text-xs font-semibold text-[#4A148C]">
           กำลังบันทึกลำดับ...

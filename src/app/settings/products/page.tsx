@@ -40,9 +40,10 @@ export default async function SettingsProductsPage({
       description="จัดการข้อมูลสินค้าและสต็อกทั้งหมดของคุณ"
       floatingSubmit={false}
       hideHeader
+      fullWidthMobile={true}
     >
       {data.setupHint ? (
-        <div className="mb-8 rounded-xl border border-amber-200 bg-amber-50 px-4 py-4 text-sm text-amber-800">
+        <div className="mb-8 mx-4 sm:mx-0 rounded-xl border border-amber-200 bg-amber-50 px-4 py-4 text-sm text-amber-800">
           {data.setupHint} กรุณารัน migration `202603160004_catalog_settings.sql`,
           `202603160005_product_inventory_fields.sql` และ
           `202604051200_product_categories.sql` ก่อนใช้งานหน้านี้
@@ -51,7 +52,7 @@ export default async function SettingsProductsPage({
 
       {activeTab === "categories" ? (
         <>
-          <div className="mb-4 inline-flex rounded-lg border border-[#E1BEE7] bg-white p-1 shadow-sm">
+          <div className="mb-4 mx-4 sm:mx-0 inline-flex rounded-lg border border-[#E1BEE7] bg-white p-1 shadow-sm">
             <Link
               href="/settings/products"
               scroll={false}
@@ -69,7 +70,9 @@ export default async function SettingsProductsPage({
               เพิ่มหมวดหมู่
             </Link>
           </div>
-          <ProductCategoryManager categories={data.productCategories} products={data.products} />
+          <div className="px-4 sm:px-0">
+            <ProductCategoryManager categories={data.productCategories} products={data.products} />
+          </div>
         </>
       ) : (
         <>
@@ -77,7 +80,7 @@ export default async function SettingsProductsPage({
             allProducts={data.products}
             baseListHref="/settings/products"
           >
-            <div className="mb-4 inline-flex rounded-lg border border-[#E1BEE7] bg-white p-1 shadow-sm">
+            <div className="mb-4 mx-4 sm:mx-0 inline-flex rounded-lg border border-[#E1BEE7] bg-white p-1 shadow-sm">
               <Link
                 href="/settings/products"
                 scroll={false}
@@ -97,13 +100,15 @@ export default async function SettingsProductsPage({
             </div>
           </ProductFilterClient>
           {shouldShowForm ? (
-            <ProductForm
-              categories={data.productCategories}
-              editingProduct={editingProduct}
-              nextSku={data.nextProductSku}
-              productList={data.products}
-              returnHref="/settings/products"
-            />
+            <div className="px-4 sm:px-0">
+              <ProductForm
+                categories={data.productCategories}
+                editingProduct={editingProduct}
+                nextSku={data.nextProductSku}
+                productList={data.products}
+                returnHref="/settings/products"
+              />
+            </div>
           ) : null}
         </>
       )}

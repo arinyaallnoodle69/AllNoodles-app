@@ -5,7 +5,7 @@ import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { notifyCustomerReceiptImageDetailed } from "@/lib/line/notify";
 
 const RECEIPT_IMAGE_BUCKET = "customer-receipts";
-const RECEIPT_EXPORT_WIDTH = 360;
+const RECEIPT_EXPORT_WIDTH = 1080;
 
 type ReceiptImageItem = {
   name: string;
@@ -102,8 +102,8 @@ function ReceiptImage({
   orderDate,
   orderNumber,
 }: GeneratedReceiptInput & { logoDataUrl: string }) {
-  const sidePadding = 18;
-  const rowBorder = { borderTop: "1px solid #cccccc" };
+  const sidePadding = 54;
+  const rowBorder = { borderTop: "3px solid #cccccc" };
 
   return (
     <div
@@ -121,16 +121,16 @@ function ReceiptImage({
         style={{
           display: "flex",
           justifyContent: "flex-end",
-          padding: "4px 8px 0",
+          padding: "12px 24px 0",
         }}
       >
         {/* eslint-disable-next-line @next/next/no-img-element -- ImageResponse requires a plain image element. */}
         <img
           alt="All Noodles"
-          height={56}
+          height={168}
           src={logoDataUrl}
-          style={{ height: 56, objectFit: "contain", width: 56 }}
-          width={56}
+          style={{ height: 168, objectFit: "contain", width: 168 }}
+          width={168}
         />
       </div>
 
@@ -139,47 +139,47 @@ function ReceiptImage({
           alignItems: "center",
           display: "flex",
           flexDirection: "column",
-          padding: `0 ${sidePadding}px 10px`,
+          padding: `0 ${sidePadding}px 30px`,
           textAlign: "center",
         }}
       >
-        <div style={{ fontSize: 12, lineHeight: 1.6 }}>
+        <div style={{ fontSize: 36, lineHeight: 1.6 }}>
           All Noodles - ใบยืนยันคำสั่งซื้อ
         </div>
-        <div style={{ fontSize: 16, fontWeight: 800, lineHeight: 1.3, marginTop: 2 }}>
+        <div style={{ fontSize: 48, fontWeight: 800, lineHeight: 1.3, marginTop: 6 }}>
           {`เลขที่ออเดอร์: ${orderNumber}`}
         </div>
-        <div style={{ fontSize: 13, lineHeight: 1.6, marginTop: 4 }}>
+        <div style={{ fontSize: 39, lineHeight: 1.6, marginTop: 12 }}>
           {`${formatDate(orderDate)} | ${formatTime(orderDate)}`}
         </div>
       </div>
 
-      <div style={{ borderTop: "2px solid #000000", margin: "0 16px" }} />
+      <div style={{ borderTop: "6px solid #000000", margin: "0 48px" }} />
 
       <div
         style={{
           display: "flex",
-          fontSize: 14,
-          padding: `10px ${sidePadding}px 12px`,
+          fontSize: 42,
+          padding: `30px ${sidePadding}px 36px`,
         }}
       >
         <span style={{ fontWeight: 700 }}>ร้านค้า:</span>
-        <span style={{ marginLeft: 4 }}>{customerName}</span>
+        <span style={{ marginLeft: 12 }}>{customerName}</span>
       </div>
 
-      <div style={{ display: "flex", gap: 8, padding: `6px ${sidePadding}px` }}>
-        <span style={{ flex: 1, fontSize: 14, fontWeight: 800, textAlign: "left" }}>
+      <div style={{ display: "flex", gap: 24, padding: `18px ${sidePadding}px` }}>
+        <span style={{ flex: 1, fontSize: 42, fontWeight: 800, textAlign: "left" }}>
           สินค้า
         </span>
-        <span style={{ fontSize: 14, fontWeight: 800, textAlign: "right", width: 60 }}>
+        <span style={{ fontSize: 42, fontWeight: 800, textAlign: "right", width: 180 }}>
           จำนวน
         </span>
-        <span style={{ fontSize: 14, fontWeight: 800, textAlign: "right", width: 48 }}>
+        <span style={{ fontSize: 42, fontWeight: 800, textAlign: "right", width: 144 }}>
           หน่วย
         </span>
       </div>
 
-      <div style={{ ...rowBorder, margin: "0 16px" }} />
+      <div style={{ ...rowBorder, margin: "0 48px" }} />
 
       {items.map((item, index) => (
         <div key={`${item.name}-${index}`} style={{ display: "flex", flexDirection: "column" }}>
@@ -187,14 +187,14 @@ function ReceiptImage({
             style={{
               alignItems: "center",
               display: "flex",
-              gap: 8,
-              padding: `10px ${sidePadding}px`,
+              gap: 24,
+              padding: `30px ${sidePadding}px`,
             }}
           >
             <div
               style={{
                 flex: 1,
-                fontSize: 13,
+                fontSize: 39,
                 lineHeight: 1.4,
                 whiteSpace: "normal",
                 wordBreak: "break-word",
@@ -203,14 +203,14 @@ function ReceiptImage({
             >
               {item.name}
             </div>
-            <div style={{ fontSize: 14, textAlign: "right", width: 60 }}>
+            <div style={{ fontSize: 42, textAlign: "right", width: 180 }}>
               {item.quantity.toLocaleString("th-TH")}
             </div>
-            <div style={{ fontSize: 14, textAlign: "right", width: 48 }}>
+            <div style={{ fontSize: 42, textAlign: "right", width: 144 }}>
               {item.saleUnitLabel}
             </div>
           </div>
-          <div style={{ ...rowBorder, margin: "0 16px" }} />
+          <div style={{ ...rowBorder, margin: "0 48px" }} />
         </div>
       ))}
 
@@ -219,14 +219,14 @@ function ReceiptImage({
           alignItems: "center",
           display: "flex",
           flexDirection: "column",
-          padding: `36px ${sidePadding}px 32px`,
+          padding: `108px ${sidePadding}px 96px`,
           textAlign: "center",
         }}
       >
-        <div style={{ fontSize: 14, fontWeight: 800, lineHeight: 1.6 }}>
+        <div style={{ fontSize: 42, fontWeight: 800, lineHeight: 1.6 }}>
           All Noodles
         </div>
-        <div style={{ fontSize: 13, lineHeight: 1.6, marginTop: 2 }}>
+        <div style={{ fontSize: 39, lineHeight: 1.6, marginTop: 6 }}>
           ขอบคุณสำหรับการสนับสนุนครับ
         </div>
       </div>
@@ -236,7 +236,7 @@ function ReceiptImage({
 
 export async function generateCustomerReceiptPng(input: GeneratedReceiptInput) {
   const { boldFont, logoDataUrl, regularFont } = await getReceiptAssets();
-  const height = Math.max(350, 238 + input.items.length * 42 + 96);
+  const height = Math.max(1050, 1002 + input.items.length * 126);
   const response = new ImageResponse(
     <ReceiptImage {...input} logoDataUrl={logoDataUrl} />,
     {

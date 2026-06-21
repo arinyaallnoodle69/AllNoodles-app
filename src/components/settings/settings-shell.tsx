@@ -45,6 +45,7 @@ type Props = {
   headerContent?: React.ReactNode;
   headerContentPlacement?: "row" | "below";
   hideHeader?: boolean;
+  fullWidthMobile?: boolean;
 };
 
 function getSwitchLink(current: SettingsSection) {
@@ -98,6 +99,7 @@ export function SettingsShell({
   headerContent,
   headerContentPlacement = "below",
   hideHeader = false,
+  fullWidthMobile = false,
 }: Props) {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState(initialSearchTerm);
@@ -202,7 +204,7 @@ export function SettingsShell({
       </div>
       ) : null}
 
-      <main className={`mx-auto min-w-0 w-full max-w-[88rem] px-4 pb-28 lg:px-3 lg:pb-32 ${hideHeader ? "py-0 lg:py-0" : "py-3 lg:py-4"}`}>
+      <main className={`mx-auto min-w-0 w-full max-w-[88rem] ${fullWidthMobile ? "px-0 sm:px-4" : "px-4"} pb-28 lg:px-3 lg:pb-32 ${hideHeader ? "py-0 lg:py-0" : "py-3 lg:py-4"}`}>
         {/* Mobile Breadcrumb */}
         {current && !hideHeader ? (
           <nav className="mb-4 flex items-center gap-1.5 text-[13px] font-bold lg:hidden">
