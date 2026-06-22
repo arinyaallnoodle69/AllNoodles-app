@@ -46,23 +46,31 @@ export default async function LoginPinSettingsPage() {
   const session = await requireAppRole("admin");
   const admin = getSupabaseAdmin();
 
-  const { data: logs } = await admin
-    .from("auth_audit_logs")
-    .select("id, event_type, created_at, user_agent")
-    .eq("user_id", session.userId)
-    .order("created_at", { ascending: false })
-    .limit(8);
+  const [logsResult, usersResult] = await Promise.all([
+    admin
+      .from("auth_audit_logs")
+      .select("id, event_type, created_at, user_agent")
+      .eq("user_id", session.userId)
+      .order("created_at", { ascending: false })
+      .limit(8),
+    admin
+      .from("app_users")
+      .select("id, display_name, role")
+      .eq("organization_id", session.organizationId)
+      .order("role", { ascending: true }),
+  ]);
 
-  const auditLogs = (logs ?? []) as AuditLogRow[];
+  const auditLogs = (logsResult.data ?? []) as AuditLogRow[];
+  const users = (usersResult.data ?? []) as Array<{ id: string; display_name: string; role: "admin" | "member" | "warehouse" }>;
 
   return (
     <SettingsShell
       title="ตั้งค่า PIN"
-      description="เปลี่ยนรหัสเข้าใช้งานสำหรับผู้ดูแลระบบ"
+      description="เปลี่ยนรหัสเข้าใช้งานสำหรับพนักงานและผู้ดูแลระบบ"
       floatingSubmit={false}
     >
       <div className="grid gap-5 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
-        <PinSettingsForm />
+        <PinSettingsForm users={users} currentUserId={session.userId} />
 
         <section className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-[0_18px_55px_rgba(15,23,42,0.05)] sm:p-7">
           <div className="flex items-center gap-4">

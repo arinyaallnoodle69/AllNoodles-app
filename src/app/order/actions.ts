@@ -1444,3 +1444,21 @@ export async function updateCustomerOrder(
     },
   };
 }
+
+export async function getActiveVehiclesAction() {
+  const { requireAppSession } = await import("@/lib/auth/authorization");
+  const session = await requireAppSession();
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase
+    .from("vehicles")
+    .select("id, name")
+    .eq("organization_id", session.organizationId)
+    .eq("is_active", true)
+    .order("sort_order", { ascending: true });
+
+  if (error) {
+    console.error("[getActiveVehiclesAction]", error);
+    return [];
+  }
+  return data ?? [];
+}

@@ -35,6 +35,7 @@ import { receiveStockAction } from "@/app/settings/stock/actions";
 import type { ReceiveStockActionState } from "@/app/settings/stock/actions";
 import type { StockProductOption, StockSupplierOption } from "@/lib/stock/admin";
 import { ThaiDatePicker } from "@/components/ui/thai-date-picker";
+import { useClientRole } from "@/lib/auth/client-role";
 
 type StockReceiveFormProps = {
   products: StockProductOption[];
@@ -66,6 +67,7 @@ export function StockReceiveForm({
   onClose,
 }: StockReceiveFormProps) {
   const router = useRouter();
+  const role = useClientRole();
   const [actionState, formAction, isPending] = useActionState(
     receiveStockAction,
     initialReceiveStockState,
@@ -512,8 +514,12 @@ export function StockReceiveForm({
                           <h4 className="text-base font-black text-slate-900 leading-snug line-clamp-1">{p.name}</h4>
                           <div className="mt-1 flex items-center gap-3 text-xs text-slate-500 font-bold">
                             <span>คงเหลือ: <strong className="text-slate-800">{p.onHandQuantity} {p.unit}</strong></span>
-                            <span className="h-1 w-1 bg-slate-300 rounded-full" />
-                            <span>ทุนเริ่มต้น: <strong className="text-slate-800">฿{p.costPrice.toLocaleString()}</strong></span>
+                            {role !== "member" && (
+                              <>
+                                <span className="h-1 w-1 bg-slate-300 rounded-full" />
+                                <span>ทุนเริ่มต้น: <strong className="text-slate-800">฿{p.costPrice.toLocaleString()}</strong></span>
+                              </>
+                            )}
                           </div>
                         </div>
                       </button>
@@ -525,7 +531,9 @@ export function StockReceiveForm({
                             <div key={unit.id} className="bg-white rounded-2xl p-4 border border-[#dbe4f0] shadow-sm">
                               <div className="flex justify-between items-center mb-2">
                                 <span className="text-xs font-black text-slate-500">{unit.label}</span>
-                                <span className="text-[11px] font-bold text-[#4A148C] bg-[#F3E5F5] px-2 py-0.5 rounded-full">฿{unit.effectiveCostPrice}</span>
+                                {role !== "member" && (
+                                  <span className="text-[11px] font-bold text-[#4A148C] bg-[#F3E5F5] px-2 py-0.5 rounded-full">฿{unit.effectiveCostPrice}</span>
+                                )}
                               </div>
                               <div className="flex items-center gap-3">
                                 <button

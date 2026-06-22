@@ -130,7 +130,7 @@ export async function syncDeliveryNoteForOrder(
   );
 
   if (!actorUserId) {
-    return { error: "ไม่พบผู้ใช้งานสำหรับซิงก์ใบส่งของ" };
+    return { error: "ไม่พบผู้ใช้งานสำหรับซิงก์บิลส่งของ" };
   }
 
   const mergedNotes = targetOrders.reduce<string | null>((acc, item) => {
@@ -191,7 +191,7 @@ export async function syncDeliveryNoteForOrder(
   }
 
   if (existingDnError) {
-    return { error: "โหลดข้อมูลใบส่งของเดิมไม่สำเร็จ" };
+    return { error: "โหลดข้อมูลบิลส่งของเดิมไม่สำเร็จ" };
   }
 
   if (existingDn) {
@@ -201,7 +201,7 @@ export async function syncDeliveryNoteForOrder(
       .eq("delivery_note_id", existingDn.id);
 
     if (existingDnItemsError) {
-      return { error: "โหลดรายการสินค้าในใบส่งของเดิมไม่สำเร็จ" };
+      return { error: "โหลดรายการสินค้าในบิลส่งของเดิมไม่สำเร็จ" };
     }
 
     const restoreByProduct = new Map<string, number>();
@@ -236,25 +236,14 @@ export async function syncDeliveryNoteForOrder(
       );
       const inventoryMovements: Database["public"]["Tables"]["inventory_movements"]["Insert"][] = [];
 
-      for (const productId of productIdsToRestore) {
+      const updatePromises = productIdsToRestore.map(async (productId) => {
         const qtyBase = restoreByProduct.get(productId) ?? 0;
-        if (qtyBase <= 0) continue;
+        if (qtyBase <= 0) return null;
 
         const stockBefore = productMap.get(productId);
-        if (stockBefore === undefined) continue;
+        if (stockBefore === undefined) return null;
 
         const stockAfter = stockBefore + qtyBase;
-        inventoryMovements.push({
-          created_by: actorUserId,
-          metadata: { source: "order_management_rebuild" },
-          movement_type: "adjustment",
-          notes: `คืนสต็อกจากการซิงก์ใบส่งของใหม่สำหรับออเดอร์ ${input.orderId}`,
-          organization_id: input.organizationId,
-          product_id: productId,
-          quantity_delta: qtyBase,
-          stock_after: stockAfter,
-          stock_before: stockBefore,
-        });
 
         const { error: updateError } = await warehouseDb
           .from("product_warehouse_stocks")
@@ -263,17 +252,41 @@ export async function syncDeliveryNoteForOrder(
           .eq("warehouse_id", warehouseId)
           .eq("product_id", productId);
 
-        if (!updateError) {
-          await warehouseDb.rpc("recalculate_product_stock_totals", {
-            p_organization_id: input.organizationId,
-            p_product_id: productId,
-          });
-        }
-
         if (updateError) {
           console.error(`[syncDeliveryNoteForOrder:updateProduct:${productId}]`, updateError);
-          return { error: "ปรับปรุงสต็อกสินค้าในคลังไม่สำเร็จ: " + updateError.message };
+          throw new Error("ปรับปรุงสต็อกสินค้าในคลังไม่สำเร็จ: " + updateError.message);
         }
+
+        await warehouseDb.rpc("recalculate_product_stock_totals", {
+          p_organization_id: input.organizationId,
+          p_product_id: productId,
+        });
+
+        const movement: Database["public"]["Tables"]["inventory_movements"]["Insert"] = {
+          created_by: actorUserId,
+          metadata: { source: "order_management_rebuild" },
+          movement_type: "adjustment",
+          notes: `คืนสต็อกจากการซิงก์บิลส่งของใหม่สำหรับออเดอร์ ${input.orderId}`,
+          organization_id: input.organizationId,
+          product_id: productId,
+          quantity_delta: qtyBase,
+          stock_after: stockAfter,
+          stock_before: stockBefore,
+        };
+
+        return movement;
+      });
+
+      try {
+        const results = await Promise.all(updatePromises);
+        for (const m of results) {
+          if (m) {
+            inventoryMovements.push(m);
+          }
+        }
+      } catch (err) {
+        const errMsg = err instanceof Error ? err.message : "ปรับปรุงสต็อกสินค้าในคลังไม่สำเร็จ";
+        return { error: errMsg };
       }
 
       if (inventoryMovements.length > 0) {
@@ -329,7 +342,7 @@ export async function syncDeliveryNoteForOrder(
   });
 
   if (deliveryError) {
-    return { error: "ปรับปรุงใบส่งของไม่สำเร็จ: " + deliveryError.message };
+    return { error: "ปรับปรุงบิลส่งของไม่สำเร็จ: " + deliveryError.message };
   }
 
   if (!input.skipBillingSync) {

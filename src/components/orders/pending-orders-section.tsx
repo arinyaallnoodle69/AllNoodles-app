@@ -179,7 +179,7 @@ function DeliveryModal({
     if (unpricedActiveItems.length > 0) {
       const names = unpricedActiveItems.map((i) => `  • ${i.productName} (${i.saleUnitLabel})`).join("\n");
       const confirmed = window.confirm(
-        `⚠️ รายการต่อไปนี้ยังไม่ได้ตั้งราคา (${unpricedActiveItems.length} รายการ)\n\n${names}\n\nใบส่งของจะคิดราคาเป็น 0 บาท\nต้องการยืนยันต่อไหม?`
+        `⚠️ รายการต่อไปนี้ยังไม่ได้ตั้งราคา (${unpricedActiveItems.length} รายการ)\n\n${names}\n\nบิลส่งของจะคิดราคาเป็น 0 บาท\nต้องการยืนยันต่อไหม?`
       );
       if (!confirmed) return;
     }
@@ -221,7 +221,7 @@ function DeliveryModal({
           <div>
             <div className="flex items-center gap-2">
               <Truck className="h-5 w-5 text-[#4A148C]" strokeWidth={2.2} />
-              <h2 className="text-lg font-bold text-slate-950">พิมพ์ใบส่งของ</h2>
+              <h2 className="text-lg font-bold text-slate-950">พิมพ์บิลส่งของ</h2>
             </div>
             {formData && (
               <p className="mt-0.5 text-sm text-slate-500">
@@ -318,7 +318,7 @@ function DeliveryModal({
                     {item.unitPrice === 0 && (
                       <div className="mt-3 flex items-center gap-2 rounded-xl bg-amber-50 px-3 py-2.5 text-xs text-amber-700">
                         <AlertTriangle className="h-3.5 w-3.5 shrink-0" strokeWidth={2.4} />
-                        <span>ยังไม่ได้ตั้งราคาสินค้านี้กับลูกค้า ใบส่งของจะคิดเป็น 0 บาท</span>
+                        <span>ยังไม่ได้ตั้งราคาสินค้านี้กับลูกค้า บิลส่งของจะคิดเป็น 0 บาท</span>
                       </div>
                     )}
                   </div>
@@ -362,7 +362,7 @@ function DeliveryModal({
                   className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-800"
                 >
                   <Truck className="h-3.5 w-3.5" strokeWidth={2.2} />
-                  พิมพ์ใบส่งของ
+                  พิมพ์บิลส่งของ
                 </a>
               )}
             </div>
@@ -394,7 +394,7 @@ function DeliveryModal({
             ) : (
               <>
                 <Truck className="h-4 w-4" strokeWidth={2.2} />
-                ยืนยันใบส่งของ
+                ยืนยันบิลส่งของ
               </>
             )}
           </button>
@@ -509,7 +509,7 @@ function StoreDeliveryModal({
     if (unpricedActiveGroups.length > 0) {
       const names = unpricedActiveGroups.map((g) => `  • ${g.productName} (${g.saleUnitLabel})`).join("\n");
       const confirmed = window.confirm(
-        `⚠️ รายการต่อไปนี้ยังไม่ได้ตั้งราคา (${unpricedActiveGroups.length} รายการ)\n\n${names}\n\nใบส่งของจะคิดราคาเป็น 0 บาท\nต้องการยืนยันต่อไหม?`
+        `⚠️ รายการต่อไปนี้ยังไม่ได้ตั้งราคา (${unpricedActiveGroups.length} รายการ)\n\n${names}\n\nบิลส่งของจะคิดราคาเป็น 0 บาท\nต้องการยืนยันต่อไหม?`
       );
       if (!confirmed) return;
     }
@@ -536,7 +536,7 @@ function StoreDeliveryModal({
     if (unpricedActiveGroups.length > 0) {
       const names = unpricedActiveGroups.map((g) => `  • ${g.productName} (${g.saleUnitLabel})`).join("\n");
       const confirmed = window.confirm(
-        `รายการต่อไปนี้ยังไม่ได้ตั้งราคา (${unpricedActiveGroups.length} รายการ)\n\n${names}\n\nใบส่งของจะคิดราคาเป็น 0 บาท\nต้องการยืนยันต่อไหม?`
+        `รายการต่อไปนี้ยังไม่ได้ตั้งราคา (${unpricedActiveGroups.length} รายการ)\n\n${names}\n\nบิลส่งของจะคิดราคาเป็น 0 บาท\nต้องการยืนยันต่อไหม?`
       );
       if (!confirmed) return;
     }
@@ -577,7 +577,7 @@ function StoreDeliveryModal({
                 <Truck className="h-5 w-5" strokeWidth={2.2} />
               </span>
               <div>
-                <h2 className="text-lg font-black text-slate-950">พิมพ์ใบส่งของ</h2>
+                <h2 className="text-lg font-black text-slate-950">พิมพ์บิลส่งของ</h2>
               </div>
             </div>
             <p className="mt-2 text-sm font-medium text-slate-600">
@@ -870,7 +870,7 @@ function StoreDeliveryModal({
                         className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-800"
                       >
                         <Truck className="h-3.5 w-3.5" strokeWidth={2.2} />
-                        พิมพ์ใบส่งของ
+                        พิมพ์บิลส่งของ
                       </a>
                     )}
                   </div>
@@ -922,7 +922,7 @@ function StoreDeliveryModal({
               ) : (
                 <>
                   <Truck className="h-4 w-4" strokeWidth={2.2} />
-                  ยืนยันใบส่งของ
+                  ยืนยันบิลส่งของ
                 </>
               )}
             </button>
@@ -1182,7 +1182,7 @@ function AllStoresDeliveryModal({
                   ALL NOODLES DELIVERY PRINT
                 </p>
                 <h2 className="text-lg font-black leading-none text-[#4A148C] sm:whitespace-nowrap sm:text-[2rem]">
-                  พิมพ์ใบส่งของ
+                  พิมพ์บิลส่งของ
                 </h2>
                 <p className="mt-1 text-[11px] font-black leading-tight text-[#4A148C] sm:text-sm">
                   วันที่ {formatDate(date)} · เลือกร้านก่อนพิมพ์
@@ -1491,7 +1491,7 @@ export function AllStoresDeliveryButton({
         className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border border-[#4A148C]/20 bg-[#4A148C] px-3 py-1.5 text-[13px] font-bold text-white shadow-sm transition hover:bg-[#4A148C] hover:shadow-lg active:scale-[0.98] disabled:opacity-50 print:hidden md:gap-2 md:px-6 md:py-2.5 md:text-sm"
       >
         <Printer className="h-3.5 w-3.5 md:h-4.5 md:w-4.5" strokeWidth={2.5} />
-        พิมพ์ใบส่งของทุกร้านค้า
+        พิมพ์บิลส่งของทุกร้านค้า
       </button>
       {open && (
         <AllStoresDeliveryModal date={date} endDate={endDate} stores={stores} onClose={() => setOpen(false)} />
@@ -1540,7 +1540,7 @@ export function StoreDeliveryButton({
         ) : (
           <Truck className="h-3.5 w-3.5" strokeWidth={2.2} />
         )}
-        พิมพ์ใบส่งของ
+        พิมพ์บิลส่งของ
       </button>
       {open && orders && orders.length > 0 && (
         <StoreDeliveryModal
@@ -1555,7 +1555,7 @@ export function StoreDeliveryButton({
       {open && orders && orders.length === 0 && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setOpen(false)}>
           <div className="rounded-2xl bg-white px-8 py-6 text-center shadow-2xl">
-            <p className="text-sm text-slate-500">ไม่มีใบส่งของสำหรับพิมพ์</p>
+            <p className="text-sm text-slate-500">ไม่มีบิลส่งของสำหรับพิมพ์</p>
           </div>
         </div>
       )}
@@ -1576,7 +1576,7 @@ export function CreateDeliveryButton({ orderId }: { orderId: string }) {
           className="inline-flex min-h-9 w-full items-center justify-center gap-1.5 rounded-lg bg-[#4A148C] px-3 py-2 text-xs font-semibold text-white transition hover:bg-[#4A148C] active:scale-[0.98]"
         >
           <Truck className="h-3.5 w-3.5" strokeWidth={2.4} />
-          พิมพ์ใบส่งของ
+          พิมพ์บิลส่งของ
       </button>
       {open && <DeliveryModal orderId={orderId} onClose={() => setOpen(false)} />}
     </>
@@ -1652,7 +1652,7 @@ export function PendingOrdersSection({ orders }: { orders: PendingOrder[] }) {
                     className="inline-flex items-center gap-1.5 rounded-xl bg-[#4A148C] px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-[#4A148C]"
                   >
                     <Truck className="h-3.5 w-3.5" strokeWidth={2.2} />
-                    <span className="hidden xs:inline">พิมพ์ใบส่งของ</span>
+                    <span className="hidden xs:inline">พิมพ์บิลส่งของ</span>
                     <span className="xs:hidden">สร้าง</span>
                   </button>
                 </div>

@@ -16,6 +16,7 @@ import { StockReceiveForm } from "./stock-receive-form";
 import { StockAdjustForm } from "./stock-adjust-form";
 import { StockTabs } from "./stock-tabs";
 import type { StockProductOption, StockSupplierOption } from "@/lib/stock/admin";
+import { useClientRole } from "@/lib/auth/client-role";
 
 // ─── Utilities ───────────────────────────────────────────────────────────────
 
@@ -75,6 +76,7 @@ const MobileStockCard = memo(({
   selectedWarehouseName: string;
   onAdjust: (productId: string) => void;
 }) => {
+  const role = useClientRole();
   const defaultUnit = getDefaultUnit(product);
 
   return (
@@ -129,9 +131,9 @@ const MobileStockCard = memo(({
       </div>
 
       {/* Modern 2x2 Grid for Stock Data */}
-      <div className="mt-6 grid grid-cols-2 border-t border-slate-200 pt-5">
+      <div className={`mt-6 ${role === "member" ? "flex flex-col gap-4" : "grid grid-cols-2"} border-t border-slate-200 pt-5`}>
         {/* Current Stock */}
-        <div className="space-y-1 border-r border-b border-slate-200 pb-4 pr-4">
+        <div className={`space-y-1 ${role === "member" ? "pb-2" : "border-r border-b border-slate-200 pb-4 pr-4"}`}>
           <div className="flex items-center gap-1.5 text-slate-400">
             <Boxes className="h-3.5 w-3.5" strokeWidth={2.5} />
             <p className="text-[10px] font-black uppercase tracking-widest">คงเหลือปัจจุบัน</p>
@@ -145,33 +147,37 @@ const MobileStockCard = memo(({
         </div>
 
         {/* Cost per Unit */}
-        <div className="space-y-1 border-b border-slate-200 pb-4 pl-4">
-          <div className="flex items-center gap-1.5 text-slate-400">
-            <Coins className="h-3.5 w-3.5" strokeWidth={2.5} />
-            <p className="text-[10px] font-black uppercase tracking-widest">ต้นทุน / {defaultUnit?.label ?? product.unit}</p>
+        {role !== "member" && (
+          <div className="space-y-1 border-b border-slate-200 pb-4 pl-4">
+            <div className="flex items-center gap-1.5 text-slate-400">
+              <Coins className="h-3.5 w-3.5" strokeWidth={2.5} />
+              <p className="text-[10px] font-black uppercase tracking-widest">ต้นทุน / {defaultUnit?.label ?? product.unit}</p>
+            </div>
+            <div className="flex items-baseline gap-1">
+              <span className="text-[1.5rem] font-black tracking-tight text-[#4A148C]">
+                ฿{formatMoney(defaultUnit?.effectiveCostPrice ?? 0)}
+              </span>
+            </div>
           </div>
-          <div className="flex items-baseline gap-1">
-            <span className="text-[1.5rem] font-black tracking-tight text-[#4A148C]">
-              ฿{formatMoney(defaultUnit?.effectiveCostPrice ?? 0)}
-            </span>
-          </div>
-        </div>
+        )}
 
         {/* Total Value */}
-        <div className="space-y-1 border-r border-slate-200 pt-4 pr-4">
-          <div className="flex items-center gap-1.5 text-slate-400">
-            <Wallet className="h-3.5 w-3.5" strokeWidth={2.5} />
-            <p className="text-[10px] font-black uppercase tracking-widest">มูลค่าสต็อกรวม</p>
+        {role !== "member" && (
+          <div className="space-y-1 border-r border-slate-200 pt-4 pr-4">
+            <div className="flex items-center gap-1.5 text-slate-400">
+              <Wallet className="h-3.5 w-3.5" strokeWidth={2.5} />
+              <p className="text-[10px] font-black uppercase tracking-widest">มูลค่าสต็อกรวม</p>
+            </div>
+            <div className="flex items-baseline gap-1">
+              <span className={`text-[1.35rem] font-black tracking-tight ${displayStock.stockValue < 0 ? 'text-rose-600' : 'text-slate-900'}`}>
+                ฿{formatMoney(displayStock.stockValue)}
+              </span>
+            </div>
           </div>
-          <div className="flex items-baseline gap-1">
-            <span className={`text-[1.35rem] font-black tracking-tight ${displayStock.stockValue < 0 ? 'text-rose-600' : 'text-slate-900'}`}>
-              ฿{formatMoney(displayStock.stockValue)}
-            </span>
-          </div>
-        </div>
+        )}
 
         {/* Adjust Button Section */}
-        <div className="flex items-end justify-end pt-4 pl-4">
+        <div className={`flex ${role === "member" ? "w-full justify-center" : "items-end justify-end pt-4 pl-4"}`}>
           <button
             type="button"
             onClick={() => onAdjust(product.id)}
@@ -198,6 +204,8 @@ const DesktopStockRow = memo(({
   selectedWarehouseName: string;
   onAdjust: (productId: string) => void;
 }) => {
+  const role = useClientRole();
+
   return (
     <tr className="hover:bg-slate-50 transition-colors group">
       <td className="whitespace-nowrap border-b border-l border-r border-slate-300 px-5 py-4 text-center font-mono font-bold text-slate-500 uppercase tracking-tight align-middle">
@@ -212,7 +220,7 @@ const DesktopStockRow = memo(({
                 alt={product.name}
                 fill
                 sizes="56px"
-                className="object-contain"
+                 className="object-contain"
               />
             ) : (
               <div className="flex h-full w-full items-center justify-center text-slate-200">
@@ -234,25 +242,27 @@ const DesktopStockRow = memo(({
       <td className="whitespace-nowrap border-b border-r border-slate-300 px-5 py-4 text-center text-base font-medium text-slate-600 align-middle">
         {product.unit}
       </td>
-      <td className="whitespace-nowrap border-b border-r border-slate-300 px-5 py-4 text-center align-middle">
-        <div className="flex flex-col gap-1">
-          {product.saleUnits.length > 0 ? (
-            product.saleUnits.map((unit) => (
-              <div key={unit.id} className="flex items-center justify-center">
+      {role !== "member" && (
+        <td className="whitespace-nowrap border-b border-r border-slate-300 px-5 py-4 text-center align-middle">
+          <div className="flex flex-col gap-1">
+            {product.saleUnits.length > 0 ? (
+              product.saleUnits.map((unit) => (
+                <div key={unit.id} className="flex items-center justify-center">
+                  <span className="text-sm font-bold text-slate-700">
+                    ฿{formatMoney(unit.effectiveCostPrice)}
+                  </span>
+                </div>
+              ))
+            ) : (
+              <div className="flex items-center justify-center">
                 <span className="text-sm font-bold text-slate-700">
-                  ฿{formatMoney(unit.effectiveCostPrice)}
+                  ฿{formatMoney(product.costPrice ?? 0)}
                 </span>
               </div>
-            ))
-          ) : (
-            <div className="flex items-center justify-center">
-              <span className="text-sm font-bold text-slate-700">
-                ฿{formatMoney(product.costPrice ?? 0)}
-              </span>
-            </div>
-          )}
-        </div>
-      </td>
+            )}
+          </div>
+        </td>
+      )}
       <td className="whitespace-nowrap border-b border-r border-slate-300 px-5 py-4 text-center align-middle">
         <div className="flex flex-col items-center gap-1">
           <span className={`text-base font-bold ${displayStock.onHandQuantity < 0 ? 'text-rose-700' : 'text-[#4A148C]'}`}>
@@ -268,14 +278,16 @@ const DesktopStockRow = memo(({
           </button>
         </div>
       </td>
-      <td className="whitespace-nowrap border-b border-r border-slate-300 px-5 py-4 text-center align-middle">
-        <div className="flex flex-col items-center gap-0.5">
-          <span className="text-base font-bold text-slate-900">
-            ฿{formatMoney(displayStock.stockValue)}
-          </span>
-          <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">VALUE</span>
-        </div>
-      </td>
+      {role !== "member" && (
+        <td className="whitespace-nowrap border-b border-r border-slate-300 px-5 py-4 text-center align-middle">
+          <div className="flex flex-col items-center gap-0.5">
+            <span className="text-base font-bold text-slate-900">
+              ฿{formatMoney(displayStock.stockValue)}
+            </span>
+            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">VALUE</span>
+          </div>
+        </td>
+      )}
     </tr>
   );
 });
@@ -284,6 +296,7 @@ DesktopStockRow.displayName = "DesktopStockRow";
 // ─── Main Component ──────────────────────────────────────────────────────────
 
 export function StockList({ products, suppliers = [], warehouses, baseHref = "/stock", onChangeTab }: StockListProps) {
+  const role = useClientRole();
   const searchParams = useSearchParams();
 
   // Local state for immediate UI response
@@ -520,14 +533,10 @@ export function StockList({ products, suppliers = [], warehouses, baseHref = "/s
                 <table className="min-w-full border-collapse border border-slate-300 text-sm">
                   <thead>
                     <tr style={{ backgroundColor: "#4A148C" }}>
-                      {[
-                        "รหัสสินค้า",
-                        "ชื่อสินค้า",
-                        "หน่วย",
-                        "ต้นทุน / หน่วย",
-                        "คงเหลือ",
-                        "มูลค่าสต็อก",
-                      ].map((label, i, arr) => (
+                      {(role === "member"
+                        ? ["รหัสสินค้า", "ชื่อสินค้า", "หน่วย", "คงเหลือ"]
+                        : ["รหัสสินค้า", "ชื่อสินค้า", "หน่วย", "ต้นทุน / หน่วย", "คงเหลือ", "มูลค่าสต็อก"]
+                      ).map((label, i, arr) => (
                         <th
                           key={label}
                           className={[

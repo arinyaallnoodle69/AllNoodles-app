@@ -2,7 +2,7 @@ import { DeliveryNoteLayout } from "@/components/print/delivery-note-layout";
 import type { DeliveryNotePrintData } from "@/lib/delivery/print";
 
 export const metadata = {
-  title: "ตัวอย่างใบส่งของ A4",
+  title: "ตัวอย่างบิลส่งของ A4",
 };
 
 const mockProducts = [
@@ -73,7 +73,7 @@ export default function DeliveryMockupPage() {
     <main className="min-h-screen bg-neutral-200 py-6 print:bg-white print:py-0">
       <section className="mx-auto mb-6 w-[210mm] max-w-[calc(100vw-24px)] rounded border border-neutral-300 bg-white px-5 py-4 shadow-sm print:hidden">
         <p className="text-sm font-black text-neutral-600">ตัวอย่างระบบ</p>
-        <h1 className="mt-1 text-2xl font-black text-neutral-950">ตัวอย่างใบส่งของ A4 แนวตั้ง</h1>
+        <h1 className="mt-1 text-2xl font-black text-neutral-950">ตัวอย่างบิลส่งของ A4 แนวตั้ง</h1>
         <p className="mt-2 text-base font-bold text-neutral-800">
           หน้านี้เป็น static mockup สำหรับตรวจ layout บนเว็บ รายการที่ 21 เป็นต้นไปจะขึ้นหน้า A4 ใหม่พร้อม header และ footer เหมือนหน้าแรก
         </p>

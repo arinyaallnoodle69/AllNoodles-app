@@ -1,7 +1,8 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { ListTree, PencilLine, Store } from "lucide-react";
+import { ListTree, LoaderCircle, PencilLine, Store } from "lucide-react";
 import type { SettingsCustomer, SettingsVehicle } from "@/lib/settings/admin";
 import type { WarehouseOption } from "@/lib/warehouses";
 import {
@@ -18,6 +19,7 @@ type CustomerListPanelProps = {
   searchTerm?: string;
   vehicles: SettingsVehicle[];
   warehouses: WarehouseOption[];
+  onEdit: (customer: SettingsCustomer) => void;
 };
 
 export function CustomerListPanel({
@@ -25,6 +27,7 @@ export function CustomerListPanel({
   searchTerm = "",
   vehicles,
   warehouses,
+  onEdit,
 }: CustomerListPanelProps) {
   const q = searchTerm.toLocaleLowerCase("th").trim();
   const filtered = q
@@ -37,7 +40,41 @@ export function CustomerListPanel({
       })
     : customers;
 
+  const [visibleCount, setVisibleCount] = useState(25);
+  const loaderRef = useRef<HTMLDivElement | null>(null);
+
+  const [prevCustomers, setPrevCustomers] = useState(customers);
+  const [prevSearchTerm, setPrevSearchTerm] = useState(searchTerm);
+  if (customers !== prevCustomers || searchTerm !== prevSearchTerm) {
+    setPrevCustomers(customers);
+    setPrevSearchTerm(searchTerm);
+    setVisibleCount(25);
+  }
+
+  useEffect(() => {
+    const currentLoader = loaderRef.current;
+    if (!currentLoader) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && filtered.length > visibleCount) {
+          setVisibleCount((prev) => prev + 25);
+        }
+      },
+      {
+        rootMargin: "200px",
+      }
+    );
+
+    observer.observe(currentLoader);
+
+    return () => {
+      observer.unobserve(currentLoader);
+    };
+  }, [filtered.length, visibleCount]);
+
   return (
+    <>
     <SettingsPanel>
       <div className="border-b border-slate-100 px-5 py-4 md:px-6 md:py-5">
         <div className="flex items-center gap-2">
@@ -66,7 +103,7 @@ export function CustomerListPanel({
         ) : (
           <>
             <div className="divide-y divide-slate-300 sm:hidden">
-              {filtered.map((customer) => (
+              {filtered.slice(0, visibleCount).map((customer) => (
                 <div key={customer.id} className="px-4 py-5">
                   <div className="flex items-start gap-3">
                     <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-[#4A148C]/20">
@@ -83,14 +120,14 @@ export function CustomerListPanel({
                     </div>
 
                     <div className="flex shrink-0 flex-col gap-2 pt-1">
-                      <Link
-                        href={`/settings/customers?edit=${customer.id}`}
-                        scroll={false}
+                      <button
+                        type="button"
+                        onClick={() => onEdit(customer)}
                         className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-[#E1BEE7] bg-white text-[#4A148C] transition hover:border-[#EA80FC] hover:bg-[#F3E5F5] active:scale-95"
                         aria-label={`แก้ไข ${customer.name}`}
                       >
                         <PencilLine className="h-3.5 w-3.5" strokeWidth={2.2} />
-                      </Link>
+                      </button>
                       <CustomerDeleteButton
                         customerId={customer.id}
                         customerName={customer.name}
@@ -163,7 +200,7 @@ export function CustomerListPanel({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {filtered.map((customer, index) => (
+                  {filtered.slice(0, visibleCount).map((customer, index) => (
                     <tr key={customer.id} className="align-middle transition hover:bg-slate-50/70">
                       <td className="border-r border-slate-100 px-4 py-4 text-center font-bold text-slate-500 tabular-nums">
                         {index + 1}
@@ -189,30 +226,30 @@ export function CustomerListPanel({
                       </td>
                       <td className="min-w-[220px] px-5 py-4 text-sm text-slate-600">
                         <CustomerWarehouseSelect
-                          customerId={customer.id}
-                          currentWarehouseId={customer.defaultWarehouseId}
-                          currentWarehouseName={customer.defaultWarehouseName}
-                          warehouses={warehouses}
+                           customerId={customer.id}
+                           currentWarehouseId={customer.defaultWarehouseId}
+                           currentWarehouseName={customer.defaultWarehouseName}
+                           warehouses={warehouses}
                         />
                       </td>
                       <td className="min-w-[220px] px-5 py-4 text-sm text-slate-600">
                         <CustomerVehicleSelect
-                          customerId={customer.id}
-                          currentVehicleId={customer.defaultVehicleId}
-                          currentVehicleName={customer.defaultVehicleName}
-                          vehicles={vehicles}
+                           customerId={customer.id}
+                           currentVehicleId={customer.defaultVehicleId}
+                           currentVehicleName={customer.defaultVehicleName}
+                           vehicles={vehicles}
                         />
                       </td>
                       <td className="px-4 py-4 text-right">
                         <div className="inline-flex items-center justify-end gap-2">
-                          <Link
-                            href={`/settings/customers?edit=${customer.id}`}
-                            scroll={false}
+                          <button
+                            type="button"
+                            onClick={() => onEdit(customer)}
                             className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-[#E1BEE7] bg-white text-[#4A148C] transition hover:border-[#EA80FC] hover:bg-[#F3E5F5] active:scale-95"
                             aria-label={`แก้ไข ${customer.name}`}
                           >
                             <PencilLine className="h-3.5 w-3.5" strokeWidth={2.2} />
-                          </Link>
+                          </button>
                           <CustomerDeleteButton
                             customerId={customer.id}
                             customerName={customer.name}
@@ -229,5 +266,13 @@ export function CustomerListPanel({
         )}
       </SettingsPanelBody>
     </SettingsPanel>
+
+    {filtered.length > visibleCount && (
+      <div ref={loaderRef} className="flex justify-center py-6 bg-transparent mt-2 items-center gap-2">
+        <LoaderCircle className="h-5.5 w-5.5 animate-spin text-[#4A148C]" strokeWidth={2.4} />
+        <span className="text-sm font-bold text-slate-500">กำลังโหลดร้านค้าเพิ่มเติม... ({filtered.length - visibleCount} รายการ)</span>
+      </div>
+    )}
+    </>
   );
 }

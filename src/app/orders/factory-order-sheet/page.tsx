@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import Link from "next/link";
 import { AutoPrint, PackingListPrintButton } from "@/app/orders/packing-list/preview/print-button";
 import { PageLoader } from "@/components/page-loader";
 import { FactoryOrderSheetLayout } from "@/components/print/factory-order-sheet-layout";
@@ -133,7 +134,7 @@ async function FactoryOrderSheetPage({ searchParams }: Props) {
             printButtonText="พิมพ์ใบสั่งของ"
           />
         </div>
-        <a
+        <Link
           href="/orders/incoming"
           style={{
             fontSize: "13px",
@@ -147,7 +148,7 @@ async function FactoryOrderSheetPage({ searchParams }: Props) {
           }}
         >
           กลับ
-        </a>
+        </Link>
       </div>
 
       {!hasData ? (
@@ -163,9 +164,9 @@ async function FactoryOrderSheetPage({ searchParams }: Props) {
           }}
         >
           <p style={{ fontSize: "18px", fontWeight: 600, color: "#64748b" }}>ไม่มีข้อมูลสินค้าสำหรับการแสดงฟอร์มนี้</p>
-          <a href="/orders/incoming" style={{ marginTop: "8px", color: "#4A148C", fontSize: "14px" }}>
+          <Link href="/orders/incoming" style={{ marginTop: "8px", color: "#4A148C", fontSize: "14px" }}>
             กลับหน้ารายการออเดอร์
-          </a>
+          </Link>
         </div>
       ) : (
         <div className="vehicle-summary-page packing-print-container">

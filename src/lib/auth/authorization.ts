@@ -13,11 +13,11 @@ export async function requireAppSession() {
   return session;
 }
 
-export async function requireAppRole(role: "admin" | "member") {
+export async function requireAppRole(role: AppSessionPayload["role"]) {
   const session = await requireAppSession();
 
   if (session.role !== role) {
-    redirect("/dashboard");
+    redirect(roleHomePage(session.role));
   }
 
   return session;
@@ -42,5 +42,6 @@ export async function requireAnyRole(
 /** Default landing page per role after login or when redirected away. */
 export function roleHomePage(role: AppSessionPayload["role"]): string {
   if (role === "warehouse") return "/delivery";
+  if (role === "member") return "/orders/incoming";
   return "/dashboard";
 }

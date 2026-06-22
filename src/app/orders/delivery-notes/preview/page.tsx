@@ -1,12 +1,15 @@
+import Link from "next/link";
 import { requireAnyRole } from "@/lib/auth/authorization";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { getDeliveryNotePrintData, type DeliveryNotePrintData } from "@/lib/delivery/print";
 import { sortDeliveryPrintDataByCustomerOrder } from "@/lib/delivery/print-ordering";
+import { readFile } from "node:fs/promises";
+import { join } from "node:path";
 import { DeliveryNoteLayout } from "@/components/print/delivery-note-layout";
 import { ShareDeliveryPdfButton } from "@/components/print/share-delivery-pdf-button";
 import { PrintButton } from "./print-button";
 
-export const metadata = { title: "พิมพ์ใบส่งของ" };
+export const metadata = { title: "พิมพ์บิลส่งของ" };
 
 type Props = {
   searchParams: Promise<{
@@ -18,6 +21,14 @@ type Props = {
 
 export default async function DeliveryNotePreviewPage({ searchParams }: Props) {
   const session = await requireAnyRole(["admin", "warehouse"]);
+  
+  let logoDataUrl = "";
+  try {
+    const fileBuffer = await readFile(join(process.cwd(), "public", "brand", "512x512.png"));
+    logoDataUrl = `data:image/png;base64,${fileBuffer.toString("base64")}`;
+  } catch (e) {
+    console.error("Failed to load logo on server:", e);
+  }
   const params = await searchParams;
   const date = params.date;
   const customerIds = (params.customer_ids ?? "")
@@ -33,7 +44,7 @@ export default async function DeliveryNotePreviewPage({ searchParams }: Props) {
     return (
       <div className="p-10 text-center">
         <p className="text-lg font-bold text-slate-900">ไม่มีข้อมูลสำหรับพิมพ์</p>
-        <a href="/orders/incoming" className="mt-4 inline-block font-bold text-[#4A148C]">กลับหน้าออเดอร์</a>
+        <Link href="/orders/incoming" className="mt-4 inline-block font-bold text-[#4A148C]">กลับหน้าออเดอร์</Link>
       </div>
     );
   }
@@ -54,9 +65,9 @@ export default async function DeliveryNotePreviewPage({ searchParams }: Props) {
     if (error || !dns || dns.length === 0) {
       return (
         <div className="p-10 text-center">
-          <p className="text-lg font-bold text-slate-900">ไม่พบใบส่งของสำหรับร้านที่เลือกในวันที่ {date}</p>
-          <p className="mt-2 text-sm text-slate-500">โปรดยืนยันออเดอร์เพื่อสร้างใบส่งของก่อนพิมพ์</p>
-          <a href="/orders/incoming" className="mt-4 inline-block font-bold text-[#4A148C]">กลับหน้าออเดอร์</a>
+          <p className="text-lg font-bold text-slate-900">ไม่พบบิลส่งของสำหรับร้านที่เลือกในวันที่ {date}</p>
+          <p className="mt-2 text-sm text-slate-500">โปรดยืนยันออเดอร์เพื่อสร้างบิลส่งของก่อนพิมพ์</p>
+          <Link href="/orders/incoming" className="mt-4 inline-block font-bold text-[#4A148C]">กลับหน้าออเดอร์</Link>
         </div>
       );
     }
@@ -76,7 +87,7 @@ export default async function DeliveryNotePreviewPage({ searchParams }: Props) {
     return (
       <div className="p-10 text-center">
         <p className="text-lg font-bold text-slate-900">ไม่สามารถโหลดข้อมูลการพิมพ์ได้</p>
-        <a href="/orders/incoming" className="mt-4 inline-block font-bold text-[#4A148C]">กลับหน้าออเดอร์</a>
+        <Link href="/orders/incoming" className="mt-4 inline-block font-bold text-[#4A148C]">กลับหน้าออเดอร์</Link>
       </div>
     );
   }
@@ -85,17 +96,17 @@ export default async function DeliveryNotePreviewPage({ searchParams }: Props) {
     <>
       <div className="no-print sticky top-0 z-50 flex items-center gap-3 border-b bg-white p-4">
         <div className="rounded-xl bg-[#4A148C]/20 px-4 py-2 text-sm font-bold text-[#4A148C]">
-          พิมพ์ใบส่งของ - {validPrintData.length} ร้านค้า
+          พิมพ์บิลส่งของ - {validPrintData.length} ร้านค้า
         </div>
         <PrintButton />
         <ShareDeliveryPdfButton fileName={`delivery-notes-${date ?? "selected"}`} />
-        <a href="/orders/incoming" className="rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-bold text-slate-700 hover:bg-slate-50 active:scale-95">
+        <Link href="/orders/incoming" className="rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-bold text-slate-700 hover:bg-slate-50 active:scale-95">
           กลับ
-        </a>
+        </Link>
       </div>
 
       <div className="min-h-screen bg-slate-50 py-10 print:bg-white print:py-0">
-        <DeliveryNoteLayout dns={validPrintData} showIntermediateFooter />
+        <DeliveryNoteLayout dns={validPrintData} showIntermediateFooter logoDataUrl={logoDataUrl} />
       </div>
     </>
   );

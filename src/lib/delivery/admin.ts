@@ -244,7 +244,7 @@ export async function getPendingOrders(
 
 /**
  * All submitted/confirmed orders for a store on a given date,
- * used for the store-level "สร้างใบส่งของ" modal.
+ * used for the store-level "สร้างบิลส่งของ" modal.
  */
 export async function getStoreOrdersForDelivery(
   organizationId: string,
@@ -275,7 +275,7 @@ export async function getStoreOrdersForDelivery(
 }
 
 /**
- * Full item data for the "สร้างใบส่งของ" form,
+ * Full item data for the "สร้างบิลส่งของ" form,
  * including already-delivered quantities.
  */
 export async function getOrderItemsForDelivery(

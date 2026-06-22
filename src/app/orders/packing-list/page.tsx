@@ -338,7 +338,7 @@ async function PackingListPage({ searchParams }: Props) {
       return {
         date: currentDate,
         dateLabel: getThaiDateLabel(currentDate),
-        organizationName: "All Noodles",
+        organizationName: "อรินยา พาณิชย์",
         stores: stores.map((store) => ({
           id: store.id,
           name: store.name,

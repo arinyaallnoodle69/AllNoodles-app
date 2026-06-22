@@ -115,6 +115,9 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   if (session.role === "warehouse") {
     redirect(roleHomePage("warehouse"));
   }
+  if (session.role === "member") {
+    redirect(roleHomePage("member"));
+  }
 
   const params = await searchParams;
   const today = getTodayInBangkok();

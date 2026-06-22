@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState, useTransition } from "react";
-import { GripVertical, Package2, Pencil, Power } from "lucide-react";
+import { useState, useTransition, useRef, useEffect } from "react";
+import { GripVertical, MoreVertical, Package2, Pencil, Power, History, Trash2, LoaderCircle } from "lucide-react";
 import { setProductActive, updateProductOrder } from "@/app/dashboard/settings/actions";
 import { DeleteProductButton } from "@/components/settings/delete-product-button";
 import { ProductCostHistoryButton } from "@/components/settings/product-cost-history-button";
@@ -39,138 +39,158 @@ import { restrictToVerticalAxis } from '@dnd-kit/modifiers';
 type ProductListProps = {
   baseListHref?: string;
   products: SettingsProduct[];
+  onEdit: (product: SettingsProduct) => void;
 };
 
 function formatCost(value: number) {
   return value.toLocaleString("th-TH", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-// ─── Sortable Mobile Card ──────────────────────────────────────────────────
-function SortableMobileCard({ 
+// ─── Mobile Card ───────────────────────────────────────────────────────────
+function MobileCard({ 
   product, 
-  editHref, 
+  onEdit, 
   deleteFormId, 
   defaultUnit 
 }: { 
   product: SettingsProduct; 
-  editHref: string; 
+  onEdit: (product: SettingsProduct) => void; 
   deleteFormId: string; 
   defaultUnit: { effectiveCostPrice: number } | null | undefined; 
 }) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging
-  } = useSortable({ id: product.id });
+  const [menuOpen, setMenuOpen] = useState(false);
 
   const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.5 : (product.isActive ? 1 : 0.7),
-    backgroundColor: isDragging ? "#F3E5F5" : "white",
-    zIndex: isDragging ? 50 : 1,
+    opacity: product.isActive ? 1 : 0.65,
+    zIndex: menuOpen ? 40 : 1,
   };
 
   return (
     <article
-      ref={setNodeRef}
       style={style}
-      className={`w-full px-4 py-6 shadow-none transition-colors relative ${isDragging ? 'shadow-lg' : ''}`}
+      className="w-full px-4 py-4 shadow-none transition-colors relative border-b border-slate-100 bg-white"
     >
-      <div className="flex items-start gap-4">
-        {/* Drag Handle - Specific target for mobile touch */}
-        <div 
-          {...attributes} 
-          {...listeners} 
-          className="cursor-grab p-2 text-slate-400 hover:text-slate-600 active:cursor-grabbing flex items-center justify-center border border-slate-200 rounded-lg bg-slate-50"
-          aria-label="ลากเพื่อย้ายลำดับ"
-        >
-          <GripVertical className="h-5 w-5" />
-        </div>
-
-        <div className="relative flex h-32 w-32 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-white">
+      <div className="flex items-center gap-4">
+        {/* Medium image container */}
+        <div className="relative h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-slate-100 border border-slate-100 flex">
           {product.imageUrls[0] ? (
-            <ProductImagePreview src={product.imageUrls[0]} alt={product.name} thumbnailSizes="128px" />
+            <ProductImagePreview src={product.imageUrls[0]} alt={product.name} thumbnailSizes="96px" />
           ) : (
-            <Package2 className="h-12 w-12 text-slate-300" strokeWidth={1.5} />
+            <Package2 className="h-10 w-10 text-slate-300" strokeWidth={1.5} />
           )}
         </div>
 
+        {/* Compact Info Panel */}
         <div className="min-w-0 flex-1">
-          <p className="text-[10px] font-black uppercase tracking-[0.15em] text-[#4A148C]/40">
-            {product.sku}
-          </p>
-          <p className="mt-0.5 text-lg font-black leading-tight text-slate-950">
-            {product.name}
-          </p>
-          
-          <div className="mt-3">
-            <p className="text-[10px] font-black uppercase tracking-[0.1em] text-slate-400 mb-1.5 ml-1">ต้นทุน / หน่วย</p>
-            <div className="flex items-center justify-between rounded-xl px-3 py-2 text-sm bg-[#4A148C]/15 border border-[#4A148C]/10">
-              <span className="font-bold text-[#4A148C]">
-                {product.baseUnit}
-              </span>
-              <span className="font-black text-[#4A148C]">
-                {formatCost(defaultUnit ? defaultUnit.effectiveCostPrice : (product.costPrice || 0))} บาท
-              </span>
-            </div>
-          </div>
-
-          <div className="mt-3 flex items-center gap-2">
+          <div className="flex items-center gap-2">
             <span
-              className={`inline-flex rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-wider ${
+              className={`inline-flex shrink-0 rounded px-1.5 py-0.5 text-[10px] font-black uppercase tracking-wider ${
                 product.isActive ? "bg-emerald-50 text-emerald-700 border border-emerald-100" : "bg-slate-100 text-slate-500 border border-slate-200"
               }`}
             >
-              {product.isActive ? "ใช้งาน" : "ปิดใช้งาน"}
+              {product.isActive ? "พร้อมขาย" : "ปิดขาย"}
             </span>
+            <p className="text-xs font-mono font-black text-[#4A148C] tracking-wider truncate">
+              {product.sku}
+            </p>
           </div>
+          <p className="mt-1 text-base font-black leading-snug text-slate-950 truncate">
+            {product.name}
+          </p>
+          <p className="mt-1 text-sm text-slate-500">
+            <span className="font-black text-slate-950">หน่วย: </span>
+            <span className="font-black text-[#4A148C]">{product.baseUnit}</span>
+            <span className="mx-1.5 text-slate-300">|</span>
+            <span className="font-black text-slate-950">ต้นทุน: </span>
+            <span className="font-black text-[#4A148C]">{formatCost(defaultUnit ? defaultUnit.effectiveCostPrice : (product.costPrice || 0))} ฿</span>
+          </p>
+        </div>
+
+        {/* Action Button - More Options */}
+        <div className="relative shrink-0 self-center">
+          <button
+            type="button"
+            onClick={() => setMenuOpen(!menuOpen)}
+            className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-100 bg-white text-slate-500 transition hover:bg-slate-50 hover:text-slate-800 shadow-sm"
+            aria-label="เมนูจัดการสินค้า"
+          >
+            <MoreVertical className="h-5.5 w-5.5" />
+          </button>
+
+          {menuOpen && (
+            <>
+              <div 
+                className="fixed inset-0 z-40 bg-transparent" 
+                onClick={() => setMenuOpen(false)}
+              />
+              <div className="absolute right-0 mt-1.5 z-50 w-40 rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl animate-in fade-in slide-in-from-top-1 duration-150">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMenuOpen(false);
+                    onEdit(product);
+                  }}
+                  className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-left text-sm font-bold text-slate-700 hover:bg-slate-50"
+                >
+                  <Pencil className="h-4.5 w-4.5 text-[#4A148C]" strokeWidth={2.2} />
+                  แก้ไข
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMenuOpen(false);
+                    document.getElementById(`history-trigger-${product.id}`)?.click();
+                  }}
+                  className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-left text-sm font-bold text-slate-700 hover:bg-slate-50"
+                >
+                  <History className="h-4.5 w-4.5 text-[#4A148C]" strokeWidth={2.2} />
+                  ประวัติ
+                </button>
+
+                <form action={setProductActive} className="w-full" onClick={() => setMenuOpen(false)}>
+                  <input type="hidden" name="productId" value={product.id} />
+                  <input type="hidden" name="nextState" value={product.isActive ? "false" : "true"} />
+                  <button
+                    type="submit"
+                    className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-left text-sm font-bold text-slate-700 hover:bg-slate-50"
+                  >
+                    <Power className={`h-4.5 w-4.5 ${product.isActive ? 'text-red-500' : 'text-emerald-500'}`} strokeWidth={2.2} />
+                    {product.isActive ? "ปิดขาย" : "เปิดขาย"}
+                  </button>
+                </form>
+
+                <div className="border-t border-slate-100 my-1" />
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMenuOpen(false);
+                    document.getElementById(`delete-trigger-${product.id}`)?.click();
+                  }}
+                  className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-left text-sm font-bold text-red-600 hover:bg-red-50"
+                >
+                  <Trash2 className="h-4.5 w-4.5 text-red-600" strokeWidth={2.2} />
+                  ลบ
+                </button>
+              </div>
+            </>
+          )}
         </div>
       </div>
 
-      <div className="mt-5 pt-4 border-t border-slate-100">
-        <div className="grid grid-cols-4 gap-2">
-          <Link
-            href={editHref}
-            scroll={false}
-            className="flex flex-col items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white py-2.5 text-[11px] font-bold text-slate-700 transition hover:bg-slate-50 active:scale-95"
-          >
-            <Pencil className="h-4 w-4 text-[#4A148C]" strokeWidth={2.5} />
-            แก้ไข
-          </Link>
-
-          <ProductCostHistoryButton 
-            productId={product.id} 
-            productName={product.name} 
-            triggerClassName="w-full flex flex-col items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white py-2.5 text-[11px] font-bold text-slate-700 transition hover:bg-slate-50 active:scale-95"
-          />
-
-          <form action={setProductActive}>
-            <input type="hidden" name="productId" value={product.id} />
-            <input type="hidden" name="nextState" value={product.isActive ? "false" : "true"} />
-            <button
-              type="submit"
-              className="w-full flex flex-col items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white py-2.5 text-[11px] font-bold text-slate-700 transition hover:bg-slate-50 active:scale-95"
-            >
-              <Power className="h-4 w-4 text-emerald-600" strokeWidth={2.5} />
-              {product.isActive ? "ปิด" : "เปิด"}
-            </button>
-          </form>
-
-          <div className="relative">
-            <form id={deleteFormId} className="hidden">
-              <input type="hidden" name="productId" value={product.id} />
-            </form>
-            <DeleteProductButton 
-              formId={deleteFormId} 
-              productName={product.name}
-              triggerClassName="w-full h-full flex flex-col items-center justify-center gap-1.5 rounded-xl border border-rose-100 bg-rose-50/50 py-2.5 text-[11px] font-bold text-rose-600 transition hover:bg-rose-50 active:scale-95"
-            />
-          </div>
-        </div>
+      {/* Hidden cost history and delete buttons to prevent unmounting when dropdown menu closes */}
+      <div className="hidden" aria-hidden="true">
+        <ProductCostHistoryButton
+          id={`history-trigger-${product.id}`}
+          productId={product.id}
+          productName={product.name}
+        />
+        <DeleteProductButton
+          id={`delete-trigger-${product.id}`}
+          formId={deleteFormId}
+          productName={product.name}
+        />
       </div>
     </article>
   );
@@ -180,13 +200,13 @@ function SortableMobileCard({
 function SortableDesktopRow({
   product,
   index,
-  editHref,
+  onEdit,
   deleteFormId,
   defaultUnit,
 }: {
   product: SettingsProduct;
   index: number;
-  editHref: string;
+  onEdit: (product: SettingsProduct) => void;
   deleteFormId: string;
   defaultUnit: { effectiveCostPrice: number } | null | undefined;
 }) {
@@ -278,14 +298,14 @@ function SortableDesktopRow({
 
       <td className="border-b border-[#EEF1F5] px-6 py-4 text-center align-middle">
         <div className="flex items-center justify-center gap-1.5">
-          <Link
-            href={editHref}
-            scroll={false}
+          <button
+            type="button"
+            onClick={() => onEdit(product)}
             className="action-touch-safe inline-flex h-9 w-9 items-center justify-center rounded-lg border border-[#E1BEE7] bg-white text-[#4A148C] transition hover:border-[#4A148C]/35 hover:bg-[#4A148C]/[0.04] active:scale-95"
             aria-label={`แก้ไข ${product.name}`}
           >
             <Pencil className="h-4 w-4" strokeWidth={2.4} />
-          </Link>
+          </button>
 
           <ProductCostHistoryButton
             iconOnly
@@ -324,15 +344,42 @@ function SortableDesktopRow({
 }
 
 // ─── Main Component ────────────────────────────────────────────────────────
-export function ProductList({ products, baseListHref = "/settings/products" }: ProductListProps) {
+export function ProductList({ products, baseListHref = "/settings/products", onEdit }: ProductListProps) {
   const [localProducts, setLocalProducts] = useState(products);
+  const [visibleCount, setVisibleCount] = useState(25);
   const [isPending, startTransition] = useTransition();
+  const loaderRef = useRef<HTMLDivElement | null>(null);
+
+  const [prevProducts, setPrevProducts] = useState(products);
+  if (products !== prevProducts) {
+    setPrevProducts(products);
+    setLocalProducts(products);
+    setVisibleCount(25);
+  }
 
   useEffect(() => {
-    setLocalProducts(products);
-  }, [products]);
+    const currentLoader = loaderRef.current;
+    if (!currentLoader) return;
 
-    const editHref = (id: string) =>
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && localProducts.length > visibleCount) {
+          setVisibleCount((prev) => prev + 25);
+        }
+      },
+      {
+        rootMargin: "200px",
+      }
+    );
+
+    observer.observe(currentLoader);
+
+    return () => {
+      observer.unobserve(currentLoader);
+    };
+  }, [localProducts.length, visibleCount]);
+
+  const editHref = (id: string) =>
     `${baseListHref}${baseListHref.includes("?") ? "&" : "?"}edit=${id}`;
 
   // DnD Sensors
@@ -405,20 +452,20 @@ export function ProductList({ products, baseListHref = "/settings/products" }: P
             modifiers={[restrictToVerticalAxis]}
           >
             <SortableContext 
-              items={localProducts.map(p => p.id)}
+              items={localProducts.slice(0, visibleCount).map(p => p.id)}
               strategy={verticalListSortingStrategy}
             >
               {/* Mobile cards - Full Width */}
               <div className="grid grid-cols-1 divide-y divide-slate-200 px-0 py-0 sm:hidden">
-                {localProducts.map((product) => {
+                {localProducts.slice(0, visibleCount).map((product) => {
                   const deleteFormId = `delete-product-${product.id}`;
                   const defaultUnit = product.saleUnits.find((u) => u.isDefault) || product.saleUnits[0];
 
                   return (
-                    <SortableMobileCard 
+                    <MobileCard 
                       key={product.id}
                       product={product}
-                      editHref={editHref(product.id)}
+                      onEdit={onEdit}
                       deleteFormId={deleteFormId}
                       defaultUnit={defaultUnit}
                     />
@@ -455,7 +502,7 @@ export function ProductList({ products, baseListHref = "/settings/products" }: P
                     </tr>
                   </thead>
                   <tbody>
-                    {localProducts.map((product, index) => {
+                    {localProducts.slice(0, visibleCount).map((product, index) => {
                       const deleteFormId = `delete-product-table-${product.id}`;
                       const defaultUnit = product.saleUnits.find((u) => u.isDefault) || product.saleUnits[0];
 
@@ -464,7 +511,7 @@ export function ProductList({ products, baseListHref = "/settings/products" }: P
                           key={product.id}
                           product={product}
                           index={index}
-                          editHref={editHref(product.id)}
+                          onEdit={onEdit}
                           deleteFormId={deleteFormId}
                           defaultUnit={defaultUnit}
                         />
@@ -484,6 +531,13 @@ export function ProductList({ products, baseListHref = "/settings/products" }: P
         )}
       </SettingsPanelBody>
     </SettingsPanel>
+
+    {localProducts.length > visibleCount && (
+      <div ref={loaderRef} className="flex justify-center py-6 bg-transparent mt-2 items-center gap-2">
+        <LoaderCircle className="h-5.5 w-5.5 animate-spin text-[#4A148C]" strokeWidth={2.4} />
+        <span className="text-sm font-bold text-slate-500">กำลังโหลดสินค้าเพิ่มเติม... ({localProducts.length - visibleCount} รายการ)</span>
+      </div>
+    )}
     </>
   );
 }

@@ -1,11 +1,12 @@
 import { ClipboardList, Search } from "lucide-react";
 import dynamic from "next/dynamic";
+import { unstable_cache } from "next/cache";
 import { SettingsShell } from "@/components/settings/settings-shell";
 import { MobileSearchDrawer } from "@/components/mobile-search/mobile-search-drawer";
 import { IncomingOrdersMobileList } from "@/components/orders/incoming-orders-mobile-list";
 import { IncomingOrderDateFilter } from "@/components/orders/incoming-order-date-filter";
 import { OrderCustomerFilter } from "@/components/orders/order-customer-filter";
-import { requireAppRole } from "@/lib/auth/authorization";
+import { requireAnyRole, requireAppRole } from "@/lib/auth/authorization";
 import { normalizeOrderDate, getTodayInBangkok } from "@/lib/orders/date";
 import { getCustomerOrderCountsByDate, getIncomingOrders, getOrderDetailById } from "@/lib/orders/detail";
 import { getBilledDeliveryNumbersForRange } from "@/lib/billing/billing-statement";
@@ -126,8 +127,44 @@ function formatDisplayDate(value: string) {
   return `${d}/${m}/${parseInt(y, 10) + 543}`;
 }
 
+const getCachedPendingLineOrders = (
+  orgId: string,
+  opts: { orderDate: string; endDate?: string; searchTerm?: string },
+) =>
+  unstable_cache(
+    () => getPendingLineOrders(orgId, opts),
+    ["incoming-pending-line-orders", orgId, opts.orderDate, opts.endDate ?? "", opts.searchTerm ?? ""],
+    { revalidate: 3, tags: [`orders-${orgId}`] },
+  )();
+
+const getCachedDeliveryList = (
+  orgId: string,
+  from: string,
+  to: string,
+  keyword: string,
+) =>
+  unstable_cache(
+    () => getDeliveryList(orgId, from, to, keyword),
+    ["incoming-delivery-list", orgId, from, to, keyword],
+    { revalidate: 3, tags: [`orders-${orgId}`] },
+  )();
+
+const getCachedBilledDeliveryNumbersArray = (
+  orgId: string,
+  fromDate: string,
+  toDate: string,
+) =>
+  unstable_cache(
+    async () => {
+      const set = await getBilledDeliveryNumbersForRange(orgId, fromDate, toDate);
+      return Array.from(set);
+    },
+    ["incoming-billed-delivery-numbers", orgId, fromDate, toDate],
+    { revalidate: 3, tags: [`orders-${orgId}`] },
+  )();
+
 export default async function IncomingOrdersPage({ searchParams }: IncomingOrdersPageProps) {
-  const session = await requireAppRole("admin");
+  const session = await requireAnyRole(["admin", "member"]);
   const admin = getSupabaseAdmin();
   const params = await searchParams;
   const orderDate = normalizeOrderDate(params.date);
@@ -155,24 +192,27 @@ export default async function IncomingOrdersPage({ searchParams }: IncomingOrder
     warehouses,
     customerOrderCountsToday,
     deliveryData,
-    billedDeliveryNumbers,
+    billedDeliveryNumbersArray,
   ] = await Promise.all([
     getIncomingOrders(session.organizationId, { orderDate, endDate, searchTerm }),
     expandedOrderId ? getOrderDetailById(session.organizationId, expandedOrderId) : Promise.resolve(null),
     getCustomersForOrder(session.organizationId),
     getProductsForOrder(session.organizationId),
     getVehiclesForOrder(session.organizationId),
-    getPendingLineOrders(session.organizationId, { orderDate, endDate, searchTerm }),
+    getCachedPendingLineOrders(session.organizationId, { orderDate, endDate, searchTerm }),
     getActiveWarehouses(session.organizationId),
     getCustomerOrderCountsByDate(session.organizationId, orderDate, endDate),
-    getDeliveryList(session.organizationId, orderDate, endDate, searchTerm || ""),
-    getBilledDeliveryNumbersForRange(session.organizationId, orderDate, endDate),
+    getCachedDeliveryList(session.organizationId, orderDate, endDate, searchTerm || ""),
+    getCachedBilledDeliveryNumbersArray(session.organizationId, orderDate, endDate),
   ]);
+
+  const billedDeliveryNumbers = new Set(billedDeliveryNumbersArray);
 
   const customerOptions = customers.map((customer) => ({
     id: customer.id,
     code: customer.code,
     name: customer.name,
+    defaultVehicleId: customer.defaultVehicleId,
   }));
   const productImageById = new Map(products.map((product) => [product.id, product.imageUrl ?? null]));
 
@@ -532,6 +572,7 @@ export default async function IncomingOrdersPage({ searchParams }: IncomingOrder
               customerOrderCountsToday={customerOrderCountsToday}
               customers={customers}
               products={products}
+              vehicles={vehicles}
               today={getTodayInBangkok()}
             />
           </div>

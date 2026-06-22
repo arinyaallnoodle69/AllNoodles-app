@@ -34,8 +34,15 @@ function PinInput({
   );
 }
 
-export function PinSettingsForm() {
+export function PinSettingsForm({
+  users = [],
+  currentUserId,
+}: {
+  users: Array<{ id: string; display_name: string; role: "admin" | "member" | "warehouse" }>;
+  currentUserId: string;
+}) {
   const formRef = useRef<HTMLFormElement>(null);
+  const [selectedUserId, setSelectedUserId] = useState(currentUserId);
   const [state, formAction, isPending] = useActionState(
     changeLoginPinAction,
     initialChangeLoginPinState,
@@ -45,6 +52,9 @@ export function PinSettingsForm() {
     state.status === "success" &&
     typeof state.successId === "string" &&
     dismissedSuccessId !== state.successId;
+
+  const selectedUser = users.find((u) => u.id === selectedUserId);
+  const isTargetSelf = selectedUserId === currentUserId;
 
   return (
     <>
@@ -60,6 +70,24 @@ export function PinSettingsForm() {
         </div>
 
         <form ref={formRef} action={formAction} className="mt-6 grid gap-5">
+          {users.length > 0 && (
+            <label className="block">
+              <span className="mb-2 block text-sm font-bold text-slate-700">เลือกบัญชีผู้ใช้งานที่ต้องการเปลี่ยน PIN</span>
+              <select
+                name="targetUserId"
+                value={selectedUserId}
+                onChange={(e) => setSelectedUserId(e.target.value)}
+                className="h-14 w-full rounded-2xl border border-slate-200 bg-white px-4 text-base font-medium text-slate-900 shadow-sm outline-none transition focus:border-[#4A148C] focus:ring-4 focus:ring-[#4A148C]/10"
+              >
+                {users.map((user) => (
+                  <option key={user.id} value={user.id}>
+                    {user.display_name} ({user.role === "admin" ? "ผู้ดูแลระบบ" : user.role === "member" ? "พนักงานทั่วไป" : "คลังสินค้า"}) {user.id === currentUserId ? "- บัญชีคุณ" : ""}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
+
           <PinInput label="PIN ใหม่" name="newPin" />
           <PinInput label="ยืนยัน PIN ใหม่" name="confirmPin" />
 
@@ -92,33 +120,52 @@ export function PinSettingsForm() {
                 <CheckCircle2 className="h-7 w-7" strokeWidth={2.4} />
               </span>
               <div>
-                <h3 className="text-xl font-black text-slate-950">เปลี่ยน PIN สำเร็จ</h3>
-                <p className="mt-2 text-sm font-semibold leading-6 text-slate-500">
-                  จะใช้งานต่อ หรือออกจากระบบเพื่อเข้าใหม่ด้วย PIN ล่าสุด
+                <h3 className="text-xl font-black text-slate-950">
+                  {isTargetSelf ? "เปลี่ยน PIN สำเร็จ" : "เปลี่ยน PIN พนักงานสำเร็จ"}
+                </h3>
+                <p className="mt-2 text-sm font-semibold leading-6 text-[#667085]">
+                  {isTargetSelf
+                    ? "จะใช้งานต่อ หรือออกจากระบบเพื่อเข้าใหม่ด้วย PIN ล่าสุด"
+                    : `ระบบได้ทำการเปลี่ยนรหัสเข้าใช้งานของ ${selectedUser?.display_name || "พนักงาน"} เรียบร้อยแล้ว พนักงานสามารถใช้รหัส 6 หลักนี้เข้าสู่ระบบได้ทันที`}
                 </p>
               </div>
             </div>
 
-            <div className="mt-6 grid gap-3 sm:grid-cols-2">
-              <button
-                type="button"
-                onClick={() => {
-                  setDismissedSuccessId(state.successId ?? null);
-                  formRef.current?.reset();
-                }}
-                className="h-14 rounded-2xl border border-slate-200 bg-white px-4 text-sm font-black text-slate-700 transition hover:bg-slate-50"
-              >
-                ใช้งานต่อ
-              </button>
-              <form action={signOut}>
+            <div className="mt-6">
+              {isTargetSelf ? (
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDismissedSuccessId(state.successId ?? null);
+                      formRef.current?.reset();
+                    }}
+                    className="h-14 rounded-2xl border border-slate-200 bg-white px-4 text-sm font-black text-slate-700 transition hover:bg-slate-50"
+                  >
+                    ใช้งานต่อ
+                  </button>
+                  <form action={signOut}>
+                    <button
+                      type="submit"
+                      className="inline-flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-[#4A148C] px-4 text-sm font-black text-white transition hover:bg-[#4A148C]"
+                    >
+                      <LogOut className="h-4 w-4" strokeWidth={2.4} />
+                      ออกจากระบบ
+                    </button>
+                  </form>
+                </div>
+              ) : (
                 <button
-                  type="submit"
-                  className="inline-flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-[#4A148C] px-4 text-sm font-black text-white transition hover:bg-[#4A148C]"
+                  type="button"
+                  onClick={() => {
+                    setDismissedSuccessId(state.successId ?? null);
+                    formRef.current?.reset();
+                  }}
+                  className="h-14 w-full rounded-2xl bg-[#4A148C] text-sm font-black text-white shadow-md transition hover:bg-[#4A148C]"
                 >
-                  <LogOut className="h-4 w-4" strokeWidth={2.4} />
-                  ออกจากระบบ
+                  ตกลง
                 </button>
-              </form>
+              )}
             </div>
           </div>
         </div>

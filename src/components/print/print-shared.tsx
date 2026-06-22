@@ -1,7 +1,7 @@
 import type { CSSProperties } from "react";
 import { bahtText } from "@/lib/format/baht-text";
 
-export const PRINT_ORGANIZATION_NAME = "AllNoodles";
+export const PRINT_ORGANIZATION_NAME = "อรินยา พาณิชย์";
 export const SHEET_WIDTH_MM = 228.6;
 export const SHEET_HEIGHT_MM = 279.4;
 export const HALF_SHEET_HEIGHT_MM = 139.7;

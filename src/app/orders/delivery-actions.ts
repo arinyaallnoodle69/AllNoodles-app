@@ -370,7 +370,7 @@ export async function getBatchDeliveryReviewDataAction(
   const { data: orderRows, error: orderError } = await orderQuery;
   if (orderError) {
     console.error("getBatchDeliveryReviewDataAction orders error:", orderError);
-    throw new Error("โหลดรายการสำหรับสร้างใบส่งของไม่สำเร็จ");
+    throw new Error("โหลดรายการสำหรับสร้างบิลส่งของไม่สำเร็จ");
   }
 
   const orders = ((orderRows ?? []) as RawReviewOrderRow[]).filter((order) =>
@@ -417,7 +417,7 @@ export async function getBatchDeliveryReviewDataAction(
 
     if (deliveredError) {
       console.error("getBatchDeliveryReviewDataAction delivered error:", deliveredError);
-      throw new Error("โหลดจำนวนที่สร้างใบส่งของแล้วไม่สำเร็จ");
+      throw new Error("โหลดจำนวนที่สร้างบิลส่งของแล้วไม่สำเร็จ");
     }
 
     for (const row of (deliveredRows ?? []) as RawDeliveredRow[]) {
@@ -627,7 +627,7 @@ export async function createDeliveryNoteAction(
   if (error) {
     return {
       status: "error",
-      message: error.message ?? "สร้างใบส่งของไม่สำเร็จ",
+      message: error.message ?? "สร้างบิลส่งของไม่สำเร็จ",
     };
   }
 
@@ -645,7 +645,7 @@ export async function createDeliveryNoteAction(
 
   return {
     status: "success",
-    message: "สร้างใบส่งของเรียบร้อยแล้ว",
+    message: "สร้างบิลส่งของเรียบร้อยแล้ว",
     deliveryNumber,
     deliveryId: (dnRow as { id: string } | null)?.id,
   };
@@ -672,7 +672,7 @@ export async function createBatchDeliveryNotesAction(
         customerName: group.customerName,
         state: {
           status: "error",
-          message: "ข้อมูลใบส่งของไม่ครบถ้วน",
+          message: "ข้อมูลบิลส่งของไม่ครบถ้วน",
         },
       });
       continue;
@@ -711,7 +711,7 @@ export async function createBatchDeliveryNotesAction(
         customerName: group.customerName,
         state: {
           status: "error",
-          message: error.message ?? "สร้างใบส่งของไม่สำเร็จ",
+          message: error.message ?? "สร้างบิลส่งของไม่สำเร็จ",
         },
       });
       continue;
@@ -731,7 +731,7 @@ export async function createBatchDeliveryNotesAction(
       customerName: group.customerName,
       state: {
         status: "success",
-        message: "สร้างใบส่งของเรียบร้อยแล้ว",
+        message: "สร้างบิลส่งของเรียบร้อยแล้ว",
         deliveryNumber,
         deliveryId: (dnRow as { id: string } | null)?.id,
       },

@@ -14,6 +14,7 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
     "allnoodles-app/**",
     ".codex/**",
+    "scratch/**",
     "fix-revalidate.js",
     "fix-revalidate-back.js",
     "lint_output.txt",

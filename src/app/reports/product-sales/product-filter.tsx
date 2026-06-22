@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ChevronDown, Package, Search, X } from "lucide-react";
 import { normalizeSearch } from "@/lib/utils/search";
 
@@ -25,6 +25,20 @@ export function ProductFilter({
   const [search, setSearch] = useState("");
   const containerRef = useRef<HTMLDivElement>(null);
 
+  const [selectedCategory, setSelectedCategory] = useState<string | "__all__">("__all__");
+  const categoryTabsContainerRef = useRef<HTMLDivElement>(null);
+  const [categoryUnderlineStyle, setCategoryUnderlineStyle] = useState<React.CSSProperties | null>(null);
+
+  const categories = useMemo(() => {
+    const set = new Set<string>();
+    for (const product of products) {
+      for (const name of product.categoryNames) {
+        if (name) set.add(name);
+      }
+    }
+    return Array.from(set).sort();
+  }, [products]);
+
   useEffect(() => {
     function onMouseDown(e: MouseEvent) {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
@@ -35,15 +49,43 @@ export function ProductFilter({
     return () => document.removeEventListener("mousedown", onMouseDown);
   }, []);
 
+  useEffect(() => {
+    const container = categoryTabsContainerRef.current;
+    if (!container) return;
+    const timer = setTimeout(() => {
+      const activeEl = container.querySelector('[data-active="true"]') as HTMLElement;
+      if (activeEl) {
+        setCategoryUnderlineStyle({
+          left: `${activeEl.offsetLeft}px`,
+          width: `${activeEl.offsetWidth}px`,
+        });
+      } else {
+        setCategoryUnderlineStyle(null);
+      }
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [selectedCategory, open]);
+
+  const handleCategorySelect = (id: string, e: React.MouseEvent<HTMLButtonElement>) => {
+    setSelectedCategory(id);
+    setCategoryUnderlineStyle({
+      left: `${e.currentTarget.offsetLeft}px`,
+      width: `${e.currentTarget.offsetWidth}px`,
+    });
+    e.currentTarget.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+  };
+
   const filtered = products.filter((product) => {
     const term = normalizeSearch(search);
-    return (
+    const matchesSearch =
       normalizeSearch(product.name).includes(term) ||
       normalizeSearch(product.sku).includes(term) ||
       product.categoryNames.some((categoryName) =>
         normalizeSearch(categoryName).includes(term),
-      )
-    );
+      );
+    const matchesCategory =
+      selectedCategory === "__all__" || product.categoryNames.includes(selectedCategory);
+    return matchesSearch && matchesCategory;
   });
 
   function toggle(id: string) {
@@ -126,6 +168,54 @@ export function ProductFilter({
               />
             </div>
           </div>
+
+          {/* Category Tabs */}
+          {categories.length > 0 && (
+            <div className="relative border-b border-slate-100 bg-slate-50/50 overflow-hidden">
+              <div
+                ref={categoryTabsContainerRef}
+                className="flex gap-4 overflow-x-auto px-3 pb-2 pt-2 scrollbar-none relative"
+              >
+                {/* Underline indicator */}
+                <span
+                  className="absolute bottom-0 h-[2.5px] rounded-full bg-[#4A148C] transition-all duration-200 ease-out"
+                  style={{
+                    ...(categoryUnderlineStyle ?? { left: 0, width: 0 }),
+                    opacity: categoryUnderlineStyle ? 1 : 0,
+                  }}
+                />
+
+                <button
+                  type="button"
+                  data-active={selectedCategory === "__all__"}
+                  onClick={(e) => handleCategorySelect("__all__", e)}
+                  className={`relative shrink-0 pb-1 text-xs font-black transition ${
+                    selectedCategory === "__all__"
+                      ? "text-[#4A148C]"
+                      : "text-slate-400 hover:text-slate-600"
+                  }`}
+                >
+                  ทั้งหมด
+                </button>
+
+                {categories.map((cat) => (
+                  <button
+                    key={cat}
+                    type="button"
+                    data-active={selectedCategory === cat}
+                    onClick={(e) => handleCategorySelect(cat, e)}
+                    className={`relative shrink-0 pb-1 text-xs font-black transition ${
+                      selectedCategory === cat
+                        ? "text-[#4A148C]"
+                        : "text-slate-400 hover:text-slate-600"
+                    }`}
+                  >
+                    {cat}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           <div className="flex items-center gap-3 border-b border-slate-100 px-3 py-2">
             <button

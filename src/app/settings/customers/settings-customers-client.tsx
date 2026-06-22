@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { PlusCircle, Search, Upload } from "lucide-react";
 import { MobileSearchDrawer } from "@/components/mobile-search/mobile-search-drawer";
@@ -53,8 +53,51 @@ export function SettingsCustomersPageClient({
   editingCustomer,
   createParam,
 }: SettingsCustomersPageClientProps) {
+  const [editingCustomerState, setEditingCustomerState] = useState<SettingsCustomer | null>(editingCustomer ?? null);
+  const [isCreatingState, setIsCreatingState] = useState(createParam === "1");
   const [searchTerm, setSearchTerm] = useState("");
   const [isImportOpen, setIsImportOpen] = useState(false);
+  const [selectedVehicleId, setSelectedVehicleId] = useState<string | "__all__" | "__none__">("__all__");
+  const vehicleTabsContainerRef = useRef<HTMLDivElement>(null);
+  const [vehicleUnderlineStyle, setVehicleUnderlineStyle] = useState<React.CSSProperties | null>(null);
+
+  const vehicleOptions = useMemo(() => {
+    return vehicles.filter((v) => v.isActive);
+  }, [vehicles]);
+
+  useEffect(() => {
+    const container = vehicleTabsContainerRef.current;
+    if (!container) return;
+    const timer = setTimeout(() => {
+      const activeEl = container.querySelector('[data-active="true"]') as HTMLElement;
+      if (activeEl) {
+        setVehicleUnderlineStyle({
+          left: `${activeEl.offsetLeft}px`,
+          width: `${activeEl.offsetWidth}px`,
+        });
+      } else {
+        setVehicleUnderlineStyle(null);
+      }
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [selectedVehicleId, vehicleOptions]);
+
+  const handleVehicleSelect = (id: string, e: React.MouseEvent<HTMLButtonElement>) => {
+    setSelectedVehicleId(id);
+    setVehicleUnderlineStyle({
+      left: `${e.currentTarget.offsetLeft}px`,
+      width: `${e.currentTarget.offsetWidth}px`,
+    });
+    e.currentTarget.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+  };
+
+  const filteredCustomers = useMemo(() => {
+    return initialCustomers.filter((c) => {
+      if (selectedVehicleId === "__all__") return true;
+      if (selectedVehicleId === "__none__") return !c.defaultVehicleId;
+      return c.defaultVehicleId === selectedVehicleId;
+    });
+  }, [initialCustomers, selectedVehicleId]);
 
   return (
     <SettingsShell
@@ -83,13 +126,14 @@ export function SettingsCustomersPageClient({
               <Upload className="h-4.5 w-4.5 text-[#4A148C]" strokeWidth={2.4} />
               นำเข้าข้อมูล
             </button>
-            <Link
-              href="/settings/customers?create=1"
+            <button
+              type="button"
+              onClick={() => setIsCreatingState(true)}
               className="inline-flex h-12 items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-[#EA80FC] to-[#4A148C] px-4 text-sm font-black text-[#4A148C] shadow-[0_12px_26px_rgba(170, 0, 255,0.3)] transition hover:brightness-105 active:scale-[0.98]"
             >
               <PlusCircle className="h-4.5 w-4.5 text-[#4A148C]" strokeWidth={2.4} />
               เพิ่มร้านค้า
-            </Link>
+            </button>
           </div>
         </div>
 	      </div>
@@ -108,39 +152,103 @@ export function SettingsCustomersPageClient({
           </div>
         </MobileSearchDrawer>
 
-        <Link
-          href="/settings/customers?create=1"
+        <button
+          type="button"
+          onClick={() => setIsCreatingState(true)}
           aria-label="เพิ่มร้านค้า"
           className="fixed bottom-[calc(4.75rem+env(safe-area-inset-bottom)+12px)] left-4 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-r from-[#EA80FC] to-[#4A148C] text-[#4A148C] shadow-[0_14px_32px_rgba(170, 0, 255,0.4)] transition hover:brightness-105 active:scale-95 lg:hidden"
         >
           <PlusCircle className="h-7 w-7 text-[#4A148C]" strokeWidth={2.4} />
-        </Link>
+        </button>
 
-		      <div className="-mx-4 flex w-[calc(100%+2rem)] flex-col gap-6 md:mx-0 md:w-full">
+        <div className="-mx-4 flex w-[calc(100%+2rem)] flex-col gap-4 md:mx-0 md:w-full">
 	        <CustomerSettingsTabs current="customers" />
 
+          {vehicleOptions.length > 0 && (
+            <div className="relative bg-transparent px-4 sm:px-0 overflow-hidden mb-1 mx-4 sm:mx-0">
+              <div
+                ref={vehicleTabsContainerRef}
+                className="relative flex gap-6 overflow-x-auto pb-1.5 pt-0.5 no-scrollbar scroll-smooth"
+              >
+                <span
+                  className="absolute bottom-0 h-[3px] rounded-full bg-[#4A148C]"
+                  style={{
+                    ...(vehicleUnderlineStyle ?? { left: 0, width: 0 }),
+                    opacity: vehicleUnderlineStyle ? 1 : 0,
+                    transition: "left 300ms cubic-bezier(0.16, 1, 0.3, 1), width 300ms cubic-bezier(0.16, 1, 0.3, 1), opacity 200ms ease-in-out",
+                  }}
+                />
+
+                <button
+                  type="button"
+                  data-active={selectedVehicleId === "__all__"}
+                  onClick={(e) => handleVehicleSelect("__all__", e)}
+                  className={`pb-2.5 text-sm font-black transition-all whitespace-nowrap tracking-wide ${
+                    selectedVehicleId === "__all__"
+                      ? "text-slate-950 scale-[1.03]"
+                      : "text-slate-500 hover:text-slate-800"
+                  }`}
+                >
+                  ทั้งหมด
+                </button>
+
+                <button
+                  type="button"
+                  data-active={selectedVehicleId === "__none__"}
+                  onClick={(e) => handleVehicleSelect("__none__", e)}
+                  className={`pb-2.5 text-sm font-black transition-all whitespace-nowrap tracking-wide ${
+                    selectedVehicleId === "__none__"
+                      ? "text-slate-950 scale-[1.03]"
+                      : "text-slate-500 hover:text-slate-800"
+                  }`}
+                >
+                  ไม่ระบุรถประจำร้าน
+                </button>
+
+                {vehicleOptions.map((v) => (
+                  <button
+                    key={v.id}
+                    type="button"
+                    data-active={selectedVehicleId === v.id}
+                    onClick={(e) => handleVehicleSelect(v.id, e)}
+                    className={`pb-2.5 text-sm font-black transition-all whitespace-nowrap tracking-wide ${
+                      selectedVehicleId === v.id
+                        ? "text-slate-950 scale-[1.03]"
+                        : "text-slate-500 hover:text-slate-800"
+                    }`}
+                  >
+                    {v.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
 	        <CustomerListPanel 
-	          customers={initialCustomers} 
+	          customers={filteredCustomers} 
 	          vehicles={vehicles} 
 	          warehouses={warehouses}
 	          searchTerm={searchTerm}
+	          onEdit={setEditingCustomerState}
 	        />
 	      </div>
 
-      {createParam === "1" ? (
+      {isCreatingState ? (
         <CustomerForm
           defaultCode={nextCustomerCode}
           returnHref="/settings/customers"
           vehicles={vehicles}
           warehouses={warehouses}
+          onClose={() => setIsCreatingState(false)}
         />
       ) : null}
-      {editingCustomer ? (
+      {editingCustomerState ? (
         <CustomerForm
-          initialCustomer={editingCustomer}
+          initialCustomer={editingCustomerState}
           returnHref="/settings/customers"
           vehicles={vehicles}
           warehouses={warehouses}
+          onClose={() => setEditingCustomerState(null)}
         />
       ) : null}
       <CustomerImportModal isOpen={isImportOpen} onClose={() => setIsImportOpen(false)} />

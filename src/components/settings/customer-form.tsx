@@ -22,6 +22,7 @@ type CustomerFormProps = {
   returnHref: string;
   vehicles: SettingsVehicle[];
   warehouses: WarehouseOption[];
+  onClose?: () => void;
 };
 
 const initialCreateCustomerState: CreateCustomerActionState = {
@@ -40,6 +41,7 @@ export function CustomerForm({
   returnHref,
   vehicles,
   warehouses,
+  onClose,
 }: CustomerFormProps) {
   const router = useRouter();
   const isEditMode = Boolean(initialCustomer);
@@ -80,13 +82,21 @@ export function CustomerForm({
       clearTimeout(closeTimerRef.current);
     }
     closeTimerRef.current = setTimeout(() => {
-      router.replace(returnHref);
+      if (onClose) {
+        onClose();
+      } else {
+        router.replace(returnHref);
+      }
     }, 380);
   }
 
   const handleCreateSuccess = useEffectEvent(() => {
     startTransition(() => {
-      router.replace(returnHref);
+      if (onClose) {
+        onClose();
+      } else {
+        router.replace(returnHref);
+      }
       router.refresh();
     });
   });

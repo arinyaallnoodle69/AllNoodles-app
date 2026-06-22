@@ -21,6 +21,7 @@ export async function changeLoginPinAction(
   formData: FormData,
 ): Promise<ChangeLoginPinState> {
   const session = await requireAppRole("admin");
+  const targetUserId = String(formData.get("targetUserId") ?? session.userId).trim();
   const newPin = normalizePin(formData.get("newPin"));
   const confirmPin = normalizePin(formData.get("confirmPin"));
 
@@ -45,7 +46,7 @@ export async function changeLoginPinAction(
     .from("app_users")
     .select("id")
     .eq("pin_lookup", pinLookup)
-    .neq("id", session.userId)
+    .neq("id", targetUserId)
     .maybeSingle();
 
   if (existingError) {
@@ -71,7 +72,7 @@ export async function changeLoginPinAction(
       locked_until: null,
       last_failed_at: null,
     })
-    .eq("id", session.userId)
+    .eq("id", targetUserId)
     .eq("organization_id", session.organizationId);
 
   if (updateError) {
@@ -84,13 +85,24 @@ export async function changeLoginPinAction(
   const requestHeaders = await headers();
   const ip = requestHeaders.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null;
 
+  // Get target user role for metadata audit logs
+  const { data: targetUser } = await admin
+    .from("app_users")
+    .select("role")
+    .eq("id", targetUserId)
+    .maybeSingle();
+
   await admin.from("auth_audit_logs").insert({
     user_id: session.userId,
     organization_id: session.organizationId,
     event_type: "pin_changed",
     ip_hash: hashRequestIp(ip),
     user_agent: requestHeaders.get("user-agent"),
-    metadata: { source: "settings_login_pin" },
+    metadata: { 
+      source: "settings_login_pin",
+      target_user_id: targetUserId,
+      target_role: targetUser?.role || null,
+    },
   });
 
   revalidatePath("/settings/login-pin");

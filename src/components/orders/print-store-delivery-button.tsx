@@ -6,7 +6,7 @@ import { useState } from "react";
 export function PrintStoreDeliveryButton({
   date,
   customerId,
-  label = "พิมพ์ใบส่งของ",
+  label = "พิมพ์บิลส่งของ",
   iconOnly = false,
 }: {
   date: string;

@@ -1,12 +1,25 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useSyncExternalStore } from "react";
+import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 import { useMobileSearch } from "./mobile-search-context";
 
 interface MobileSearchDrawerProps {
   children: React.ReactNode;
   title?: string;
+}
+
+function subscribeToClientMount() {
+  return () => {};
+}
+
+function getClientSnapshot() {
+  return true;
+}
+
+function getServerSnapshot() {
+  return false;
 }
 
 /**
@@ -17,10 +30,21 @@ interface MobileSearchDrawerProps {
  */
 export function MobileSearchDrawer({ children, title = "ค้นหา" }: MobileSearchDrawerProps) {
   const { isOpen, close, _register } = useMobileSearch();
+  const mounted = useSyncExternalStore(
+    subscribeToClientMount,
+    getClientSnapshot,
+    getServerSnapshot,
+  );
 
-  useEffect(() => _register(), [_register]);
+  useEffect(() => {
+    return _register();
+  }, [_register]);
 
-  return (
+  if (!mounted) {
+    return null;
+  }
+
+  return createPortal(
     <>
       <div
         aria-hidden="true"
@@ -55,6 +79,7 @@ export function MobileSearchDrawer({ children, title = "ค้นหา" }: Mobi
 
         <div className="overflow-y-auto max-h-[calc(75vh-60px)] p-5 pb-[max(1.5rem,env(safe-area-inset-bottom))]">{children}</div>
       </div>
-    </>
+    </>,
+    document.body
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useDeferredValue, useEffect, useMemo, useState, useTransition } from "react";
+import { useDeferredValue, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import Image from "next/image";
 import {
   AlertTriangle,
@@ -17,6 +17,7 @@ import { fetchCustomerPricesAction } from "@/app/orders/incoming/actions";
 import { getEffectiveSaleUnitCost } from "@/lib/products/sale-unit-cost";
 import type { OrderProductOption } from "@/lib/orders/manage";
 import { normalizeSearch } from "@/lib/utils/search";
+import { useClientRole } from "@/lib/auth/client-role";
 
 export type AddedOrderItemDraft = {
   imageUrl: string | null;
@@ -131,12 +132,44 @@ export function OrderAddProductPicker({
   products,
 }: Props) {
   const [open, setOpen] = useState(false);
+  const role = useClientRole();
   const [query, setQuery] = useState("");
   const deferredQuery = useDeferredValue(query);
   const [priceMap, setPriceMap] = useState<Record<string, number>>({});
   const [selections, setSelections] = useState<Record<string, SelectionDraft>>({});
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+
+  const [selectedCategoryId, setSelectedCategoryId] = useState("__all__");
+
+  const catTabsContainerRef = useRef<HTMLDivElement>(null);
+  const [catUnderlineStyle, setCatUnderlineStyle] = useState<React.CSSProperties | null>(null);
+
+  useEffect(() => {
+    const container = catTabsContainerRef.current;
+    if (!container) return;
+    const timer = setTimeout(() => {
+      const activeEl = container.querySelector('[data-active="true"]') as HTMLElement;
+      if (activeEl) {
+        setCatUnderlineStyle({
+          left: `${activeEl.offsetLeft}px`,
+          width: `${activeEl.offsetWidth}px`,
+        });
+      } else {
+        setCatUnderlineStyle(null);
+      }
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [selectedCategoryId, open, products]);
+
+  const handleCategorySelect = (id: string, e: React.MouseEvent<HTMLButtonElement>) => {
+    setSelectedCategoryId(id);
+    setCatUnderlineStyle({
+      left: `${e.currentTarget.offsetLeft}px`,
+      width: `${e.currentTarget.offsetWidth}px`,
+    });
+    e.currentTarget.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+  };
 
   useEffect(() => {
     if (!open) return;
@@ -152,20 +185,33 @@ export function OrderAddProductPicker({
     [products],
   );
 
+  const categoryOptions = useMemo(() => {
+    const seen = new Map<string, string>();
+    for (const product of products) {
+      for (let i = 0; i < product.categoryIds.length; i++) {
+        const id = product.categoryIds[i];
+        const name = product.categoryNames[i];
+        if (id && name && !seen.has(id)) seen.set(id, name);
+      }
+    }
+    return Array.from(seen.entries()).map(([id, name]) => ({ id, name }));
+  }, [products]);
+
   const filteredProducts = useMemo(() => {
     const normalized = normalizeSearch(deferredQuery);
-    const source = normalized
-      ? products.filter((product) => {
-          return (
-            normalizeSearch(product.name).includes(normalized) ||
-            normalizeSearch(product.sku).includes(normalized) ||
-            product.categoryNames.some((category) => normalizeSearch(category).includes(normalized))
-          );
-        })
-      : products;
+    const source = products.filter((product) => {
+      const matchesCategory = selectedCategoryId === "__all__" || product.categoryIds.includes(selectedCategoryId);
+      if (!matchesCategory) return false;
+      if (!normalized) return true;
+      return (
+        normalizeSearch(product.name).includes(normalized) ||
+        normalizeSearch(product.sku).includes(normalized) ||
+        product.categoryNames.some((category) => normalizeSearch(category).includes(normalized))
+      );
+    });
 
     return source.slice(0, 50);
-  }, [products, deferredQuery]);
+  }, [products, deferredQuery, selectedCategoryId]);
 
   const selectedCount = Object.keys(selections).length;
 
@@ -237,6 +283,10 @@ export function OrderAddProductPicker({
     if (!unit) return "ไม่พบหน่วยขาย";
     if (!Number.isFinite(price) || price <= 0) return "กรุณาใส่ราคามากกว่า 0";
 
+    if (role === "member") {
+      return null;
+    }
+
     const cost = getEffectiveSaleUnitCost({
       baseCostPrice: product.baseCostPrice,
       baseUnitQuantity: unit.baseUnitQuantity,
@@ -287,10 +337,15 @@ export function OrderAddProductPicker({
     }
 
     onAddMany(selectedItems);
+    handleClose();
+  }
+
+  function handleClose() {
     setOpen(false);
     setQuery("");
     setSelections({});
     setError(null);
+    setSelectedCategoryId("__all__");
   }
 
   return (
@@ -323,7 +378,7 @@ export function OrderAddProductPicker({
           <button
             type="button"
             className="absolute inset-0"
-            onClick={() => setOpen(false)}
+            onClick={handleClose}
             aria-label="ปิดหน้าต่างเพิ่มสินค้า"
           />
           <div className="relative flex h-[92dvh] w-full max-w-[100vw] min-w-0 flex-col overflow-x-hidden overflow-y-hidden rounded-t-[2rem] bg-white shadow-2xl sm:h-[86dvh] sm:max-w-[calc(100vw-2rem)] sm:rounded-[2rem]">
@@ -339,7 +394,7 @@ export function OrderAddProductPicker({
               </div>
               <button
                 type="button"
-                onClick={() => setOpen(false)}
+                onClick={handleClose}
                 className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-slate-200 text-slate-500 transition hover:bg-slate-50 active:scale-95"
                 aria-label="ปิด"
               >
@@ -347,27 +402,74 @@ export function OrderAddProductPicker({
               </button>
             </div>
 
-            <div className="shrink-0 border-b border-slate-100 px-4 py-3 sm:px-5">
-              <label className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 transition focus-within:border-[#4A148C]/60 focus-within:bg-white focus-within:ring-2 focus-within:ring-[#4A148C]/10">
-                <Search className="h-5 w-5 shrink-0 text-slate-400" strokeWidth={2.1} />
-                <input
-                  type="text"
-                  value={query}
-                  onChange={(event) => setQuery(event.target.value)}
-                  placeholder="ค้นหาสินค้า SKU หรือหมวดหมู่"
-                  className="min-w-0 flex-1 bg-transparent text-base text-slate-800 outline-none placeholder:text-slate-400"
-                />
-                {query ? (
+            <div className="shrink-0 border-b border-[#EA80FC]/15 bg-white">
+              <div className="px-4 py-3.5 sm:px-5">
+                <div className="flex items-center gap-3 rounded-2xl border border-[#EA80FC]/35 bg-[#F3E5F5]/25 px-4 py-3 transition focus-within:border-[#4A148C] focus-within:ring-2 focus-within:ring-[#4A148C]/10">
+                  <Search className="h-5 w-5 shrink-0 text-[#4A148C]" strokeWidth={2.4} />
+                  <input
+                    type="text"
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                    placeholder="ค้นหาสินค้า..."
+                    className="min-w-0 flex-1 bg-transparent text-base font-semibold text-[#4A148C] outline-none placeholder:text-[#4A148C]/50"
+                  />
+                  {query ? (
+                    <button
+                      type="button"
+                      onClick={() => setQuery("")}
+                      className="action-touch-safe text-[#4A148C]/70 transition hover:text-[#4A148C]"
+                      aria-label="ล้างคำค้นหา"
+                    >
+                      <X className="h-4.5 w-4.5" strokeWidth={2.5} />
+                    </button>
+                  ) : null}
+                </div>
+              </div>
+
+              {/* Category filter tabs (Lineman style) */}
+              <div className="border-t border-[#EA80FC]/15 px-4 sm:px-5 bg-white">
+                <div 
+                  ref={catTabsContainerRef}
+                  className="relative flex gap-6 overflow-x-auto pt-3.5 pb-0.5 no-scrollbar scroll-smooth"
+                >
+                  {/* Sliding Indicator Line */}
+                  <span
+                    className="absolute bottom-0 h-[3px] rounded-full bg-[#4A148C]"
+                    style={{
+                      ...(catUnderlineStyle ?? { left: 0, width: 0 }),
+                      opacity: catUnderlineStyle ? 1 : 0,
+                      transition: "left 300ms cubic-bezier(0.16, 1, 0.3, 1), width 300ms cubic-bezier(0.16, 1, 0.3, 1), opacity 200ms ease-in-out",
+                    }}
+                  />
                   <button
                     type="button"
-                    onClick={() => setQuery("")}
-                    className="text-slate-400 transition hover:text-slate-600"
-                    aria-label="ล้างคำค้นหา"
+                    data-active={selectedCategoryId === "__all__"}
+                    onClick={(e) => handleCategorySelect("__all__", e)}
+                    className={`pb-2.5 text-sm font-black transition-all whitespace-nowrap tracking-wide ${
+                      selectedCategoryId === "__all__"
+                        ? "text-[#4A148C] scale-[1.03]"
+                        : "text-slate-400 hover:text-slate-600"
+                    }`}
                   >
-                    <X className="h-4 w-4" strokeWidth={2.1} />
+                    ทุกหมวดหมู่
                   </button>
-                ) : null}
-              </label>
+                  {categoryOptions.map((c) => (
+                    <button
+                      key={c.id}
+                      type="button"
+                      data-active={selectedCategoryId === c.id}
+                      onClick={(e) => handleCategorySelect(c.id, e)}
+                      className={`pb-2.5 text-sm font-black transition-all whitespace-nowrap tracking-wide ${
+                        selectedCategoryId === c.id
+                          ? "text-[#4A148C] scale-[1.03]"
+                          : "text-slate-400 hover:text-slate-600"
+                      }`}
+                    >
+                      {c.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
 
             <div className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto px-3 py-3 sm:px-5">
@@ -395,7 +497,7 @@ export function OrderAddProductPicker({
                     : 0;
 
                   const currentPriceNum = draft?.price ? Number.parseFloat(draft.price) : 0;
-                  const isBelowCost = draft && cost > 0 && currentPriceNum > 0 && currentPriceNum < (cost - 0.001);
+                  const isBelowCost = role !== "member" && draft && cost > 0 && currentPriceNum > 0 && currentPriceNum < (cost - 0.001);
 
                   return (
                     <div
@@ -540,56 +642,58 @@ export function OrderAddProductPicker({
                               </div>
                             </div>
 
-                            <div className="space-y-1.5 md:space-y-2">
-                              <div className="flex items-center justify-between">
-                                <label
-                                  className={`text-[12px] font-black uppercase tracking-wide md:text-[14px] md:tracking-wider ${
-                                    isBelowCost ? "text-[#FF0000]" : "text-slate-600"
-                                  }`}
-                                >
-                                  ราคาต่อ{selectedUnit.label}
-                                </label>
-                                {cost > 0 && (
-                                  <span
-                                    className={`rounded-full border px-1.5 py-0.5 text-[10px] font-black md:px-2 md:text-[11px] ${
-                                      isBelowCost
-                                        ? "animate-pulse border-[#FF0000] bg-white text-[#FF0000] shadow-sm"
-                                        : "border-slate-200 text-slate-400"
+                            {role !== "member" && (
+                              <div className="space-y-1.5 md:space-y-2">
+                                <div className="flex items-center justify-between">
+                                  <label
+                                    className={`text-[12px] font-black uppercase tracking-wide md:text-[14px] md:tracking-wider ${
+                                      isBelowCost ? "text-[#FF0000]" : "text-slate-600"
                                     }`}
                                   >
-                                    ทุน ฿{formatTHB(cost)}
+                                    ราคาต่อ{selectedUnit.label}
+                                  </label>
+                                  {cost > 0 && (
+                                    <span
+                                      className={`rounded-full border px-1.5 py-0.5 text-[10px] font-black md:px-2 md:text-[11px] ${
+                                        isBelowCost
+                                          ? "animate-pulse border-[#FF0000] bg-white text-[#FF0000] shadow-sm"
+                                          : "border-slate-200 text-slate-400"
+                                      }`}
+                                    >
+                                      ทุน ฿{formatTHB(cost)}
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="relative">
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    step="0.01"
+                                    value={draft.price}
+                                    onFocus={(e) => e.target.select()}
+                                    placeholder="0.00"
+                                    onChange={(event) =>
+                                      updateSelection(product.id, (current) => ({
+                                        ...current,
+                                        price: event.target.value,
+                                      }))
+                                    }
+                                    className={`h-9 w-full rounded-xl border-2 pl-3 pr-12 text-lg font-black shadow-md outline-none transition-all md:h-10 md:rounded-2xl md:pl-4 md:pr-16 md:text-xl ${
+                                      isBelowCost
+                                        ? "!border-[#FF0000] !bg-rose-50 !text-[#FF0000]"
+                                        : "border-transparent bg-white text-slate-950 focus:border-[#4A148C]/30"
+                                    }`}
+                                  />
+                                  <span
+                                    className={`absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-black md:right-4 md:text-xs ${
+                                      isBelowCost ? "text-[#FF0000]" : "text-slate-500"
+                                    }`}
+                                  >
+                                    บาท
                                   </span>
-                                )}
+                                </div>
                               </div>
-                              <div className="relative">
-                                <input
-                                  type="number"
-                                  min="0"
-                                  step="0.01"
-                                  value={draft.price}
-                                  onFocus={(e) => e.target.select()}
-                                  placeholder="0.00"
-                                  onChange={(event) =>
-                                    updateSelection(product.id, (current) => ({
-                                      ...current,
-                                      price: event.target.value,
-                                    }))
-                                  }
-                                  className={`h-9 w-full rounded-xl border-2 pl-3 pr-12 text-lg font-black shadow-md outline-none transition-all md:h-10 md:rounded-2xl md:pl-4 md:pr-16 md:text-xl ${
-                                    isBelowCost
-                                      ? "!border-[#FF0000] !bg-rose-50 !text-[#FF0000]"
-                                      : "border-transparent bg-white text-slate-950 focus:border-[#4A148C]/30"
-                                  }`}
-                                />
-                                <span
-                                  className={`absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-black md:right-4 md:text-xs ${
-                                    isBelowCost ? "text-[#FF0000]" : "text-slate-500"
-                                  }`}
-                                >
-                                  บาท
-                                </span>
-                              </div>
-                            </div>
+                            )}
                           </div>
 
                           {isBelowCost && (

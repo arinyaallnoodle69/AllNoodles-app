@@ -40,7 +40,7 @@ export type DeliveryNoteReportSummary = {
   netProfit: number;
 };
 
-export type DeliveryReportCustomerOption = { id: string; name: string };
+export type DeliveryReportCustomerOption = { id: string; name: string; defaultVehicleId?: string | null };
 
 type RawDeliveryNote = {
   id: string;
@@ -83,16 +83,17 @@ export async function getCustomersForDeliveryNoteReport(
   organizationId: string,
 ): Promise<DeliveryReportCustomerOption[]> {
   const supabase = getSupabaseAdmin();
-    const { data } = await supabase
+  const { data } = await supabase
     .from("customers")
-    .select("id, name")
+    .select("id, name, default_vehicle_id")
     .eq("organization_id", organizationId)
     .eq("is_active", true)
     .order("name", { ascending: true });
 
-  return ((data ?? []) as { id: string; name: string }[]).map((row) => ({
+  return ((data ?? []) as { id: string; name: string; default_vehicle_id: string | null }[]).map((row) => ({
     id: row.id,
     name: row.name,
+    defaultVehicleId: row.default_vehicle_id,
   }));
 }
 

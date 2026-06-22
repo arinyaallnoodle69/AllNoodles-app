@@ -74,7 +74,7 @@ export function DesktopOrderDetail({ detail, deliveryNumbers }: Props) {
             <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 text-base font-semibold text-slate-700">
               {deliveryNumberText ? (
                 <span>
-                  ใบส่งของ:{" "}
+                  บิลส่งของ:{" "}
                   <span className="font-mono text-slate-900" translate="no">
                     {deliveryNumberText}
                   </span>

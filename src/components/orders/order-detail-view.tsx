@@ -144,7 +144,7 @@ export function OrderDetailView({ detail }: OrderDetailViewProps) {
               className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 px-4 py-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
             >
               <Truck className="h-4 w-4" strokeWidth={2.2} />
-              สร้างใบส่งของ
+              สร้างบิลส่งของ
             </button>
             <button
               type="button"

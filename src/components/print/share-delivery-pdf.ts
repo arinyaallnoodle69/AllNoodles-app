@@ -22,14 +22,20 @@ export function buildDeliveryPdfFileName(input: string | undefined) {
   return `${baseName}-${date}.pdf`;
 }
 
-function waitForImage(image: HTMLImageElement) {
-  if (image.complete) return Promise.resolve();
-
-  return new Promise<void>((resolve) => {
-    const done = () => resolve();
-    image.addEventListener("load", done, { once: true });
-    image.addEventListener("error", done, { once: true });
-  });
+async function waitForImage(image: HTMLImageElement) {
+  try {
+    // Wait for the browser to fully decode the image (essential for base64 / data URLs in Safari)
+    await image.decode();
+  } catch {
+    // Fallback if decode is not supported or fails
+    if (!image.complete) {
+      await new Promise<void>((resolve) => {
+        const done = () => resolve();
+        image.addEventListener("load", done, { once: true });
+        image.addEventListener("error", done, { once: true });
+      });
+    }
+  }
 }
 
 async function waitForDocumentImages(sourceDocument: Document) {
@@ -44,7 +50,7 @@ export async function createDeliveryPdfFileFromDocument(sourceDocument: Document
   );
 
   if (pages.length === 0) {
-    window.alert("ไม่พบใบส่งของสำหรับสร้าง PDF");
+    window.alert("ไม่พบบิลส่งของสำหรับสร้าง PDF");
     return null;
   }
 
@@ -59,6 +65,9 @@ export async function createDeliveryPdfFileFromDocument(sourceDocument: Document
   ]);
   await waitForDocumentImages(sourceDocument);
 
+  // Give iOS WebKit a tiny moment to settle and paint fonts/images
+  await new Promise((resolve) => window.setTimeout(resolve, 300));
+
   const pdf = new jsPDF({
     orientation: "portrait",
     unit: "mm",
@@ -71,9 +80,22 @@ export async function createDeliveryPdfFileFromDocument(sourceDocument: Document
       pdf.addPage([DELIVERY_SHEET_WIDTH_MM, DELIVERY_SHEET_HEIGHT_MM], "portrait");
     }
 
+    // Warm-up call to force WebKit/Safari to decode and cache cloned image elements
+    try {
+      await toCanvas(page, {
+        backgroundColor: "#ffffff",
+        height: page.offsetHeight,
+        pixelRatio: 1.7,
+        width: page.offsetWidth,
+      });
+      // Small pause to let Safari process the decoded image caching
+      await new Promise((resolve) => window.setTimeout(resolve, 100));
+    } catch (e) {
+      console.warn("Warm-up toCanvas failed:", e);
+    }
+
     const canvas = await toCanvas(page, {
       backgroundColor: "#ffffff",
-      cacheBust: true,
       height: page.offsetHeight,
       pixelRatio: 1.7,
       width: page.offsetWidth,
@@ -92,7 +114,7 @@ export async function sharePreparedDeliveryPdf(pdfFile: File) {
   if (navigator.share && navigator.canShare?.({ files: [pdfFile] })) {
     await navigator.share({
       files: [pdfFile],
-      title: "ใบส่งของ",
+      title: "บิลส่งของ",
     });
     return;
   }
@@ -133,13 +155,14 @@ export async function createDeliveryPdfFileFromUrl(url: string, fileName?: strin
   const iframe = document.createElement("iframe");
   iframe.style.cssText = [
     "position:fixed",
-    "top:-10000px",
-    "left:-10000px",
+    "top:0",
+    "left:0",
     "width:1200px",
     "height:1700px",
     "border:0",
-    "opacity:0",
+    "opacity:0.01",
     "pointer-events:none",
+    "z-index:-999",
   ].join(";");
 
   document.body.appendChild(iframe);
@@ -148,6 +171,10 @@ export async function createDeliveryPdfFileFromUrl(url: string, fileName?: strin
     const loadedDocumentPromise = waitForIframeLoad(iframe);
     iframe.src = url;
     const frameDocument = await loadedDocumentPromise;
+    
+    // Add a 1000ms delay to give iOS WebKit time to paint the styles/fonts of the iframe content before capture
+    await new Promise((resolve) => window.setTimeout(resolve, 1000));
+    
     return await createDeliveryPdfFileFromDocument(frameDocument, fileName);
   } finally {
     iframe.remove();

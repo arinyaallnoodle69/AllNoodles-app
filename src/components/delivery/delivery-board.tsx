@@ -128,7 +128,7 @@ export function DeliverySearchForm({ from, to, q }: { from: string; to: string; 
               id="delivery-search"
               name="q"
               defaultValue={q}
-              placeholder="ชื่อร้าน, รหัสร้าน, เลขที่ใบส่งของ"
+              placeholder="ชื่อร้าน, รหัสร้าน, เลขที่บิลส่งของ"
               className="w-full rounded-xl border border-slate-300 bg-white py-3 pl-12 pr-4 text-base text-slate-800 outline-none transition focus:border-[#4A148C] focus:ring-2 focus:ring-[#4A148C]/10"
             />
           </div>

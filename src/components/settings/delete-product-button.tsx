@@ -1,6 +1,7 @@
 "use client";
 
-import { useTransition, useState } from "react";
+import { useTransition, useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { deleteProduct } from "@/app/dashboard/settings/actions";
 import { AlertTriangle, Trash2, X, AlertCircle, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -10,14 +11,20 @@ type DeleteProductButtonProps = {
   iconOnly?: boolean;
   productName: string;
   triggerClassName?: string;
+  id?: string;
 };
 
-export function DeleteProductButton({ formId, iconOnly = false, productName, triggerClassName }: DeleteProductButtonProps) {
+export function DeleteProductButton({ formId, iconOnly = false, productName, triggerClassName, id }: DeleteProductButtonProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [isOpen, setIsOpen] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [mounted, setMounted] = useState(false);
 
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setMounted(true);
+  }, []);
 
   const confirmDelete = async () => {
     const form = document.getElementById(formId) as HTMLFormElement | null;
@@ -40,6 +47,7 @@ export function DeleteProductButton({ formId, iconOnly = false, productName, tri
   return (
     <>
       <button
+        id={id}
         type="button"
         onClick={() => {
           setErrorMsg(null);
@@ -53,7 +61,7 @@ export function DeleteProductButton({ formId, iconOnly = false, productName, tri
         {iconOnly ? null : "ลบ"}
       </button>
 
-      {isOpen && (
+      {isOpen && mounted && createPortal(
         <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 animate-in fade-in duration-300">
           {/* Backdrop */}
           <div 
@@ -129,7 +137,8 @@ export function DeleteProductButton({ formId, iconOnly = false, productName, tri
               <X size={20} strokeWidth={3} />
             </button>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );

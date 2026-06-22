@@ -28,6 +28,7 @@ import {
 } from "lucide-react";
 import { signOut } from "@/app/login/actions";
 import { useCreateOrder } from "@/components/orders/create-order-context";
+import { useClientRole } from "@/lib/auth/client-role";
 
 const primaryNav = [
   { href: "/dashboard", icon: LayoutDashboard, label: "แดชบอร์ด" },
@@ -73,6 +74,8 @@ function SettingsLinkStatus() {
 }
 
 export function SettingsMobileBottomNav() {
+  const role = useClientRole();
+  const isMember = role === "member";
   const pathname = usePathname();
   const [moreOpen, setMoreOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -93,15 +96,13 @@ export function SettingsMobileBottomNav() {
     setNavigatingHref(null);
   }
 
-  // รีเซ็ตสถานะการนำทางและปิด Modal เมื่อนำทางไปยังหน้าปลายทางสำเร็จแล้ว
+  // รีเซ็ตสถานะการนำทางและปิด Modal เมื่อมีการเปลี่ยนเส้นทาง (ป้องกันค้างเมื่อปัดย้อนกลับหรือเปลี่ยนหน้าสำเร็จ)
   useEffect(() => {
-    if (navigatingHref && pathname === navigatingHref) {
-      const timer = setTimeout(() => {
-        resetNavigationState();
-      }, 0);
-      return () => clearTimeout(timer);
-    }
-  }, [pathname, navigatingHref]);
+    const timer = setTimeout(() => {
+      resetNavigationState();
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [pathname]);
 
   const nav = (
     <>
@@ -200,68 +201,139 @@ export function SettingsMobileBottomNav() {
 
           <div className="relative px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-3">
             <div className="grid grid-cols-5 items-end">
-              {primaryNav.slice(0, 2).map(({ href, icon: Icon, label, ...rest }) => {
-                const activePrefix =
-                  "activePrefix" in rest ? (rest as { activePrefix: string }).activePrefix : undefined;
-                const active = isActive(href, pathname, activePrefix);
+              {isMember ? (
+                <>
+                  {/* Column 1: Orders */}
+                  {(() => {
+                    const active = pathname.startsWith("/orders");
+                    return (
+                      <Link
+                        href="/orders/incoming"
+                        onClick={resetNavigationState}
+                        className={`flex flex-col items-center justify-center gap-1 rounded-2xl px-1 py-2 text-[10px] font-medium transition ${
+                          active ? "text-[#4A148C]" : "text-slate-500 hover:text-slate-900"
+                        }`}
+                      >
+                        <ClipboardList className={`h-5 w-5 transition-colors ${active ? "text-[#4A148C]" : "text-slate-500"}`} strokeWidth={active ? 2.8 : 2.2} />
+                        <span className={`whitespace-nowrap transition-all ${active ? "font-bold scale-105" : ""}`}>ออเดอร์</span>
+                      </Link>
+                    );
+                  })()}
 
-                return (
-                  <Link
-                    key={href}
-                    href={href}
-                    onClick={resetNavigationState}
+                  {/* Column 2: Stock */}
+                  {(() => {
+                    const active = pathname.startsWith("/stock");
+                    return (
+                      <Link
+                        href="/stock"
+                        onClick={resetNavigationState}
+                        className={`flex flex-col items-center justify-center gap-1 rounded-2xl px-1 py-2 text-[10px] font-medium transition ${
+                          active ? "text-[#4A148C]" : "text-slate-500 hover:text-slate-900"
+                        }`}
+                      >
+                        <Boxes className={`h-5 w-5 transition-colors ${active ? "text-[#4A148C]" : "text-slate-500"}`} strokeWidth={active ? 2.8 : 2.2} />
+                        <span className={`whitespace-nowrap transition-all ${active ? "font-bold scale-105" : ""}`}>สต็อก</span>
+                      </Link>
+                    );
+                  })()}
+
+                  {/* Column 3: Spacer */}
+                  <div aria-hidden="true" />
+
+                  {/* Column 4: Billing */}
+                  {(() => {
+                    const active = pathname.startsWith("/billing");
+                    return (
+                      <Link
+                        href="/billing"
+                        onClick={resetNavigationState}
+                        className={`flex flex-col items-center justify-center gap-1 rounded-2xl px-1 py-2 text-[10px] font-medium transition ${
+                          active ? "text-[#4A148C]" : "text-slate-500 hover:text-slate-900"
+                        }`}
+                      >
+                        <Receipt className={`h-5 w-5 transition-colors ${active ? "text-[#4A148C]" : "text-slate-500"}`} strokeWidth={active ? 2.8 : 2.2} />
+                        <span className={`whitespace-nowrap transition-all ${active ? "font-bold scale-105" : ""}`}>ใบวางบิล</span>
+                      </Link>
+                    );
+                  })()}
+
+                  {/* Column 5: Logout */}
+                  <form action={signOut} className="w-full flex items-center justify-center">
+                    <button
+                      type="submit"
+                      className="flex w-full flex-col items-center justify-center gap-1 rounded-2xl px-1 py-2 text-[10px] font-medium transition text-slate-500 hover:text-slate-900"
+                    >
+                      <LogOut className="h-5 w-5 text-slate-500" strokeWidth={2.2} />
+                      <span className="whitespace-nowrap">ออกระบบ</span>
+                    </button>
+                  </form>
+                </>
+              ) : (
+                <>
+                  {primaryNav.slice(0, 2).map(({ href, icon: Icon, label, ...rest }) => {
+                    const activePrefix =
+                      "activePrefix" in rest ? (rest as { activePrefix: string }).activePrefix : undefined;
+                    const active = isActive(href, pathname, activePrefix);
+
+                    return (
+                      <Link
+                        key={href}
+                        href={href}
+                        onClick={resetNavigationState}
+                        className={`flex flex-col items-center justify-center gap-1 rounded-2xl px-1 py-2 text-[10px] font-medium transition ${
+                          active
+                            ? "text-[#4A148C]"
+                            : "text-slate-500 hover:text-slate-900"
+                        }`}
+                      >
+                        <Icon className={`h-5 w-5 transition-colors ${active ? "text-[#4A148C]" : "text-slate-500"}`} strokeWidth={active ? 2.8 : 2.2} />
+                        <span className={`whitespace-nowrap transition-all ${active ? "font-bold scale-105" : ""}`}>{label}</span>
+                      </Link>
+                    );
+                  })}
+
+                  <div aria-hidden="true" />
+
+                  {primaryNav.slice(2).map(({ href, icon: Icon, label, ...rest }) => {
+                    const activePrefix =
+                      "activePrefix" in rest ? (rest as { activePrefix: string }).activePrefix : undefined;
+                    const active = isActive(href, pathname, activePrefix);
+
+                    return (
+                      <Link
+                        key={href}
+                        href={href}
+                        onClick={resetNavigationState}
+                        className={`flex flex-col items-center justify-center gap-1 rounded-2xl px-1 py-2 text-[10px] font-medium transition ${
+                          active
+                            ? "text-[#4A148C]"
+                            : "text-slate-500 hover:text-slate-900"
+                        }`}
+                      >
+                        <Icon className={`h-5 w-5 transition-colors ${active ? "text-[#4A148C]" : "text-slate-500"}`} strokeWidth={active ? 2.8 : 2.2} />
+                        <span className={`whitespace-nowrap transition-all ${active ? "font-bold scale-105" : ""}`}>{label}</span>
+                      </Link>
+                    );
+                  })}
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSettingsOpen(false);
+                      setNavigatingHref(null);
+                      setMoreOpen(true);
+                    }}
                     className={`flex flex-col items-center justify-center gap-1 rounded-2xl px-1 py-2 text-[10px] font-medium transition ${
-                      active
+                      moreActive
                         ? "text-[#4A148C]"
                         : "text-slate-500 hover:text-slate-900"
                     }`}
                   >
-                    <Icon className={`h-5 w-5 transition-colors ${active ? "text-[#4A148C]" : "text-slate-500"}`} strokeWidth={active ? 2.8 : 2.2} />
-                    <span className={`whitespace-nowrap transition-all ${active ? "font-bold scale-105" : ""}`}>{label}</span>
-                  </Link>
-                );
-              })}
-
-              <div aria-hidden="true" />
-
-              {primaryNav.slice(2).map(({ href, icon: Icon, label, ...rest }) => {
-                const activePrefix =
-                  "activePrefix" in rest ? (rest as { activePrefix: string }).activePrefix : undefined;
-                const active = isActive(href, pathname, activePrefix);
-
-                return (
-                  <Link
-                    key={href}
-                    href={href}
-                    onClick={resetNavigationState}
-                    className={`flex flex-col items-center justify-center gap-1 rounded-2xl px-1 py-2 text-[10px] font-medium transition ${
-                      active
-                        ? "text-[#4A148C]"
-                        : "text-slate-500 hover:text-slate-900"
-                    }`}
-                  >
-                    <Icon className={`h-5 w-5 transition-colors ${active ? "text-[#4A148C]" : "text-slate-500"}`} strokeWidth={active ? 2.8 : 2.2} />
-                    <span className={`whitespace-nowrap transition-all ${active ? "font-bold scale-105" : ""}`}>{label}</span>
-                  </Link>
-                );
-              })}
-
-              <button
-                type="button"
-                onClick={() => {
-                  setSettingsOpen(false);
-                  setNavigatingHref(null);
-                  setMoreOpen(true);
-                }}
-                className={`flex flex-col items-center justify-center gap-1 rounded-2xl px-1 py-2 text-[10px] font-medium transition ${
-                  moreActive
-                    ? "text-[#4A148C]"
-                    : "text-slate-500 hover:text-slate-900"
-                }`}
-              >
-                <MoreHorizontal className={`h-5 w-5 transition-colors ${moreActive ? "text-[#4A148C]" : "text-slate-500"}`} strokeWidth={2.4} />
-                <span className={`whitespace-nowrap ${moreActive ? "font-bold" : ""}`}>เพิ่มเติม</span>
-              </button>
+                    <MoreHorizontal className={`h-5 w-5 transition-colors ${moreActive ? "text-[#4A148C]" : "text-slate-500"}`} strokeWidth={2.4} />
+                    <span className={`whitespace-nowrap ${moreActive ? "font-bold" : ""}`}>เพิ่มเติม</span>
+                  </button>
+                </>
+              )}
             </div>
           </div>
 
@@ -288,19 +360,10 @@ export function SettingsMobileBottomNav() {
       {/* Settings Full Screen Modal */}
       {settingsModalOpen && (
         <div className="fixed inset-0 z-[200] bg-[#F3E5F5] animate-in fade-in duration-200 lg:hidden font-[family:var(--font-sarabun)]">
-          {navigatingHref ? (
-            <div className="absolute inset-0 z-20 flex items-center justify-center bg-[#F3E5F5]/86 backdrop-blur-[2px]">
-              <div className="flex min-w-44 flex-col items-center gap-3 rounded-2xl border border-[#EA80FC]/35 bg-white px-5 py-4 shadow-[0_18px_44px_rgba(142, 36, 170,0.16)]">
-                <LoaderCircle className="h-7 w-7 animate-spin text-[#4A148C]" strokeWidth={2.4} />
-                <p className="text-sm font-black text-[#4A148C]">กำลังโหลด...</p>
-              </div>
-            </div>
-          ) : null}
           <div className="flex h-[68px] items-center justify-between border-b border-[#EA80FC]/70 bg-[#4A148C] px-4 text-white">
             <span className="text-lg font-black tracking-wide text-white">ตั้งค่า</span>
             <button
               onClick={resetNavigationState}
-              disabled={Boolean(navigatingHref)}
               className="flex h-9 w-9 items-center justify-center rounded-full bg-white/12 text-white/90 hover:bg-white/20 transition active:scale-95"
             >
               <X className="h-5 w-5" strokeWidth={2.5} />

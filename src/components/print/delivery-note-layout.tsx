@@ -20,6 +20,7 @@ type DeliveryNotePage = {
 type Props = {
   dns: DeliveryNotePrintData[];
   showIntermediateFooter?: boolean;
+  logoDataUrl?: string;
 };
 
 function buildNotePages(dns: DeliveryNotePrintData[]) {
@@ -59,22 +60,22 @@ function formatShortThaiDate(date: string) {
   return `${day}/${month}/${String(buddhistYear).slice(-2)}`;
 }
 
-function DeliveryNoteHeader({ notePage }: { notePage: DeliveryNotePage }) {
+function DeliveryNoteHeader({ notePage, logoDataUrl }: { notePage: DeliveryNotePage; logoDataUrl?: string }) {
   const { dn, pageIndex, totalPages } = notePage;
 
   return (
     <header className="dn-header">
       <div className="dn-brand">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={LOGO_SRC} alt="AllNoodles" className="dn-logo" />
+        <img src={logoDataUrl || LOGO_SRC} alt="อรินยา พาณิชย์" className="dn-logo" />
         <div className="dn-brand-text">
-          <div className="dn-org-name">AllNoodles</div>
+          <div className="dn-org-name">อรินยา พาณิชย์</div>
           <div className="dn-org-line">-</div>
           <div className="dn-org-line">โทร {ORGANIZATION_PHONE}</div>
         </div>
       </div>
 
-      <div className="dn-title">ใบส่งของ</div>
+      <div className="dn-title">บิลส่งของ</div>
 
       <div className="dn-doc-meta">
         <div className="dn-meta-row">
@@ -187,12 +188,12 @@ function DeliveryNoteFooter({ dn }: { dn: DeliveryNotePrintData }) {
   );
 }
 
-function DeliveryNotePageView({ notePage }: { notePage: DeliveryNotePage }) {
+function DeliveryNotePageView({ notePage, logoDataUrl }: { notePage: DeliveryNotePage; logoDataUrl?: string }) {
   const { dn, items } = notePage;
 
   return (
     <div className="dn-page-content">
-      <DeliveryNoteHeader notePage={notePage} />
+      <DeliveryNoteHeader notePage={notePage} logoDataUrl={logoDataUrl} />
       <CustomerBlock dn={dn} />
       <DeliveryItemsTable items={items} />
       <div className="dn-flex-spacer" />
@@ -201,7 +202,7 @@ function DeliveryNotePageView({ notePage }: { notePage: DeliveryNotePage }) {
   );
 }
 
-export function DeliveryNoteLayout({ dns }: Props) {
+export function DeliveryNoteLayout({ dns, logoDataUrl }: Props) {
   const notePages = buildNotePages(dns);
 
   return (
@@ -526,7 +527,7 @@ export function DeliveryNoteLayout({ dns }: Props) {
 
       {notePages.map((notePage) => (
         <div key={notePage.key} className="note-page" data-delivery-note-page="true">
-          <DeliveryNotePageView notePage={notePage} />
+          <DeliveryNotePageView notePage={notePage} logoDataUrl={logoDataUrl} />
         </div>
       ))}
     </>

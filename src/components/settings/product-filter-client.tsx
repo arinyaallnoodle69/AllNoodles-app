@@ -1,17 +1,22 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { Download, Plus, Search } from "lucide-react";
 import { MobileSearchDrawer } from "@/components/mobile-search/mobile-search-drawer";
 import { ProductList } from "@/components/settings/product-list";
 import { normalizeSearch } from "@/lib/utils/search";
-import type { SettingsProduct } from "@/lib/settings/admin";
+import type { SettingsProduct, SettingsProductCategory } from "@/lib/settings/admin";
+import { ProductForm } from "@/components/settings/product-form";
 
 type ProductFilterClientProps = {
   allProducts: SettingsProduct[];
   baseListHref: string;
   children?: React.ReactNode;
+  categories: SettingsProductCategory[];
+  nextSku: string;
+  initialCreate?: boolean;
+  initialEditProduct?: SettingsProduct | null;
 };
 
 type SpreadsheetCell = string | number;
@@ -98,27 +103,55 @@ function createZip(files: Array<{ name: string; content: string }>) {
     const checksum = crc32(contentBytes);
     const localOffset = output.length;
 
-    writeUInt32(output, 0x04034b50);
-    writeUInt16(output, 20);
-    writeUInt16(output, 0);
-    writeUInt16(output, 0);
-    writeUInt16(output, dosTime);
-    writeUInt16(output, dosDate);
-    writeUInt32(output, checksum);
+    output.push(
+      0x50,
+      0x4b,
+      0x03,
+      0x04,
+      10,
+      0,
+      0,
+      0,
+      0,
+      0,
+      dosTime & 0xff,
+      (dosTime >>> 8) & 0xff,
+      dosDate & 0xff,
+      (dosDate >>> 8) & 0xff,
+      checksum & 0xff,
+      (checksum >>> 8) & 0xff,
+      (checksum >>> 16) & 0xff,
+      (checksum >>> 24) & 0xff,
+    );
     writeUInt32(output, contentBytes.length);
     writeUInt32(output, contentBytes.length);
     writeUInt16(output, nameBytes.length);
     writeUInt16(output, 0);
-    output.push(...nameBytes, ...contentBytes);
+    output.push(...nameBytes);
+    output.push(...contentBytes);
 
-    writeUInt32(centralDirectory, 0x02014b50);
-    writeUInt16(centralDirectory, 20);
-    writeUInt16(centralDirectory, 20);
-    writeUInt16(centralDirectory, 0);
-    writeUInt16(centralDirectory, 0);
-    writeUInt16(centralDirectory, dosTime);
-    writeUInt16(centralDirectory, dosDate);
-    writeUInt32(centralDirectory, checksum);
+    centralDirectory.push(
+      0x50,
+      0x4b,
+      0x01,
+      0x02,
+      20,
+      0,
+      10,
+      0,
+      0,
+      0,
+      0,
+      0,
+      dosTime & 0xff,
+      (dosTime >>> 8) & 0xff,
+      dosDate & 0xff,
+      (dosDate >>> 8) & 0xff,
+      checksum & 0xff,
+      (checksum >>> 8) & 0xff,
+      (checksum >>> 16) & 0xff,
+      (checksum >>> 24) & 0xff,
+    );
     writeUInt32(centralDirectory, contentBytes.length);
     writeUInt32(centralDirectory, contentBytes.length);
     writeUInt16(centralDirectory, nameBytes.length);
@@ -131,15 +164,23 @@ function createZip(files: Array<{ name: string; content: string }>) {
     centralDirectory.push(...nameBytes);
   }
 
-  const centralDirectoryOffset = output.length;
+  const directoryOffset = output.length;
   output.push(...centralDirectory);
-  writeUInt32(output, 0x06054b50);
-  writeUInt16(output, 0);
-  writeUInt16(output, 0);
+
+  output.push(
+    0x50,
+    0x4b,
+    0x05,
+    0x06,
+    0,
+    0,
+    0,
+    0,
+  );
   writeUInt16(output, files.length);
   writeUInt16(output, files.length);
   writeUInt32(output, centralDirectory.length);
-  writeUInt32(output, centralDirectoryOffset);
+  writeUInt32(output, directoryOffset);
   writeUInt16(output, 0);
 
   return new Uint8Array(output);
@@ -209,20 +250,75 @@ export function ProductFilterClient({
   allProducts,
   baseListHref,
   children,
+  categories,
+  nextSku,
+  initialCreate,
+  initialEditProduct,
 }: ProductFilterClientProps) {
+  const [editingProduct, setEditingProduct] = useState<SettingsProduct | null>(initialEditProduct ?? null);
+  const [isCreating, setIsCreating] = useState(!!initialCreate);
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState<string | "__all__">("__all__");
+  const categoryTabsContainerRef = useRef<HTMLDivElement>(null);
+  const [categoryUnderlineStyle, setCategoryUnderlineStyle] = useState<React.CSSProperties | null>(null);
+
+  const categoryOptions = useMemo(() => {
+    const seen = new Map<string, string>();
+    for (const product of allProducts) {
+      if (product.categoryIds && product.categoryNames) {
+        for (let i = 0; i < product.categoryIds.length; i++) {
+          const id = product.categoryIds[i];
+          const name = product.categoryNames[i];
+          if (id && name && !seen.has(id)) seen.set(id, name);
+        }
+      }
+    }
+    return Array.from(seen.entries())
+      .map(([id, name]) => ({ id, name }))
+      .sort((a, b) => a.name.localeCompare(b.name, "th"));
+  }, [allProducts]);
+
+  useEffect(() => {
+    const container = categoryTabsContainerRef.current;
+    if (!container) return;
+    const timer = setTimeout(() => {
+      const activeEl = container.querySelector('[data-active="true"]') as HTMLElement;
+      if (activeEl) {
+        setCategoryUnderlineStyle({
+          left: `${activeEl.offsetLeft}px`,
+          width: `${activeEl.offsetWidth}px`,
+        });
+      } else {
+        setCategoryUnderlineStyle(null);
+      }
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [selectedCategory, categoryOptions]);
+
+  const handleCategorySelect = (id: string, e: React.MouseEvent<HTMLButtonElement>) => {
+    setSelectedCategory(id);
+    setCategoryUnderlineStyle({
+      left: `${e.currentTarget.offsetLeft}px`,
+      width: `${e.currentTarget.offsetWidth}px`,
+    });
+    e.currentTarget.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+  };
 
   const filteredProducts = useMemo(() => {
     return allProducts.filter((product) => {
+      const matchesCategory =
+        selectedCategory === "__all__" || (product.categoryIds && product.categoryIds.includes(selectedCategory));
+      if (!matchesCategory) return false;
+
       if (!searchQuery) return true;
       const normalized = normalizeSearch(searchQuery);
       return (
         normalizeSearch(product.name).includes(normalized) ||
         normalizeSearch(product.sku).includes(normalized) ||
-        product.categoryNames.some((name) => normalizeSearch(name).includes(normalized))
+        (product.categoryNames && product.categoryNames.some((name) => normalizeSearch(name).includes(normalized)))
       );
     });
-  }, [allProducts, searchQuery]);
+  }, [allProducts, searchQuery, selectedCategory]);
 
   function handleExport() {
     const blob = buildXlsxBlob(filteredProducts);
@@ -257,14 +353,14 @@ export function ProductFilterClient({
               />
             </label>
 
-            <Link
-              href={`${baseListHref}${baseListHref.includes("?") ? "&" : "?"}create=1`}
-              scroll={false}
+            <button
+              type="button"
+              onClick={() => setIsCreating(true)}
               className="inline-flex h-12 items-center justify-center gap-2 rounded-lg bg-[#4A148C] px-4 text-sm font-bold text-white shadow-[0_12px_26px_rgba(142, 36, 170,0.22)] transition hover:bg-[#4A148C] active:scale-[0.98]"
             >
               <Plus className="h-4.5 w-4.5" strokeWidth={2.4} />
               เพิ่มสินค้า
-            </Link>
+            </button>
 
             <button
               type="button"
@@ -276,9 +372,59 @@ export function ProductFilterClient({
             </button>
           </div>
         </div>
+
       </div>
 
-      {children}
+      <div className="mb-4">
+        {children}
+      </div>
+
+      {categoryOptions.length > 0 && (
+        <div className="relative bg-transparent px-4 sm:px-0 overflow-hidden mb-3 mx-4 sm:mx-0">
+          <div
+            ref={categoryTabsContainerRef}
+            className="relative flex gap-6 overflow-x-auto pb-1.5 pt-0.5 no-scrollbar scroll-smooth"
+          >
+            <span
+              className="absolute bottom-0 h-[3px] rounded-full bg-[#4A148C]"
+              style={{
+                ...(categoryUnderlineStyle ?? { left: 0, width: 0 }),
+                opacity: categoryUnderlineStyle ? 1 : 0,
+                transition: "left 300ms cubic-bezier(0.16, 1, 0.3, 1), width 300ms cubic-bezier(0.16, 1, 0.3, 1), opacity 200ms ease-in-out",
+              }}
+            />
+
+            <button
+              type="button"
+              data-active={selectedCategory === "__all__"}
+              onClick={(e) => handleCategorySelect("__all__", e)}
+              className={`pb-2.5 text-sm font-black transition-all whitespace-nowrap tracking-wide ${
+                selectedCategory === "__all__"
+                  ? "text-[#4A148C] scale-[1.03]"
+                  : "text-slate-400 hover:text-slate-600"
+              }`}
+            >
+              ทุกหมวดหมู่
+            </button>
+
+            {categoryOptions.map((c) => (
+              <button
+                key={c.id}
+                type="button"
+                data-active={selectedCategory === c.id}
+                onClick={(e) => handleCategorySelect(c.id, e)}
+                className={`pb-2.5 text-sm font-black transition-all whitespace-nowrap tracking-wide ${
+                  selectedCategory === c.id
+                    ? "text-[#4A148C] scale-[1.03]"
+                    : "text-slate-400 hover:text-slate-600"
+                }`}
+              >
+                {c.name}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       <MobileSearchDrawer title="ค้นหาสินค้า">
         <div className="space-y-3">
@@ -294,14 +440,14 @@ export function ProductFilterClient({
           </label>
 
           <div className="grid grid-cols-2 gap-2">
-            <Link
-              href={`${baseListHref}${baseListHref.includes("?") ? "&" : "?"}create=1`}
-              scroll={false}
+            <button
+              type="button"
+              onClick={() => setIsCreating(true)}
               className="inline-flex h-12 items-center justify-center gap-2 rounded-lg bg-[#4A148C] px-4 text-sm font-bold text-white shadow-[0_12px_26px_rgba(142, 36, 170,0.22)] transition active:scale-[0.98]"
             >
               <Plus className="h-4.5 w-4.5" strokeWidth={2.4} />
               เพิ่มสินค้า
-            </Link>
+            </button>
 
             <button
               type="button"
@@ -315,16 +461,36 @@ export function ProductFilterClient({
         </div>
       </MobileSearchDrawer>
 
-      <Link
-        href={`${baseListHref}${baseListHref.includes("?") ? "&" : "?"}create=1`}
-        scroll={false}
+      <button
+        type="button"
+        onClick={() => setIsCreating(true)}
         aria-label="เพิ่มสินค้า"
         className="fixed bottom-[calc(4.75rem+env(safe-area-inset-bottom)+12px)] left-4 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-[#4A148C] text-white shadow-[0_14px_32px_rgba(142, 36, 170,0.32)] transition active:scale-95 lg:hidden"
       >
         <Plus className="h-7 w-7" strokeWidth={2.6} />
-      </Link>
+      </button>
 
-      <ProductList products={filteredProducts} baseListHref={baseListHref} />
+      <ProductList products={filteredProducts} baseListHref={baseListHref} onEdit={setEditingProduct} />
+
+      {isCreating && (
+        <ProductForm
+          categories={categories}
+          nextSku={nextSku}
+          productList={allProducts}
+          returnHref={baseListHref}
+          onClose={() => setIsCreating(false)}
+        />
+      )}
+      {editingProduct && (
+        <ProductForm
+          categories={categories}
+          editingProduct={editingProduct}
+          nextSku={nextSku}
+          productList={allProducts}
+          returnHref={baseListHref}
+          onClose={() => setEditingProduct(null)}
+        />
+      )}
     </>
   );
 }

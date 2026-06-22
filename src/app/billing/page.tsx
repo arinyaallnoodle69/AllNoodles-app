@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import { AppSidebarLayout } from "@/components/app-sidebar";
 import { PageLoader } from "@/components/page-loader";
-import { requireAppRole } from "@/lib/auth/authorization";
+import { requireAnyRole, requireAppRole } from "@/lib/auth/authorization";
 import {
   getBillingCandidates,
   getCustomersForBilling,
@@ -32,7 +32,7 @@ function isValidDate(value: string | undefined): value is string {
 }
 
 async function BillingPageContent({ searchParams }: BillingPageProps) {
-  const session = await requireAppRole("admin");
+  const session = await requireAnyRole(["admin", "member"]);
   const params = await searchParams;
   
   const from = isValidDate(params.from) ? params.from : daysAgoISO(30);

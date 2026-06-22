@@ -219,10 +219,19 @@ export async function mergeItemsIntoOrder(
     }
   }
 
-  for (const [rowId, payload] of rowsToUpdate.entries()) {
-    const { error: updateError } = await admin.from("order_items").update(payload).eq("id", rowId);
-    if (updateError) {
-      return { error: updateError.message ?? "ไม่สามารถรวมรายการสินค้าเดิมได้" };
+  if (rowsToUpdate.size > 0) {
+    const updatePromises = Array.from(rowsToUpdate.entries()).map(async ([rowId, payload]) => {
+      const { error: updateError } = await admin.from("order_items").update(payload).eq("id", rowId);
+      if (updateError) {
+        throw new Error(updateError.message ?? "ไม่สามารถรวมรายการสินค้าเดิมได้");
+      }
+    });
+
+    try {
+      await Promise.all(updatePromises);
+    } catch (error) {
+      const errMsg = error instanceof Error ? error.message : "ไม่สามารถรวมรายการสินค้าเดิมได้";
+      return { error: errMsg };
     }
   }
 

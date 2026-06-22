@@ -2,12 +2,12 @@
 
 import { revalidatePath, revalidateTag } from "next/cache";
 import { after } from "next/server";
-import { requireAppRole } from "@/lib/auth/authorization";
+import { requireAppRole, requireAnyRole } from "@/lib/auth/authorization";
 import { linkLineCustomerAndConvertPendingOrders } from "@/lib/orders/line-pending";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { getTodayInBangkok } from "@/lib/orders/date";
 import { getEffectiveSaleUnitCost } from "@/lib/products/sale-unit-cost";
-import { getCustomersForOrder, getProductsForOrder, type OrderCustomerOption, type OrderProductOption } from "@/lib/orders/manage";
+import { getCustomersForOrder, getProductsForOrder, getVehiclesForOrder, type OrderCustomerOption, type OrderProductOption, type OrderVehicleOption } from "@/lib/orders/manage";
 import { getIncomingOrders, getOrderDetailById, type IncomingOrderListItem, type OrderDetailData } from "@/lib/orders/detail";
 import { syncBillingSnapshotsForDeliveryNumbers } from "@/lib/billing/actions";
 import { revalidateDashboardPages } from "@/lib/dashboard/revalidate-dashboard-pages";
@@ -955,7 +955,7 @@ export async function addOrderItemAction(formData: FormData): Promise<ActionResu
 export async function fetchCustomerPricesAction(
   customerId: string,
 ): Promise<Record<string, number>> {
-  const session = await requireAppRole("admin");
+  const session = await requireAnyRole(["admin", "member"]);
   const admin = getSupabaseAdmin() as unknown as ActionsAdmin;
 
   const { data } = await admin
@@ -1051,7 +1051,7 @@ export async function upsertCustomerPricesBatchFromOrderModalAction(input: {
     salePrice: number;
   }>;
 }): Promise<{ success: true } | { error: string }> {
-  const session = await requireAppRole("admin");
+  const session = await requireAnyRole(["admin", "member"]);
   const admin = getSupabaseAdmin() as unknown as ActionsAdmin;
 
   const customerId = String(input.customerId ?? "").trim();
@@ -1154,7 +1154,7 @@ export async function fetchCustomerLastOrderItemsAction(
   customerId: string,
   orderDate: string,
 ): Promise<CustomerLastOrderSnapshot> {
-  const session = await requireAppRole("admin");
+  const session = await requireAnyRole(["admin", "member"]);
   const admin = getSupabaseAdmin() as unknown as ActionsAdmin;
 
   if (!customerId) {
@@ -1252,7 +1252,7 @@ function mapManualItemsToMergeableInputs(
 }
 
 export async function createManualOrderAction(formData: FormData): Promise<ActionResult> {
-  const session = await requireAppRole("admin");
+  const session = await requireAnyRole(["admin", "member"]);
   const admin = getSupabaseAdmin() as unknown as ActionsAdmin;
 
   const customerId = String(formData.get("customerId") ?? "").trim();
@@ -1744,17 +1744,20 @@ export async function updateIncomingOrderDateAction(formData: FormData): Promise
 export async function fetchOrderModalDataAction(): Promise<{
   customers: OrderCustomerOption[];
   products: OrderProductOption[];
+  vehicles: OrderVehicleOption[];
   today: string;
 }> {
-  const session = await requireAppRole("admin");
-  const [customers, products] = await Promise.all([
+  const session = await requireAnyRole(["admin", "member"]);
+  const [customers, products, vehicles] = await Promise.all([
     getCustomersForOrder(session.organizationId),
     getProductsForOrder(session.organizationId),
+    getVehiclesForOrder(session.organizationId),
   ]);
 
   return {
     customers,
     products,
+    vehicles,
     today: getTodayInBangkok(),
   };
 }
@@ -1762,7 +1765,7 @@ export async function fetchOrderModalDataAction(): Promise<{
 export async function fetchCustomerOrderCountsForDateAction(
   orderDate: string,
 ): Promise<Record<string, number>> {
-  const session = await requireAppRole("admin");
+  const session = await requireAnyRole(["admin", "member"]);
   const admin = getSupabaseAdmin() as unknown as ActionsAdmin;
   const normalizedDate = /^\d{4}-\d{2}-\d{2}$/.test(orderDate) ? orderDate : getTodayInBangkok();
 

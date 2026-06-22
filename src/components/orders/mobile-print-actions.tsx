@@ -190,8 +190,8 @@ export function MobilePrintActions({
                         <Settings className="h-5 w-5" strokeWidth={2.5} />
                       </div>
                     }
-                    title="จัดการใบส่งของ / พิมพ์เอกสารขนส่ง"
-                    description="จัดการ ออก หรือสั่งพิมพ์ใบส่งของของร้านค้าทั้งหมดในรอบจัดส่งพร้อมกัน"
+                    title="จัดการบิลส่งของ / พิมพ์เอกสารขนส่ง"
+                    description="จัดการ ออก หรือสั่งพิมพ์บิลส่งของของร้านค้าทั้งหมดในรอบจัดส่งพร้อมกัน"
                     action={
                       <IncomingOrdersDeliveryActions
                         date={date}

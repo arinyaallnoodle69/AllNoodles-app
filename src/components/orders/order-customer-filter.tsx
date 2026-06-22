@@ -1,12 +1,13 @@
 "use client";
-
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Check, ChevronDown, Search, Store, X } from "lucide-react";
+import { getActiveVehiclesAction } from "@/app/order/actions";
 
 type OrderCustomerFilterOption = {
   id: string;
   code: string;
   name: string;
+  defaultVehicleId?: string | null;
 };
 
 type OrderCustomerFilterProps = {
@@ -26,6 +27,11 @@ function FilterPanel({
   onToggleOption,
   onSelectAllVisible,
   onClearSelection,
+  vehicles,
+  selectedVehicleId,
+  vehicleUnderlineStyle,
+  vehicleTabsContainerRef,
+  handleVehicleSelect,
 }: {
   filteredOptions: OrderCustomerFilterOption[];
   query: string;
@@ -35,6 +41,11 @@ function FilterPanel({
   onToggleOption: (optionId: string) => void;
   onSelectAllVisible: () => void;
   onClearSelection: () => void;
+  vehicles: { id: string; name: string }[];
+  selectedVehicleId: string | "__all__";
+  vehicleUnderlineStyle: React.CSSProperties | null;
+  vehicleTabsContainerRef: React.RefObject<HTMLDivElement | null>;
+  handleVehicleSelect: (id: string, e: React.MouseEvent<HTMLButtonElement>) => void;
 }) {
   return (
     <>
@@ -59,6 +70,52 @@ function FilterPanel({
             </button>
           ) : null}
         </label>
+
+        {vehicles.length > 0 && (
+          <div className="relative border-b border-slate-100 bg-slate-50/50 -mx-3 mt-3 px-3 py-1.5 overflow-hidden">
+            <div
+              ref={vehicleTabsContainerRef}
+              className="flex gap-4 overflow-x-auto pb-1.5 pt-1 scrollbar-none relative"
+            >
+              <span
+                className="absolute bottom-0 h-[2.5px] rounded-full bg-[#4A148C] transition-all duration-200 ease-out"
+                style={{
+                  ...(vehicleUnderlineStyle ?? { left: 0, width: 0 }),
+                  opacity: vehicleUnderlineStyle ? 1 : 0,
+                }}
+              />
+
+              <button
+                type="button"
+                data-active={selectedVehicleId === "__all__"}
+                onClick={(e) => handleVehicleSelect("__all__", e)}
+                className={`relative shrink-0 pb-1 text-xs font-black transition ${
+                  selectedVehicleId === "__all__"
+                    ? "text-[#4A148C]"
+                    : "text-slate-400 hover:text-slate-600"
+                }`}
+              >
+                ทั้งหมด
+              </button>
+
+              {vehicles.map((v) => (
+                <button
+                  key={v.id}
+                  type="button"
+                  data-active={selectedVehicleId === v.id}
+                  onClick={(e) => handleVehicleSelect(v.id, e)}
+                  className={`relative shrink-0 pb-1 text-xs font-black transition ${
+                    selectedVehicleId === v.id
+                      ? "text-[#4A148C]"
+                      : "text-slate-400 hover:text-slate-600"
+                  }`}
+                >
+                  {v.name}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         <div className="mt-3 flex items-center justify-between gap-2 text-xs font-bold text-slate-600">
           <button
@@ -125,6 +182,17 @@ export function OrderCustomerFilter({
   const [isMobileViewport, setIsMobileViewport] = useState(false);
   const containerRef = useRef<HTMLDivElement | null>(null);
 
+  const [selectedVehicleId, setSelectedVehicleId] = useState<string | "__all__">("__all__");
+  const [vehicles, setVehicles] = useState<{ id: string; name: string }[]>([]);
+  const vehicleTabsContainerRef = useRef<HTMLDivElement>(null);
+  const [vehicleUnderlineStyle, setVehicleUnderlineStyle] = useState<React.CSSProperties | null>(null);
+
+  useEffect(() => {
+    getActiveVehiclesAction().then((data) => {
+      setVehicles(data);
+    });
+  }, []);
+
   useEffect(() => {
     setSelected(selectedIds);
   }, [selectedIds]);
@@ -161,13 +229,43 @@ export function OrderCustomerFilter({
     };
   }, [isOpen, isMobileViewport]);
 
+  useEffect(() => {
+    const container = vehicleTabsContainerRef.current;
+    if (!container) return;
+    const timer = setTimeout(() => {
+      const activeEl = container.querySelector('[data-active="true"]') as HTMLElement;
+      if (activeEl) {
+        setVehicleUnderlineStyle({
+          left: `${activeEl.offsetLeft}px`,
+          width: `${activeEl.offsetWidth}px`,
+        });
+      } else {
+        setVehicleUnderlineStyle(null);
+      }
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [selectedVehicleId, isOpen]);
+
+  const handleVehicleSelect = (id: string, e: React.MouseEvent<HTMLButtonElement>) => {
+    setSelectedVehicleId(id);
+    setVehicleUnderlineStyle({
+      left: `${e.currentTarget.offsetLeft}px`,
+      width: `${e.currentTarget.offsetWidth}px`,
+    });
+    e.currentTarget.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+  };
+
   const filteredOptions = useMemo(() => {
     const normalizedQuery = query.trim().toLocaleLowerCase("th");
-    if (!normalizedQuery) return options;
-    return options.filter((option) =>
+    let list = options;
+    if (selectedVehicleId !== "__all__") {
+      list = list.filter((option) => option.defaultVehicleId === selectedVehicleId);
+    }
+    if (!normalizedQuery) return list;
+    return list.filter((option) =>
       `${option.code} ${option.name}`.toLocaleLowerCase("th").includes(normalizedQuery),
     );
-  }, [options, query]);
+  }, [options, query, selectedVehicleId]);
 
   const selectedLabel = useMemo(() => {
     if (selected.length === 0) return placeholder;
@@ -224,6 +322,11 @@ export function OrderCustomerFilter({
             onToggleOption={toggleOption}
             onSelectAllVisible={selectAllVisible}
             onClearSelection={clearSelection}
+            vehicles={vehicles}
+            selectedVehicleId={selectedVehicleId}
+            vehicleUnderlineStyle={vehicleUnderlineStyle}
+            vehicleTabsContainerRef={vehicleTabsContainerRef}
+            handleVehicleSelect={handleVehicleSelect}
           />
         </div>
       ) : null}
@@ -265,6 +368,11 @@ export function OrderCustomerFilter({
                 onToggleOption={toggleOption}
                 onSelectAllVisible={selectAllVisible}
                 onClearSelection={clearSelection}
+                vehicles={vehicles}
+                selectedVehicleId={selectedVehicleId}
+                vehicleUnderlineStyle={vehicleUnderlineStyle}
+                vehicleTabsContainerRef={vehicleTabsContainerRef}
+                handleVehicleSelect={handleVehicleSelect}
               />
             </div>
           </div>

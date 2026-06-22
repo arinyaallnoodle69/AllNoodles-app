@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { AlertTriangle, CheckCircle2, Tag, X } from "lucide-react";
 import { getStoreItemCostSnapshots, setStoreItemPrices } from "@/app/orders/actions";
 import { confirmBelowCostSave, isBelowCostPrice } from "@/components/pricing/price-guard";
+import { useClientRole } from "@/lib/auth/client-role";
 
 export type UnpricedItem = {
   effectiveCostPrice?: number | null;
@@ -29,6 +30,7 @@ function itemKey(item: UnpricedItem) {
 
 export function UnpricedItemsDialog({ customerId, customerName, items }: Props) {
   const router = useRouter();
+  const role = useClientRole();
   const [open, setOpen] = useState(false);
   const [prices, setPrices] = useState<Record<string, string>>({});
   const [costs, setCosts] = useState<Record<string, number>>({});
@@ -111,9 +113,11 @@ export function UnpricedItemsDialog({ customerId, customerName, items }: Props) 
       };
     });
 
-    const firstBelowCostItem = itemsToSave.find(({ salePrice, effectiveCostPrice }) =>
-      isBelowCostPrice(salePrice, effectiveCostPrice),
-    );
+    const firstBelowCostItem = role !== "member"
+      ? itemsToSave.find(({ salePrice, effectiveCostPrice }) =>
+          isBelowCostPrice(salePrice, effectiveCostPrice),
+        )
+      : undefined;
 
     if (
       firstBelowCostItem &&
@@ -217,7 +221,7 @@ export function UnpricedItemsDialog({ customerId, customerName, items }: Props) 
                       const priceValue = prices[key] ?? "";
                       const parsedPrice = Number.parseFloat(priceValue);
                       const effectiveCostPrice = costs[key] ?? item.effectiveCostPrice ?? null;
-                      const isBelowCost = isBelowCostPrice(parsedPrice, effectiveCostPrice);
+                      const isBelowCost = role !== "member" && isBelowCostPrice(parsedPrice, effectiveCostPrice);
 
                       return (
                         <div

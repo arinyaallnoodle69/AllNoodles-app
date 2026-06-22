@@ -6,7 +6,7 @@ import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
 // Row types
 
-type CustomerRow = { id: string; customer_code: string; default_warehouse_id: string | null; name: string };
+type CustomerRow = { id: string; customer_code: string; default_warehouse_id: string | null; default_vehicle_id: string | null; name: string };
 type ProductRow = {
   cost_price: number | string;
   id: string;
@@ -99,7 +99,7 @@ function compareProductSku(left: OrderProductOption, right: OrderProductOption) 
 
 // Exported types
 
-export type OrderCustomerOption = { code: string; defaultWarehouseId: string | null; id: string; name: string };
+export type OrderCustomerOption = { code: string; defaultWarehouseId: string | null; defaultVehicleId: string | null; id: string; name: string };
 
 export type OrderVehicleOption = { id: string; name: string };
 
@@ -141,7 +141,7 @@ export async function getCustomersForOrder(orgId: string): Promise<OrderCustomer
   const admin = getSupabaseAdmin() as unknown as ManageAdmin;
   const { data } = await admin
     .from("customers")
-    .select("id, customer_code, name, default_warehouse_id")
+    .select("id, customer_code, name, default_warehouse_id, default_vehicle_id")
     .eq("organization_id", orgId)
     .eq("is_active", true)
     .order("customer_code", { ascending: true });
@@ -150,6 +150,7 @@ export async function getCustomersForOrder(orgId: string): Promise<OrderCustomer
     .map((c) => ({
       code: c.customer_code,
       defaultWarehouseId: c.default_warehouse_id,
+      defaultVehicleId: c.default_vehicle_id,
       id: c.id,
       name: c.name,
     }))

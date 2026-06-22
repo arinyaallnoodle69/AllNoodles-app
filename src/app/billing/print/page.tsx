@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import { notFound } from "next/navigation";
-import { requireAppRole } from "@/lib/auth/authorization";
+import { requireAnyRole, requireAppRole } from "@/lib/auth/authorization";
 import {
   getBatchBillingData,
   getBillingStatementData,
@@ -48,7 +48,7 @@ function parseDeliveryNumbers(value: string | undefined) {
 }
 
 async function BillingPrintPageContent({ searchParams }: Props) {
-  const session = await requireAppRole("admin");
+  const session = await requireAnyRole(["admin", "member"]);
   const params = await searchParams;
 
   const customerId = params.customer;

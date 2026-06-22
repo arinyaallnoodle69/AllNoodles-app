@@ -27,8 +27,9 @@ import {
 } from "lucide-react";
 import { useCreateOrder } from "./create-order-context";
 import { getEffectiveSaleUnitCost } from "@/lib/products/sale-unit-cost";
-import type { OrderCustomerOption, OrderProductOption } from "@/lib/orders/manage";
+import type { OrderCustomerOption, OrderProductOption, OrderVehicleOption } from "@/lib/orders/manage";
 import { normalizeSearch } from "@/lib/utils/search";
+import { useClientRole } from "@/lib/auth/client-role";
 import {
   createManualOrderAction,
   fetchCustomerOrderCountsForDateAction,
@@ -101,6 +102,7 @@ type Props = {
   customerOrderCountsToday?: Record<string, number>;
   customers?: OrderCustomerOption[];
   products?: OrderProductOption[];
+  vehicles?: OrderVehicleOption[];
   today?: string;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
@@ -304,6 +306,7 @@ const ProductRow = React.memo(({
   noCustomer: boolean;
   selectedWarehouseId: string | null;
 }) => {
+  const role = useClientRole();
   const units = getUnits(product);
   const unit = units.find((u) => u.id === selection?.unitId) ?? units.find((u) => u.isDefault) ?? units[0] ?? null;
   const effectiveCost = unit ? getEffectiveSaleUnitCost({
@@ -313,7 +316,7 @@ const ProductRow = React.memo(({
     fixedCostPrice: unit.fixedCostPrice,
   }) : 0;
   const currentPriceNum = selection?.unitPrice ? Number.parseFloat(selection.unitPrice) : 0;
-  const isBelowCost = Boolean(selection && effectiveCost > 0 && currentPriceNum > 0 && currentPriceNum < (effectiveCost - 0.001));
+  const isBelowCost = role !== "member" && Boolean(selection && effectiveCost > 0 && currentPriceNum > 0 && currentPriceNum < (effectiveCost - 0.001));
   const customerPrice = priceMap[unit?.id ?? product.id] ?? priceMap[product.id] ?? 0;
   const displayStockQuantity = getDisplayStockQuantity(product, selectedWarehouseId);
 
@@ -340,7 +343,7 @@ const ProductRow = React.memo(({
         className="relative cursor-pointer px-3 py-3 md:px-4 md:py-4"
       >
         <div className="absolute right-3 top-3 flex h-6 w-6 shrink-0 items-center justify-center md:right-4 md:top-4">
-          <label className="relative flex cursor-pointer items-center justify-center">
+          <div className="relative flex items-center justify-center">
             <input
               type="checkbox"
               readOnly
@@ -349,7 +352,7 @@ const ProductRow = React.memo(({
               className="peer pointer-events-none h-5 w-5 appearance-none rounded border-2 border-slate-300 transition-all checked:border-[#4A148C] checked:bg-[#4A148C]"
             />
             <Check className="pointer-events-none absolute h-3.5 w-3.5 scale-0 text-white transition-transform peer-checked:scale-100" strokeWidth={5} />
-          </label>
+          </div>
         </div>
 
         <div className="flex flex-col items-center gap-2.5 md:flex-row md:items-center md:gap-3">
@@ -369,7 +372,7 @@ const ProductRow = React.memo(({
             )}
           </div>
 
-          <div className="w-full min-w-0 text-center md:flex-1 md:text-left">
+          <div className="w-full min-w-0 text-center md:flex-1 md:text-left md:pr-12">
             <p className="text-[11px] font-black uppercase tracking-tight text-slate-500 md:hidden">
               {product.sku}
             </p>
@@ -443,48 +446,50 @@ const ProductRow = React.memo(({
               </div>
             </div>
 
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <label className={`text-[14px] font-black uppercase tracking-wider ${isBelowCost ? "text-[#FF0000]" : "text-slate-600"}`}>
-                  ราคาต่อ{unit?.label}
-                </label>
-                {effectiveCost > 0 && (
-                  <span className={`rounded-full border px-2 py-0.5 text-[11px] font-black ${
-                    isBelowCost
-                      ? "animate-pulse border-[#FF0000] bg-white text-[#FF0000] shadow-sm"
-                      : "border-slate-200 text-slate-400"
-                  }`}>
-                    ทุน ฿{formatTHB(effectiveCost)}
-                  </span>
-                )}
+            {role !== "member" && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className={`text-[14px] font-black uppercase tracking-wider ${isBelowCost ? "text-[#FF0000]" : "text-slate-600"}`}>
+                    ราคาต่อ{unit?.label}
+                  </label>
+                  {effectiveCost > 0 && (
+                    <span className={`rounded-full border px-2 py-0.5 text-[11px] font-black ${
+                      isBelowCost
+                        ? "animate-pulse border-[#FF0000] bg-white text-[#FF0000] shadow-sm"
+                        : "border-slate-200 text-slate-400"
+                    }`}>
+                      ทุน ฿{formatTHB(effectiveCost)}
+                    </span>
+                  )}
+                </div>
+                <div className="relative">
+                  <input
+                    type="number"
+                    value={selection.unitPrice === "0" ? "" : selection.unitPrice}
+                    disabled={selection.isPriceLocked}
+                    onChange={(e) => onUpdateSelection(product.id, "unitPrice", e.target.value)}
+                    className={`h-10 w-full rounded-2xl border-2 pl-4 pr-12 text-xl font-black shadow-md outline-none transition-all ${
+                      selection.isPriceLocked
+                        ? "border-transparent bg-slate-100 text-slate-400 shadow-none"
+                        : "border-transparent bg-white text-slate-950 focus:border-[#4A148C]/30"
+                    } ${isBelowCost ? "!border-[#FF0000] !bg-rose-50 !text-[#FF0000]" : ""}`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => onUpdateSelection(product.id, "isPriceLocked", !selection.isPriceLocked)}
+                    className={`absolute right-1.5 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-xl transition-all active:scale-90 ${
+                      selection.isPriceLocked
+                        ? "text-slate-400"
+                        : isBelowCost
+                          ? "bg-[#FF0000] text-white"
+                          : "bg-[#4A148C] text-white"
+                    }`}
+                  >
+                    {selection.isPriceLocked ? <Lock className="h-5 w-5" /> : <Unlock className="h-5 w-5" />}
+                  </button>
+                </div>
               </div>
-              <div className="relative">
-                <input
-                  type="number"
-                  value={selection.unitPrice === "0" ? "" : selection.unitPrice}
-                  disabled={selection.isPriceLocked}
-                  onChange={(e) => onUpdateSelection(product.id, "unitPrice", e.target.value)}
-                  className={`h-10 w-full rounded-2xl border-2 pl-4 pr-12 text-xl font-black shadow-md outline-none transition-all ${
-                    selection.isPriceLocked
-                      ? "border-transparent bg-slate-100 text-slate-400 shadow-none"
-                      : "border-transparent bg-white text-slate-950 focus:border-[#4A148C]/30"
-                  } ${isBelowCost ? "!border-[#FF0000] !bg-rose-50 !text-[#FF0000]" : ""}`}
-                />
-                <button
-                  type="button"
-                  onClick={() => onUpdateSelection(product.id, "isPriceLocked", !selection.isPriceLocked)}
-                  className={`absolute right-1.5 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-xl transition-all active:scale-90 ${
-                    selection.isPriceLocked
-                      ? "text-slate-400"
-                      : isBelowCost
-                        ? "bg-[#FF0000] text-white"
-                        : "bg-[#4A148C] text-white"
-                  }`}
-                >
-                  {selection.isPriceLocked ? <Lock className="h-5 w-5" /> : <Unlock className="h-5 w-5" />}
-                </button>
-              </div>
-            </div>
+            )}
           </div>
 
           {isBelowCost && (
@@ -517,12 +522,46 @@ function ProductSelectModal({
   selectedCustomerLabel,
   selectedWarehouseId,
 }: ProductSelectModalProps) {
+  const role = useClientRole();
   const [query, setQuery] = useState("");
   const deferredQuery = React.useDeferredValue(query);
   const [selectedCategoryId, setSelectedCategoryId] = useState("__all__");
-  const [categoryPickerOpen, setCategoryPickerOpen] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [selections, setSelections] = useState<Record<string, ProductSelection>>({});
+
+  const catTabsContainerRef = useRef<HTMLDivElement>(null);
+  const [catUnderlineStyle, setCatUnderlineStyle] = useState<React.CSSProperties | null>(null);
+  const [displayLimit, setDisplayLimit] = useState(40);
+
+  useEffect(() => {
+    const container = catTabsContainerRef.current;
+    if (!container) return;
+    const timer = setTimeout(() => {
+      const activeEl = container.querySelector('[data-active="true"]') as HTMLElement;
+      if (activeEl) {
+        setCatUnderlineStyle({
+          left: `${activeEl.offsetLeft}px`,
+          width: `${activeEl.offsetWidth}px`,
+        });
+      } else {
+        setCatUnderlineStyle(null);
+      }
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [selectedCategoryId, open, products]);
+
+  useEffect(() => {
+    setDisplayLimit(40);
+  }, [selectedCategoryId, query]);
+
+  const handleCategorySelect = (id: string, e: React.MouseEvent<HTMLButtonElement>) => {
+    setSelectedCategoryId(id);
+    setCatUnderlineStyle({
+      left: `${e.currentTarget.offsetLeft}px`,
+      width: `${e.currentTarget.offsetWidth}px`,
+    });
+    e.currentTarget.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+  };
   
   // Sync selected products' prices when customer prices load in the background
   useEffect(() => {
@@ -577,7 +616,6 @@ function ProductSelectModal({
     return Array.from(seen.entries()).map(([id, name]) => ({ id, name }));
   }, [products]);
 
-  const activeCategoryName = categoryOptions.find(c => c.id === selectedCategoryId)?.name ?? "ทุกหมวดหมู่";
 
   const filteredProducts = useMemo(() => {
     const normalized = normalizeSearch(deferredQuery);
@@ -674,7 +712,7 @@ function ProductSelectModal({
       });
 
       // WARNING LOGIC: cost must be > 0 and price < cost (with epsilon for float safety)
-      if (effectiveCost > 0 && unitPrice > 0 && unitPrice < (effectiveCost - 0.001)) {
+      if (role !== "member" && effectiveCost > 0 && unitPrice > 0 && unitPrice < (effectiveCost - 0.001)) {
         belowCostItems.push({ name: product.name, cost: effectiveCost, price: unitPrice });
       }
 
@@ -714,7 +752,6 @@ function ProductSelectModal({
       setSelections({});
       setSaving(false);
       setSelectedCategoryId("__all__");
-      setCategoryPickerOpen(false);
       setCostWarningInfo(null);
     }
   }, [open]);
@@ -781,28 +818,73 @@ function ProductSelectModal({
         </div>
 
         {/* Combined Search & Category Filter */}
-        <div className="shrink-0 border-b border-[#EA80FC]/30 bg-white px-4 py-3 sm:px-8">
-          <div className="flex items-center gap-2">
-            <div className="flex flex-1 items-center gap-2 rounded-2xl border-2 border-[#EA80FC]/25 bg-[#F3E5F5] px-3 py-2.5 shadow-sm transition-all focus-within:border-[#EA80FC] focus-within:bg-white">
-              <Search className="h-5 w-5 text-[#4A148C]" />
+        <div className="shrink-0 border-b border-[#EA80FC]/15 bg-white">
+          <div className="px-4 py-3.5 sm:px-8">
+            <div className="flex items-center gap-3 rounded-2xl border border-[#EA80FC]/35 bg-[#F3E5F5]/25 px-4 py-3 transition focus-within:border-[#4A148C] focus-within:ring-2 focus-within:ring-[#4A148C]/10">
+              <Search className="h-5 w-5 shrink-0 text-[#4A148C]" strokeWidth={2.4} />
               <input
                 type="text"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="ค้นหาสินค้า..."
-                className="min-w-0 flex-1 bg-transparent text-base font-bold text-[#4A148C] outline-none placeholder:text-[#4A148C]/65"
+                className="min-w-0 flex-1 bg-transparent text-base font-semibold text-[#4A148C] outline-none placeholder:text-[#4A148C]/50"
               />
+              {query ? (
+                <button
+                  type="button"
+                  onClick={() => setQuery("")}
+                  className="action-touch-safe text-[#4A148C]/70 transition hover:text-[#4A148C]"
+                  aria-label="ล้างคำค้นหาสินค้า"
+                >
+                  <X className="h-4.5 w-4.5" strokeWidth={2.5} />
+                </button>
+              ) : null}
             </div>
-            <button
-              onClick={() => setCategoryPickerOpen(true)}
-              className="flex shrink-0 items-center gap-2 rounded-2xl border-2 border-[#EA80FC]/25 bg-[#F3E5F5] px-3 py-2.5 text-sm font-black text-[#4A148C] shadow-sm transition hover:border-[#EA80FC]/70 active:scale-95"
+          </div>
+
+          {/* Category filter tabs (Lineman style) */}
+          <div className="border-t border-[#EA80FC]/15 px-4 sm:px-8 bg-white">
+            <div 
+              ref={catTabsContainerRef}
+              className="relative flex gap-6 overflow-x-auto pt-3.5 pb-0.5 no-scrollbar scroll-smooth"
             >
-              <div className="flex flex-col items-start leading-none gap-1">
-                <span className="text-[9px] uppercase tracking-widest text-[#4A148C]/70">หมวดหมู่</span>
-                <span className="text-[#4A148C] truncate max-w-[90px]">{activeCategoryName}</span>
-              </div>
-              <ChevronRight className="h-3.5 w-3.5 text-[#EA80FC]" strokeWidth={4} />
-            </button>
+              {/* Sliding Indicator Line */}
+              <span
+                className="absolute bottom-0 h-[3px] rounded-full bg-[#4A148C]"
+                style={{
+                  ...(catUnderlineStyle ?? { left: 0, width: 0 }),
+                  opacity: catUnderlineStyle ? 1 : 0,
+                  transition: "left 300ms cubic-bezier(0.16, 1, 0.3, 1), width 300ms cubic-bezier(0.16, 1, 0.3, 1), opacity 200ms ease-in-out",
+                }}
+              />
+              <button
+                type="button"
+                data-active={selectedCategoryId === "__all__"}
+                onClick={(e) => handleCategorySelect("__all__", e)}
+                className={`pb-2.5 text-sm font-black transition-all whitespace-nowrap tracking-wide ${
+                  selectedCategoryId === "__all__"
+                    ? "text-[#4A148C] scale-[1.03]"
+                    : "text-slate-400 hover:text-slate-600"
+                }`}
+              >
+                ทุกหมวดหมู่
+              </button>
+              {categoryOptions.map((c) => (
+                <button
+                  key={c.id}
+                  type="button"
+                  data-active={selectedCategoryId === c.id}
+                  onClick={(e) => handleCategorySelect(c.id, e)}
+                  className={`pb-2.5 text-sm font-black transition-all whitespace-nowrap tracking-wide ${
+                    selectedCategoryId === c.id
+                      ? "text-[#4A148C] scale-[1.03]"
+                      : "text-slate-400 hover:text-slate-600"
+                  }`}
+                >
+                  {c.name}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 
@@ -826,7 +908,7 @@ function ProductSelectModal({
           ) : (
             <div className="space-y-4 p-3 md:space-y-0 md:p-5">
               <div className="grid grid-cols-2 gap-3 md:grid-cols-2 md:gap-4 lg:grid-cols-3">
-                {filteredProducts.map((p) => (
+                {filteredProducts.slice(0, displayLimit).map((p) => (
                   <ProductRow
                     key={p.id}
                     product={p}
@@ -841,6 +923,17 @@ function ProductSelectModal({
                   />
                 ))}
               </div>
+              {filteredProducts.length > displayLimit && (
+                <div className="flex justify-center py-6">
+                  <button
+                    type="button"
+                    onClick={() => setDisplayLimit((prev) => prev + 40)}
+                    className="action-touch-safe rounded-2xl border-2 border-[#EA80FC]/45 bg-[#F3E5F5]/40 px-6 py-2.5 text-sm font-black text-[#4A148C] transition-all hover:bg-[#F3E5F5]/60 active:scale-95"
+                  >
+                    แสดงเพิ่มเติม ({filteredProducts.length - displayLimit} รายการ)
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -873,49 +966,6 @@ function ProductSelectModal({
           </div>
         </div>
 
-        {/* Sliding Category Picker */}
-        {categoryPickerOpen && (
-          <div className="absolute inset-0 z-[10010] flex flex-col bg-slate-950/40 backdrop-blur-sm">
-            <div className="absolute inset-0" onClick={() => setCategoryPickerOpen(false)} />
-            <div className="relative mt-auto flex max-h-[85%] flex-col overflow-hidden rounded-t-[3rem] border-t border-[#EA80FC]/45 bg-white shadow-2xl animate-in slide-in-from-bottom duration-300">
-              <div className="flex items-center justify-between border-b border-[#EA80FC]/30 px-8 py-6">
-                <h4 className="text-2xl font-black uppercase tracking-tight text-[#4A148C]">เลือกหมวดหมู่</h4>
-                <button
-                  onClick={() => setCategoryPickerOpen(false)}
-                  className="flex h-11 w-11 items-center justify-center rounded-2xl border border-[#EA80FC]/35 bg-white text-[#4A148C] transition active:scale-95"
-                >
-                  <X className="h-6 w-6" strokeWidth={3} />
-                </button>
-              </div>
-              <div className="flex-1 overflow-y-auto p-4 sm:p-6">
-                <div className="grid grid-cols-1 gap-3">
-                  <button
-                    onClick={() => { setSelectedCategoryId("__all__"); setCategoryPickerOpen(false); }}
-                    className={`flex items-center justify-between rounded-3xl border px-6 py-5 text-left transition-all ${
-                      selectedCategoryId === "__all__" ? "border-[#EA80FC]/70 bg-[#4A148C] text-white shadow-xl" : "border-[#EA80FC]/25 bg-[#F3E5F5] text-[#4A148C] hover:border-[#EA80FC]/70"
-                    }`}
-                  >
-                    <span className="text-xl font-black">ทุกหมวดหมู่</span>
-                    {selectedCategoryId === "__all__" && <Check className="h-6 w-6" strokeWidth={5} />}
-                  </button>
-                  {categoryOptions.map(c => (
-                    <button
-                      key={c.id}
-                      onClick={() => { setSelectedCategoryId(c.id); setCategoryPickerOpen(false); }}
-                      className={`flex items-center justify-between rounded-3xl border px-6 py-5 text-left transition-all ${
-                        selectedCategoryId === c.id ? "border-[#EA80FC]/70 bg-[#4A148C] text-white shadow-xl" : "border-[#EA80FC]/25 bg-[#F3E5F5] text-[#4A148C] hover:border-[#EA80FC]/70"
-                      }`}
-                    >
-                      <span className="text-xl font-black">{c.name}</span>
-                      {selectedCategoryId === c.id && <Check className="h-6 w-6" strokeWidth={5} />}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div className="h-safe-or-8 bg-white" />
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );
@@ -927,6 +977,7 @@ export function CreateOrderModal({
   customerOrderCountsToday = {},
   customers = [],
   products = [],
+  vehicles = [],
   today = new Date().toISOString().split("T")[0],
   open: propOpen,
   onOpenChange,
@@ -955,7 +1006,53 @@ export function CreateOrderModal({
   const [cart, setCart] = useState<CartItem[]>([]);
   const [customerPickerOpen, setCustomerPickerOpen] = useState(false);
   const [customerPickerQuery, setCustomerPickerQuery] = useState("");
+  const [selectedVehicleId, setSelectedVehicleId] = useState<string | "__all__">("__all__");
   const [priceMap, setPriceMap] = useState<Record<string, number>>({});
+
+  const vehicleTabsContainerRef = useRef<HTMLDivElement>(null);
+  const [vehicleUnderlineStyle, setVehicleUnderlineStyle] = useState<React.CSSProperties | null>(null);
+
+  useEffect(() => {
+    const container = vehicleTabsContainerRef.current;
+    if (!container) return;
+    const timer = setTimeout(() => {
+      const activeEl = container.querySelector('[data-active="true"]') as HTMLElement;
+      if (activeEl) {
+        setVehicleUnderlineStyle({
+          left: `${activeEl.offsetLeft}px`,
+          width: `${activeEl.offsetWidth}px`,
+        });
+      } else {
+        setVehicleUnderlineStyle(null);
+      }
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [selectedVehicleId, customerPickerOpen]);
+
+  const handleVehicleSelect = (id: string, e: React.MouseEvent<HTMLButtonElement>) => {
+    setSelectedVehicleId(id);
+    setVehicleUnderlineStyle({
+      left: `${e.currentTarget.offsetLeft}px`,
+      width: `${e.currentTarget.offsetWidth}px`,
+    });
+    e.currentTarget.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+  };
+
+  const showSubmitPopup = useCallback((message: string) => {
+    setSubmitPopupMessage(message);
+    if (submitPopupTimerRef.current) {
+      clearTimeout(submitPopupTimerRef.current);
+    }
+    submitPopupTimerRef.current = setTimeout(() => setSubmitPopupMessage(null), 2800);
+  }, []);
+
+  const handleAddProductClick = useCallback(() => {
+    if (!customerId) {
+      showSubmitPopup("กรุณาเลือกร้านค้าก่อน");
+      return;
+    }
+    setProductModalOpen(true);
+  }, [customerId, showSubmitPopup]);
   const [pricesLoading, setPricesLoading] = useState(false);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyError, setHistoryError] = useState<string | null>(null);
@@ -1021,12 +1118,19 @@ export function CreateOrderModal({
     };
   }, [open, orderDate]);
 
-  const filteredCustomers = customerPickerQuery
-    ? orderedCustomers.filter((c) => {
-        const n = normalizeSearch(customerPickerQuery);
-        return normalizeSearch(c.name).includes(n) || normalizeSearch(c.code).includes(n);
-      })
-    : orderedCustomers;
+  const filteredCustomers = useMemo(() => {
+    let list = orderedCustomers;
+    if (selectedVehicleId !== "__all__") {
+      list = list.filter((c) => c.defaultVehicleId === selectedVehicleId);
+    }
+    if (customerPickerQuery) {
+      const n = normalizeSearch(customerPickerQuery);
+      list = list.filter(
+        (c) => normalizeSearch(c.name).includes(n) || normalizeSearch(c.code).includes(n),
+      );
+    }
+    return list;
+  }, [orderedCustomers, selectedVehicleId, customerPickerQuery]);
 
   async function loadLastOrderSnapshot(nextCustomerId: string, nextOrderDate: string) {
     if (!nextCustomerId) {
@@ -1123,6 +1227,7 @@ export function CreateOrderModal({
   }
 
   async function handleCustomerSelect(id: string) {
+    setError(null);
     setHistoryNotice(null);
     setCustomerId(id);
     setActiveTab("create"); // Keep on Product List tab after selection
@@ -1292,14 +1397,7 @@ export function CreateOrderModal({
 
   function handleSubmit() {
     setError(null);
-    function showSubmitPopup(message: string) {
-      setError(message);
-      setSubmitPopupMessage(message);
-      if (submitPopupTimerRef.current) {
-        clearTimeout(submitPopupTimerRef.current);
-      }
-      submitPopupTimerRef.current = setTimeout(() => setSubmitPopupMessage(null), 2800);
-    }
+
 
     if (!customerId) {
       showSubmitPopup("กรุณาเลือกลูกค้าก่อน");
@@ -1407,12 +1505,12 @@ export function CreateOrderModal({
                   </div>
                   <h3 className="mb-2 text-3xl font-black tracking-tight text-[#4A148C]">บันทึกสำเร็จ!</h3>
                   <div className="space-y-1 text-[#4A148C]">
-                    <p className="text-sm font-bold uppercase tracking-widest opacity-80">เลขที่ใบส่งของ</p>
+                    <p className="text-sm font-bold uppercase tracking-widest opacity-80">เลขที่บิลส่งของ</p>
                     <p className="font-mono text-2xl font-black text-[#4A148C]">{success.deliveryNumber}</p>
                   </div>
                   {success.deliveryNumber && (
                     <div className="mt-4 rounded-2xl border border-[#EA80FC]/35 bg-[#F3E5F5] px-6 py-3">
-                      <p className="mb-0.5 text-[10px] font-black uppercase tracking-widest text-[#4A148C]">ใบส่งของ</p>
+                      <p className="mb-0.5 text-[10px] font-black uppercase tracking-widest text-[#4A148C]">บิลส่งของ</p>
                       <p className="font-mono text-lg font-black text-[#4A148C]">{success.deliveryNumber}</p>
                     </div>
                   )}
@@ -1452,7 +1550,7 @@ export function CreateOrderModal({
                     <div>
                       <p className="text-base font-bold leading-tight">บันทึกออเดอร์สำเร็จ!</p>
                       <p className="mt-1 text-sm font-semibold opacity-90">
-                        ใบส่งของ: <span className="font-mono text-[#4A148C] font-bold">{success.deliveryNumber}</span>
+                        บิลส่งของ: <span className="font-mono text-[#4A148C] font-bold">{success.deliveryNumber}</span>
                       </p>
                     </div>
                   </div>
@@ -1656,7 +1754,7 @@ export function CreateOrderModal({
                           </p>
                           <button
                             type="button"
-                            onClick={() => setProductModalOpen(true)}
+                            onClick={handleAddProductClick}
                             className="action-touch-safe inline-flex items-center gap-1.5 rounded-xl border border-[#EA80FC]/70 bg-[#4A148C] px-3 py-2 text-sm font-bold text-white transition hover:bg-[#4A148C] active:scale-95"
                           >
                             <Plus className="h-4 w-4" strokeWidth={2.5} />
@@ -1668,7 +1766,7 @@ export function CreateOrderModal({
                           {cart.length === 0 ? (
                             <button
                               type="button"
-                              onClick={() => setProductModalOpen(true)}
+                              onClick={handleAddProductClick}
                               className="action-touch-safe flex w-full flex-col items-center justify-center rounded-2xl border-2 border-dashed border-[#EA80FC]/45 bg-[#F3E5F5] px-4 py-10 text-center transition hover:border-[#EA80FC] hover:bg-[#EA80FC]/10"
                             >
                               <Package2 className="h-9 w-9 text-[#4A148C]" strokeWidth={1.8} />
@@ -1876,85 +1974,140 @@ export function CreateOrderModal({
         <div className="fixed inset-0 z-[10000] flex items-end justify-center bg-slate-950/50 sm:items-center sm:p-4">
           <div className="absolute inset-0" onClick={() => setCustomerPickerOpen(false)} />
           <div className="relative flex h-full w-full max-h-full flex-col overflow-hidden rounded-none bg-white shadow-2xl sm:h-[80dvh] sm:max-w-md sm:rounded-[2rem]">
-            <div className="sticky top-0 z-20 flex items-center justify-between gap-3 border-b border-slate-200 bg-white px-4 py-2.5 sm:py-4">
+            {/* Modal Header */}
+            <div className="sticky top-0 z-20 flex items-center justify-between gap-3 border-b border-[#EA80FC]/30 bg-[#4A148C] px-5 py-4 text-white">
               <div className="min-w-0">
-                <h3 className="truncate text-base font-bold text-slate-950 sm:text-lg">เลือกร้านค้า</h3>
-                <p className="text-[10px] text-slate-500 sm:text-xs">ค้นหาด้วยชื่อร้าน หรือรหัสร้าน</p>
+                <h3 className="truncate text-lg font-black tracking-wide text-white">เลือกร้านค้า</h3>
+                <p className="text-[10px] font-semibold text-[#E1BEE7] mt-0.5">ค้นหาชื่อร้าน หรือรหัสร้าน</p>
               </div>
               <button
                 type="button"
                 onClick={() => setCustomerPickerOpen(false)}
-                className="action-touch-safe flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-200 text-slate-500 transition hover:bg-slate-50 sm:h-10 sm:w-10"
+                className="action-touch-safe flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/12 text-white/90 hover:bg-white/20 transition active:scale-95"
                 aria-label="ปิดหน้าต่างเลือกร้านค้า"
               >
-                <X className="h-4.5 w-4.5 sm:h-5 sm:w-5" strokeWidth={2.2} />
+                <X className="h-5 w-5" strokeWidth={2.5} />
               </button>
             </div>
 
-            <div className="shrink-0 border-b border-slate-100 px-4 py-3">
-              <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 transition focus-within:border-[#4A148C]/60 focus-within:ring-2 focus-within:ring-[#4A148C]/10">
-                <Search className="h-5 w-5 shrink-0 text-slate-400" strokeWidth={2} />
+            {/* Search Input */}
+            <div className="shrink-0 border-b border-[#EA80FC]/15 px-4 py-3.5 bg-white">
+              <div className="flex items-center gap-3 rounded-2xl border border-[#EA80FC]/35 bg-[#F3E5F5]/25 px-4 py-3 transition focus-within:border-[#4A148C] focus-within:ring-2 focus-within:ring-[#4A148C]/10">
+                <Search className="h-5 w-5 shrink-0 text-[#4A148C]" strokeWidth={2.4} />
                 <input
                   type="text"
                   value={customerPickerQuery}
                   onChange={(e) => setCustomerPickerQuery(e.target.value)}
-                  placeholder="ค้นหาชื่อร้าน หรือรหัสร้าน"
-                  className="min-w-0 flex-1 bg-transparent text-base text-slate-700 outline-none placeholder:text-slate-400"
+                  placeholder="ค้นหาชื่อร้าน หรือรหัสร้าน..."
+                  className="min-w-0 flex-1 bg-transparent text-base font-semibold text-[#4A148C] outline-none placeholder:text-[#4A148C]/50"
                 />
                 {customerPickerQuery ? (
                   <button
                     type="button"
                     onClick={() => setCustomerPickerQuery("")}
-                    className="action-touch-safe text-slate-400 transition hover:text-slate-600"
+                    className="action-touch-safe text-[#4A148C]/70 transition hover:text-[#4A148C]"
                     aria-label="ล้างคำค้นหาร้านค้า"
                   >
-                    <X className="h-4 w-4" strokeWidth={2.2} />
+                    <X className="h-4.5 w-4.5" strokeWidth={2.5} />
                   </button>
                 ) : null}
               </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto px-3 py-3">
+            {/* Vehicle filter tabs (Lineman style) */}
+            <div className="shrink-0 border-b border-[#EA80FC]/15 bg-white">
+              <div 
+                ref={vehicleTabsContainerRef}
+                className="relative flex gap-6 overflow-x-auto px-4 pt-3.5 pb-0.5 no-scrollbar scroll-smooth"
+              >
+                {/* Sliding Indicator Line */}
+                <span
+                  className="absolute bottom-0 h-[3px] rounded-full bg-[#4A148C]"
+                  style={{
+                    ...(vehicleUnderlineStyle ?? { left: 0, width: 0 }),
+                    opacity: vehicleUnderlineStyle ? 1 : 0,
+                    transition: "left 300ms cubic-bezier(0.16, 1, 0.3, 1), width 300ms cubic-bezier(0.16, 1, 0.3, 1), opacity 200ms ease-in-out",
+                  }}
+                />
+                <button
+                  type="button"
+                  data-active={selectedVehicleId === "__all__"}
+                  onClick={(e) => handleVehicleSelect("__all__", e)}
+                  className={`pb-2.5 text-sm font-black transition-all whitespace-nowrap tracking-wide ${
+                    selectedVehicleId === "__all__"
+                      ? "text-[#4A148C] scale-[1.03]"
+                      : "text-slate-400 hover:text-slate-600"
+                  }`}
+                >
+                  ร้านทั้งหมด
+                </button>
+                {vehicles.map((v) => (
+                  <button
+                    key={v.id}
+                    type="button"
+                    data-active={selectedVehicleId === v.id}
+                    onClick={(e) => handleVehicleSelect(v.id, e)}
+                    className={`pb-2.5 text-sm font-black transition-all whitespace-nowrap tracking-wide ${
+                      selectedVehicleId === v.id
+                        ? "text-[#4A148C] scale-[1.03]"
+                        : "text-slate-400 hover:text-slate-600"
+                    }`}
+                  >
+                    {v.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Customer List */}
+            <div className="flex-1 overflow-y-auto bg-slate-50/50 px-4 py-4">
               {filteredCustomers.length === 0 ? (
-                <div className="flex h-full min-h-[14rem] flex-col items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 text-center">
-                  <Building2 className="h-8 w-8 text-slate-300" strokeWidth={1.9} />
-                  <p className="mt-3 text-sm font-semibold text-slate-500">ไม่พบร้านค้าที่ค้นหา</p>
+                <div className="flex h-full min-h-[14rem] flex-col items-center justify-center rounded-[2rem] border border-dashed border-[#EA80FC]/30 bg-[#F3E5F5]/10 px-4 text-center">
+                  <Building2 className="h-10 w-10 text-[#4A148C]/40" strokeWidth={1.8} />
+                  <p className="mt-3 text-sm font-bold text-[#4A148C]">ไม่พบร้านค้าที่ค้นหา</p>
                 </div>
               ) : (
-                <div className="space-y-2">
+                <div className="space-y-2.5">
                   {filteredCustomers.map((customer) => {
                     const isSelected = customer.id === customerId;
                     const orderCountToday = customerOrderCountsByDate[customer.id] ?? 0;
+                    
                     return (
                       <button
                         key={customer.id}
                         type="button"
                         onClick={() => void handleCustomerSelect(customer.id)}
-                        className={`action-touch-safe flex w-full items-center gap-3 rounded-2xl border px-4 py-3.5 text-left transition ${
+                        className={`action-touch-safe flex w-full items-center gap-3.5 rounded-2xl border px-4 py-3.5 text-left transition ${
                           isSelected
-                            ? "border-[#4A148C]/50 bg-[#4A148C]/15"
-                            : "border-slate-200 bg-white hover:bg-slate-50"
+                            ? "border-[#EA80FC] bg-[#4A148C]/[0.06] shadow-sm shadow-[#4A148C]/5"
+                            : "border-slate-200 bg-white hover:bg-slate-50/50"
                         }`}
                       >
-                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-100">
-                          <Building2 className="h-4.5 w-4.5 text-slate-500" strokeWidth={2} />
+                        <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition ${
+                          isSelected ? "bg-[#4A148C] text-white" : "bg-[#F3E5F5]/60 text-[#4A148C]"
+                        }`}>
+                          <Building2 className="h-5 w-5" strokeWidth={2} />
                         </div>
                         <div className="min-w-0 flex-1">
-                          <p className="text-base font-semibold leading-snug text-slate-900">{customer.name}</p>
-                          <div className="mt-1 flex flex-wrap items-center gap-2">
-                            <p className="text-sm text-slate-500">{customer.code}</p>
+                          <p className="text-base font-bold leading-snug text-slate-900">{customer.name}</p>
+                          <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                            <span className="font-mono text-[11px] font-bold text-slate-500">{customer.code}</span>
                             {orderCountToday > 0 ? (
-                              <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-bold text-emerald-700 ring-1 ring-emerald-200">
+                              <span className="rounded-full bg-emerald-50 px-1.5 py-0.5 text-[9px] font-bold text-emerald-700 border border-emerald-200">
                                 สั่งแล้ววันนี้{orderCountToday > 1 ? ` ${orderCountToday}` : ""}
                               </span>
                             ) : null}
                           </div>
                         </div>
-                        {isSelected ? (
-                          <span className="rounded-full bg-[#4A148C] px-2 py-0.5 text-xs font-bold text-white">
-                            เลือกแล้ว
-                          </span>
-                        ) : null}
+                        <div className="shrink-0">
+                          {isSelected ? (
+                            <div className="flex h-5.5 w-5.5 items-center justify-center rounded-full bg-[#4A148C] text-white shadow-sm shadow-[#4A148C]/30 animate-in zoom-in duration-200">
+                              <Check className="h-3.5 w-3.5" strokeWidth={3.5} />
+                            </div>
+                          ) : (
+                            <div className="h-5.5 w-5.5 rounded-full border border-slate-300 bg-white" />
+                          )}
+                        </div>
                       </button>
                     );
                   })}
@@ -2109,6 +2262,7 @@ export function GlobalCreateOrderModal() {
       onOpenChange={(open) => !open && close()}
       customers={data.customers}
       products={data.products}
+      vehicles={data.vehicles}
       today={data.today}
       customerOrderCountsToday={{}}
       hideTrigger={true}

@@ -174,7 +174,7 @@ export function OrderDeliveryActionButton({
       <PrintStoreDeliveryButton
         date={date}
         customerId={customerId}
-        label="พิมพ์ใบส่งของ"
+        label="พิมพ์บิลส่งของ"
         iconOnly={iconOnly}
       />
     );
@@ -185,7 +185,7 @@ export function OrderDeliveryActionButton({
       <PrintStoreDeliveryButton
         date={date}
         customerId={customerId}
-        label="พิมพ์ใบส่งของ"
+        label="พิมพ์บิลส่งของ"
         iconOnly={iconOnly}
       />
     );

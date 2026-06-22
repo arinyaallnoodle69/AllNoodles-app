@@ -3,8 +3,9 @@
 import { useEffect, useRef, useState } from "react";
 import { ChevronDown, Search, Store, X } from "lucide-react";
 import { normalizeSearch } from "@/lib/utils/search";
+import { getActiveVehiclesAction } from "@/app/order/actions";
 
-type Customer = { id: string; name: string };
+type Customer = { id: string; name: string; defaultVehicleId?: string | null };
 
 export function StoreFilter({
   customers,
@@ -18,6 +19,17 @@ export function StoreFilter({
   const [search, setSearch] = useState("");
   const containerRef = useRef<HTMLDivElement>(null);
 
+  const [selectedVehicleId, setSelectedVehicleId] = useState<string | "__all__">("__all__");
+  const [vehicles, setVehicles] = useState<{ id: string; name: string }[]>([]);
+  const vehicleTabsContainerRef = useRef<HTMLDivElement>(null);
+  const [vehicleUnderlineStyle, setVehicleUnderlineStyle] = useState<React.CSSProperties | null>(null);
+
+  useEffect(() => {
+    getActiveVehiclesAction().then((data) => {
+      setVehicles(data);
+    });
+  }, []);
+
   // Close on outside click
   useEffect(() => {
     function onMouseDown(e: MouseEvent) {
@@ -29,9 +41,37 @@ export function StoreFilter({
     return () => document.removeEventListener("mousedown", onMouseDown);
   }, []);
 
-  const filtered = customers.filter((c) =>
-    normalizeSearch(c.name).includes(normalizeSearch(search)),
-  );
+  useEffect(() => {
+    const container = vehicleTabsContainerRef.current;
+    if (!container) return;
+    const timer = setTimeout(() => {
+      const activeEl = container.querySelector('[data-active="true"]') as HTMLElement;
+      if (activeEl) {
+        setVehicleUnderlineStyle({
+          left: `${activeEl.offsetLeft}px`,
+          width: `${activeEl.offsetWidth}px`,
+        });
+      } else {
+        setVehicleUnderlineStyle(null);
+      }
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [selectedVehicleId, open]);
+
+  const handleVehicleSelect = (id: string, e: React.MouseEvent<HTMLButtonElement>) => {
+    setSelectedVehicleId(id);
+    setVehicleUnderlineStyle({
+      left: `${e.currentTarget.offsetLeft}px`,
+      width: `${e.currentTarget.offsetWidth}px`,
+    });
+    e.currentTarget.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+  };
+
+  const filtered = customers.filter((c) => {
+    const matchesSearch = normalizeSearch(c.name).includes(normalizeSearch(search));
+    const matchesVehicle = selectedVehicleId === "__all__" || c.defaultVehicleId === selectedVehicleId;
+    return matchesSearch && matchesVehicle;
+  });
 
   function toggle(id: string) {
     setSelected((prev) => {
@@ -121,6 +161,54 @@ export function StoreFilter({
               />
             </div>
           </div>
+
+          {/* Vehicle Tabs */}
+          {vehicles.length > 0 && (
+            <div className="relative border-b border-slate-100 bg-slate-50/50 overflow-hidden">
+              <div
+                ref={vehicleTabsContainerRef}
+                className="flex gap-4 overflow-x-auto px-3 pb-2 pt-2 scrollbar-none relative"
+              >
+                {/* Underline indicator */}
+                <span
+                  className="absolute bottom-0 h-[2.5px] rounded-full bg-[#4A148C] transition-all duration-200 ease-out"
+                  style={{
+                    ...(vehicleUnderlineStyle ?? { left: 0, width: 0 }),
+                    opacity: vehicleUnderlineStyle ? 1 : 0,
+                  }}
+                />
+
+                <button
+                  type="button"
+                  data-active={selectedVehicleId === "__all__"}
+                  onClick={(e) => handleVehicleSelect("__all__", e)}
+                  className={`relative shrink-0 pb-1 text-xs font-black transition ${
+                    selectedVehicleId === "__all__"
+                      ? "text-[#4A148C]"
+                      : "text-slate-400 hover:text-slate-600"
+                  }`}
+                >
+                  ทั้งหมด
+                </button>
+
+                {vehicles.map((v) => (
+                  <button
+                    key={v.id}
+                    type="button"
+                    data-active={selectedVehicleId === v.id}
+                    onClick={(e) => handleVehicleSelect(v.id, e)}
+                    className={`relative shrink-0 pb-1 text-xs font-black transition ${
+                      selectedVehicleId === v.id
+                        ? "text-[#4A148C]"
+                        : "text-slate-400 hover:text-slate-600"
+                    }`}
+                  >
+                    {v.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Select / clear all */}
           <div className="flex items-center gap-3 border-b border-slate-100 px-3 py-2">

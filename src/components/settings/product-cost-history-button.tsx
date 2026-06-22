@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { History, X, TrendingUp, TrendingDown, Minus } from "lucide-react";
 import { fetchProductCostHistory, type ProductCostHistoryRow } from "@/app/dashboard/settings/actions";
 
@@ -75,16 +76,24 @@ export function ProductCostHistoryButton({
   productId,
   productName,
   triggerClassName,
+  id,
 }: {
   iconOnly?: boolean;
   productId: string;
   productName: string;
   triggerClassName?: string;
+  id?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [rows, setRows] = useState<ProductCostHistoryRow[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setMounted(true);
+  }, []);
 
   function handleOpen() {
     setOpen(true);
@@ -105,6 +114,7 @@ export function ProductCostHistoryButton({
     <>
       {/* ปุ่ม ประวัติ */}
       <button
+        id={id}
         type="button"
         onClick={handleOpen}
         aria-label={iconOnly ? `ดูประวัติต้นทุน ${productName}` : undefined}
@@ -115,9 +125,9 @@ export function ProductCostHistoryButton({
       </button>
 
       {/* Modal overlay */}
-      {open && (
+      {open && mounted && createPortal(
         <div
-          className="fixed inset-0 z-50 flex items-end justify-center sm:items-center"
+          className="fixed inset-0 z-[150] flex items-end justify-center sm:items-center"
           style={{ background: "rgba(0,0,0,0.45)" }}
           onClick={(e) => { if (e.target === e.currentTarget) handleClose(); }}
         >
@@ -163,7 +173,8 @@ export function ProductCostHistoryButton({
               ))}
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );

@@ -34,7 +34,7 @@ function toNum(v: unknown): number {
 
 // ─── Customer list for filter ─────────────────────────────────────────────────
 
-export type CustomerOption = { id: string; name: string };
+export type CustomerOption = { id: string; name: string; defaultVehicleId?: string | null };
 export type ProductFilterOption = {
   categoryNames: string[];
   id: string;
@@ -47,16 +47,17 @@ export async function getCustomersForFilter(
   organizationId: string,
 ): Promise<CustomerOption[]> {
   const supabase = getSupabaseAdmin();
-    const { data } = await supabase
+  const { data } = await supabase
     .from("customers")
-    .select("id, name")
+    .select("id, name, default_vehicle_id")
     .eq("organization_id", organizationId)
     .eq("is_active", true)
     .order("name", { ascending: true });
 
-  return ((data ?? []) as { id: string; name: string }[]).map((c) => ({
+  return ((data ?? []) as { id: string; name: string; default_vehicle_id: string | null }[]).map((c) => ({
     id: c.id,
     name: c.name,
+    defaultVehicleId: c.default_vehicle_id,
   }));
 }
 

@@ -2,11 +2,12 @@
 
 import { createContext, useCallback, useContext, useEffect, useState, useTransition } from "react";
 import { fetchOrderModalDataAction } from "@/app/orders/incoming/actions";
-import type { OrderCustomerOption, OrderProductOption } from "@/lib/orders/manage";
+import type { OrderCustomerOption, OrderProductOption, OrderVehicleOption } from "@/lib/orders/manage";
 
 type CreateOrderData = {
   customers: OrderCustomerOption[];
   products: OrderProductOption[];
+  vehicles: OrderVehicleOption[];
   today: string;
 };
 

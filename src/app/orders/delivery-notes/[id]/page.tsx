@@ -6,7 +6,7 @@ import { DeliveryNoteLayout } from "@/components/print/delivery-note-layout";
 import { AutoPrint, PrintButton } from "./print-button";
 import { EditQuantitiesForm } from "./edit-quantities-form";
 
-export const metadata = { title: "ใบส่งของ" };
+export const metadata = { title: "บิลส่งของ" };
 
 type Props = { 
   params: Promise<{ id: string }>;

@@ -84,7 +84,7 @@ export function DeliveredTodaySection({
     <section className="overflow-hidden rounded-[1.5rem] border border-emerald-200 bg-emerald-50 shadow-[0_12px_40px_rgba(15,23,42,0.05)]">
       <div className="flex flex-wrap items-center gap-3 border-b border-emerald-200 bg-emerald-100/60 px-5 py-3.5">
         <span className="text-sm font-bold text-emerald-800">
-          ยืนยันใบส่งของแล้ว
+          ยืนยันบิลส่งของแล้ว
         </span>
         <a
           href={`/delivery?from=${date}&to=${date}`}
@@ -163,7 +163,7 @@ export function DeliveredTodaySection({
                   {activeReferenceRow.customerName}
                 </h3>
                 <p className="mt-1 text-sm text-slate-500">
-                  ใบส่งของ: {activeReferenceRow.deliveryNumbers.join(", ")}
+                  บิลส่งของ: {activeReferenceRow.deliveryNumbers.join(", ")}
                 </p>
               </div>
               <button

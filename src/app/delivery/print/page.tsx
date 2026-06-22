@@ -2,11 +2,13 @@ import { requireAppRole } from "@/lib/auth/authorization";
 import { type DeliveryNotePrintData, sortDeliveryItems } from "@/lib/delivery/print";
 import { sortDeliveryPrintRowsByCustomerOrder } from "@/lib/delivery/print-ordering";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { readFile } from "node:fs/promises";
+import { join } from "node:path";
 import { DeliveryNoteLayout } from "@/components/print/delivery-note-layout";
 import { ShareDeliveryPdfButton } from "@/components/print/share-delivery-pdf-button";
 import { AutoPrint, PrintButton } from "./print-button";
 
-export const metadata = { title: "ปริ้นใบส่งของ" };
+export const metadata = { title: "ปริ้นบิลส่งของ" };
 
 type Props = {
   searchParams: Promise<{
@@ -170,7 +172,7 @@ function buildPrintData(rows: RawDeliveryPrintRow[]): DeliveryNotePrintData[] {
       totalAmount,
       notes,
       organization: {
-        name: base.organizations.name || "All Noodles",
+        name: base.organizations.name || "อรินยา พาณิชย์",
         logoUrl: (organizationMetadata.logo_url as string) || null,
         address: (organizationMetadata.address as string) || null,
         phone: (organizationMetadata.phone as string) || null,
@@ -189,6 +191,14 @@ function buildPrintData(rows: RawDeliveryPrintRow[]): DeliveryNotePrintData[] {
 
 export default async function DeliveryBatchPrintPage({ searchParams }: Props) {
   const session = await requireAppRole("admin");
+  
+  let logoDataUrl = "";
+  try {
+    const fileBuffer = await readFile(join(process.cwd(), "public", "brand", "512x512.png"));
+    logoDataUrl = `data:image/png;base64,${fileBuffer.toString("base64")}`;
+  } catch (e) {
+    console.error("Failed to load logo on server:", e);
+  }
   const params = await searchParams;
   const date = params.date ?? new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Bangkok" });
   const endDate = params.endDate || date;
@@ -272,11 +282,11 @@ export default async function DeliveryBatchPrintPage({ searchParams }: Props) {
 
       {dns.length === 0 ? (
         <div className="no-print flex flex-col items-center gap-3 py-24 text-center">
-          <p className="text-lg font-semibold text-slate-500">ไม่มีใบส่งของในรายการที่เลือก</p>
+          <p className="text-lg font-semibold text-slate-500">ไม่มีบิลส่งของในรายการที่เลือก</p>
           <p className="text-sm text-slate-400">{dateLabel}</p>
         </div>
       ) : (
-        <DeliveryNoteLayout dns={dns} />
+        <DeliveryNoteLayout dns={dns} logoDataUrl={logoDataUrl} />
       )}
     </>
   );

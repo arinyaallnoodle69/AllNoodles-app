@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { startTransition, useCallback, useEffect, useId, useMemo, useRef, useState, useTransition } from "react";
+import { startTransition, useCallback, useEffect, useId, useMemo, useRef, useState, useTransition, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
@@ -27,11 +27,6 @@ import {
   type ProductSubmitActionState,
 } from "@/app/dashboard/settings/actions";
 import {
-  settingsFieldLabelClass,
-  settingsInputClass,
-  settingsSelectClass,
-} from "@/components/settings/settings-ui";
-import {
   type SaleUnitCostMode,
 } from "@/lib/products/sale-unit-cost";
 import type { SettingsProduct, SettingsProductCategory } from "@/lib/settings/admin";
@@ -42,6 +37,7 @@ type ProductFormProps = {
   nextSku: string;
   productList?: SettingsProduct[];
   returnHref: string;
+  onClose?: () => void;
 };
 
 type OrderPreset = "free" | "integer" | "custom";
@@ -95,6 +91,10 @@ const initialProductSubmitActionState: ProductSubmitActionState = {
   message: "",
   status: "idle",
 };
+const productFieldLabelClass = "mb-2 block text-sm font-black text-slate-950";
+const productInputClass =
+  "w-full rounded-lg border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-bold text-slate-950 outline-none transition-all placeholder:font-semibold placeholder:text-slate-500 focus:border-transparent focus:ring-2 focus:ring-[#4A148C]";
+const productSelectClass = `${productInputClass} appearance-none`;
 
 type SaleUnitDraft = {
   baseUnitQuantity: string;
@@ -740,11 +740,32 @@ function ProductFormBody({
     });
   }
 
+  function handleClientSubmit(event: FormEvent<HTMLFormElement>) {
+    const form = event.currentTarget;
+    if (form.checkValidity()) {
+      return;
+    }
+
+    event.preventDefault();
+    setActiveBodyTab("info");
+
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        const invalidField = form.querySelector<HTMLElement>(":invalid");
+        invalidField?.focus({ preventScroll: true });
+        invalidField?.scrollIntoView({ behavior: "smooth", block: "center" });
+        form.reportValidity();
+      });
+    });
+  }
+
   return (
     <>
       <form
         ref={formRef}
         action={handleSubmit}
+        noValidate
+        onSubmit={handleClientSubmit}
         onInputCapture={syncBasicFieldsFromForm}
         className="flex min-h-0 flex-1 flex-col"
       >
@@ -766,9 +787,9 @@ function ProductFormBody({
           <button
             type="button"
             onClick={() => setActiveBodyTab("info")}
-            className={`flex items-center justify-center gap-1.5 border-b-2 py-3.5 text-sm font-semibold transition ${activeBodyTab === "info"
+            className={`flex items-center justify-center gap-1.5 border-b-2 py-3.5 text-sm font-black transition ${activeBodyTab === "info"
                 ? "border-[#4A148C] text-[#4A148C]"
-                : "border-transparent text-slate-500 hover:text-slate-700"
+                : "border-transparent text-slate-800 hover:text-slate-950"
               }`}
           >
             <Package2 className="h-4 w-4" strokeWidth={2.2} />
@@ -777,9 +798,9 @@ function ProductFormBody({
           <button
             type="button"
             onClick={() => setActiveBodyTab("images")}
-            className={`flex items-center justify-center gap-1.5 border-b-2 py-3.5 text-sm font-semibold transition ${activeBodyTab === "images"
+            className={`flex items-center justify-center gap-1.5 border-b-2 py-3.5 text-sm font-black transition ${activeBodyTab === "images"
                 ? "border-[#4A148C] text-[#4A148C]"
-                : "border-transparent text-slate-500 hover:text-slate-700"
+                : "border-transparent text-slate-800 hover:text-slate-950"
               }`}
           >
             <ImagePlus className="h-4 w-4" strokeWidth={2.2} />
@@ -792,32 +813,32 @@ function ProductFormBody({
 
             {/* Section: ข้อมูลสินค้า */}
             <section className="space-y-4">
-              <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400">ข้อมูลสินค้า</p>
+              <p className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-800">ข้อมูลสินค้า</p>
 
               <div>
-                <label className={settingsFieldLabelClass} htmlFor="product-name">ชื่อสินค้า</label>
-                <input id="product-name" name="name" required defaultValue={editingProduct?.name ?? ""} className={settingsInputClass} placeholder="เช่น เส้นบะหมี่ไข่พรีเมียม" />
+                <label className={productFieldLabelClass} htmlFor="product-name">ชื่อสินค้า</label>
+                <input id="product-name" name="name" required defaultValue={editingProduct?.name ?? ""} className={productInputClass} placeholder="เช่น เส้นบะหมี่ไข่พรีเมียม" />
               </div>
 
               <div>
-                <label className={settingsFieldLabelClass} htmlFor="product-sku">รหัสสินค้า</label>
+                <label className={productFieldLabelClass} htmlFor="product-sku">รหัสสินค้า</label>
                 <div className="relative">
-                  <Barcode className="absolute left-3 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-slate-400" strokeWidth={2} />
-                  <input id="product-sku" name="sku" required readOnly={!isEditing} defaultValue={skuValue} className={`${settingsInputClass} pl-10 ${!isEditing ? "bg-slate-50 text-slate-500" : ""}`} placeholder="ANP001" />
+                  <Barcode className="absolute left-3 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-slate-800" strokeWidth={2.3} />
+                  <input id="product-sku" name="sku" required readOnly={!isEditing} defaultValue={skuValue} className={`${productInputClass} pl-10 ${!isEditing ? "bg-slate-50 text-slate-950" : ""}`} placeholder="ANP001" />
                 </div>
-                {!isEditing && <p className="mt-1.5 text-xs text-slate-400">ระบบกำหนดให้อัตโนมัติตามลำดับถัดไป</p>}
+                {!isEditing && <p className="mt-1.5 text-xs font-bold text-slate-800">ระบบกำหนดให้อัตโนมัติตามลำดับถัดไป</p>}
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className={settingsFieldLabelClass} htmlFor="product-cost-price">ราคาต้นทุน</label>
+                  <label className={productFieldLabelClass} htmlFor="product-cost-price">ราคาต้นทุน</label>
                   <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 font-semibold text-slate-400">฿</span>
-                    <input id="product-cost-price" name="costPrice" type="number" min="0" step="0.01" required value={baseCostPrice} onChange={(e) => setBaseCostPrice(e.target.value)} className={`${settingsInputClass} pl-8`} placeholder="0.00" />
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 font-black text-slate-800">฿</span>
+                    <input id="product-cost-price" name="costPrice" type="number" min="0" step="0.01" value={baseCostPrice} onChange={(e) => setBaseCostPrice(e.target.value)} className={`${productInputClass} pl-8`} placeholder="0.00" />
                   </div>
                 </div>
                 <div>
-                  <label className={settingsFieldLabelClass} htmlFor="product-base-unit">หน่วยฐาน</label>
+                  <label className={productFieldLabelClass} htmlFor="product-base-unit">หน่วยฐาน</label>
                   <input
                     id="product-base-unit"
                     name="baseUnit"
@@ -832,36 +853,36 @@ function ProductFormBody({
                         ),
                       );
                     }}
-                    className={settingsInputClass}
+                    className={productInputClass}
                     placeholder="เช่น kg, แพ็ค, ชิ้น"
                   />
                 </div>
               </div>
 
               <div>
-                <label className={settingsFieldLabelClass} htmlFor="product-stock-quantity">สต็อกเริ่มต้น</label>
+                <label className={productFieldLabelClass} htmlFor="product-stock-quantity">สต็อกเริ่มต้น</label>
                 <div className="relative">
-                  <Warehouse className="absolute left-3 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-slate-400" strokeWidth={2} />
-                  <input id="product-stock-quantity" name="stockQuantity" type="number" step="1" required defaultValue={editingProduct?.stockQuantity ?? 0} className={`${settingsInputClass} pl-10`} placeholder="0" />
+                  <Warehouse className="absolute left-3 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-slate-800" strokeWidth={2.3} />
+                  <input id="product-stock-quantity" name="stockQuantity" type="number" step="1" required defaultValue={editingProduct?.stockQuantity ?? 0} className={`${productInputClass} pl-10`} placeholder="0" />
                 </div>
               </div>
               <div className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
                 <div className="space-y-1">
-                  <label className={settingsFieldLabelClass} htmlFor="product-packing-list-name">ชื่อย่อสำหรับใบจัดของ</label>
+                  <label className={productFieldLabelClass} htmlFor="product-packing-list-name">ชื่อย่อสำหรับใบจัดของ</label>
                   <input
                     id="product-packing-list-name"
                     value={packingListName}
                     onChange={(e) => setPackingListName(e.target.value)}
-                    className={settingsInputClass}
+                    className={productInputClass}
                     placeholder="เช่น หมี่มังกรขาว"
                   />
-                  <p className="text-xs text-slate-500">
+                  <p className="text-xs font-bold text-slate-800">
                     ใช้เฉพาะตอนพิมพ์ใบจัดของ หากไม่กรอก ระบบจะใช้ชื่อสินค้าหลักแทน
                   </p>
                 </div>
                 <div className="rounded-xl border border-dashed border-slate-300 bg-white px-4 py-3">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">ตัวอย่างในใบจัดของ</p>
-                  <p className="mt-2 text-sm font-semibold leading-snug text-slate-900">
+                  <p className="text-[11px] font-black uppercase tracking-[0.14em] text-slate-800">ตัวอย่างในใบจัดของ</p>
+                  <p className="mt-2 text-sm font-black leading-snug text-slate-950">
                     {(packingListName || basicFormValues.name || editingProduct?.name || "ชื่อสินค้าจะแสดงตรงนี้").trim()}
                   </p>
                 </div>
@@ -870,7 +891,7 @@ function ProductFormBody({
 
             {/* Section: รายละเอียดสินค้า */}
             <section className="space-y-4">
-              <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400">รายละเอียดสินค้า</p>
+              <p className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-800">รายละเอียดสินค้า</p>
 
               {/* Hidden inputs to pass metadata via FormData */}
               <input type="hidden" name="brand" value={brand} />
@@ -878,25 +899,25 @@ function ProductFormBody({
               <input type="hidden" name="packingListName" value={packingListName} />
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="sm:col-span-1">
-                  <label className={settingsFieldLabelClass} htmlFor="product-brand">แบรนด์</label>
+                  <label className={productFieldLabelClass} htmlFor="product-brand">แบรนด์</label>
                   <input
                     id="product-brand"
                     value={brand}
                     onChange={(e) => setBrand(e.target.value)}
-                    className={settingsInputClass}
+                    className={productInputClass}
                     placeholder="เช่น All Noodles"
                   />
                 </div>
 
                 <div className="sm:col-span-1">
-                  <label className={settingsFieldLabelClass} htmlFor="product-category">หมวดหมู่สินค้า</label>
+                  <label className={productFieldLabelClass} htmlFor="product-category">หมวดหมู่สินค้า</label>
                   <div className="relative">
                     <select
                       id="product-category"
                       name="categoryIds"
                       value={selectedCategoryId}
                       onChange={(e) => setSelectedCategoryId(e.target.value)}
-                      className={`${settingsSelectClass} pr-10`}
+                      className={`${productSelectClass} pr-10`}
                       disabled={categories.length === 0}
                     >
                       <option value="">— ไม่ระบุหมวดหมู่ —</option>
@@ -906,28 +927,28 @@ function ProductFormBody({
                         </option>
                       ))}
                     </select>
-                    <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-slate-400">
+                    <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-slate-800">
                       <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                         <path fillRule="evenodd" d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
                       </svg>
                     </span>
                   </div>
                   {categories.length === 0 && (
-                    <p className="mt-1.5 text-xs text-slate-400">
-                      ยังไม่มีหมวดหมู่ในระบบ กรุณาไปที่แท็บ <span className="font-semibold text-slate-600">เพิ่มหมวดหมู่</span> ก่อน
+                    <p className="mt-1.5 text-xs font-bold text-slate-800">
+                      ยังไม่มีหมวดหมู่ในระบบ กรุณาไปที่แท็บ <span className="font-black text-slate-950">เพิ่มหมวดหมู่</span> ก่อน
                     </p>
                   )}
                 </div>
               </div>
 
               <div>
-                <label className={settingsFieldLabelClass} htmlFor="product-description">รายละเอียด</label>
+                <label className={productFieldLabelClass} htmlFor="product-description">รายละเอียด</label>
                 <textarea
                   id="product-description"
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   rows={3}
-                  className={`${settingsInputClass} resize-none`}
+                  className={`${productInputClass} resize-none`}
                   placeholder="คำอธิบายสินค้า เช่น เส้นบะหมี่ไข่คุณภาพสูง ผลิตจากแป้งสาลีนำเข้า"
                 />
               </div>
@@ -937,8 +958,8 @@ function ProductFormBody({
             <section className="space-y-3">
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400">เงื่อนไขการสั่ง</p>
-                  <p className="mt-1 text-xs text-slate-400">ตั้งค่าจำนวนสั่งซื้อขั้นต่ำและรูปแบบการเพิ่มจำนวนต่อหน่วยขาย</p>
+                  <p className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-800">เงื่อนไขการสั่ง</p>
+                  <p className="mt-1 text-xs font-bold text-slate-800">ตั้งค่าจำนวนสั่งซื้อขั้นต่ำและรูปแบบการเพิ่มจำนวนต่อหน่วยขาย</p>
                 </div>
                 <button type="button" onClick={addSaleUnit} className="hidden items-center gap-1.5 rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 active:scale-[0.97]">
                   <CirclePlus className="h-3.5 w-3.5" strokeWidth={2.2} />
@@ -960,7 +981,7 @@ function ProductFormBody({
                       {/* ── เงื่อนไขสั่ง ── */}
                       <div className="space-y-2.5">
                         <div className="flex items-center justify-between">
-                          <span className="text-xs font-semibold text-slate-500">รูปแบบการสั่ง</span>
+                        <span className="text-xs font-black text-slate-950">รูปแบบการสั่ง</span>
                         </div>
                         <div className="grid grid-cols-3 gap-2">
                           {(
@@ -975,7 +996,7 @@ function ProductFormBody({
                             ] as { value: OrderPreset; label: string; desc: string }[]
                           ).map((opt) => (
                             <button key={opt.value} type="button" onClick={() => setOrderPreset(saleUnit.key, opt.value)} className={`rounded-xl border px-2 py-2.5 text-center transition ${saleUnit.orderPreset === opt.value ? "border-[#4A148C] bg-[#F3E5F5] text-[#4A148C]" : "border-slate-200 text-slate-600 hover:bg-slate-50"}`}>
-                              <p className="text-xs font-semibold leading-tight">{opt.label}</p>
+                              <p className="text-xs font-black leading-tight">{opt.label}</p>
                               <p className="mt-0.5 text-[10px] opacity-60">{opt.desc}</p>
                             </button>
                           ))}
@@ -984,12 +1005,12 @@ function ProductFormBody({
                           <div className="space-y-2 pt-1">
                             <div className="grid grid-cols-2 gap-3">
                               <div>
-                                <label className={settingsFieldLabelClass} htmlFor={`su-min-${uid}`}>จำนวนขั้นต่ำ</label>
-                                <input id={`su-min-${uid}`} type="number" min="1" step="0.001" value={saleUnit.minOrderQty} onChange={(e) => updateSaleUnit(saleUnit.key, "minOrderQty", e.target.value)} className={settingsInputClass} placeholder="1" />
+                                <label className={productFieldLabelClass} htmlFor={`su-min-${uid}`}>จำนวนขั้นต่ำ</label>
+                                <input id={`su-min-${uid}`} type="number" min="1" step="0.001" value={saleUnit.minOrderQty} onChange={(e) => updateSaleUnit(saleUnit.key, "minOrderQty", e.target.value)} className={productInputClass} placeholder="1" />
                               </div>
                               <div>
-                                <label className={settingsFieldLabelClass} htmlFor={`su-step-${uid}`}>เพิ่ม/ลดทีละ</label>
-                                <input id={`su-step-${uid}`} type="number" min="0.001" step="0.001" value={saleUnit.stepOrderQty} onChange={(e) => updateSaleUnit(saleUnit.key, "stepOrderQty", e.target.value)} className={settingsInputClass} placeholder="1" />
+                                <label className={productFieldLabelClass} htmlFor={`su-step-${uid}`}>เพิ่ม/ลดทีละ</label>
+                                <input id={`su-step-${uid}`} type="number" min="0.001" step="0.001" value={saleUnit.stepOrderQty} onChange={(e) => updateSaleUnit(saleUnit.key, "stepOrderQty", e.target.value)} className={productInputClass} placeholder="1" />
                               </div>
                             </div>
                             {(() => {
@@ -999,8 +1020,8 @@ function ProductFormBody({
                                 const examples = [min, min + step, min + step * 2, min + step * 3].map((v) => (Number.isInteger(v) ? v : v.toFixed(3).replace(/\.?0+$/, ""))).join(", ");
                                 return (
                                   <div className="space-y-1">
-                                    <p className="text-xs text-slate-400">ตัวอย่าง: {examples}...</p>
-                                    <p className="text-xs text-slate-400">
+                                    <p className="text-xs font-bold text-slate-800">ตัวอย่าง: {examples}...</p>
+                                    <p className="text-xs font-bold text-slate-800">
                                       ถ้าต้องการสั่งแบบ 5, 10, 15 ให้ใส่ขั้นต่ำ 5 และเพิ่ม/ลดทีละ 5
                                     </p>
                                   </div>
@@ -1046,7 +1067,7 @@ function ProductFormBody({
             {isEditing ? (
               <div className="space-y-4">
                 <div>
-                  <label className={settingsFieldLabelClass}>รูปสินค้าปัจจุบัน</label>
+                  <label className={productFieldLabelClass}>รูปสินค้าปัจจุบัน</label>
                   <div className="relative flex aspect-square items-center justify-center overflow-hidden rounded-2xl border border-slate-200 bg-slate-50">
                     {galleryItems.length > 0 ? (
                       <Image
@@ -1063,14 +1084,14 @@ function ProductFormBody({
                 </div>
 
                 <div>
-                  <label className={settingsFieldLabelClass}>เปลี่ยนรูปสินค้า</label>
+                  <label className={productFieldLabelClass}>เปลี่ยนรูปสินค้า</label>
                   <div className="grid gap-3 sm:grid-cols-2">
                     <label className="group relative flex min-h-44 cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50 p-6 text-center transition hover:border-[#4A148C]">
                       <div className="mb-4 rounded-full bg-white p-4 shadow-sm transition-transform group-hover:scale-105">
                         <ImagePlus className="h-7 w-7 text-[#4A148C]" strokeWidth={2.2} />
                       </div>
-                      <p className="text-base font-semibold text-slate-900">เพิ่มรูปจากเครื่อง</p>
-                      <p className="mt-1 text-sm text-slate-500">ได้สูงสุด {MAX_PRODUCT_IMAGES} รูปต่อสินค้า</p>
+                      <p className="text-base font-black text-slate-950">เพิ่มรูปจากเครื่อง</p>
+                      <p className="mt-1 text-sm font-bold text-slate-800">ได้สูงสุด {MAX_PRODUCT_IMAGES} รูปต่อสินค้า</p>
                       <input
                         ref={filePickerRef}
                         type="file"
@@ -1090,8 +1111,8 @@ function ProductFormBody({
                       <div className="mb-4 rounded-full bg-white p-4 shadow-sm transition-transform group-hover:scale-105">
                         <Camera className="h-7 w-7 text-[#4A148C]" strokeWidth={2.2} />
                       </div>
-                      <p className="text-base font-semibold text-slate-900">ถ่ายรูปตอนนี้</p>
-                      <p className="mt-1 text-sm text-slate-500">
+                      <p className="text-base font-black text-slate-950">ถ่ายรูปตอนนี้</p>
+                      <p className="mt-1 text-sm font-bold text-slate-800">
                         {remainingImageSlots > 0
                           ? `เพิ่มได้อีก ${remainingImageSlots} รูป`
                           : `ครบ ${MAX_PRODUCT_IMAGES} รูปแล้ว`}
@@ -1139,7 +1160,7 @@ function ProductFormBody({
                               type="button"
                               onClick={() => setPrimaryImage(activeIndex)}
                               disabled={activeIndex === keptExistingUrls.length}
-                              className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                              className="inline-flex items-center gap-2 rounded-xl border border-slate-300 px-3 py-2 text-sm font-black text-slate-950 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
                             >
                               <BadgeCheck className="h-4 w-4 text-[#4A148C]" strokeWidth={2.2} />
                               ตั้งเป็นรูปหลัก
@@ -1148,7 +1169,7 @@ function ProductFormBody({
                               type="button"
                               onClick={() => moveImage(activeIndex, "left")}
                               disabled={activeIndex <= keptExistingUrls.length}
-                              className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                              className="inline-flex items-center gap-2 rounded-xl border border-slate-300 px-3 py-2 text-sm font-black text-slate-950 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
                             >
                               <ArrowLeft className="h-4 w-4" strokeWidth={2.2} />
                               เลื่อนไปซ้าย
@@ -1157,7 +1178,7 @@ function ProductFormBody({
                               type="button"
                               onClick={() => moveImage(activeIndex, "right")}
                               disabled={activeIndex >= galleryItems.length - 1}
-                              className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                              className="inline-flex items-center gap-2 rounded-xl border border-slate-300 px-3 py-2 text-sm font-black text-slate-950 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
                             >
                               <ArrowRight className="h-4 w-4" strokeWidth={2.2} />
                               เลื่อนไปขวา
@@ -1167,19 +1188,19 @@ function ProductFormBody({
                         <button
                           type="button"
                           onClick={() => removeGalleryItem(activeIndex)}
-                          className="inline-flex items-center gap-2 rounded-xl border border-rose-200 px-3 py-2 text-sm font-semibold text-rose-700 transition hover:bg-rose-50"
+                          className="inline-flex items-center gap-2 rounded-xl border border-rose-300 px-3 py-2 text-sm font-black text-rose-800 transition hover:bg-rose-50"
                         >
                           <Trash2 className="h-4 w-4" strokeWidth={2.2} />
                           ลบรูปนี้
                         </button>
                       </div>
-                      <p className="mt-3 text-xs leading-5 text-slate-500">
+                      <p className="mt-3 text-xs font-bold leading-5 text-slate-800">
                         รูปแรกในรายการจะเป็นรูปหลัก สามารถเพิ่มรูปใหม่ต่อท้ายรูปเดิมได้
                       </p>
                     </div>
                   </div>
                 ) : (
-                  <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-5 text-sm leading-6 text-slate-500">
+                  <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-5 text-sm font-bold leading-6 text-slate-800">
                     ยังไม่ได้เลือกรูปใหม่ หากกดบันทึกโดยไม่เลือก ระบบจะคงรูปสินค้าเดิมไว้
                   </div>
                 )}
@@ -1187,14 +1208,14 @@ function ProductFormBody({
             ) : (
               <>
                 <div>
-                  <label className={settingsFieldLabelClass}>รูปสินค้า</label>
+                  <label className={productFieldLabelClass}>รูปสินค้า</label>
                   <div className="grid gap-3 sm:grid-cols-2">
                     <label className="group relative flex min-h-52 cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50 p-6 text-center transition hover:border-[#4A148C]">
                       <div className="mb-4 rounded-full bg-white p-4 shadow-sm transition-transform group-hover:scale-105">
                         <ImagePlus className="h-7 w-7 text-[#4A148C]" strokeWidth={2.2} />
                       </div>
-                      <p className="text-base font-semibold text-slate-900">เพิ่มรูปจากเครื่อง</p>
-                      <p className="mt-1 text-sm text-slate-500">ได้สูงสุด {MAX_PRODUCT_IMAGES} รูปต่อสินค้า</p>
+                      <p className="text-base font-black text-slate-950">เพิ่มรูปจากเครื่อง</p>
+                      <p className="mt-1 text-sm font-bold text-slate-800">ได้สูงสุด {MAX_PRODUCT_IMAGES} รูปต่อสินค้า</p>
                       <input
                         ref={filePickerRef}
                         type="file"
@@ -1214,8 +1235,8 @@ function ProductFormBody({
                       <div className="mb-4 rounded-full bg-white p-4 shadow-sm transition-transform group-hover:scale-105">
                         <Camera className="h-7 w-7 text-[#4A148C]" strokeWidth={2.2} />
                       </div>
-                      <p className="text-base font-semibold text-slate-900">ถ่ายรูปตอนนี้</p>
-                      <p className="mt-1 text-sm text-slate-500">
+                      <p className="text-base font-black text-slate-950">ถ่ายรูปตอนนี้</p>
+                      <p className="mt-1 text-sm font-bold text-slate-800">
                         {remainingImageSlots > 0
                           ? `เพิ่มได้อีก ${remainingImageSlots} รูป`
                           : `ครบ ${MAX_PRODUCT_IMAGES} รูปแล้ว`}
@@ -1264,7 +1285,7 @@ function ProductFormBody({
                           type="button"
                           onClick={() => setPrimaryImage(activeIndex)}
                           disabled={activeIndex === 0}
-                          className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                          className="inline-flex items-center gap-2 rounded-xl border border-slate-300 px-3 py-2 text-sm font-black text-slate-950 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
                         >
                           <BadgeCheck className="h-4 w-4 text-[#4A148C]" strokeWidth={2.2} />
                           ตั้งเป็นรูปหลัก
@@ -1273,7 +1294,7 @@ function ProductFormBody({
                           type="button"
                           onClick={() => moveImage(activeIndex, "left")}
                           disabled={activeIndex === 0}
-                          className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                          className="inline-flex items-center gap-2 rounded-xl border border-slate-300 px-3 py-2 text-sm font-black text-slate-950 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
                         >
                           <ArrowLeft className="h-4 w-4" strokeWidth={2.2} />
                           เลื่อนไปซ้าย
@@ -1282,7 +1303,7 @@ function ProductFormBody({
                           type="button"
                           onClick={() => moveImage(activeIndex, "right")}
                           disabled={activeIndex === previews.length - 1}
-                          className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                          className="inline-flex items-center gap-2 rounded-xl border border-slate-300 px-3 py-2 text-sm font-black text-slate-950 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
                         >
                           <ArrowRight className="h-4 w-4" strokeWidth={2.2} />
                           เลื่อนไปขวา
@@ -1290,19 +1311,19 @@ function ProductFormBody({
                         <button
                           type="button"
                           onClick={() => removeGalleryItem(activeIndex)}
-                          className="inline-flex items-center gap-2 rounded-xl border border-rose-200 px-3 py-2 text-sm font-semibold text-rose-700 transition hover:bg-rose-50"
+                          className="inline-flex items-center gap-2 rounded-xl border border-rose-300 px-3 py-2 text-sm font-black text-rose-800 transition hover:bg-rose-50"
                         >
                           <Trash2 className="h-4 w-4" strokeWidth={2.2} />
                           ลบรูปนี้
                         </button>
                       </div>
-                      <p className="mt-3 text-xs leading-5 text-slate-500">
+                      <p className="mt-3 text-xs font-bold leading-5 text-slate-800">
                         รูปแรกจะเป็นรูปหลักของสินค้า และสามารถเพิ่มได้สูงสุด {MAX_PRODUCT_IMAGES} รูป
                       </p>
                     </div>
                   </div>
                 ) : (
-                  <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-5 text-sm leading-6 text-slate-500">
+                  <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-5 text-sm font-bold leading-6 text-slate-800">
                     ยังไม่ได้เลือกรูปสินค้า หากไม่มีรูป ระบบยังสามารถบันทึกรายการสินค้าได้ตามปกติ
                   </div>
                 )}
@@ -1322,14 +1343,14 @@ function ProductFormBody({
             type="button"
             onClick={onClose}
             disabled={isPending}
-            className="rounded-xl border border-slate-200 px-4 py-3 text-sm font-medium text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-xl border border-slate-300 px-4 py-3 text-sm font-black text-slate-950 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
           >
             ยกเลิก
           </button>
           <button
             type="submit"
             disabled={isSubmitDisabled}
-            className="action-touch-safe inline-flex items-center gap-2 rounded-xl bg-[#4A148C] px-5 py-3 text-sm font-medium text-white shadow-[0_12px_30px_rgba(142, 36, 170,0.22)] transition hover:bg-[#4A148C] disabled:cursor-not-allowed disabled:opacity-70"
+            className="action-touch-safe inline-flex items-center gap-2 rounded-xl bg-[#4A148C] px-5 py-3 text-sm font-black text-white shadow-[0_12px_30px_rgba(142, 36, 170,0.22)] transition hover:bg-[#4A148C] disabled:cursor-not-allowed disabled:opacity-70"
           >
             {isPending ? (
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -1353,7 +1374,7 @@ function ProductFormBody({
                 <p className="text-sm font-bold text-[#4A148C]">
                   {isEditing ? "แก้ไขสินค้าสำเร็จแล้ว" : "เพิ่มสินค้าสำเร็จแล้ว"}
                 </p>
-                <p className="text-xs text-slate-500">
+                <p className="text-xs font-bold text-slate-800">
                   {isEditing ? "บันทึกการเปลี่ยนแปลงเรียบร้อย" : "กำลังปิดหน้าต่าง..."}
                 </p>
               </div>
@@ -1457,12 +1478,12 @@ export function ProductForm({
   nextSku,
   productList,
   returnHref,
+  onClose,
 }: ProductFormProps) {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
   const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
   const initialIndex = productList
     ? Math.max(0, productList.findIndex((p) => p.id === editingProduct?.id))
     : 0;
@@ -1526,11 +1547,13 @@ export function ProductForm({
       clearTimeout(closeTimerRef.current);
     }
     closeTimerRef.current = setTimeout(() => {
+      onClose?.();
       router.replace(returnHref, { scroll: false });
     }, 380);
   }
 
   function handleSubmitSuccess() {
+    onClose?.();
     router.replace(returnHref, { scroll: false });
     router.refresh();
   }
@@ -1557,11 +1580,11 @@ export function ProductForm({
             ) : null}
 
             <div className="flex-1">
-              <p className="text-xs font-medium uppercase tracking-[0.18em] text-slate-400">
+              <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-800">
                 {isEditing ? "แก้ไขสินค้า" : "เพิ่มสินค้า"}
               </p>
               {hasNav ? (
-                <p className="text-xs text-slate-400">{currentIndex + 1} / {productList.length}</p>
+                <p className="text-xs font-bold text-slate-800">{currentIndex + 1} / {productList.length}</p>
               ) : null}
             </div>
 
@@ -1595,12 +1618,12 @@ export function ProductForm({
             ) : (
               <CirclePlus className="h-5 w-5 shrink-0 text-[#4A148C]" strokeWidth={2.2} />
             )}
-            <h3 className="text-xl font-semibold leading-snug tracking-[-0.02em] text-slate-950">
+            <h3 className="text-xl font-black leading-snug tracking-[-0.02em] text-slate-950">
               {isEditing ? (currentProduct?.name ?? "แก้ไขข้อมูลสินค้า") : "รายการสินค้าใหม่"}
             </h3>
           </div>
           {!isEditing ? (
-            <p className="mt-1 text-xs leading-5 text-slate-500">
+            <p className="mt-1 text-xs font-bold leading-5 text-slate-800">
               สร้างสินค้าใหม่พร้อมรูปภาพและข้อมูลสต็อกเริ่มต้น
             </p>
           ) : null}

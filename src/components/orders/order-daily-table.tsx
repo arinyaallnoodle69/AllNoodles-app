@@ -381,7 +381,7 @@ export function OrderDailyTable({ data, date, expanded, q, deliveredToday }: Pro
           </h2>
           <p className="mx-auto mt-2 max-w-xl text-sm leading-7 text-slate-500">
             {stats.activeStoreCount > 0 
-              ? "ออเดอร์ทั้งหมดของวันนี้ได้รับการสร้างใบส่งของเรียบร้อยแล้ว"
+              ? "ออเดอร์ทั้งหมดของวันนี้ได้รับการสร้างบิลส่งของเรียบร้อยแล้ว"
               : "เมื่อลูกค้าสั่งออเดอร์ผ่าน LINE รายการจะถูกรวมมาแสดงที่หน้านี้เป็นรายร้านต่อวัน"}
           </p>
         </section>

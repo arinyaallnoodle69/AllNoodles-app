@@ -30,7 +30,7 @@ export function PrintButton() {
       disabled={isPrinting}
       className="rounded-xl bg-[#4A148C] px-5 py-2.5 text-sm font-semibold text-white shadow hover:bg-[#4A148C] disabled:cursor-not-allowed disabled:opacity-70"
     >
-      {isPrinting ? "กำลังพิมพ์..." : "พิมพ์ใบส่งของ"}
+      {isPrinting ? "กำลังพิมพ์..." : "พิมพ์บิลส่งของ"}
     </button>
   );
 }

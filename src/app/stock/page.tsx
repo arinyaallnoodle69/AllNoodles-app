@@ -1,4 +1,4 @@
-import { requireAppRole } from "@/lib/auth/authorization";
+import { requireAnyRole, requireAppRole } from "@/lib/auth/authorization";
 import { getStockDashboardData, getStockHistoryData, type StockHistoryRow } from "@/lib/stock/admin";
 import { getStockIssueHistoryData, type StockIssueRow } from "@/lib/stock/issues";
 import { getActiveWarehouses } from "@/lib/warehouses";
@@ -15,7 +15,7 @@ type SearchParams = Promise<{
 }>;
 
 export default async function StockPage({ searchParams }: { searchParams: SearchParams }) {
-  const session = await requireAppRole("admin");
+  const session = await requireAnyRole(["admin", "member"]);
   const params = await searchParams;
   const tab = params.tab || "stock";
   const warehouseId = params.warehouse || "all";
