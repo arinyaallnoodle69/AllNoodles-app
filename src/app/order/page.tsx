@@ -4,6 +4,7 @@ import OrderClient from "./order-client";
 import { PageLoader } from "@/components/page-loader";
 import { parseOrderWindowSettings } from "@/lib/order-window";
 import { getLinkedCustomerByLineUserId } from "@/lib/orders/line-pending";
+import { sortProductsByCategory } from "@/lib/products/sort-by-category";
 import { getSiteUrl } from "@/lib/site-url";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { getOrderCustomerSession } from "@/lib/auth/order-session";
@@ -16,6 +17,7 @@ type ProductSaleUnitRow = Database["public"]["Tables"]["product_sale_units"]["Ro
 type ProductCategoryRow = {
   id: string;
   name: string;
+  sort_order: number;
 };
 type ProductCategoryItemRow = {
   product_category_id: string;
@@ -83,7 +85,7 @@ const getCatalogData = cache(async () => {
   const [categoriesResult, categoryItemsResult, orgResult] = organizationId
     ? await Promise.all([
         supabaseAdmin.from("product_categories")
-          .select("id, name")
+          .select("id, name, sort_order")
           .eq("organization_id", organizationId)
           .eq("is_active", true)
           .order("sort_order", { ascending: true }),
@@ -101,31 +103,18 @@ const getCatalogData = cache(async () => {
         { data: [] as ProductCategoryItemRow[] },
         { data: null },
       ];
-  const categoryNameById = new Map<string, string>(
-    (((categoriesResult.data ?? []) as ProductCategoryRow[]) ?? []).map((category) => [
-      category.id,
-      category.name,
-    ]),
-  );
-  const categoryIdsByProductId = new Map<string, string[]>();
-  const categoryNamesByProductId = new Map<string, string[]>();
+  const categories = ((categoriesResult.data ?? []) as ProductCategoryRow[]) ?? [];
+  const categoryItemIdsByProductId = new Map<string, Set<string>>();
 
   for (const item of ((categoryItemsResult.data ?? []) as ProductCategoryItemRow[]) ?? []) {
-    const currentIds = categoryIdsByProductId.get(item.product_id) ?? [];
-    currentIds.push(item.product_category_id);
-    categoryIdsByProductId.set(item.product_id, currentIds);
-
-    const categoryName = categoryNameById.get(item.product_category_id);
-    if (!categoryName) {
-      continue;
-    }
-
-    const currentNames = categoryNamesByProductId.get(item.product_id) ?? [];
-    currentNames.push(categoryName);
-    categoryNamesByProductId.set(item.product_id, currentNames);
+    const current = categoryItemIdsByProductId.get(item.product_id) ?? new Set<string>();
+    current.add(item.product_category_id);
+    categoryItemIdsByProductId.set(item.product_id, current);
   }
 
   const catalogProducts: CatalogProduct[] = rawProducts.map((product) => {
+    const productCategoryIds = categoryItemIdsByProductId.get(product.id) ?? new Set<string>();
+    const productCategories = categories.filter((category) => productCategoryIds.has(category.id));
     const activeSaleUnits =
       (product.product_sale_units?.filter((saleUnit) => saleUnit.is_active) ?? []).map((saleUnit) => ({
         ...saleUnit,
@@ -167,8 +156,8 @@ const getCatalogData = cache(async () => {
 
     return {
       ...product,
-      categoryIds: categoryIdsByProductId.get(product.id) ?? [],
-      categoryNames: categoryNamesByProductId.get(product.id) ?? [],
+      categoryIds: productCategories.map((category) => category.id),
+      categoryNames: productCategories.map((category) => category.name),
       id: product.id,
       product_id: product.id,
       product_images: [...(product.product_images ?? [])].sort(
@@ -193,7 +182,10 @@ const getCatalogData = cache(async () => {
 
   return {
     allowOrderAfterCutoff: orderWindowSettings.allowOrderAfterCutoff,
-    catalogProducts,
+    catalogProducts: sortProductsByCategory(
+      catalogProducts,
+      categories.map((category) => ({ id: category.id, sortOrder: Number(category.sort_order) })),
+    ),
     orderCloseTime: orderWindowSettings.closeTime,
     orderOpenTime: orderWindowSettings.openTime,
     organizationId,

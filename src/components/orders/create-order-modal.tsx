@@ -510,6 +510,212 @@ const ProductRow = React.memo(({
 });
 ProductRow.displayName = "ProductRow";
 
+const DesktopProductTableRow = React.memo(({
+  isSelected,
+  noCustomer,
+  onSelect,
+  onUpdateSelection,
+  priceMap,
+  product,
+  selectedWarehouseId,
+  selection,
+}: {
+  isSelected: boolean;
+  noCustomer: boolean;
+  onSelect: (productId: string, selected: boolean) => void;
+  onUpdateSelection: (
+    productId: string,
+    field: ProductSelectionField,
+    value: ProductSelection[ProductSelectionField],
+  ) => void;
+  priceMap: Record<string, number>;
+  product: OrderProductOption;
+  selectedWarehouseId: string | null;
+  selection?: ProductSelection;
+}) => {
+  const role = useClientRole();
+  const units = getUnits(product);
+  const selectedUnit =
+    units.find((unit) => unit.id === selection?.unitId) ??
+    units.find((unit) => unit.isDefault) ??
+    units[0] ??
+    null;
+  const stockQuantity = getDisplayStockQuantity(product, selectedWarehouseId);
+  const currentPrice = selection
+    ? Number(selection.unitPrice)
+    : selectedUnit
+      ? getUnitPrice(product.id, selectedUnit.id, priceMap)
+      : 0;
+
+  function selectRow() {
+    onSelect(product.id, !isSelected);
+  }
+
+  function stopRowSelection(event: React.SyntheticEvent) {
+    event.stopPropagation();
+  }
+
+  function changeUnit(unitId: string | null) {
+    const unit = units.find((item) => item.id === unitId) ?? selectedUnit;
+    if (!unit) return;
+    const unitPrice = getUnitPrice(product.id, unit.id, priceMap);
+    onUpdateSelection(product.id, "unitId", unit.id);
+    onUpdateSelection(product.id, "quantity", String(unit.minOrderQty));
+    onUpdateSelection(product.id, "unitPrice", unitPrice > 0 ? String(unitPrice) : "");
+    onUpdateSelection(product.id, "isPriceLocked", unitPrice > 0);
+  }
+
+  function stepQuantity(direction: -1 | 1) {
+    if (!selection || !selectedUnit) return;
+    const current = Number(selection.quantity);
+    onUpdateSelection(
+      product.id,
+      "quantity",
+      String(
+        stepByRule(
+          Number.isFinite(current) ? current : selectedUnit.minOrderQty,
+          direction,
+          selectedUnit.minOrderQty,
+          selectedUnit.stepOrderQty,
+        ),
+      ),
+    );
+  }
+
+  return (
+    <tr
+      onClick={selectRow}
+      className={`cursor-pointer border-b border-slate-200 transition-colors ${
+        isSelected ? "bg-[#F3E5F5]/75" : "bg-white hover:bg-[#F3E5F5]/25"
+      }`}
+    >
+      <td className="w-12 px-3 py-3 text-center">
+        <span
+          className={`inline-flex h-5 w-5 items-center justify-center border-2 ${
+            isSelected ? "border-[#4A148C] bg-[#4A148C]" : "border-slate-300 bg-white"
+          }`}
+        >
+          {isSelected ? <Check className="h-3.5 w-3.5 text-white" strokeWidth={4} /> : null}
+        </span>
+      </td>
+      <td className="w-28 px-3 py-3 font-mono text-sm font-black text-[#4A148C]">
+        {product.sku}
+      </td>
+      <td className="min-w-[18rem] px-3 py-3">
+        <div className="flex items-center gap-3">
+          <div className="relative h-12 w-12 shrink-0 overflow-hidden bg-slate-50">
+            {product.imageUrl ? (
+              <Image
+                src={product.imageUrl}
+                alt={product.name}
+                fill
+                sizes="48px"
+                className="object-contain"
+              />
+            ) : (
+              <div className="flex h-full w-full items-center justify-center">
+                <Package2 className="h-6 w-6 text-slate-300" strokeWidth={1.7} />
+              </div>
+            )}
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-black text-slate-950">{product.name}</p>
+            <div className="mt-1 flex items-center gap-2 text-xs font-bold text-slate-500">
+              {product.brand ? <span>{product.brand}</span> : null}
+              {units.length > 1 && isSelected ? (
+                <select
+                  value={selectedUnit?.id ?? ""}
+                  onClick={stopRowSelection}
+                  onChange={(event) => changeUnit(event.target.value || null)}
+                  className="h-7 max-w-36 border border-[#EA80FC]/40 bg-white px-2 font-bold text-[#4A148C] outline-none"
+                >
+                  {units.map((unit) => (
+                    <option key={unit.id ?? "__base__"} value={unit.id ?? ""}>
+                      {unit.label}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <span>{selectedUnit?.label ?? product.unit}</span>
+              )}
+            </div>
+          </div>
+        </div>
+      </td>
+      <td className="w-32 px-3 py-3 text-center">
+        <span
+          className={`text-sm font-black ${
+            stockQuantity < 0 ? "text-red-600" : "text-slate-950"
+          }`}
+        >
+          {stockQuantity.toLocaleString("th-TH")} {product.unit}
+        </span>
+      </td>
+      <td className="w-44 px-3 py-3" onClick={stopRowSelection}>
+        {isSelected && selection && selectedUnit ? (
+          <div className="flex items-center justify-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => stepQuantity(-1)}
+              className="flex h-8 w-8 items-center justify-center border border-[#EA80FC]/40 bg-white text-[#4A148C]"
+              aria-label={`ลดจำนวน ${product.name}`}
+            >
+              <Minus className="h-4 w-4" strokeWidth={2.8} />
+            </button>
+            <input
+              type="number"
+              min={selectedUnit.minOrderQty}
+              step={getEffectiveStep(selectedUnit.stepOrderQty)}
+              value={selection.quantity}
+              onChange={(event) => onUpdateSelection(product.id, "quantity", event.target.value)}
+              className="h-8 w-20 border border-[#EA80FC]/40 bg-white px-2 text-center text-sm font-black text-slate-950 outline-none focus:border-[#4A148C]"
+            />
+            <button
+              type="button"
+              onClick={() => stepQuantity(1)}
+              className="flex h-8 w-8 items-center justify-center border border-[#EA80FC]/40 bg-white text-[#4A148C]"
+              aria-label={`เพิ่มจำนวน ${product.name}`}
+            >
+              <Plus className="h-4 w-4" strokeWidth={2.8} />
+            </button>
+          </div>
+        ) : (
+          <p className="text-center text-sm font-bold text-slate-400">-</p>
+        )}
+      </td>
+      <td className="w-44 px-3 py-3" onClick={stopRowSelection}>
+        {isSelected && selection && role !== "member" ? (
+          <div className="relative">
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              value={selection.unitPrice === "0" ? "" : selection.unitPrice}
+              placeholder="ไม่มีราคา"
+              onChange={(event) =>
+                onUpdateSelection(product.id, "unitPrice", event.target.value)
+              }
+              className="h-9 w-full border border-[#EA80FC]/40 bg-white px-3 pr-10 text-right text-sm font-black text-slate-950 outline-none placeholder:text-red-500 focus:border-[#4A148C]"
+            />
+            <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs font-black text-slate-500">
+              บาท
+            </span>
+          </div>
+        ) : currentPrice > 0 ? (
+          <p className="text-right text-sm font-black text-slate-950">
+            {formatTHB(currentPrice)} บาท
+          </p>
+        ) : noCustomer ? (
+          <p className="text-center text-xs font-black text-slate-400">กรุณาเลือกร้าน</p>
+        ) : (
+          <p className="text-center text-xs font-black text-red-600">ไม่มีราคา</p>
+        )}
+      </td>
+    </tr>
+  );
+});
+DesktopProductTableRow.displayName = "DesktopProductTableRow";
+
 function ProductSelectModal({
   cart,
   noCustomer,
@@ -526,6 +732,8 @@ function ProductSelectModal({
   const [query, setQuery] = useState("");
   const deferredQuery = React.useDeferredValue(query);
   const [selectedCategoryId, setSelectedCategoryId] = useState("__all__");
+  const [selectedBrand, setSelectedBrand] = useState("__all__");
+  const [expandedCategoryId, setExpandedCategoryId] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [selections, setSelections] = useState<Record<string, ProductSelection>>({});
 
@@ -556,12 +764,19 @@ function ProductSelectModal({
 
   const handleCategorySelect = (id: string, e: React.MouseEvent<HTMLButtonElement>) => {
     setSelectedCategoryId(id);
+    setSelectedBrand("__all__");
     setCatUnderlineStyle({
       left: `${e.currentTarget.offsetLeft}px`,
       width: `${e.currentTarget.offsetWidth}px`,
     });
     e.currentTarget.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
   };
+
+  function handleDesktopCategorySelect(categoryId: string) {
+    setSelectedCategoryId(categoryId);
+    setSelectedBrand("__all__");
+    setExpandedCategoryId((current) => (current === categoryId ? null : categoryId));
+  }
   
   // Sync selected products' prices when customer prices load in the background
   useEffect(() => {
@@ -616,21 +831,42 @@ function ProductSelectModal({
     return Array.from(seen.entries()).map(([id, name]) => ({ id, name }));
   }, [products]);
 
+  const brandsByCategory = useMemo(() => {
+    const result = new Map<string, string[]>();
+
+    for (const category of categoryOptions) {
+      const brands = new Set<string>();
+      for (const product of products) {
+        if (!product.categoryIds.includes(category.id)) continue;
+        const brand = product.brand.trim();
+        if (brand) brands.add(brand);
+      }
+      result.set(
+        category.id,
+        [...brands].sort((left, right) => left.localeCompare(right, "th")),
+      );
+    }
+
+    return result;
+  }, [categoryOptions, products]);
 
   const filteredProducts = useMemo(() => {
     const normalized = normalizeSearch(deferredQuery);
     const result = products.filter((product) => {
       const matchesCategory = selectedCategoryId === "__all__" || product.categoryIds.includes(selectedCategoryId);
       if (!matchesCategory) return false;
+      const matchesBrand = selectedBrand === "__all__" || product.brand === selectedBrand;
+      if (!matchesBrand) return false;
       if (!normalized) return true;
       return (
         normalizeSearch(product.name).includes(normalized) ||
         normalizeSearch(product.sku).includes(normalized) ||
+        normalizeSearch(product.brand).includes(normalized) ||
         product.categoryNames.some(n => normalizeSearch(n).includes(normalized))
       );
     });
     return result;
-  }, [products, deferredQuery, selectedCategoryId]);
+  }, [products, deferredQuery, selectedBrand, selectedCategoryId]);
 
   const handleSelectProduct = useCallback((productId: string, selected: boolean) => {
     setSelectedIds((prev) => {
@@ -752,6 +988,8 @@ function ProductSelectModal({
       setSelections({});
       setSaving(false);
       setSelectedCategoryId("__all__");
+      setSelectedBrand("__all__");
+      setExpandedCategoryId(null);
       setCostWarningInfo(null);
     }
   }, [open]);
@@ -843,7 +1081,7 @@ function ProductSelectModal({
           </div>
 
           {/* Category filter tabs (Lineman style) */}
-          <div className="border-t border-[#EA80FC]/15 px-4 sm:px-8 bg-white">
+          <div className="border-t border-[#EA80FC]/15 bg-white px-4 sm:px-8 lg:hidden">
             <div 
               ref={catTabsContainerRef}
               className="relative flex gap-6 overflow-x-auto pt-3.5 pb-0.5 no-scrollbar scroll-smooth"
@@ -888,8 +1126,151 @@ function ProductSelectModal({
           </div>
         </div>
 
-        {/* Content Area - Full Width List */}
-        <div className="flex-1 overflow-y-auto bg-white">
+        {/* Desktop category navigation and product table */}
+        <div className="hidden min-h-0 flex-1 grid-cols-[20%_80%] bg-white lg:grid">
+          <aside className="min-h-0 overflow-y-auto border-r border-[#EA80FC]/25 bg-[#fbf8ff]">
+            <div className="sticky top-0 z-10 border-b border-[#EA80FC]/25 bg-white px-4 py-3">
+              <p className="text-xs font-black uppercase tracking-[0.16em] text-[#4A148C]">
+                หมวดหมู่สินค้า
+              </p>
+              <p className="mt-1 text-xs font-bold text-slate-600">
+                เลือกหมวดและแบรนด์
+              </p>
+            </div>
+
+            <nav className="px-2 py-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedCategoryId("__all__");
+                  setSelectedBrand("__all__");
+                  setExpandedCategoryId(null);
+                }}
+                className={`flex min-h-11 w-full items-center justify-between border-b border-[#EA80FC]/20 px-3 text-left text-sm font-black transition ${
+                  selectedCategoryId === "__all__"
+                    ? "bg-[#4A148C] text-white"
+                    : "text-slate-950 hover:bg-[#F3E5F5]"
+                }`}
+              >
+                สินค้าทั้งหมด
+                <span className="text-xs tabular-nums">{products.length}</span>
+              </button>
+
+              {categoryOptions.map((category) => {
+                const brands = brandsByCategory.get(category.id) ?? [];
+                const isExpanded = expandedCategoryId === category.id;
+                const isSelected = selectedCategoryId === category.id;
+                const productCount = products.filter((product) =>
+                  product.categoryIds.includes(category.id),
+                ).length;
+
+                return (
+                  <div key={category.id} className="border-b border-[#EA80FC]/20">
+                    <button
+                      type="button"
+                      onClick={() => handleDesktopCategorySelect(category.id)}
+                      className={`flex min-h-12 w-full items-center gap-2 px-3 text-left text-sm font-black transition ${
+                        isSelected
+                          ? "bg-[#F3E5F5] text-[#4A148C]"
+                          : "text-slate-950 hover:bg-[#F3E5F5]/60"
+                      }`}
+                    >
+                      <ChevronRight
+                        className={`h-4 w-4 shrink-0 transition-transform ${
+                          isExpanded ? "rotate-90" : ""
+                        }`}
+                        strokeWidth={2.5}
+                      />
+                      <span className="min-w-0 flex-1 truncate">{category.name}</span>
+                      <span className="text-xs tabular-nums text-slate-500">{productCount}</span>
+                    </button>
+
+                    {isExpanded ? (
+                      <div className="border-t border-[#EA80FC]/15 bg-white py-1">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedBrand("__all__")}
+                          className={`flex min-h-9 w-full items-center border-l-2 px-8 text-left text-xs font-black ${
+                            selectedBrand === "__all__"
+                              ? "border-[#4A148C] text-[#4A148C]"
+                              : "border-transparent text-slate-600 hover:text-[#4A148C]"
+                          }`}
+                        >
+                          ทุกแบรนด์
+                        </button>
+                        {brands.length > 0 ? (
+                          brands.map((brand) => (
+                            <button
+                              key={brand}
+                              type="button"
+                              onClick={() => setSelectedBrand(brand)}
+                              className={`flex min-h-9 w-full items-center border-l-2 px-8 text-left text-xs font-black ${
+                                selectedBrand === brand
+                                  ? "border-[#4A148C] text-[#4A148C]"
+                                  : "border-transparent text-slate-600 hover:text-[#4A148C]"
+                              }`}
+                            >
+                              {brand}
+                            </button>
+                          ))
+                        ) : (
+                          <p className="px-8 py-2 text-xs font-bold text-slate-400">
+                            ไม่มีข้อมูลแบรนด์
+                          </p>
+                        )}
+                      </div>
+                    ) : null}
+                  </div>
+                );
+              })}
+            </nav>
+          </aside>
+
+          <section className="min-h-0 overflow-auto bg-white">
+            {productsLoading ? (
+              <div className="flex h-full min-h-64 flex-col items-center justify-center gap-3 text-slate-500">
+                <Loader2 className="h-8 w-8 animate-spin text-[#4A148C]" />
+                <p className="text-sm font-black">กำลังโหลดสินค้า...</p>
+              </div>
+            ) : filteredProducts.length === 0 ? (
+              <div className="flex h-full min-h-64 flex-col items-center justify-center gap-3 text-slate-400">
+                <Search className="h-10 w-10" strokeWidth={1.7} />
+                <p className="text-sm font-black">ไม่พบสินค้าที่ตรงกับตัวกรอง</p>
+              </div>
+            ) : (
+              <table className="w-full min-w-[56rem] table-fixed border-collapse">
+                <thead className="sticky top-0 z-10 bg-[#4A148C] text-white">
+                  <tr>
+                    <th className="w-12 px-3 py-3 text-center text-xs font-black" aria-label="เลือก" />
+                    <th className="w-28 px-3 py-3 text-left text-xs font-black">รหัสสินค้า</th>
+                    <th className="px-3 py-3 text-left text-xs font-black">รูปและชื่อสินค้า</th>
+                    <th className="w-32 px-3 py-3 text-center text-xs font-black">สต็อก</th>
+                    <th className="w-44 px-3 py-3 text-center text-xs font-black">จำนวน</th>
+                    <th className="w-44 px-3 py-3 text-right text-xs font-black">ราคาขาย</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredProducts.map((product) => (
+                    <DesktopProductTableRow
+                      key={product.id}
+                      product={product}
+                      isSelected={selectedIds.has(product.id)}
+                      selection={selections[product.id]}
+                      onSelect={handleSelectProduct}
+                      onUpdateSelection={handleUpdateSelection}
+                      priceMap={priceMap}
+                      noCustomer={noCustomer}
+                      selectedWarehouseId={selectedWarehouseId}
+                    />
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </section>
+        </div>
+
+        {/* Mobile and portrait tablet content */}
+        <div className="flex-1 overflow-y-auto bg-white lg:hidden">
           {productsLoading ? (
             <div className="flex h-64 flex-col items-center justify-center gap-4 text-slate-400">
               <Loader2 className="h-10 w-10 animate-spin" />
@@ -939,7 +1320,7 @@ function ProductSelectModal({
         </div>
 
         {/* Modal Footer */}
-        <div className="shrink-0 border-t border-[#EA80FC]/35 bg-white px-5 py-4 pb-safe-or-4 shadow-[0_-10px_40px_rgba(142, 36, 170,0.10)] sm:px-8">
+        <div className="shrink-0 border-t border-[#EA80FC]/35 bg-white px-5 py-4 pb-safe-or-4 shadow-[0_-10px_40px_rgba(142,36,170,0.10)] sm:px-8">
           <div className="flex items-center justify-between gap-6">
             <div className="min-w-0">
               <p className="mb-1 text-[10px] font-black uppercase leading-none tracking-widest text-[#4A148C]">เลือกแล้ว</p>
@@ -949,7 +1330,7 @@ function ProductSelectModal({
               type="button"
               onClick={() => void handleConfirm()}
               disabled={saving || selectedIds.size === 0}
-              className="flex-1 flex items-center justify-center gap-3 rounded-2xl border border-[#EA80FC]/75 bg-[#4A148C] py-3.5 text-xl font-black text-white shadow-xl shadow-[#4A148C]/30 transition-all hover:bg-[#4A148C] disabled:opacity-40 active:scale-[0.98]"
+              className="flex flex-1 items-center justify-center gap-3 rounded-2xl border border-[#EA80FC]/75 bg-[#4A148C] py-3.5 text-xl font-black text-white shadow-xl shadow-[#4A148C]/30 transition-all hover:bg-[#4A148C] disabled:opacity-40 active:scale-[0.98] lg:max-w-sm lg:flex-none lg:px-10"
             >
               {saving ? (
                 <>

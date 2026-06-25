@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import { AppSidebarLayout } from "@/components/app-sidebar";
 import { PageLoader } from "@/components/page-loader";
-import { requireAnyRole, requireAppRole } from "@/lib/auth/authorization";
+import { requireAnyRole } from "@/lib/auth/authorization";
 import {
   getBillingCandidates,
   getCustomersForBilling,

@@ -9,7 +9,7 @@
  * @param categories  The category list with `id` and `sortOrder` — order determines display order.
  */
 export function sortProductsByCategory<
-  T extends { id: string; categoryIds: string[]; name: string; display_order?: number },
+  T extends { id: string; categoryIds: string[]; name: string; display_order?: number | null },
 >(products: T[], categories: { id: string; sortOrder: number }[]): T[] {
   const sortOrderById = new Map<string, number>(
     categories.map((c) => [c.id, c.sortOrder]),
@@ -33,4 +33,3 @@ export function sortProductsByCategory<
     return a.name.localeCompare(b.name, "th");
   });
 }
-

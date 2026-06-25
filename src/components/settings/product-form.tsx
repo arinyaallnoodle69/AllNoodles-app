@@ -29,7 +29,7 @@ import {
 import {
   type SaleUnitCostMode,
 } from "@/lib/products/sale-unit-cost";
-import type { SettingsProduct, SettingsProductCategory } from "@/lib/settings/admin";
+import type { SettingsProduct, SettingsProductCategory, SettingsSupplier } from "@/lib/settings/admin";
 
 type ProductFormProps = {
   categories: SettingsProductCategory[];
@@ -37,6 +37,7 @@ type ProductFormProps = {
   nextSku: string;
   productList?: SettingsProduct[];
   returnHref: string;
+  suppliers: SettingsSupplier[];
   onClose?: () => void;
 };
 
@@ -122,6 +123,8 @@ type ProductFormBodyProps = {
   onClose: () => void;
   onPendingChange?: (pending: boolean) => void;
   onSubmitSuccess: () => void;
+  suppliers: SettingsSupplier[];
+  brandSuggestions?: string[];
 };
 
 function ProductFormBody({
@@ -131,6 +134,8 @@ function ProductFormBody({
   onClose,
   onPendingChange,
   onSubmitSuccess,
+  suppliers,
+  brandSuggestions = [],
 }: ProductFormBodyProps) {
   const formId = useId();
   const isEditing = editingProduct !== null;
@@ -148,6 +153,10 @@ function ProductFormBody({
   const [isCameraOpen, setIsCameraOpen] = useState(false);
   const [isStartingCamera, setIsStartingCamera] = useState(false);
   const [baseUnit, setBaseUnit] = useState(editingProduct?.baseUnit ?? "kg");
+  const [productKind, setProductKind] = useState<"made_to_order" | "stock">(
+    editingProduct?.productKind ?? "made_to_order",
+  );
+  const [supplierId, setSupplierId] = useState(editingProduct?.supplierId ?? "");
   const [baseCostPrice, setBaseCostPrice] = useState(
     editingProduct ? (Number(editingProduct.costPrice) === 0 ? "" : String(editingProduct.costPrice)) : "",
   );
@@ -676,6 +685,8 @@ function ProductFormBody({
       getParsedNumber(basicFormValues.stockQuantity || "0") === Number(editingProduct.stockQuantity ?? 0) &&
       brand === (editingProduct.brand ?? "") &&
       selectedCategoryId === (editingProduct.categoryIds[0] ?? "") &&
+      productKind === (editingProduct.productKind ?? "made_to_order") &&
+      supplierId === (editingProduct.supplierId ?? "") &&
       description === (editingProduct.description ?? "") &&
       packingListName === (editingProduct.packingListName ?? "");
 
@@ -695,6 +706,8 @@ function ProductFormBody({
     baseCostPrice,
     brand,
     selectedCategoryId,
+    productKind,
+    supplierId,
     description,
     packingListName,
     saleUnits,
@@ -897,6 +910,8 @@ function ProductFormBody({
               <input type="hidden" name="brand" value={brand} />
               <input type="hidden" name="description" value={description} />
               <input type="hidden" name="packingListName" value={packingListName} />
+              <input type="hidden" name="productKind" value={productKind} />
+              <input type="hidden" name="supplierId" value={supplierId} />
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="sm:col-span-1">
                   <label className={productFieldLabelClass} htmlFor="product-brand">แบรนด์</label>
@@ -906,7 +921,14 @@ function ProductFormBody({
                     onChange={(e) => setBrand(e.target.value)}
                     className={productInputClass}
                     placeholder="เช่น All Noodles"
+                    list="brand-suggestions"
+                    autoComplete="off"
                   />
+                  <datalist id="brand-suggestions">
+                    {brandSuggestions.map((b) => (
+                      <option key={b} value={b} />
+                    ))}
+                  </datalist>
                 </div>
 
                 <div className="sm:col-span-1">
@@ -938,6 +960,56 @@ function ProductFormBody({
                       ยังไม่มีหมวดหมู่ในระบบ กรุณาไปที่แท็บ <span className="font-black text-slate-950">เพิ่มหมวดหมู่</span> ก่อน
                     </p>
                   )}
+                </div>
+
+                <div className="sm:col-span-1">
+                  <label className={productFieldLabelClass} htmlFor="product-kind">ประเภทสินค้า</label>
+                  <div className="relative">
+                    <select
+                      id="product-kind"
+                      value={productKind}
+                      onChange={(e) => setProductKind(e.target.value === "stock" ? "stock" : "made_to_order")}
+                      className={`${productSelectClass} pr-10`}
+                    >
+                      <option value="made_to_order">ผลิตสด</option>
+                      <option value="stock">สต็อก</option>
+                    </select>
+                    <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-slate-800">
+                      <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                        <path fillRule="evenodd" d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
+                      </svg>
+                    </span>
+                  </div>
+                </div>
+
+                <div className="sm:col-span-1">
+                  <label className={productFieldLabelClass} htmlFor="product-supplier">ผลิตจากโรงงาน</label>
+                  <div className="relative">
+                    <select
+                      id="product-supplier"
+                      value={supplierId}
+                      onChange={(e) => setSupplierId(e.target.value)}
+                      className={`${productSelectClass} pr-10`}
+                      disabled={suppliers.length === 0}
+                    >
+                      <option value="">ไม่ระบุโรงงาน</option>
+                      {suppliers.map((supplier) => (
+                        <option key={supplier.id} value={supplier.id}>
+                          {supplier.code ? `${supplier.code} - ${supplier.name}` : supplier.name}
+                        </option>
+                      ))}
+                    </select>
+                    <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-slate-800">
+                      <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                        <path fillRule="evenodd" d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
+                      </svg>
+                    </span>
+                  </div>
+                  {suppliers.length === 0 ? (
+                    <p className="mt-1.5 text-xs font-bold text-slate-800">
+                      ยังไม่มีผู้ขายในระบบ กรุณาเพิ่มจากหน้าจัดการผู้ขายก่อน
+                    </p>
+                  ) : null}
                 </div>
               </div>
 
@@ -995,9 +1067,9 @@ function ProductFormBody({
                               { value: "custom", label: "กำหนดเอง", desc: "เช่น 5, 10, 15..." },
                             ] as { value: OrderPreset; label: string; desc: string }[]
                           ).map((opt) => (
-                            <button key={opt.value} type="button" onClick={() => setOrderPreset(saleUnit.key, opt.value)} className={`rounded-xl border px-2 py-2.5 text-center transition ${saleUnit.orderPreset === opt.value ? "border-[#4A148C] bg-[#F3E5F5] text-[#4A148C]" : "border-slate-200 text-slate-600 hover:bg-slate-50"}`}>
+                            <button key={opt.value} type="button" onClick={() => setOrderPreset(saleUnit.key, opt.value)} className={`rounded-xl border px-2 py-2.5 text-center transition ${saleUnit.orderPreset === opt.value ? "border-[#4A148C] bg-[#F3E5F5] text-slate-950" : "border-slate-300 text-slate-950 hover:bg-slate-50"}`}>
                               <p className="text-xs font-black leading-tight">{opt.label}</p>
-                              <p className="mt-0.5 text-[10px] opacity-60">{opt.desc}</p>
+                              <p className="mt-0.5 text-[10px] font-black text-slate-950">{opt.desc}</p>
                             </button>
                           ))}
                         </div>
@@ -1478,6 +1550,7 @@ export function ProductForm({
   nextSku,
   productList,
   returnHref,
+  suppliers,
   onClose,
 }: ProductFormProps) {
   const router = useRouter();
@@ -1500,6 +1573,18 @@ export function ProductForm({
   const canGoPrev = hasNav && currentIndex > 0;
   const canGoNext = hasNav && currentIndex < productList.length - 1;
 
+  const brandSuggestions = useMemo(() => {
+    if (!productList) return [];
+    const brands = new Set<string>();
+    for (const p of productList) {
+      if (p.brand) {
+        const trimmed = p.brand.trim();
+        if (trimmed) brands.add(trimmed);
+      }
+    }
+    return Array.from(brands).sort((a, b) => a.localeCompare(b, "th"));
+  }, [productList]);
+
   // Build a lightweight fingerprint of the product data so that when the
   // server returns updated values (after router.refresh()), the key changes
   // and ProductFormBody remounts with fresh state from props.
@@ -1515,6 +1600,8 @@ export function ProductForm({
       currentProduct.brand,
       currentProduct.description,
       currentProduct.packingListName,
+      currentProduct.productKind,
+      currentProduct.supplierId,
       currentProduct.categoryIds.join(","),
       currentProduct.stockQuantity,
       currentProduct.imageUrls.join(","),
@@ -1639,6 +1726,8 @@ export function ProductForm({
           onClose={closeModal}
           onPendingChange={setIsSubmitting}
           onSubmitSuccess={handleSubmitSuccess}
+          suppliers={suppliers}
+          brandSuggestions={brandSuggestions}
         />
       </div>
     </div>

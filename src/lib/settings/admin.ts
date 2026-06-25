@@ -34,6 +34,7 @@ export type SettingsProduct = {
   isActive: boolean;
   name: string;
   packingListName: string;
+  productKind: "made_to_order" | "stock";
   pricingCount: number;
   saleUnits: {
     baseUnitQuantity: number;
@@ -49,6 +50,8 @@ export type SettingsProduct = {
   }[];
   sku: string;
   stockQuantity: number;
+  supplierId: string | null;
+  supplierName: string | null;
 };
 
 export type SettingsProductCategory = {
@@ -145,7 +148,7 @@ export type SettingsData = {
 
 export type SettingsProductsData = Pick<
   SettingsData,
-  "nextProductSku" | "productCategories" | "products" | "setupHint"
+  "nextProductSku" | "productCategories" | "products" | "setupHint" | "suppliers"
 >;
 
 type ProductRow = {
@@ -155,8 +158,10 @@ type ProductRow = {
   metadata: Record<string, string> | null;
   name: string;
   organization_id: string;
+  product_kind?: "made_to_order" | "stock" | string | null;
   sku: string;
   stock_quantity: number | string;
+  supplier_id?: string | null;
   unit: string;
   display_order?: number;
 };
@@ -255,21 +260,6 @@ function getNextCustomerCode(codes: string[]) {
   }, 0);
 
   return `ANS${String(maxSequence + 1).padStart(3, "0")}`;
-}
-
-const skuCollator = new Intl.Collator("th", {
-  numeric: true,
-  sensitivity: "base",
-});
-
-function compareProductSku<T extends { name: string; sku: string }>(left: T, right: T) {
-  const skuComparison = skuCollator.compare(left.sku, right.sku);
-
-  if (skuComparison !== 0) {
-    return skuComparison;
-  }
-
-  return left.name.localeCompare(right.name, "th");
 }
 
 function getRecord(value: unknown): Record<string, unknown> | null {
@@ -372,7 +362,7 @@ async function fetchSettingsData(organizationId: string): Promise<SettingsData> 
     await Promise.all([
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (productsTable as any)
-        .select("id, organization_id, sku, name, cost_price, stock_quantity, unit, is_active, metadata, display_order")
+        .select("id, organization_id, sku, name, cost_price, stock_quantity, unit, is_active, metadata, display_order, product_kind, supplier_id")
         .eq("organization_id", organizationId)
         .order("display_order", { ascending: true })
         .order("sku", { ascending: true }),
@@ -489,6 +479,7 @@ async function fetchSettingsData(organizationId: string): Promise<SettingsData> 
   const customerPricingCount = new Map<string, number>();
   const categoryIdsByProductId = new Map<string, string[]>();
   const categoryNamesByProductId = new Map<string, string[]>();
+  const categoryItemIdsByProductId = new Map<string, Set<string>>();
   const productIdsByCategoryId = new Map<string, string[]>();
   const saleUnitMap = new Map<
     string,
@@ -545,23 +536,29 @@ async function fetchSettingsData(organizationId: string): Promise<SettingsData> 
     );
   }
 
-  const categoryNameMap = new Map(categories.map((category) => [category.id, category.name]));
-
   for (const item of categoryItems) {
-    const productCategoryIds = categoryIdsByProductId.get(item.product_id) ?? [];
-    productCategoryIds.push(item.product_category_id);
-    categoryIdsByProductId.set(item.product_id, productCategoryIds);
-
-    const categoryName = categoryNameMap.get(item.product_category_id);
-    if (categoryName) {
-      const productCategoryNames = categoryNamesByProductId.get(item.product_id) ?? [];
-      productCategoryNames.push(categoryName);
-      categoryNamesByProductId.set(item.product_id, productCategoryNames);
-    }
+    const currentProductCategoryIds = categoryItemIdsByProductId.get(item.product_id) ?? new Set<string>();
+    currentProductCategoryIds.add(item.product_category_id);
+    categoryItemIdsByProductId.set(item.product_id, currentProductCategoryIds);
 
     const categoryProductIds = productIdsByCategoryId.get(item.product_category_id) ?? [];
     categoryProductIds.push(item.product_id);
     productIdsByCategoryId.set(item.product_category_id, categoryProductIds);
+  }
+
+  const sortedCategories = categories.toSorted((left, right) => {
+    if (Number(left.sort_order) !== Number(right.sort_order)) {
+      return Number(left.sort_order) - Number(right.sort_order);
+    }
+
+    return left.name.localeCompare(right.name, "th");
+  });
+
+  for (const product of products) {
+    const productCategoryIds = categoryItemIdsByProductId.get(product.id) ?? new Set<string>();
+    const productCategories = sortedCategories.filter((category) => productCategoryIds.has(category.id));
+    categoryIdsByProductId.set(product.id, productCategories.map((category) => category.id));
+    categoryNamesByProductId.set(product.id, productCategories.map((category) => category.name));
   }
 
   const productMap = new Map(
@@ -576,6 +573,7 @@ async function fetchSettingsData(organizationId: string): Promise<SettingsData> 
     ]),
   );
   const customerMap = new Map(customers.map((customer) => [customer.id, customer.name]));
+  const supplierMap = new Map(suppliers.map((supplier) => [supplier.id, supplier.name]));
   const vehicleMap = new Map(vehicles.map((vehicle) => [vehicle.id, vehicle.name]));
   const warehouseMap = new Map(
     (await getActiveWarehouses(organizationId)).map((warehouse) => [warehouse.id, warehouse.name]),
@@ -641,14 +639,7 @@ async function fetchSettingsData(organizationId: string): Promise<SettingsData> 
       sku: productMap.get(price.product_id)?.sku ?? "-",
     })),
     nextProductSku: getNextProductSku(products.map((product) => product.sku)),
-    productCategories: categories
-      .toSorted((left, right) => {
-        if (Number(left.sort_order) !== Number(right.sort_order)) {
-          return Number(left.sort_order) - Number(right.sort_order);
-        }
-
-        return left.name.localeCompare(right.name, "th");
-      })
+    productCategories: sortedCategories
       .map((category) => ({
         id: category.id,
         isActive: category.is_active,
@@ -661,6 +652,8 @@ async function fetchSettingsData(organizationId: string): Promise<SettingsData> 
       products.map((product) => {
         const meta = (product.metadata ?? {}) as Record<string, string>;
         const categoryNames = categoryNamesByProductId.get(product.id) ?? [];
+        const productKind: SettingsProduct["productKind"] =
+          product.product_kind === "stock" ? "stock" : "made_to_order";
         return {
           brand: meta.brand ?? "",
           category: categoryNames.join(", ") || meta.category || "",
@@ -673,6 +666,7 @@ async function fetchSettingsData(organizationId: string): Promise<SettingsData> 
           isActive: product.is_active,
           name: product.name,
           packingListName: meta.packing_list_name ?? "",
+          productKind,
           pricingCount: productPricingCount.get(product.id) ?? 0,
           saleUnits:
             saleUnitMap.get(product.id)?.toSorted((left, right) => {
@@ -700,6 +694,8 @@ async function fetchSettingsData(organizationId: string): Promise<SettingsData> 
             })) ?? [],
           sku: product.sku,
           stockQuantity: Number(product.stock_quantity),
+          supplierId: product.supplier_id ?? null,
+          supplierName: product.supplier_id ? (supplierMap.get(product.supplier_id) ?? null) : null,
           baseUnit: product.unit,
         };
       }),
@@ -754,11 +750,11 @@ async function fetchSettingsProductsData(organizationId: string): Promise<Settin
   const categoriesTable = admin.from("product_categories") as unknown as SelectTable;
   const categoryItemsTable = admin.from("product_category_items") as unknown as SelectTable;
 
-  const [productsResult, imagesResult, saleUnitsResult, categoriesResult, categoryItemsResult] =
+  const [productsResult, imagesResult, saleUnitsResult, categoriesResult, categoryItemsResult, suppliersResult] =
     await Promise.all([
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (productsTable as any)
-        .select("id, organization_id, sku, name, cost_price, stock_quantity, unit, is_active, metadata, display_order")
+        .select("id, organization_id, sku, name, cost_price, stock_quantity, unit, is_active, metadata, display_order, product_kind, supplier_id")
         .eq("organization_id", organizationId)
         .order("display_order", { ascending: true })
         .order("sku", { ascending: true }),
@@ -780,9 +776,15 @@ async function fetchSettingsProductsData(organizationId: string): Promise<Settin
         .select("product_category_id, product_id")
         .eq("organization_id", organizationId)
         .order("created_at", { ascending: true }),
+      admin
+        .from("suppliers")
+        .select("id, supplier_code, name, address, province, district, subdistrict, postal_code, metadata")
+        .eq("organization_id", organizationId)
+        .eq("is_active", true)
+        .order("supplier_code", { ascending: true }),
     ]);
 
-  const errors = [productsResult.error, imagesResult.error, saleUnitsResult.error].filter(Boolean);
+  const errors = [productsResult.error, imagesResult.error, saleUnitsResult.error, suppliersResult.error].filter(Boolean);
   const categoryErrors = [categoriesResult.error, categoryItemsResult.error].filter(Boolean);
 
   if (errors.length > 0) {
@@ -791,6 +793,7 @@ async function fetchSettingsProductsData(organizationId: string): Promise<Settin
       nextProductSku: getNextProductSku([]),
       productCategories: [],
       products: [],
+      suppliers: [],
       setupHint: isMissingTableError(firstError?.message)
         ? "ยังไม่ได้รัน migration สำหรับหน้าตั้งค่า"
         : "ยังโหลดข้อมูลหน้าตั้งค่าไม่สำเร็จ",
@@ -802,6 +805,7 @@ async function fetchSettingsProductsData(organizationId: string): Promise<Settin
   );
   const images = (imagesResult.data ?? []) as ProductImageRow[];
   const saleUnits = (saleUnitsResult.data ?? []) as ProductSaleUnitRow[];
+  const suppliers = (suppliersResult.data ?? []) as SupplierRow[];
   const activeSaleUnits = saleUnits.filter((saleUnit) => saleUnit.is_active);
   const categories =
     categoryErrors.length > 0
@@ -826,6 +830,7 @@ async function fetchSettingsProductsData(organizationId: string): Promise<Settin
   const productMap = new Map<string, ProductRow>(
     products.map((product) => [product.id, product]),
   );
+  const supplierMap = new Map(suppliers.map((supplier) => [supplier.id, supplier.name]));
 
   const saleUnitMap = new Map<
     string,
@@ -876,36 +881,37 @@ async function fetchSettingsProductsData(organizationId: string): Promise<Settin
 
   const categoryIdsByProductId = new Map<string, string[]>();
   const categoryNamesByProductId = new Map<string, string[]>();
+  const categoryItemIdsByProductId = new Map<string, Set<string>>();
   const productIdsByCategoryId = new Map<string, string[]>();
-  const categoryNameMap = new Map(categories.map((category) => [category.id, category.name]));
 
   for (const item of categoryItems) {
-    const productCategoryIds = categoryIdsByProductId.get(item.product_id) ?? [];
-    productCategoryIds.push(item.product_category_id);
-    categoryIdsByProductId.set(item.product_id, productCategoryIds);
-
-    const categoryName = categoryNameMap.get(item.product_category_id);
-    if (categoryName) {
-      const productCategoryNames = categoryNamesByProductId.get(item.product_id) ?? [];
-      productCategoryNames.push(categoryName);
-      categoryNamesByProductId.set(item.product_id, productCategoryNames);
-    }
+    const currentProductCategoryIds = categoryItemIdsByProductId.get(item.product_id) ?? new Set<string>();
+    currentProductCategoryIds.add(item.product_category_id);
+    categoryItemIdsByProductId.set(item.product_id, currentProductCategoryIds);
 
     const categoryProductIds = productIdsByCategoryId.get(item.product_category_id) ?? [];
     categoryProductIds.push(item.product_id);
     productIdsByCategoryId.set(item.product_category_id, categoryProductIds);
   }
 
+  const sortedCategories = categories.toSorted((left, right) => {
+    if (Number(left.sort_order) !== Number(right.sort_order)) {
+      return Number(left.sort_order) - Number(right.sort_order);
+    }
+
+    return left.name.localeCompare(right.name, "th");
+  });
+
+  for (const product of products) {
+    const productCategoryIds = categoryItemIdsByProductId.get(product.id) ?? new Set<string>();
+    const productCategories = sortedCategories.filter((category) => productCategoryIds.has(category.id));
+    categoryIdsByProductId.set(product.id, productCategories.map((category) => category.id));
+    categoryNamesByProductId.set(product.id, productCategories.map((category) => category.name));
+  }
+
   return {
     nextProductSku: getNextProductSku(products.map((product) => product.sku)),
-    productCategories: categories
-      .toSorted((left, right) => {
-        if (Number(left.sort_order) !== Number(right.sort_order)) {
-          return Number(left.sort_order) - Number(right.sort_order);
-        }
-
-        return left.name.localeCompare(right.name, "th");
-      })
+    productCategories: sortedCategories
       .map((category) => ({
         id: category.id,
         isActive: category.is_active,
@@ -914,10 +920,12 @@ async function fetchSettingsProductsData(organizationId: string): Promise<Settin
         productIds: productIdsByCategoryId.get(category.id) ?? [],
         sortOrder: Number(category.sort_order),
       })),
-    products: products
-      .map((product) => {
+    products: sortProductsByCategory(
+      products.map((product) => {
         const meta = (product.metadata ?? {}) as Record<string, string>;
         const categoryNames = categoryNamesByProductId.get(product.id) ?? [];
+        const productKind: SettingsProduct["productKind"] =
+          product.product_kind === "stock" ? "stock" : "made_to_order";
         return {
           baseUnit: product.unit,
           brand: meta.brand ?? "",
@@ -931,6 +939,7 @@ async function fetchSettingsProductsData(organizationId: string): Promise<Settin
           isActive: product.is_active,
           name: product.name,
           packingListName: meta.packing_list_name ?? "",
+          productKind,
           pricingCount: 0,
           saleUnits:
             saleUnitMap.get(product.id)?.toSorted((left, right) => {
@@ -958,15 +967,23 @@ async function fetchSettingsProductsData(organizationId: string): Promise<Settin
             })) ?? [],
           sku: product.sku,
           stockQuantity: Number(product.stock_quantity),
+          supplierId: product.supplier_id ?? null,
+          supplierName: product.supplier_id ? (supplierMap.get(product.supplier_id) ?? null) : null,
           display_order: product.display_order,
         };
-      })
-      .toSorted((left, right) => {
-        const orderA = left.display_order ?? 0;
-        const orderB = right.display_order ?? 0;
-        if (orderA !== orderB) return orderA - orderB;
-        return compareProductSku(left, right);
       }),
+      sortedCategories.map((category) => ({
+        id: category.id,
+        sortOrder: Number(category.sort_order),
+      })),
+    ),
+    suppliers: suppliers.map((supplier) => ({
+      address: supplier.address,
+      addressDraft: getSupplierAddressDraft(supplier),
+      code: supplier.supplier_code,
+      id: supplier.id,
+      name: supplier.name,
+    })),
     setupHint:
       categoryErrors.length > 0 && categoryErrors.every((error) => isMissingTableError(error?.message))
         ? "ระบบหมวดหมู่สินค้ายังไม่พร้อมใช้งาน"
@@ -977,8 +994,5 @@ async function fetchSettingsProductsData(organizationId: string): Promise<Settin
 export async function getSettingsProductsData(
   organizationId: string,
 ): Promise<SettingsProductsData> {
-  "use cache";
-  cacheTag(`settings-${organizationId}`);
-  cacheLife("max");
   return fetchSettingsProductsData(organizationId);
 }

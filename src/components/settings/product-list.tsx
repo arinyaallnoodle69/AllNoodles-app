@@ -1,7 +1,7 @@
 "use client";
 
-import Link from "next/link";
 import { useState, useTransition, useRef, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { GripVertical, MoreVertical, Package2, Pencil, Power, History, Trash2, LoaderCircle } from "lucide-react";
 import { setProductActive, updateProductOrder } from "@/app/dashboard/settings/actions";
 import { DeleteProductButton } from "@/components/settings/delete-product-button";
@@ -9,8 +9,6 @@ import { ProductCostHistoryButton } from "@/components/settings/product-cost-his
 import { ProductImagePreview } from "@/components/settings/product-image-preview";
 import {
   SettingsEmptyState,
-  SettingsPanel,
-  SettingsPanelBody,
 } from "@/components/settings/settings-ui";
 import type { SettingsProduct } from "@/lib/settings/admin";
 
@@ -37,13 +35,60 @@ import { CSS } from '@dnd-kit/utilities';
 import { restrictToVerticalAxis } from '@dnd-kit/modifiers';
 
 type ProductListProps = {
-  baseListHref?: string;
   products: SettingsProduct[];
   onEdit: (product: SettingsProduct) => void;
 };
 
 function formatCost(value: number) {
   return value.toLocaleString("th-TH", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function ProductActiveAction({
+  onComplete,
+  product,
+}: {
+  onComplete: () => void;
+  product: SettingsProduct;
+}) {
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+
+  function handleToggle() {
+    const formData = new FormData();
+    formData.set("productId", product.id);
+    formData.set("nextState", product.isActive ? "false" : "true");
+
+    startTransition(async () => {
+      const result = await setProductActive(formData);
+
+      if (!result.success) {
+        window.alert(result.error);
+        return;
+      }
+
+      onComplete();
+      router.refresh();
+    });
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={handleToggle}
+      disabled={isPending}
+      className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-left text-sm font-bold text-slate-700 hover:bg-slate-50 disabled:cursor-wait disabled:opacity-60"
+    >
+      {isPending ? (
+        <LoaderCircle className="h-4.5 w-4.5 animate-spin text-[#4A148C]" strokeWidth={2.2} />
+      ) : (
+        <Power
+          className={`h-4.5 w-4.5 ${product.isActive ? "text-red-500" : "text-emerald-500"}`}
+          strokeWidth={2.2}
+        />
+      )}
+      {isPending ? "กำลังอัปเดต..." : product.isActive ? "ปิดใช้งาน" : "เปิดใช้งาน"}
+    </button>
+  );
 }
 
 // ─── Mobile Card ───────────────────────────────────────────────────────────
@@ -61,7 +106,6 @@ function MobileCard({
   const [menuOpen, setMenuOpen] = useState(false);
 
   const style = {
-    opacity: product.isActive ? 1 : 0.65,
     zIndex: menuOpen ? 40 : 1,
   };
 
@@ -72,7 +116,11 @@ function MobileCard({
     >
       <div className="flex items-center gap-4">
         {/* Medium image container */}
-        <div className="relative h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-slate-100 border border-slate-100 flex">
+        <div
+          className={`relative flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden ${
+            product.isActive ? "" : "opacity-65"
+          }`}
+        >
           {product.imageUrls[0] ? (
             <ProductImagePreview src={product.imageUrls[0]} alt={product.name} thumbnailSizes="96px" />
           ) : (
@@ -81,11 +129,13 @@ function MobileCard({
         </div>
 
         {/* Compact Info Panel */}
-        <div className="min-w-0 flex-1">
+        <div className={`min-w-0 flex-1 ${product.isActive ? "" : "opacity-65"}`}>
           <div className="flex items-center gap-2">
             <span
               className={`inline-flex shrink-0 rounded px-1.5 py-0.5 text-[10px] font-black uppercase tracking-wider ${
-                product.isActive ? "bg-emerald-50 text-emerald-700 border border-emerald-100" : "bg-slate-100 text-slate-500 border border-slate-200"
+                product.isActive
+                  ? "border border-emerald-100 bg-emerald-50 text-emerald-700"
+                  : "border border-red-700 bg-red-600 text-white"
               }`}
             >
               {product.isActive ? "พร้อมขาย" : "ปิดขาย"}
@@ -148,17 +198,10 @@ function MobileCard({
                   ประวัติ
                 </button>
 
-                <form action={setProductActive} className="w-full" onClick={() => setMenuOpen(false)}>
-                  <input type="hidden" name="productId" value={product.id} />
-                  <input type="hidden" name="nextState" value={product.isActive ? "false" : "true"} />
-                  <button
-                    type="submit"
-                    className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-left text-sm font-bold text-slate-700 hover:bg-slate-50"
-                  >
-                    <Power className={`h-4.5 w-4.5 ${product.isActive ? 'text-red-500' : 'text-emerald-500'}`} strokeWidth={2.2} />
-                    {product.isActive ? "ปิดขาย" : "เปิดขาย"}
-                  </button>
-                </form>
+                <ProductActiveAction
+                  product={product}
+                  onComplete={() => setMenuOpen(false)}
+                />
 
                 <div className="border-t border-slate-100 my-1" />
 
@@ -197,6 +240,83 @@ function MobileCard({
 }
 
 // ─── Sortable Desktop Row ──────────────────────────────────────────────────
+function DesktopActionMenu({
+  product,
+  onEdit,
+}: {
+  product: SettingsProduct;
+  onEdit: (product: SettingsProduct) => void;
+}) {
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  return (
+    <div className="relative inline-block text-left">
+      <button
+        type="button"
+        onClick={() => setMenuOpen(!menuOpen)}
+        className="flex h-9 w-9 items-center justify-center rounded-lg border border-[#E1BEE7] bg-white text-slate-500 transition hover:border-[#4A148C]/35 hover:bg-[#4A148C]/[0.04] hover:text-[#4A148C] active:scale-95 shadow-sm"
+        aria-label="เมนูจัดการสินค้า"
+      >
+        <MoreVertical className="h-4.5 w-4.5" />
+      </button>
+
+      {menuOpen && (
+        <>
+          <div 
+            className="fixed inset-0 z-40 bg-transparent" 
+            onClick={() => setMenuOpen(false)}
+          />
+          <div className="absolute right-0 mt-1.5 z-50 w-40 rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl text-left">
+            <button
+              type="button"
+              onClick={() => {
+                setMenuOpen(false);
+                onEdit(product);
+              }}
+              className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-bold text-slate-700 hover:bg-slate-50"
+            >
+              <Pencil className="h-4.5 w-4.5 text-[#4A148C]" strokeWidth={2.2} />
+              แก้ไข
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setMenuOpen(false);
+                document.getElementById(`table-history-trigger-${product.id}`)?.click();
+              }}
+              className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-bold text-slate-700 hover:bg-slate-50"
+            >
+              <History className="h-4.5 w-4.5 text-[#4A148C]" strokeWidth={2.2} />
+              ประวัติ
+            </button>
+
+            <ProductActiveAction
+              product={product}
+              onComplete={() => setMenuOpen(false)}
+            />
+
+            <div className="border-t border-slate-100 my-1" />
+
+            <button
+              type="button"
+              onClick={() => {
+                setMenuOpen(false);
+                document.getElementById(`table-delete-trigger-${product.id}`)?.click();
+              }}
+              className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-bold text-red-600 hover:bg-red-50"
+            >
+              <Trash2 className="h-4.5 w-4.5 text-red-600" strokeWidth={2.2} />
+              ลบ
+            </button>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+// ─── Sortable Desktop Row ──────────────────────────────────────────────────
 function SortableDesktopRow({
   product,
   index,
@@ -222,7 +342,7 @@ function SortableDesktopRow({
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    opacity: isDragging ? 0.5 : (product.isActive ? 1 : 0.6),
+    opacity: isDragging ? 0.5 : 1,
     backgroundColor: isDragging ? "#F3E5F5" : "transparent",
     zIndex: isDragging ? 50 : 1,
   };
@@ -231,9 +351,9 @@ function SortableDesktopRow({
     <tr
       ref={setNodeRef}
       style={style}
-      className={`${product.isActive ? "bg-white hover:bg-slate-50" : "bg-slate-50/70"} ${isDragging ? "shadow-lg" : ""}`}
+      className={`${product.isActive ? "bg-white hover:bg-slate-50" : "bg-slate-50/70 [&>td:not(:last-child)]:opacity-60"} ${isDragging ? "shadow-lg" : ""}`}
     >
-      <td className="border-b border-r border-[#EEF1F5] px-4 py-4 text-center align-middle text-base font-bold tabular-nums text-[#4A148C]">
+      <td className="border-b border-r border-[#EEF1F5] px-4 py-2 text-center align-middle text-sm font-bold tabular-nums text-[#4A148C]">
         <span className="inline-flex items-center gap-2">
           <span>{index + 1}</span>
           <span
@@ -247,15 +367,15 @@ function SortableDesktopRow({
         </span>
       </td>
 
-      <td className="border-b border-r border-[#EEF1F5] px-6 py-4 align-middle">
+      <td className="border-b border-r border-[#EEF1F5] px-6 py-2 align-middle">
         <div className="space-y-1">
-          <p className="font-mono text-base font-black text-[#4A148C]">{product.sku}</p>
+          <p className="font-mono text-sm font-black text-[#4A148C]">{product.sku}</p>
         </div>
       </td>
 
-      <td className="border-b border-r border-[#EEF1F5] px-6 py-4 align-middle">
+      <td className="border-b border-r border-[#EEF1F5] px-6 py-2 align-middle">
         <div className="flex items-center gap-4">
-          <div className="relative flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-white">
+          <div className="relative flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden">
             {product.imageUrls[0] ? (
               <ProductImagePreview src={product.imageUrls[0]} alt={product.name} thumbnailSizes="80px" />
             ) : (
@@ -271,72 +391,53 @@ function SortableDesktopRow({
         </div>
       </td>
 
-      <td className="border-b border-r border-[#EEF1F5] px-6 py-4 text-center align-middle">
-        <div className="flex min-h-[3rem] items-center justify-center">
-          <span className="text-base font-bold text-[#4A148C]">{product.baseUnit}</span>
+      <td className="border-b border-r border-[#EEF1F5] px-6 py-2 text-center align-middle">
+        <div className="flex items-center justify-center">
+          <span className="text-sm font-bold text-[#4A148C]">{product.baseUnit}</span>
         </div>
       </td>
 
-      <td className="border-b border-r border-[#EEF1F5] px-6 py-4 text-right align-middle">
-        <div className="flex min-h-[3rem] items-center justify-end">
-          <p className="text-base font-black tabular-nums text-[#4A148C]">
+      <td className="border-b border-r border-[#EEF1F5] px-6 py-2 text-right align-middle">
+        <div className="flex items-center justify-end">
+          <p className="text-sm font-black tabular-nums text-[#4A148C]">
             {formatCost(defaultUnit ? defaultUnit.effectiveCostPrice : (product.costPrice || 0))}
           </p>
         </div>
       </td>
 
-      <td className="border-b border-r border-[#EEF1F5] px-6 py-4 text-center align-middle">
+      <td className="hidden border-b border-r border-[#EEF1F5] px-6 py-2 text-center align-middle 2xl:table-cell">
         <span
-          className={`inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-sm font-black leading-none ${
+          className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-black leading-none ${
             product.isActive ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-500"
           }`}
         >
-          <span className={`h-2 w-2 rounded-full ${product.isActive ? "bg-emerald-500" : "bg-slate-400"}`} />
+          <span className={`h-1.5 w-1.5 rounded-full ${product.isActive ? "bg-emerald-500" : "bg-slate-400"}`} />
           {product.isActive ? "พร้อมขาย" : "ไม่พร้อมขาย"}
         </span>
       </td>
 
-      <td className="border-b border-[#EEF1F5] px-6 py-4 text-center align-middle">
-        <div className="flex items-center justify-center gap-1.5">
-          <button
-            type="button"
-            onClick={() => onEdit(product)}
-            className="action-touch-safe inline-flex h-9 w-9 items-center justify-center rounded-lg border border-[#E1BEE7] bg-white text-[#4A148C] transition hover:border-[#4A148C]/35 hover:bg-[#4A148C]/[0.04] active:scale-95"
-            aria-label={`แก้ไข ${product.name}`}
-          >
-            <Pencil className="h-4 w-4" strokeWidth={2.4} />
-          </button>
+      <td className="border-b border-[#EEF1F5] px-6 py-2 text-center align-middle">
+        <div className="flex items-center justify-center">
+          <DesktopActionMenu
+            product={product}
+            onEdit={onEdit}
+          />
+        </div>
 
+        <div className="hidden" aria-hidden="true">
           <ProductCostHistoryButton
-            iconOnly
+            id={`table-history-trigger-${product.id}`}
             productId={product.id}
             productName={product.name}
-            triggerClassName="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-[#E1BEE7] bg-white text-[#4A148C] transition hover:border-[#4A148C]/35 hover:bg-[#4A148C]/[0.04] active:scale-95"
           />
-
-          <form action={setProductActive}>
+          <form id={deleteFormId} className="hidden">
             <input type="hidden" name="productId" value={product.id} />
-            <input type="hidden" name="nextState" value={product.isActive ? "false" : "true"} />
-            <button
-              type="submit"
-              className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-[#E1BEE7] bg-white text-[#4A148C] transition hover:border-[#4A148C]/35 hover:bg-[#4A148C]/[0.04] active:scale-95"
-              aria-label={product.isActive ? `ปิดใช้งาน ${product.name}` : `เปิดใช้งาน ${product.name}`}
-            >
-              <Power className="h-4 w-4" strokeWidth={2.4} />
-            </button>
           </form>
-
-          <div className="ml-1">
-            <form id={deleteFormId} className="hidden">
-              <input type="hidden" name="productId" value={product.id} />
-            </form>
-            <DeleteProductButton
-              formId={deleteFormId}
-              iconOnly
-              productName={product.name}
-              triggerClassName="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-[#E1BEE7] bg-white text-red-600 transition hover:border-red-200 hover:bg-red-50 active:scale-95"
-            />
-          </div>
+          <DeleteProductButton
+            id={`table-delete-trigger-${product.id}`}
+            formId={deleteFormId}
+            productName={product.name}
+          />
         </div>
       </td>
     </tr>
@@ -344,7 +445,7 @@ function SortableDesktopRow({
 }
 
 // ─── Main Component ────────────────────────────────────────────────────────
-export function ProductList({ products, baseListHref = "/settings/products", onEdit }: ProductListProps) {
+export function ProductList({ products, onEdit }: ProductListProps) {
   const [localProducts, setLocalProducts] = useState(products);
   const [visibleCount, setVisibleCount] = useState(25);
   const [isPending, startTransition] = useTransition();
@@ -378,9 +479,6 @@ export function ProductList({ products, baseListHref = "/settings/products", onE
       observer.unobserve(currentLoader);
     };
   }, [localProducts.length, visibleCount]);
-
-  const editHref = (id: string) =>
-    `${baseListHref}${baseListHref.includes("?") ? "&" : "?"}edit=${id}`;
 
   // DnD Sensors
   const sensors = useSensors(
@@ -428,14 +526,14 @@ export function ProductList({ products, baseListHref = "/settings/products", onE
 
   return (
     <>
-    <SettingsPanel className="rounded-none border-x-0 shadow-none sm:rounded-lg sm:border sm:border-[#E1BEE7] sm:shadow-[0_18px_45px_rgba(31,42,68,0.06)] bg-white">
+    <div className="w-full bg-white overflow-visible sm:overflow-visible">
       {isPending ? (
-        <div className="border-b border-[#EEF1F5] bg-white px-5 py-2 text-xs font-semibold text-[#4A148C]">
+        <div className="border-b border-[#EEF1F5] bg-white px-5 py-2 text-xs font-semibold text-[#4A148C] shrink-0">
           กำลังบันทึกลำดับ...
         </div>
       ) : null}
 
-      <SettingsPanelBody className="p-0">
+      <div className="p-0 overflow-visible sm:overflow-visible">
         {localProducts.length > 0 ? (
           <DndContext 
             id="product-list-dnd"
@@ -474,29 +572,29 @@ export function ProductList({ products, baseListHref = "/settings/products", onE
               </div>
 
               {/* Desktop table */}
-              <div className="hidden overflow-x-auto sm:block">
-                <table className="min-w-full border-collapse text-left">
+              <div className="hidden sm:block overflow-x-auto lg:overflow-visible">
+                <table className="min-w-full border-collapse text-left table-fixed">
                   <thead>
                     <tr className="bg-[#4A148C]">
-                      <th className="border-b border-[#4A148C] border-r border-white/20 px-4 py-4 text-center text-sm font-black text-white">
+                      <th className="w-16 border-b border-[#4A148C] border-r border-white/20 px-4 py-4 text-center text-sm font-black text-white">
                         ลำดับ
                       </th>
-                      <th className="border-b border-[#4A148C] border-r border-white/20 px-6 py-4 text-left text-sm font-black text-white">
+                      <th className="w-32 border-b border-[#4A148C] border-r border-white/20 px-6 py-4 text-left text-sm font-black text-white">
                         รหัสสินค้า
                       </th>
                       <th className="border-b border-[#4A148C] border-r border-white/20 px-6 py-4 text-left text-sm font-black text-white">
                         ชื่อสินค้า
                       </th>
-                      <th className="border-b border-[#4A148C] border-r border-white/20 px-6 py-4 text-center text-sm font-black text-white">
+                      <th className="w-24 border-b border-[#4A148C] border-r border-white/20 px-6 py-4 text-center text-sm font-black text-white">
                         หน่วย
                       </th>
-                      <th className="border-b border-[#4A148C] border-r border-white/20 px-6 py-4 text-right text-sm font-black text-white">
+                      <th className="w-36 border-b border-[#4A148C] border-r border-white/20 px-4 py-4 text-right text-sm font-black text-white whitespace-nowrap">
                         ต้นทุนต่อหน่วย
                       </th>
-                      <th className="border-b border-[#4A148C] border-r border-white/20 px-6 py-4 text-center text-sm font-black text-white">
+                      <th className="hidden w-32 border-b border-[#4A148C] border-r border-white/20 px-6 py-4 text-center text-sm font-black text-white 2xl:table-cell">
                         สถานะ
                       </th>
-                      <th className="border-b border-[#4A148C] px-6 py-4 text-center text-sm font-black text-white">
+                      <th className="w-20 border-b border-[#4A148C] px-6 py-4 text-center text-sm font-black text-white">
                         จัดการ
                       </th>
                     </tr>
@@ -529,8 +627,8 @@ export function ProductList({ products, baseListHref = "/settings/products", onE
             </SettingsEmptyState>
           </div>
         )}
-      </SettingsPanelBody>
-    </SettingsPanel>
+      </div>
+    </div>
 
     {localProducts.length > visibleCount && (
       <div ref={loaderRef} className="flex justify-center py-6 bg-transparent mt-2 items-center gap-2">

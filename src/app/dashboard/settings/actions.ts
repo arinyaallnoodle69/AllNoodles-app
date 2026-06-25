@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath, revalidateTag, updateTag } from "next/cache";
+import { readSheet } from "read-excel-file/node";
 import { requireAppRole } from "@/lib/auth/authorization";
 import { normalizeSaleUnitCostMode } from "@/lib/products/sale-unit-cost";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
@@ -11,7 +12,13 @@ let productImagesBucketReady = false;
 let productImagesBucketReadyPromise: Promise<void> | null = null;
 
 type SettingsAdmin = ReturnType<typeof getSupabaseAdmin>;
+type ProductKind = "made_to_order" | "stock";
 export type ProductSubmitActionState = {
+  message: string;
+  status: "idle" | "success" | "error";
+};
+export type ProductImportActionState = {
+  errors?: string[];
   message: string;
   status: "idle" | "success" | "error";
 };
@@ -28,6 +35,74 @@ function safePrice(value: FormDataEntryValue | null) {
 function safeInteger(value: FormDataEntryValue | null) {
   const parsed = Number.parseInt(String(value ?? "").trim(), 10);
   return Number.isFinite(parsed) ? parsed : NaN;
+}
+
+function safeProductKind(value: FormDataEntryValue | null): ProductKind {
+  return safeText(value) === "stock" ? "stock" : "made_to_order";
+}
+
+function normalizeImportKey(value: unknown) {
+  return String(value ?? "").trim().toLocaleLowerCase("th");
+}
+
+function normalizeImportHeader(value: string) {
+  return value.replace(/\s+/g, "").trim().toLocaleLowerCase("th");
+}
+
+function readImportCell(row: Record<string, unknown>, headers: Map<string, string>, aliases: string[]) {
+  for (const alias of aliases) {
+    const header = headers.get(normalizeImportHeader(alias));
+    if (!header) continue;
+    const value = row[header];
+    const normalized = String(value ?? "").trim();
+    if (normalized) return normalized;
+  }
+  return "";
+}
+
+function parseImportNumber(value: string, fallback: number) {
+  if (!value) return fallback;
+  const parsed = Number(value.replace(/,/g, "").trim());
+  return Number.isFinite(parsed) ? parsed : Number.NaN;
+}
+
+function parseImportStatus(value: string) {
+  const normalized = normalizeImportKey(value);
+  if (!normalized) return true;
+  return !["0", "false", "no", "ปิด", "ปิดขาย", "ไม่พร้อมขาย", "inactive"].includes(normalized);
+}
+
+function parseImportProductKind(value: string): ProductKind {
+  const normalized = normalizeImportKey(value);
+  return ["stock", "สต็อก", "สต็อค", "สินค้าเก็บสต็อก", "สินค้าเก็บสต๊อก"].includes(normalized)
+    ? "stock"
+    : "made_to_order";
+}
+
+function excelRowsToRecords(sheetRows: unknown[][]) {
+  const headerRow = sheetRows[0] ?? [];
+  const headers = headerRow.map((header) => String(header ?? "").trim());
+  const records: Record<string, unknown>[] = [];
+
+  for (const row of sheetRows.slice(1)) {
+    const record: Record<string, unknown> = {};
+    let hasValue = false;
+
+    for (const [columnIndex, header] of headers.entries()) {
+      if (!header) continue;
+      const value = String(row[columnIndex] ?? "").trim();
+      record[header] = value;
+      if (value) {
+        hasValue = true;
+      }
+    }
+
+    if (hasValue) {
+      records.push(record);
+    }
+  }
+
+  return records;
 }
 
 function parseCategoryIds(formData: FormData) {
@@ -412,6 +487,8 @@ export async function createProduct(formData: FormData): Promise<boolean> {
   const costPrice = safePrice(formData.get("costPrice"));
   const stockQuantity = safeInteger(formData.get("stockQuantity"));
   const baseUnit = safeText(formData.get("baseUnit"));
+  const productKind = safeProductKind(formData.get("productKind"));
+  const supplierId = safeText(formData.get("supplierId")) || null;
   const saleUnits = parseSaleUnits(formData, baseUnit);
   const files = formData
     .getAll("images")
@@ -462,17 +539,24 @@ export async function createProduct(formData: FormData): Promise<boolean> {
   if (packingListName) metadata.packing_list_name = packingListName;
 
   const storage = admin.storage;
+  const productInsert = {
+    cost_price: costPrice,
+    metadata: metadata as Json,
+    name,
+    organization_id: session.organizationId,
+    product_kind: productKind,
+    sku,
+    stock_quantity: stockQuantity,
+    supplier_id: supplierId,
+    unit: baseUnit,
+  } as Database["public"]["Tables"]["products"]["Insert"] & {
+    product_kind: ProductKind;
+    supplier_id: string | null;
+  };
+
   const { data: product, error: productError } = await admin
     .from("products")
-    .insert({
-      cost_price: costPrice,
-      metadata: metadata as Json,
-      name,
-      organization_id: session.organizationId,
-      sku,
-      stock_quantity: stockQuantity,
-      unit: baseUnit,
-    })
+    .insert(productInsert)
     .select("id")
     .single();
 
@@ -578,6 +662,8 @@ export async function updateProduct(formData: FormData): Promise<boolean> {
   const costPrice = safePrice(formData.get("costPrice"));
   const stockQuantity = safeInteger(formData.get("stockQuantity"));
   const baseUnit = safeText(formData.get("baseUnit"));
+  const productKind = safeProductKind(formData.get("productKind"));
+  const supplierId = safeText(formData.get("supplierId")) || null;
   const saleUnits = parseSaleUnits(formData, baseUnit);
   const removedSaleUnitIds = new Set(
     formData
@@ -682,15 +768,22 @@ export async function updateProduct(formData: FormData): Promise<boolean> {
     }
   }
 
+  const productUpdate = {
+    cost_price: costPrice,
+    metadata: metadata as Json,
+    name,
+    product_kind: productKind,
+    sku,
+    stock_quantity: stockQuantity,
+    supplier_id: supplierId,
+    unit: baseUnit,
+  } as Database["public"]["Tables"]["products"]["Update"] & {
+    product_kind: ProductKind;
+    supplier_id: string | null;
+  };
+
   const mutationResults = await Promise.all([
-    admin.from("products").update({
-      cost_price: costPrice,
-      metadata: metadata as Json,
-      name,
-      sku,
-      stock_quantity: stockQuantity,
-      unit: baseUnit,
-    }).eq("id", productId).eq("organization_id", session.organizationId),
+    admin.from("products").update(productUpdate).eq("id", productId).eq("organization_id", session.organizationId),
     ...saleUnits.map((saleUnit, index) =>
       saleUnit.id
         ? admin.from("product_sale_units").update({
@@ -900,6 +993,288 @@ export async function createProductFormAction(
   }
 }
 
+export async function importProductsFromExcelAction(
+  _previousState: ProductImportActionState,
+  formData: FormData,
+): Promise<ProductImportActionState> {
+  const session = await requireAppRole("admin");
+  const file = formData.get("file");
+
+  if (!(file instanceof File) || file.size === 0) {
+    return {
+      message: "กรุณาเลือกไฟล์ Excel ก่อนนำเข้า",
+      status: "error",
+    };
+  }
+
+  if (file.size > 5 * 1024 * 1024) {
+    return {
+      message: "ไฟล์ใหญ่เกินไป กรุณาใช้ไฟล์ไม่เกิน 5 MB",
+      status: "error",
+    };
+  }
+
+  const admin = getSupabaseAdmin() as SettingsAdmin;
+  let rows: Record<string, unknown>[] = [];
+
+  try {
+    const buffer = Buffer.from(await file.arrayBuffer());
+    const sheetRows = await readSheet(buffer);
+    rows = excelRowsToRecords(sheetRows as unknown[][]);
+  } catch (error) {
+    console.error("[importProductsFromExcelAction:read]", error);
+    return {
+      message: "อ่านไฟล์ Excel ไม่สำเร็จ กรุณาตรวจสอบไฟล์แล้วลองใหม่",
+      status: "error",
+    };
+  }
+
+  if (rows.length === 0) {
+    return {
+      message: "ไม่พบข้อมูลสินค้าในไฟล์ Excel",
+      status: "error",
+    };
+  }
+
+  const [productsResult, categoriesResult, suppliersResult] = await Promise.all([
+    admin
+      .from("products")
+      .select("id, sku")
+      .eq("organization_id", session.organizationId),
+    admin
+      .from("product_categories")
+      .select("id, name")
+      .eq("organization_id", session.organizationId),
+    admin
+      .from("suppliers")
+      .select("id, supplier_code, name")
+      .eq("organization_id", session.organizationId),
+  ]);
+
+  if (productsResult.error || categoriesResult.error || suppliersResult.error) {
+    return {
+      message: "โหลดข้อมูลอ้างอิงก่อนนำเข้าไม่สำเร็จ",
+      status: "error",
+    };
+  }
+
+  const existingProductsBySku = new Map(
+    ((productsResult.data ?? []) as Array<{ id: string; sku: string }>).map((product) => [
+      normalizeImportKey(product.sku),
+      product,
+    ]),
+  );
+  const categoryByName = new Map(
+    ((categoriesResult.data ?? []) as Array<{ id: string; name: string }>).map((category) => [
+      normalizeImportKey(category.name),
+      category,
+    ]),
+  );
+  const supplierByKey = new Map<string, { id: string; name: string; supplier_code: string }>();
+  for (const supplier of (suppliersResult.data ?? []) as Array<{ id: string; name: string; supplier_code: string }>) {
+    supplierByKey.set(normalizeImportKey(supplier.name), supplier);
+    supplierByKey.set(normalizeImportKey(supplier.supplier_code), supplier);
+  }
+
+  const usedSkus = new Set(
+    ((productsResult.data ?? []) as Array<{ sku: string }>).map((product) => product.sku.trim()).filter(Boolean),
+  );
+  const errors: string[] = [];
+  let createdCount = 0;
+  let updatedCount = 0;
+  let skippedCount = 0;
+
+  for (const [index, row] of rows.entries()) {
+    const rowNumber = index + 2;
+    const headers = new Map(Object.keys(row).map((header) => [normalizeImportHeader(header), header]));
+
+    const name = readImportCell(row, headers, ["ชื่อสินค้า", "สินค้า", "name", "product name"]);
+    if (!name) {
+      skippedCount += 1;
+      errors.push(`แถว ${rowNumber}: ไม่มีชื่อสินค้า`);
+      continue;
+    }
+
+    const requestedSku = readImportCell(row, headers, ["SKU", "รหัสสินค้า", "รหัส", "sku"]);
+    const baseUnit = readImportCell(row, headers, ["หน่วยหลัก", "หน่วย", "base unit", "unit"]) || "kg";
+    const costPrice = parseImportNumber(
+      readImportCell(row, headers, ["ราคาทุน", "ต้นทุน", "cost", "cost price"]),
+      0,
+    );
+    const stockQuantity = parseImportNumber(
+      readImportCell(row, headers, ["จำนวนสต็อก", "สต็อก", "stock", "stock quantity"]),
+      0,
+    );
+    const saleUnitLabel =
+      readImportCell(row, headers, ["หน่วยขาย", "sale unit", "sale unit label"]) || baseUnit;
+    const saleUnitRatio = parseImportNumber(
+      readImportCell(row, headers, ["อัตราต่อหน่วยหลัก", "อัตรา", "ratio"]),
+      1,
+    );
+    const minOrderQty = parseImportNumber(
+      readImportCell(row, headers, ["ขั้นต่ำ", "จำนวนขั้นต่ำ", "min order"]),
+      1,
+    );
+    const stepOrderQtyText = readImportCell(row, headers, ["เพิ่มทีละ", "step", "step order"]);
+    const stepOrderQty = stepOrderQtyText ? parseImportNumber(stepOrderQtyText, 0) : null;
+    const costMode = normalizeSaleUnitCostMode(
+      readImportCell(row, headers, ["โหมดต้นทุนหน่วยขาย", "โหมดต้นทุน", "cost mode"]) || "derived",
+    );
+    const fixedCostText = readImportCell(row, headers, ["ต้นทุนหน่วยขาย", "fixed cost", "sale unit cost"]);
+    const fixedCostPrice = fixedCostText ? parseImportNumber(fixedCostText, 0) : null;
+    const categoryName = readImportCell(row, headers, ["หมวดหมู่", "category"]);
+    const supplierText = readImportCell(row, headers, ["ผู้ขาย", "โรงงาน", "supplier"]);
+    const brand = readImportCell(row, headers, ["แบรนด์", "brand"]);
+    const packingListName = readImportCell(row, headers, ["ชื่อในใบจัดของ", "ชื่อใบจัดของ", "packing list name"]);
+    const description = readImportCell(row, headers, ["คำอธิบาย", "รายละเอียด", "description"]);
+    const productKind = parseImportProductKind(readImportCell(row, headers, ["ประเภทสินค้า", "ประเภท", "product kind"]));
+    const isActive = parseImportStatus(readImportCell(row, headers, ["สถานะ", "status"]));
+
+    if (
+      Number.isNaN(costPrice) ||
+      Number.isNaN(stockQuantity) ||
+      Number.isNaN(saleUnitRatio) ||
+      Number.isNaN(minOrderQty) ||
+      (stepOrderQty !== null && Number.isNaN(stepOrderQty)) ||
+      (fixedCostPrice !== null && Number.isNaN(fixedCostPrice))
+    ) {
+      skippedCount += 1;
+      errors.push(`แถว ${rowNumber}: ตัวเลขไม่ถูกต้อง`);
+      continue;
+    }
+
+    const category = categoryName ? categoryByName.get(normalizeImportKey(categoryName)) : null;
+    if (categoryName && !category) {
+      skippedCount += 1;
+      errors.push(`แถว ${rowNumber}: ไม่พบหมวดหมู่ "${categoryName}"`);
+      continue;
+    }
+
+    const supplier = supplierText ? supplierByKey.get(normalizeImportKey(supplierText)) : null;
+    if (supplierText && !supplier) {
+      skippedCount += 1;
+      errors.push(`แถว ${rowNumber}: ไม่พบผู้ขายหรือโรงงาน "${supplierText}"`);
+      continue;
+    }
+
+    const existingProduct = requestedSku ? existingProductsBySku.get(normalizeImportKey(requestedSku)) : null;
+    let sku = requestedSku.trim();
+    if (!existingProduct && !sku) {
+      sku = getNextProductSku([...usedSkus]);
+    }
+    if (!existingProduct && usedSkus.has(sku)) {
+      skippedCount += 1;
+      errors.push(`แถว ${rowNumber}: รหัสสินค้า "${sku}" ซ้ำ`);
+      continue;
+    }
+
+    const metadata: Record<string, string> = {};
+    if (brand) metadata.brand = brand;
+    if (category?.name) metadata.category = category.name;
+    if (description) metadata.description = description;
+    if (packingListName) metadata.packing_list_name = packingListName;
+
+    try {
+      let productId = existingProduct?.id ?? "";
+      const productPayload = {
+        cost_price: costPrice,
+        is_active: isActive,
+        metadata: metadata as Json,
+        name,
+        organization_id: session.organizationId,
+        product_kind: productKind,
+        sku,
+        stock_quantity: stockQuantity,
+        supplier_id: supplier?.id ?? null,
+        unit: baseUnit,
+      } as Database["public"]["Tables"]["products"]["Insert"] & {
+        product_kind: ProductKind;
+        supplier_id: string | null;
+      };
+
+      if (existingProduct) {
+        const { error: updateError } = await admin
+          .from("products")
+          .update(productPayload)
+          .eq("organization_id", session.organizationId)
+          .eq("id", existingProduct.id);
+        throwIfError(updateError, "Update imported product failed");
+        updatedCount += 1;
+      } else {
+        const { data: insertedProduct, error: insertError } = await admin
+          .from("products")
+          .insert(productPayload)
+          .select("id")
+          .single();
+        throwIfError(insertError, "Insert imported product failed");
+        if (!insertedProduct) {
+          throw new Error("Insert imported product returned no row");
+        }
+        productId = insertedProduct.id;
+        usedSkus.add(sku);
+        existingProductsBySku.set(normalizeImportKey(sku), { id: productId, sku });
+        createdCount += 1;
+      }
+
+      const { data: existingSaleUnit, error: saleUnitLookupError } = await admin
+        .from("product_sale_units")
+        .select("id")
+        .eq("organization_id", session.organizationId)
+        .eq("product_id", productId)
+        .eq("is_default", true)
+        .maybeSingle();
+      throwIfError(saleUnitLookupError, "Find imported product sale unit failed");
+
+      const saleUnitPayload = {
+        base_unit_quantity: saleUnitRatio > 0 ? saleUnitRatio : 1,
+        cost_mode: costMode,
+        fixed_cost_price: costMode === "fixed" ? fixedCostPrice : null,
+        is_active: true,
+        is_default: true,
+        min_order_qty: minOrderQty > 0 ? minOrderQty : 1,
+        organization_id: session.organizationId,
+        product_id: productId,
+        sort_order: 0,
+        step_order_qty: stepOrderQty && stepOrderQty > 0 ? stepOrderQty : null,
+        unit_label: saleUnitLabel,
+      };
+
+      if (existingSaleUnit?.id) {
+        const { error: saleUnitUpdateError } = await admin
+          .from("product_sale_units")
+          .update(saleUnitPayload)
+          .eq("id", existingSaleUnit.id);
+        throwIfError(saleUnitUpdateError, "Update imported product sale unit failed");
+      } else {
+        const { error: saleUnitInsertError } = await admin.from("product_sale_units").insert(saleUnitPayload);
+        throwIfError(saleUnitInsertError, "Insert imported product sale unit failed");
+      }
+
+      await syncProductCategoryAssignments(
+        admin,
+        session.organizationId,
+        productId,
+        category ? [category.id] : [],
+      );
+    } catch (error) {
+      skippedCount += 1;
+      errors.push(`แถว ${rowNumber}: บันทึกสินค้าไม่สำเร็จ`);
+      console.error("[importProductsFromExcelAction:row]", error);
+    }
+  }
+
+  if (createdCount + updatedCount > 0) {
+    revalidateSettingsSurfaces(session.organizationId);
+  }
+
+  const message = `นำเข้าเสร็จแล้ว เพิ่มใหม่ ${createdCount.toLocaleString("th-TH")} รายการ, อัปเดต ${updatedCount.toLocaleString("th-TH")} รายการ, ข้าม ${skippedCount.toLocaleString("th-TH")} รายการ`;
+  return {
+    errors: errors.slice(0, 10),
+    message,
+    status: createdCount + updatedCount > 0 ? "success" : "error",
+  };
+}
+
 export async function updateProductFormAction(
   _previousState: ProductSubmitActionState,
   formData: FormData,
@@ -1058,14 +1433,23 @@ export async function setProductActive(formData: FormData) {
   const nextState = safeText(formData.get("nextState")) === "true";
 
   if (!productId) {
-    return;
+    return { success: false as const, error: "ไม่พบรหัสสินค้า" };
   }
 
-  await admin.from("products").update({
-    is_active: nextState,
-  }).eq("id", productId);
+  const { error } = await admin
+    .from("products")
+    .update({
+      is_active: nextState,
+    })
+    .eq("organization_id", session.organizationId)
+    .eq("id", productId);
+
+  if (error) {
+    return { success: false as const, error: error.message ?? "อัปเดตสถานะสินค้าไม่สำเร็จ" };
+  }
 
   revalidateSettingsSurfaces(session.organizationId);
+  return { success: true as const };
 }
 
 export async function deleteProduct(formData: FormData): Promise<{ success: boolean; error?: string }> {
@@ -1146,6 +1530,31 @@ export async function updateProductOrder(productIds: string[]) {
     }
   }
   
+  revalidateSettingsSurfaces(session.organizationId);
+  return { success: true };
+}
+
+export async function updateProductCategoryOrder(categoryIds: string[]) {
+  const session = await requireAppRole("admin");
+  const admin = getSupabaseAdmin();
+  const uniqueCategoryIds = [...new Set(categoryIds.map((id) => id.trim()).filter(Boolean))];
+
+  const updates = uniqueCategoryIds.map((id, index) =>
+    admin
+      .from("product_categories")
+      .update({ sort_order: index })
+      .eq("organization_id", session.organizationId)
+      .eq("id", id),
+  );
+
+  const results = await Promise.all(updates);
+
+  for (const result of results) {
+    if (result.error) {
+      throw new Error(`Failed to update category order: ${result.error.message}`);
+    }
+  }
+
   revalidateSettingsSurfaces(session.organizationId);
   return { success: true };
 }

@@ -1,4 +1,4 @@
-import { requireAnyRole, requireAppRole } from "@/lib/auth/authorization";
+import { requireAnyRole } from "@/lib/auth/authorization";
 import { getStockDashboardData, getStockHistoryData, type StockHistoryRow } from "@/lib/stock/admin";
 import { getStockIssueHistoryData, type StockIssueRow } from "@/lib/stock/issues";
 import { getActiveWarehouses } from "@/lib/warehouses";

@@ -69,7 +69,7 @@ export function ProductImagePreview({ alt, src, thumbnailSizes }: ProductImagePr
         onPointerDown={warmImage}
         onTouchStart={warmImage}
         onFocus={warmImage}
-        className="group h-full w-full cursor-zoom-in"
+        className="group relative h-full w-full cursor-zoom-in"
         aria-label={`Preview image: ${alt}`}
       >
         <Image

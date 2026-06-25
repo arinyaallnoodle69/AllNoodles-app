@@ -9,16 +9,23 @@ export type OrderStoreStatusItem = {
   latestOrderId: string | null;
   name: string;
   orderCount: number;
+  vehicleId: string | null;
+  vehicleName: string | null;
 };
 
 export type OrderStoreStatusSummary = {
   allStores: OrderStoreStatusItem[];
   orderedStores: OrderStoreStatusItem[];
   unorderedStores: OrderStoreStatusItem[];
+  vehicles: {
+    id: string;
+    name: string;
+  }[];
 };
 
 type CustomerRow = {
   customer_code: string | null;
+  default_vehicle_id: string | null;
   id: string;
   name: string | null;
 };
@@ -27,6 +34,11 @@ type OrderRow = {
   id: string;
   created_at: string | null;
   customer_id: string;
+};
+
+type VehicleRow = {
+  id: string;
+  name: string | null;
 };
 
 const codeCollator = new Intl.Collator("th", {
@@ -61,10 +73,10 @@ export async function getOrderStoreStatusSummary(
 ): Promise<OrderStoreStatusSummary> {
   const admin = getSupabaseAdmin();
 
-  const [customersResult, ordersResult] = await Promise.all([
+  const [customersResult, ordersResult, vehiclesResult] = await Promise.all([
     admin
       .from("customers")
-      .select("id, customer_code, name")
+      .select("id, customer_code, name, default_vehicle_id")
       .eq("organization_id", organizationId)
       .eq("is_active", true)
       .order("customer_code", { ascending: true }),
@@ -74,6 +86,12 @@ export async function getOrderStoreStatusSummary(
       .eq("organization_id", organizationId)
       .eq("order_date", orderDate)
       .neq("status", "cancelled"),
+    admin
+      .from("vehicles")
+      .select("id, name")
+      .eq("organization_id", organizationId)
+      .eq("is_active", true)
+      .order("sort_order", { ascending: true }),
   ]);
 
   if (customersResult.error) {
@@ -83,6 +101,16 @@ export async function getOrderStoreStatusSummary(
   if (ordersResult.error) {
     throw new Error(ordersResult.error.message ?? "Failed to load store order status.");
   }
+
+  if (vehiclesResult.error) {
+    throw new Error(vehiclesResult.error.message ?? "Failed to load vehicles.");
+  }
+
+  const vehicles = ((vehiclesResult.data ?? []) as VehicleRow[]).map((vehicle) => ({
+    id: vehicle.id,
+    name: vehicle.name ?? "-",
+  }));
+  const vehicleNameById = new Map(vehicles.map((vehicle) => [vehicle.id, vehicle.name]));
 
   const orderStatsByCustomerId = new Map<string, { latestOrderAt: string | null; latestOrderId: string | null; orderCount: number }>();
 
@@ -115,6 +143,10 @@ export async function getOrderStoreStatusSummary(
         latestOrderId: stats?.latestOrderId ?? null,
         name: customer.name ?? "-",
         orderCount: stats?.orderCount ?? 0,
+        vehicleId: customer.default_vehicle_id ?? null,
+        vehicleName: customer.default_vehicle_id
+          ? (vehicleNameById.get(customer.default_vehicle_id) ?? null)
+          : null,
       };
     })
     .toSorted(compareStore);
@@ -134,5 +166,6 @@ export async function getOrderStoreStatusSummary(
     allStores,
     orderedStores,
     unorderedStores,
+    vehicles,
   };
 }

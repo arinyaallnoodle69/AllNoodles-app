@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useState, useTransition } from "react";
+import React, { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -59,6 +59,8 @@ type StoreListModalState = {
     name: string;
     code?: string;
     latestOrderId?: string | null;
+    vehicleId?: string | null;
+    vehicleName?: string | null;
   }>;
 };
 
@@ -227,6 +229,9 @@ export function DashboardClient({
   }
   const [viewingStores, setViewingStores] = useState<StoreListModalState | null>(null);
   const [isViewingStoresClosing, setIsViewingStoresClosing] = useState(false);
+  const [selectedStoreVehicleId, setSelectedStoreVehicleId] = useState<string | "__all__">("__all__");
+  const storeVehicleTabsContainerRef = useRef<HTMLDivElement>(null);
+  const [storeVehicleUnderlineStyle, setStoreVehicleUnderlineStyle] = useState<React.CSSProperties | null>(null);
 
   function closeViewingStores() {
     if (isViewingStoresClosing) return;
@@ -260,6 +265,41 @@ export function DashboardClient({
     () => new Set(storeStatusSummary.orderedStores.map((store) => store.id)),
     [storeStatusSummary.orderedStores],
   );
+
+  const visibleViewingStores = useMemo(() => {
+    const stores = viewingStores?.stores ?? [];
+    if (selectedStoreVehicleId === "__all__") return stores;
+    return stores.filter((store) => store.vehicleId === selectedStoreVehicleId);
+  }, [selectedStoreVehicleId, viewingStores]);
+
+  useEffect(() => {
+    const container = storeVehicleTabsContainerRef.current;
+    if (!container) return;
+
+    const timer = window.setTimeout(() => {
+      const activeEl = container.querySelector('[data-active="true"]') as HTMLElement | null;
+      if (!activeEl) {
+        setStoreVehicleUnderlineStyle(null);
+        return;
+      }
+
+      setStoreVehicleUnderlineStyle({
+        left: `${activeEl.offsetLeft}px`,
+        width: `${activeEl.offsetWidth}px`,
+      });
+    }, 0);
+
+    return () => window.clearTimeout(timer);
+  }, [selectedStoreVehicleId, storeStatusSummary.vehicles, viewingStores]);
+
+  function handleStoreVehicleSelect(id: string | "__all__", event: React.MouseEvent<HTMLButtonElement>) {
+    setSelectedStoreVehicleId(id);
+    setStoreVehicleUnderlineStyle({
+      left: `${event.currentTarget.offsetLeft}px`,
+      width: `${event.currentTarget.offsetWidth}px`,
+    });
+    event.currentTarget.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+  }
 
   const {
     kpi,
@@ -436,6 +476,7 @@ export function DashboardClient({
             <button
               onClick={() => {
                 setIsViewingStoresClosing(false);
+                setSelectedStoreVehicleId("__all__");
                 setViewingStores({
                   title: "ร้านค้าทั้งหมด",
                   stores: storeStatusSummary.allStores,
@@ -467,6 +508,7 @@ export function DashboardClient({
               <button
                 onClick={() => {
                   setIsViewingStoresClosing(false);
+                  setSelectedStoreVehicleId("__all__");
                   setViewingStores({
                     title: "ร้านค้าที่ยังไม่ได้สั่ง",
                     stores: storeStatusSummary.unorderedStores,
@@ -490,6 +532,7 @@ export function DashboardClient({
               <button
                 onClick={() => {
                   setIsViewingStoresClosing(false);
+                  setSelectedStoreVehicleId("__all__");
                   setViewingStores({
                     title: "ร้านค้าที่สั่งแล้ว",
                     stores: storeStatusSummary.orderedStores,
@@ -680,8 +723,54 @@ export function DashboardClient({
               </button>
             </div>
 
+            {storeStatusSummary.vehicles.length > 0 ? (
+              <div className="mb-5 border-b border-[#EA80FC]/15 bg-white">
+                <div
+                  ref={storeVehicleTabsContainerRef}
+                  className="no-scrollbar relative flex gap-6 overflow-x-auto scroll-smooth px-8 pt-1"
+                >
+                  <span
+                    className="absolute bottom-0 h-[3px] rounded-full bg-[#4A148C]"
+                    style={{
+                      ...(storeVehicleUnderlineStyle ?? { left: 0, width: 0 }),
+                      opacity: storeVehicleUnderlineStyle ? 1 : 0,
+                      transition:
+                        "left 300ms cubic-bezier(0.16, 1, 0.3, 1), width 300ms cubic-bezier(0.16, 1, 0.3, 1), opacity 200ms ease-in-out",
+                    }}
+                  />
+                  <button
+                    type="button"
+                    data-active={selectedStoreVehicleId === "__all__"}
+                    onClick={(event) => handleStoreVehicleSelect("__all__", event)}
+                    className={`whitespace-nowrap pb-3 text-sm font-black tracking-wide transition-all ${
+                      selectedStoreVehicleId === "__all__"
+                        ? "scale-[1.03] text-[#4A148C]"
+                        : "text-slate-400 hover:text-slate-600"
+                    }`}
+                  >
+                    ร้านทั้งหมด
+                  </button>
+                  {storeStatusSummary.vehicles.map((vehicle) => (
+                    <button
+                      key={vehicle.id}
+                      type="button"
+                      data-active={selectedStoreVehicleId === vehicle.id}
+                      onClick={(event) => handleStoreVehicleSelect(vehicle.id, event)}
+                      className={`whitespace-nowrap pb-3 text-sm font-black tracking-wide transition-all ${
+                        selectedStoreVehicleId === vehicle.id
+                          ? "scale-[1.03] text-[#4A148C]"
+                          : "text-slate-400 hover:text-slate-600"
+                      }`}
+                    >
+                      {vehicle.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+
             <div className="no-scrollbar max-h-[60vh] space-y-px overflow-y-auto pb-10">
-              {!viewingStores || viewingStores.stores.length === 0 ? (
+              {!viewingStores || visibleViewingStores.length === 0 ? (
                 <div className="flex flex-col items-center py-24 text-center">
                   <div className="mb-5 rounded-full bg-slate-50 p-7">
                     <Store className="h-14 w-14 text-slate-200" />
@@ -695,7 +784,7 @@ export function DashboardClient({
                       <Loader2 className="h-10 w-10 animate-spin text-[#4A148C]" strokeWidth={3} />
                     </div>
                   ) : null}
-                  {viewingStores.stores.map((store) => {
+                  {visibleViewingStores.map((store) => {
                     const isOrdered = orderedStoreIds.has(store.id);
 
                     return (

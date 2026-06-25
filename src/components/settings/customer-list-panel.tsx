@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import Link from "next/link";
 import { ListTree, LoaderCircle, PencilLine, Store } from "lucide-react";
 import type { SettingsCustomer, SettingsVehicle } from "@/lib/settings/admin";
 import type { WarehouseOption } from "@/lib/warehouses";

@@ -4,6 +4,29 @@ import Image from "next/image";
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
+  AutoScrollActivator,
+  closestCenter,
+  DndContext,
+  KeyboardSensor,
+  MouseSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import {
+  Check,
+  GripVertical,
+  LayoutGrid,
   Package2,
   PencilLine,
   Plus,
@@ -15,16 +38,10 @@ import {
 } from "lucide-react";
 import {
   deleteProductCategory,
+  updateProductCategoryOrder,
   upsertProductCategory,
 } from "@/app/dashboard/settings/actions";
-import {
-  SettingsEmptyState,
-  SettingsPanel,
-  SettingsPanelBody,
-  SettingsPanelHeader,
-  settingsFieldLabelClass,
-  settingsInputClass,
-} from "@/components/settings/settings-ui";
+import { SettingsEmptyState } from "@/components/settings/settings-ui";
 import { normalizeSearch } from "@/lib/utils/search";
 import type {
   SettingsProduct,
@@ -45,19 +62,118 @@ function sortIds(values: string[]) {
   return [...values].sort((left, right) => left.localeCompare(right));
 }
 
+function cx(...parts: Array<string | false | null | undefined>) {
+  return parts.filter(Boolean).join(" ");
+}
+
+function SortableCategoryRow({
+  category,
+  index,
+  isActive,
+  onSelect,
+}: {
+  category: SettingsProductCategory;
+  index: number;
+  isActive: boolean;
+  onSelect: (categoryId: string) => void;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: category.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.62 : 1,
+    zIndex: isDragging ? 50 : 1,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      role="button"
+      tabIndex={0}
+      onClick={() => onSelect(category.id)}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          onSelect(category.id);
+        }
+      }}
+      className={cx(
+        "grid w-full grid-cols-[4rem_minmax(12rem,1fr)_8rem_8rem_7rem] items-center border-t border-[#EA80FC]/15 px-4 py-4 text-left transition hover:bg-[#F3E5F5]/45",
+        isActive && "bg-[#F3E5F5]/70",
+        isDragging && "relative shadow-[0_18px_42px_rgba(74,20,140,0.18)]",
+      )}
+    >
+      <span className="flex items-center gap-2 text-sm font-black text-slate-950">
+        <span>{index + 1}</span>
+        <button
+          type="button"
+          {...attributes}
+          {...listeners}
+          className="inline-flex cursor-grab text-slate-400 transition hover:text-[#4A148C] active:cursor-grabbing"
+          aria-label={`ลากเพื่อย้ายลำดับหมวดหมู่ ${category.name}`}
+          onClick={(event) => event.stopPropagation()}
+        >
+          <GripVertical className="h-4 w-4" strokeWidth={2.4} />
+        </button>
+      </span>
+      <span className="min-w-0">
+        <span className="block truncate text-base font-black text-slate-950">
+          {category.name}
+        </span>
+        <span className="mt-1 block text-xs font-bold text-slate-700">
+          ลากไอคอนเพื่อจัดลำดับ
+        </span>
+      </span>
+      <span className="text-center text-base font-black text-slate-950">
+        {category.productCount}
+      </span>
+      <span className="text-center">
+        <span className="inline-flex rounded-full bg-emerald-50 px-3 py-1 text-xs font-black text-emerald-700">
+          ใช้งาน
+        </span>
+      </span>
+      <span className="flex items-center justify-center gap-2">
+        <span className="inline-flex h-9 w-9 items-center justify-center border border-[#EA80FC]/35 bg-white text-[#4A148C]">
+          <PencilLine className="h-4 w-4" strokeWidth={2.3} />
+        </span>
+        {isActive ? (
+          <span className="inline-flex h-9 w-9 items-center justify-center bg-[#4A148C] text-white">
+            <Check className="h-4 w-4" strokeWidth={2.8} />
+          </span>
+        ) : null}
+      </span>
+    </div>
+  );
+}
+
 export function ProductCategoryManager({
   categories,
   products,
 }: ProductCategoryManagerProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
+  const [localCategories, setLocalCategories] = useState(categories);
+  const [prevCategories, setPrevCategories] = useState(categories);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(
     categories[0]?.id ?? null,
   );
   const [isCreating, setIsCreating] = useState(categories.length === 0);
-  const [draftName, setDraftName] = useState("");
-  const [draftProductIds, setDraftProductIds] = useState<string[]>([]);
+  const [draftName, setDraftName] = useState(categories[0]?.name ?? "");
+  const [draftProductIds, setDraftProductIds] = useState<string[]>(categories[0]?.productIds ?? []);
+  const [categorySearch, setCategorySearch] = useState("");
   const [productSearch, setProductSearch] = useState("");
+  const [productCategoryFilter, setProductCategoryFilter] = useState("__all__");
+  const [productBrandFilter, setProductBrandFilter] = useState("__all__");
+  const [isProductModalOpen, setIsProductModalOpen] = useState(false);
   const [feedback, setFeedback] = useState<{ tone: "error" | "success"; message: string } | null>(
     null,
   );
@@ -65,34 +181,18 @@ export function ProductCategoryManager({
   const [nameModalValue, setNameModalValue] = useState("");
   const nameInputRef = useRef<HTMLInputElement | null>(null);
 
-  const selectedCategory = useMemo(
-    () => categories.find((category) => category.id === selectedCategoryId) ?? null,
-    [categories, selectedCategoryId],
-  );
-
-  const [prevCategories, setPrevCategories] = useState(categories);
-  const [prevSelectedId, setPrevSelectedId] = useState(selectedCategoryId);
-
-  if (categories !== prevCategories || selectedCategoryId !== prevSelectedId) {
+  if (categories !== prevCategories) {
     setPrevCategories(categories);
-    setPrevSelectedId(selectedCategoryId);
-
-    if (!isCreating) {
-      if (!selectedCategoryId && categories[0]) {
-        setSelectedCategoryId(categories[0].id);
-        setDraftName(categories[0].name);
-        setDraftProductIds(categories[0].productIds);
-      } else if (selectedCategory) {
-        setDraftName(selectedCategory.name);
-        setDraftProductIds(selectedCategory.productIds);
-      }
-    }
+    setLocalCategories(categories);
   }
 
+  const selectedCategory = useMemo(
+    () => localCategories.find((category) => category.id === selectedCategoryId) ?? null,
+    [localCategories, selectedCategoryId],
+  );
+
   useEffect(() => {
-    if (!nameModalMode) {
-      return;
-    }
+    if (!nameModalMode) return;
 
     const frame = window.requestAnimationFrame(() => {
       nameInputRef.current?.focus();
@@ -102,18 +202,73 @@ export function ProductCategoryManager({
     return () => window.cancelAnimationFrame(frame);
   }, [nameModalMode]);
 
-  const normalizedSearch = normalizeSearch(productSearch);
+  const sensors = useSensors(
+    useSensor(MouseSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: {
+        delay: 250,
+        tolerance: 5,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
+  );
+
+  const activeCategoryCount = localCategories.filter((category) => category.isActive).length;
+  const hiddenCategoryCount = Math.max(localCategories.length - activeCategoryCount, 0);
+  const selectedCount = draftProductIds.length;
+  const normalizedCategorySearch = normalizeSearch(categorySearch);
+  const normalizedProductSearch = normalizeSearch(productSearch);
+
+  const filteredCategories = useMemo(() => {
+    if (!normalizedCategorySearch) return localCategories;
+
+    return localCategories.filter((category) => normalizeSearch(category.name).includes(normalizedCategorySearch));
+  }, [localCategories, normalizedCategorySearch]);
+
+  const brandOptions = useMemo(() => {
+    const brands = new Set<string>();
+
+    for (const product of products) {
+      const brand = product.brand.trim();
+      if (brand) brands.add(brand);
+    }
+
+    return [...brands].sort((left, right) => left.localeCompare(right, "th"));
+  }, [products]);
+
+  const selectedProducts = useMemo(() => {
+    const selectedProductIdSet = new Set(draftProductIds);
+    return products.filter((product) => selectedProductIdSet.has(product.id));
+  }, [draftProductIds, products]);
+
   const filteredProducts = useMemo(() => {
-    if (!normalizedSearch) return products;
+    const hasSearch = Boolean(normalizedProductSearch);
 
     return products.filter((product) => {
+      if (productCategoryFilter !== "__all__" && !product.categoryIds.includes(productCategoryFilter)) {
+        return false;
+      }
+
+      if (productBrandFilter !== "__all__" && product.brand !== productBrandFilter) {
+        return false;
+      }
+
+      if (!hasSearch) return true;
+
       return (
-        normalizeSearch(product.name).includes(normalizedSearch) ||
-        normalizeSearch(product.sku).includes(normalizedSearch) ||
-        product.categoryNames.some((n) => normalizeSearch(n).includes(normalizedSearch))
+        normalizeSearch(product.name).includes(normalizedProductSearch) ||
+        normalizeSearch(product.sku).includes(normalizedProductSearch) ||
+        normalizeSearch(product.brand).includes(normalizedProductSearch) ||
+        product.categoryNames.some((name) => normalizeSearch(name).includes(normalizedProductSearch))
       );
     });
-  }, [normalizedSearch, products]);
+  }, [normalizedProductSearch, productBrandFilter, productCategoryFilter, products]);
 
   const sortedDraftProductIds = useMemo(() => sortIds(draftProductIds), [draftProductIds]);
   const selectedCategoryProductIds = useMemo(
@@ -164,7 +319,7 @@ export function ProductCategoryManager({
   }
 
   function openCategory(categoryId: string) {
-    const category = categories.find((item) => item.id === categoryId);
+    const category = localCategories.find((item) => item.id === categoryId);
     if (!category) return;
 
     setIsCreating(false);
@@ -180,6 +335,55 @@ export function ProductCategoryManager({
         ? current.filter((id) => id !== productId)
         : [...current, productId],
     );
+  }
+
+  function removeProduct(productId: string) {
+    setDraftProductIds((current) => current.filter((id) => id !== productId));
+  }
+
+  function openProductModal() {
+    if (!draftName.trim()) {
+      setFeedback({ tone: "error", message: "กรุณาตั้งชื่อหมวดหมู่ก่อนเพิ่มสินค้า" });
+      return;
+    }
+
+    setProductSearch("");
+    setProductCategoryFilter("__all__");
+    setProductBrandFilter("__all__");
+    setIsProductModalOpen(true);
+  }
+
+  function handleCategoryDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    if (!over || active.id === over.id || normalizedCategorySearch) return;
+
+    let updatedCategories: SettingsProductCategory[] = [];
+
+    setLocalCategories((items) => {
+      const oldIndex = items.findIndex((item) => item.id === active.id);
+      const newIndex = items.findIndex((item) => item.id === over.id);
+
+      if (oldIndex < 0 || newIndex < 0) {
+        updatedCategories = items;
+        return items;
+      }
+
+      updatedCategories = arrayMove(items, oldIndex, newIndex).map((category, index) => ({
+        ...category,
+        sortOrder: index,
+      }));
+      return updatedCategories;
+    });
+
+    startTransition(async () => {
+      try {
+        await updateProductCategoryOrder(updatedCategories.map((category) => category.id));
+      } catch (error) {
+        console.error("Failed to update category order:", error);
+        setFeedback({ tone: "error", message: "บันทึกลำดับหมวดหมู่ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง" });
+        setLocalCategories(categories);
+      }
+    });
   }
 
   function handleSave() {
@@ -238,267 +442,543 @@ export function ProductCategoryManager({
   }
 
   return (
-    <SettingsPanel className="overflow-hidden rounded-[1.75rem] border border-slate-200 shadow-[0_18px_40px_rgba(15,23,42,0.06)]">
-      <SettingsPanelHeader
-        title="เพิ่มหมวดหมู่สินค้า"
-        description="ตั้งชื่อหมวดหมู่และกำหนดว่าสินค้าใดอยู่ในหมวดนั้น เพื่อให้ค้นหาและคัดกรองสินค้าได้ง่ายขึ้นทุกหน้าที่เกี่ยวข้อง"
-        icon="list"
-      />
-
-      <SettingsPanelBody className="p-0">
-        <div className="grid gap-0 lg:grid-cols-[320px_minmax(0,1fr)]">
-          <aside className="border-b border-slate-100 bg-slate-50/80 p-4 lg:border-b-0 lg:border-r lg:p-5">
-            <div>
-              <p className="text-xs font-bold uppercase tracking-[0.18em] text-slate-400">
-                หมวดหมู่ทั้งหมด
+    <section className="overflow-hidden border border-[#EA80FC]/20 bg-white shadow-[0_18px_55px_rgba(74,20,140,0.08)] sm:rounded-[1.5rem]">
+      <header className="border-b border-[#EA80FC]/20 bg-white px-4 py-5 sm:px-6 lg:px-8">
+        <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex min-w-0 items-start gap-4">
+            <div className="flex h-14 w-14 shrink-0 items-center justify-center bg-[#4A148C] text-white shadow-[0_12px_28px_rgba(74,20,140,0.22)]">
+              <LayoutGrid className="h-7 w-7" strokeWidth={2.3} />
+            </div>
+            <div className="min-w-0">
+              <p className="text-[11px] font-black uppercase tracking-[0.22em] text-[#4A148C]">
+                ALL NOODLES SETTINGS
               </p>
-              <p className="mt-1 text-sm text-slate-500">{categories.length} หมวดหมู่</p>
+              <h2 className="mt-1 text-2xl font-black leading-tight tracking-tight text-slate-950 sm:text-3xl">
+                จัดการหมวดหมู่
+              </h2>
+              <p className="mt-1 max-w-2xl text-sm font-bold leading-6 text-slate-800">
+                จัดกลุ่มสินค้าให้ค้นหาเร็วขึ้น และเลือกสินค้าเข้าออเดอร์ได้เป็นระเบียบกว่าเดิม
+              </p>
             </div>
+          </div>
 
-            <div className="mt-4 space-y-2">
-              <button
-                type="button"
-                onClick={openCreateCategoryModal}
-                className={`flex w-full items-center justify-between gap-3 rounded-2xl border px-4 py-3 text-left transition ${
-                  isCreating
-                    ? "border-[#4A148C] bg-white text-[#4A148C] shadow-[0_12px_28px_rgba(4,53,106,0.12)]"
-                    : "border-dashed border-[#4A148C]/30 bg-white text-slate-700 hover:border-[#4A148C]/50"
-                }`}
-              >
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-base font-semibold">เพิ่มหมวดหมู่ใหม่</p>
-                  <p className="mt-1 text-sm text-slate-400">
-                    ตั้งชื่อหมวดหมู่ก่อน แล้วค่อยเลือกสินค้า
-                  </p>
-                </div>
-                <Plus
-                  className={`h-5 w-5 shrink-0 ${
-                    isCreating ? "text-[#4A148C]" : "text-slate-300"
-                  }`}
-                  strokeWidth={2}
-                />
-              </button>
+          <button
+            type="button"
+            onClick={openCreateCategoryModal}
+            className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-[#EA80FC]/60 bg-[#4A148C] px-5 text-sm font-black text-white shadow-[0_14px_32px_rgba(74,20,140,0.24)] transition active:scale-[0.98] sm:w-auto"
+          >
+            <Plus className="h-5 w-5" strokeWidth={2.7} />
+            เพิ่มหมวดหมู่
+          </button>
+        </div>
 
-              {categories.length === 0 ? (
-                <SettingsEmptyState className="border-slate-200 bg-white py-8">
-                  ยังไม่มีหมวดหมู่สินค้า เริ่มจากปุ่ม <span className="font-semibold">เพิ่มหมวดหมู่ใหม่</span> ด้านบน
-                </SettingsEmptyState>
-              ) : (
-                categories.map((category) => {
-                  const isActive = !isCreating && category.id === selectedCategoryId;
-
-                  return (
-                    <button
-                      key={category.id}
-                      type="button"
-                      onClick={() => openCategory(category.id)}
-                      className={`flex w-full items-center justify-between gap-3 rounded-2xl border px-4 py-3 text-left transition ${
-                        isActive
-                          ? "border-[#4A148C] bg-white text-[#4A148C] shadow-[0_12px_28px_rgba(4,53,106,0.12)]"
-                          : "border-transparent bg-white text-slate-700 hover:border-slate-200"
-                      }`}
-                    >
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-base font-semibold">{category.name}</p>
-                        <p className="mt-1 text-sm text-slate-400">
-                          {category.productCount} สินค้า
-                        </p>
-                      </div>
-                      <Tag
-                        className={`h-5 w-5 shrink-0 ${
-                          isActive ? "text-[#4A148C]" : "text-slate-300"
-                        }`}
-                        strokeWidth={2}
-                      />
-                    </button>
-                  );
-                })
+        <div className="mt-5 grid grid-cols-3 gap-2 sm:gap-3">
+          {[
+            { label: "หมวดหมู่ทั้งหมด", value: localCategories.length },
+            { label: "ใช้งานอยู่", value: activeCategoryCount },
+            { label: "ซ่อนอยู่", value: hiddenCategoryCount },
+          ].map((item, index) => (
+            <article
+              key={item.label}
+              className={cx(
+                "border border-[#EA80FC]/20 bg-white px-3 py-3 sm:px-5 sm:py-4",
+                index === 1 && "bg-[#F3E5F5]/60",
               )}
-            </div>
-          </aside>
+            >
+              <p className="text-[11px] font-black leading-tight text-slate-950 sm:text-sm">
+                {item.label}
+              </p>
+              <p className="mt-2 text-2xl font-black leading-none text-[#4A148C] sm:text-3xl">
+                {item.value}
+              </p>
+            </article>
+          ))}
+        </div>
+      </header>
 
-          <div className="min-w-0 bg-white p-4 lg:p-6">
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-              <div>
-                <p className="text-xs font-bold uppercase tracking-[0.18em] text-slate-400">
-                  ตั้งค่าหมวดหมู่
-                </p>
-                <h3 className="mt-1 text-2xl font-bold tracking-tight text-slate-950">
-                  {draftName || "หมวดหมู่ใหม่"}
-                </h3>
-                <p className="mt-1 text-sm leading-6 text-slate-500">
-                  {draftName
-                    ? "เลือกสินค้าเข้าในหมวดนี้ได้หลายรายการ และกลับมาแก้ไขได้ทุกเมื่อ"
-                    : "เริ่มจากกดปุ่มเพิ่มหมวดหมู่ใหม่ แล้วตั้งชื่อหมวดหมู่ก่อน"}
-                </p>
-                {isCreating ? (
-                  <div className="mt-3 inline-flex items-center gap-2 rounded-full bg-[#F3E5F5] px-3 py-1.5 text-sm font-semibold text-[#4A148C]">
-                    <Plus className="h-4 w-4" strokeWidth={2.2} />
-                    กำลังสร้างหมวดหมู่ใหม่
-                  </div>
-                ) : null}
-              </div>
-
-              <div className="flex flex-wrap items-center gap-3">
+      <div className="grid min-h-[42rem] lg:grid-cols-[minmax(0,1.05fr)_minmax(24rem,0.95fr)]">
+        <div className="min-w-0 border-b border-[#EA80FC]/20 bg-white lg:border-b-0 lg:border-r">
+          <div className="space-y-4 px-4 py-4 sm:px-6 lg:px-8">
+            <div className="flex flex-col gap-3 xl:flex-row">
+              <label className="flex min-h-12 flex-1 items-center gap-3 border border-[#EA80FC]/25 bg-white px-4">
+                <Search className="h-5 w-5 shrink-0 text-[#4A148C]" strokeWidth={2.3} />
+                <input
+                  value={categorySearch}
+                  onChange={(event) => setCategorySearch(event.target.value)}
+                  placeholder="ค้นหาหมวดหมู่..."
+                  className="min-w-0 flex-1 bg-transparent text-base font-bold text-slate-950 outline-none placeholder:text-slate-500"
+                />
+              </label>
+              <div className="flex min-h-12 items-center border border-[#EA80FC]/25 bg-white p-1">
                 <button
                   type="button"
-                  onClick={draftName ? openRenameCategoryModal : openCreateCategoryModal}
-                  disabled={isPending}
-                  className="inline-flex h-11 items-center gap-2 rounded-2xl border border-slate-200 px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-45"
+                  className="h-10 flex-1 bg-[#4A148C] px-4 text-sm font-black text-white xl:flex-none"
                 >
-                  <PencilLine className="h-4 w-4" strokeWidth={2.1} />
-                  {draftName ? "แก้ชื่อหมวดหมู่" : "ตั้งชื่อหมวดหมู่"}
+                  ทั้งหมด
                 </button>
-                {selectedCategory ? (
-                  <button
-                    type="button"
-                    onClick={handleDelete}
-                    disabled={isPending}
-                    className="inline-flex h-11 items-center gap-2 rounded-2xl border border-rose-200 px-4 text-sm font-semibold text-rose-600 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    <Trash2 className="h-4 w-4" strokeWidth={2.1} />
-                    ลบหมวดหมู่
-                  </button>
-                ) : null}
                 <button
                   type="button"
-                  onClick={handleSave}
-                  disabled={isPending || !hasChanges || !draftName.trim()}
-                  className="inline-flex h-11 items-center gap-2 rounded-2xl bg-[#4A148C] px-5 text-sm font-semibold text-white shadow-[0_12px_28px_rgba(142, 36, 170,0.18)] transition hover:bg-[#4A148C] disabled:cursor-not-allowed disabled:opacity-45"
+                  className="h-10 flex-1 px-4 text-sm font-black text-slate-950 transition hover:bg-[#F3E5F5] xl:flex-none"
                 >
-                  <Save className="h-4 w-4" strokeWidth={2.2} />
-                  {isPending ? "กำลังบันทึก..." : "บันทึกหมวดหมู่"}
+                  ใช้งาน
+                </button>
+                <button
+                  type="button"
+                  className="h-10 flex-1 px-4 text-sm font-black text-slate-950 transition hover:bg-[#F3E5F5] xl:flex-none"
+                >
+                  ซ่อน
                 </button>
               </div>
             </div>
 
             {feedback ? (
               <div
-                className={`mt-4 rounded-2xl border px-4 py-3 text-sm font-medium ${
+                className={cx(
+                  "border px-4 py-3 text-sm font-black",
                   feedback.tone === "success"
-                    ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                    : "border-rose-200 bg-rose-50 text-rose-700"
-                }`}
+                    ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+                    : "border-rose-200 bg-rose-50 text-rose-700",
+                )}
               >
                 {feedback.message}
               </div>
             ) : null}
+          </div>
 
-            <div className="mt-6">
-              <section className="min-w-0 rounded-[1.5rem] border border-slate-200 bg-white">
-                <div className="border-b border-slate-100 px-5 py-4">
-                  <p className="text-sm font-semibold text-slate-900">เลือกสินค้าในหมวดหมู่</p>
-                  <p className="mt-1 text-sm text-slate-500">
-                    ติ๊กเลือกสินค้าได้หลายรายการ และค้นหาได้ทั้งชื่อสินค้า รหัสสินค้า และชื่อหมวดเดิมของสินค้า
+          <div className="hidden px-4 pb-6 sm:block sm:px-6 lg:px-8">
+            {normalizedCategorySearch ? (
+              <p className="mb-2 text-xs font-black text-slate-700">
+                ล้างคำค้นหาก่อน หากต้องการลากเพื่อจัดลำดับหมวดหมู่
+              </p>
+            ) : null}
+            <div className="overflow-hidden border border-[#EA80FC]/20">
+              <div className="grid grid-cols-[4rem_minmax(12rem,1fr)_8rem_8rem_7rem] bg-[#4A148C] px-4 py-3 text-sm font-black text-white">
+                <span>ลำดับ</span>
+                <span>หมวดหมู่</span>
+                <span className="text-center">จำนวนสินค้า</span>
+                <span className="text-center">สถานะ</span>
+                <span className="text-center">จัดการ</span>
+              </div>
+
+              {filteredCategories.length === 0 ? (
+                <SettingsEmptyState className="m-4 border-[#EA80FC]/35 bg-white py-10 text-slate-950">
+                  ไม่พบหมวดหมู่ที่ค้นหา
+                </SettingsEmptyState>
+              ) : (
+                <DndContext
+                  id="product-category-list-dnd"
+                  sensors={sensors}
+                  autoScroll={{
+                    enabled: true,
+                    activator: AutoScrollActivator.Pointer,
+                    acceleration: 16,
+                    interval: 5,
+                    threshold: { x: 0, y: 0.28 },
+                  }}
+                  collisionDetection={closestCenter}
+                  onDragEnd={handleCategoryDragEnd}
+                  modifiers={[restrictToVerticalAxis]}
+                >
+                  <SortableContext
+                    items={filteredCategories.map((category) => category.id)}
+                    strategy={verticalListSortingStrategy}
+                    disabled={Boolean(normalizedCategorySearch)}
+                  >
+                    {filteredCategories.map((category, index) => (
+                      <SortableCategoryRow
+                        key={category.id}
+                        category={category}
+                        index={index}
+                        isActive={!isCreating && category.id === selectedCategoryId}
+                        onSelect={openCategory}
+                      />
+                    ))}
+                  </SortableContext>
+                </DndContext>
+              )}
+            </div>
+          </div>
+
+          <div className="space-y-0 px-4 pb-6 sm:hidden">
+            {filteredCategories.length === 0 ? (
+              <SettingsEmptyState className="border-[#EA80FC]/35 bg-white py-10 text-slate-950">
+                ไม่พบหมวดหมู่ที่ค้นหา
+              </SettingsEmptyState>
+            ) : (
+              filteredCategories.map((category, index) => {
+                const isActive = !isCreating && category.id === selectedCategoryId;
+
+                return (
+                  <button
+                    key={category.id}
+                    type="button"
+                    onClick={() => openCategory(category.id)}
+                    className={cx(
+                      "flex w-full items-center gap-3 border-b border-[#EA80FC]/25 bg-white py-4 text-left",
+                      isActive && "bg-[#F3E5F5]/55",
+                    )}
+                  >
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center bg-[#4A148C] text-sm font-black text-white">
+                      {index + 1}
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-lg font-black text-slate-950">
+                        {category.name}
+                      </span>
+                      <span className="mt-1 flex items-center gap-2 text-sm font-black text-slate-800">
+                        <Tag className="h-4 w-4 text-[#4A148C]" strokeWidth={2.4} />
+                        {category.productCount} สินค้า
+                      </span>
+                    </span>
+                    <GripVertical className="h-5 w-5 shrink-0 text-slate-400" strokeWidth={2.4} />
+                  </button>
+                );
+              })
+            )}
+          </div>
+        </div>
+
+        <aside className="min-w-0 bg-[#fbf8ff]">
+          <div className="sticky top-0 z-10 border-b border-[#EA80FC]/20 bg-white px-4 py-4 sm:px-6">
+            <div className="flex flex-col gap-4">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-[11px] font-black uppercase tracking-[0.18em] text-[#4A148C]">
+                    CATEGORY DETAIL
+                  </p>
+                  <h3 className="mt-1 truncate text-2xl font-black text-slate-950">
+                    {draftName || "หมวดหมู่ใหม่"}
+                  </h3>
+                  <p className="mt-1 text-sm font-bold text-slate-800">
+                    เลือกแล้ว {selectedCount} รายการ จากทั้งหมด {products.length} รายการ
+                  </p>
+                </div>
+                {isCreating ? (
+                  <span className="shrink-0 rounded-full bg-[#F3E5F5] px-3 py-1.5 text-xs font-black text-[#4A148C]">
+                    กำลังสร้าง
+                  </span>
+                ) : null}
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-[1fr_auto_auto]">
+                <button
+                  type="button"
+                  onClick={draftName ? openRenameCategoryModal : openCreateCategoryModal}
+                  disabled={isPending}
+                  className="inline-flex h-11 items-center justify-center gap-2 border border-[#EA80FC]/35 bg-white px-4 text-sm font-black text-slate-950 transition hover:bg-[#F3E5F5] disabled:opacity-50"
+                >
+                  <PencilLine className="h-4 w-4 text-[#4A148C]" strokeWidth={2.4} />
+                  {draftName ? "แก้ชื่อ" : "ตั้งชื่อ"}
+                </button>
+                {selectedCategory ? (
+                  <button
+                    type="button"
+                    onClick={handleDelete}
+                    disabled={isPending}
+                    className="inline-flex h-11 items-center justify-center gap-2 border border-rose-200 bg-white px-4 text-sm font-black text-rose-700 transition hover:bg-rose-50 disabled:opacity-50"
+                  >
+                    <Trash2 className="h-4 w-4" strokeWidth={2.4} />
+                    ลบ
+                  </button>
+                ) : null}
+                <button
+                  type="button"
+                  onClick={handleSave}
+                  disabled={isPending || !hasChanges || !draftName.trim()}
+                  className="col-span-2 inline-flex h-11 items-center justify-center gap-2 bg-[#4A148C] px-5 text-sm font-black text-white shadow-[0_12px_28px_rgba(74,20,140,0.2)] transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-45 sm:col-span-1"
+                >
+                  <Save className="h-4 w-4" strokeWidth={2.5} />
+                  {isPending ? "กำลังบันทึก..." : "บันทึก"}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-4 px-4 py-4 sm:px-6">
+            <button
+              type="button"
+              onClick={openProductModal}
+              className="flex h-12 w-full items-center justify-center gap-2 bg-[#4A148C] text-base font-black text-white shadow-[0_14px_32px_rgba(74,20,140,0.2)] transition active:scale-[0.98]"
+            >
+              <Plus className="h-5 w-5" strokeWidth={2.7} />
+              เพิ่มสินค้าในหมวดนี้
+            </button>
+
+            {!draftName.trim() ? (
+              <SettingsEmptyState className="border-[#EA80FC]/35 bg-white py-12 text-slate-950">
+                ตั้งชื่อหมวดหมู่ก่อน แล้วค่อยเพิ่มสินค้า
+              </SettingsEmptyState>
+            ) : selectedProducts.length === 0 ? (
+              <div className="border border-dashed border-[#EA80FC]/45 bg-white px-5 py-10 text-center">
+                <div className="mx-auto flex h-12 w-12 items-center justify-center bg-[#F3E5F5] text-[#4A148C]">
+                  <Package2 className="h-6 w-6" strokeWidth={2.4} />
+                </div>
+                <p className="mt-4 text-lg font-black text-slate-950">ยังไม่มีสินค้าในหมวดนี้</p>
+                <p className="mt-1 text-sm font-bold text-slate-700">
+                  กดปุ่มเพิ่มสินค้า แล้วเลือกสินค้าที่ต้องการจัดเข้าหมวดนี้
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {selectedProducts.map((product) => (
+                  <div
+                    key={product.id}
+                    className="flex items-center gap-3 border border-[#EA80FC]/20 bg-white px-3 py-3"
+                  >
+                    {product.imageUrls[0] ? (
+                      <Image
+                        src={product.imageUrls[0]}
+                        alt={product.name}
+                        width={52}
+                        height={52}
+                        sizes="52px"
+                        className="h-13 w-13 shrink-0 object-cover"
+                      />
+                    ) : (
+                      <div className="flex h-13 w-13 shrink-0 items-center justify-center bg-[#F3E5F5] text-[#4A148C]">
+                        <Package2 className="h-5 w-5" strokeWidth={2.2} />
+                      </div>
+                    )}
+
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-base font-black text-slate-950">{product.name}</p>
+                      <div className="mt-1 flex flex-wrap items-center gap-2">
+                        <span className="font-mono text-xs font-black text-[#4A148C]">
+                          {product.sku}
+                        </span>
+                        {product.brand ? (
+                          <span className="text-xs font-black text-slate-800">{product.brand}</span>
+                        ) : null}
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => removeProduct(product.id)}
+                      className="flex h-10 w-10 shrink-0 items-center justify-center border border-rose-200 bg-white text-rose-600 transition hover:bg-rose-50"
+                      aria-label={`เอา ${product.name} ออกจากหมวดหมู่`}
+                    >
+                      <X className="h-5 w-5" strokeWidth={2.5} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="sticky bottom-0 border-t border-[#EA80FC]/20 bg-white px-4 py-3 sm:px-6 lg:hidden">
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={isPending || !hasChanges || !draftName.trim()}
+              className="flex h-12 w-full items-center justify-center gap-2 bg-[#4A148C] text-base font-black text-white shadow-[0_-10px_30px_rgba(74,20,140,0.16)] disabled:opacity-45"
+            >
+              <Save className="h-5 w-5" strokeWidth={2.5} />
+              {isPending ? "กำลังบันทึก..." : "บันทึกหมวดหมู่"}
+            </button>
+          </div>
+        </aside>
+      </div>
+
+      {isProductModalOpen ? (
+        <div className="fixed inset-0 z-[70] flex items-end justify-center bg-slate-950/45 p-0 sm:items-center sm:p-4">
+          <div
+            className="absolute inset-0"
+            onClick={() => setIsProductModalOpen(false)}
+            aria-hidden="true"
+          />
+          <div className="relative flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden bg-white shadow-[0_28px_80px_rgba(15,23,42,0.24)] sm:max-h-[88vh] sm:rounded-[1.5rem]">
+            <div className="border-b border-[#EA80FC]/20 px-4 py-4 sm:px-6">
+              <div className="flex items-start justify-between gap-4">
+                <div className="min-w-0">
+                  <p className="text-xs font-black uppercase tracking-[0.18em] text-[#4A148C]">
+                    ADD PRODUCTS
+                  </p>
+                  <h3 className="mt-1 text-2xl font-black tracking-tight text-slate-950">
+                    เพิ่มสินค้าในหมวด {draftName || "หมวดหมู่ใหม่"}
+                  </h3>
+                  <p className="mt-1 text-sm font-bold text-slate-800">
+                    เลือกแล้ว {selectedCount} รายการ กรองด้วยหมวดหมู่เดิมหรือแบรนด์ได้
                   </p>
                 </div>
 
-                <div className="border-b border-slate-100 px-5 py-4">
-                  <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
-                    <Search className="h-4.5 w-4.5 shrink-0 text-slate-400" strokeWidth={2} />
-                    <input
-                      value={productSearch}
-                      onChange={(event) => setProductSearch(event.target.value)}
-                      placeholder="ค้นหาสินค้า รหัสสินค้า หรือหมวดหมู่"
-                      className="min-w-0 flex-1 bg-transparent text-sm text-slate-700 outline-none placeholder:text-slate-400"
-                    />
-                  </div>
+                <button
+                  type="button"
+                  onClick={() => setIsProductModalOpen(false)}
+                  className="inline-flex h-11 w-11 shrink-0 items-center justify-center border border-[#EA80FC]/35 bg-white text-[#4A148C] transition hover:bg-[#F3E5F5]"
+                  aria-label="ปิด"
+                >
+                  <X className="h-5 w-5" strokeWidth={2.4} />
+                </button>
+              </div>
+
+              <div className="mt-4 grid gap-2 lg:grid-cols-[minmax(0,1fr)_14rem_14rem]">
+                <label className="flex h-12 items-center gap-3 border border-[#EA80FC]/25 bg-white px-4">
+                  <Search className="h-5 w-5 shrink-0 text-[#4A148C]" strokeWidth={2.3} />
+                  <input
+                    value={productSearch}
+                    onChange={(event) => setProductSearch(event.target.value)}
+                    placeholder="ค้นหาชื่อสินค้า รหัสสินค้า หรือแบรนด์..."
+                    className="min-w-0 flex-1 bg-transparent text-base font-bold text-slate-950 outline-none placeholder:text-slate-500"
+                  />
+                </label>
+
+                <select
+                  value={productCategoryFilter}
+                  onChange={(event) => setProductCategoryFilter(event.target.value)}
+                  className="h-12 border border-[#EA80FC]/25 bg-white px-4 text-sm font-black text-slate-950 outline-none focus:border-[#4A148C] focus:ring-2 focus:ring-[#4A148C]/15"
+                  aria-label="กรองหมวดหมู่"
+                >
+                  <option value="__all__">ทุกหมวดหมู่</option>
+                  {categories.map((category) => (
+                    <option key={category.id} value={category.id}>
+                      {category.name}
+                    </option>
+                  ))}
+                </select>
+
+                <select
+                  value={productBrandFilter}
+                  onChange={(event) => setProductBrandFilter(event.target.value)}
+                  className="h-12 border border-[#EA80FC]/25 bg-white px-4 text-sm font-black text-slate-950 outline-none focus:border-[#4A148C] focus:ring-2 focus:ring-[#4A148C]/15"
+                  aria-label="กรองแบรนด์"
+                >
+                  <option value="__all__">ทุกแบรนด์</option>
+                  {brandOptions.map((brand) => (
+                    <option key={brand} value={brand}>
+                      {brand}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="min-h-0 flex-1 overflow-y-auto bg-[#fbf8ff] px-4 py-4 sm:px-6">
+              {filteredProducts.length === 0 ? (
+                <SettingsEmptyState className="border-[#EA80FC]/35 bg-white py-12 text-slate-950">
+                  ไม่พบสินค้าตามเงื่อนไขที่เลือก
+                </SettingsEmptyState>
+              ) : (
+                <div className="grid gap-2 lg:grid-cols-2">
+                  {filteredProducts.map((product) => {
+                    const isSelected = draftProductIds.includes(product.id);
+                    const otherCategoryName =
+                      product.categoryIds.length > 0 &&
+                      !product.categoryIds.includes(selectedCategoryId ?? "")
+                        ? product.categoryNames[0]
+                        : null;
+                    const isDisabled = Boolean(otherCategoryName);
+
+                    return (
+                      <label
+                        key={product.id}
+                        className={cx(
+                          "flex items-center gap-3 border bg-white px-3 py-3 transition",
+                          isDisabled
+                            ? "cursor-not-allowed border-slate-200 opacity-55"
+                            : isSelected
+                              ? "cursor-pointer border-[#4A148C] bg-[#F3E5F5]/70"
+                              : "cursor-pointer border-[#EA80FC]/20 hover:border-[#EA80FC]/60",
+                        )}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          disabled={isDisabled}
+                          onChange={() => !isDisabled && toggleProduct(product.id)}
+                          className="h-5 w-5 shrink-0 accent-[#4A148C] disabled:cursor-not-allowed"
+                        />
+
+                        {product.imageUrls[0] ? (
+                          <Image
+                            src={product.imageUrls[0]}
+                            alt={product.name}
+                            width={56}
+                            height={56}
+                            sizes="56px"
+                            className="h-14 w-14 shrink-0 object-cover"
+                          />
+                        ) : (
+                          <div className="flex h-14 w-14 shrink-0 items-center justify-center bg-[#F3E5F5] text-[#4A148C]">
+                            <Package2 className="h-6 w-6" strokeWidth={2.2} />
+                          </div>
+                        )}
+
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-base font-black text-slate-950">
+                            {product.name}
+                          </p>
+                          <div className="mt-1 flex flex-wrap items-center gap-2">
+                            <span className="font-mono text-xs font-black text-[#4A148C]">
+                              {product.sku}
+                            </span>
+                            {product.brand ? (
+                              <span className="text-xs font-black text-slate-800">
+                                {product.brand}
+                              </span>
+                            ) : null}
+                          </div>
+                          {otherCategoryName ? (
+                            <p className="mt-1 truncate text-xs font-black text-slate-600">
+                              อยู่ในหมวด: {otherCategoryName} แล้ว
+                            </p>
+                          ) : isSelected ? (
+                            <p className="mt-1 text-xs font-black text-[#4A148C]">
+                              เลือกอยู่ในหมวดนี้
+                            </p>
+                          ) : null}
+                        </div>
+                      </label>
+                    );
+                  })}
                 </div>
+              )}
+            </div>
 
-                <div className="max-h-[34rem] overflow-y-auto px-3 py-3">
-                  {!draftName.trim() ? (
-                    <SettingsEmptyState className="border-slate-200 bg-slate-50 py-12">
-                      ตั้งชื่อหมวดหมู่ก่อน แล้วค่อยเลือกสินค้า
-                    </SettingsEmptyState>
-                  ) : filteredProducts.length === 0 ? (
-                    <SettingsEmptyState className="border-slate-200 bg-slate-50 py-12">
-                      ไม่พบสินค้าในคำค้นนี้
-                    </SettingsEmptyState>
-                  ) : (
-                    <div className="space-y-2">
-                      {filteredProducts.map((product) => {
-                        const isSelected = draftProductIds.includes(product.id);
-                        // สินค้าอยู่หมวดอื่นอยู่แล้ว (ไม่ใช่หมวดที่กำลังแก้ไข)
-                        const otherCategoryName =
-                          product.categoryIds.length > 0 &&
-                          !product.categoryIds.includes(selectedCategoryId ?? "")
-                            ? product.categoryNames[0]
-                            : null;
-                        const isDisabled = Boolean(otherCategoryName);
-
-                        return (
-                          <label
-                            key={product.id}
-                            className={`flex items-center gap-4 rounded-2xl border px-4 py-3 transition ${
-                              isDisabled
-                                ? "cursor-not-allowed border-slate-100 bg-slate-50 opacity-50"
-                                : isSelected
-                                  ? "cursor-pointer border-[#4A148C] bg-[#F3E5F5]"
-                                  : "cursor-pointer border-slate-200 bg-white hover:border-slate-300"
-                            }`}
-                          >
-                            <input
-                              type="checkbox"
-                              checked={isSelected}
-                              disabled={isDisabled}
-                              onChange={() => !isDisabled && toggleProduct(product.id)}
-                              className="h-5 w-5 rounded border-slate-300 accent-[#4A148C] disabled:cursor-not-allowed"
-                            />
-
-                            {product.imageUrls[0] ? (
-                              <Image
-                                src={product.imageUrls[0]}
-                                alt={product.name}
-                                width={52}
-                                height={52}
-                                className="h-13 w-13 shrink-0 rounded-xl object-cover"
-                              />
-                            ) : (
-                              <div className="flex h-13 w-13 shrink-0 items-center justify-center rounded-xl bg-slate-100">
-                                <Package2 className="h-5 w-5 text-slate-400" strokeWidth={1.8} />
-                              </div>
-                            )}
-
-                            <div className="min-w-0 flex-1">
-                              <p className="truncate text-base font-semibold text-slate-900">
-                                {product.name}
-                              </p>
-                              <p className="mt-1 text-sm text-slate-400">{product.sku}</p>
-                              {otherCategoryName ? (
-                                <p className="mt-1 truncate text-xs font-medium text-slate-400">
-                                  อยู่ในหมวด: {otherCategoryName} แล้ว
-                                </p>
-                              ) : isSelected ? (
-                                <p className="mt-1 text-xs font-medium text-[#4A148C]">
-                                  ✓ เลือกอยู่ในหมวดนี้
-                                </p>
-                              ) : null}
-                            </div>
-                          </label>
-                        );
-                      })}
-                    </div>
-                  )}
+            <div className="border-t border-[#EA80FC]/20 bg-white px-4 py-4 sm:px-6">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <p className="text-sm font-black text-slate-950">
+                  เลือกสินค้าในหมวดนี้แล้ว {selectedCount} รายการ
+                </p>
+                <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center">
+                  <button
+                    type="button"
+                    onClick={() => setIsProductModalOpen(false)}
+                    className="h-11 border border-[#EA80FC]/35 bg-white px-5 text-sm font-black text-slate-950 transition hover:bg-[#F3E5F5]"
+                  >
+                    ปิด
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsProductModalOpen(false);
+                      handleSave();
+                    }}
+                    disabled={isPending || !hasChanges || !draftName.trim()}
+                    className="h-11 bg-[#4A148C] px-5 text-sm font-black text-white shadow-[0_12px_28px_rgba(74,20,140,0.2)] transition active:scale-[0.98] disabled:opacity-45"
+                  >
+                    {isPending ? "กำลังบันทึก..." : "บันทึกหมวดหมู่"}
+                  </button>
                 </div>
-              </section>
+              </div>
             </div>
           </div>
         </div>
-      </SettingsPanelBody>
+      ) : null}
 
       {nameModalMode ? (
         <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/45 p-4">
           <div className="absolute inset-0" onClick={closeNameModal} aria-hidden="true" />
-          <div className="relative w-full max-w-md rounded-[1.75rem] bg-white shadow-[0_28px_80px_rgba(15,23,42,0.22)]">
-            <div className="flex items-start justify-between gap-4 border-b border-slate-100 px-6 py-5">
+          <div className="relative w-full max-w-md overflow-hidden bg-white shadow-[0_28px_80px_rgba(15,23,42,0.22)]">
+            <div className="flex items-start justify-between gap-4 border-b border-[#EA80FC]/20 px-6 py-5">
               <div>
-                <p className="text-xs font-bold uppercase tracking-[0.18em] text-slate-400">
+                <p className="text-xs font-black uppercase tracking-[0.18em] text-[#4A148C]">
                   หมวดหมู่สินค้า
                 </p>
-                <h3 className="mt-1 text-2xl font-bold tracking-tight text-slate-950">
+                <h3 className="mt-1 text-2xl font-black tracking-tight text-slate-950">
                   {nameModalMode === "create" ? "เพิ่มหมวดหมู่ใหม่" : "แก้ชื่อหมวดหมู่"}
                 </h3>
-                <p className="mt-2 text-sm leading-6 text-slate-500">
+                <p className="mt-2 text-sm font-bold leading-6 text-slate-800">
                   {nameModalMode === "create"
                     ? "ตั้งชื่อหมวดหมู่ก่อน แล้วค่อยเลือกสินค้าที่ต้องการให้อยู่ในหมวดนี้"
                     : "เปลี่ยนชื่อหมวดหมู่ให้ชัดเจนและค้นหาได้ง่ายขึ้น"}
@@ -508,15 +988,18 @@ export function ProductCategoryManager({
               <button
                 type="button"
                 onClick={closeNameModal}
-                className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 transition hover:bg-slate-50"
+                className="inline-flex h-11 w-11 shrink-0 items-center justify-center border border-[#EA80FC]/35 bg-white text-[#4A148C] transition hover:bg-[#F3E5F5]"
                 aria-label="ปิด"
               >
-                <X className="h-5 w-5" strokeWidth={2.2} />
+                <X className="h-5 w-5" strokeWidth={2.4} />
               </button>
             </div>
 
             <div className="px-6 py-6">
-              <label className={settingsFieldLabelClass} htmlFor="category-name-modal">
+              <label
+                className="mb-2 block text-sm font-black text-slate-950"
+                htmlFor="category-name-modal"
+              >
                 ชื่อหมวดหมู่
               </label>
               <input
@@ -530,31 +1013,31 @@ export function ProductCategoryManager({
                     confirmNameModal();
                   }
                 }}
-                className={settingsInputClass}
+                className="h-12 w-full border border-[#EA80FC]/35 bg-white px-4 text-base font-black text-slate-950 outline-none transition placeholder:text-slate-500 focus:border-[#4A148C] focus:ring-2 focus:ring-[#4A148C]/15"
                 placeholder="เช่น กลุ่มเส้นเล็ก หรือ เต้าหู้"
               />
             </div>
 
-            <div className="flex items-center justify-end gap-3 border-t border-slate-100 px-6 py-5">
+            <div className="flex items-center justify-end gap-3 border-t border-[#EA80FC]/20 px-6 py-5">
               <button
                 type="button"
                 onClick={closeNameModal}
-                className="inline-flex h-11 items-center rounded-2xl border border-slate-200 px-4 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
+                className="inline-flex h-11 items-center border border-[#EA80FC]/35 bg-white px-5 text-sm font-black text-slate-950 transition hover:bg-[#F3E5F5]"
               >
                 ยกเลิก
               </button>
               <button
                 type="button"
                 onClick={confirmNameModal}
-                className="inline-flex h-11 items-center gap-2 rounded-2xl bg-[#4A148C] px-5 text-sm font-semibold text-white shadow-[0_12px_28px_rgba(142, 36, 170,0.18)] transition hover:bg-[#4A148C]"
+                className="inline-flex h-11 items-center gap-2 bg-[#4A148C] px-5 text-sm font-black text-white shadow-[0_12px_28px_rgba(74,20,140,0.2)] transition active:scale-[0.98]"
               >
-                <Save className="h-4 w-4" strokeWidth={2.2} />
+                <Save className="h-4 w-4" strokeWidth={2.5} />
                 ยืนยันชื่อหมวดหมู่
               </button>
             </div>
           </div>
         </div>
       ) : null}
-    </SettingsPanel>
+    </section>
   );
 }

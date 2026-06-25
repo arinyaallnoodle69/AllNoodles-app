@@ -2,6 +2,7 @@ import "server-only";
 import { cacheLife, cacheTag } from "next/cache";
 
 import { createWarehouseStockMap, getProductWarehouseStockSnapshots } from "@/lib/stock/warehouse-stocks";
+import { sortProductsByCategory } from "@/lib/products/sort-by-category";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
 // Row types
@@ -10,6 +11,7 @@ type CustomerRow = { id: string; customer_code: string; default_warehouse_id: st
 type ProductRow = {
   cost_price: number | string;
   id: string;
+  metadata: unknown;
   name: string;
   sku: string;
   stock_quantity: number | string;
@@ -105,6 +107,7 @@ export type OrderVehicleOption = { id: string; name: string };
 
 export type OrderProductOption = {
   baseCostPrice: number;
+  brand: string;
   categoryIds: string[];
   categoryNames: string[];
   id: string;
@@ -188,7 +191,7 @@ export async function getProductsForOrder(orgId: string): Promise<OrderProductOp
     await Promise.all([
       admin
         .from("products")
-        .select("id, name, sku, unit, stock_quantity, cost_price, display_order")
+        .select("id, name, sku, unit, stock_quantity, cost_price, display_order, metadata")
         .eq("organization_id", orgId)
         .eq("is_active", true)
         .order("display_order", { ascending: true })
@@ -260,36 +263,29 @@ export async function getProductsForOrder(orgId: string): Promise<OrderProductOp
     }
   }
 
-  const categoryNameById = new Map<string, string>(
-    (((categoriesRes.data ?? []) as ProductCategoryRow[]) ?? []).map((category) => [
-      category.id,
-      category.name,
-    ]),
-  );
-  const categoryIdsByProductId = new Map<string, string[]>();
-  const categoryNamesByProductId = new Map<string, string[]>();
+  const categories = ((categoriesRes.data ?? []) as ProductCategoryRow[]) ?? [];
+  const categoryItemIdsByProductId = new Map<string, Set<string>>();
 
   for (const item of ((categoryItemsRes.data ?? []) as ProductCategoryItemRow[]) ?? []) {
-    const currentIds = categoryIdsByProductId.get(item.product_id) ?? [];
-    currentIds.push(item.product_category_id);
-    categoryIdsByProductId.set(item.product_id, currentIds);
-
-    const categoryName = categoryNameById.get(item.product_category_id);
-    if (!categoryName) {
-      continue;
-    }
-
-    const currentNames = categoryNamesByProductId.get(item.product_id) ?? [];
-    currentNames.push(categoryName);
-    categoryNamesByProductId.set(item.product_id, currentNames);
+    const current = categoryItemIdsByProductId.get(item.product_id) ?? new Set<string>();
+    current.add(item.product_category_id);
+    categoryItemIdsByProductId.set(item.product_id, current);
   }
 
   const mapped = (productsRes.data ?? []).map((p) => {
     const baseCostPrice = Number(p.cost_price ?? 0);
+    const metadata =
+      p.metadata && typeof p.metadata === "object" && !Array.isArray(p.metadata)
+        ? (p.metadata as Record<string, unknown>)
+        : {};
+    const productCategoryIds = categoryItemIdsByProductId.get(p.id) ?? new Set<string>();
+    const productCategories = categories.filter((category) => productCategoryIds.has(category.id));
+
     return {
       baseCostPrice,
-      categoryIds: categoryIdsByProductId.get(p.id) ?? [],
-      categoryNames: categoryNamesByProductId.get(p.id) ?? [],
+      brand: typeof metadata.brand === "string" ? metadata.brand.trim() : "",
+      categoryIds: productCategories.map((category) => category.id),
+      categoryNames: productCategories.map((category) => category.name),
       id: p.id,
       imageUrl: firstImageByProductId.get(p.id) ?? null,
       name: p.name,
@@ -306,10 +302,8 @@ export async function getProductsForOrder(orgId: string): Promise<OrderProductOp
     };
   });
 
-  return mapped.toSorted((left, right) => {
-    const orderA = left.display_order ?? 0;
-    const orderB = right.display_order ?? 0;
-    if (orderA !== orderB) return orderA - orderB;
-    return compareProductSku(left, right);
-  });
+  return sortProductsByCategory(
+    mapped.toSorted(compareProductSku),
+    categories.map((category) => ({ id: category.id, sortOrder: Number(category.sort_order) })),
+  );
 }

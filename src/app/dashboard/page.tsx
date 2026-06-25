@@ -90,6 +90,7 @@ async function DashboardDataContent({
       allStores: [],
       orderedStores: [],
       unorderedStores: [],
+      vehicles: [],
     };
   }
 

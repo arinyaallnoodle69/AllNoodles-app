@@ -6,7 +6,7 @@ import { MobileSearchDrawer } from "@/components/mobile-search/mobile-search-dra
 import { IncomingOrdersMobileList } from "@/components/orders/incoming-orders-mobile-list";
 import { IncomingOrderDateFilter } from "@/components/orders/incoming-order-date-filter";
 import { OrderCustomerFilter } from "@/components/orders/order-customer-filter";
-import { requireAnyRole, requireAppRole } from "@/lib/auth/authorization";
+import { requireAnyRole } from "@/lib/auth/authorization";
 import { normalizeOrderDate, getTodayInBangkok } from "@/lib/orders/date";
 import { getCustomerOrderCountsByDate, getIncomingOrders, getOrderDetailById } from "@/lib/orders/detail";
 import { getBilledDeliveryNumbersForRange } from "@/lib/billing/billing-statement";
