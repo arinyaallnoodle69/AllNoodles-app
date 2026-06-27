@@ -12,6 +12,7 @@ import {
   ChevronRight,
   ClipboardList,
   History,
+  ListFilter,
   Loader2,
   Lock,
   Minus,
@@ -737,40 +738,114 @@ function ProductSelectModal({
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [selections, setSelections] = useState<Record<string, ProductSelection>>({});
 
-  const catTabsContainerRef = useRef<HTMLDivElement>(null);
-  const [catUnderlineStyle, setCatUnderlineStyle] = useState<React.CSSProperties | null>(null);
   const [displayLimit, setDisplayLimit] = useState(40);
-
-  useEffect(() => {
-    const container = catTabsContainerRef.current;
-    if (!container) return;
-    const timer = setTimeout(() => {
-      const activeEl = container.querySelector('[data-active="true"]') as HTMLElement;
-      if (activeEl) {
-        setCatUnderlineStyle({
-          left: `${activeEl.offsetLeft}px`,
-          width: `${activeEl.offsetWidth}px`,
-        });
-      } else {
-        setCatUnderlineStyle(null);
-      }
-    }, 0);
-    return () => clearTimeout(timer);
-  }, [selectedCategoryId, open, products]);
+  const [mobileFilterDrawer, setMobileFilterDrawer] = useState<"brand" | "category" | null>(null);
+  const [isMobileFilterDrawerClosing, setIsMobileFilterDrawerClosing] = useState(false);
+  const mobileFilterDrawerTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
+  const [isMobileSearchClosing, setIsMobileSearchClosing] = useState(false);
+  const mobileSearchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const mobileSearchInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setDisplayLimit(40);
-  }, [selectedCategoryId, query]);
+  }, [selectedCategoryId, selectedBrand, query]);
 
-  const handleCategorySelect = (id: string, e: React.MouseEvent<HTMLButtonElement>) => {
+  const handleCategorySelect = (id: string, e?: React.MouseEvent<HTMLButtonElement>) => {
     setSelectedCategoryId(id);
-    setSelectedBrand("__all__");
-    setCatUnderlineStyle({
-      left: `${e.currentTarget.offsetLeft}px`,
-      width: `${e.currentTarget.offsetWidth}px`,
-    });
-    e.currentTarget.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+    if (id === "__all__") {
+      setSelectedBrand("__all__");
+    } else {
+      const availableBrands = new Set<string>();
+      for (const product of products) {
+        if (!product.categoryIds.includes(id)) continue;
+        const brand = product.brand.trim();
+        if (brand) availableBrands.add(brand);
+      }
+      if (selectedBrand !== "__all__" && !availableBrands.has(selectedBrand)) {
+        setSelectedBrand("__all__");
+      }
+    }
+    e?.currentTarget.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
   };
+
+  const handleBrandSelect = (brand: string, e?: React.MouseEvent<HTMLButtonElement>) => {
+    setSelectedBrand(brand);
+    e?.currentTarget.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+  };
+
+  function openMobileFilterDrawer(type: "brand" | "category") {
+    if (mobileFilterDrawerTimerRef.current) {
+      clearTimeout(mobileFilterDrawerTimerRef.current);
+      mobileFilterDrawerTimerRef.current = null;
+    }
+    if (mobileSearchTimerRef.current) {
+      clearTimeout(mobileSearchTimerRef.current);
+      mobileSearchTimerRef.current = null;
+    }
+    setMobileSearchOpen(false);
+    setIsMobileSearchClosing(false);
+    setIsMobileFilterDrawerClosing(false);
+    setMobileFilterDrawer(type);
+  }
+
+  function closeMobileFilterDrawer() {
+    if (!mobileFilterDrawer || isMobileFilterDrawerClosing) return;
+
+    setIsMobileFilterDrawerClosing(true);
+    mobileFilterDrawerTimerRef.current = setTimeout(() => {
+      setMobileFilterDrawer(null);
+      setIsMobileFilterDrawerClosing(false);
+      mobileFilterDrawerTimerRef.current = null;
+    }, 250);
+  }
+
+  function openMobileSearch() {
+    if (mobileFilterDrawerTimerRef.current) {
+      clearTimeout(mobileFilterDrawerTimerRef.current);
+      mobileFilterDrawerTimerRef.current = null;
+    }
+    if (mobileSearchTimerRef.current) {
+      clearTimeout(mobileSearchTimerRef.current);
+      mobileSearchTimerRef.current = null;
+    }
+    setMobileFilterDrawer(null);
+    setIsMobileFilterDrawerClosing(false);
+    setIsMobileSearchClosing(false);
+    setMobileSearchOpen(true);
+  }
+
+  function closeMobileSearch() {
+    if (!mobileSearchOpen || isMobileSearchClosing) return;
+
+    setIsMobileSearchClosing(true);
+    mobileSearchTimerRef.current = setTimeout(() => {
+      setMobileSearchOpen(false);
+      setIsMobileSearchClosing(false);
+      mobileSearchTimerRef.current = null;
+    }, 250);
+  }
+
+  useEffect(() => {
+    return () => {
+      if (mobileFilterDrawerTimerRef.current) {
+        clearTimeout(mobileFilterDrawerTimerRef.current);
+      }
+      if (mobileSearchTimerRef.current) {
+        clearTimeout(mobileSearchTimerRef.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!mobileSearchOpen || isMobileSearchClosing) return;
+
+    const frame = window.requestAnimationFrame(() => {
+      mobileSearchInputRef.current?.focus();
+    });
+
+    return () => window.cancelAnimationFrame(frame);
+  }, [mobileSearchOpen, isMobileSearchClosing]);
 
   function handleDesktopCategorySelect(categoryId: string) {
     setSelectedCategoryId(categoryId);
@@ -849,6 +924,18 @@ function ProductSelectModal({
 
     return result;
   }, [categoryOptions, products]);
+
+  const brandOptions = useMemo(() => {
+    if (selectedCategoryId === "__all__") {
+      const brands = new Set<string>();
+      for (const product of products) {
+        const brand = product.brand.trim();
+        if (brand) brands.add(brand);
+      }
+      return [...brands].sort((left, right) => left.localeCompare(right, "th"));
+    }
+    return brandsByCategory.get(selectedCategoryId) ?? [];
+  }, [brandsByCategory, products, selectedCategoryId]);
 
   const filteredProducts = useMemo(() => {
     const normalized = normalizeSearch(deferredQuery);
@@ -991,6 +1078,10 @@ function ProductSelectModal({
       setSelectedBrand("__all__");
       setExpandedCategoryId(null);
       setCostWarningInfo(null);
+      setMobileFilterDrawer(null);
+      setIsMobileFilterDrawerClosing(false);
+      setMobileSearchOpen(false);
+      setIsMobileSearchClosing(false);
     }
   }, [open]);
 
@@ -1046,18 +1137,31 @@ function ProductSelectModal({
               <p className="mt-0.5 truncate text-[10px] font-bold text-white/85 sm:text-xs">ร้าน: {selectedCustomerLabel}</p>
             )}
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-white/15 bg-white/10 text-white transition active:scale-95 sm:h-11 sm:w-11 sm:rounded-2xl"
-          >
-            <X className="h-5 w-5 sm:h-6 sm:w-6" strokeWidth={3} />
-          </button>
+          <div className="flex shrink-0 items-center gap-2">
+            <button
+              type="button"
+              onClick={openMobileSearch}
+              className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-white/15 bg-white/10 text-white transition active:scale-95 lg:hidden"
+              aria-label="ค้นหาสินค้า"
+            >
+              <Search className="h-5 w-5" strokeWidth={2.5} />
+              {query ? (
+                <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-[#EA80FC]" aria-hidden="true" />
+              ) : null}
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-white/15 bg-white/10 text-white transition active:scale-95 sm:h-11 sm:w-11 sm:rounded-2xl"
+            >
+              <X className="h-5 w-5 sm:h-6 sm:w-6" strokeWidth={3} />
+            </button>
+          </div>
         </div>
 
         {/* Combined Search & Category Filter */}
         <div className="shrink-0 border-b border-[#EA80FC]/15 bg-white">
-          <div className="px-4 py-3.5 sm:px-8">
+          <div className="hidden px-4 py-3.5 sm:px-8 lg:block">
             <div className="flex items-center gap-3 rounded-2xl border border-[#EA80FC]/35 bg-[#F3E5F5]/25 px-4 py-3 transition focus-within:border-[#4A148C] focus-within:ring-2 focus-within:ring-[#4A148C]/10">
               <Search className="h-5 w-5 shrink-0 text-[#4A148C]" strokeWidth={2.4} />
               <input
@@ -1080,50 +1184,102 @@ function ProductSelectModal({
             </div>
           </div>
 
-          {/* Category filter tabs (Lineman style) */}
-          <div className="border-t border-[#EA80FC]/15 bg-white px-4 sm:px-8 lg:hidden">
-            <div 
-              ref={catTabsContainerRef}
-              className="relative flex gap-6 overflow-x-auto pt-3.5 pb-0.5 no-scrollbar scroll-smooth"
-            >
-              {/* Sliding Indicator Line */}
-              <span
-                className="absolute bottom-0 h-[3px] rounded-full bg-[#4A148C]"
-                style={{
-                  ...(catUnderlineStyle ?? { left: 0, width: 0 }),
-                  opacity: catUnderlineStyle ? 1 : 0,
-                  transition: "left 300ms cubic-bezier(0.16, 1, 0.3, 1), width 300ms cubic-bezier(0.16, 1, 0.3, 1), opacity 200ms ease-in-out",
-                }}
-              />
-              <button
-                type="button"
-                data-active={selectedCategoryId === "__all__"}
-                onClick={(e) => handleCategorySelect("__all__", e)}
-                className={`pb-2.5 text-sm font-black transition-all whitespace-nowrap tracking-wide ${
-                  selectedCategoryId === "__all__"
-                    ? "text-[#4A148C] scale-[1.03]"
-                    : "text-slate-400 hover:text-slate-600"
-                }`}
-              >
-                ทุกหมวดหมู่
-              </button>
-              {categoryOptions.map((c) => (
+          {/* Mobile category & brand filters */}
+          {categoryOptions.length > 0 ? (
+            <div className="border-t border-[#EA80FC]/15 bg-white lg:hidden">
+              <div className="flex items-center gap-5 px-4 sm:px-8">
                 <button
-                  key={c.id}
                   type="button"
-                  data-active={selectedCategoryId === c.id}
-                  onClick={(e) => handleCategorySelect(c.id, e)}
-                  className={`pb-2.5 text-sm font-black transition-all whitespace-nowrap tracking-wide ${
-                    selectedCategoryId === c.id
-                      ? "text-[#4A148C] scale-[1.03]"
-                      : "text-slate-400 hover:text-slate-600"
-                  }`}
+                  onClick={() => openMobileFilterDrawer("category")}
+                  className="flex h-12 shrink-0 items-center gap-1.5 text-sm font-black text-[#4A148C]"
+                  aria-label="เปิดรายการหมวดหมู่ทั้งหมด"
                 >
-                  {c.name}
+                  หมวดหมู่
+                  <ListFilter className="h-4 w-4" strokeWidth={2.5} />
                 </button>
-              ))}
+                <div className="flex min-w-0 flex-1 items-center gap-6 overflow-x-auto no-scrollbar">
+                  <button
+                    type="button"
+                    onClick={(e) => handleCategorySelect("__all__", e)}
+                    className={`relative h-12 shrink-0 px-1 text-sm font-black whitespace-nowrap transition-colors ${
+                      selectedCategoryId === "__all__"
+                        ? "text-[#4A148C]"
+                        : "text-slate-500"
+                    }`}
+                  >
+                    ทุกหมวดหมู่
+                    {selectedCategoryId === "__all__" ? (
+                      <span className="absolute inset-x-0 bottom-0 h-0.5 bg-[#4A148C]" />
+                    ) : null}
+                  </button>
+                  {categoryOptions.map((c) => (
+                    <button
+                      key={c.id}
+                      type="button"
+                      onClick={(e) => handleCategorySelect(c.id, e)}
+                      className={`relative h-12 shrink-0 px-1 text-sm font-black whitespace-nowrap transition-colors ${
+                        selectedCategoryId === c.id
+                          ? "text-[#4A148C]"
+                          : "text-slate-500"
+                      }`}
+                    >
+                      {c.name}
+                      {selectedCategoryId === c.id ? (
+                        <span className="absolute inset-x-0 bottom-0 h-0.5 bg-[#4A148C]" />
+                      ) : null}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {brandOptions.length > 0 ? (
+                <div className="flex items-center gap-5 border-t border-[#EA80FC]/15 bg-slate-50/30 px-4 sm:px-8">
+                  <button
+                    type="button"
+                    onClick={() => openMobileFilterDrawer("brand")}
+                    className="flex h-12 shrink-0 items-center gap-1.5 text-sm font-black text-[#4A148C]"
+                    aria-label="เปิดรายการแบรนด์ทั้งหมด"
+                  >
+                    แบรนด์
+                    <ListFilter className="h-4 w-4" strokeWidth={2.5} />
+                  </button>
+                  <div className="flex min-w-0 flex-1 items-center gap-6 overflow-x-auto no-scrollbar">
+                    <button
+                      type="button"
+                      onClick={(e) => handleBrandSelect("__all__", e)}
+                      className={`relative flex h-12 shrink-0 items-center whitespace-nowrap px-1 text-sm font-black transition-colors ${
+                        selectedBrand === "__all__"
+                          ? "text-[#4A148C]"
+                          : "text-slate-500"
+                      }`}
+                    >
+                      ทั้งหมด
+                      {selectedBrand === "__all__" ? (
+                        <span className="absolute inset-x-0 bottom-0 h-0.5 bg-[#4A148C]" />
+                      ) : null}
+                    </button>
+                    {brandOptions.map((brand) => (
+                      <button
+                        key={brand}
+                        type="button"
+                        onClick={(e) => handleBrandSelect(brand, e)}
+                        className={`relative flex h-12 shrink-0 items-center whitespace-nowrap px-1 text-sm font-black transition-colors ${
+                          selectedBrand === brand
+                            ? "text-[#4A148C]"
+                            : "text-slate-500"
+                        }`}
+                      >
+                        {brand}
+                        {selectedBrand === brand ? (
+                          <span className="absolute inset-x-0 bottom-0 h-0.5 bg-[#4A148C]" />
+                        ) : null}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
             </div>
-          </div>
+          ) : null}
         </div>
 
         {/* Desktop category navigation and product table */}
@@ -1346,6 +1502,197 @@ function ProductSelectModal({
             </button>
           </div>
         </div>
+
+        {mobileFilterDrawer ? (
+          <div
+            className={`fixed inset-0 z-[10020] flex items-end bg-slate-950/45 lg:hidden ${
+              isMobileFilterDrawerClosing
+                ? "animate-out fade-out duration-200"
+                : "animate-in fade-in duration-200"
+            }`}
+          >
+            <button
+              type="button"
+              className="absolute inset-0"
+              onClick={closeMobileFilterDrawer}
+              aria-label="ปิดรายการตัวกรอง"
+            />
+            <section
+              className={`relative flex max-h-[78dvh] w-full flex-col overflow-hidden rounded-t-[1.5rem] bg-white shadow-[0_-20px_60px_rgba(15,23,42,0.22)] ${
+                isMobileFilterDrawerClosing
+                  ? "animate-out slide-out-to-bottom-full duration-250 ease-in"
+                  : "animate-in slide-in-from-bottom-full duration-300 ease-out"
+              }`}
+            >
+              <header className="flex items-center justify-between border-b border-[#E1BEE7] px-5 py-4">
+                <div>
+                  <p className="text-xs font-black uppercase tracking-[0.14em] text-[#4A148C]">
+                    ตัวกรองสินค้า
+                  </p>
+                  <h3 className="mt-1 text-xl font-black text-slate-950">
+                    {mobileFilterDrawer === "category" ? "เลือกหมวดหมู่" : "เลือกแบรนด์"}
+                  </h3>
+                </div>
+                <button
+                  type="button"
+                  onClick={closeMobileFilterDrawer}
+                  className="flex h-11 w-11 items-center justify-center rounded-full border border-[#E1BEE7] text-[#4A148C]"
+                  aria-label="ปิด"
+                >
+                  <X className="h-5 w-5" strokeWidth={2.5} />
+                </button>
+              </header>
+
+              <div className="min-h-0 flex-1 overflow-y-auto px-5 py-2">
+                {mobileFilterDrawer === "category" ? (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedCategoryId("__all__");
+                        setSelectedBrand("__all__");
+                        closeMobileFilterDrawer();
+                      }}
+                      className={`flex min-h-14 w-full items-center justify-between border-b border-[#E1BEE7]/70 text-left text-base font-black ${
+                        selectedCategoryId === "__all__" ? "text-[#4A148C]" : "text-slate-950"
+                      }`}
+                    >
+                      ทุกหมวดหมู่
+                      {selectedCategoryId === "__all__" ? (
+                        <span className="h-2.5 w-2.5 rounded-full bg-[#4A148C]" />
+                      ) : null}
+                    </button>
+                    {categoryOptions.map((category) => (
+                      <button
+                        key={category.id}
+                        type="button"
+                        onClick={() => {
+                          setSelectedCategoryId(category.id);
+                          setSelectedBrand("__all__");
+                          closeMobileFilterDrawer();
+                        }}
+                        className={`flex min-h-14 w-full items-center justify-between border-b border-[#E1BEE7]/70 text-left text-base font-black ${
+                          selectedCategoryId === category.id ? "text-[#4A148C]" : "text-slate-950"
+                        }`}
+                      >
+                        {category.name}
+                        {selectedCategoryId === category.id ? (
+                          <span className="h-2.5 w-2.5 rounded-full bg-[#4A148C]" />
+                        ) : null}
+                      </button>
+                    ))}
+                  </>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        handleBrandSelect("__all__");
+                        closeMobileFilterDrawer();
+                      }}
+                      className={`flex min-h-14 w-full items-center justify-between border-b border-[#E1BEE7]/70 text-left text-base font-black ${
+                        selectedBrand === "__all__" ? "text-[#4A148C]" : "text-slate-950"
+                      }`}
+                    >
+                      ทุกแบรนด์
+                      {selectedBrand === "__all__" ? (
+                        <span className="h-2.5 w-2.5 rounded-full bg-[#4A148C]" />
+                      ) : null}
+                    </button>
+                    {brandOptions.map((brand) => (
+                      <button
+                        key={brand}
+                        type="button"
+                        onClick={() => {
+                          handleBrandSelect(brand);
+                          closeMobileFilterDrawer();
+                        }}
+                        className={`flex min-h-14 w-full items-center justify-between border-b border-[#E1BEE7]/70 text-left text-base font-black ${
+                          selectedBrand === brand ? "text-[#4A148C]" : "text-slate-950"
+                        }`}
+                      >
+                        {brand}
+                        {selectedBrand === brand ? (
+                          <span className="h-2.5 w-2.5 rounded-full bg-[#4A148C]" />
+                        ) : null}
+                      </button>
+                    ))}
+                  </>
+                )}
+              </div>
+            </section>
+          </div>
+        ) : null}
+
+        {mobileSearchOpen ? (
+          <div
+            className={`fixed inset-0 z-[10020] lg:hidden ${
+              isMobileSearchClosing
+                ? "animate-out fade-out duration-200"
+                : "animate-in fade-in duration-200"
+            }`}
+          >
+            <button
+              type="button"
+              className="absolute inset-0 bg-slate-950/45"
+              onClick={closeMobileSearch}
+              aria-label="ปิดการค้นหา"
+            />
+            <section
+              className={`absolute inset-x-0 top-0 flex max-h-[42dvh] flex-col overflow-hidden rounded-b-[1.5rem] bg-white shadow-[0_20px_60px_rgba(15,23,42,0.22)] ${
+                isMobileSearchClosing
+                  ? "animate-out slide-out-to-top-full duration-250 ease-in"
+                  : "animate-in slide-in-from-top-full duration-300 ease-out"
+              }`}
+            >
+              <header className="flex items-center justify-between border-b border-[#E1BEE7] px-5 py-4">
+                <div>
+                  <p className="text-xs font-black uppercase tracking-[0.14em] text-[#4A148C]">
+                    ค้นหา
+                  </p>
+                  <h3 className="mt-1 text-xl font-black text-slate-950">ค้นหาสินค้า</h3>
+                </div>
+                <button
+                  type="button"
+                  onClick={closeMobileSearch}
+                  className="flex h-11 w-11 items-center justify-center rounded-full border border-[#E1BEE7] text-[#4A148C]"
+                  aria-label="ปิด"
+                >
+                  <X className="h-5 w-5" strokeWidth={2.5} />
+                </button>
+              </header>
+
+              <div className="px-5 py-4">
+                <label className="relative block">
+                  <Search className="pointer-events-none absolute left-4 top-1/2 h-4.5 w-4.5 -translate-y-1/2 text-[#667085]" strokeWidth={2} />
+                  <input
+                    ref={mobileSearchInputRef}
+                    type="search"
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                    placeholder="ค้นหาสินค้า หรือรหัสสินค้า"
+                    className="h-12 w-full rounded-lg border border-[#D7DEE8] bg-white pl-11 pr-11 text-sm font-semibold text-[#4A148C] outline-none transition placeholder:text-[#667085] focus:border-[#4A148C] focus:ring-2 focus:ring-[#4A148C]/15"
+                  />
+                  {query ? (
+                    <button
+                      type="button"
+                      onClick={() => setQuery("")}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-[#4A148C]/70"
+                      aria-label="ล้างคำค้นหา"
+                    >
+                      <X className="h-4.5 w-4.5" strokeWidth={2.5} />
+                    </button>
+                  ) : null}
+                </label>
+                {query ? (
+                  <p className="mt-3 text-xs font-bold text-slate-500">
+                    พบ {filteredProducts.length.toLocaleString("th-TH")} รายการ
+                  </p>
+                ) : null}
+              </div>
+            </section>
+          </div>
+        ) : null}
 
       </div>
     </div>

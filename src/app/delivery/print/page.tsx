@@ -5,6 +5,7 @@ import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { DeliveryNoteLayout } from "@/components/print/delivery-note-layout";
+import { PRINT_ORGANIZATION_NAME } from "@/components/print/print-shared";
 import { ShareDeliveryPdfButton } from "@/components/print/share-delivery-pdf-button";
 import { AutoPrint, PrintButton } from "./print-button";
 
@@ -172,7 +173,7 @@ function buildPrintData(rows: RawDeliveryPrintRow[]): DeliveryNotePrintData[] {
       totalAmount,
       notes,
       organization: {
-        name: base.organizations.name || "อรินยา พาณิชย์",
+        name: PRINT_ORGANIZATION_NAME,
         logoUrl: (organizationMetadata.logo_url as string) || null,
         address: (organizationMetadata.address as string) || null,
         phone: (organizationMetadata.phone as string) || null,

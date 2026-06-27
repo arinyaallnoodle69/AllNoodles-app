@@ -9,6 +9,7 @@ import {
   type PackingListVehicle,
 } from "@/components/print/packing-list-layout";
 import { requireAnyRole } from "@/lib/auth/authorization";
+import { PRINT_ORGANIZATION_NAME } from "@/components/print/print-shared";
 import { sortProductsByCategory } from "@/lib/products/sort-by-category";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { AutoPrint, PackingListPrintButton } from "./preview/print-button";
@@ -338,7 +339,7 @@ async function PackingListPage({ searchParams }: Props) {
       return {
         date: currentDate,
         dateLabel: getThaiDateLabel(currentDate),
-        organizationName: "อรินยา พาณิชย์",
+        organizationName: PRINT_ORGANIZATION_NAME,
         stores: stores.map((store) => ({
           id: store.id,
           name: store.name,

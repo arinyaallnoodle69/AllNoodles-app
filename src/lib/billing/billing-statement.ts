@@ -647,7 +647,7 @@ export async function getBillingStatementData(
 
   const orgMeta = (orgResult.data.metadata as Record<string, string>) || {};
   const orgInfo = {
-    name: orgResult.data.name || PRINT_ORGANIZATION_NAME,
+    name: PRINT_ORGANIZATION_NAME,
     address: orgMeta.address || "จังหวัดเชียงใหม่",
     phone: orgMeta.phone || "-",
   };

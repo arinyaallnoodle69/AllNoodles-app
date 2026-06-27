@@ -1,23 +1,19 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { Download, FileText, Loader2, X } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Download, FileText, Image as ImageIcon, Loader2, X } from "lucide-react";
 import { createPortal } from "react-dom";
 import * as htmlToImage from "html-to-image";
+import { PRINT_ORGANIZATION_NAME } from "@/components/print/print-shared";
 import {
-  HALF_SHEET_HEIGHT_MM,
-  PRINT_ORGANIZATION_NAME,
-  PrintCustomerRow,
-  PrintDocHeader,
-  PrintTotalRow,
-  SHEET_WIDTH_MM,
-  chunkItems,
-  fmt,
-  formatDateShort,
-} from "@/components/print/print-shared";
+  BILLING_A4_HEIGHT_MM,
+  BILLING_A4_WIDTH_MM,
+  BILLING_INVOICE_STYLES,
+  BillingInvoicePage,
+  buildBillingInvoicePages,
+} from "@/components/print/billing-statement-layout";
 
 let cachedFontEmbedCSS: string | null = null;
-const DOTTED_LINE = "2px dotted black";
 
 function dataUrlToBlob(dataUrl: string): Blob {
   const parts = dataUrl.split(",");
@@ -59,15 +55,43 @@ export function BillingPreviewButton({
   const [isOpen, setIsOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [scale, setScale] = useState(1);
-  const [zoom, setZoom] = useState(1);
-  const [touchStartDist, setTouchStartDist] = useState(0);
+  const [pageScale, setPageScale] = useState(1);
 
-  const containerRef = useRef<HTMLDivElement | null>(null);
+  const previewBodyRef = useRef<HTMLDivElement | null>(null);
 
-  const chunks = chunkItems(deliveries, 10);
-  const pages = chunks.length > 0 ? chunks : [[]];
-  const totalPages = pages.length;
+  const today = new Date().toISOString().split("T")[0];
+
+  const pages = useMemo(() => {
+    const rows = deliveries.map((item, index) => ({
+      lineNumber: index + 1,
+      deliveryNumber: item.number,
+      deliveryDate: item.date,
+      totalAmount: item.amount,
+      notes: null,
+    }));
+
+    return buildBillingInvoicePages({
+      customer: {
+        id: "",
+        code: customerCode,
+        name: customerName,
+        address: null,
+        phone: null,
+      },
+      organization: {
+        name: PRINT_ORGANIZATION_NAME,
+        address: "-",
+        phone: "-",
+      },
+      billingDate: today,
+      fromDate,
+      toDate,
+      grandTotal: totalAmount,
+      billingNumber: null,
+      isLocked: false,
+      rows,
+    });
+  }, [customerCode, customerName, deliveries, fromDate, toDate, today, totalAmount]);
 
   useEffect(() => {
     setMounted(true);
@@ -90,22 +114,22 @@ export function BillingPreviewButton({
   }, []);
 
   useEffect(() => {
-    if (!isOpen || !containerRef.current) return;
+    if (!isOpen || !previewBodyRef.current) return;
 
     const updateScale = () => {
-      const container = containerRef.current;
+      const container = previewBodyRef.current;
       if (!container) return;
 
-      const containerWidth = container.offsetWidth;
       const dummy = document.createElement("div");
-      dummy.style.width = `${SHEET_WIDTH_MM}mm`;
+      dummy.style.width = `${BILLING_A4_WIDTH_MM}mm`;
       dummy.style.position = "absolute";
       dummy.style.visibility = "hidden";
       document.body.appendChild(dummy);
       const sheetWidth = dummy.offsetWidth;
       document.body.removeChild(dummy);
 
-      setScale(containerWidth < sheetWidth && sheetWidth > 0 ? containerWidth / sheetWidth : 1);
+      const availableWidth = container.clientWidth - 32;
+      setPageScale(availableWidth > 0 && sheetWidth > availableWidth ? availableWidth / sheetWidth : 1);
     };
 
     const timer = setTimeout(updateScale, 100);
@@ -115,32 +139,7 @@ export function BillingPreviewButton({
       clearTimeout(timer);
       window.removeEventListener("resize", updateScale);
     };
-  }, [isOpen]);
-
-  const handleTouchStart = (event: React.TouchEvent) => {
-    if (event.touches.length === 2) {
-      const dist = Math.hypot(
-        event.touches[0].pageX - event.touches[1].pageX,
-        event.touches[0].pageY - event.touches[1].pageY,
-      );
-      setTouchStartDist(dist);
-    }
-  };
-
-  const handleTouchMove = (event: React.TouchEvent) => {
-    if (event.touches.length === 2 && touchStartDist > 0) {
-      const dist = Math.hypot(
-        event.touches[0].pageX - event.touches[1].pageX,
-        event.touches[0].pageY - event.touches[1].pageY,
-      );
-      const factor = dist / touchStartDist;
-
-      setZoom((prev) => Math.min(Math.max(prev * factor, 1), 3));
-      setTouchStartDist(dist);
-    }
-  };
-
-  const handleTouchEnd = () => setTouchStartDist(0);
+  }, [isOpen, pages.length]);
 
   const saveAsImage = async () => {
     const targets = document.querySelectorAll(".billing-preview-card-element");
@@ -241,17 +240,11 @@ export function BillingPreviewButton({
     }
   };
 
-  const today = new Date().toISOString().split("T")[0];
-  const finalScale = scale * zoom;
-
   return (
     <>
       <button
         type="button"
-        onClick={() => {
-          setIsOpen(true);
-          setZoom(1);
-        }}
+        onClick={() => setIsOpen(true)}
         className="inline-flex items-center gap-1.5 rounded-full bg-[#4A148C] px-4 py-2 text-xs font-black text-white transition hover:bg-[#4A148C] active:scale-95"
       >
         <FileText className="h-3.5 w-3.5" />
@@ -260,213 +253,108 @@ export function BillingPreviewButton({
 
       {mounted && isOpen
         ? createPortal(
-            <div
-              className="fixed inset-0 z-[500] flex items-center justify-center bg-black/40 backdrop-blur-sm animate-in fade-in duration-200"
-              onClick={(event) => {
-                if (event.target === event.currentTarget) setIsOpen(false);
-              }}
-            >
-              <div
-                className="relative w-full md:max-w-[900px] animate-in zoom-in-95 duration-300"
-                onClick={(event) => event.stopPropagation()}
-              >
-                <button
-                  onClick={() => setIsOpen(false)}
-                  className="absolute -top-10 right-0 z-[510] flex items-center gap-2.5 py-2 text-white transition-opacity hover:opacity-80"
-                >
-                  <X className="h-5 w-5 md:h-6 md:w-6" strokeWidth={3} />
-                  <span className="text-[14px] font-black tracking-tight md:text-[15px]">ปิดหน้าต่าง</span>
-                </button>
+            <div className="fixed inset-0 z-[500] flex flex-col bg-[#0a0c10] animate-in fade-in duration-300">
+              <style dangerouslySetInnerHTML={{ __html: BILLING_INVOICE_STYLES }} />
+              <div className="sticky top-0 z-50 flex shrink-0 items-center justify-between border-b border-white/5 bg-[#12151c]/90 px-4 py-3 backdrop-blur-xl sm:px-8 sm:py-5">
+                <div className="flex items-center gap-4">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#4A148C] text-white shadow-[0_0_20px_rgba(74,20,140,0.35)] sm:h-12 sm:w-12">
+                    <ImageIcon className="h-5 w-5 sm:h-6 sm:w-6" strokeWidth={2.5} />
+                  </div>
+                  <div className="min-w-0">
+                    <h3 className="text-base font-black tracking-tight text-white sm:text-xl">ตัวอย่างใบวางบิล</h3>
+                    <p className="truncate text-[10px] font-bold uppercase tracking-[0.15em] text-slate-400 sm:text-xs">
+                      {customerCode} {customerName} · {pages.length} หน้า (A4 แนวตั้ง)
+                    </p>
+                  </div>
+                </div>
 
-                <div
-                  className="scrollbar-hide flex max-h-[80vh] w-full flex-col items-center overflow-auto"
-                  ref={containerRef}
-                  onTouchStart={handleTouchStart}
-                  onTouchMove={handleTouchMove}
-                  onTouchEnd={handleTouchEnd}
-                >
-                  <div className="flex flex-col items-center gap-6 py-4">
-                    <style dangerouslySetInnerHTML={{ __html: `
-                      .billing-preview-card-element, .billing-preview-card-element * {
-                        font-family: Tahoma, 'Sarabun', sans-serif !important;
-                        color: #000000 !important;
-                      }
-                      .billing-preview-card-element .monospace-font {
-                        font-family: monospace !important;
-                      }
-                    ` }} />
-                    {pages.map((pageDeliveries, pageIdx) => {
-                      const isLastPage = pageIdx === totalPages - 1;
-                      return (
+                <div className="flex items-center gap-2 sm:gap-4">
+                  <button
+                    type="button"
+                    onClick={saveAsImage}
+                    disabled={isSaving}
+                    className="hidden items-center gap-2.5 rounded-xl bg-white px-5 py-2.5 text-sm font-black text-[#0a0c10] shadow-[0_8px_20px_rgba(255,255,255,0.15)] transition hover:bg-slate-100 active:scale-95 disabled:opacity-60 sm:flex"
+                  >
+                    {isSaving ? <Loader2 className="h-4.5 w-4.5 animate-spin" /> : <Download className="h-4.5 w-4.5" strokeWidth={3} />}
+                    {isSaving ? "กำลังบันทึก..." : pages.length > 1 ? "บันทึกทั้งหมด" : "บันทึกรูป"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsOpen(false)}
+                    className="group flex h-10 w-10 items-center justify-center rounded-xl bg-white/5 text-white/50 transition hover:bg-rose-500/10 hover:text-rose-500 active:scale-95 sm:h-12 sm:w-12"
+                    aria-label="ปิด"
+                  >
+                    <X className="h-6 w-6 transition group-hover:rotate-90" strokeWidth={2.5} />
+                  </button>
+                </div>
+              </div>
+
+              <div
+                ref={previewBodyRef}
+                className="flex-1 overflow-y-auto bg-[radial-gradient(circle_at_center,rgba(74,20,140,0.08)_0%,transparent_70%)] p-4 pb-28 sm:p-12 sm:pb-12"
+              >
+                <div className="mx-auto flex w-full max-w-[210mm] flex-col items-center gap-10 sm:gap-16">
+                  {pages.map((page, pageIdx) => (
+                    <div key={page.key} className="group relative flex w-full flex-col items-center">
+                      {pages.length > 1 ? (
+                        <div className="mb-3 flex items-center gap-3 self-start sm:absolute sm:-left-16 sm:mb-0 sm:flex-col sm:self-auto">
+                          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#1a1f26] text-sm font-black text-white ring-1 ring-white/10 shadow-2xl">
+                            {pageIdx + 1}
+                          </span>
+                          <div className="h-px w-8 bg-white/10 sm:h-12 sm:w-px" />
+                        </div>
+                      ) : null}
+
+                      <div
+                        className="relative overflow-hidden rounded-sm bg-white shadow-[0_40px_100px_rgba(0,0,0,0.6)] ring-1 ring-white/5"
+                        style={
+                          pageScale < 1
+                            ? {
+                                width: `${BILLING_A4_WIDTH_MM * pageScale}mm`,
+                                height: `${BILLING_A4_HEIGHT_MM * pageScale}mm`,
+                                maxWidth: "100%",
+                              }
+                            : {
+                                width: `${BILLING_A4_WIDTH_MM}mm`,
+                                maxWidth: "100%",
+                              }
+                        }
+                      >
                         <div
-                          key={`page-${pageIdx}`}
                           style={{
-                            width: `${SHEET_WIDTH_MM * finalScale}mm`,
-                            height: `${HALF_SHEET_HEIGHT_MM * finalScale}mm`,
-                            overflow: "hidden",
+                            transform: pageScale < 1 ? `scale(${pageScale})` : undefined,
+                            transformOrigin: "top left",
+                            width: `${BILLING_A4_WIDTH_MM}mm`,
                           }}
                         >
-                          <div
-                            style={{
-                              boxSizing: "border-box",
-                              width: `${SHEET_WIDTH_MM}mm`,
-                              height: `${HALF_SHEET_HEIGHT_MM}mm`,
-                              padding: "6mm 8mm",
-                              overflow: "hidden",
-                              display: "flex",
-                              flexDirection: "column",
-                              background: "white",
-                              transform: `scale(${finalScale})`,
-                              transformOrigin: "top left",
-                              boxShadow: "0 4px 10px rgba(0,0,0,0.15)",
-                            }}
-                            className="billing-preview-card-element"
-                          >
-                            <PrintDocHeader
-                              orgName={PRINT_ORGANIZATION_NAME}
-                              orgAddress="-"
-                              orgPhone="-"
-                              title="ใบวางบิล"
-                              docDate={today}
-                              pageLabel={totalPages > 1 ? `หน้า ${pageIdx + 1}/${totalPages}` : undefined}
-                              dividerStyle="none"
-                              docMetaFontSize="11.8pt"
-                              hideOrgDetails={true}
-                            />
-
-                            <PrintCustomerRow customer={{ code: customerCode, name: customerName, address: "-" }} />
-
-                            <table
-                              style={{
-                                width: "100%",
-                                tableLayout: "fixed",
-                                borderCollapse: "collapse",
-                                fontSize: "11.8pt",
-                                marginBottom: "1mm",
-                              }}
-                            >
-                              <thead>
-                                <tr>
-                                  <th
-                                    style={{
-                                      padding: "1mm 2mm",
-                                      color: "black",
-                                      borderTop: DOTTED_LINE,
-                                      borderBottom: DOTTED_LINE,
-                                      width: "6%",
-                                      textAlign: "center",
-                                    }}
-                                  >
-                                    ลำดับ
-                                  </th>
-                                  <th
-                                    style={{
-                                      padding: "1mm 2mm",
-                                      color: "black",
-                                      borderTop: DOTTED_LINE,
-                                      borderBottom: DOTTED_LINE,
-                                      width: "50%",
-                                      textAlign: "center",
-                                    }}
-                                  >
-                                    เลขที่ใบจัดส่ง
-                                  </th>
-                                  <th
-                                    style={{
-                                      padding: "1mm 2mm",
-                                      color: "black",
-                                      borderTop: DOTTED_LINE,
-                                      borderBottom: DOTTED_LINE,
-                                      width: "26%",
-                                      textAlign: "center",
-                                    }}
-                                  >
-                                    วันที่
-                                  </th>
-                                  <th
-                                    style={{
-                                      padding: "1mm 2mm",
-                                      color: "black",
-                                      borderTop: DOTTED_LINE,
-                                      borderBottom: DOTTED_LINE,
-                                      width: "18%",
-                                      textAlign: "right",
-                                    }}
-                                  >
-                                    ยอดรวม
-                                  </th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {pageDeliveries.map((item, index) => (
-                                  <tr key={item.number}>
-                                    <td style={{ padding: "0.8mm 2mm", textAlign: "center", color: "black" }}>
-                                      {pageIdx * 10 + index + 1}
-                                    </td>
-                                    <td
-                                      className="monospace-font"
-                                      style={{
-                                        padding: "0.8mm 2mm",
-                                        textAlign: "center",
-                                        fontFamily: "monospace",
-                                        fontSize: "11.8pt",
-                                        fontWeight: 700,
-                                        color: "black",
-                                      }}
-                                    >
-                                      {item.number}
-                                    </td>
-                                    <td style={{ padding: "0.8mm 2mm", textAlign: "center", color: "black" }}>
-                                      {formatDateShort(item.date)}
-                                    </td>
-                                    <td
-                                      style={{
-                                        padding: "0.8mm 2mm",
-                                        textAlign: "right",
-                                        fontWeight: 700,
-                                        color: "black",
-                                      }}
-                                    >
-                                      {fmt(item.amount)}
-                                    </td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
-
-                            <div style={{ flex: 1 }} />
-
-                            {isLastPage ? (
-                              <PrintTotalRow totalAmount={totalAmount} dividerStyle="dotted" showBottomBorder={false} />
-                            ) : null}
-                          </div>
+                          <BillingInvoicePage
+                            page={page}
+                            captureClassName="billing-preview-card-element billing-invoice-page"
+                          />
                         </div>
-                      );
-                    })}
-                  </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-
-                <div className="mt-4 flex flex-col items-center gap-2">
-                  <div className="flex justify-center">
-                    <button
-                      type="button"
-                      onClick={saveAsImage}
-                      disabled={isSaving}
-                      className="inline-flex items-center gap-1.5 rounded-full bg-[#4A148C] px-6 py-2.5 text-sm font-bold text-[#4A148C] shadow-lg transition hover:bg-[#4A148C] disabled:opacity-60"
-                    >
-                      {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-                      {isSaving ? "กำลังบันทึก..." : totalPages > 1 ? "บันทึกรูปทั้งหมด" : "บันทึกรูป"}
-                    </button>
-                  </div>
-                  <span className="text-xs text-white/60">สามารถใช้นิ้วซูมเข้า-ออกได้</span>
-                </div>
-
-                {errorMessage ? (
-                  <div className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-center text-sm font-semibold text-rose-700">
-                    {errorMessage}
-                  </div>
-                ) : null}
               </div>
+
+              <div className="border-t border-white/5 bg-[#12151c]/90 p-4 pb-safe-offset-4 backdrop-blur-xl sm:hidden">
+                <button
+                  type="button"
+                  onClick={saveAsImage}
+                  disabled={isSaving}
+                  className="flex w-full items-center justify-center gap-3 rounded-2xl bg-emerald-600 py-4 text-lg font-black text-white shadow-[0_15px_30px_rgba(16,185,129,0.25)] transition active:scale-95 disabled:opacity-60"
+                >
+                  {isSaving ? <Loader2 className="h-6 w-6 animate-spin" /> : <Download className="h-6 w-6" strokeWidth={3} />}
+                  {isSaving ? "กำลังบันทึก..." : pages.length > 1 ? "บันทึกทั้งหมด" : "บันทึกลงเครื่อง"}
+                </button>
+              </div>
+
+              {errorMessage ? (
+                <div className="absolute bottom-24 left-4 right-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-center text-sm font-semibold text-rose-700 sm:bottom-8">
+                  {errorMessage}
+                </div>
+              ) : null}
             </div>,
             document.body,
           )

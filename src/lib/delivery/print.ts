@@ -1,5 +1,4 @@
-import "server-only";
-
+import { PRINT_ORGANIZATION_NAME } from "@/components/print/print-shared";
 import { sortDeliveryPrintDataByCustomerOrder } from "@/lib/delivery/print-ordering";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
@@ -229,7 +228,7 @@ export async function getDeliveryNotePrintData(
     totalAmount: toNum(dn.total_amount),
     notes: dn.notes ?? null,
     organization: {
-      name: dn.organizations.name,
+      name: PRINT_ORGANIZATION_NAME,
       logoUrl,
       address: orgAddress,
       phone: orgPhone,
