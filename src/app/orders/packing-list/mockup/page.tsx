@@ -45,6 +45,15 @@ function buildMockQuantity(productIndex: number, storeIndex: number, vehicleFirs
   return 0;
 }
 
+function normalizePackingBrand(value: string) {
+  return value.trim() || "-";
+}
+
+function getMinCategoryRank(categoryIds: string[], rankById: Map<string, number>) {
+  if (categoryIds.length === 0) return Infinity;
+  return Math.min(...categoryIds.map((id) => rankById.get(id) ?? Infinity));
+}
+
 export default async function PackingListMockupPage({ searchParams }: Props) {
   const session = await requireAnyRole(["admin", "warehouse"]);
   const params = await searchParams;
@@ -66,17 +75,38 @@ export default async function PackingListMockupPage({ searchParams }: Props) {
 
     return {
       id: customer.code || customer.id,
-      name: `${customer.code} ${customer.name}`.trim(),
+      name: customer.name,
       vehicleId,
       vehicleName,
     };
   });
 
-  const products: PackingListProduct[] = data.products.slice(0, 50).map((product, index) => {
+  const categoryRankById = new Map(data.productCategories.map((category) => [category.id, category.sortOrder]));
+  const originalProductIndex = new Map(data.products.map((product, index) => [product.id, index]));
+  const sortedProducts = data.products.toSorted((left, right) => {
+    const leftCategoryRank = getMinCategoryRank(left.categoryIds, categoryRankById);
+    const rightCategoryRank = getMinCategoryRank(right.categoryIds, categoryRankById);
+    if (leftCategoryRank < rightCategoryRank) return -1;
+    if (leftCategoryRank > rightCategoryRank) return 1;
+
+    const leftCategory = left.categoryNames[0] ?? left.category;
+    const rightCategory = right.categoryNames[0] ?? right.category;
+    const categoryCompare = leftCategory.localeCompare(rightCategory, "th");
+    if (categoryCompare !== 0) return categoryCompare;
+
+    const leftBrand = normalizePackingBrand(left.packingListBrand || left.brand);
+    const rightBrand = normalizePackingBrand(right.packingListBrand || right.brand);
+    const brandCompare = leftBrand.localeCompare(rightBrand, "th");
+    if (brandCompare !== 0) return brandCompare;
+
+    return (originalProductIndex.get(left.id) ?? 999999) - (originalProductIndex.get(right.id) ?? 999999);
+  });
+
+  const products: PackingListProduct[] = sortedProducts.slice(0, 50).map((product, index) => {
     const defaultSaleUnit = product.saleUnits.find((unit) => unit.isDefault) ?? product.saleUnits[0];
 
     return {
-      brand: product.packingListBrand || product.brand || "ไม่ระบุแบรนด์",
+      brand: normalizePackingBrand(product.packingListBrand || product.brand),
       category: product.categoryNames[0] ?? (product.category || "ไม่ระบุหมวด"),
       icon: product.packingListIcon,
       key: `${product.sku}-${defaultSaleUnit?.label ?? product.baseUnit}-${index}`,

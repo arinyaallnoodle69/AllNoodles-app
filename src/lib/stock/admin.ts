@@ -313,6 +313,16 @@ export const getStockReceiptDetail = cache(
 export const getStockDashboardData = cache(
   async (organizationId: string, movementLimit = 20, movementOffset = 0): Promise<StockDashboardData> => {
     const admin = getSupabaseAdmin();
+    const movementsPromise =
+      movementLimit > 0
+        ? admin.from("inventory_movements")
+            .select(
+              "id, product_id, warehouse_id, movement_type, quantity_delta, stock_before, stock_after, reference_number, notes, created_at, inventory_receipts(receipt_url)",
+            )
+            .eq("organization_id", organizationId)
+            .order("created_at", { ascending: false })
+            .range(movementOffset, movementOffset + movementLimit - 1)
+        : Promise.resolve({ data: [], error: null });
 
     const [productsResult, imagesResult, saleUnitsResult, movementsResult, suppliersResult, warehouseStocksResult] = await Promise.all([
       admin.from("products")
@@ -332,13 +342,7 @@ export const getStockDashboardData = cache(
         .eq("organization_id", organizationId)
         .eq("is_active", true)
         .order("sort_order", { ascending: true }),
-      admin.from("inventory_movements")
-        .select(
-          "id, product_id, warehouse_id, movement_type, quantity_delta, stock_before, stock_after, reference_number, notes, created_at, inventory_receipts(receipt_url)",
-        )
-        .eq("organization_id", organizationId)
-        .order("created_at", { ascending: false })
-        .range(movementOffset, movementOffset + movementLimit - 1),
+      movementsPromise,
       admin.from("suppliers")
         .select("id, name, supplier_code")
         .eq("organization_id", organizationId)

@@ -724,10 +724,10 @@ export function DashboardClient({
             </div>
 
             {storeStatusSummary.vehicles.length > 0 ? (
-              <div className="mb-5 border-b border-[#EA80FC]/15 bg-white">
+              <div className="mb-5 shrink-0 border-b border-[#EA80FC]/15 bg-white">
                 <div
                   ref={storeVehicleTabsContainerRef}
-                  className="no-scrollbar relative flex gap-6 overflow-x-auto scroll-smooth px-8 pt-1"
+                  className="no-scrollbar relative flex select-none gap-6 overflow-x-auto overscroll-x-contain scroll-smooth px-8 pt-1 touch-pan-x [-webkit-overflow-scrolling:touch] [-webkit-touch-callout:none] [user-select:none]"
                 >
                   <span
                     className="absolute bottom-0 h-[3px] rounded-full bg-[#4A148C]"
@@ -742,7 +742,7 @@ export function DashboardClient({
                     type="button"
                     data-active={selectedStoreVehicleId === "__all__"}
                     onClick={(event) => handleStoreVehicleSelect("__all__", event)}
-                    className={`whitespace-nowrap pb-3 text-sm font-black tracking-wide transition-all ${
+                    className={`shrink-0 whitespace-nowrap pb-3 text-sm font-black tracking-wide transition-all touch-pan-x ${
                       selectedStoreVehicleId === "__all__"
                         ? "scale-[1.03] text-[#4A148C]"
                         : "text-slate-400 hover:text-slate-600"
@@ -756,7 +756,7 @@ export function DashboardClient({
                       type="button"
                       data-active={selectedStoreVehicleId === vehicle.id}
                       onClick={(event) => handleStoreVehicleSelect(vehicle.id, event)}
-                      className={`whitespace-nowrap pb-3 text-sm font-black tracking-wide transition-all ${
+                      className={`shrink-0 whitespace-nowrap pb-3 text-sm font-black tracking-wide transition-all touch-pan-x ${
                         selectedStoreVehicleId === vehicle.id
                           ? "scale-[1.03] text-[#4A148C]"
                           : "text-slate-400 hover:text-slate-600"

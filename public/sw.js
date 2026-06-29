@@ -1,4 +1,5 @@
-const CACHE_NAME = "All Noodles-v9";
+const CACHE_NAME = "All Noodles-v10";
+const NAVIGATION_TIMEOUT_MS = 4000;
 const APP_SHELL = [
   "/offline",
   "/manifest.webmanifest",
@@ -24,6 +25,35 @@ function cleanResponse(response) {
     statusText: response.statusText,
     headers: response.headers,
   });
+}
+
+async function getOfflineResponse() {
+  const offlinePage = await caches.match("/offline");
+  if (offlinePage) {
+    return cleanResponse(offlinePage);
+  }
+
+  return new Response("Offline", {
+    status: 503,
+    headers: { "Content-Type": "text/plain; charset=utf-8" },
+  });
+}
+
+function timeout(ms) {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}
+
+async function fetchNavigationWithTimeout(request) {
+  const networkResponse = fetch(request).then(cleanResponse);
+  const offlineFallback = timeout(NAVIGATION_TIMEOUT_MS).then(getOfflineResponse);
+
+  try {
+    return await Promise.race([networkResponse, offlineFallback]);
+  } catch {
+    return getOfflineResponse();
+  }
 }
 
 function getDefaultPushPayload() {
@@ -92,21 +122,7 @@ self.addEventListener("fetch", (event) => {
   const url = new URL(request.url);
 
   if (request.mode === "navigate") {
-    event.respondWith(
-      fetch(request)
-        .then(cleanResponse)
-        .catch(async () => {
-          const offlinePage = await caches.match("/offline");
-          if (offlinePage) {
-            return cleanResponse(offlinePage);
-          }
-
-          return new Response("Offline", {
-            status: 503,
-            headers: { "Content-Type": "text/plain; charset=utf-8" },
-          });
-        }),
-    );
+    event.respondWith(fetchNavigationWithTimeout(request));
     return;
   }
 
@@ -119,8 +135,7 @@ self.addEventListener("fetch", (event) => {
       fetch(request).catch(async () => {
         const cached = await caches.match(request);
         if (cached) return cleanResponse(cached);
-        const offlinePage = await caches.match("/offline");
-        return cleanResponse(offlinePage);
+        return getOfflineResponse();
       }),
     );
     return;

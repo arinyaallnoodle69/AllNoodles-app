@@ -42,7 +42,7 @@ export function PageLoader() {
   }, []);
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-transparent p-6 font-sans">
+    <div className="flex h-[100dvh] max-h-[100dvh] min-h-[100dvh] touch-none select-none flex-col items-center justify-center overflow-hidden overscroll-none bg-transparent p-6 font-sans">
       <section className="relative flex w-full max-w-[24rem] flex-col items-center px-8 py-10">
         <div className="relative flex h-60 w-60 items-center justify-center">
           <Image

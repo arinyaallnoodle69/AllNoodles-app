@@ -114,6 +114,15 @@ function getThaiDateLabel(value: string) {
   }
 }
 
+function normalizePackingBrand(value: string) {
+  return value.trim() || "-";
+}
+
+function getMinCategoryRank(categoryIds: string[], rankById: Map<string, number>) {
+  if (categoryIds.length === 0) return Infinity;
+  return Math.min(...categoryIds.map((id) => rankById.get(id) ?? Infinity));
+}
+
 export default async function PackingListWrapper({ searchParams }: Props) {
   return (
     <Suspense fallback={<PageLoader />}>
@@ -242,6 +251,18 @@ async function PackingListPage({ searchParams }: Props) {
   sortedMasterProducts.forEach((product, index) => {
     productSortIndexMap.set(product.id, index);
   });
+  const categoryRankById = new Map(
+    ((categoriesDb.data ?? []) as DbCategory[]).map((category) => [
+      category.id,
+      Number(category.sort_order ?? 0),
+    ]),
+  );
+  const categoryRankByProductId = new Map(
+    dbProductsList.map((product: DbProduct) => [
+      product.id,
+      getMinCategoryRank(categoryIdsByProductId.get(product.id) ?? [], categoryRankById),
+    ]),
+  );
 
   const rawOrders = (ordersResult.data ?? []) as OrderWithRelations[];
   const ordersByDate = new Map<string, OrderWithRelations[]>();
@@ -300,7 +321,7 @@ async function PackingListPage({ searchParams }: Props) {
               productId: item.product_id,
               sku: item.products.sku,
               name: packingListMetaByProductId.get(item.product_id)?.name ?? item.products.name,
-              brand: packingListMetaByProductId.get(item.product_id)?.brand ?? "",
+              brand: normalizePackingBrand(packingListMetaByProductId.get(item.product_id)?.brand ?? ""),
               category: packingListMetaByProductId.get(item.product_id)?.category ?? "",
               icon: packingListMetaByProductId.get(item.product_id)?.icon ?? "",
               unit: item.sale_unit_label,
@@ -340,9 +361,21 @@ async function PackingListPage({ searchParams }: Props) {
           unit: product.unit,
         }))
         .sort((a, b) => {
+          const categoryRankA = categoryRankByProductId.get(a.productId) ?? Infinity;
+          const categoryRankB = categoryRankByProductId.get(b.productId) ?? Infinity;
+          if (categoryRankA < categoryRankB) return -1;
+          if (categoryRankA > categoryRankB) return 1;
+
+          const categoryCompare = a.category.localeCompare(b.category, "th");
+          if (categoryCompare !== 0) return categoryCompare;
+
+          const brandCompare = a.brand.localeCompare(b.brand, "th");
+          if (brandCompare !== 0) return brandCompare;
+
           const indexA = productSortIndexMap.get(a.productId) ?? 999999;
           const indexB = productSortIndexMap.get(b.productId) ?? 999999;
           if (indexA !== indexB) return indexA - indexB;
+
           return a.sku.localeCompare(b.sku) || a.name.localeCompare(b.name);
         });
 

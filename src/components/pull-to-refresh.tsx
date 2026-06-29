@@ -13,24 +13,63 @@ export function PullToRefresh({ children }: PullToRefreshProps) {
   const [isPending, startTransition] = useTransition();
   const [pullDistance, setPullDistance] = useState(0);
   const [refreshState, setRefreshState] = useState<"idle" | "pulling" | "refreshing">("idle");
-  const [isPrintPage, setIsPrintPage] = useState(false);
+  const [isRoutePullRefreshDisabled, setIsRoutePullRefreshDisabled] = useState(false);
 
   const startY = useRef(0);
   const isPulling = useRef(false);
   const PULL_THRESHOLD = 75; // Distance to trigger refresh (px)
   const MAX_PULL = 110;       // Max distance allowed (px)
 
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const pathname = window.location.pathname;
-      setIsPrintPage(pathname.includes("/print") || pathname.includes("/preview"));
+  function isPathPullRefreshDisabled(pathname: string) {
+    return (
+      pathname === "/login" ||
+      pathname.startsWith("/login/") ||
+      pathname.includes("/print") ||
+      pathname.includes("/preview")
+    );
+  }
+
+  const isPullRefreshDisabled = isRoutePullRefreshDisabled;
+
+  function isInsideRefreshBlockedSurface(target: EventTarget | null) {
+    let element = target instanceof HTMLElement ? target : null;
+
+    while (element && element !== document.body) {
+      if (
+        element.matches(
+          '[aria-modal="true"], [data-drawer="true"], [data-popup="true"], [data-disable-pull-refresh="true"]',
+        )
+      ) {
+        return true;
+      }
+
+      const classes = typeof element.className === "string" ? element.className : "";
+      if (classes.includes("fixed") && classes.includes("inset-0")) {
+        return true;
+      }
+
+      element = element.parentElement;
     }
+
+    return false;
+  }
+
+  useEffect(() => {
+    setIsRoutePullRefreshDisabled(isPathPullRefreshDisabled(window.location.pathname));
   }, []);
 
   useEffect(() => {
-    if (isPrintPage) return;
+    if (isPullRefreshDisabled) {
+      isPulling.current = false;
+      setRefreshState("idle");
+      setPullDistance(0);
+      return;
+    }
 
     const handleTouchStart = (e: TouchEvent) => {
+      if (isPathPullRefreshDisabled(window.location.pathname)) return;
+      if (isInsideRefreshBlockedSurface(e.target)) return;
+
       // Only start pull if main page is at absolute top
       if (window.scrollY > 0) return;
 
@@ -109,7 +148,7 @@ export function PullToRefresh({ children }: PullToRefreshProps) {
       window.removeEventListener("touchmove", handleTouchMove);
       window.removeEventListener("touchend", handleTouchEnd);
     };
-  }, [pullDistance, refreshState, isPending, isPrintPage, router]);
+  }, [pullDistance, refreshState, isPending, isPullRefreshDisabled, router]);
 
   // Keep showing spinner while transition is pending
   const showSpinner = refreshState === "refreshing" || isPending;
@@ -118,7 +157,7 @@ export function PullToRefresh({ children }: PullToRefreshProps) {
   return (
     <div className="relative w-full">
       {/* ─── Premium Modern Indicator ─── */}
-      {!isPrintPage && (activeDistance > 0 || showSpinner) && (
+      {!isPullRefreshDisabled && (activeDistance > 0 || showSpinner) && (
         <div
           style={{
             height: `${activeDistance}px`,
