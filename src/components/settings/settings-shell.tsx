@@ -3,11 +3,11 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import type { LucideIcon } from "lucide-react";
-import { ArrowUpRight, ChevronRight, Save, Search, X, Clock, Factory, Package2, Store, Truck, Warehouse } from "lucide-react";
+import { ArrowLeft, ArrowUpRight, ChevronRight, Gauge, KeyRound, Save, Search, X, Clock, Factory, Package2, Store, Truck, Warehouse } from "lucide-react";
 import { LineAppIcon } from "@/components/icons/line-app-icon";
 import { AppSidebarLayout } from "@/components/app-sidebar";
 
-type SettingsSection = "customerData" | "customers" | "products" | "vehicles" | "suppliers" | "orderWindow" | "stock" | "warehouses";
+type SettingsSection = "customerData" | "customers" | "loginPin" | "performance" | "products" | "vehicles" | "suppliers" | "orderWindow" | "stock" | "warehouses";
 
 function getSectionIcon(current?: SettingsSection) {
   if (!current) return null;
@@ -26,6 +26,10 @@ function getSectionIcon(current?: SettingsSection) {
       return Warehouse;
     case "orderWindow":
       return Clock;
+    case "loginPin":
+      return KeyRound;
+    case "performance":
+      return Gauge;
     default:
       return null;
   }
@@ -122,6 +126,10 @@ export function SettingsShell({
     if (onSearch) onSearch(value);
   };
 
+  const handleOpenMobileSettingsMenu = () => {
+    window.dispatchEvent(new CustomEvent("open-mobile-settings-menu"));
+  };
+
   const inner = (
     <div className="min-h-screen bg-background font-[family:var(--font-sarabun)] text-slate-900">
       {!hideHeader ? (
@@ -205,9 +213,21 @@ export function SettingsShell({
       ) : null}
 
       <main className={`mx-auto min-w-0 w-full max-w-[88rem] ${fullWidthMobile ? "px-0 sm:px-4" : "px-4"} pb-28 lg:px-3 lg:pb-32 ${hideHeader ? "py-0 lg:py-0" : "py-3 lg:py-4"}`}>
+        {current ? (
+          <div className={`${fullWidthMobile ? "" : "-mx-4"} bg-white/90 px-3 pb-1.5 pt-2 lg:hidden`}>
+            <button
+              type="button"
+              onClick={handleOpenMobileSettingsMenu}
+              className="inline-flex items-center gap-1.5 rounded-full px-2 py-1 text-[12px] font-black text-[#4A148C] transition active:scale-[0.98]"
+            >
+              <ArrowLeft className="h-3.5 w-3.5" strokeWidth={2.7} />
+              <span>กลับหน้าตั้งค่า</span>
+            </button>
+          </div>
+        ) : null}
         {/* Mobile Breadcrumb */}
         {current && !hideHeader ? (
-          <nav className="mb-4 flex items-center gap-1.5 text-[13px] font-bold lg:hidden">
+          <nav className="hidden">
             <Link href="/settings" className="text-slate-400 transition hover:text-[#4A148C]">ตั้งค่า</Link>
             <ChevronRight className="h-3.5 w-3.5 text-slate-300" strokeWidth={3} />
             <span className="text-[#4A148C]">{title}</span>

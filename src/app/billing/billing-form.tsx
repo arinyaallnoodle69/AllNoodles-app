@@ -16,7 +16,7 @@ import {
 import { ThaiDatePicker } from "@/components/ui/thai-date-picker";
 import { MobileSearchDrawer } from "@/components/mobile-search/mobile-search-drawer";
 import { useMobileSearch } from "@/components/mobile-search/mobile-search-context";
-import type { BillingCandidate } from "@/lib/billing/billing-statement";
+import type { BillingCandidate, BillingCustomerOption } from "@/lib/billing/billing-statement";
 import { fmtDateTH } from "@/lib/utils/date";
 import { BillingPreviewButton } from "./billing-preview-button";
 
@@ -24,7 +24,7 @@ type BillingFormProps = {
   initialFromDate: string;
   initialToDate: string;
   candidates: BillingCandidate[];
-  allCustomers: { id: string; name: string; customer_code: string }[];
+  allCustomers: BillingCustomerOption[];
 };
 
 export function BillingForm({
@@ -41,6 +41,7 @@ export function BillingForm({
   const [isCustomerDialogOpen, setIsCustomerDialogOpen] = useState(false);
   const [customerSearch, setCustomerSearch] = useState("");
   const [selectedCustomerIds, setSelectedCustomerIds] = useState<string[]>([]);
+  const [selectedVehicleId, setSelectedVehicleId] = useState<string>("__all__");
   const [statusFilter, setStatusFilter] = useState<"all" | "billed" | "unbilled">("all");
   const { close: closeSearchDrawer } = useMobileSearch();
 
@@ -61,14 +62,29 @@ export function BillingForm({
   };
 
 
+  const vehicleTabs = useMemo(() => {
+    const vehicleMap = new Map<string, string>();
+    for (const customer of allCustomers) {
+      if (!customer.defaultVehicleId || !customer.vehicleName) continue;
+      vehicleMap.set(customer.defaultVehicleId, customer.vehicleName);
+    }
+    return Array.from(vehicleMap, ([id, name]) => ({ id, name })).sort((a, b) =>
+      a.name.localeCompare(b.name, "th"),
+    );
+  }, [allCustomers]);
+
   const filteredCustomers = useMemo(() => {
     const q = customerSearch.trim().toLowerCase();
-    if (!q) return allCustomers;
-    return allCustomers.filter(c =>
+    const customersForVehicle = selectedVehicleId === "__all__"
+      ? allCustomers
+      : allCustomers.filter((customer) => customer.defaultVehicleId === selectedVehicleId);
+
+    if (!q) return customersForVehicle;
+    return customersForVehicle.filter(c =>
       c.name.toLowerCase().includes(q) ||
       c.customer_code.toLowerCase().includes(q)
     );
-  }, [allCustomers, customerSearch]);
+  }, [allCustomers, customerSearch, selectedVehicleId]);
 
   const toggleCustomer = (id: string) => {
     setSelectedCustomerIds(prev =>
@@ -81,7 +97,11 @@ export function BillingForm({
     setSelectedCustomerIds(prev => Array.from(new Set([...prev, ...idsToAdd])));
   };
 
-  const clearSelection = () => setSelectedCustomerIds([]);
+  const clearFilters = () => {
+    setSelectedCustomerIds([]);
+    setCustomerSearch("");
+    setSelectedVehicleId("__all__");
+  };
 
   const visibleCandidates = useMemo(() => {
     if (selectedCustomerIds.length === 0) return [];
@@ -340,19 +360,52 @@ export function BillingForm({
               </div>
             </div>
 
+            {vehicleTabs.length > 0 && (
+              <div className="border-b border-slate-100 px-6 pb-2">
+                <div className="flex gap-5 overflow-x-auto pb-1.5 no-scrollbar">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedVehicleId("__all__")}
+                    className={`shrink-0 border-b-2 pb-1 text-xs font-black transition ${
+                      selectedVehicleId === "__all__"
+                        ? "border-[#4A148C] text-[#4A148C]"
+                        : "border-transparent text-slate-400 hover:text-slate-600"
+                    }`}
+                  >
+                    ทั้งหมด
+                  </button>
+
+                  {vehicleTabs.map((vehicle) => (
+                    <button
+                      key={vehicle.id}
+                      type="button"
+                      onClick={() => setSelectedVehicleId(vehicle.id)}
+                      className={`shrink-0 border-b-2 pb-1 text-xs font-black transition ${
+                        selectedVehicleId === vehicle.id
+                          ? "border-[#4A148C] text-[#4A148C]"
+                          : "border-transparent text-slate-400 hover:text-slate-600"
+                      }`}
+                    >
+                      {vehicle.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Select All / Clear Row */}
-            <div className="flex items-center justify-between border-b border-slate-50 px-6 py-2">
+            <div className="flex items-center justify-between gap-3 border-b border-slate-50 px-4 py-3 md:px-6 md:py-2">
                <button
                 onClick={selectAllFiltered}
-                className="text-[11px] font-black uppercase tracking-widest text-[#4A148C]"
+                className="flex-1 rounded-xl bg-[#4A148C]/10 px-4 py-2.5 text-sm font-black text-[#4A148C] transition active:scale-[0.98] md:flex-none md:rounded-lg md:bg-transparent md:px-2 md:py-1 md:text-[11px] md:uppercase md:tracking-widest md:hover:bg-[#4A148C]/5"
               >
                 เลือกที่พบทั้งหมด
               </button>
               <button
-                onClick={clearSelection}
-                className="text-[11px] font-black uppercase tracking-widest text-slate-400"
+                onClick={clearFilters}
+                className="flex-1 rounded-xl bg-slate-100 px-4 py-2.5 text-sm font-black text-slate-600 transition active:scale-[0.98] md:flex-none md:rounded-lg md:bg-transparent md:px-2 md:py-1 md:text-[11px] md:uppercase md:tracking-widest md:text-slate-400 md:hover:bg-slate-100"
               >
-                ล้างทั้งหมด
+                ล้างตัวกรอง
               </button>
             </div>
 

@@ -43,6 +43,14 @@ export type BillingCandidate = {
   }[];
 };
 
+export type BillingCustomerOption = {
+  id: string;
+  name: string;
+  customer_code: string;
+  defaultVehicleId: string | null;
+  vehicleName: string | null;
+};
+
 export type BillingStatementData = {
   customer: {
     id: string;
@@ -83,6 +91,12 @@ type DeliveryNoteRow = {
 function toNum(v: number | string | null | undefined) {
   const n = Number(v ?? 0);
   return Number.isFinite(n) ? n : 0;
+}
+
+function getRelatedVehicleName(vehicle: { name?: string | null } | { name?: string | null }[] | null | undefined) {
+  if (!vehicle) return null;
+  if (Array.isArray(vehicle)) return vehicle[0]?.name ?? null;
+  return vehicle.name ?? null;
 }
 
 function chunkIds<T>(items: T[], size: number): T[][] {
@@ -425,17 +439,29 @@ export async function getBilledDeliveryNumbersForRange(
   return billedDeliveryNumbers;
 }
 
-export async function getCustomersForBilling(organizationId: string) {
+export async function getCustomersForBilling(organizationId: string): Promise<BillingCustomerOption[]> {
   const supabase = getSupabaseAdmin();
   const { data, error } = await supabase
     .from("customers")
-    .select("id, name, customer_code")
+    .select("id, name, customer_code, default_vehicle_id, vehicles(id, name)")
     .eq("organization_id", organizationId)
     .eq("is_active", true)
     .order("customer_code", { ascending: true });
   
   if (error || !data) return [];
-  return data;
+  return (data as Array<{
+    id: string;
+    name: string;
+    customer_code: string;
+    default_vehicle_id: string | null;
+    vehicles: { id: string; name: string } | { id: string; name: string }[] | null;
+  }>).map((customer) => ({
+    id: customer.id,
+    name: customer.name,
+    customer_code: customer.customer_code,
+    defaultVehicleId: customer.default_vehicle_id,
+    vehicleName: getRelatedVehicleName(customer.vehicles),
+  }));
 }
 
 export async function getBillingHistory(

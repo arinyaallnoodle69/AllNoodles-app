@@ -135,6 +135,7 @@ export function OrderAddProductPicker({
   const role = useClientRole();
   const [query, setQuery] = useState("");
   const deferredQuery = useDeferredValue(query);
+  const [isDesktopSearchOpen, setIsDesktopSearchOpen] = useState(false);
   const [priceMap, setPriceMap] = useState<Record<string, number>>({});
   const [selections, setSelections] = useState<Record<string, SelectionDraft>>({});
   const [error, setError] = useState<string | null>(null);
@@ -343,6 +344,7 @@ export function OrderAddProductPicker({
   function handleClose() {
     setOpen(false);
     setQuery("");
+    setIsDesktopSearchOpen(false);
     setSelections({});
     setError(null);
     setSelectedCategoryId("__all__");
@@ -392,6 +394,41 @@ export function OrderAddProductPicker({
                   เลือกแล้ว {selectedCount.toLocaleString("th-TH")} รายการ
                 </p>
               </div>
+              <div
+                className={`hidden items-center overflow-hidden rounded-2xl border border-[#EA80FC]/35 bg-[#F3E5F5]/25 transition-all duration-300 ease-out lg:flex ${
+                  isDesktopSearchOpen ? "w-[34rem] opacity-100" : "w-0 border-transparent opacity-0"
+                }`}
+              >
+                <Search className="ml-4 h-5 w-5 shrink-0 text-[#4A148C]" strokeWidth={2.5} />
+                <input
+                  type="text"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="ค้นหาสินค้า..."
+                  className="min-w-0 flex-1 bg-transparent px-3 py-3 text-base font-bold text-[#4A148C] outline-none placeholder:text-[#4A148C]/50"
+                />
+                {query ? (
+                  <button
+                    type="button"
+                    onClick={() => setQuery("")}
+                    className="mr-3 text-[#4A148C]/70 transition hover:text-[#4A148C]"
+                    aria-label="ล้างคำค้นหา"
+                  >
+                    <X className="h-4.5 w-4.5" strokeWidth={2.6} />
+                  </button>
+                ) : null}
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsDesktopSearchOpen((current) => !current)}
+                className="relative hidden h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-[#EA80FC]/35 bg-[#F3E5F5]/25 text-[#4A148C] transition hover:bg-[#F3E5F5]/60 active:scale-95 lg:flex"
+                aria-label="ค้นหาสินค้า"
+              >
+                <Search className="h-5 w-5" strokeWidth={2.7} />
+                {query && !isDesktopSearchOpen ? (
+                  <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-[#EA80FC]" aria-hidden="true" />
+                ) : null}
+              </button>
               <button
                 type="button"
                 onClick={handleClose}
@@ -403,7 +440,7 @@ export function OrderAddProductPicker({
             </div>
 
             <div className="shrink-0 border-b border-[#EA80FC]/15 bg-white">
-              <div className="px-4 py-3.5 sm:px-5">
+              <div className="px-4 py-3.5 sm:px-5 lg:hidden">
                 <div className="flex items-center gap-3 rounded-2xl border border-[#EA80FC]/35 bg-[#F3E5F5]/25 px-4 py-3 transition focus-within:border-[#4A148C] focus-within:ring-2 focus-within:ring-[#4A148C]/10">
                   <Search className="h-5 w-5 shrink-0 text-[#4A148C]" strokeWidth={2.4} />
                   <input

@@ -42,6 +42,7 @@ export function SettingsSuppliersPageClient({
 
   return (
     <SettingsShell
+      current="suppliers"
       title="จัดการผู้ขาย"
       description="เพิ่ม แก้ไข และจัดการข้อมูลผู้ขาย (Suppliers)"
       titleIcon={Factory}

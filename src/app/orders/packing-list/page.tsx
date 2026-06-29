@@ -10,6 +10,7 @@ import {
 } from "@/components/print/packing-list-layout";
 import { requireAnyRole } from "@/lib/auth/authorization";
 import { PRINT_ORGANIZATION_NAME } from "@/components/print/print-shared";
+import { getPackingListProductMeta } from "@/lib/orders/packing-list-product-meta";
 import { sortProductsByCategory } from "@/lib/products/sort-by-category";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { AutoPrint, PackingListPrintButton } from "./preview/print-button";
@@ -66,6 +67,7 @@ type DbProduct = {
 
 type DbCategory = {
   id: string;
+  name: string;
   sort_order: number | string | null;
 };
 
@@ -77,6 +79,9 @@ type GroupedStore = {
 };
 
 type ProductDescriptor = {
+  brand: string;
+  category: string;
+  icon: string;
   productId: string;
   sku: string;
   name: string;
@@ -89,16 +94,6 @@ function getVehicleName(value: unknown) {
     return (value[0] as { name?: string } | undefined)?.name ?? null;
   }
   return (value as { name?: string }).name ?? null;
-}
-
-function getPackingListProductName(name: string, metadata: unknown) {
-  if (metadata && typeof metadata === "object" && !Array.isArray(metadata)) {
-    const packingListName = (metadata as Record<string, unknown>).packing_list_name;
-    if (typeof packingListName === "string" && packingListName.trim()) {
-      return packingListName.trim();
-    }
-  }
-  return name;
 }
 
 function getOrderKey(item: OrderItemRow) {
@@ -175,7 +170,7 @@ async function PackingListPage({ searchParams }: Props) {
       .eq("organization_id", session.organizationId),
     admin
       .from("product_categories")
-      .select("id, sort_order")
+      .select("id, name, sort_order")
       .eq("organization_id", session.organizationId)
       .eq("is_active", true),
     admin
@@ -198,6 +193,15 @@ async function PackingListPage({ searchParams }: Props) {
     current.push(item.product_category_id);
     categoryIdsByProductId.set(item.product_id, current);
   }
+  const categoryNameById = new Map(
+    ((categoriesDb.data ?? []) as DbCategory[]).map((category) => [category.id, category.name]),
+  );
+  const categoryNamesByProductId = new Map(
+    Array.from(categoryIdsByProductId.entries()).map(([productId, categoryIds]) => [
+      productId,
+      categoryIds.map((categoryId) => categoryNameById.get(categoryId)).filter(Boolean) as string[],
+    ]),
+  );
 
   const dbProductsList = (productsDb.data ?? []).filter((product: DbProduct) => {
     const metadata =
@@ -207,17 +211,21 @@ async function PackingListPage({ searchParams }: Props) {
     return !metadata?.deleted;
   });
 
-  const packingListNameByProductId = new Map(
+  const packingListMetaByProductId = new Map(
     dbProductsList.map((product: DbProduct) => [
       product.id,
-      getPackingListProductName(product.name, product.metadata),
+      getPackingListProductMeta({
+        categoryNames: categoryNamesByProductId.get(product.id) ?? [],
+        metadata: product.metadata,
+        name: product.name,
+      }),
     ]),
   );
 
   const sortedMasterProducts = sortProductsByCategory(
     dbProductsList.map((product: DbProduct) => ({
       id: product.id,
-      name: packingListNameByProductId.get(product.id) ?? product.name,
+      name: packingListMetaByProductId.get(product.id)?.name ?? product.name,
       display_order:
         product.display_order !== null && product.display_order !== undefined
           ? Number(product.display_order)
@@ -291,7 +299,10 @@ async function PackingListPage({ searchParams }: Props) {
             productMap.set(key, {
               productId: item.product_id,
               sku: item.products.sku,
-              name: packingListNameByProductId.get(item.product_id) ?? item.products.name,
+              name: packingListMetaByProductId.get(item.product_id)?.name ?? item.products.name,
+              brand: packingListMetaByProductId.get(item.product_id)?.brand ?? "",
+              category: packingListMetaByProductId.get(item.product_id)?.category ?? "",
+              icon: packingListMetaByProductId.get(item.product_id)?.icon ?? "",
               unit: item.sale_unit_label,
             });
           }
@@ -320,6 +331,9 @@ async function PackingListPage({ searchParams }: Props) {
       const products = Array.from(productMap.entries())
         .map(([key, product]) => ({
           key,
+          brand: product.brand,
+          category: product.category,
+          icon: product.icon,
           productId: product.productId,
           sku: product.sku,
           name: product.name,
@@ -348,6 +362,9 @@ async function PackingListPage({ searchParams }: Props) {
         })),
         products: products.map((product) => ({
           key: product.key,
+          brand: product.brand,
+          category: product.category,
+          icon: product.icon,
           sku: product.sku,
           name: product.name,
           unit: product.unit,

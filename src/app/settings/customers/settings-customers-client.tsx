@@ -225,6 +225,7 @@ export function SettingsCustomersPageClient({
 
 	        <CustomerListPanel 
 	          customers={filteredCustomers} 
+	          reorderEnabled={selectedVehicleId === "__all__" && searchTerm.trim().length === 0}
 	          vehicles={vehicles} 
 	          warehouses={warehouses}
 	          searchTerm={searchTerm}

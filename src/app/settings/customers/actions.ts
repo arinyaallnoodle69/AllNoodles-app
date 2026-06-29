@@ -45,6 +45,7 @@ type CustomerImportInsert = {
   organization_id: string;
   postal_code: string | null;
   province: string | null;
+  sort_order?: number;
   subdistrict: string | null;
 };
 
@@ -110,6 +111,28 @@ async function generateCustomerCode(organizationId: string) {
   }
 
   return getNextCustomerCode((data ?? []).map((customer) => customer.customer_code ?? ""));
+}
+
+async function getNextCustomerSortOrder(organizationId: string) {
+  const admin = getSupabaseAdmin();
+  const { data } = await (admin as unknown as {
+    from(table: "customers"): {
+      select(columns: string): {
+        eq(column: string, value: string): {
+          order(column: string, options: { ascending: boolean }): {
+            limit(count: number): Promise<{ data: Array<{ sort_order: number | null }> | null }>;
+          };
+        };
+      };
+    };
+  })
+    .from("customers")
+    .select("sort_order")
+    .eq("organization_id", organizationId)
+    .order("sort_order", { ascending: false })
+    .limit(1);
+
+  return Number(data?.[0]?.sort_order ?? -1) + 1;
 }
 
 function getAddressPayload(value: FormDataEntryValue | null): AddressPayload | null {
@@ -200,6 +223,7 @@ export async function createCustomerAction(
   const admin = getSupabaseAdmin();
   const { address, defaultVehicleId, defaultWarehouseId, name } = validation;
   const customerCode = await generateCustomerCode(session.organizationId);
+  const nextSortOrder = await getNextCustomerSortOrder(session.organizationId);
 
   if (!customerCode) {
     return {
@@ -278,6 +302,7 @@ export async function createCustomerAction(
     organization_id: session.organizationId,
     postal_code: address.postalCode || null,
     province: address.provinceName || null,
+    sort_order: nextSortOrder,
     subdistrict: address.subdistrictName || null,
   });
 
@@ -485,6 +510,50 @@ export async function updateCustomerDefaultVehicleAction(
   return {};
 }
 
+export async function updateCustomerOrderAction(customerIds: string[]): Promise<{ error?: string }> {
+  const session = await requireAppRole("admin");
+  const admin = getSupabaseAdmin();
+  const uniqueCustomerIds = [...new Set(customerIds.map((id) => id.trim()).filter(Boolean))];
+
+  if (uniqueCustomerIds.length === 0) {
+    return { error: "ไม่พบรายการร้านค้าที่ต้องการจัดเรียง" };
+  }
+
+  const { data: customers, error: lookupError } = await admin
+    .from("customers")
+    .select("id")
+    .eq("organization_id", session.organizationId)
+    .eq("is_active", true)
+    .in("id", uniqueCustomerIds);
+
+  if (lookupError || (customers ?? []).length !== uniqueCustomerIds.length) {
+    return { error: "รายการร้านค้าไม่ถูกต้อง กรุณารีเฟรชหน้าแล้วลองใหม่" };
+  }
+
+  const customersTable = admin.from("customers") as unknown as {
+    update(values: { sort_order: number }): {
+      eq(column: string, value: string): {
+        eq(column: string, value: string): Promise<{ error: { message?: string } | null }>;
+      };
+    };
+  };
+
+  const updates = uniqueCustomerIds.map((id, index) =>
+    customersTable
+      .update({ sort_order: index })
+      .eq("organization_id", session.organizationId)
+      .eq("id", id),
+  );
+
+  const results = await Promise.all(updates);
+  if (results.some((result) => result.error)) {
+    return { error: "บันทึกลำดับร้านค้าไม่สำเร็จ กรุณาลองใหม่อีกครั้ง" };
+  }
+
+  revalidateCustomerSettings(session.organizationId);
+  return {};
+}
+
 export async function deleteCustomerAction(customerId: string): Promise<{ error?: string }> {
   const session = await requireAppRole("admin");
   const admin = getSupabaseAdmin();
@@ -637,6 +706,7 @@ export async function importCustomersAction(
 
   const importErrors: string[] = [];
   const customersToInsert: CustomerImportInsert[] = [];
+  const firstImportedSortOrder = await getNextCustomerSortOrder(session.organizationId);
 
   for (let i = 1; i < rows.length; i++) {
     const row = rows[i];
@@ -751,6 +821,7 @@ export async function importCustomersAction(
       organization_id: session.organizationId,
       postal_code: resolvedPostalCode,
       province: resolvedProvince,
+      sort_order: firstImportedSortOrder + customersToInsert.length,
       subdistrict: resolvedSubdistrict,
     });
   }

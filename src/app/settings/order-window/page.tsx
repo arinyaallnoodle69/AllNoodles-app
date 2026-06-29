@@ -13,6 +13,7 @@ export default async function SettingsOrderWindowPage() {
 
   return (
     <SettingsShell
+      current="orderWindow"
       title="เวลารับออเดอร์และแจ้งเตือน"
       description="ตั้งเวลารับออเดอร์จริงของร้าน พร้อมเปิดหรือปิดแจ้งเตือนออเดอร์ใหม่บนอุปกรณ์นี้ได้จากหน้าเดียว"
       floatingSubmit={false}

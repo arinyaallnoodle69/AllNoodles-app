@@ -33,6 +33,8 @@ export type SettingsProduct = {
   imageUrls: string[];
   isActive: boolean;
   name: string;
+  packingListBrand: string;
+  packingListIcon: string;
   packingListName: string;
   productKind: "made_to_order" | "stock";
   pricingCount: number;
@@ -74,6 +76,7 @@ export type SettingsCustomer = {
   id: string;
   name: string;
   pricingCount: number;
+  sortOrder: number;
 };
 
 export type SettingsCustomerAddress = {
@@ -115,6 +118,10 @@ export type SettingsPriceRow = {
 };
 
 export type SettingsSaleUnitOption = {
+  brand: string;
+  categoryIds: string[];
+  categoryNames: string[];
+  categorySortOrders: number[];
   effectiveCostPrice: number;
   id: string;
   imageUrl: string | null;
@@ -197,6 +204,7 @@ type CustomerRow = {
   name: string;
   postal_code: string | null;
   province: string | null;
+  sort_order: number | string;
   subdistrict: string | null;
 };
 
@@ -379,10 +387,11 @@ async function fetchSettingsData(organizationId: string): Promise<SettingsData> 
       admin
         .from("customers")
         .select(
-          "id, customer_code, name, address, province, district, subdistrict, postal_code, metadata, default_vehicle_id, default_warehouse_id",
+          "id, customer_code, name, address, province, district, subdistrict, postal_code, metadata, default_vehicle_id, default_warehouse_id, sort_order",
         )
         .eq("organization_id", organizationId)
         .eq("is_active", true)
+        .order("sort_order", { ascending: true })
         .order("customer_code", { ascending: true }),
       admin
         .from("suppliers")
@@ -479,6 +488,7 @@ async function fetchSettingsData(organizationId: string): Promise<SettingsData> 
   const customerPricingCount = new Map<string, number>();
   const categoryIdsByProductId = new Map<string, string[]>();
   const categoryNamesByProductId = new Map<string, string[]>();
+  const categorySortOrdersByProductId = new Map<string, number[]>();
   const categoryItemIdsByProductId = new Map<string, Set<string>>();
   const productIdsByCategoryId = new Map<string, string[]>();
   const saleUnitMap = new Map<
@@ -559,12 +569,20 @@ async function fetchSettingsData(organizationId: string): Promise<SettingsData> 
     const productCategories = sortedCategories.filter((category) => productCategoryIds.has(category.id));
     categoryIdsByProductId.set(product.id, productCategories.map((category) => category.id));
     categoryNamesByProductId.set(product.id, productCategories.map((category) => category.name));
+    categorySortOrdersByProductId.set(
+      product.id,
+      productCategories.map((category) => Number(category.sort_order)),
+    );
   }
 
   const productMap = new Map(
     products.map((product) => [
       product.id,
       {
+        brand: ((product.metadata ?? {}) as Record<string, string>).brand ?? "",
+        categoryIds: categoryIdsByProductId.get(product.id) ?? [],
+        categoryNames: categoryNamesByProductId.get(product.id) ?? [],
+        categorySortOrders: categorySortOrdersByProductId.get(product.id) ?? [],
         imageUrl: imageMap.get(product.id)?.[0] ?? null,
         name: product.name,
         sku: product.sku,
@@ -610,6 +628,7 @@ async function fetchSettingsData(organizationId: string): Promise<SettingsData> 
       id: customer.id,
       name: customer.name,
       pricingCount: customerPricingCount.get(customer.id) ?? 0,
+      sortOrder: Number(customer.sort_order ?? 0),
     })),
     suppliers: suppliers.map((supplier) => ({
       address: supplier.address,
@@ -665,6 +684,8 @@ async function fetchSettingsData(organizationId: string): Promise<SettingsData> 
           imageUrls: imageMap.get(product.id) ?? [],
           isActive: product.is_active,
           name: product.name,
+          packingListBrand: meta.packing_list_brand ?? "",
+          packingListIcon: meta.packing_list_icon ?? "",
           packingListName: meta.packing_list_name ?? "",
           productKind,
           pricingCount: productPricingCount.get(product.id) ?? 0,
@@ -702,6 +723,10 @@ async function fetchSettingsData(organizationId: string): Promise<SettingsData> 
       categories.map((c) => ({ id: c.id, sortOrder: Number(c.sort_order) })),
     ),
     saleUnits: activeSaleUnits.map((saleUnit) => ({
+      brand: productMap.get(saleUnit.product_id)?.brand ?? "",
+      categoryIds: productMap.get(saleUnit.product_id)?.categoryIds ?? [],
+      categoryNames: productMap.get(saleUnit.product_id)?.categoryNames ?? [],
+      categorySortOrders: productMap.get(saleUnit.product_id)?.categorySortOrders ?? [],
       effectiveCostPrice:
         saleUnitMap
           .get(saleUnit.product_id)
@@ -938,6 +963,8 @@ async function fetchSettingsProductsData(organizationId: string): Promise<Settin
           imageUrls: imageMap.get(product.id) ?? [],
           isActive: product.is_active,
           name: product.name,
+          packingListBrand: meta.packing_list_brand ?? "",
+          packingListIcon: meta.packing_list_icon ?? "",
           packingListName: meta.packing_list_name ?? "",
           productKind,
           pricingCount: 0,

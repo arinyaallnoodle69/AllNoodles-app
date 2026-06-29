@@ -104,6 +104,17 @@ export function SettingsMobileBottomNav() {
     return () => clearTimeout(timer);
   }, [pathname]);
 
+  useEffect(() => {
+    function openSettingsMenu() {
+      setMoreOpen(false);
+      setNavigatingHref(null);
+      setSettingsOpen(true);
+    }
+
+    window.addEventListener("open-mobile-settings-menu", openSettingsMenu);
+    return () => window.removeEventListener("open-mobile-settings-menu", openSettingsMenu);
+  }, []);
+
   const nav = (
     <>
       {moreOpen ? (

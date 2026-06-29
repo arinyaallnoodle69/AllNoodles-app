@@ -8,6 +8,9 @@ export type PackingListStore = {
 };
 
 export type PackingListProduct = {
+  brand: string;
+  category: string;
+  icon: string;
   key: string;
   sku: string;
   name: string;
@@ -117,6 +120,25 @@ function insertZeroWidthSpaces(text: string): string {
   } catch {
     return text;
   }
+}
+
+function buildHeaderGroups(products: PackingListProduct[], field: "brand" | "category") {
+  const groups: { key: string; label: string; startIndex: number; span: number }[] = [];
+
+  products.forEach((product, index) => {
+    const label = product[field].trim() || (field === "category" ? "ไม่ระบุหมวด" : "ไม่ระบุแบรนด์");
+    const key = field === "brand" ? `${product.category.trim()}||${label}` : label;
+    const lastGroup = groups[groups.length - 1];
+
+    if (lastGroup?.key === key) {
+      lastGroup.span += 1;
+      return;
+    }
+
+    groups.push({ key, label, startIndex: index, span: 1 });
+  });
+
+  return groups;
 }
 
 
@@ -323,9 +345,11 @@ function calcDataColWidth(count: number, availableMm: number) {
 
 function StandardPackingListPage({ page, data }: { page: StandardPageDef; data: PackingListData }) {
   const columnWidth = calcDataColWidth(Math.max(page.pageProducts.length, 1), 247);
+  const categoryGroups = buildHeaderGroups(page.pageProducts, "category");
+  const brandGroups = buildHeaderGroups(page.pageProducts, "brand");
   const isLastStorePage = page.storeChunk === page.storeTotalChunks;
   const rowCount = page.pageStores.length + (isLastStorePage ? 1 : 0);
-  const rowHeightMm = Math.max(6.35, Math.min(7.35, 181.5 / Math.max(rowCount, 1)));
+  const rowHeightMm = Math.max(5.9, Math.min(7.1, 170 / Math.max(rowCount, 1)));
   const productTotals = isLastStorePage
     ? page.pageProductIndices.map((productIndex) =>
         page.vehicleStoreIndices.reduce((sum, storeIndex) => sum + (data.qty[productIndex]?.[storeIndex] ?? 0), 0),
@@ -351,6 +375,38 @@ function StandardPackingListPage({ page, data }: { page: StandardPageDef; data: 
           <table className="packing-table" style={{ "--standard-row-height": `${rowHeightMm}mm` } as CSSProperties}>
             <thead>
               <tr>
+                <th className="packing-col packing-col--store packing-col--group-label">หมวดหมู่</th>
+                {categoryGroups.map((group) => {
+                  const palette = getColumnPalette(group.startIndex);
+                  return (
+                    <th
+                      key={`category-${group.startIndex}-${group.label}`}
+                      className="packing-col packing-col--category"
+                      colSpan={group.span}
+                      style={{ backgroundColor: palette.header }}
+                    >
+                      {insertZeroWidthSpaces(group.label)}
+                    </th>
+                  );
+                })}
+              </tr>
+              <tr>
+                <th className="packing-col packing-col--store packing-col--group-label">แบรนด์</th>
+                {brandGroups.map((group) => {
+                  const palette = getColumnPalette(group.startIndex);
+                  return (
+                    <th
+                      key={`brand-${group.startIndex}-${group.label}`}
+                      className="packing-col packing-col--brand"
+                      colSpan={group.span}
+                      style={{ backgroundColor: palette.rowA }}
+                    >
+                      {insertZeroWidthSpaces(group.label)}
+                    </th>
+                  );
+                })}
+              </tr>
+              <tr>
                 <th className="packing-col packing-col--store">ข้อมูลลูกค้า / ร้านค้า</th>
                 {(() => {
                   return page.pageProducts.map((product, columnIndex) => {
@@ -363,6 +419,9 @@ function StandardPackingListPage({ page, data }: { page: StandardPageDef; data: 
                       >
                                                 <div className="packing-product-header">
                           <div className="packing-product-header__name">
+                            {product.icon ? (
+                              <span className="packing-product-header__icon" aria-hidden="true">{product.icon}</span>
+                            ) : null}
                             {insertZeroWidthSpaces(product.name)}
                           </div>
                           <span className="packing-product-header__unit">{product.unit}</span>
@@ -472,7 +531,10 @@ function TransposedPackingListPage({ page, data }: { page: TransposedPageDef; da
                 <tr key={product.key} className="packing-table__row">
                   <td className="packing-cell packing-cell--transpose-product">
                     <div className="packing-transpose-product">
-                      <span className="packing-transpose-product__name">{product.name}</span>
+                      <span className="packing-transpose-product__name">
+                        {product.icon ? <span aria-hidden="true">{product.icon} </span> : null}
+                        {product.name}
+                      </span>
                       <span className="packing-transpose-product__unit">{product.unit}</span>
                     </div>
                   </td>
@@ -844,6 +906,37 @@ function PackingListStyles() {
         white-space: nowrap;
       }
 
+      .packing-col--group-label {
+        padding-top: 0.45mm;
+        padding-bottom: 0.45mm;
+        background: #f8fafc;
+        color: #475569;
+        font-size: 6.4pt;
+        text-align: center;
+      }
+
+      .packing-col--category,
+      .packing-col--brand {
+        height: 3.8mm;
+        padding: 0.25mm 0.6mm;
+        overflow: hidden;
+        text-align: center;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .packing-col--category {
+        font-size: 7.4pt;
+        font-weight: 900;
+        color: #0f172a;
+      }
+
+      .packing-col--brand {
+        font-size: 6.7pt;
+        font-weight: 800;
+        color: #334155;
+      }
+
       .packing-col--transpose-product {
         width: 27mm;
         min-width: 27mm;
@@ -873,8 +966,8 @@ function PackingListStyles() {
         flex-direction: column;
         justify-content: space-between;
         gap: 0.2mm;
-        min-height: 14mm;
-        padding: 0.55mm 0.05mm;
+        min-height: 8.2mm;
+        padding: 0.35mm 0.05mm;
         width: 100%;
         min-width: 0;
         overflow: hidden;
@@ -883,8 +976,8 @@ function PackingListStyles() {
                         .packing-product-header__name {
         display: block;
         flex: 1;
-        font-size: 7pt;
-        line-height: 1.2;
+        font-size: 6.8pt;
+        line-height: 1.08;
         font-weight: 700;
         color: #0f172a;
         width: 100%;
@@ -896,12 +989,21 @@ function PackingListStyles() {
         text-align: left;
         padding-left: 0.8mm;
         padding-right: 0.8mm;
-        padding-top: 0.5mm;
+        padding-top: 0.2mm;
         box-sizing: border-box;
       }
 
+      .packing-product-header__icon {
+        display: inline-block;
+        margin-right: 0.35mm;
+        font-family: "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", "Sarabun", sans-serif;
+        font-size: 7.2pt;
+        line-height: 1;
+        vertical-align: -0.05em;
+      }
+
       .packing-product-header__unit {
-        font-size: 6pt;
+        font-size: 5.8pt;
         font-weight: 700;
         line-height: 1;
         color: #475569;

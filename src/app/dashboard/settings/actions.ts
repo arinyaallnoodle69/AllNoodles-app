@@ -496,6 +496,8 @@ export async function createProduct(formData: FormData): Promise<boolean> {
   const brand = safeText(formData.get("brand")) ?? "";
   const requestedCategoryIds = parseCategoryIds(formData);
   const description = safeText(formData.get("description")) ?? "";
+  const packingListBrand = safeText(formData.get("packingListBrand")) ?? "";
+  const packingListIcon = safeText(formData.get("packingListIcon")) ?? "";
   const packingListName = safeText(formData.get("packingListName")) ?? "";
 
   if (
@@ -536,6 +538,8 @@ export async function createProduct(formData: FormData): Promise<boolean> {
   if (brand) metadata.brand = brand;
   if (categoryNames.length > 0) metadata.category = categoryNames.join(", ");
   if (description) metadata.description = description;
+  if (packingListBrand) metadata.packing_list_brand = packingListBrand;
+  if (packingListIcon) metadata.packing_list_icon = packingListIcon;
   if (packingListName) metadata.packing_list_name = packingListName;
 
   const storage = admin.storage;
@@ -682,6 +686,8 @@ export async function updateProduct(formData: FormData): Promise<boolean> {
   const brand = safeText(formData.get("brand")) ?? "";
   const requestedCategoryIds = parseCategoryIds(formData);
   const description = safeText(formData.get("description")) ?? "";
+  const packingListBrand = safeText(formData.get("packingListBrand")) ?? "";
+  const packingListIcon = safeText(formData.get("packingListIcon")) ?? "";
   const packingListName = safeText(formData.get("packingListName")) ?? "";
 
   if (
@@ -740,6 +746,8 @@ export async function updateProduct(formData: FormData): Promise<boolean> {
   if (brand) metadata.brand = brand;
   if (categoryNames.length > 0) metadata.category = categoryNames.join(", ");
   if (description) metadata.description = description;
+  if (packingListBrand) metadata.packing_list_brand = packingListBrand;
+  if (packingListIcon) metadata.packing_list_icon = packingListIcon;
   if (packingListName) metadata.packing_list_name = packingListName;
 
   const storage = admin.storage;

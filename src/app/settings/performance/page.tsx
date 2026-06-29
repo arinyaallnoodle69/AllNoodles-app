@@ -115,6 +115,7 @@ export default async function SystemPerformancePage() {
 
   return (
     <SettingsShell
+      current="performance"
       title="ประสิทธิภาพและสุขภาพระบบ"
       description="รายงานสถิติ ความหน่วง และการคิวรีข้อมูลของแอปพลิเคชันเชิงรึก"
       floatingSubmit={false}

@@ -196,6 +196,8 @@ function ProductFormBody({
     editingProduct?.categoryIds[0] ?? "",
   );
   const [description, setDescription] = useState(editingProduct?.description ?? "");
+  const [packingListBrand, setPackingListBrand] = useState(editingProduct?.packingListBrand ?? "");
+  const [packingListIcon, setPackingListIcon] = useState(editingProduct?.packingListIcon ?? "");
   const [packingListName, setPackingListName] = useState(editingProduct?.packingListName ?? "");
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -688,6 +690,8 @@ function ProductFormBody({
       productKind === (editingProduct.productKind ?? "made_to_order") &&
       supplierId === (editingProduct.supplierId ?? "") &&
       description === (editingProduct.description ?? "") &&
+      packingListBrand === (editingProduct.packingListBrand ?? "") &&
+      packingListIcon === (editingProduct.packingListIcon ?? "") &&
       packingListName === (editingProduct.packingListName ?? "");
 
     const sameSaleUnits = JSON.stringify(initialSaleUnits) === JSON.stringify(currentSaleUnits);
@@ -709,6 +713,8 @@ function ProductFormBody({
     productKind,
     supplierId,
     description,
+    packingListBrand,
+    packingListIcon,
     packingListName,
     saleUnits,
     keptExistingUrls,
@@ -893,9 +899,35 @@ function ProductFormBody({
                     ใช้เฉพาะตอนพิมพ์ใบจัดของ หากไม่กรอก ระบบจะใช้ชื่อสินค้าหลักแทน
                   </p>
                 </div>
+                <div className="grid gap-3 sm:grid-cols-[0.8fr_1.2fr]">
+                  <div>
+                    <label className={productFieldLabelClass} htmlFor="product-packing-list-icon">ไอคอน/อีโมจิ</label>
+                    <input
+                      id="product-packing-list-icon"
+                      value={packingListIcon}
+                      onChange={(e) => setPackingListIcon(e.target.value)}
+                      className={productInputClass}
+                      placeholder="เช่น 🍜"
+                    />
+                  </div>
+                  <div>
+                    <label className={productFieldLabelClass} htmlFor="product-packing-list-brand">แบรนด์ในใบจัดของ</label>
+                    <input
+                      id="product-packing-list-brand"
+                      value={packingListBrand}
+                      onChange={(e) => setPackingListBrand(e.target.value)}
+                      className={productInputClass}
+                      placeholder="ไม่กรอก = ใช้แบรนด์หลัก"
+                    />
+                  </div>
+                </div>
                 <div className="rounded-xl border border-dashed border-slate-300 bg-white px-4 py-3">
                   <p className="text-[11px] font-black uppercase tracking-[0.14em] text-slate-800">ตัวอย่างในใบจัดของ</p>
+                  <p className="mt-1 text-[11px] font-black uppercase tracking-[0.12em] text-slate-500">
+                    {(packingListBrand || brand || "แบรนด์").trim()}
+                  </p>
                   <p className="mt-2 text-sm font-black leading-snug text-slate-950">
+                    {packingListIcon.trim() ? <span className="mr-1">{packingListIcon.trim()}</span> : null}
                     {(packingListName || basicFormValues.name || editingProduct?.name || "ชื่อสินค้าจะแสดงตรงนี้").trim()}
                   </p>
                 </div>
@@ -909,6 +941,8 @@ function ProductFormBody({
               {/* Hidden inputs to pass metadata via FormData */}
               <input type="hidden" name="brand" value={brand} />
               <input type="hidden" name="description" value={description} />
+              <input type="hidden" name="packingListBrand" value={packingListBrand} />
+              <input type="hidden" name="packingListIcon" value={packingListIcon} />
               <input type="hidden" name="packingListName" value={packingListName} />
               <input type="hidden" name="productKind" value={productKind} />
               <input type="hidden" name="supplierId" value={supplierId} />

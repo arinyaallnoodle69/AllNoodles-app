@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Receipt, History, Search, Loader2 } from "lucide-react";
-import type { BillingCandidate, BillingRecord } from "@/lib/billing/billing-statement";
+import type { BillingCandidate, BillingCustomerOption, BillingRecord } from "@/lib/billing/billing-statement";
 import { getBillingHistoryAction } from "@/lib/billing/actions";
 import { BillingForm } from "./billing-form";
 import { HistorySearchForm } from "./history-search-form";
@@ -11,7 +11,7 @@ import { fmt } from "@/components/print/print-shared";
 
 type Props = {
   candidates: BillingCandidate[];
-  allCustomers: { id: string; name: string; customer_code: string }[];
+  allCustomers: BillingCustomerOption[];
   initialFrom: string;
   initialTo: string;
 };

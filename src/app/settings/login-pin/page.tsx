@@ -65,6 +65,7 @@ export default async function LoginPinSettingsPage() {
 
   return (
     <SettingsShell
+      current="loginPin"
       title="ตั้งค่า PIN"
       description="เปลี่ยนรหัสเข้าใช้งานสำหรับพนักงานและผู้ดูแลระบบ"
       floatingSubmit={false}

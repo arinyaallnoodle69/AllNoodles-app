@@ -742,6 +742,7 @@ function ProductSelectModal({
   const [mobileFilterDrawer, setMobileFilterDrawer] = useState<"brand" | "category" | null>(null);
   const [isMobileFilterDrawerClosing, setIsMobileFilterDrawerClosing] = useState(false);
   const mobileFilterDrawerTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [isDesktopSearchOpen, setIsDesktopSearchOpen] = useState(false);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const [isMobileSearchClosing, setIsMobileSearchClosing] = useState(false);
   const mobileSearchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -1080,6 +1081,7 @@ function ProductSelectModal({
       setCostWarningInfo(null);
       setMobileFilterDrawer(null);
       setIsMobileFilterDrawerClosing(false);
+      setIsDesktopSearchOpen(false);
       setMobileSearchOpen(false);
       setIsMobileSearchClosing(false);
     }
@@ -1132,12 +1134,51 @@ function ProductSelectModal({
         {/* Header */}
         <div className="flex shrink-0 items-center justify-between gap-4 border-b border-[#EA80FC]/70 bg-[#4A148C] px-4 py-2.5 text-white sm:px-8 sm:py-4">
           <div className="min-w-0 flex-1">
-            <h3 className="text-lg font-black tracking-tight text-white sm:text-xl">เลือกสินค้าเพิ่ม</h3>
-            {selectedCustomerLabel && (
-              <p className="mt-0.5 truncate text-[10px] font-bold text-white/85 sm:text-xs">ร้าน: {selectedCustomerLabel}</p>
-            )}
+            <h3 className="truncate text-2xl font-black leading-tight tracking-tight text-white sm:text-3xl">
+              {selectedCustomerLabel ?? "ยังไม่ได้เลือกร้านค้า"}
+            </h3>
+            <p className="mt-0.5 text-[10px] font-black uppercase tracking-[0.16em] text-white/70 sm:text-xs">
+              เลือกสินค้าเพิ่ม
+            </p>
           </div>
           <div className="flex shrink-0 items-center gap-2">
+            <div
+              className={`hidden items-center overflow-hidden rounded-2xl border border-white/15 bg-white/10 transition-all duration-300 ease-out lg:flex ${
+                isDesktopSearchOpen ? "w-[34rem] opacity-100" : "w-0 border-transparent opacity-0"
+              }`}
+            >
+              <Search className="ml-4 h-5 w-5 shrink-0 text-white/80" strokeWidth={2.5} />
+              <input
+                type="text"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="ค้นหาสินค้า..."
+                className="min-w-0 flex-1 bg-transparent px-3 py-3 text-base font-bold text-white outline-none placeholder:text-white/55"
+              />
+              {query ? (
+                <button
+                  type="button"
+                  onClick={() => setQuery("")}
+                  className="mr-3 text-white/70 transition hover:text-white"
+                  aria-label="ล้างคำค้นหาสินค้า"
+                >
+                  <X className="h-4.5 w-4.5" strokeWidth={2.6} />
+                </button>
+              ) : null}
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setIsDesktopSearchOpen((current) => !current)}
+              className="relative hidden h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-white/15 bg-white/10 text-white transition active:scale-95 lg:flex"
+              aria-label="ค้นหาสินค้า"
+            >
+              <Search className="h-5 w-5" strokeWidth={2.7} />
+              {query && !isDesktopSearchOpen ? (
+                <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-[#EA80FC]" aria-hidden="true" />
+              ) : null}
+            </button>
+
             <button
               type="button"
               onClick={openMobileSearch}
@@ -1160,8 +1201,8 @@ function ProductSelectModal({
         </div>
 
         {/* Combined Search & Category Filter */}
-        <div className="shrink-0 border-b border-[#EA80FC]/15 bg-white">
-          <div className="hidden px-4 py-3.5 sm:px-8 lg:block">
+        <div className="shrink-0 border-b border-[#EA80FC]/15 bg-white lg:hidden">
+          <div className="hidden px-4 py-3.5 sm:px-8">
             <div className="flex items-center gap-3 rounded-2xl border border-[#EA80FC]/35 bg-[#F3E5F5]/25 px-4 py-3 transition focus-within:border-[#4A148C] focus-within:ring-2 focus-within:ring-[#4A148C]/10">
               <Search className="h-5 w-5 shrink-0 text-[#4A148C]" strokeWidth={2.4} />
               <input
