@@ -179,6 +179,7 @@ export function ProductCategoryManager({
   );
   const [nameModalMode, setNameModalMode] = useState<"create" | "rename" | null>(null);
   const [nameModalValue, setNameModalValue] = useState("");
+  const [saveNameOnConfirm, setSaveNameOnConfirm] = useState(false);
   const nameInputRef = useRef<HTMLInputElement | null>(null);
 
   if (categories !== prevCategories) {
@@ -293,17 +294,31 @@ export function ProductCategoryManager({
   function openCreateCategoryModal() {
     setNameModalMode("create");
     setNameModalValue("");
+    setSaveNameOnConfirm(false);
     setFeedback(null);
   }
 
   function openRenameCategoryModal() {
     setNameModalMode("rename");
     setNameModalValue(draftName);
+    setSaveNameOnConfirm(false);
+    setFeedback(null);
+  }
+
+  function openMobileRenameCategoryModal(category: SettingsProductCategory) {
+    setIsCreating(false);
+    setSelectedCategoryId(category.id);
+    setDraftName(category.name);
+    setDraftProductIds(category.productIds);
+    setNameModalMode("rename");
+    setNameModalValue(category.name);
+    setSaveNameOnConfirm(true);
     setFeedback(null);
   }
 
   function closeNameModal() {
     setNameModalMode(null);
+    setSaveNameOnConfirm(false);
   }
 
   function confirmNameModal() {
@@ -327,6 +342,30 @@ export function ProductCategoryManager({
     setDraftName(trimmedName);
     setFeedback(null);
     setNameModalMode(null);
+    setSaveNameOnConfirm(false);
+
+    if (nameModalMode === "rename" && saveNameOnConfirm && selectedCategoryId) {
+      startTransition(async () => {
+        const result = await upsertProductCategory({
+          categoryId: selectedCategoryId,
+          name: trimmedName,
+          productIds: draftProductIds,
+        });
+
+        if (!result.success) {
+          setFeedback({ tone: "error", message: result.error });
+          return;
+        }
+
+        setLocalCategories((current) =>
+          current.map((category) =>
+            category.id === selectedCategoryId ? { ...category, name: trimmedName } : category,
+          ),
+        );
+        setFeedback({ tone: "success", message: "บันทึกชื่อหมวดหมู่แล้ว" });
+        router.refresh();
+      });
+    }
   }
 
   function openCategory(categoryId: string) {
@@ -622,10 +661,10 @@ export function ProductCategoryManager({
                       isActive && "border-[#EA80FC]/55 bg-[#F3E5F5]/45",
                     )}
                   >
-                    <div className="flex items-start gap-3">
-                      <span className="flex h-10 w-10 shrink-0 items-center justify-center bg-[#4A148C] text-sm font-black text-white">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 shrink-0 text-center text-lg font-black text-[#4A148C] tabular-nums">
                         {index + 1}
-                      </span>
+                      </div>
                       <div className="min-w-0 flex-1">
                         <div className="flex min-w-0 items-start justify-between gap-3">
                           <button
@@ -652,14 +691,24 @@ export function ProductCategoryManager({
                           </button>
                         </div>
 
-                        <button
-                          type="button"
-                          onClick={() => openCategoryProductModal(category.id)}
-                          className="mt-3 inline-flex items-center gap-2 text-sm font-black text-[#4A148C] underline decoration-2 decoration-[#EA80FC]/55 underline-offset-4"
-                        >
-                          เลือกสินค้า
-                          <PencilLine className="h-4 w-4" strokeWidth={2.4} />
-                        </button>
+                        <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2">
+                          <button
+                            type="button"
+                            onClick={() => openCategoryProductModal(category.id)}
+                            className="inline-flex items-center gap-2 text-sm font-black text-[#4A148C] underline decoration-2 decoration-[#EA80FC]/55 underline-offset-4"
+                          >
+                            เลือกสินค้า
+                            <PencilLine className="h-4 w-4" strokeWidth={2.4} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => openMobileRenameCategoryModal(category)}
+                            className="inline-flex items-center gap-2 text-sm font-black text-slate-950 underline decoration-2 decoration-slate-300 underline-offset-4"
+                          >
+                            แก้ชื่อ
+                            <PencilLine className="h-4 w-4 text-[#4A148C]" strokeWidth={2.4} />
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </article>

@@ -33,6 +33,7 @@ export default function StockLayout({
       floatingSubmit={false}
       titleIcon={PackageCheck}
       hideHeader
+      fullWidthMobile
     >
       <div>
         {children}

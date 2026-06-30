@@ -47,20 +47,16 @@ export default async function StockPage({ searchParams }: { searchParams: Search
         </div>
       ) : null}
 
-      <div>
-        <div className="-mx-3 md:mx-0">
-          <UnifiedStockClient
-            products={data.products}
-            suppliers={data.suppliers}
-            warehouses={warehouses}
-            initialTab={tab as "stock" | "history" | "issues"}
-            initialHistory={initialHistory}
-            initialIssues={initialIssues}
-            initialWarehouseId={warehouseId}
-            initialDate={date}
-          />
-        </div>
-      </div>
+      <UnifiedStockClient
+        products={data.products}
+        suppliers={data.suppliers}
+        warehouses={warehouses}
+        initialTab={tab as "stock" | "history" | "issues"}
+        initialHistory={initialHistory}
+        initialIssues={initialIssues}
+        initialWarehouseId={warehouseId}
+        initialDate={date}
+      />
     </>
   );
 }

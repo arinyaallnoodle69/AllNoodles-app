@@ -4,7 +4,6 @@ import localFont from "next/font/local";
 import "./globals.css";
 import { PwaProvider } from "@/components/pwa-provider";
 import { getSiteUrl } from "@/lib/site-url";
-import { PullToRefresh } from "@/components/pull-to-refresh";
 import { RootAppLayoutShell } from "@/components/root-layout-shell";
 import { PerformanceReporter } from "@/components/performance/performance-reporter";
 
@@ -110,11 +109,9 @@ export default function RootLayout({
           <PerformanceReporter />
         </Suspense>
         <main>
-          <PullToRefresh>
-            <Suspense fallback={null}>
-              <RootAppLayoutShell>{children}</RootAppLayoutShell>
-            </Suspense>
-          </PullToRefresh>
+          <Suspense fallback={null}>
+            <RootAppLayoutShell>{children}</RootAppLayoutShell>
+          </Suspense>
         </main>
       </body>
     </html>

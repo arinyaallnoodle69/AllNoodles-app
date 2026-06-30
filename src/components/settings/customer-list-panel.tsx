@@ -1,6 +1,14 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, useTransition, type ReactNode } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useTransition,
+  type CSSProperties,
+  type ReactNode,
+} from "react";
 import {
   AutoScrollActivator,
   closestCenter,
@@ -9,7 +17,7 @@ import {
   type DragEndEvent,
   type DragStartEvent,
   KeyboardSensor,
-  PointerSensor,
+  MouseSensor,
   TouchSensor,
   useSensor,
   useSensors,
@@ -21,6 +29,7 @@ import {
   useSortable,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
+import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
 import { CSS } from "@dnd-kit/utilities";
 import { GripVertical, ListTree, LoaderCircle, PencilLine, Store } from "lucide-react";
 import { updateCustomerOrderAction } from "@/app/settings/customers/actions";
@@ -46,6 +55,7 @@ type CustomerListPanelProps = {
 
 type MobileCustomerCardProps = {
   customer: SettingsCustomer;
+  displayIndex: number;
   isDragging?: boolean;
   leadingSlot?: ReactNode;
   onEdit: (customer: SettingsCustomer) => void;
@@ -53,8 +63,21 @@ type MobileCustomerCardProps = {
   warehouses: WarehouseOption[];
 };
 
+type DesktopCustomerRowProps = {
+  customer: SettingsCustomer;
+  displayIndex: number;
+  dragHandle?: ReactNode;
+  isDragging?: boolean;
+  onEdit: (customer: SettingsCustomer) => void;
+  rowRef?: (node: HTMLTableRowElement | null) => void;
+  rowStyle?: CSSProperties;
+  vehicles: SettingsVehicle[];
+  warehouses: WarehouseOption[];
+};
+
 function MobileCustomerCard({
   customer,
+  displayIndex,
   isDragging = false,
   leadingSlot,
   onEdit,
@@ -72,8 +95,12 @@ function MobileCustomerCard({
       <div className="flex items-start gap-2.5">
         {leadingSlot}
 
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#4A148C]/15">
-          <Store className="h-5 w-5 text-[#4A148C]" strokeWidth={2.2} />
+        <div className="w-6 shrink-0 pt-2 text-center text-base font-black tabular-nums text-[#4A148C]">
+          {displayIndex.toLocaleString("th-TH")}
+        </div>
+
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#4A148C]/20 text-[#4A148C]">
+          <Store className="h-5.5 w-5.5" strokeWidth={2.3} />
         </div>
 
         <div className="min-w-0 flex-1">
@@ -137,8 +164,90 @@ function MobileCustomerCard({
   );
 }
 
+function DesktopCustomerRow({
+  customer,
+  displayIndex,
+  dragHandle,
+  isDragging = false,
+  onEdit,
+  rowRef,
+  rowStyle,
+  vehicles,
+  warehouses,
+}: DesktopCustomerRowProps) {
+  return (
+    <tr
+      ref={rowRef}
+      style={rowStyle}
+      className={`align-middle transition hover:bg-slate-50/70 ${
+        isDragging ? "relative z-10 bg-white shadow-[0_18px_34px_rgba(74,20,140,0.16)]" : ""
+      }`}
+    >
+      <td className="border-r border-slate-100 px-4 py-4 text-center font-bold text-slate-500 tabular-nums">
+        <div className="flex items-center justify-center gap-2">
+          {dragHandle}
+          <span>{displayIndex}</span>
+        </div>
+      </td>
+      <td className="px-5 py-4 md:px-6">
+        <div className="flex items-center gap-3">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#4A148C]/20">
+            <Store className="h-5 w-5 text-[#4A148C]" strokeWidth={2.2} />
+          </div>
+          <p className="text-base font-bold text-slate-950">{customer.name}</p>
+        </div>
+      </td>
+      <td className="px-5 py-4 font-mono text-sm font-bold text-slate-700">
+        {customer.code}
+      </td>
+      <td className="max-w-xs px-5 py-4 text-sm font-bold leading-6 text-slate-700 xl:max-w-sm">
+        {customer.address || <span className="text-slate-300">-</span>}
+      </td>
+      <td className="px-5 py-4">
+        <span className="inline-flex rounded-full border border-[#EA80FC] bg-[#F3E5F5] px-3 py-1 text-sm font-bold text-[#4A148C]">
+          {customer.pricingCount} รายการ
+        </span>
+      </td>
+      <td className="min-w-[220px] px-5 py-4 text-sm text-slate-600">
+        <CustomerWarehouseSelect
+          customerId={customer.id}
+          currentWarehouseId={customer.defaultWarehouseId}
+          currentWarehouseName={customer.defaultWarehouseName}
+          warehouses={warehouses}
+        />
+      </td>
+      <td className="min-w-[220px] px-5 py-4 text-sm text-slate-600">
+        <CustomerVehicleSelect
+          customerId={customer.id}
+          currentVehicleId={customer.defaultVehicleId}
+          currentVehicleName={customer.defaultVehicleName}
+          vehicles={vehicles}
+        />
+      </td>
+      <td className="px-4 py-4 text-right">
+        <div className="inline-flex items-center justify-end gap-2">
+          <button
+            type="button"
+            onClick={() => onEdit(customer)}
+            className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-[#E1BEE7] bg-white text-[#4A148C] transition hover:border-[#EA80FC] hover:bg-[#F3E5F5] active:scale-95"
+            aria-label={`แก้ไข ${customer.name}`}
+          >
+            <PencilLine className="h-3.5 w-3.5" strokeWidth={2.2} />
+          </button>
+          <CustomerDeleteButton
+            customerId={customer.id}
+            customerName={customer.name}
+            customerCode={customer.code}
+          />
+        </div>
+      </td>
+    </tr>
+  );
+}
+
 function SortableMobileCustomerCard({
   customer,
+  displayIndex,
   onEdit,
   vehicles,
   warehouses,
@@ -164,6 +273,7 @@ function SortableMobileCustomerCard({
     >
       <MobileCustomerCard
         customer={customer}
+        displayIndex={displayIndex}
         isDragging={false}
         leadingSlot={
           <button
@@ -185,6 +295,54 @@ function SortableMobileCustomerCard({
   );
 }
 
+function SortableDesktopCustomerRow({
+  customer,
+  displayIndex,
+  onEdit,
+  vehicles,
+  warehouses,
+}: Omit<DesktopCustomerRowProps, "dragHandle" | "isDragging" | "rowRef" | "rowStyle">) {
+  const {
+    attributes,
+    isDragging,
+    listeners,
+    setActivatorNodeRef,
+    setNodeRef,
+    transform,
+    transition,
+  } = useSortable({ id: customer.id });
+
+  return (
+    <DesktopCustomerRow
+      customer={customer}
+      displayIndex={displayIndex}
+      dragHandle={
+        <span
+          ref={setActivatorNodeRef}
+          className="inline-flex cursor-grab touch-none items-center justify-center text-slate-300 transition-colors hover:text-[#EA80FC] active:cursor-grabbing"
+          aria-label={`ลากเพื่อจัดลำดับ ${customer.name}`}
+          {...attributes}
+          {...listeners}
+        >
+          <GripVertical className="h-4 w-4" strokeWidth={2.4} />
+        </span>
+      }
+      isDragging={isDragging}
+      onEdit={onEdit}
+      rowRef={setNodeRef}
+      rowStyle={{
+        transform: CSS.Transform.toString(transform),
+        transition,
+        opacity: isDragging ? 0.5 : 1,
+        backgroundColor: isDragging ? "#F3E5F5" : "transparent",
+        zIndex: isDragging ? 50 : 1,
+      }}
+      vehicles={vehicles}
+      warehouses={warehouses}
+    />
+  );
+}
+
 export function CustomerListPanel({
   customers,
   reorderEnabled = false,
@@ -195,6 +353,8 @@ export function CustomerListPanel({
 }: CustomerListPanelProps) {
   const [orderedCustomers, setOrderedCustomers] = useState(customers);
   const [activeCustomerId, setActiveCustomerId] = useState<string | null>(null);
+  const [isMounted, setIsMounted] = useState(false);
+  const [isDesktopViewport, setIsDesktopViewport] = useState(false);
   const [isReordering, startReorderTransition] = useTransition();
   const q = searchTerm.toLocaleLowerCase("th").trim();
   const filtered = useMemo(() => {
@@ -210,12 +370,19 @@ export function CustomerListPanel({
   }, [orderedCustomers, q]);
 
   const canReorder = reorderEnabled && !q && filtered.length > 1;
+  const enableMobileReorder = canReorder && isMounted && !isDesktopViewport;
+  const enableDesktopReorder = canReorder && isMounted && isDesktopViewport;
   const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: { distance: 8 },
+    useSensor(MouseSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
     }),
     useSensor(TouchSensor, {
-      activationConstraint: { delay: 180, tolerance: 8 },
+      activationConstraint: {
+        delay: 250,
+        tolerance: 5,
+      },
     }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
@@ -224,6 +391,9 @@ export function CustomerListPanel({
 
   const [visibleCount, setVisibleCount] = useState(25);
   const loaderRef = useRef<HTMLDivElement | null>(null);
+  const dragPointerYRef = useRef<number | null>(null);
+  const dragPointerXRef = useRef<number | null>(null);
+  const dragScrollFrameRef = useRef<number | null>(null);
   const activeCustomer = activeCustomerId
     ? orderedCustomers.find((customer) => customer.id === activeCustomerId) ?? null
     : null;
@@ -237,7 +407,24 @@ export function CustomerListPanel({
     setVisibleCount(25);
   }
 
+  useEffect(() => {
+    const query = window.matchMedia("(min-width: 640px)");
+    const updateViewport = () => {
+      setIsDesktopViewport(query.matches);
+      setIsMounted(true);
+    };
+
+    updateViewport();
+    query.addEventListener("change", updateViewport);
+
+    return () => {
+      query.removeEventListener("change", updateViewport);
+    };
+  }, []);
+
   function handleDragStart(event: DragStartEvent) {
+    if (isDesktopViewport) return;
+
     setActiveCustomerId(String(event.active.id));
     if (typeof navigator !== "undefined" && "vibrate" in navigator) {
       navigator.vibrate?.(12);
@@ -271,34 +458,95 @@ export function CustomerListPanel({
   }
 
   useEffect(() => {
-    if (!activeCustomerId) return;
+    if (!activeCustomerId || isDesktopViewport) return;
 
     const html = document.documentElement;
     const body = document.body;
     const previousHtmlOverscrollY = html.style.overscrollBehaviorY;
     const previousBodyOverscrollY = body.style.overscrollBehaviorY;
-    const previousBodyTouchAction = body.style.touchAction;
+    const previousScrollBehavior = html.style.scrollBehavior;
 
     html.style.overscrollBehaviorY = "contain";
     body.style.overscrollBehaviorY = "contain";
-    body.style.touchAction = "none";
+    html.style.scrollBehavior = "auto";
+    dragPointerYRef.current = null;
+    dragPointerXRef.current = null;
 
-    const preventNativeDragGesture = (event: TouchEvent) => {
-      event.preventDefault();
+    const updatePointerY = (event: TouchEvent | PointerEvent) => {
+      if ("touches" in event) {
+        dragPointerXRef.current = event.touches[0]?.clientX ?? null;
+        dragPointerYRef.current = event.touches[0]?.clientY ?? null;
+        return;
+      }
+      dragPointerXRef.current = event.clientX;
+      dragPointerYRef.current = event.clientY;
     };
 
-    document.addEventListener("touchmove", preventNativeDragGesture, {
-      capture: false,
-      passive: false,
-    });
+    const getScrollableTarget = (x: number, y: number) => {
+      let element = document.elementFromPoint(x, y);
+      while (element && element !== document.body && element !== document.documentElement) {
+        const style = window.getComputedStyle(element);
+        const canScrollY = /(auto|scroll)/.test(style.overflowY);
+        if (canScrollY && element.scrollHeight > element.clientHeight) {
+          return element as HTMLElement;
+        }
+        element = element.parentElement;
+      }
+
+      return (document.scrollingElement || document.documentElement || document.body) as HTMLElement;
+    };
+
+    const autoScroll = () => {
+      const pointerY = dragPointerYRef.current;
+      const pointerX = dragPointerXRef.current ?? Math.round(window.innerWidth / 2);
+      if (pointerY !== null) {
+        const bottomNavOffset = 126;
+        const edgeSize = 300;
+        const baseSpeed = 16;
+        const maxSpeed = 70;
+        const effectiveBottom = Math.max(260, window.innerHeight - bottomNavOffset);
+        let delta = 0;
+
+        if (pointerY > effectiveBottom - edgeSize) {
+          const ratio = (pointerY - (effectiveBottom - edgeSize)) / edgeSize;
+          delta = Math.min(100, Math.round(baseSpeed + ratio * maxSpeed));
+        } else if (pointerY < edgeSize) {
+          const ratio = (edgeSize - pointerY) / edgeSize;
+          delta = -Math.min(100, Math.round(baseSpeed + ratio * maxSpeed));
+        }
+
+        if (delta !== 0) {
+          const scrollTarget = getScrollableTarget(pointerX, Math.min(pointerY, effectiveBottom - 1));
+          if (scrollTarget) {
+            scrollTarget.scrollTop += delta;
+          } else {
+            window.scrollBy({ top: delta, behavior: "auto" });
+          }
+        }
+      }
+
+      dragScrollFrameRef.current = window.requestAnimationFrame(autoScroll);
+    };
+
+    // Use capture: true so we receive touch events before dnd-kit's sensor blocks or stops propagation
+    document.addEventListener("touchmove", updatePointerY, { capture: true, passive: true });
+    document.addEventListener("pointermove", updatePointerY, { capture: true, passive: true });
+    dragScrollFrameRef.current = window.requestAnimationFrame(autoScroll);
 
     return () => {
       html.style.overscrollBehaviorY = previousHtmlOverscrollY;
       body.style.overscrollBehaviorY = previousBodyOverscrollY;
-      body.style.touchAction = previousBodyTouchAction;
-      document.removeEventListener("touchmove", preventNativeDragGesture);
+      html.style.scrollBehavior = previousScrollBehavior;
+      dragPointerYRef.current = null;
+      dragPointerXRef.current = null;
+      if (dragScrollFrameRef.current !== null) {
+        window.cancelAnimationFrame(dragScrollFrameRef.current);
+        dragScrollFrameRef.current = null;
+      }
+      document.removeEventListener("touchmove", updatePointerY, { capture: true });
+      document.removeEventListener("pointermove", updatePointerY, { capture: true });
     };
-  }, [activeCustomerId]);
+  }, [activeCustomerId, isDesktopViewport]);
 
   useEffect(() => {
     const currentLoader = loaderRef.current;
@@ -321,6 +569,8 @@ export function CustomerListPanel({
       observer.unobserve(currentLoader);
     };
   }, [filtered.length, visibleCount]);
+
+  const visibleCustomers = filtered.slice(0, visibleCount);
 
   return (
     <>
@@ -352,29 +602,26 @@ export function CustomerListPanel({
         ) : (
           <>
             <div className="divide-y divide-slate-200 sm:hidden">
-              {canReorder ? (
+              {enableMobileReorder ? (
                 <DndContext
-                  autoScroll={{
-                    acceleration: 14,
-                    activator: AutoScrollActivator.DraggableRect,
-                    enabled: true,
-                    interval: 5,
-                    threshold: { x: 0.15, y: 0.32 },
-                  }}
+                  id="customer-list-mobile-dnd"
+                  autoScroll={false}
                   collisionDetection={closestCenter}
+                  modifiers={[restrictToVerticalAxis]}
                   onDragCancel={handleDragCancel}
                   onDragEnd={handleDragEnd}
                   onDragStart={handleDragStart}
                   sensors={sensors}
                 >
                   <SortableContext
-                    items={filtered.slice(0, visibleCount).map((customer) => customer.id)}
+                    items={visibleCustomers.map((customer) => customer.id)}
                     strategy={verticalListSortingStrategy}
                   >
-                    {filtered.slice(0, visibleCount).map((customer) => (
+                    {visibleCustomers.map((customer, index) => (
                       <SortableMobileCustomerCard
                         key={customer.id}
                         customer={customer}
+                        displayIndex={index + 1}
                         onEdit={onEdit}
                         vehicles={vehicles}
                         warehouses={warehouses}
@@ -388,6 +635,7 @@ export function CustomerListPanel({
                     {activeCustomer ? (
                       <MobileCustomerCard
                         customer={activeCustomer}
+                        displayIndex={Math.max(1, filtered.findIndex((customer) => customer.id === activeCustomer.id) + 1)}
                         isDragging
                         leadingSlot={
                           <div className="mt-1 inline-flex h-9 w-5 shrink-0 items-center justify-center rounded-lg text-[#4A148C]">
@@ -402,12 +650,16 @@ export function CustomerListPanel({
                   </DragOverlay>
                 </DndContext>
               ) : null}
-              <div className={canReorder ? "hidden" : "contents"}>
-              {filtered.slice(0, visibleCount).map((customer) => (
+              <div className={enableMobileReorder ? "hidden" : "contents"}>
+              {visibleCustomers.map((customer, index) => (
                 <div key={customer.id} className="px-4 py-3.5">
                   <div className="flex items-start gap-2.5">
-                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#4A148C]/15">
-                      <Store className="h-5 w-5 text-[#4A148C]" strokeWidth={2.2} />
+                    <div className="w-6 shrink-0 pt-2 text-center text-base font-black tabular-nums text-[#4A148C]">
+                      {(index + 1).toLocaleString("th-TH")}
+                    </div>
+
+                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#4A148C]/20 text-[#4A148C]">
+                      <Store className="h-5.5 w-5.5" strokeWidth={2.3} />
                     </div>
 
                     <div className="min-w-0 flex-1">
@@ -479,7 +731,23 @@ export function CustomerListPanel({
             </div>
 
             <div className="hidden overflow-x-auto sm:block">
-              <table className="min-w-full border-collapse text-left">
+              <DndContext
+                id="customer-list-desktop-dnd"
+                autoScroll={{
+                  acceleration: 16,
+                  activator: AutoScrollActivator.Pointer,
+                  enabled: true,
+                  interval: 5,
+                  threshold: { x: 0, y: 0.28 },
+                }}
+                collisionDetection={closestCenter}
+                modifiers={[restrictToVerticalAxis]}
+                onDragCancel={handleDragCancel}
+                onDragEnd={handleDragEnd}
+                onDragStart={handleDragStart}
+                sensors={sensors}
+              >
+              <table className="min-w-full table-fixed border-collapse text-left">
                 <thead>
                   <tr className="bg-[#4A148C]">
                     <th className="w-16 border-b border-[#4A148C] border-r border-white/20 px-4 py-4 text-center text-xs font-bold uppercase tracking-[0.14em] text-white">
@@ -507,7 +775,24 @@ export function CustomerListPanel({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {filtered.slice(0, visibleCount).map((customer, index) => (
+                  {enableDesktopReorder ? (
+                      <SortableContext
+                        items={visibleCustomers.map((customer) => customer.id)}
+                        strategy={verticalListSortingStrategy}
+                      >
+                        {visibleCustomers.map((customer, index) => (
+                          <SortableDesktopCustomerRow
+                            key={customer.id}
+                            customer={customer}
+                            displayIndex={index + 1}
+                            onEdit={onEdit}
+                            vehicles={vehicles}
+                            warehouses={warehouses}
+                          />
+                        ))}
+                      </SortableContext>
+                  ) : (
+                  visibleCustomers.map((customer, index) => (
                     <tr key={customer.id} className="align-middle transition hover:bg-slate-50/70">
                       <td className="border-r border-slate-100 px-4 py-4 text-center font-bold text-slate-500 tabular-nums">
                         {index + 1}
@@ -565,9 +850,10 @@ export function CustomerListPanel({
                         </div>
                       </td>
                     </tr>
-                  ))}
+                  )))}
                 </tbody>
               </table>
+              </DndContext>
             </div>
           </>
         )}
@@ -583,3 +869,4 @@ export function CustomerListPanel({
     </>
   );
 }
+

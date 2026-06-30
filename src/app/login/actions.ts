@@ -3,6 +3,7 @@
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import {
+  APP_ROLE_COOKIE,
   APP_SESSION_COOKIE,
   createSessionValue,
   getAppSession,
@@ -247,6 +248,13 @@ export async function verifyPin(formData: FormData) {
     path: "/",
     maxAge: 120,
   });
+  cookieStore.set(APP_ROLE_COOKIE, session.role, {
+    httpOnly: false,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+    expires: new Date(session.expires_at),
+  });
 
   redirect(nextPath ?? roleHomePage(session.role));
 }
@@ -263,5 +271,6 @@ export async function signOut() {
   }
 
   cookieStore.delete(APP_SESSION_COOKIE);
+  cookieStore.delete(APP_ROLE_COOKIE);
   redirect("/login");
 }

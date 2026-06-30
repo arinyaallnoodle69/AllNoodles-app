@@ -1566,3 +1566,171 @@ export async function updateProductCategoryOrder(categoryIds: string[]) {
   revalidateSettingsSurfaces(session.organizationId);
   return { success: true };
 }
+
+export async function saveProductBrand(input: {
+  brandId?: string;
+  name: string;
+}): Promise<{ success: boolean; error?: string; brandId?: string }> {
+  const session = await requireAppRole("admin");
+  const admin = getSupabaseAdmin();
+  const name = safeText(input.name);
+
+  if (!name) {
+    return { success: false as const, error: "กรุณาระบุชื่อแบรนด์" };
+  }
+
+  const brandsTable = admin.from("product_brands");
+  let brandId = input.brandId;
+
+  if (brandId) {
+    // Editing: first fetch the old brand name
+    const { data: oldBrandData } = await brandsTable
+      .select("name")
+      .eq("organization_id", session.organizationId)
+      .eq("id", brandId)
+      .single();
+
+    const oldName = oldBrandData?.name;
+
+    const { error } = await brandsTable
+      .update({ name })
+      .eq("organization_id", session.organizationId)
+      .eq("id", brandId);
+
+    if (error) {
+      return { success: false as const, error: error.message ?? "บันทึกแบรนด์ไม่สำเร็จ" };
+    }
+
+    // If name changed, update all products that used the old name
+    if (oldName && oldName !== name) {
+      const { data: productsToUpdate } = await admin
+        .from("products")
+        .select("id, metadata")
+        .eq("organization_id", session.organizationId)
+        .eq("metadata->>brand", oldName);
+
+      if (productsToUpdate && productsToUpdate.length > 0) {
+        await Promise.all(
+          productsToUpdate.map((p) => {
+            const meta = { ...((p.metadata ?? {}) as Record<string, string>) };
+            meta.brand = name;
+            if (meta.packing_list_brand === oldName) {
+              meta.packing_list_brand = name;
+            }
+            return admin
+              .from("products")
+              .update({ metadata: meta as Json })
+              .eq("id", p.id)
+              .eq("organization_id", session.organizationId);
+          })
+        );
+      }
+    }
+  } else {
+    // Creating
+    const { data, error } = await brandsTable
+      .insert({
+        name,
+        organization_id: session.organizationId,
+      })
+      .select("id")
+      .single();
+
+    if (error || !data?.id) {
+      return { success: false as const, error: error?.message ?? "สร้างแบรนด์ไม่สำเร็จ" };
+    }
+
+    brandId = data.id;
+  }
+
+  revalidateSettingsSurfaces(session.organizationId);
+  return { success: true as const, brandId };
+}
+
+export async function deleteProductBrand(brandId: string) {
+  const session = await requireAppRole("admin");
+  const admin = getSupabaseAdmin();
+
+  if (!brandId.trim()) {
+    return { success: false as const, error: "ไม่พบแบรนด์ที่ต้องการลบ" };
+  }
+
+  const brandsTable = admin.from("product_brands");
+
+  // Fetch brand name first to remove it from products metadata
+  const { data: brandData } = await brandsTable
+    .select("name")
+    .eq("organization_id", session.organizationId)
+    .eq("id", brandId)
+    .single();
+
+  const brandName = brandData?.name;
+
+  const { error } = await brandsTable
+    .delete()
+    .eq("organization_id", session.organizationId)
+    .eq("id", brandId);
+
+  if (error) {
+    return { success: false as const, error: error.message ?? "ลบแบรนด์ไม่สำเร็จ" };
+  }
+
+  // Remove brand from products metadata
+  if (brandName) {
+    const { data: productsToUpdate } = await admin
+      .from("products")
+      .select("id, metadata")
+      .eq("organization_id", session.organizationId)
+      .eq("metadata->>brand", brandName);
+
+    if (productsToUpdate && productsToUpdate.length > 0) {
+      await Promise.all(
+        productsToUpdate.map((p) => {
+          const meta = { ...((p.metadata ?? {}) as Record<string, string>) };
+          delete meta.brand;
+          if (meta.packing_list_brand === brandName) {
+            delete meta.packing_list_brand;
+          }
+          return admin
+            .from("products")
+            .update({ metadata: meta as Json })
+            .eq("id", p.id)
+            .eq("organization_id", session.organizationId);
+        })
+      );
+    }
+  }
+
+  revalidateSettingsSurfaces(session.organizationId);
+  return { success: true as const };
+}
+
+export async function updateProductBrandOrder(brandIds: string[]): Promise<{ success: boolean; error?: string }> {
+  try {
+    const session = await requireAppRole("admin");
+    const admin = getSupabaseAdmin();
+    const uniqueBrandIds = [...new Set(brandIds.map((id) => id.trim()).filter(Boolean))];
+
+    const updates = uniqueBrandIds.map((id, index) =>
+      admin
+        .from("product_brands")
+        .update({ sort_order: index })
+        .eq("organization_id", session.organizationId)
+        .eq("id", id),
+    );
+
+    const results = await Promise.all(updates);
+
+    for (const result of results) {
+      if (result.error) {
+        return { success: false, error: result.error.message };
+      }
+    }
+
+    revalidateSettingsSurfaces(session.organizationId);
+    return { success: true };
+  } catch (err) {
+    const errorMsg = err instanceof Error ? err.message : "Failed to update brand order";
+    return { success: false, error: errorMsg };
+  }
+}

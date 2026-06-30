@@ -37,6 +37,9 @@ import { MobileSearchProvider, useMobileSearch } from "@/components/mobile-searc
 import { CreateOrderProvider } from "@/components/orders/create-order-context";
 import { GlobalCreateOrderModal } from "@/components/orders/create-order-modal";
 import { ScrollToTopButton } from "@/components/ui/scroll-to-top-button";
+import { useClientRole } from "@/lib/auth/client-role";
+
+type AppRole = "admin" | "member" | "warehouse";
 
 // ─── Page title map (mobile top bar) ─────────────────────────────────────────
 
@@ -76,12 +79,14 @@ function MobileTopBar() {
   const pathname = usePathname();
   const { hasSearch, isOpen, open, close } = useMobileSearch();
   const title = getPageTitle(pathname);
+  const role = useClientRole();
+  const homeHref = getRoleHomeHref(role);
 
   return (
     <header className="fixed inset-x-0 top-0 z-[60] h-[68px] border-b border-slate-200 bg-white text-slate-950 lg:hidden">
       <div className="flex h-full items-center gap-3 px-4">
         {/* Logo */}
-        <Link href="/dashboard" className="block shrink-0">
+        <Link href={homeHref} className="block shrink-0">
           <Image
             src="/brand/512x512.png"
             alt="All Noodles"
@@ -152,6 +157,33 @@ const settingsNavItems = [
 function isActive(href: string, pathname: string): boolean {
   if (href === "/dashboard") return pathname === "/dashboard";
   return pathname === href || pathname.startsWith(href + "/");
+}
+
+function getRoleHomeHref(role: AppRole | null) {
+  if (role === "warehouse") return "/delivery";
+  if (role === "member") return "/orders/incoming";
+  return "/dashboard";
+}
+
+function canAccessNavHref(role: AppRole | null, href: string) {
+  if (!role) return false;
+  if (role === "admin") return true;
+  if (role === "member") {
+    return (
+      href === "/orders/incoming" ||
+      href === "/billing" ||
+      href === "/stock"
+    );
+  }
+  if (role === "warehouse") {
+    return (
+      href === "/delivery" ||
+      href === "/orders/packing-list" ||
+      href === "/orders/factory-order-sheet" ||
+      href === "/orders/vehicle-product-summary"
+    );
+  }
+  return false;
 }
 
 function shouldShowScrollTopButton(pathname: string) {
@@ -235,6 +267,9 @@ export function AppSidebarLayout({
   hideOrdersTabs?: boolean;
   hideReportsTabs?: boolean;
 }) {
+  const role = useClientRole();
+  const homeHref = getRoleHomeHref(role);
+
   const [mounted, setMounted] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
 
@@ -264,6 +299,23 @@ export function AppSidebarLayout({
     }
   }, []);
 
+  useEffect(() => {
+    if (!mounted || role) return;
+
+    let cancelled = false;
+    void fetch("/api/session/role", { cache: "no-store" })
+      .then((response) => {
+        if (!cancelled && response.ok) {
+          window.dispatchEvent(new Event("allnoodles-role-change"));
+        }
+      })
+      .catch(() => {});
+
+    return () => {
+      cancelled = true;
+    };
+  }, [mounted, role]);
+
   function toggleCollapsed() {
     setCollapsed((prev) => {
       const next = !prev;
@@ -277,9 +329,13 @@ export function AppSidebarLayout({
   // Pre-hydration, we render a consistent base state (expanded)
   // After hydration, 'mounted' becomes true and we apply the user's preference
   const isSidebarCollapsed = mounted ? collapsed : false;
+  const effectiveRole = mounted ? (role ?? "admin") : "admin";
+  const visibleMainNavItems = mainNavItems.filter((item) => canAccessNavHref(effectiveRole, item.href));
+  const visibleReportsNavItems = reportsNavItems.filter((item) => canAccessNavHref(effectiveRole, item.href));
+  const visibleSettingsNavItems = settingsNavItems.filter((item) => canAccessNavHref(effectiveRole, item.href));
 
-  const anyReportsActive = reportsNavItems.some((item) => pathname.startsWith(item.href));
-  const anySettingsActive = settingsNavItems.some((item) => pathname.startsWith(item.href));
+  const anyReportsActive = visibleReportsNavItems.some((item) => pathname.startsWith(item.href));
+  const anySettingsActive = visibleSettingsNavItems.some((item) => pathname.startsWith(item.href));
   const showMobileTopBar = pathname !== "/dashboard" && !hideMobileTopBar;
   const showOrdersTabs = !hideOrdersTabs;
   const showReportsTabs = !hideReportsTabs;
@@ -310,7 +366,7 @@ export function AppSidebarLayout({
               }`}
           >
             {!collapsed && (
-              <Link href="/dashboard" className="flex min-w-0 shrink items-center gap-2.5">
+              <Link href={homeHref} className="flex min-w-0 shrink items-center gap-2.5">
                 <Image
                   src="/brand/512x512.png"
                   alt="All Noodles"
@@ -342,19 +398,22 @@ export function AppSidebarLayout({
           <nav className="relative z-10 flex-1 overflow-y-auto overflow-x-hidden py-3">
             {/* Main nav items */}
             <div className="space-y-0.5 px-2">
-              {mainNavItems.map((item) => (
+              {visibleMainNavItems.map((item) => (
                 <SidebarLink key={item.href} item={item} collapsed={isSidebarCollapsed} pathname={pathname} />
               ))}
             </div>
 
             {/* Divider */}
-            <div className="mx-3 my-3 border-t border-[#E1BEE7]" />
+            {visibleReportsNavItems.length > 0 || visibleSettingsNavItems.length > 0 ? (
+              <div className="mx-3 my-3 border-t border-[#E1BEE7]" />
+            ) : null}
 
             {/* Reports collapsible section */}
+            {visibleReportsNavItems.length > 0 ? (
             <div className="px-2">
               {collapsed ? (
                 <Link
-                  href="/reports/profit-sales"
+                  href={visibleReportsNavItems[0].href}
                   title="Reports"
                   className={`flex items-center justify-center rounded-xl px-2.5 py-2.5 text-sm font-black transition-colors ${anyReportsActive
                       ? "bg-[#4A148C] text-white shadow-sm shadow-[#4A148C]/20"
@@ -391,7 +450,7 @@ export function AppSidebarLayout({
                       }`}
                   >
                     <div className="mt-0.5 space-y-0.5">
-                      {reportsNavItems.map((item) => (
+                      {visibleReportsNavItems.map((item) => (
                         <SidebarLink
                           key={item.href}
                           item={item}
@@ -405,66 +464,71 @@ export function AppSidebarLayout({
                 </>
               )}
             </div>
-
-            {/* Divider */}
-            <div className="mx-3 my-3 border-t border-[#E1BEE7]" />
+            ) : null}
 
             {/* Settings collapsible section */}
-            <div className="px-2">
-              {collapsed ? (
-                <Link
-                  href="/settings/products"
-                  title="Settings"
-                  className={`flex items-center justify-center rounded-xl px-2.5 py-2.5 text-sm font-black transition-colors ${anySettingsActive
-                      ? "bg-[#4A148C] text-white shadow-sm shadow-[#4A148C]/20"
-                      : "text-[#4A148C] hover:bg-[#F3E5F5] hover:text-[#4A148C]"
-                    }`}
-                >
-                  <Settings2 className="h-4.5 w-4.5 shrink-0" strokeWidth={2.2} />
-                </Link>
-              ) : (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSettingsOpenInternal(!settingsOpen);
-                      setSettingsUserToggled(true);
-                    }}
-                    className={`flex w-full items-center justify-between rounded-xl px-2.5 py-2.5 text-sm font-black transition-colors ${anySettingsActive
-                        ? "bg-[#EA80FC] text-[#4A148C]"
-                        : "text-[#4A148C] hover:bg-[#F3E5F5] hover:text-[#4A148C]"
-                      }`}
-                  >
-                    <span className="flex items-center gap-3">
-                      <Settings2 className="h-4.5 w-4.5 shrink-0" strokeWidth={2.2} />
-                      <span>ตั้งค่า</span>
-                    </span>
-                    <ChevronDown
-                      className={`h-4 w-4 shrink-0 transition-transform duration-200 ${settingsOpen ? "rotate-180" : ""
-                        }`}
-                      strokeWidth={2.2}
-                    />
-                  </button>
+            {visibleSettingsNavItems.length > 0 ? (
+              <>
+                {/* Divider */}
+                <div className="mx-3 my-3 border-t border-[#E1BEE7]" />
 
-                  <div
-                    className={`overflow-hidden transition-all duration-200 ${settingsOpen ? "max-h-[28rem] opacity-100" : "max-h-0 opacity-0"
-                      }`}
-                  >
-                    <div className="mt-0.5 space-y-0.5">
-                      {settingsNavItems.map((item) => (
-                        <SidebarLink
-                          key={item.href}
-                          item={item}
-                          collapsed={isSidebarCollapsed}
-                          pathname={pathname}
-                          indent
+                <div className="px-2">
+                  {collapsed ? (
+                    <Link
+                      href={visibleSettingsNavItems[0].href}
+                      title="Settings"
+                      className={`flex items-center justify-center rounded-xl px-2.5 py-2.5 text-sm font-black transition-colors ${anySettingsActive
+                          ? "bg-[#4A148C] text-white shadow-sm shadow-[#4A148C]/20"
+                          : "text-[#4A148C] hover:bg-[#F3E5F5] hover:text-[#4A148C]"
+                        }`}
+                    >
+                      <Settings2 className="h-4.5 w-4.5 shrink-0" strokeWidth={2.2} />
+                    </Link>
+                  ) : (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSettingsOpenInternal(!settingsOpen);
+                          setSettingsUserToggled(true);
+                        }}
+                        className={`flex w-full items-center justify-between rounded-xl px-2.5 py-2.5 text-sm font-black transition-colors ${anySettingsActive
+                            ? "bg-[#EA80FC] text-[#4A148C]"
+                            : "text-[#4A148C] hover:bg-[#F3E5F5] hover:text-[#4A148C]"
+                          }`}
+                      >
+                        <span className="flex items-center gap-3">
+                          <Settings2 className="h-4.5 w-4.5 shrink-0" strokeWidth={2.2} />
+                          <span>ตั้งค่า</span>
+                        </span>
+                        <ChevronDown
+                          className={`h-4 w-4 shrink-0 transition-transform duration-200 ${settingsOpen ? "rotate-180" : ""
+                            }`}
+                          strokeWidth={2.2}
                         />
-                      ))}
-                    </div>
-                  </div>
-                </>
-              )}
-            </div>
+                      </button>
+
+                      <div
+                        className={`overflow-hidden transition-all duration-200 ${settingsOpen ? "max-h-[28rem] opacity-100" : "max-h-0 opacity-0"
+                          }`}
+                      >
+                        <div className="mt-0.5 space-y-0.5">
+                          {visibleSettingsNavItems.map((item) => (
+                            <SidebarLink
+                              key={item.href}
+                              item={item}
+                              collapsed={isSidebarCollapsed}
+                              pathname={pathname}
+                              indent
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </>
+            ) : null}
           </nav>
 
           {/* Logout button */}

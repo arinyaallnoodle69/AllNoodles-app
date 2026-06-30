@@ -42,7 +42,7 @@ function ActionButtons({ vehicleId }: { vehicleId: string }) {
     <div className="flex items-center gap-2">
       <Link
         href={`/settings/vehicles?edit=${vehicleId}`}
-        className="inline-flex items-center gap-1 rounded-full border border-slate-200 px-3 py-1.5 text-xs font-black text-[#1a1a1a] transition hover:border-[#4A148C]/30 hover:text-[#4A148C]"
+        className="inline-flex items-center gap-1.5 rounded-lg border border-[#E1BEE7] bg-white px-3 py-1.5 text-xs font-black text-[#4A148C] transition hover:border-[#EA80FC] hover:bg-[#F3E5F5] active:scale-95"
       >
         <PencilLine className="h-3.5 w-3.5" strokeWidth={2.2} />
         แก้ไข
@@ -51,7 +51,7 @@ function ActionButtons({ vehicleId }: { vehicleId: string }) {
       <form action={deleteVehicleAction.bind(null, vehicleId)}>
         <button
           type="submit"
-          className="inline-flex items-center gap-1 rounded-full border border-red-200 px-3 py-1.5 text-xs font-black text-red-700 transition hover:bg-red-50"
+          className="inline-flex items-center gap-1 rounded-lg border border-red-200 bg-white px-3 py-1.5 text-xs font-black text-red-600 transition hover:border-red-300 hover:bg-red-50 active:scale-95"
         >
           <Trash2 className="h-3.5 w-3.5" strokeWidth={2.2} />
           ลบ
@@ -83,15 +83,19 @@ export function VehicleListPanel({ vehicles }: VehicleListPanelProps) {
             </div>
           ) : (
             <>
-              <div className="grid gap-3 sm:hidden">
-                {vehicles.map((vehicle) => (
+              <div className="grid grid-cols-1 divide-y divide-slate-100 px-0 py-0 sm:hidden">
+                {vehicles.map((vehicle, index) => (
                   <article
                     key={vehicle.id}
-                    className="w-full border-x-0 border-y border-slate-200 bg-white px-4 py-4 shadow-none first:border-t-0 last:border-b-0"
+                    className="w-full px-4 py-4 shadow-none transition-colors relative border-b border-slate-100 bg-white"
                   >
-                    <div className="flex items-start gap-3">
-                      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-slate-100">
-                        <Truck className="h-5 w-5 text-[#4A148C]" strokeWidth={2.2} />
+                    <div className="flex items-center gap-3">
+                      <div className="w-6 shrink-0 text-center text-base font-black tabular-nums text-[#4A148C]">
+                        {index + 1}
+                      </div>
+
+                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#4A148C]/10 text-[#4A148C]">
+                        <Truck className="h-5 w-5" strokeWidth={2.2} />
                       </div>
 
                       <div className="min-w-0 flex-1">
@@ -142,6 +146,9 @@ export function VehicleListPanel({ vehicles }: VehicleListPanelProps) {
                 <table className="min-w-full border-collapse text-left">
                   <thead>
                     <tr className="bg-slate-50">
+                      <th className="w-24 px-6 py-4 text-center text-xs font-black uppercase tracking-[0.16em] text-[#1a1a1a]">
+                        ลำดับ
+                      </th>
                       <th className="px-6 py-4 text-xs font-black uppercase tracking-[0.16em] text-[#1a1a1a]">
                         ชื่อรถ
                       </th>
@@ -163,8 +170,11 @@ export function VehicleListPanel({ vehicles }: VehicleListPanelProps) {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {vehicles.map((vehicle) => (
+                    {vehicles.map((vehicle, index) => (
                       <tr key={vehicle.id}>
+                        <td className="px-6 py-4 text-center text-sm font-black tabular-nums text-[#4A148C]">
+                          {index + 1}
+                        </td>
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-3">
                             <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-slate-100">

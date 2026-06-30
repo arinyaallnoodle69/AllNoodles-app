@@ -5,6 +5,7 @@ import { cookies } from "next/headers";
 import { getSessionSecret } from "@/lib/supabase/env";
 
 export const APP_SESSION_COOKIE = "allnoodles_session";
+export const APP_ROLE_COOKIE = "allnoodles_role";
 
 export type AppSessionPayload = {
   displayName: string;

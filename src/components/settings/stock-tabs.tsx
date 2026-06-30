@@ -44,8 +44,8 @@ export function StockTabs({ current, onChangeTab }: StockTabsProps) {
   };
 
   return (
-    <div className="mt-4 mb-6">
-      <div className="grid grid-cols-3 rounded-xl bg-slate-100/80 p-1 backdrop-blur-sm border border-slate-200/50 shadow-sm">
+    <div className="mb-0 mt-0 w-full lg:mb-6 lg:mt-4">
+      <div className="flex border-b border-slate-200 bg-white lg:grid lg:grid-cols-3 lg:rounded-xl lg:border lg:border-slate-200/50 lg:bg-slate-100/80 lg:p-1 lg:shadow-sm lg:backdrop-blur-sm">
         {tabs.map((tab) => {
           const isActive = current === tab.key;
           const isLoading = isPending && targetKey === tab.key;
@@ -55,13 +55,13 @@ export function StockTabs({ current, onChangeTab }: StockTabsProps) {
               key={tab.href}
               disabled={isPending}
               onClick={() => handleTabClick(tab.href, tab.key)}
-              className={`rounded-lg px-1 py-2.5 text-center text-[11px] font-black transition-all duration-200 sm:px-4 sm:py-2.5 sm:text-sm flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-85 ${
+              className={`relative flex flex-1 items-center justify-center gap-1.5 px-1 py-3 text-center text-[11px] font-black transition-all duration-200 cursor-pointer disabled:opacity-85 sm:px-4 sm:py-3 sm:text-sm lg:rounded-lg lg:py-2.5 ${
                 isActive
-                  ? "bg-[#4A148C] text-white shadow-sm scale-[1.02]"
-                  : "text-slate-600 hover:text-slate-900"
+                  ? "bg-[#4A148C] text-white shadow-sm lg:scale-[1.02]"
+                  : "text-slate-500 hover:text-slate-900 lg:text-slate-600"
               }`}
             >
-              {isLoading && <Loader2 className="h-3 w-3 animate-spin text-[#4A148C]" />}
+              {isLoading && <Loader2 className={`h-3 w-3 animate-spin ${isActive ? "text-white" : "text-[#4A148C]"}`} />}
               <span>{tab.label}</span>
             </button>
           );

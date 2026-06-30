@@ -60,6 +60,7 @@ type IncomingOrdersPageProps = {
     expanded?: string;
     q?: string;
     warehouse?: string;
+    vehicle?: string;
   }>;
 };
 
@@ -173,6 +174,7 @@ export default async function IncomingOrdersPage({ searchParams }: IncomingOrder
   const expandedOrderId = params.expanded?.trim() ?? "";
   const autoOpenCreateModal = params.create === "1";
   const selectedWarehouseId = params.warehouse?.trim() ?? "";
+  const selectedVehicleId = params.vehicle?.trim() ?? "__all__";
   const selectedCustomerIds = Array.from(
     new Set(
       (params.customers ?? "")
@@ -218,13 +220,22 @@ export default async function IncomingOrdersPage({ searchParams }: IncomingOrder
 
   const activeOrders = orders.filter((order) => order.status !== "cancelled");
 
-  let filteredOrders =
+  let baseFilteredOrders =
     selectedCustomerIds.length > 0
       ? activeOrders.filter((order) => selectedCustomerIds.includes(order.customerId))
       : activeOrders;
 
   if (selectedWarehouseId) {
-    filteredOrders = filteredOrders.filter((order) => order.warehouseId === selectedWarehouseId);
+    baseFilteredOrders = baseFilteredOrders.filter((order) => order.warehouseId === selectedWarehouseId);
+  }
+
+  let filteredOrders = baseFilteredOrders;
+  if (selectedVehicleId !== "__all__") {
+    if (selectedVehicleId === "__none__") {
+      filteredOrders = baseFilteredOrders.filter((order) => !order.vehicleId);
+    } else {
+      filteredOrders = baseFilteredOrders.filter((order) => order.vehicleId === selectedVehicleId);
+    }
   }
 
   const filteredExpandedDetail =
@@ -690,7 +701,7 @@ export default async function IncomingOrdersPage({ searchParams }: IncomingOrder
             </div>
           </div>
 
-          {filteredOrders.length > 0 ? (
+          {baseFilteredOrders.length > 0 ? (
             <>
               <div className="relative left-1/2 w-screen -translate-x-1/2 lg:hidden">
                 <IncomingOrdersMobileList

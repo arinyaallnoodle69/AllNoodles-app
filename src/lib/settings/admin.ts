@@ -65,6 +65,13 @@ export type SettingsProductCategory = {
   sortOrder: number;
 };
 
+export type SettingsProductBrand = {
+  id: string;
+  name: string;
+  productCount: number;
+  sortOrder: number;
+};
+
 export type SettingsCustomer = {
   address: string;
   addressDraft: SettingsCustomerAddress;
@@ -147,6 +154,7 @@ export type SettingsData = {
   nextProductSku: string;
   prices: SettingsPriceRow[];
   productCategories: SettingsProductCategory[];
+  productBrands: SettingsProductBrand[];
   products: SettingsProduct[];
   saleUnits: SettingsSaleUnitOption[];
   setupHint: string | null;
@@ -155,7 +163,7 @@ export type SettingsData = {
 
 export type SettingsProductsData = Pick<
   SettingsData,
-  "nextProductSku" | "productCategories" | "products" | "setupHint" | "suppliers"
+  "nextProductSku" | "productCategories" | "productBrands" | "products" | "setupHint" | "suppliers"
 >;
 
 type ProductRow = {
@@ -353,6 +361,7 @@ async function fetchSettingsData(organizationId: string): Promise<SettingsData> 
   const pricesTable = admin.from("customer_product_prices") as unknown as SelectTable;
   const categoriesTable = admin.from("product_categories") as unknown as SelectTable;
   const categoryItemsTable = admin.from("product_category_items") as unknown as SelectTable;
+  const brandsTable = admin.from("product_brands") as unknown as SelectTable;
   const vehiclesTable = admin.from("vehicles") as unknown as SelectTable;
   // Note: customersTable removed — admin used directly for multi-eq chain
 
@@ -365,6 +374,7 @@ async function fetchSettingsData(organizationId: string): Promise<SettingsData> 
     pricesResult,
     categoriesResult,
     categoryItemsResult,
+    brandsResult,
     vehiclesResult,
   ] =
     await Promise.all([
@@ -413,6 +423,10 @@ async function fetchSettingsData(organizationId: string): Promise<SettingsData> 
         .select("product_category_id, product_id")
         .eq("organization_id", organizationId)
         .order("created_at", { ascending: true }),
+      brandsTable
+        .select("id, name, sort_order")
+        .eq("organization_id", organizationId)
+        .order("sort_order", { ascending: true }),
       vehiclesTable
         .select("id, name, is_active, sort_order, license_plate, driver_name")
         .eq("organization_id", organizationId)
@@ -429,6 +443,7 @@ async function fetchSettingsData(organizationId: string): Promise<SettingsData> 
     vehiclesResult.error,
   ].filter(Boolean);
   const categoryErrors = [categoriesResult.error, categoryItemsResult.error].filter(Boolean);
+  const brandErrors = [brandsResult.error].filter(Boolean);
 
   if (errors.length > 0) {
     const firstError = errors[0];
@@ -441,6 +456,7 @@ async function fetchSettingsData(organizationId: string): Promise<SettingsData> 
       nextProductSku: getNextProductSku([]),
       prices: [],
       productCategories: [],
+      productBrands: [],
       products: [],
       saleUnits: [],
       setupHint: isMissingTableError(firstError?.message)
@@ -475,6 +491,10 @@ async function fetchSettingsData(organizationId: string): Promise<SettingsData> 
     categoryErrors.length > 0
       ? []
       : ((categoryItemsResult.data ?? []) as ProductCategoryItemRow[]);
+  const brands =
+    brandErrors.length > 0
+      ? []
+      : ((brandsResult.data ?? []) as Array<{ id: string; name: string; sort_order: number | string }>);
   const vehicles = (vehiclesResult.data ?? []) as VehicleRow[];
 
   const imageMap = new Map<string, string[]>();
@@ -575,6 +595,15 @@ async function fetchSettingsData(organizationId: string): Promise<SettingsData> 
     );
   }
 
+  const productCountByBrandName = new Map<string, number>();
+  for (const product of products) {
+    const meta = (product.metadata ?? {}) as Record<string, string>;
+    const brandName = meta.brand?.trim() || "";
+    if (brandName) {
+      productCountByBrandName.set(brandName, (productCountByBrandName.get(brandName) ?? 0) + 1);
+    }
+  }
+
   const productMap = new Map(
     products.map((product) => [
       product.id,
@@ -599,37 +628,38 @@ async function fetchSettingsData(organizationId: string): Promise<SettingsData> 
   const customersByVehicleId = new Map<string, { code: string; id: string; name: string }[]>();
 
   for (const customer of customers) {
-    if (!customer.default_vehicle_id) {
-      continue;
-    }
+    const vehicleId = customer.default_vehicle_id;
+    if (!vehicleId) continue;
 
-    const current = customersByVehicleId.get(customer.default_vehicle_id) ?? [];
+    const current = customersByVehicleId.get(vehicleId) ?? [];
     current.push({
       code: customer.customer_code,
       id: customer.id,
       name: customer.name,
     });
-    customersByVehicleId.set(customer.default_vehicle_id, current);
+    customersByVehicleId.set(vehicleId, current);
   }
 
   return {
-    customers: customers.map((customer) => ({
-      address: customer.address,
-      addressDraft: getCustomerAddressDraft(customer),
-      code: customer.customer_code,
-      defaultWarehouseId: customer.default_warehouse_id,
-      defaultWarehouseName: customer.default_warehouse_id
-        ? (warehouseMap.get(customer.default_warehouse_id) ?? null)
-        : null,
-      defaultVehicleId: customer.default_vehicle_id,
-      defaultVehicleName: customer.default_vehicle_id
-        ? (vehicleMap.get(customer.default_vehicle_id) ?? null)
-        : null,
-      id: customer.id,
-      name: customer.name,
-      pricingCount: customerPricingCount.get(customer.id) ?? 0,
-      sortOrder: Number(customer.sort_order ?? 0),
-    })),
+    customers: customers.map((customer) => {
+      return {
+        address: customer.address,
+        addressDraft: getCustomerAddressDraft(customer),
+        code: customer.customer_code,
+        defaultWarehouseId: customer.default_warehouse_id ?? null,
+        defaultWarehouseName: customer.default_warehouse_id
+          ? (warehouseMap.get(customer.default_warehouse_id) ?? null)
+          : null,
+        defaultVehicleId: customer.default_vehicle_id ?? null,
+        defaultVehicleName: customer.default_vehicle_id
+          ? (vehicleMap.get(customer.default_vehicle_id) ?? null)
+          : null,
+        id: customer.id,
+        name: customer.name,
+        pricingCount: customerPricingCount.get(customer.id) ?? 0,
+        sortOrder: Number(customer.sort_order ?? 0),
+      };
+    }),
     suppliers: suppliers.map((supplier) => ({
       address: supplier.address,
       addressDraft: getSupplierAddressDraft(supplier),
@@ -646,6 +676,7 @@ async function fetchSettingsData(organizationId: string): Promise<SettingsData> 
           .get(price.product_id)
           ?.find((saleUnit) => saleUnit.id === price.product_sale_unit_id)?.effectiveCostPrice ?? 0,
       customerName: customerMap.get(price.customer_id) ?? "ร้านค้าไม่ทราบชื่อ",
+      id: `${price.customer_id}:${price.product_sale_unit_id}`,
       imageUrl: productMap.get(price.product_id)?.imageUrl ?? null,
       productId: price.product_id,
       productSaleUnitId: price.product_sale_unit_id,
@@ -658,6 +689,14 @@ async function fetchSettingsData(organizationId: string): Promise<SettingsData> 
       sku: productMap.get(price.product_id)?.sku ?? "-",
     })),
     nextProductSku: getNextProductSku(products.map((product) => product.sku)),
+    productBrands: brands
+      .map((brand) => ({
+        id: brand.id,
+        name: brand.name,
+        productCount: productCountByBrandName.get(brand.name) ?? 0,
+        sortOrder: Number(brand.sort_order),
+      }))
+      .toSorted((left, right) => left.sortOrder - right.sortOrder),
     productCategories: sortedCategories
       .map((category) => ({
         id: category.id,
@@ -774,8 +813,17 @@ async function fetchSettingsProductsData(organizationId: string): Promise<Settin
   const saleUnitsTable = admin.from("product_sale_units") as unknown as SelectTable;
   const categoriesTable = admin.from("product_categories") as unknown as SelectTable;
   const categoryItemsTable = admin.from("product_category_items") as unknown as SelectTable;
+  const brandsTable = admin.from("product_brands") as unknown as SelectTable;
 
-  const [productsResult, imagesResult, saleUnitsResult, categoriesResult, categoryItemsResult, suppliersResult] =
+  const [
+    productsResult,
+    imagesResult,
+    saleUnitsResult,
+    categoriesResult,
+    categoryItemsResult,
+    brandsResult,
+    suppliersResult,
+  ] =
     await Promise.all([
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (productsTable as any)
@@ -801,6 +849,10 @@ async function fetchSettingsProductsData(organizationId: string): Promise<Settin
         .select("product_category_id, product_id")
         .eq("organization_id", organizationId)
         .order("created_at", { ascending: true }),
+      brandsTable
+        .select("id, name, sort_order")
+        .eq("organization_id", organizationId)
+        .order("sort_order", { ascending: true }),
       admin
         .from("suppliers")
         .select("id, supplier_code, name, address, province, district, subdistrict, postal_code, metadata")
@@ -811,12 +863,14 @@ async function fetchSettingsProductsData(organizationId: string): Promise<Settin
 
   const errors = [productsResult.error, imagesResult.error, saleUnitsResult.error, suppliersResult.error].filter(Boolean);
   const categoryErrors = [categoriesResult.error, categoryItemsResult.error].filter(Boolean);
+  const brandErrors = [brandsResult.error].filter(Boolean);
 
   if (errors.length > 0) {
     const firstError = errors[0];
     return {
       nextProductSku: getNextProductSku([]),
       productCategories: [],
+      productBrands: [],
       products: [],
       suppliers: [],
       setupHint: isMissingTableError(firstError?.message)
@@ -840,6 +894,10 @@ async function fetchSettingsProductsData(organizationId: string): Promise<Settin
     categoryErrors.length > 0
       ? []
       : ((categoryItemsResult.data ?? []) as ProductCategoryItemRow[]);
+  const brands =
+    brandErrors.length > 0
+      ? []
+      : ((brandsResult.data ?? []) as Array<{ id: string; name: string; sort_order: number | string }>);
 
   const imageMap = new Map<string, string[]>();
   for (const image of images) {
@@ -934,6 +992,15 @@ async function fetchSettingsProductsData(organizationId: string): Promise<Settin
     categoryNamesByProductId.set(product.id, productCategories.map((category) => category.name));
   }
 
+  const productCountByBrandName = new Map<string, number>();
+  for (const product of products) {
+    const meta = (product.metadata ?? {}) as Record<string, string>;
+    const brandName = meta.brand?.trim() || "";
+    if (brandName) {
+      productCountByBrandName.set(brandName, (productCountByBrandName.get(brandName) ?? 0) + 1);
+    }
+  }
+
   return {
     nextProductSku: getNextProductSku(products.map((product) => product.sku)),
     productCategories: sortedCategories
@@ -945,6 +1012,14 @@ async function fetchSettingsProductsData(organizationId: string): Promise<Settin
         productIds: productIdsByCategoryId.get(category.id) ?? [],
         sortOrder: Number(category.sort_order),
       })),
+    productBrands: brands
+      .map((brand) => ({
+        id: brand.id,
+        name: brand.name,
+        productCount: productCountByBrandName.get(brand.name) ?? 0,
+        sortOrder: Number(brand.sort_order),
+      }))
+      .toSorted((left, right) => left.sortOrder - right.sortOrder),
     products: sortProductsByCategory(
       products.map((product) => {
         const meta = (product.metadata ?? {}) as Record<string, string>;

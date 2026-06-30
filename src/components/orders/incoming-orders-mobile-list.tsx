@@ -3,6 +3,7 @@
 import { Fragment, useEffect, useRef, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { IncomingOrderOpenCard } from "./incoming-order-open-card";
+import { IncomingOrderVehicleFilter } from "./incoming-order-vehicle-filter";
 import type { OrderVehicleOption } from "@/lib/orders/manage";
 
 type MobileListOrder = {
@@ -79,57 +80,76 @@ export function IncomingOrdersMobileList({
   const hasMore = visibleCount < orders.length;
 
   return (
-    <div className="grid grid-cols-1 gap-3 border-t border-[#EA80FC]/25 bg-white px-3 py-3 sm:grid-cols-2 sm:gap-3">
-      {visibleOrders.map((order, index) => {
-        const showDivider = index === 0 || order.orderDate !== visibleOrders[index - 1].orderDate;
+    <div className="bg-white">
+      {/* Mobile Vehicle Filter Header */}
+      <div className="px-4 py-3 border-b border-[#EA80FC]/20">
+        <h3 className="text-base font-black text-[#4A148C]">ตารางรายการคำสั่งซื้อล่าสุด</h3>
+        <p className="mt-0.5 text-xs font-semibold text-[#4A148C]">
+          จัดการและติดตามสถานะออเดอร์ในวันที่เลือกจากจุดเดียว
+        </p>
+        <IncomingOrderVehicleFilter vehicles={vehicles} />
+      </div>
 
-        return (
-          <Fragment key={order.id}>
-            {showDivider ? (
-              <div className="col-span-full flex items-center gap-3 bg-white px-1 py-2">
-                <div className="h-[2px] flex-1 bg-[#EA80FC]/35" />
-                <div className="shrink-0 rounded-2xl border border-[#EA80FC]/50 bg-[#F3E5F5] px-4 py-1.5 shadow-sm">
-                  <span className="text-[13px] font-black uppercase tracking-wider text-[#4A148C]">
-                    {formatDisplayDate(order.orderDate)}
-                  </span>
-                </div>
-                <div className="h-[2px] flex-1 bg-[#EA80FC]/35" />
-              </div>
-            ) : null}
-
-            <IncomingOrderOpenCard
-              href={`/orders/incoming?expanded=${order.id}${searchTerm ? `&q=${searchTerm}` : ""}${currentListDate ? `&date=${currentListDate}` : ""}`}
-              orderId={order.id}
-              orderNumber={order.orderNumber}
-              customerId={order.customerId}
-              customerName={order.customerName}
-              customerCode={order.customerCode}
-              channelLabel={order.channelLabel}
-              currentListDate={currentListDate}
-              deliveryNumbers={order.deliveryNumbers}
-              displayDate={formatDisplayDate(order.orderDate)}
-              isBilled={order.isBilled}
-              notes={order.notes}
-              orderDate={order.orderDate}
-              productCount={order.productCount}
-              searchTerm={searchTerm}
-              selectedCustomerIds={selectedCustomerIds}
-              totalAmountText={order.totalAmountText}
-              vehicleId={order.vehicleId}
-              vehicleName={order.vehicleName}
-              vehicles={vehicles}
-              warehouseName={order.warehouseName}
-            />
-          </Fragment>
-        );
-      })}
-
-      {/* Sensor for Infinite Scrolling */}
-      {hasMore && (
-        <div ref={sensorRef} className="col-span-full flex items-center justify-center gap-2 rounded-2xl border border-[#EA80FC]/25 bg-white py-6">
-          <Loader2 className="h-5 w-5 animate-spin text-[#4A148C]" strokeWidth={2.4} />
-          <span className="text-sm font-semibold text-[#4A148C]">กำลังโหลดออเดอร์เพิ่ม...</span>
+      {visibleOrders.length === 0 ? (
+        <div className="px-6 py-16 text-center bg-slate-50/30 rounded-b-2xl">
+          <p className="text-base font-semibold text-slate-500">ไม่พบรายการคำสั่งซื้อสำหรับรถส่งของคันนี้</p>
         </div>
+      ) : (
+        <>
+          <div className="grid grid-cols-1 gap-3 px-3 py-3 sm:grid-cols-2 sm:gap-3">
+            {visibleOrders.map((order, index) => {
+              const showDivider = index === 0 || order.orderDate !== visibleOrders[index - 1].orderDate;
+
+              return (
+                <Fragment key={order.id}>
+                  {showDivider ? (
+                    <div className="col-span-full flex items-center gap-3 bg-white px-1 py-2">
+                      <div className="h-[2px] flex-1 bg-[#EA80FC]/35" />
+                      <div className="shrink-0 rounded-2xl border border-[#EA80FC]/50 bg-[#F3E5F5] px-4 py-1.5 shadow-sm">
+                        <span className="text-[13px] font-black uppercase tracking-wider text-[#4A148C]">
+                          {formatDisplayDate(order.orderDate)}
+                        </span>
+                      </div>
+                      <div className="h-[2px] flex-1 bg-[#EA80FC]/35" />
+                    </div>
+                  ) : null}
+
+                  <IncomingOrderOpenCard
+                    href={`/orders/incoming?expanded=${order.id}${searchTerm ? `&q=${searchTerm}` : ""}${currentListDate ? `&date=${currentListDate}` : ""}`}
+                    orderId={order.id}
+                    orderNumber={order.orderNumber}
+                    customerId={order.customerId}
+                    customerName={order.customerName}
+                    customerCode={order.customerCode}
+                    channelLabel={order.channelLabel}
+                    currentListDate={currentListDate}
+                    deliveryNumbers={order.deliveryNumbers}
+                    displayDate={formatDisplayDate(order.orderDate)}
+                    isBilled={order.isBilled}
+                    notes={order.notes}
+                    orderDate={order.orderDate}
+                    productCount={order.productCount}
+                    searchTerm={searchTerm}
+                    selectedCustomerIds={selectedCustomerIds}
+                    totalAmountText={order.totalAmountText}
+                    vehicleId={order.vehicleId}
+                    vehicleName={order.vehicleName}
+                    vehicles={vehicles}
+                    warehouseName={order.warehouseName}
+                  />
+                </Fragment>
+              );
+            })}
+
+            {/* Sensor for Infinite Scrolling */}
+            {hasMore && (
+              <div ref={sensorRef} className="col-span-full flex items-center justify-center gap-2 rounded-2xl border border-[#EA80FC]/25 bg-white py-6">
+                <Loader2 className="h-5 w-5 animate-spin text-[#4A148C]" strokeWidth={2.4} />
+                <span className="text-sm font-semibold text-[#4A148C]">กำลังโหลดออเดอร์เพิ่ม...</span>
+              </div>
+            )}
+          </div>
+        </>
       )}
     </div>
   );

@@ -6,6 +6,7 @@ import { fetchIncomingOrderDetailAction } from "@/app/orders/incoming/actions";
 import { DesktopOrderDetail } from "@/components/orders/desktop-order-detail";
 import { IncomingOrderDateButton } from "@/components/orders/incoming-order-date-button";
 import { IncomingOrderVehicleSelect } from "@/components/orders/incoming-order-vehicle-select";
+import { IncomingOrderVehicleFilter } from "@/components/orders/incoming-order-vehicle-filter";
 import { OrderDeliveryActionButton } from "@/components/orders/order-delivery-action-button";
 import type { IncomingOrderListItem, OrderDetailData } from "@/lib/orders/detail";
 import type { OrderVehicleOption } from "@/lib/orders/manage";
@@ -354,6 +355,7 @@ export const IncomingOrdersDesktopTable = memo(function IncomingOrdersDesktopTab
             <p className="mt-1 text-sm font-semibold text-[#4A148C] xl:text-base">
               จัดการและติดตามสถานะออเดอร์ในวันที่เลือกจากจุดเดียว
             </p>
+            <IncomingOrderVehicleFilter vehicles={vehicles} />
             <p className="mt-1 hidden text-xs font-semibold text-[#4A148C] lg:block xl:hidden">
               ↔ เลื่อนซ้าย-ขวาเพื่อดูข้อมูลเพิ่มเติม
             </p>
@@ -390,34 +392,42 @@ export const IncomingOrdersDesktopTable = memo(function IncomingOrdersDesktopTab
               </tr>
             </thead>
             <tbody className="divide-y divide-[#EA80FC]/18">
-              {orders.map((order, index) => {
-                const orderKey = `${order.customerId}_${order.orderDate}`;
-                const isExpanded = expandedOrderId === order.id && visibleOrderIds.has(order.id);
-                const detail = detailByOrderId[order.id] ?? null;
-                const deliveryNumbers = deliveryByCustomerId[orderKey];
-                const isBilled = billedByCustomerDate[orderKey] ?? false;
-                const isLoading = loadingOrderId === order.id || (isPending && isExpanded && !detail);
+              {orders.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="px-6 py-12 text-center text-sm font-semibold text-slate-500 bg-slate-50/50">
+                    ไม่พบรายการคำสั่งซื้อสำหรับรถส่งของคันนี้
+                  </td>
+                </tr>
+              ) : (
+                orders.map((order, index) => {
+                  const orderKey = `${order.customerId}_${order.orderDate}`;
+                  const isExpanded = expandedOrderId === order.id && visibleOrderIds.has(order.id);
+                  const detail = detailByOrderId[order.id] ?? null;
+                  const deliveryNumbers = deliveryByCustomerId[orderKey];
+                  const isBilled = billedByCustomerDate[orderKey] ?? false;
+                  const isLoading = loadingOrderId === order.id || (isPending && isExpanded && !detail);
 
-                return (
-                  <IncomingOrderRow
-                    key={order.id}
-                    order={order}
-                    index={index}
-                    orders={orders}
-                    isExpanded={isExpanded}
-                    isLoading={isLoading}
-                    detail={detail}
-                    detailError={detailError}
-                    deliveryNumbers={deliveryNumbers}
-                    isBilled={isBilled}
-                    vehicles={vehicles}
-                    orderDate={orderDate}
-                    searchTerm={searchTerm}
-                    selectedCustomerIds={selectedCustomerIds}
-                    toggleOrder={toggleOrder}
-                  />
-                );
-              })}
+                  return (
+                    <IncomingOrderRow
+                      key={order.id}
+                      order={order}
+                      index={index}
+                      orders={orders}
+                      isExpanded={isExpanded}
+                      isLoading={isLoading}
+                      detail={detail}
+                      detailError={detailError}
+                      deliveryNumbers={deliveryNumbers}
+                      isBilled={isBilled}
+                      vehicles={vehicles}
+                      orderDate={orderDate}
+                      searchTerm={searchTerm}
+                      selectedCustomerIds={selectedCustomerIds}
+                      toggleOrder={toggleOrder}
+                    />
+                  );
+                })
+              )}
             </tbody>
             </table>
           </div>

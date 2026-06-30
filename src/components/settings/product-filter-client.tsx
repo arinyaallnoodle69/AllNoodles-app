@@ -7,7 +7,7 @@ import { importProductsFromExcelAction } from "@/app/dashboard/settings/actions"
 import { MobileSearchDrawer } from "@/components/mobile-search/mobile-search-drawer";
 import { ProductList } from "@/components/settings/product-list";
 import { normalizeSearch } from "@/lib/utils/search";
-import type { SettingsProduct, SettingsProductCategory, SettingsSupplier } from "@/lib/settings/admin";
+import type { SettingsProduct, SettingsProductCategory, SettingsProductBrand, SettingsSupplier } from "@/lib/settings/admin";
 import { ProductForm } from "@/components/settings/product-form";
 import type { ProductImportActionState } from "@/app/dashboard/settings/actions";
 
@@ -16,6 +16,7 @@ type ProductFilterClientProps = {
   baseListHref: string;
   children?: React.ReactNode;
   categories: SettingsProductCategory[];
+  brands: SettingsProductBrand[];
   suppliers: SettingsSupplier[];
   nextSku: string;
   initialCreate?: boolean;
@@ -259,6 +260,7 @@ export function ProductFilterClient({
   baseListHref,
   children,
   categories,
+  brands,
   suppliers,
   nextSku,
   initialCreate,
@@ -493,7 +495,7 @@ export function ProductFilterClient({
       </div>
 
       {/* Mobile-only Category & Brand Filter */}
-      <div className="-mx-3 mb-4 block border-b border-[#E1BEE7]/50 bg-white px-4 lg:hidden">
+      <div className="mb-4 block border-b border-[#E1BEE7]/50 bg-white px-4 lg:hidden">
         {categoryOptions.length > 0 && (
           <div className="flex items-center gap-5">
             <button
@@ -811,6 +813,7 @@ export function ProductFilterClient({
       {isCreating && (
         <ProductForm
           categories={categories}
+          brands={brands}
           suppliers={suppliers}
           nextSku={nextSku}
           productList={allProducts}
@@ -821,6 +824,7 @@ export function ProductFilterClient({
       {editingProduct && (
         <ProductForm
           categories={categories}
+          brands={brands}
           editingProduct={editingProduct}
           suppliers={suppliers}
           nextSku={nextSku}

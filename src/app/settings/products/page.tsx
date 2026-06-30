@@ -24,6 +24,8 @@ export default async function SettingsProductsPage({
   const activeTab =
     params.tab === "categories" && params.create !== "1" && !params.edit
       ? "categories"
+      : params.tab === "brands" && params.create !== "1" && !params.edit
+      ? "brands"
       : "products";
   const editingProduct = data.products.find((product) => product.id === params.edit) ?? null;
 
@@ -47,6 +49,7 @@ export default async function SettingsProductsPage({
       <ProductSettingsTabs
         products={data.products}
         categories={data.productCategories}
+        brands={data.productBrands}
         suppliers={data.suppliers}
         nextSku={data.nextProductSku}
         initialTab={activeTab}

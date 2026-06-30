@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { PlusCircle, Search, Upload } from "lucide-react";
+import { Plus, PlusCircle, Search, Upload } from "lucide-react";
 import { MobileSearchDrawer } from "@/components/mobile-search/mobile-search-drawer";
 import { CustomerForm } from "@/components/settings/customer-form";
 import { CustomerListPanel } from "@/components/settings/customer-list-panel";
@@ -155,9 +155,9 @@ export function SettingsCustomersPageClient({
           type="button"
           onClick={() => setIsCreatingState(true)}
           aria-label="เพิ่มร้านค้า"
-          className="fixed bottom-[calc(4.75rem+env(safe-area-inset-bottom)+12px)] left-4 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-r from-[#EA80FC] to-[#4A148C] text-[#4A148C] shadow-[0_14px_32px_rgba(170, 0, 255,0.4)] transition hover:brightness-105 active:scale-95 lg:hidden"
+          className="fixed bottom-[calc(4.75rem+env(safe-area-inset-bottom)+12px)] left-4 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-[#4A148C] text-white shadow-[0_14px_32px_rgba(142, 36, 170,0.32)] transition active:scale-95 lg:hidden"
         >
-          <PlusCircle className="h-7 w-7 text-[#4A148C]" strokeWidth={2.4} />
+          <Plus className="h-7 w-7" strokeWidth={2.6} />
         </button>
 
         <div className="-mx-4 flex w-[calc(100%+2rem)] flex-col gap-4 md:mx-0 md:w-full">
@@ -225,7 +225,7 @@ export function SettingsCustomersPageClient({
 
 	        <CustomerListPanel 
 	          customers={filteredCustomers} 
-	          reorderEnabled={selectedVehicleId === "__all__" && searchTerm.trim().length === 0}
+	          reorderEnabled={searchTerm.trim().length === 0}
 	          vehicles={vehicles} 
 	          warehouses={warehouses}
 	          searchTerm={searchTerm}

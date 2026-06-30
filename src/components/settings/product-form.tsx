@@ -29,10 +29,11 @@ import {
 import {
   type SaleUnitCostMode,
 } from "@/lib/products/sale-unit-cost";
-import type { SettingsProduct, SettingsProductCategory, SettingsSupplier } from "@/lib/settings/admin";
+import type { SettingsProduct, SettingsProductCategory, SettingsProductBrand, SettingsSupplier } from "@/lib/settings/admin";
 
 type ProductFormProps = {
   categories: SettingsProductCategory[];
+  brands: SettingsProductBrand[];
   editingProduct?: SettingsProduct | null;
   nextSku: string;
   productList?: SettingsProduct[];
@@ -118,24 +119,24 @@ function deriveOrderPreset(min: number, step: number | null): OrderPreset {
 // Inner form body - remounts via `key` when navigating between products
 type ProductFormBodyProps = {
   categories: SettingsProductCategory[];
+  brands: SettingsProductBrand[];
   editingProduct: SettingsProduct | null;
   nextSku: string;
   onClose: () => void;
   onPendingChange?: (pending: boolean) => void;
   onSubmitSuccess: () => void;
   suppliers: SettingsSupplier[];
-  brandSuggestions?: string[];
 };
 
 function ProductFormBody({
   categories,
+  brands,
   editingProduct,
   nextSku,
   onClose,
   onPendingChange,
   onSubmitSuccess,
   suppliers,
-  brandSuggestions = [],
 }: ProductFormBodyProps) {
   const formId = useId();
   const isEditing = editingProduct !== null;
@@ -949,20 +950,22 @@ function ProductFormBody({
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="sm:col-span-1">
                   <label className={productFieldLabelClass} htmlFor="product-brand">แบรนด์</label>
-                  <input
+                  <select
                     id="product-brand"
                     value={brand}
                     onChange={(e) => setBrand(e.target.value)}
                     className={productInputClass}
-                    placeholder="เช่น All Noodles"
-                    list="brand-suggestions"
-                    autoComplete="off"
-                  />
-                  <datalist id="brand-suggestions">
-                    {brandSuggestions.map((b) => (
-                      <option key={b} value={b} />
+                  >
+                    <option value="">-- ไม่ระบุแบรนด์ --</option>
+                    {brand && !brands.some((b) => b.name === brand) && (
+                      <option value={brand}>{brand}</option>
+                    )}
+                    {brands.map((b) => (
+                      <option key={b.id} value={b.name}>
+                        {b.name}
+                      </option>
                     ))}
-                  </datalist>
+                  </select>
                 </div>
 
                 <div className="sm:col-span-1">
@@ -1580,6 +1583,7 @@ function ProductFormBody({
 // Exported shell - manages navigation, swipe, and modal backdrop
 export function ProductForm({
   categories,
+  brands,
   editingProduct = null,
   nextSku,
   productList,
@@ -1606,18 +1610,6 @@ export function ProductForm({
   const hasNav = productList && productList.length > 1 && isEditing;
   const canGoPrev = hasNav && currentIndex > 0;
   const canGoNext = hasNav && currentIndex < productList.length - 1;
-
-  const brandSuggestions = useMemo(() => {
-    if (!productList) return [];
-    const brands = new Set<string>();
-    for (const p of productList) {
-      if (p.brand) {
-        const trimmed = p.brand.trim();
-        if (trimmed) brands.add(trimmed);
-      }
-    }
-    return Array.from(brands).sort((a, b) => a.localeCompare(b, "th"));
-  }, [productList]);
 
   // Build a lightweight fingerprint of the product data so that when the
   // server returns updated values (after router.refresh()), the key changes
@@ -1755,13 +1747,13 @@ export function ProductForm({
         <ProductFormBody
           key={productDataFingerprint}
           categories={categories}
+          brands={brands}
           editingProduct={currentProduct}
           nextSku={nextSku}
           onClose={closeModal}
           onPendingChange={setIsSubmitting}
           onSubmitSuccess={handleSubmitSuccess}
           suppliers={suppliers}
-          brandSuggestions={brandSuggestions}
         />
       </div>
     </div>

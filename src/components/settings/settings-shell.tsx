@@ -214,7 +214,7 @@ export function SettingsShell({
 
       <main className={`mx-auto min-w-0 w-full max-w-[88rem] ${fullWidthMobile ? "px-0 sm:px-4" : "px-4"} pb-28 lg:px-3 lg:pb-32 ${hideHeader ? "py-0 lg:py-0" : "py-3 lg:py-4"}`}>
         {current ? (
-          <div className={`${fullWidthMobile ? "" : "-mx-4"} bg-white/90 px-3 pb-1.5 pt-2 lg:hidden`}>
+          <div className={`${fullWidthMobile ? "" : "-mx-4"} sticky top-[68px] z-30 border-b border-[#E1BEE7]/35 bg-white/95 backdrop-blur px-3 pb-2.5 pt-2.5 lg:hidden`}>
             <button
               type="button"
               onClick={handleOpenMobileSettingsMenu}

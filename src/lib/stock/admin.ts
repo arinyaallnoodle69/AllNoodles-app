@@ -11,6 +11,7 @@ import {
 
 export type StockProductOption = {
   costPrice: number;
+  displayOrder: number;
   id: string;
   imageUrl: string | null;
   isActive: boolean;
@@ -31,6 +32,7 @@ export type StockProductOption = {
     warehouseId: string;
   }[];
   categoryName: string | null;
+  brandName: string | null;
   sku: string;
   unit: string;
 };
@@ -69,6 +71,7 @@ export type StockDashboardData = {
 
 type ProductRow = {
   cost_price: number | string;
+  display_order: number | string;
   id: string;
   is_active: boolean;
   name: string;
@@ -76,6 +79,7 @@ type ProductRow = {
   sku: string;
   stock_quantity: number | string;
   unit: string;
+  metadata: Record<string, unknown> | null;
   product_category_items: Array<{
     product_categories: {
       name: string;
@@ -327,7 +331,7 @@ export const getStockDashboardData = cache(
     const [productsResult, imagesResult, saleUnitsResult, movementsResult, suppliersResult, warehouseStocksResult] = await Promise.all([
       admin.from("products")
         .select(`
-          id, sku, name, cost_price, stock_quantity, reserved_quantity, unit, is_active, display_order,
+          id, sku, name, cost_price, stock_quantity, reserved_quantity, unit, is_active, display_order, metadata,
           product_category_items(product_categories(name))
         `)
         .eq("organization_id", organizationId)
@@ -426,9 +430,11 @@ export const getStockDashboardData = cache(
 
       return {
         costPrice: baseCostPrice,
+        displayOrder: Number(product.display_order ?? 0),
         id: product.id,
         imageUrl: imageMap.get(product.id) ?? null,
         categoryName: product.product_category_items?.[0]?.product_categories?.name ?? null,
+        brandName: (product.metadata as { brand?: string })?.brand ?? null,
         isActive: product.is_active,
         name: product.name,
         onHandQuantity: Number(product.stock_quantity),
@@ -442,6 +448,11 @@ export const getStockDashboardData = cache(
         sku: product.sku,
         unit: product.unit,
       };
+    }).toSorted((left, right) => {
+      if (left.displayOrder !== right.displayOrder) {
+        return left.displayOrder - right.displayOrder;
+      }
+      return left.sku.localeCompare(right.sku, "th");
     });
 
     return {

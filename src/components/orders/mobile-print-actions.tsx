@@ -52,17 +52,15 @@ type ActionCardProps = {
   action: React.ReactNode;
 };
 
-function ActionCard({ icon, title, description, action }: ActionCardProps) {
+function ActionCard({ icon, action }: ActionCardProps) {
   return (
-    <div className="flex flex-col gap-3 rounded-2xl border border-slate-100 bg-slate-50/50 p-4 transition-all hover:bg-slate-50">
-      <div className="flex items-start gap-3">
+    <div className="group flex items-center gap-3 rounded-3xl border border-[#E1BEE7]/70 bg-white p-3 shadow-[0_12px_32px_rgba(74,20,140,0.08)] transition-all active:scale-[0.985]">
+      <div className="flex min-w-0 flex-1 items-center gap-3">
         {icon}
-        <div>
-          <h4 className="text-sm font-black text-slate-900">{title}</h4>
-          <p className="mt-0.5 text-[11px] font-semibold text-slate-500">{description}</p>
+        <div className="min-w-0 flex-1 [&_button]:h-12 [&_button]:w-full [&_button]:justify-center [&_button]:rounded-2xl [&_button]:border-[#4A148C] [&_button]:bg-[#4A148C] [&_button]:px-4 [&_button]:py-0 [&_button]:text-sm [&_button]:font-black [&_button]:text-white [&_button]:shadow-[0_12px_24px_rgba(74,20,140,0.22)] [&_button]:hover:bg-[#4A148C]">
+          {action}
         </div>
       </div>
-      <div className="mt-1 flex justify-end border-t border-slate-100/80 pt-3">{action}</div>
     </div>
   );
 }
@@ -95,13 +93,13 @@ export function MobilePrintActions({
               onClick={() => setIsOpen(false)}
             >
               <div
-                className="animate-in relative z-[510] flex max-h-[85vh] w-full flex-col rounded-t-[28px] bg-white shadow-2xl slide-in-from-bottom duration-300"
+                className="animate-in relative z-[510] flex max-h-[82vh] w-full flex-col rounded-t-[28px] bg-white shadow-2xl slide-in-from-bottom duration-300"
                 onClick={(event) => event.stopPropagation()}
               >
                 <div className="flex items-center justify-between border-b border-slate-100 px-6 py-5">
                   <div>
                     <h3 className="text-lg font-black text-slate-900">พิมพ์และจัดการเอกสาร</h3>
-                    <p className="mt-0.5 text-xs font-semibold text-slate-400">
+                    <p className="hidden">
                       เลือกเอกสารหรือรายงานสรุปออเดอร์ที่ต้องการ
                     </p>
                   </div>
@@ -115,7 +113,7 @@ export function MobilePrintActions({
                   </button>
                 </div>
 
-                <div className="scrollbar-hide flex-1 space-y-4 overflow-y-auto px-5 py-6 pb-12">
+                <div className="scrollbar-hide flex-1 space-y-3 overflow-y-auto bg-[#FBF7FC] px-5 py-5 pb-12">
                   <ActionCard
                     icon={
                       <div className="flex shrink-0 items-center justify-center rounded-xl bg-[#F3E5F5] p-2.5 text-[#4A148C]">

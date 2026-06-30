@@ -454,6 +454,7 @@ export type Database = {
           phone: string | null
           postal_code: string | null
           province: string | null
+          sort_order: number
           subdistrict: string | null
           updated_at: string
         }
@@ -473,6 +474,7 @@ export type Database = {
           phone?: string | null
           postal_code?: string | null
           province?: string | null
+          sort_order?: number
           subdistrict?: string | null
           updated_at?: string
         }
@@ -492,6 +494,7 @@ export type Database = {
           phone?: string | null
           postal_code?: string | null
           province?: string | null
+          sort_order?: number
           subdistrict?: string | null
           updated_at?: string
         }
@@ -1460,6 +1463,41 @@ export type Database = {
         }
         Relationships: []
       }
+      product_brands: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          organization_id: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          organization_id: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          organization_id?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_brands_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       product_categories: {
         Row: {
           created_at: string
@@ -1778,9 +1816,11 @@ export type Database = {
           metadata: Json
           name: string
           organization_id: string
+          product_kind: string
           reserved_quantity: number
           sku: string
           stock_quantity: number
+          supplier_id: string | null
           unit: string
           updated_at: string
         }
@@ -1793,9 +1833,11 @@ export type Database = {
           metadata?: Json
           name: string
           organization_id: string
+          product_kind?: string
           reserved_quantity?: number
           sku: string
           stock_quantity?: number
+          supplier_id?: string | null
           unit?: string
           updated_at?: string
         }
@@ -1808,9 +1850,11 @@ export type Database = {
           metadata?: Json
           name?: string
           organization_id?: string
+          product_kind?: string
           reserved_quantity?: number
           sku?: string
           stock_quantity?: number
+          supplier_id?: string | null
           unit?: string
           updated_at?: string
         }
@@ -1820,6 +1864,13 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "products_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
             referencedColumns: ["id"]
           },
         ]

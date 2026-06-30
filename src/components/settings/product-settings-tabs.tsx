@@ -1,20 +1,23 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { FolderTree, Package2 } from "lucide-react";
+import { FolderTree, Package2, Tag } from "lucide-react";
 import { ProductCategoryManager } from "@/components/settings/product-category-manager";
+import { ProductBrandManager } from "@/components/settings/product-brand-manager";
 import { ProductFilterClient } from "@/components/settings/product-filter-client";
 import type {
   SettingsProduct,
   SettingsProductCategory,
+  SettingsProductBrand,
   SettingsSupplier,
 } from "@/lib/settings/admin";
 
-type ProductSettingsTab = "products" | "categories";
+type ProductSettingsTab = "products" | "categories" | "brands";
 
 type ProductSettingsTabsProps = {
   products: SettingsProduct[];
   categories: SettingsProductCategory[];
+  brands: SettingsProductBrand[];
   suppliers: SettingsSupplier[];
   nextSku: string;
   initialTab: ProductSettingsTab;
@@ -25,24 +28,31 @@ type ProductSettingsTabsProps = {
 const tabs: Array<{
   key: ProductSettingsTab;
   label: string;
-  icon: typeof Package2;
+  icon: React.ComponentType<{ className?: string; strokeWidth?: number }>;
 }> = [
   { key: "products", label: "ตารางสินค้า", icon: Package2 },
   { key: "categories", label: "จัดการหมวดหมู่", icon: FolderTree },
+  { key: "brands", label: "จัดการแบรนด์", icon: Tag },
 ];
 
 function getTabFromLocation() {
   if (typeof window === "undefined") return "products";
 
   const params = new URLSearchParams(window.location.search);
-  return params.get("tab") === "categories" && params.get("create") !== "1" && !params.get("edit")
-    ? "categories"
-    : "products";
+  const tab = params.get("tab");
+  if (tab === "categories" && params.get("create") !== "1" && !params.get("edit")) {
+    return "categories";
+  }
+  if (tab === "brands" && params.get("create") !== "1" && !params.get("edit")) {
+    return "brands";
+  }
+  return "products";
 }
 
 export function ProductSettingsTabs({
   products,
   categories,
+  brands,
   suppliers,
   nextSku,
   initialTab,
@@ -74,7 +84,10 @@ export function ProductSettingsTabs({
 
     setActiveTab(nextTab);
 
-    const href = nextTab === "categories" ? "/settings/products?tab=categories" : "/settings/products";
+    const href =
+      nextTab === "products"
+        ? "/settings/products"
+        : `/settings/products?tab=${nextTab}`;
     window.history.pushState({}, "", href);
     window.scrollTo({ top: 0, behavior: "auto" });
 
@@ -145,8 +158,15 @@ export function ProductSettingsTabs({
         {contentTab === "categories" ? (
           <div key="categories" className="animate-[productSettingsTabIn_160ms_ease-out]">
             <div className="mx-4 mb-4 sm:mx-0">{tabSwitcher}</div>
-            <div className="px-4 sm:px-0">
+            <div className="px-0 sm:px-0">
               <ProductCategoryManager categories={categories} products={products} />
+            </div>
+          </div>
+        ) : contentTab === "brands" ? (
+          <div key="brands" className="animate-[productSettingsTabIn_160ms_ease-out]">
+            <div className="mx-4 mb-4 sm:mx-0">{tabSwitcher}</div>
+            <div className="px-0 sm:px-0">
+              <ProductBrandManager brands={brands} />
             </div>
           </div>
         ) : (
@@ -155,6 +175,7 @@ export function ProductSettingsTabs({
               allProducts={products}
               baseListHref="/settings/products"
               categories={categories}
+              brands={brands}
               suppliers={suppliers}
               nextSku={nextSku}
               initialCreate={initialCreate}

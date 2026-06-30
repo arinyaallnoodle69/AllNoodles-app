@@ -96,12 +96,14 @@ function MobileCard({
   product, 
   onEdit, 
   deleteFormId, 
-  defaultUnit 
+  defaultUnit,
+  displayIndex
 }: { 
   product: SettingsProduct; 
   onEdit: (product: SettingsProduct) => void; 
   deleteFormId: string; 
   defaultUnit: { effectiveCostPrice: number } | null | undefined; 
+  displayIndex?: number;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -112,45 +114,54 @@ function MobileCard({
   return (
     <article
       style={style}
-      className="w-full px-4 py-4 shadow-none transition-colors relative border-b border-slate-100 bg-white"
+      className="w-full px-4 py-5 shadow-none transition-colors relative border-b border-slate-100 bg-white"
     >
       <div className="flex items-center gap-4">
-        {/* Medium image container */}
-        <div
-          className={`relative flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden ${
-            product.isActive ? "" : "opacity-65"
-          }`}
-        >
-          {product.imageUrls[0] ? (
-            <ProductImagePreview src={product.imageUrls[0]} alt={product.name} thumbnailSizes="96px" />
-          ) : (
-            <Package2 className="h-10 w-10 text-slate-300" strokeWidth={1.5} />
-          )}
+        {displayIndex !== undefined && (
+          <div className="w-6 shrink-0 text-center text-base font-black tabular-nums text-[#4A148C]">
+            {displayIndex}
+          </div>
+        )}
+        {/* Column wrapper for image and its badge below */}
+        <div className="flex flex-col items-center gap-1.5 shrink-0 ml-2">
+          {/* Medium image container */}
+          <div
+            className={`relative flex h-20 w-20 items-center justify-center overflow-hidden rounded-xl bg-slate-50 ${
+              product.isActive ? "" : "opacity-65"
+            }`}
+          >
+            {product.imageUrls[0] ? (
+              <ProductImagePreview src={product.imageUrls[0]} alt={product.name} thumbnailSizes="96px" />
+            ) : (
+              <Package2 className="h-10 w-10 text-slate-300" strokeWidth={1.5} />
+            )}
+          </div>
+
+          {/* Badge under the image */}
+          <span
+            className={`rounded px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider shadow-sm ${
+              product.isActive
+                ? "bg-emerald-500 text-white"
+                : "bg-red-600 text-white"
+            }`}
+          >
+            {product.isActive ? "พร้อมขาย" : "ปิดขาย"}
+          </span>
         </div>
 
         {/* Compact Info Panel */}
-        <div className={`min-w-0 flex-1 ${product.isActive ? "" : "opacity-65"}`}>
-          <div className="flex items-center gap-2">
-            <span
-              className={`inline-flex shrink-0 rounded px-1.5 py-0.5 text-[10px] font-black uppercase tracking-wider ${
-                product.isActive
-                  ? "border border-emerald-100 bg-emerald-50 text-emerald-700"
-                  : "border border-red-700 bg-red-600 text-white"
-              }`}
-            >
-              {product.isActive ? "พร้อมขาย" : "ปิดขาย"}
-            </span>
-            <p className="text-xs font-mono font-black text-[#4A148C] tracking-wider truncate">
-              {product.sku}
-            </p>
-          </div>
-          <p className="mt-1 text-base font-black leading-snug text-slate-950 truncate">
+        <div className={`min-w-0 flex-1 ${product.isActive ? "" : "opacity-65"} flex flex-col justify-center`}>
+          <p className="text-xs font-mono font-black text-[#4A148C] tracking-wider truncate">
+            {product.sku}
+          </p>
+          <p className="mt-0.5 py-0.5 text-base font-black leading-normal text-slate-950 line-clamp-2 break-words">
             {product.name}
           </p>
-          <p className="mt-1 text-sm text-slate-500">
+          <p className="mt-1 text-sm text-slate-500 leading-normal">
             <span className="font-black text-slate-950">หน่วย: </span>
             <span className="font-black text-[#4A148C]">{product.baseUnit}</span>
-            <span className="mx-1.5 text-slate-300">|</span>
+          </p>
+          <p className="mt-0.5 text-sm text-slate-500 leading-normal">
             <span className="font-black text-slate-950">ต้นทุน: </span>
             <span className="font-black text-[#4A148C]">{formatCost(defaultUnit ? defaultUnit.effectiveCostPrice : (product.costPrice || 0))} ฿</span>
           </p>
@@ -161,7 +172,7 @@ function MobileCard({
           <button
             type="button"
             onClick={() => setMenuOpen(!menuOpen)}
-            className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-100 bg-white text-slate-500 transition hover:bg-slate-50 hover:text-slate-800 shadow-sm"
+            className="flex h-10 w-10 items-center justify-center text-[#4A148C] transition hover:text-[#4A148C]/80 active:scale-95 drop-shadow-[0_1.5px_2px_rgba(74,20,140,0.35)]"
             aria-label="เมนูจัดการสินค้า"
           >
             <MoreVertical className="h-5.5 w-5.5" />
@@ -555,7 +566,7 @@ export function ProductList({ products, onEdit }: ProductListProps) {
             >
               {/* Mobile cards - Full Width */}
               <div className="grid grid-cols-1 divide-y divide-slate-200 px-0 py-0 sm:hidden">
-                {localProducts.slice(0, visibleCount).map((product) => {
+                {localProducts.slice(0, visibleCount).map((product, index) => {
                   const deleteFormId = `delete-product-${product.id}`;
                   const defaultUnit = product.saleUnits.find((u) => u.isDefault) || product.saleUnits[0];
 
@@ -566,6 +577,7 @@ export function ProductList({ products, onEdit }: ProductListProps) {
                       onEdit={onEdit}
                       deleteFormId={deleteFormId}
                       defaultUnit={defaultUnit}
+                      displayIndex={index + 1}
                     />
                   );
                 })}
