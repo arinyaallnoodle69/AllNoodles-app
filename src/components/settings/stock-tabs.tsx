@@ -44,7 +44,7 @@ export function StockTabs({ current, onChangeTab }: StockTabsProps) {
   };
 
   return (
-    <div className="mb-0 mt-0 w-full lg:mb-6 lg:mt-4">
+    <div className="mb-3 mt-0 w-full lg:mb-6 lg:mt-4">
       <div className="flex border-b border-slate-200 bg-white lg:grid lg:grid-cols-3 lg:rounded-xl lg:border lg:border-slate-200/50 lg:bg-slate-100/80 lg:p-1 lg:shadow-sm lg:backdrop-blur-sm">
         {tabs.map((tab) => {
           const isActive = current === tab.key;

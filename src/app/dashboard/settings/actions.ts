@@ -569,19 +569,22 @@ export async function createProduct(formData: FormData): Promise<boolean> {
   }
 
   await admin.from("product_sale_units").insert(
-    saleUnits.map((saleUnit, index) => ({
-      base_unit_quantity: saleUnit.baseUnitQuantity,
-      cost_mode: saleUnit.costMode,
-      fixed_cost_price: saleUnit.costMode === "fixed" ? saleUnit.fixedCostPrice : null,
-      is_active: true,
-      is_default: index === 0,
-      min_order_qty: saleUnit.minOrderQty,
-      organization_id: session.organizationId,
-      product_id: product.id,
-      sort_order: index,
-      step_order_qty: saleUnit.stepOrderQty,
-      unit_label: saleUnit.label,
-    })),
+    saleUnits.map((saleUnit, index) => {
+      const isDefault = index === 0;
+      return {
+        base_unit_quantity: saleUnit.baseUnitQuantity,
+        cost_mode: isDefault ? "derived" : saleUnit.costMode,
+        fixed_cost_price: isDefault ? null : (saleUnit.costMode === "fixed" ? saleUnit.fixedCostPrice : null),
+        is_active: true,
+        is_default: isDefault,
+        min_order_qty: saleUnit.minOrderQty,
+        organization_id: session.organizationId,
+        product_id: product.id,
+        sort_order: index,
+        step_order_qty: saleUnit.stepOrderQty,
+        unit_label: saleUnit.label,
+      };
+    }),
   );
 
   await syncProductCategoryAssignments(admin, session.organizationId, product.id, categoryIds);
@@ -792,14 +795,15 @@ export async function updateProduct(formData: FormData): Promise<boolean> {
 
   const mutationResults = await Promise.all([
     admin.from("products").update(productUpdate).eq("id", productId).eq("organization_id", session.organizationId),
-    ...saleUnits.map((saleUnit, index) =>
-      saleUnit.id
+    ...saleUnits.map((saleUnit, index) => {
+      const isDefault = index === 0;
+      return saleUnit.id
         ? admin.from("product_sale_units").update({
           base_unit_quantity: saleUnit.baseUnitQuantity,
-          cost_mode: saleUnit.costMode,
-          fixed_cost_price: saleUnit.costMode === "fixed" ? saleUnit.fixedCostPrice : null,
+          cost_mode: isDefault ? "derived" : saleUnit.costMode,
+          fixed_cost_price: isDefault ? null : (saleUnit.costMode === "fixed" ? saleUnit.fixedCostPrice : null),
           is_active: true,
-          is_default: index === 0,
+          is_default: isDefault,
           min_order_qty: saleUnit.minOrderQty,
           sort_order: index,
           step_order_qty: saleUnit.stepOrderQty,
@@ -807,18 +811,18 @@ export async function updateProduct(formData: FormData): Promise<boolean> {
         }).eq("id", saleUnit.id).eq("organization_id", session.organizationId)
         : admin.from("product_sale_units").insert({
           base_unit_quantity: saleUnit.baseUnitQuantity,
-          cost_mode: saleUnit.costMode,
-          fixed_cost_price: saleUnit.costMode === "fixed" ? saleUnit.fixedCostPrice : null,
+          cost_mode: isDefault ? "derived" : saleUnit.costMode,
+          fixed_cost_price: isDefault ? null : (saleUnit.costMode === "fixed" ? saleUnit.fixedCostPrice : null),
           is_active: true,
-          is_default: index === 0,
+          is_default: isDefault,
           min_order_qty: saleUnit.minOrderQty,
           organization_id: session.organizationId,
           product_id: productId,
           sort_order: index,
           step_order_qty: saleUnit.stepOrderQty,
           unit_label: saleUnit.label,
-        }),
-    ),
+        });
+    }),
     toDeactivateIds.length > 0
       ? admin.from("product_sale_units")
         .update({ is_active: false, is_default: false })

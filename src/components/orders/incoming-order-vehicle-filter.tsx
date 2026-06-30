@@ -64,7 +64,7 @@ export function IncomingOrderVehicleFilter({ vehicles }: Props) {
     <div className="relative bg-transparent overflow-hidden mt-3 mb-1 w-full">
       <div
         ref={vehicleTabsContainerRef}
-        className="relative flex gap-6 overflow-x-auto pb-1.5 pt-0.5 no-scrollbar scroll-smooth"
+        className="relative flex gap-6 overflow-x-auto pb-1.5 pt-0.5 no-scrollbar scroll-smooth -mx-4 px-4"
       >
         {/* Underline indicator */}
         <span

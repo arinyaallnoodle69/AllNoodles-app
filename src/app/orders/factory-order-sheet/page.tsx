@@ -34,37 +34,35 @@ async function FactoryOrderSheetPage({ searchParams }: Props) {
   // Fetch full vehicle summary data
   const summaryData = await getVehicleProductSummaryData(session.organizationId, date, endDate);
 
-  // Target product SKUs for the factory order sheet
-  const TARGET_SKUS = new Set([
-    "TYN036",
-    "TYN037",
-    "TYN014",
-    "TYN015",
-    "TYN010",
-    "TYN011",
-    "TYN012",
-    "TYN006",
-    "TYN013",
-  ]);
-
-  // Filter products and their matching quantity rows
-  const filteredProducts: VehicleSummaryProduct[] = [];
-  const filteredQty: number[][] = [];
+  // Group the products in summaryData that are productKind === 'made_to_order' by their supplier/factory name
+  const groups = new Map<string, { factoryName: string; products: VehicleSummaryProduct[]; qty: number[][] }>();
 
   summaryData.products.forEach((product, index) => {
-    if (product.sku && TARGET_SKUS.has(product.sku.trim().toUpperCase())) {
-      filteredProducts.push(product);
-      filteredQty.push(summaryData.qty[index]);
+    if (product.productKind === "made_to_order") {
+      const factoryName = product.supplierName || "โรงงานอนามัย";
+      const key = product.supplierId || factoryName;
+
+      let group = groups.get(key);
+      if (!group) {
+        group = { factoryName, products: [], qty: [] };
+        groups.set(key, group);
+      }
+
+      group.products.push(product);
+      group.qty.push(summaryData.qty[index]);
     }
   });
 
-  const filteredSummaryData = {
-    ...summaryData,
-    products: filteredProducts,
-    qty: filteredQty,
-  };
+  const factorySheets = Array.from(groups.values()).map((group) => {
+    return {
+      ...summaryData,
+      factoryName: group.factoryName,
+      products: group.products,
+      qty: group.qty,
+    };
+  });
 
-  const hasData = filteredSummaryData.products.length > 0;
+  const hasData = factorySheets.length > 0;
 
   return (
     <>
@@ -121,14 +119,14 @@ async function FactoryOrderSheetPage({ searchParams }: Props) {
           border: "1px solid rgba(15,23,42,0.06)",
         }}
       >
-        <span style={{ fontSize: "15px", fontWeight: 800, color: "#4A148C" }}>ใบสั่งของ (โรงงานอนามัย)</span>
+        <span style={{ fontSize: "15px", fontWeight: 800, color: "#4A148C" }}>ใบสั่งของ</span>
         <span className="vehicle-summary-toolbar__meta" style={{ fontSize: "13px", color: "#64748b", fontWeight: 700 }}>
-          {filteredSummaryData.dateLabel} · {filteredSummaryData.vehicles.length} รถ
+          {summaryData.dateLabel} · {summaryData.vehicles.length} รถ · {factorySheets.length} ใบ
         </span>
         <div className="vehicle-summary-toolbar__actions" style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "nowrap" }}>
           <PackingListPrintButton
             unassignedStores={[]}
-            dateLabel={filteredSummaryData.dateLabel}
+            dateLabel={summaryData.dateLabel}
             hidePrintOnMobile={false}
             documentTitle="ใบสั่งของ"
             printButtonText="พิมพ์ใบสั่งของ"
@@ -170,7 +168,9 @@ async function FactoryOrderSheetPage({ searchParams }: Props) {
         </div>
       ) : (
         <div className="vehicle-summary-page packing-print-container">
-          <FactoryOrderSheetLayout data={filteredSummaryData} />
+          {factorySheets.map((sheet, index) => (
+            <FactoryOrderSheetLayout key={sheet.factoryName + index} data={sheet} />
+          ))}
         </div>
       )}
     </>

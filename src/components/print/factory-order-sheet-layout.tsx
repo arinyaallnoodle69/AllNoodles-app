@@ -35,7 +35,9 @@ function FactoryOrderSheet({ data }: { data: VehicleProductSummaryData }) {
             <h1 className="vehicle-summary-header__title">ใบสั่งของ</h1>
           </div>
           <div className="vehicle-summary-header__line">
-            <div className="vehicle-summary-header__brand">โรงงาน : โรงงานอนามัย</div>
+            <div className="vehicle-summary-header__brand">
+              โรงงาน : {data.factoryName || "โรงงานอนามัย"}
+            </div>
             <div className="vehicle-summary-header__meta-inline">
               <span>{data.dateLabel}</span>
               <span>{data.vehicles.length.toLocaleString("th-TH")} คัน</span>
@@ -135,6 +137,8 @@ function FactoryOrderStyles() {
           margin: 0 !important;
           border: none !important;
           box-shadow: none !important;
+          page-break-after: always;
+          break-after: page;
         }
       }
 

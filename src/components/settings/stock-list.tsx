@@ -640,7 +640,7 @@ export function StockList({ products, suppliers = [], warehouses, baseHref = "/s
               หมวดหมู่
               <ListFilter className="h-4 w-4" strokeWidth={2.5} />
             </button>
-            <div className="no-scrollbar flex min-w-0 flex-1 items-center gap-6 overflow-x-auto overscroll-x-contain">
+            <div className="no-scrollbar flex min-w-0 flex-1 items-center gap-6 overflow-x-auto overscroll-x-contain -mx-4 px-4">
               <button
                 type="button"
                 onClick={(e) => handleCategorySelect("__all__", e)}
@@ -688,7 +688,7 @@ export function StockList({ products, suppliers = [], warehouses, baseHref = "/s
               แบรนด์
               <ListFilter className="h-4 w-4" strokeWidth={2.5} />
             </button>
-            <div className="no-scrollbar flex min-w-0 flex-1 items-center gap-6 overflow-x-auto overscroll-x-contain">
+            <div className="no-scrollbar flex min-w-0 flex-1 items-center gap-6 overflow-x-auto overscroll-x-contain -mx-4 px-4">
               <button
                 type="button"
                 onClick={(e) => handleBrandSelect("__all__", e)}

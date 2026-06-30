@@ -8,6 +8,9 @@ export type VehicleSummaryProduct = {
   sku: string;
   name: string;
   unit: string;
+  productKind?: string;
+  supplierId?: string | null;
+  supplierName?: string | null;
 };
 
 export type VehicleSummaryVehicle = {
@@ -21,6 +24,7 @@ export type VehicleProductSummaryData = {
   products: VehicleSummaryProduct[];
   vehicles: VehicleSummaryVehicle[];
   qty: number[][];
+  factoryName?: string;
 };
 
 type OrderRow = {
@@ -91,7 +95,7 @@ export async function getVehicleProductSummaryData(
       .lte("order_date", endDate),
     admin
       .from("products")
-      .select("id, sku, name, unit, display_order, metadata")
+      .select("id, sku, name, unit, display_order, metadata, product_kind, supplier_id, suppliers(name)")
       .eq("organization_id", organizationId)
       .eq("is_active", true),
     admin
@@ -124,7 +128,7 @@ export async function getVehicleProductSummaryData(
     categoryIdsByProductId.set(item.product_id, current);
   }
 
-  const activeProducts = ((productsResult.data ?? []) as DbProduct[]).filter((product) => {
+  const activeProducts = ((productsResult.data ?? []) as Array<DbProduct & { product_kind: string; supplier_id: string | null; suppliers: { name: string } | null }>).filter((product) => {
     const metadata = product.metadata && typeof product.metadata === "object" ? (product.metadata as Record<string, unknown>) : null;
     return !metadata?.deleted;
   });
@@ -137,6 +141,9 @@ export async function getVehicleProductSummaryData(
       categoryIds: categoryIdsByProductId.get(product.id) ?? [],
       sku: product.sku,
       unit: product.unit,
+      productKind: product.product_kind,
+      supplierId: product.supplier_id,
+      supplierName: product.suppliers?.name ?? null,
     })),
     ((categoriesResult.data ?? []) as DbCategory[]).map((category) => ({
       id: category.id,
@@ -149,6 +156,9 @@ export async function getVehicleProductSummaryData(
     sku: product.sku,
     name: product.name,
     unit: product.unit || "-",
+    productKind: product.productKind,
+    supplierId: product.supplierId,
+    supplierName: product.supplierName,
   }));
 
   const configuredVehicles: VehicleSummaryVehicle[] = ((vehiclesResult.data ?? []) as Array<{ id: string; name: string }>).map((vehicle) => ({
