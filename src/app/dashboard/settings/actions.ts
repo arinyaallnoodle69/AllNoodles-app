@@ -38,7 +38,7 @@ function safeInteger(value: FormDataEntryValue | null) {
 }
 
 function safeProductKind(value: FormDataEntryValue | null): ProductKind {
-  return safeText(value) === "stock" ? "stock" : "made_to_order";
+  return safeText(value) === "made_to_order" ? "made_to_order" : "stock";
 }
 
 function normalizeImportKey(value: unknown) {
@@ -74,6 +74,7 @@ function parseImportStatus(value: string) {
 
 function parseImportProductKind(value: string): ProductKind {
   const normalized = normalizeImportKey(value);
+  if (!normalized) return "stock";
   return ["stock", "สต็อก", "สต็อค", "สินค้าเก็บสต็อก", "สินค้าเก็บสต๊อก"].includes(normalized)
     ? "stock"
     : "made_to_order";

@@ -1,13 +1,21 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { readSheet } from "read-excel-file/node";
 import { requireAppRole } from "@/lib/auth/authorization";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
 type WarehouseField = "name" | "slug" | "address";
+type ProductWarehouseFulfillmentMode = "disabled" | "fresh" | "stock";
 
 export type WarehouseActionState = {
   fieldErrors: Partial<Record<WarehouseField, string>>;
+  message: string;
+  status: "error" | "idle" | "success";
+};
+
+export type WarehouseProductModeImportState = {
+  errors?: string[];
   message: string;
   status: "error" | "idle" | "success";
 };
@@ -27,6 +35,79 @@ type AddressPayload = {
 
 function getTrimmedText(value: unknown) {
   return String(value ?? "").trim();
+}
+
+function normalizeImportKey(value: unknown) {
+  return getTrimmedText(value).replace(/\s+/g, "").toLocaleLowerCase("th");
+}
+
+function excelRowsToRecords(sheetRows: unknown[][]) {
+  const headers = (sheetRows[0] ?? []).map((header) => getTrimmedText(header));
+  const records: Record<string, unknown>[] = [];
+
+  for (const row of sheetRows.slice(1)) {
+    const record: Record<string, unknown> = {};
+    let hasValue = false;
+
+    headers.forEach((header, index) => {
+      if (!header) return;
+      const value = getTrimmedText(row[index]);
+      record[header] = value;
+      if (value) hasValue = true;
+    });
+
+    if (hasValue) {
+      records.push(record);
+    }
+  }
+
+  return { headers, records };
+}
+
+function parseWarehouseProductMode(value: unknown): ProductWarehouseFulfillmentMode | null {
+  const normalized = normalizeImportKey(value);
+  if (!normalized) return null;
+
+  if (["fresh", "produce", "made_to_order", "ผลิตสด", "สั่งผลิต", "ผลิต"].includes(normalized)) {
+    return "fresh";
+  }
+
+  if (["disabled", "disable", "none", "no", "ไม่ใช้", "ไม่ใช้ในคลังนี้", "ปิด", "-"].includes(normalized)) {
+    return "disabled";
+  }
+
+  if (["stock", "สต็อก", "สต๊อก", "ใช้สต็อก", "ใช้สต๊อก", "ใช้stock"].includes(normalized)) {
+    return "stock";
+  }
+
+  return null;
+}
+
+function getWarehouseModeHeaderAliases(warehouse: { name: string; slug: string }) {
+  const base = `${warehouse.name} (${warehouse.slug.toUpperCase()})`;
+  return [
+    warehouse.name,
+    warehouse.slug,
+    base,
+    `${base} - โหมด`,
+    `${base} โหมด`,
+    `${warehouse.name} - โหมด`,
+    `${warehouse.name} โหมด`,
+    `โหมด ${warehouse.name}`,
+  ].map(normalizeImportKey);
+}
+
+function getWarehouseSupplierHeaderAliases(warehouse: { name: string; slug: string }) {
+  const base = `${warehouse.name} (${warehouse.slug.toUpperCase()})`;
+  return [
+    `${base} - โรงงาน`,
+    `${base} โรงงาน`,
+    `${warehouse.name} - โรงงาน`,
+    `${warehouse.name} โรงงาน`,
+    `โรงงาน ${warehouse.name}`,
+    `${base} - ผู้ขาย`,
+    `${warehouse.name} - ผู้ขาย`,
+  ].map(normalizeImportKey);
 }
 
 function getAddressPayload(value: FormDataEntryValue | null): AddressPayload | null {
@@ -119,6 +200,8 @@ function revalidateWarehousePaths() {
   revalidatePath("/settings");
   revalidatePath("/settings/warehouses");
   revalidatePath("/settings/customers");
+  revalidatePath("/orders/incoming");
+  revalidatePath("/orders/factory-order-sheet");
 }
 
 type WarehouseClient = {
@@ -371,4 +454,289 @@ export async function deleteWarehouseAction(warehouseId: string): Promise<{ erro
   }
 
   revalidateWarehousePaths();
+}
+
+export async function updateWarehouseProductFulfillmentModesAction(
+  warehouseId: string,
+  formData: FormData,
+): Promise<void> {
+  const session = await requireAppRole("admin");
+  const productIds = formData.getAll("productId").map((value) => getTrimmedText(value));
+  const modes = formData.getAll("mode").map((value) => getTrimmedText(value));
+  const supplierIds = formData.getAll("supplierId").map((value) => getTrimmedText(value));
+  const admin = getSupabaseAdmin();
+
+  const { data: warehouse, error: warehouseError } = await admin
+    .from("warehouses")
+    .select("id")
+    .eq("id", warehouseId)
+    .eq("organization_id", session.organizationId)
+    .maybeSingle();
+
+  if (warehouseError || !warehouse) {
+    console.error("Update warehouse product fulfillment modes failed: warehouse not found", warehouseError);
+    return;
+  }
+
+  const rows = productIds
+    .map((productId, index) => {
+      const mode = modes[index] as ProductWarehouseFulfillmentMode;
+      if (!productId || !["disabled", "fresh", "stock"].includes(mode)) {
+        return null;
+      }
+      const supplierId = supplierIds[index] || null;
+
+      return {
+        mode,
+        organization_id: session.organizationId,
+        product_id: productId,
+        supplier_id: mode === "fresh" ? supplierId : null,
+        warehouse_id: warehouseId,
+      };
+    })
+    .filter(Boolean) as Array<{
+      mode: ProductWarehouseFulfillmentMode;
+      organization_id: string;
+      product_id: string;
+      supplier_id: string | null;
+      warehouse_id: string;
+    }>;
+
+  if (rows.length === 0) {
+    return;
+  }
+
+  const warehouseProductModesTable = (admin as unknown as {
+    from(table: "product_warehouse_fulfillment_modes"): {
+      upsert(
+        rows: Array<{
+          mode: ProductWarehouseFulfillmentMode;
+          organization_id: string;
+          product_id: string;
+          supplier_id: string | null;
+          warehouse_id: string;
+        }>,
+        options: { onConflict: string },
+      ): Promise<{ error: { message?: string } | null }>;
+    };
+  }).from("product_warehouse_fulfillment_modes");
+
+  const { error } = await warehouseProductModesTable
+    .upsert(rows, {
+      onConflict: "organization_id,product_id,warehouse_id",
+    });
+
+  if (error) {
+    console.error("Update warehouse product fulfillment modes failed:", error);
+    return;
+  }
+
+  revalidateWarehousePaths();
+}
+
+export async function importWarehouseProductModesAction(
+  _prevState: WarehouseProductModeImportState,
+  formData: FormData,
+): Promise<WarehouseProductModeImportState> {
+  const session = await requireAppRole("admin");
+  const file = formData.get("file");
+
+  if (!(file instanceof File) || file.size === 0) {
+    return {
+      errors: ["เลือกไฟล์ Excel ก่อนนำเข้า"],
+      message: "ยังนำเข้าข้อมูลไม่ได้",
+      status: "error",
+    };
+  }
+
+  let rows: ReturnType<typeof excelRowsToRecords>;
+  try {
+    const buffer = Buffer.from(await file.arrayBuffer());
+    const sheetRows = await readSheet(buffer);
+    rows = excelRowsToRecords(sheetRows as unknown[][]);
+  } catch (error) {
+    console.error("[importWarehouseProductModesAction:read]", error);
+    return {
+      errors: ["อ่านไฟล์ Excel ไม่สำเร็จ กรุณาใช้ไฟล์ template ของระบบ"],
+      message: "นำเข้าไฟล์ไม่สำเร็จ",
+      status: "error",
+    };
+  }
+
+  if (rows.records.length === 0) {
+    return {
+      errors: ["ไม่พบข้อมูลสินค้าในไฟล์"],
+      message: "ไฟล์ไม่มีข้อมูลสำหรับนำเข้า",
+      status: "error",
+    };
+  }
+
+  const admin = getSupabaseAdmin();
+  const [productsResult, warehousesResult, suppliersResult] = await Promise.all([
+    admin
+      .from("products")
+      .select("id, sku, name, metadata")
+      .eq("organization_id", session.organizationId)
+      .eq("is_active", true),
+    admin
+      .from("warehouses")
+      .select("id, name, slug")
+      .eq("organization_id", session.organizationId)
+      .eq("is_active", true),
+    admin
+      .from("suppliers")
+      .select("id, supplier_code, name")
+      .eq("organization_id", session.organizationId)
+      .order("supplier_code", { ascending: true }),
+  ]);
+
+  if (productsResult.error || warehousesResult.error || suppliersResult.error) {
+    return {
+      errors: ["โหลดข้อมูลสินค้า/คลัง/โรงงานไม่สำเร็จ"],
+      message: "นำเข้าไฟล์ไม่สำเร็จ",
+      status: "error",
+    };
+  }
+
+  const productsBySku = new Map<string, { id: string; sku: string }>();
+  for (const product of (productsResult.data ?? []) as Array<{ id: string; sku: string; metadata: Record<string, unknown> | null }>) {
+    if (product.metadata?.deleted) continue;
+    productsBySku.set(normalizeImportKey(product.sku), { id: product.id, sku: product.sku });
+  }
+
+  const warehouses = (warehousesResult.data ?? []) as Array<{ id: string; name: string; slug: string }>;
+  const suppliersByKey = new Map<string, { id: string; name: string; supplier_code: string }>();
+  for (const supplier of (suppliersResult.data ?? []) as Array<{ id: string; name: string; supplier_code: string }>) {
+    suppliersByKey.set(normalizeImportKey(supplier.name), supplier);
+    suppliersByKey.set(normalizeImportKey(supplier.supplier_code), supplier);
+    suppliersByKey.set(normalizeImportKey(`${supplier.name} (${supplier.supplier_code})`), supplier);
+  }
+
+  const skuHeaders = ["SKU", "รหัสสินค้า", "sku"].map(normalizeImportKey);
+  const skuHeader = rows.headers.find((header) => skuHeaders.includes(normalizeImportKey(header)));
+  if (!skuHeader) {
+    return {
+      errors: ["ไม่พบคอลัมน์ SKU หรือ รหัสสินค้า"],
+      message: "รูปแบบไฟล์ไม่ถูกต้อง",
+      status: "error",
+    };
+  }
+
+  const warehouseHeaders = warehouses
+    .map((warehouse) => {
+      const modeHeader = rows.headers.find((header) => getWarehouseModeHeaderAliases(warehouse).includes(normalizeImportKey(header))) ?? null;
+      const supplierHeader = rows.headers.find((header) => getWarehouseSupplierHeaderAliases(warehouse).includes(normalizeImportKey(header))) ?? null;
+      return { modeHeader, supplierHeader, warehouse };
+    })
+    .filter((item): item is { modeHeader: string; supplierHeader: string | null; warehouse: { id: string; name: string; slug: string } } => item.modeHeader !== null);
+
+  if (warehouseHeaders.length === 0) {
+    return {
+      errors: ["ไม่พบคอลัมน์คลังในไฟล์ template"],
+      message: "รูปแบบไฟล์ไม่ถูกต้อง",
+      status: "error",
+    };
+  }
+
+  const errors: string[] = [];
+  const upsertRows: Array<{
+    mode: ProductWarehouseFulfillmentMode;
+    organization_id: string;
+    product_id: string;
+    supplier_id: string | null;
+    warehouse_id: string;
+  }> = [];
+
+  rows.records.forEach((row, index) => {
+    const rowNumber = index + 2;
+    const sku = getTrimmedText(row[skuHeader]);
+    const product = productsBySku.get(normalizeImportKey(sku));
+
+    if (!product) {
+      errors.push(`แถว ${rowNumber}: ไม่พบสินค้า SKU "${sku}"`);
+      return;
+    }
+
+    for (const { modeHeader, supplierHeader, warehouse } of warehouseHeaders) {
+      const rawMode = getTrimmedText(row[modeHeader]);
+      if (!rawMode) continue;
+
+      const mode = parseWarehouseProductMode(rawMode);
+      if (!mode) {
+        errors.push(`แถว ${rowNumber}: ค่า "${rawMode}" ในคอลัมน์ ${modeHeader} ไม่ถูกต้อง`);
+        continue;
+      }
+      const rawSupplier = supplierHeader ? getTrimmedText(row[supplierHeader]) : "";
+      const supplier = rawSupplier ? suppliersByKey.get(normalizeImportKey(rawSupplier)) ?? null : null;
+
+      if (mode === "fresh" && !supplier) {
+        errors.push(`แถว ${rowNumber}: ${warehouse.name} ตั้งเป็นผลิตสด ต้องระบุโรงงานให้ถูกต้อง`);
+        continue;
+      }
+
+      if (mode !== "fresh" && rawSupplier && !supplier) {
+        errors.push(`แถว ${rowNumber}: ไม่พบโรงงาน "${rawSupplier}" ในคอลัมน์ ${supplierHeader}`);
+        continue;
+      }
+
+      upsertRows.push({
+        mode,
+        organization_id: session.organizationId,
+        product_id: product.id,
+        supplier_id: mode === "fresh" ? supplier?.id ?? null : null,
+        warehouse_id: warehouse.id,
+      });
+    }
+  });
+
+  if (errors.length > 0) {
+    return {
+      errors: errors.slice(0, 30),
+      message: `พบข้อผิดพลาด ${errors.length.toLocaleString("th-TH")} รายการ กรุณาแก้ไฟล์แล้วนำเข้าใหม่`,
+      status: "error",
+    };
+  }
+
+  if (upsertRows.length === 0) {
+    return {
+      errors: ["ไม่พบช่องโหมดสินค้าที่ต้องบันทึก"],
+      message: "ไม่มีข้อมูลสำหรับบันทึก",
+      status: "error",
+    };
+  }
+
+  const warehouseProductModesTable = (admin as unknown as {
+    from(table: "product_warehouse_fulfillment_modes"): {
+      upsert(
+        rows: Array<{
+          mode: ProductWarehouseFulfillmentMode;
+          organization_id: string;
+          product_id: string;
+          supplier_id: string | null;
+          warehouse_id: string;
+        }>,
+        options: { onConflict: string },
+      ): Promise<{ error: { message?: string } | null }>;
+    };
+  }).from("product_warehouse_fulfillment_modes");
+
+  const { error } = await warehouseProductModesTable.upsert(upsertRows, {
+    onConflict: "organization_id,product_id,warehouse_id",
+  });
+
+  if (error) {
+    console.error("[importWarehouseProductModesAction:upsert]", error);
+    return {
+      errors: ["บันทึกข้อมูลลงฐานข้อมูลไม่สำเร็จ"],
+      message: "นำเข้าไฟล์ไม่สำเร็จ",
+      status: "error",
+    };
+  }
+
+  revalidateWarehousePaths();
+
+  return {
+    message: `นำเข้าโหมดสินค้าในคลังสำเร็จ ${upsertRows.length.toLocaleString("th-TH")} รายการ`,
+    status: "success",
+  };
 }

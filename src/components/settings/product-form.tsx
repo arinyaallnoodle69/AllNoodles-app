@@ -154,9 +154,7 @@ function ProductFormBody({
   const [isCameraOpen, setIsCameraOpen] = useState(false);
   const [isStartingCamera, setIsStartingCamera] = useState(false);
   const [baseUnit, setBaseUnit] = useState(editingProduct?.baseUnit ?? "kg");
-  const [productKind, setProductKind] = useState<"made_to_order" | "stock">(
-    editingProduct?.productKind ?? "made_to_order",
-  );
+  const legacyProductKind = editingProduct?.productKind ?? "stock";
   const [supplierId, setSupplierId] = useState(editingProduct?.supplierId ?? "");
   const [baseCostPrice, setBaseCostPrice] = useState(
     editingProduct ? (Number(editingProduct.costPrice) === 0 ? "" : String(editingProduct.costPrice)) : "",
@@ -688,7 +686,6 @@ function ProductFormBody({
       getParsedNumber(basicFormValues.stockQuantity || "0") === Number(editingProduct.stockQuantity ?? 0) &&
       brand === (editingProduct.brand ?? "") &&
       selectedCategoryId === (editingProduct.categoryIds[0] ?? "") &&
-      productKind === (editingProduct.productKind ?? "made_to_order") &&
       supplierId === (editingProduct.supplierId ?? "") &&
       description === (editingProduct.description ?? "") &&
       packingListBrand === (editingProduct.packingListBrand ?? "") &&
@@ -711,7 +708,6 @@ function ProductFormBody({
     baseCostPrice,
     brand,
     selectedCategoryId,
-    productKind,
     supplierId,
     description,
     packingListBrand,
@@ -945,7 +941,7 @@ function ProductFormBody({
               <input type="hidden" name="packingListBrand" value={packingListBrand} />
               <input type="hidden" name="packingListIcon" value={packingListIcon} />
               <input type="hidden" name="packingListName" value={packingListName} />
-              <input type="hidden" name="productKind" value={productKind} />
+              <input type="hidden" name="productKind" value={legacyProductKind} />
               <input type="hidden" name="supplierId" value={supplierId} />
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="sm:col-span-1">
@@ -997,26 +993,6 @@ function ProductFormBody({
                       ยังไม่มีหมวดหมู่ในระบบ กรุณาไปที่แท็บ <span className="font-black text-slate-950">เพิ่มหมวดหมู่</span> ก่อน
                     </p>
                   )}
-                </div>
-
-                <div className="sm:col-span-1">
-                  <label className={productFieldLabelClass} htmlFor="product-kind">ประเภทสินค้า</label>
-                  <div className="relative">
-                    <select
-                      id="product-kind"
-                      value={productKind}
-                      onChange={(e) => setProductKind(e.target.value === "stock" ? "stock" : "made_to_order")}
-                      className={`${productSelectClass} pr-10`}
-                    >
-                      <option value="made_to_order">ผลิตสด</option>
-                      <option value="stock">สต็อก</option>
-                    </select>
-                    <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-slate-800">
-                      <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                        <path fillRule="evenodd" d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
-                      </svg>
-                    </span>
-                  </div>
                 </div>
 
                 <div className="sm:col-span-1">
@@ -1626,7 +1602,6 @@ export function ProductForm({
       currentProduct.brand,
       currentProduct.description,
       currentProduct.packingListName,
-      currentProduct.productKind,
       currentProduct.supplierId,
       currentProduct.categoryIds.join(","),
       currentProduct.stockQuantity,

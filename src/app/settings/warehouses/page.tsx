@@ -33,13 +33,6 @@ type DbWarehouseRow = {
   metadata?: WarehouseMetadata | null;
 };
 
-type DbCustomerRow = {
-  id: string;
-  name: string;
-  code: string;
-  default_warehouse_id: string | null;
-};
-
 type WarehouseAdminClient = {
   from(table: string): {
     select(cols: string): {
@@ -52,6 +45,25 @@ type WarehouseAdminChain = {
   eq(col: string, val: string | boolean): WarehouseAdminChain;
   order(col: string, opts: { ascending: boolean }): WarehouseAdminChain;
   then: Promise<{ data: unknown; error: { message?: string } | null }>["then"];
+};
+
+type WarehouseProductMode = "disabled" | "fresh" | "stock";
+
+type WarehouseProductModeItem = {
+  brand: string;
+  categoryNames: string[];
+  id: string;
+  modeByWarehouseId: Record<string, WarehouseProductMode>;
+  name: string;
+  supplierIdByWarehouseId: Record<string, string | null>;
+  sku: string;
+  imageUrl: string | null;
+};
+
+type WarehouseSupplierOption = {
+  code: string;
+  id: string;
+  name: string;
 };
 
 async function getWarehousesWithCounts(organizationId: string) {
@@ -72,11 +84,16 @@ async function getWarehousesWithCounts(organizationId: string) {
 
   const { data: customerRows } = await admin
     .from("customers")
-    .select("id, name, code, default_warehouse_id")
+    .select("id, name, customer_code, default_warehouse_id")
     .eq("organization_id", organizationId)
     .eq("is_active", true);
 
-  const customers = (customerRows ?? []) as DbCustomerRow[];
+  const customers = ((customerRows ?? []) as Array<{ id: string; name: string; customer_code: string; default_warehouse_id: string | null }>).map((c) => ({
+    id: c.id,
+    name: c.name,
+    code: c.customer_code,
+    default_warehouse_id: c.default_warehouse_id,
+  }));
 
   const customersByWarehouse = new Map<string, Array<{ id: string; name: string; code: string }>>();
   for (const c of customers) {
@@ -109,11 +126,124 @@ async function getWarehousesWithCounts(organizationId: string) {
   }));
 }
 
+async function getWarehouseProductModeItems(organizationId: string): Promise<WarehouseProductModeItem[]> {
+  const admin = getSupabaseAdmin();
+
+  const [productsResult, categoriesResult, modesResult, imagesResult] = await Promise.all([
+    admin
+      .from("products")
+      .select(`
+        id,
+        sku,
+        name,
+        metadata,
+        display_order,
+        product_category_items(product_categories(name))
+      `)
+      .eq("organization_id", organizationId)
+      .eq("is_active", true)
+      .order("display_order", { ascending: true })
+      .order("sku", { ascending: true }),
+    admin
+      .from("warehouses")
+      .select("id")
+      .eq("organization_id", organizationId)
+      .eq("is_active", true),
+    (admin as unknown as {
+      from(table: "product_warehouse_fulfillment_modes"): {
+        select(cols: string): {
+          eq(col: string, val: string): Promise<{ data: unknown[] | null; error: { message?: string } | null }>;
+        };
+      };
+    })
+      .from("product_warehouse_fulfillment_modes")
+      .select("product_id, warehouse_id, mode, supplier_id")
+      .eq("organization_id", organizationId),
+    admin
+      .from("product_images")
+      .select("product_id, public_url, sort_order")
+      .eq("organization_id", organizationId)
+      .order("sort_order", { ascending: true }),
+  ]);
+
+  if (productsResult.error || categoriesResult.error || modesResult.error || imagesResult.error) {
+    return [];
+  }
+
+  const imageMap = new Map<string, string>();
+  for (const img of (imagesResult.data ?? []) as Array<{ product_id: string; public_url: string }>) {
+    if (!imageMap.has(img.product_id)) {
+      imageMap.set(img.product_id, img.public_url);
+    }
+  }
+
+  const warehouseIds = new Set(((categoriesResult.data ?? []) as Array<{ id: string }>).map((warehouse) => warehouse.id));
+  const modeByProductWarehouse = new Map<string, WarehouseProductMode>();
+  const supplierIdByProductWarehouse = new Map<string, string | null>();
+  for (const row of (modesResult.data ?? []) as Array<{ product_id: string; warehouse_id: string; mode: WarehouseProductMode; supplier_id: string | null }>) {
+    modeByProductWarehouse.set(`${row.product_id}:${row.warehouse_id}`, row.mode);
+    supplierIdByProductWarehouse.set(`${row.product_id}:${row.warehouse_id}`, row.supplier_id ?? null);
+  }
+
+  return ((productsResult.data ?? []) as Array<{
+    id: string;
+    sku: string;
+    name: string;
+    metadata: Record<string, unknown> | null;
+    product_category_items?: Array<{ product_categories: { name: string } | null }> | null;
+  }>)
+    .filter((product) => !product.metadata?.deleted)
+    .map((product) => {
+      const modeByWarehouseId: Record<string, WarehouseProductMode> = {};
+      const supplierIdByWarehouseId: Record<string, string | null> = {};
+      for (const warehouseId of warehouseIds) {
+        modeByWarehouseId[warehouseId] = modeByProductWarehouse.get(`${product.id}:${warehouseId}`) ?? "stock";
+        supplierIdByWarehouseId[warehouseId] = supplierIdByProductWarehouse.get(`${product.id}:${warehouseId}`) ?? null;
+      }
+
+      return {
+        brand: typeof product.metadata?.brand === "string" ? product.metadata.brand : "",
+        categoryNames: (product.product_category_items ?? [])
+          .map((item) => item.product_categories?.name ?? "")
+          .filter(Boolean),
+        id: product.id,
+        modeByWarehouseId,
+        name: product.name,
+        supplierIdByWarehouseId,
+        sku: product.sku,
+        imageUrl: imageMap.get(product.id) ?? null,
+      };
+    });
+}
+
+async function getWarehouseSupplierOptions(organizationId: string): Promise<WarehouseSupplierOption[]> {
+  const admin = getSupabaseAdmin();
+  const { data, error } = await admin
+    .from("suppliers")
+    .select("id, supplier_code, name")
+    .eq("organization_id", organizationId)
+    .order("supplier_code", { ascending: true });
+
+  if (error || !data) {
+    return [];
+  }
+
+  return (data as Array<{ id: string; supplier_code: string; name: string }>).map((supplier) => ({
+    code: supplier.supplier_code,
+    id: supplier.id,
+    name: supplier.name,
+  }));
+}
+
 export default async function SettingsWarehousesPage({
   searchParams,
 }: SettingsWarehousesPageProps) {
   const session = await requireAppRole("admin");
-  const warehouses = await getWarehousesWithCounts(session.organizationId);
+  const [warehouses, productModeItems, suppliers] = await Promise.all([
+    getWarehousesWithCounts(session.organizationId),
+    getWarehouseProductModeItems(session.organizationId),
+    getWarehouseSupplierOptions(session.organizationId),
+  ]);
   const params = await searchParams;
   const searchTerm = params.q?.trim() ?? "";
   const normalizedSearch = searchTerm.toLocaleLowerCase("th");
@@ -211,7 +341,7 @@ export default async function SettingsWarehousesPage({
       </Link>
 
       <div className="mx-auto flex w-full max-w-[1024px] flex-col gap-8 animate-fade-in">
-        <WarehouseListPanel warehouses={filteredWarehouses} />
+        <WarehouseListPanel products={productModeItems} suppliers={suppliers} warehouses={filteredWarehouses} />
       </div>
 
       {params.create === "1" ? <WarehouseForm returnHref="/settings/warehouses" /> : null}

@@ -197,15 +197,45 @@ function createZip(files: Array<{ name: string; content: string }>) {
 
 function buildXlsxBlob(products: SettingsProduct[]) {
   const rows = [
-    ["รหัสสินค้า", "ชื่อสินค้า", "หน่วย", "ต้นทุน", "สถานะ"],
+    [
+      "SKU",
+      "ชื่อสินค้า",
+      "หน่วยหลัก",
+      "ราคาทุน",
+      "จำนวนสต็อก",
+      "ผู้ขาย",
+      "หมวดหมู่",
+      "แบรนด์",
+      "ชื่อในใบจัดของ",
+      "คำอธิบาย",
+      "สถานะ",
+      "หน่วยขาย",
+      "อัตราต่อหน่วยหลัก",
+      "ขั้นต่ำ",
+      "เพิ่มทีละ",
+      "โหมดต้นทุนหน่วยขาย",
+      "ต้นทุนหน่วยขาย",
+    ],
     ...products.map((product) => {
       const defaultUnit = product.saleUnits.find((unit) => unit.isDefault) ?? product.saleUnits[0];
       return [
         product.sku,
         product.name,
         product.baseUnit,
-        defaultUnit?.effectiveCostPrice ?? "",
-        product.isActive ? "พร้อมขาย" : "ไม่พร้อมขาย",
+        product.costPrice,
+        product.stockQuantity,
+        product.supplierName ?? "",
+        product.category || product.categoryNames[0] || "",
+        product.brand ?? "",
+        product.packingListName ?? "",
+        product.description ?? "",
+        product.isActive ? "พร้อมขาย" : "ปิดขาย",
+        defaultUnit?.label ?? product.baseUnit,
+        defaultUnit?.baseUnitQuantity ?? 1,
+        defaultUnit?.minOrderQty ?? 1,
+        defaultUnit?.stepOrderQty ?? "",
+        defaultUnit?.costMode ?? "derived",
+        defaultUnit?.costMode === "fixed" ? (defaultUnit.fixedCostPrice ?? "") : "",
       ];
     }),
   ];
