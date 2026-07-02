@@ -7,6 +7,7 @@ import {
   normalizeSaleUnitCostMode,
   type SaleUnitCostMode,
 } from "@/lib/products/sale-unit-cost";
+import { sortProductsByCategory } from "@/lib/products/sort-by-category";
 
 
 export type StockProductOption = {
@@ -328,11 +329,19 @@ export const getStockDashboardData = cache(
             .range(movementOffset, movementOffset + movementLimit - 1)
         : Promise.resolve({ data: [], error: null });
 
-    const [productsResult, imagesResult, saleUnitsResult, movementsResult, suppliersResult, warehouseStocksResult] = await Promise.all([
+    const [
+      productsResult,
+      imagesResult,
+      saleUnitsResult,
+      movementsResult,
+      suppliersResult,
+      warehouseStocksResult,
+      categoriesResult,
+    ] = await Promise.all([
       admin.from("products")
         .select(`
           id, sku, name, cost_price, stock_quantity, reserved_quantity, unit, is_active, display_order, metadata,
-          product_category_items(product_categories(name))
+          product_category_items(product_categories(id, name))
         `)
         .eq("organization_id", organizationId)
         .order("display_order", { ascending: true })
@@ -356,6 +365,9 @@ export const getStockDashboardData = cache(
         .from("product_warehouse_stocks")
         .select("product_id, warehouse_id, stock_quantity, reserved_quantity")
         .eq("organization_id", organizationId),
+      admin.from("product_categories")
+        .select("id, sort_order")
+        .eq("organization_id", organizationId),
     ]);
 
     const errors = [
@@ -363,6 +375,7 @@ export const getStockDashboardData = cache(
       imagesResult.error,
       saleUnitsResult.error,
       movementsResult.error,
+      categoriesResult.error,
     ].filter(Boolean);
 
     if (errors.length > 0) {
@@ -387,6 +400,7 @@ export const getStockDashboardData = cache(
     const movements = (movementsResult.data ?? []) as MovementRow[];
     const suppliers = (suppliersResult.data ?? []) as SupplierRow[];
     const warehouseStocks = warehouseStocksResult.error ? [] : (warehouseStocksResult.data ?? []);
+    const categories = (categoriesResult.data ?? []) as Array<{ id: string; sort_order: number | string }>;
 
     const imageMap = new Map<string, string>();
     for (const image of images) {
@@ -410,7 +424,7 @@ export const getStockDashboardData = cache(
       warehouseStockMap.set(stock.product_id, current);
     }
 
-    const normalizedProducts = products.map((product) => {
+    const mappedProducts = products.map((product) => {
       const baseCostPrice = Number(product.cost_price);
       const productSaleUnits = (saleUnitMap.get(product.id) ?? [])
         .toSorted((a, b) => Number(a.sort_order) - Number(b.sort_order))
@@ -428,9 +442,15 @@ export const getStockDashboardData = cache(
           };
         });
 
+      const categoryIds = (product.product_category_items ?? [])
+        .map((item) => (item as unknown as { product_categories?: { id: string } | null })?.product_categories?.id)
+        .filter(Boolean) as string[];
+
       return {
         costPrice: baseCostPrice,
         displayOrder: Number(product.display_order ?? 0),
+        display_order: product.display_order !== null ? Number(product.display_order) : null,
+        categoryIds,
         id: product.id,
         imageUrl: imageMap.get(product.id) ?? null,
         categoryName: product.product_category_items?.[0]?.product_categories?.name ?? null,
@@ -448,12 +468,10 @@ export const getStockDashboardData = cache(
         sku: product.sku,
         unit: product.unit,
       };
-    }).toSorted((left, right) => {
-      if (left.displayOrder !== right.displayOrder) {
-        return left.displayOrder - right.displayOrder;
-      }
-      return left.sku.localeCompare(right.sku, "th");
     });
+
+    const categorySortList = categories.map((c) => ({ id: c.id, sortOrder: Number(c.sort_order) }));
+    const normalizedProducts = sortProductsByCategory(mappedProducts, categorySortList);
 
     return {
       lowStockCount: normalizedProducts.reduce((total, product) => {

@@ -640,6 +640,64 @@ async function fetchSettingsData(organizationId: string): Promise<SettingsData> 
     customersByVehicleId.set(vehicleId, current);
   }
 
+  const sortedProducts = sortProductsByCategory(
+    products.map((product) => {
+      const meta = (product.metadata ?? {}) as Record<string, string>;
+      const categoryNames = categoryNamesByProductId.get(product.id) ?? [];
+      const productKind: SettingsProduct["productKind"] =
+        product.product_kind === "stock" ? "stock" : "made_to_order";
+      return {
+        brand: meta.brand ?? "",
+        category: categoryNames.join(", ") || meta.category || "",
+        categoryIds: categoryIdsByProductId.get(product.id) ?? [],
+        categoryNames,
+        costPrice: Number(product.cost_price),
+        description: meta.description ?? "",
+        id: product.id,
+        imageUrls: imageMap.get(product.id) ?? [],
+        isActive: product.is_active,
+        name: product.name,
+        packingListBrand: meta.packing_list_brand ?? "",
+        packingListIcon: meta.packing_list_icon ?? "",
+        packingListName: meta.packing_list_name ?? "",
+        productKind,
+        pricingCount: productPricingCount.get(product.id) ?? 0,
+        saleUnits:
+          saleUnitMap.get(product.id)?.toSorted((left, right) => {
+            if (left.sortOrder !== right.sortOrder) {
+              return left.sortOrder - right.sortOrder;
+            }
+
+            if (left.isDefault !== right.isDefault) {
+              return left.isDefault ? -1 : 1;
+            }
+
+            return left.label.localeCompare(right.label, "th");
+          }).map((u) => ({
+            baseUnitQuantity: u.baseUnitQuantity,
+            costMode: u.costMode,
+            effectiveCostPrice: u.effectiveCostPrice,
+            fixedCostPrice: u.fixedCostPrice,
+            id: u.id,
+            imageUrl: imageMap.get(product.id)?.[0] ?? null,
+            isDefault: u.isDefault,
+            label: u.label,
+            minOrderQty: u.minOrderQty,
+            sortOrder: u.sortOrder,
+            stepOrderQty: u.stepOrderQty,
+          })) ?? [],
+        sku: product.sku,
+        stockQuantity: Number(product.stock_quantity),
+        supplierId: product.supplier_id ?? null,
+        supplierName: product.supplier_id ? (supplierMap.get(product.supplier_id) ?? null) : null,
+        baseUnit: product.unit,
+      };
+    }),
+    categories.map((c) => ({ id: c.id, sortOrder: Number(c.sort_order) })),
+  );
+
+  const productIndexById = new Map(sortedProducts.map((p, index) => [p.id, index]));
+
   return {
     customers: customers.map((customer) => {
       return {
@@ -706,61 +764,7 @@ async function fetchSettingsData(organizationId: string): Promise<SettingsData> 
         productIds: productIdsByCategoryId.get(category.id) ?? [],
         sortOrder: Number(category.sort_order),
       })),
-    products: sortProductsByCategory(
-      products.map((product) => {
-        const meta = (product.metadata ?? {}) as Record<string, string>;
-        const categoryNames = categoryNamesByProductId.get(product.id) ?? [];
-        const productKind: SettingsProduct["productKind"] =
-          product.product_kind === "stock" ? "stock" : "made_to_order";
-        return {
-          brand: meta.brand ?? "",
-          category: categoryNames.join(", ") || meta.category || "",
-          categoryIds: categoryIdsByProductId.get(product.id) ?? [],
-          categoryNames,
-          costPrice: Number(product.cost_price),
-          description: meta.description ?? "",
-          id: product.id,
-          imageUrls: imageMap.get(product.id) ?? [],
-          isActive: product.is_active,
-          name: product.name,
-          packingListBrand: meta.packing_list_brand ?? "",
-          packingListIcon: meta.packing_list_icon ?? "",
-          packingListName: meta.packing_list_name ?? "",
-          productKind,
-          pricingCount: productPricingCount.get(product.id) ?? 0,
-          saleUnits:
-            saleUnitMap.get(product.id)?.toSorted((left, right) => {
-              if (left.sortOrder !== right.sortOrder) {
-                return left.sortOrder - right.sortOrder;
-              }
-
-              if (left.isDefault !== right.isDefault) {
-                return left.isDefault ? -1 : 1;
-              }
-
-              return left.label.localeCompare(right.label, "th");
-            }).map((u) => ({
-              baseUnitQuantity: u.baseUnitQuantity,
-              costMode: u.costMode,
-              effectiveCostPrice: u.effectiveCostPrice,
-              fixedCostPrice: u.fixedCostPrice,
-              id: u.id,
-              imageUrl: imageMap.get(product.id)?.[0] ?? null,
-              isDefault: u.isDefault,
-              label: u.label,
-              minOrderQty: u.minOrderQty,
-              sortOrder: u.sortOrder,
-              stepOrderQty: u.stepOrderQty,
-            })) ?? [],
-          sku: product.sku,
-          stockQuantity: Number(product.stock_quantity),
-          supplierId: product.supplier_id ?? null,
-          supplierName: product.supplier_id ? (supplierMap.get(product.supplier_id) ?? null) : null,
-          baseUnit: product.unit,
-        };
-      }),
-      categories.map((c) => ({ id: c.id, sortOrder: Number(c.sort_order) })),
-    ),
+    products: sortedProducts,
     saleUnits: activeSaleUnits.map((saleUnit) => ({
       brand: productMap.get(saleUnit.product_id)?.brand ?? "",
       categoryIds: productMap.get(saleUnit.product_id)?.categoryIds ?? [],
@@ -776,7 +780,14 @@ async function fetchSettingsData(organizationId: string): Promise<SettingsData> 
       productId: saleUnit.product_id,
       productName: productMap.get(saleUnit.product_id)?.name ?? "สินค้าไม่ทราบชื่อ",
       sku: productMap.get(saleUnit.product_id)?.sku ?? "-",
-    })),
+    })).toSorted((left, right) => {
+      const leftIdx = productIndexById.get(left.productId) ?? Number.MAX_SAFE_INTEGER;
+      const rightIdx = productIndexById.get(right.productId) ?? Number.MAX_SAFE_INTEGER;
+      if (leftIdx !== rightIdx) {
+        return leftIdx - rightIdx;
+      }
+      return left.id.localeCompare(right.id);
+    }),
     setupHint:
       categoryErrors.length > 0 && categoryErrors.every((error) => isMissingTableError(error?.message))
         ? "ระบบหมวดหมู่สินค้ายังไม่พร้อมใช้งาน"

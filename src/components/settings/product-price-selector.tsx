@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useTransition } from "react";
 import Image from "next/image";
-import { Check, ChevronRight, Package2, Search, X } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, Package2, Search, X } from "lucide-react";
 import { upsertStoreProductPrice } from "@/app/dashboard/settings/actions";
 import { confirmBelowCostSave, isBelowCostPrice } from "@/components/pricing/price-guard";
 import type { SettingsSaleUnitOption } from "@/lib/settings/admin";
@@ -25,7 +25,7 @@ export function ProductPriceSelectorModal({
   const [selectedCategory, setSelectedCategory] = useState("__all__");
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
   const [selectedBrand, setSelectedBrand] = useState("__all__");
-  const [isDesktopSearchOpen, setIsDesktopSearchOpen] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [selections, setSelections] = useState<Map<string, string>>(new Map());
   const [isPending, startTransition] = useTransition();
 
@@ -91,12 +91,7 @@ export function ProductPriceSelectorModal({
     );
   });
 
-  const skuCollator = new Intl.Collator("th", { numeric: true, sensitivity: "base" });
-  const sorted = [...filtered].sort((a, b) => {
-    const skuComp = skuCollator.compare(a.sku, b.sku);
-    if (skuComp !== 0) return skuComp;
-    return a.productName.localeCompare(b.productName, "th");
-  });
+  const sorted = [...filtered];
 
   const categoryProductCount = useMemo(() => {
     const counts = new Map<string, number>();
@@ -192,10 +187,10 @@ export function ProductPriceSelectorModal({
 
   return (
     <div className="fixed inset-0 z-[80] flex items-end justify-center overflow-x-hidden bg-slate-950/55 p-0 sm:items-center sm:p-4">
-      <div className="relative flex h-[92dvh] w-full max-w-[100vw] min-w-0 flex-col overflow-x-hidden overflow-y-hidden rounded-t-[2rem] bg-white shadow-2xl sm:h-[86dvh] sm:max-w-6xl sm:rounded-[2rem]">
+      <div className="relative flex h-[100dvh] w-full max-w-[100vw] min-w-0 flex-col overflow-x-hidden overflow-y-hidden rounded-none bg-white shadow-2xl sm:h-[86dvh] sm:max-w-6xl sm:rounded-[2rem]">
         {/* Header */}
-        <div className="flex shrink-0 items-center justify-between gap-4 border-b border-[#EA80FC]/70 bg-[#4A148C] px-4 py-2.5 text-white sm:px-8 sm:py-4">
-          <div className="min-w-0 flex-1">
+        <div className="relative flex shrink-0 items-center justify-between gap-4 border-b border-[#EA80FC]/70 bg-[#4A148C] px-4 py-2.5 text-white sm:px-8 sm:py-4">
+          <div className={`min-w-0 flex-1 ${isSearchOpen ? "hidden lg:block" : "block"}`}>
             <p className="text-[10px] font-black uppercase tracking-[0.16em] text-white/70 sm:text-xs">
               เลือกสินค้าเพิ่ม
             </p>
@@ -206,39 +201,61 @@ export function ProductPriceSelectorModal({
               เลือกแล้ว {selections.size.toLocaleString("th-TH")} รายการ
             </p>
           </div>
-          <div className="flex shrink-0 items-center gap-2">
+          <div className="flex shrink-0 items-center gap-2 flex-1 lg:flex-initial justify-end">
             <div
-              className={`hidden items-center overflow-hidden rounded-2xl border border-white/15 bg-white/10 transition-all duration-300 ease-out lg:flex ${
-                isDesktopSearchOpen ? "w-[34rem] opacity-100" : "w-0 border-transparent opacity-0"
+              className={`absolute inset-y-0 left-0 right-0 z-20 flex items-center bg-[#4A148C] px-4 transition-all duration-150 ease-out lg:relative lg:inset-auto lg:z-auto lg:bg-transparent lg:px-0 lg:border lg:border-white/15 lg:bg-white/10 lg:rounded-2xl ${
+                isSearchOpen
+                  ? "translate-x-0 opacity-100 pointer-events-auto lg:w-[34rem] lg:flex-initial lg:opacity-100 lg:px-3 lg:py-2"
+                  : "translate-x-4 opacity-0 pointer-events-none lg:w-0 lg:translate-x-0 lg:opacity-0 lg:border-transparent"
               }`}
             >
-              <Search className="ml-4 h-5 w-5 shrink-0 text-white/80" strokeWidth={2.5} />
+              <button
+                type="button"
+                onClick={() => {
+                  if (isSearchOpen) {
+                    setIsSearchOpen(false);
+                    setSearch("");
+                  }
+                }}
+                disabled={!isSearchOpen}
+                className={`flex items-center justify-center text-white/80 transition-all ${
+                  isSearchOpen ? "cursor-pointer hover:text-white" : "pointer-events-none"
+                } ml-1 sm:ml-4`}
+              >
+                {isSearchOpen ? (
+                  <ChevronLeft className="h-4.5 w-4.5 sm:h-5 sm:w-5 shrink-0" strokeWidth={2.8} />
+                ) : (
+                  <Search className="h-4 w-4 sm:h-5 sm:w-5 shrink-0" strokeWidth={2.5} />
+                )}
+              </button>
               <input
                 type="text"
                 placeholder="ค้นหาสินค้า..."
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
-                className="min-w-0 flex-1 bg-transparent px-3 py-3 text-base font-bold text-white outline-none placeholder:text-white/55"
+                className="min-w-0 flex-1 bg-transparent px-2 py-1 sm:px-3 sm:py-1.5 text-sm sm:text-base font-bold text-white outline-none placeholder:text-white/55"
               />
               {search ? (
                 <button
                   type="button"
                   onClick={() => setSearch("")}
-                  className="mr-3 text-white/70 transition hover:text-white"
+                  className="mr-2 sm:mr-3 text-white/70 transition hover:text-white"
                   aria-label="ล้างคำค้นหา"
                 >
-                  <X className="h-4.5 w-4.5" strokeWidth={2.6} />
+                  <X className="h-4 w-4 sm:h-4.5 sm:w-4.5" strokeWidth={2.6} />
                 </button>
               ) : null}
             </div>
 
             <button
               type="button"
-              onClick={() => setIsDesktopSearchOpen((current) => !current)}
-              className="hidden h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-white/15 bg-white/10 text-white transition active:scale-95 lg:flex"
+              onClick={() => setIsSearchOpen((current) => !current)}
+              className={`${
+                isSearchOpen ? "hidden lg:flex" : "flex"
+              } h-9 w-9 sm:h-11 sm:w-11 shrink-0 items-center justify-center rounded-xl sm:rounded-2xl border border-white/15 bg-white/10 text-white transition active:scale-95`}
               aria-label="ค้นหาสินค้า"
             >
-              <Search className="h-5 w-5" strokeWidth={2.7} />
+              <Search className="h-4 w-4 sm:h-5 sm:w-5" strokeWidth={2.7} />
             </button>
 
             <button
@@ -252,68 +269,20 @@ export function ProductPriceSelectorModal({
           </div>
         </div>
 
-        {/* Search and filters */}
-        <div className="shrink-0 border-b border-[#EA80FC]/15 bg-white">
-          <div className="px-4 py-3.5 sm:px-8 lg:hidden">
-            <div className="flex items-center gap-3 rounded-2xl border border-[#EA80FC]/35 bg-[#F3E5F5]/25 px-4 py-3 transition focus-within:border-[#4A148C] focus-within:ring-2 focus-within:ring-[#4A148C]/10">
-              <Search className="h-5 w-5 shrink-0 text-[#4A148C]" strokeWidth={2.4} />
-              <input
-                type="text"
-                placeholder="ค้นหาสินค้า..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="min-w-0 flex-1 bg-transparent text-base font-semibold text-[#4A148C] outline-none placeholder:text-[#4A148C]/50"
-              />
-              {search ? (
-                <button
-                  type="button"
-                  onClick={() => setSearch("")}
-                  className="text-[#4A148C]/70 transition hover:text-[#4A148C]"
-                  aria-label="ล้างคำค้นหา"
-                >
-                  <X className="h-4.5 w-4.5" strokeWidth={2.5} />
-                </button>
-              ) : null}
-            </div>
-          </div>
-
-          {categoryOptions.length > 0 ? (
-            <div className="border-t border-[#EA80FC]/15 bg-white px-4 sm:px-8 lg:hidden">
-              <div className="no-scrollbar relative flex gap-6 overflow-x-auto pb-0.5 pt-3.5 scroll-smooth">
-                {[{ id: "__all__", name: "ทุกหมวดหมู่" }, ...categoryOptions].map((option) => {
-                  const isActive = selectedCategory === option.id;
-
-                  return (
-                    <button
-                      key={option.id}
-                      type="button"
-                      onClick={() => selectCategory(option.id)}
-                      className={`shrink-0 whitespace-nowrap pb-2.5 text-sm font-black tracking-wide underline decoration-[3px] underline-offset-[11px] transition-all ${
-                        isActive
-                          ? "scale-[1.03] text-[#4A148C] decoration-[#4A148C]"
-                          : "text-slate-400 decoration-transparent hover:text-slate-600"
-                      }`}
-                    >
-                      {option.name}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          ) : null}
-
-          {brandOptions.length > 0 ? (
-            <div className="border-t border-[#EA80FC]/15 bg-white px-4 sm:px-8 lg:hidden">
-              <div className="no-scrollbar flex gap-6 overflow-x-auto pb-0.5 pt-3.5">
-                {[{ id: "__all__", name: "ทุกแบรนด์" }, ...brandOptions.map((brand) => ({ id: brand, name: brand }))].map(
-                  (option) => {
-                    const isActive = selectedBrand === option.id;
+        {/* Category & Brand filters on Mobile */}
+        {(categoryOptions.length > 0 || brandOptions.length > 0) && (
+          <div className="shrink-0 border-b border-[#EA80FC]/15 bg-white lg:hidden">
+            {categoryOptions.length > 0 && (
+              <div className="px-4 sm:px-8">
+                <div className="no-scrollbar relative flex gap-6 overflow-x-auto pb-0.5 pt-3.5 scroll-smooth">
+                  {[{ id: "__all__", name: "ทุกหมวดหมู่" }, ...categoryOptions].map((option) => {
+                    const isActive = selectedCategory === option.id;
 
                     return (
                       <button
                         key={option.id}
                         type="button"
-                        onClick={() => setSelectedBrand(option.id)}
+                        onClick={() => selectCategory(option.id)}
                         className={`shrink-0 whitespace-nowrap pb-2.5 text-sm font-black tracking-wide underline decoration-[3px] underline-offset-[11px] transition-all ${
                           isActive
                             ? "scale-[1.03] text-[#4A148C] decoration-[#4A148C]"
@@ -323,12 +292,39 @@ export function ProductPriceSelectorModal({
                         {option.name}
                       </button>
                     );
-                  },
-                )}
+                  })}
+                </div>
               </div>
-            </div>
-          ) : null}
-        </div>
+            )}
+
+            {brandOptions.length > 0 && (
+              <div className="border-t border-[#EA80FC]/15 bg-white px-4 sm:px-8">
+                <div className="no-scrollbar flex gap-6 overflow-x-auto pb-0.5 pt-3.5">
+                  {[{ id: "__all__", name: "ทุกแบรนด์" }, ...brandOptions.map((brand) => ({ id: brand, name: brand }))].map(
+                    (option) => {
+                      const isActive = selectedBrand === option.id;
+
+                      return (
+                        <button
+                          key={option.id}
+                          type="button"
+                          onClick={() => setSelectedBrand(option.id)}
+                          className={`shrink-0 whitespace-nowrap pb-2.5 text-sm font-black tracking-wide underline decoration-[3px] underline-offset-[11px] transition-all ${
+                            isActive
+                              ? "scale-[1.03] text-[#4A148C] decoration-[#4A148C]"
+                              : "text-slate-400 decoration-transparent hover:text-slate-600"
+                          }`}
+                        >
+                          {option.name}
+                        </button>
+                      );
+                    },
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Desktop category navigation and product table */}
         <div className="hidden min-h-0 flex-1 grid-cols-[20%_80%] bg-white lg:grid">
@@ -661,12 +657,12 @@ export function ProductPriceSelectorModal({
                       }`}
                     >
                       <div className="overflow-hidden">
-                        <div className="bg-[#4A148C]/15 px-3 pb-4 pt-2 md:px-4 md:pb-4 md:pt-3">
-                          <label className="mb-2 block text-[12px] font-black uppercase tracking-wide text-slate-600 md:text-[14px] md:tracking-wider">
+                        <div className="bg-[#4A148C]/10 px-3 pb-3 pt-1.5 md:px-4 md:pb-3.5 md:pt-2">
+                          <label className="mb-1 block text-[11px] font-black uppercase tracking-wide text-slate-600 md:text-[13px] md:tracking-wider">
                             ราคาขาย (บาท)
                           </label>
                           <div className="relative">
-                            <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-base font-black text-slate-400">
+                            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm font-black text-slate-400">
                               ฿
                             </span>
                             <input
@@ -676,7 +672,7 @@ export function ProductPriceSelectorModal({
                               onChange={(e) => updatePrice(unit.id, e.target.value)}
                               onClick={(e) => e.stopPropagation()}
                               placeholder="0.00"
-                              className={`w-full rounded-xl border py-3 pl-9 pr-4 text-lg font-black outline-none transition-all focus:ring-4 focus:ring-[#4A148C]/10 ${
+                              className={`w-full rounded-lg border py-2 pl-7 pr-3 text-sm font-black outline-none transition-all focus:ring-4 focus:ring-[#4A148C]/10 ${
                                 isBelowCost
                                   ? "border-amber-300 bg-amber-50 text-amber-700"
                                   : "border-slate-200 bg-slate-50 text-slate-900 focus:border-[#4A148C] focus:bg-white"
@@ -685,7 +681,7 @@ export function ProductPriceSelectorModal({
                           </div>
 
                           {isBelowCost && (
-                            <div className="mt-2 flex items-center gap-1.5 rounded-lg bg-[#FF0000] px-2 py-1.5 text-[10px] font-black text-white">
+                            <div className="mt-1.5 flex items-center gap-1.5 rounded-md bg-[#FF0000] px-2 py-1 text-[10px] font-black text-white">
                               ⚠️ ต่ำกว่าทุน (฿{unit.effectiveCostPrice.toLocaleString("th-TH")})
                             </div>
                           )}
@@ -700,12 +696,12 @@ export function ProductPriceSelectorModal({
         </div>
 
         {/* Footer */}
-        <div className="shrink-0 border-t border-slate-200 bg-white p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-[0_-8px_20px_rgba(0,0,0,0.03)]">
+        <div className="shrink-0 border-t border-slate-200 bg-white px-4 py-3.5 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-[0_-8px_20px_rgba(0,0,0,0.03)]">
           <div className="mx-auto flex max-w-2xl gap-3">
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 rounded-2xl border border-slate-200 py-4 text-sm font-bold text-slate-500 transition hover:bg-slate-50 active:scale-95"
+              className="flex-1 rounded-2xl border border-slate-200 py-3 text-sm font-bold text-slate-500 transition hover:bg-slate-50 active:scale-95"
             >
               ยกเลิก
             </button>
@@ -713,7 +709,7 @@ export function ProductPriceSelectorModal({
               type="button"
               onClick={handleSave}
               disabled={isPending || selections.size === 0}
-              className="flex-[2] rounded-2xl bg-[#4A148C] py-4 text-sm font-bold text-white shadow-xl shadow-[#4A148C]/20 transition enabled:hover:bg-[#4A148C] enabled:active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
+              className="flex-[2] rounded-2xl bg-[#4A148C] py-3 text-sm font-bold text-white shadow-xl shadow-[#4A148C]/20 transition enabled:hover:bg-[#4A148C] enabled:active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
             >
               {isPending ? "กำลังบันทึก..." : `บันทึก ${selections.size} รายการ`}
             </button>

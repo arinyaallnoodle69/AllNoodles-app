@@ -1,5 +1,5 @@
 import { requireAppRole } from "@/lib/auth/authorization";
-import { getSettingsDataFresh } from "@/lib/settings/admin";
+import { getSettingsData } from "@/lib/settings/admin";
 import { getActiveWarehouses } from "@/lib/warehouses";
 import { SettingsCustomersPageClient } from "./settings-customers-client";
 
@@ -19,7 +19,7 @@ export default async function SettingsCustomersPage({
 }: SettingsCustomersPageProps) {
   const session = await requireAppRole("admin");
   const [data, warehouses] = await Promise.all([
-    getSettingsDataFresh(session.organizationId),
+    getSettingsData(session.organizationId),
     getActiveWarehouses(session.organizationId),
   ]);
   const params = await searchParams;
