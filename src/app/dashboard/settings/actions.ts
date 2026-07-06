@@ -1474,25 +1474,32 @@ export async function deleteProduct(formData: FormData): Promise<{ success: bool
     return { success: false, error: "ไม่พบรหัสสินค้า" };
   }
 
-  const { error } = await admin.from("products").delete().eq("id", productId);
-  
+  const { data: product, error: lookupError } = await admin
+    .from("products")
+    .select("metadata")
+    .eq("organization_id", session.organizationId)
+    .eq("id", productId)
+    .maybeSingle();
+
+  if (lookupError) {
+    return { success: false, error: lookupError.message };
+  }
+
+  if (!product) {
+    return { success: false, error: "ไม่พบสินค้าที่ต้องการลบ" };
+  }
+
+  const currentMetadata = typeof product.metadata === "object" && product.metadata !== null ? product.metadata : {};
+  const { error } = await admin
+    .from("products")
+    .update({
+      is_active: false,
+      metadata: { ...currentMetadata, deleted: true },
+    })
+    .eq("organization_id", session.organizationId)
+    .eq("id", productId);
+
   if (error) {
-    if (error.code === "23503") {
-      // Soft Delete Fallback: Cannot hard delete due to history, so we hide it instead.
-      const { data: product } = await admin.from("products").select("metadata").eq("id", productId).single();
-      const currentMetadata = typeof product?.metadata === "object" && product?.metadata !== null ? product.metadata : {};
-      
-      const { error: updateError } = await admin.from("products").update({
-        metadata: { ...currentMetadata, deleted: true }
-      }).eq("id", productId);
-
-      if (updateError) {
-        return { success: false, error: updateError.message };
-      }
-
-      revalidateSettingsSurfaces(session.organizationId);
-      return { success: true };
-    }
     return { success: false, error: error.message };
   }
 

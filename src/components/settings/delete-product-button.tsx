@@ -9,12 +9,13 @@ import { useRouter } from "next/navigation";
 type DeleteProductButtonProps = {
   formId: string;
   iconOnly?: boolean;
+  productId?: string;
   productName: string;
   triggerClassName?: string;
   id?: string;
 };
 
-export function DeleteProductButton({ formId, iconOnly = false, productName, triggerClassName, id }: DeleteProductButtonProps) {
+export function DeleteProductButton({ formId, iconOnly = false, productId, productName, triggerClassName, id }: DeleteProductButtonProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [isOpen, setIsOpen] = useState(false);
@@ -28,9 +29,14 @@ export function DeleteProductButton({ formId, iconOnly = false, productName, tri
 
   const confirmDelete = async () => {
     const form = document.getElementById(formId) as HTMLFormElement | null;
-    if (!form) return;
-
-    const formData = new FormData(form);
+    const formData = form ? new FormData(form) : new FormData();
+    if (productId && !formData.get("productId")) {
+      formData.set("productId", productId);
+    }
+    if (!formData.get("productId")) {
+      setErrorMsg("ไม่พบรหัสสินค้า กรุณาปิดหน้าต่างแล้วลองใหม่");
+      return;
+    }
     
     startTransition(async () => {
       setErrorMsg(null);

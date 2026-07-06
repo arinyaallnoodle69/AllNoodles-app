@@ -167,15 +167,32 @@ export async function updateVehicleAction(
   };
 }
 
-export async function deleteVehicleAction(vehicleId: string): Promise<void> {
+export async function deleteVehicleAction(vehicleId: string): Promise<{ error?: string }> {
   const session = await requireAppRole("admin");
   const admin = getSupabaseAdmin();
 
-  await admin
+  const { data: vehicle, error: lookupError } = await admin
+    .from("vehicles")
+    .select("id")
+    .eq("id", vehicleId)
+    .eq("organization_id", session.organizationId)
+    .maybeSingle();
+
+  if (lookupError || !vehicle) {
+    return { error: "ไม่พบรถที่ต้องการลบ" };
+  }
+
+  const { error } = await admin
     .from("vehicles")
     .delete()
     .eq("id", vehicleId)
     .eq("organization_id", session.organizationId);
 
+  if (error) {
+    console.error("Delete vehicle failed:", error);
+    return { error: "ลบรถไม่สำเร็จ กรุณาลองอีกครั้ง" };
+  }
+
   revalidateVehiclePaths();
+  return {};
 }

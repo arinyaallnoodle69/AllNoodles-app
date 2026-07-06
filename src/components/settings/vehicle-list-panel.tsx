@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { IdCard, PencilLine, Store, Trash2, Truck, UserRound, UsersRound, X } from "lucide-react";
 import { deleteVehicleAction } from "@/app/settings/vehicles/actions";
@@ -38,6 +39,24 @@ function CustomerCountButton({
 }
 
 function ActionButtons({ vehicleId }: { vehicleId: string }) {
+  const router = useRouter();
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  async function handleDelete() {
+    if (!window.confirm("ต้องการลบรถคันนี้ใช่ไหม?")) {
+      return;
+    }
+
+    setIsDeleting(true);
+    const result = await deleteVehicleAction(vehicleId);
+    if (result.error) {
+      alert(result.error);
+    } else {
+      router.refresh();
+    }
+    setIsDeleting(false);
+  }
+
   return (
     <div className="flex items-center gap-2">
       <Link
@@ -48,15 +67,15 @@ function ActionButtons({ vehicleId }: { vehicleId: string }) {
         แก้ไข
       </Link>
 
-      <form action={deleteVehicleAction.bind(null, vehicleId)}>
-        <button
-          type="submit"
-          className="inline-flex items-center gap-1 rounded-lg border border-red-200 bg-white px-3 py-1.5 text-xs font-black text-red-600 transition hover:border-red-300 hover:bg-red-50 active:scale-95"
-        >
+      <button
+        type="button"
+        onClick={handleDelete}
+        disabled={isDeleting}
+        className="inline-flex items-center gap-1 rounded-lg border border-red-200 bg-white px-3 py-1.5 text-xs font-black text-red-600 transition hover:border-red-300 hover:bg-red-50 active:scale-95 disabled:cursor-not-allowed disabled:opacity-60"
+      >
           <Trash2 className="h-3.5 w-3.5" strokeWidth={2.2} />
           ลบ
-        </button>
-      </form>
+      </button>
     </div>
   );
 }

@@ -506,6 +506,32 @@ export function ProductCategoryManager({
     });
   }
 
+  function handleDeleteCategory(category: SettingsProductCategory) {
+    const isConfirmed = window.confirm(
+      `ต้องการลบหมวดหมู่ "${category.name}" ใช่หรือไม่`,
+    );
+    if (!isConfirmed) return;
+
+    startTransition(async () => {
+      const result = await deleteProductCategory(category.id);
+
+      if (!result.success) {
+        setFeedback({ tone: "error", message: result.error });
+        return;
+      }
+
+      setFeedback({ tone: "success", message: "ลบหมวดหมู่แล้ว" });
+      setIsCreating(categories.length <= 1);
+      if (selectedCategoryId === category.id) {
+        setSelectedCategoryId(null);
+        setDraftName("");
+        setDraftProductIds([]);
+        setProductSearch("");
+      }
+      router.refresh();
+    });
+  }
+
   return (
     <section className="overflow-hidden border border-[#EA80FC]/20 bg-white shadow-[0_18px_55px_rgba(74,20,140,0.08)] sm:rounded-[1.5rem]">
       <header className="border-b border-[#EA80FC]/20 bg-white px-4 py-5 sm:px-6 lg:px-8">
@@ -707,6 +733,15 @@ export function ProductCategoryManager({
                           >
                             แก้ชื่อ
                             <PencilLine className="h-4 w-4 text-[#4A148C]" strokeWidth={2.4} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteCategory(category)}
+                            disabled={isPending}
+                            className="inline-flex items-center gap-2 text-sm font-black text-rose-700 underline decoration-2 decoration-rose-200 underline-offset-4 disabled:opacity-50"
+                          >
+                            ลบ
+                            <Trash2 className="h-4 w-4" strokeWidth={2.4} />
                           </button>
                         </div>
                       </div>

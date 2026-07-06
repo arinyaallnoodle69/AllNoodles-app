@@ -243,6 +243,7 @@ function MobileCard({
         <DeleteProductButton
           id={`delete-trigger-${product.id}`}
           formId={deleteFormId}
+          productId={product.id}
           productName={product.name}
         />
       </div>
@@ -447,6 +448,7 @@ function SortableDesktopRow({
           <DeleteProductButton
             id={`table-delete-trigger-${product.id}`}
             formId={deleteFormId}
+            productId={product.id}
             productName={product.name}
           />
         </div>
