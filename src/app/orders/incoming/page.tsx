@@ -15,6 +15,7 @@ import { getCustomersForOrder, getProductsForOrder, getVehiclesForOrder } from "
 import { getDeliveryList } from "@/lib/delivery/delivery-list";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { getActiveWarehouses } from "@/lib/warehouses";
+import { buildVehicleTransferDates } from "@/lib/orders/vehicle-transfer";
 import { IncomingOrdersDeliveryActions } from "@/components/orders/incoming-orders-delivery-actions";
 import type {
   PackingListSummaryProduct,
@@ -72,6 +73,7 @@ type IncomingOrderSummaryItemRow = {
   products: {
     name: string;
     sku: string;
+    display_order: number | null;
   } | null;
 };
 
@@ -100,7 +102,7 @@ async function getOrderSummaryItems(
             product_id,
             quantity,
             sale_unit_label,
-            products!inner(name, sku)
+            products!inner(name, sku, display_order)
           `,
         )
         .in("order_id", chunk),
@@ -219,6 +221,9 @@ export default async function IncomingOrdersPage({ searchParams }: IncomingOrder
   const productImageById = new Map(products.map((product) => [product.id, product.imageUrl ?? null]));
 
   const activeOrders = orders.filter((order) => order.status !== "cancelled");
+  const vehicleTransferDates = session.role === "admin"
+    ? buildVehicleTransferDates(activeOrders, vehicles, orderDate, endDate)
+    : [];
 
   let baseFilteredOrders =
     selectedCustomerIds.length > 0
@@ -263,11 +268,15 @@ export default async function IncomingOrdersPage({ searchParams }: IncomingOrder
   const summaryProductMap = new Map<string, PackingListSummaryProduct>();
   const summaryStoreMap = new Map<string, PackingListSummaryStore>();
 
+  const vehicleSortOrderMap = new Map(vehicles.map((v, idx) => [v.id, idx]));
+  const customerSortOrderMap = new Map(customers.map((c, idx) => [c.id, idx]));
+
   for (const order of filteredOrders) {
     const orderItems = itemsByOrderId.get(order.id) ?? [];
     const storeKey = `${order.customerId}_${order.orderDate}_${order.vehicleId ?? "unassigned"}`;
     const existingStore = summaryStoreMap.get(storeKey) ?? {
       id: storeKey,
+      customerId: order.customerId,
       customerCode: order.customerCode,
       customerName: order.customerName,
       date: order.orderDate,
@@ -300,6 +309,7 @@ export default async function IncomingOrdersPage({ searchParams }: IncomingOrder
           imageUrl: productImageById.get(item.product_id) ?? null,
           vehicleId: order.vehicleId,
           vehicleName: order.vehicleName,
+          display_order: item.products.display_order ?? undefined,
         });
       }
 
@@ -313,11 +323,16 @@ export default async function IncomingOrdersPage({ searchParams }: IncomingOrder
           name: item.products.name,
           unit,
           quantity,
+          display_order: item.products.display_order ?? undefined,
         });
       }
     }
 
     const storeItems = Array.from(storeItemMap.values()).sort((a, b) => {
+      const orderA = a.display_order ?? 0;
+      const orderB = b.display_order ?? 0;
+      if (orderA !== orderB) return orderA - orderB;
+
       const skuCompare = a.sku.localeCompare(b.sku, "th");
       if (skuCompare !== 0) return skuCompare;
       return a.name.localeCompare(b.name, "th");
@@ -330,6 +345,10 @@ export default async function IncomingOrdersPage({ searchParams }: IncomingOrder
   }
 
   const summaryProducts = Array.from(summaryProductMap.values()).sort((a, b) => {
+    const orderA = a.display_order ?? 0;
+    const orderB = b.display_order ?? 0;
+    if (orderA !== orderB) return orderA - orderB;
+
     const skuCompare = a.sku.localeCompare(b.sku, "th");
     if (skuCompare !== 0) return skuCompare;
     return a.name.localeCompare(b.name, "th");
@@ -338,8 +357,15 @@ export default async function IncomingOrdersPage({ searchParams }: IncomingOrder
   const summaryStores = Array.from(summaryStoreMap.values()).sort((a, b) => {
     const dateCompare = a.date.localeCompare(b.date);
     if (dateCompare !== 0) return dateCompare;
-    const vehicleCompare = (a.vehicleName ?? "").localeCompare(b.vehicleName ?? "", "th");
-    if (vehicleCompare !== 0) return vehicleCompare;
+
+    const indexA = a.vehicleId ? vehicleSortOrderMap.get(a.vehicleId) ?? Infinity : Infinity;
+    const indexB = b.vehicleId ? vehicleSortOrderMap.get(b.vehicleId) ?? Infinity : Infinity;
+    if (indexA !== indexB) return indexA - indexB;
+
+    const custIndexA = a.customerId ? customerSortOrderMap.get(a.customerId) ?? Infinity : Infinity;
+    const custIndexB = b.customerId ? customerSortOrderMap.get(b.customerId) ?? Infinity : Infinity;
+    if (custIndexA !== custIndexB) return custIndexA - custIndexB;
+
     return `${a.customerCode} ${a.customerName}`.localeCompare(`${b.customerCode} ${b.customerName}`, "th");
   });
 
@@ -472,7 +498,7 @@ export default async function IncomingOrdersPage({ searchParams }: IncomingOrder
     ]),
   );
 
-  const mobileMappedOrders = filteredOrders.map((order) => {
+  const mobileMappedOrders = baseFilteredOrders.map((order) => {
     const deliveryNumbers = deliveryMap.get(`${order.customerId}_${order.orderDate}`);
     const isBilled = billedDeliveryByCustomerDate[`${order.customerId}_${order.orderDate}`] ?? false;
     return {
@@ -708,6 +734,7 @@ export default async function IncomingOrdersPage({ searchParams }: IncomingOrder
                   orders={mobileMappedOrders}
                   vehicles={vehicles}
                   currentListDate={orderDate}
+                  vehicleTransferDates={vehicleTransferDates}
                   searchTerm={searchTerm}
                   selectedCustomerIds={selectedCustomerIds}
                 />
@@ -721,10 +748,11 @@ export default async function IncomingOrdersPage({ searchParams }: IncomingOrder
                     initialExpandedDetail={filteredExpandedDetail}
                     initialExpandedOrderId={expandedOrderId}
                     orderDate={orderDate}
-                    orders={filteredOrders}
+                    orders={baseFilteredOrders}
                     searchTerm={searchTerm}
                     selectedCustomerIds={selectedCustomerIds}
                     vehicles={vehicles}
+                    vehicleTransferDates={vehicleTransferDates}
                   />
                 </div>
               </div>

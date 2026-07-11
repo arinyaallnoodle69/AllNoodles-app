@@ -112,7 +112,7 @@ export default async function SettingsVehiclesPage({
         <Plus className="h-7 w-7" strokeWidth={2.6} />
       </Link>
 
-      <div className="mx-auto flex w-full max-w-[1024px] flex-col gap-8">
+      <div className="flex w-full flex-col gap-8">
         <VehicleListPanel vehicles={filteredVehicles} />
       </div>
 

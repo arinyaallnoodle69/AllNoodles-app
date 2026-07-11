@@ -1,7 +1,10 @@
 import Link from "next/link";
 
+export type CustomerSettingsTab = "customers" | "pricing";
+
 type CustomerSettingsTabsProps = {
-  current: "customers" | "pricing";
+  current: CustomerSettingsTab;
+  onTabChange?: (tab: CustomerSettingsTab) => void;
 };
 
 const tabs = [
@@ -11,21 +14,30 @@ const tabs = [
     label: "รายชื่อร้านค้า",
   },
   {
-    href: "/settings/customers/pricing",
+    href: "/settings/customers?tab=pricing",
     key: "pricing",
     label: "ผูกราคาสินค้า",
   },
 ] as const;
 
-export function CustomerSettingsTabs({ current }: CustomerSettingsTabsProps) {
+export function CustomerSettingsTabs({ current, onTabChange }: CustomerSettingsTabsProps) {
   return (
     <div className="flex rounded-2xl border border-slate-200 bg-white p-1 shadow-[0_12px_28px_rgba(15,23,42,0.06)]">
       {tabs.map((tab) => {
         const isActive = current === tab.key;
+
+        const handleClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+          if (onTabChange) {
+            e.preventDefault();
+            onTabChange(tab.key);
+          }
+        };
+
         return (
           <Link
-            key={tab.href}
+            key={tab.key}
             href={tab.href}
+            onClick={handleClick}
             className={`flex-1 rounded-[1rem] px-4 py-2.5 text-center text-sm font-medium transition ${
               isActive
                 ? "bg-[#4A148C] text-white shadow-[0_10px_24px_rgba(142, 36, 170,0.24)]"

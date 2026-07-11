@@ -14,6 +14,7 @@ import { revalidateDashboardPages } from "@/lib/dashboard/revalidate-dashboard-p
 import { mergeItemsIntoOrder, type MergeableOrderItemInput } from "@/lib/orders/merge-order-items";
 import { notifyUpdatedCustomerReceiptForOrder } from "@/lib/orders/notify-customer-receipt";
 import { syncDeliveryNoteForOrder } from "@/lib/orders/sync-delivery-note";
+import { isVehicleTransferInput, type VehicleTransferInput } from "@/lib/orders/vehicle-transfer";
 import { getCustomerRequiredWarehouse } from "@/lib/warehouses";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/types/database";
@@ -45,6 +46,23 @@ type ExistingWarehouseOrderRow = {
 };
 
 type ActionsAdmin = SupabaseClient<Database>;
+type VehicleTransferRpcAdmin = {
+  rpc: (
+    fn: "move_orders_between_vehicles",
+    args: {
+      p_from_vehicle_id: string;
+      p_order_date: string;
+      p_organization_id: string;
+      p_to_vehicle_id: string;
+    },
+  ) => Promise<{
+    data: Array<{
+      moved_delivery_note_count: number;
+      moved_order_count: number;
+    }> | null;
+    error: { message?: string } | null;
+  }>;
+};
 type WarehouseOrderAdmin = {
   // The generated Supabase types do not include warehouse_id until gen:types runs after the migration.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -530,6 +548,41 @@ export async function updateCustomerVehicleFromIncomingOrderAction(
   revalidatePath("/delivery");
   revalidatePath("/settings/customers");
   return { success: true };
+}
+
+export async function moveIncomingOrdersVehicleAction(
+  input: VehicleTransferInput,
+): Promise<{ success: true; movedOrderCount: number } | { error: string }> {
+  const session = await requireAppRole("admin");
+
+  if (!isVehicleTransferInput(input)) {
+    return { error: "ข้อมูลวันที่หรือรถที่เลือกไม่ถูกต้อง" };
+  }
+
+  const admin = getSupabaseAdmin() as unknown as VehicleTransferRpcAdmin;
+  const { data, error } = await admin.rpc("move_orders_between_vehicles", {
+    p_from_vehicle_id: input.fromVehicleId,
+    p_order_date: input.date,
+    p_organization_id: session.organizationId,
+    p_to_vehicle_id: input.toVehicleId,
+  });
+
+  if (error) {
+    console.error("[moveIncomingOrdersVehicleAction]", error);
+    return { error: "ย้ายรถไม่สำเร็จ กรุณารีเฟรชหน้าแล้วลองใหม่" };
+  }
+
+  const movedOrderCount = Number(data?.[0]?.moved_order_count ?? 0);
+  if (movedOrderCount === 0) {
+    return { error: "ไม่พบออเดอร์ของรถต้นทางในวันที่เลือก" };
+  }
+
+  invalidateIncomingOrderCaches(session.organizationId);
+  revalidatePath("/orders/packing-list");
+  revalidatePath("/orders/vehicle-product-summary");
+  revalidatePath("/delivery/print");
+
+  return { success: true, movedOrderCount };
 }
 
 

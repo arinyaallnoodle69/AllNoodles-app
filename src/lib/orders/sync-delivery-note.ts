@@ -64,17 +64,25 @@ export async function syncDeliveryNoteForOrder(
     skipRevalidate?: boolean;
   },
 ): Promise<SyncResult> {
-  const { data: order, error: orderError } = await admin
+  const { data: rawOrder, error: orderError } = await admin
     .from("orders")
-    .select("id, customer_id, order_date, notes")
+    .select("id, customer_id, order_date, notes, assigned_vehicle_id")
     .eq("id", input.orderId)
     .single();
 
-  if (orderError || !order) {
+  if (orderError || !rawOrder) {
     return {
       error: `ไม่พบข้อมูลออเดอร์ (ID: ${input.orderId.slice(0, 8)}...) ${orderError?.message ?? ""}`,
     };
   }
+
+  const order = rawOrder as unknown as {
+    assigned_vehicle_id: string | null;
+    customer_id: string;
+    id: string;
+    notes: string | null;
+    order_date: string;
+  };
 
   const warehouseResult = await getOrderRequiredWarehouse(input.organizationId, input.orderId);
   if (warehouseResult.error) {
@@ -88,7 +96,8 @@ export async function syncDeliveryNoteForOrder(
     .eq("id", order.customer_id)
     .single();
 
-  const vehicleId = customer?.default_vehicle_id || null;
+  const assignedVehicleId = order.assigned_vehicle_id;
+  const vehicleId = assignedVehicleId || customer?.default_vehicle_id || null;
   const lossInBaseUnitByItemId = input.lossInBaseUnitByItemId ?? new Map<string, number>();
 
   const { data: sameDayOrders, error: sameDayOrdersError } = await admin

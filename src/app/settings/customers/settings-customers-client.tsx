@@ -1,14 +1,16 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Plus, PlusCircle, Search, Upload } from "lucide-react";
+import { Plus, PlusCircle, Search, Upload, PackageSearch } from "lucide-react";
 import { MobileSearchDrawer } from "@/components/mobile-search/mobile-search-drawer";
 import { CustomerForm } from "@/components/settings/customer-form";
 import { CustomerListPanel } from "@/components/settings/customer-list-panel";
 import { CustomerSettingsTabs } from "@/components/settings/customer-settings-tabs";
 import { SettingsShell } from "@/components/settings/settings-shell";
 import { CustomerImportModal } from "@/components/settings/customer-import-modal";
-import type { SettingsCustomer, SettingsVehicle } from "@/lib/settings/admin";
+import { CustomerPricePanel, type CustomerPriceGroup } from "@/components/settings/customer-price-panel";
+import { SettingsPanel, SettingsPanelBody } from "@/components/settings/settings-ui";
+import type { SettingsCustomer, SettingsVehicle, SettingsPriceRow, SettingsSaleUnitOption } from "@/lib/settings/admin";
 import type { WarehouseOption } from "@/lib/warehouses";
 
 type SettingsCustomersPageClientProps = {
@@ -18,6 +20,9 @@ type SettingsCustomersPageClientProps = {
   nextCustomerCode: string;
   editingCustomer: SettingsCustomer | null;
   createParam?: string;
+  prices: SettingsPriceRow[];
+  saleUnits: SettingsSaleUnitOption[];
+  initialTab: "customers" | "pricing";
 };
 
 type CustomerSearchBoxProps = {
@@ -51,6 +56,9 @@ export function SettingsCustomersPageClient({
   nextCustomerCode,
   editingCustomer,
   createParam,
+  prices,
+  saleUnits,
+  initialTab,
 }: SettingsCustomersPageClientProps) {
   const [editingCustomerState, setEditingCustomerState] = useState<SettingsCustomer | null>(editingCustomer ?? null);
   const [isCreatingState, setIsCreatingState] = useState(createParam === "1");
@@ -59,6 +67,34 @@ export function SettingsCustomersPageClient({
   const [selectedVehicleId, setSelectedVehicleId] = useState<string | "__all__" | "__none__">("__all__");
   const vehicleTabsContainerRef = useRef<HTMLDivElement>(null);
   const [vehicleUnderlineStyle, setVehicleUnderlineStyle] = useState<React.CSSProperties | null>(null);
+
+  const [activeTab, setActiveTab] = useState<"customers" | "pricing">(initialTab);
+
+  useEffect(() => {
+    function handlePopState() {
+      const params = new URLSearchParams(window.location.search);
+      const tab = params.get("tab") === "pricing" ? "pricing" : "customers";
+      setActiveTab(tab);
+    }
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
+
+  const selectTab = (nextTab: "customers" | "pricing") => {
+    if (nextTab === activeTab) return;
+    setActiveTab(nextTab);
+    const href = nextTab === "customers" ? "/settings/customers" : "/settings/customers?tab=pricing";
+    window.history.pushState({}, "", href);
+  };
+
+  const priceGroups: CustomerPriceGroup[] = useMemo(() => {
+    return initialCustomers.map((customer) => ({
+      customerId: customer.id,
+      customerCode: customer.code,
+      customerName: customer.name,
+      prices: prices.filter((p) => p.customerId === customer.id),
+    }));
+  }, [initialCustomers, prices]);
 
   const vehicleOptions = useMemo(() => {
     return vehicles.filter((v) => v.isActive);
@@ -101,45 +137,58 @@ export function SettingsCustomersPageClient({
   return (
     <SettingsShell
       current="customers"
-      title="จัดการร้านค้า"
-      description="เพิ่มร้านค้า กำหนดที่อยู่ ผูกราคาขายเฉพาะราย และเลือกรถประจำร้านได้จากหน้านี้"
+      title={activeTab === "pricing" ? "ผูกราคาสินค้า" : "จัดการร้านค้า"}
+      description={
+        activeTab === "pricing"
+          ? "ตั้งค่าราคาขายเฉพาะรายร้านได้จากที่นี่ กดที่ร้านค้าเพื่อดูและจัดการราคา"
+          : "เพิ่มร้านค้า กำหนดที่อยู่ ผูกราคาขายเฉพาะราย และเลือกรถประจำร้านได้จากหน้านี้"
+      }
       floatingSubmit={false}
       hideHeader
-      >
-	      <div className="sticky top-0 z-40 -mx-3 mb-4 hidden border-b border-[#E1BEE7] bg-white/95 px-4 py-3 shadow-[0_10px_30px_rgba(31,42,68,0.08)] backdrop-blur lg:block">
+    >
+      <div className="sticky top-0 z-40 -mx-3 mb-4 hidden border-b border-[#E1BEE7] bg-white/95 px-4 py-3 shadow-[0_10px_30px_rgba(31,42,68,0.08)] backdrop-blur lg:block">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div className="min-w-0">
-            <p className="text-lg font-black text-[#4A148C]">จัดการร้านค้า</p>
+            <p className="text-lg font-black text-[#4A148C]">
+              {activeTab === "pricing" ? "ผูกราคาสินค้า" : "จัดการร้านค้า"}
+            </p>
             <p className="text-xs font-semibold text-[#667085]">
-              แสดง {initialCustomers.length.toLocaleString("th-TH")} ร้านค้า
+              {activeTab === "pricing"
+                ? `สินค้าที่ผูกราคากับร้าน ทั้งหมด ${prices.length} รายการ`
+                : `แสดง ${initialCustomers.length.toLocaleString("th-TH")} ร้านค้า`}
             </p>
           </div>
 
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-[minmax(14rem,1fr)_auto_auto] lg:w-[48rem]">
+          <div className={activeTab === "pricing" ? "w-full lg:w-[24rem]" : "grid grid-cols-1 gap-2 sm:grid-cols-[minmax(14rem,1fr)_auto_auto] lg:w-[48rem]"}>
             <CustomerSearchBox value={searchTerm} onSearch={setSearchTerm} />
-            <button
-              type="button"
-              onClick={() => setIsImportOpen(true)}
-              className="inline-flex h-12 items-center justify-center gap-2 rounded-lg border border-[#EA80FC]/30 bg-white px-4 text-sm font-black text-[#4A148C] transition hover:bg-slate-50 active:scale-[0.98]"
-            >
-              <Upload className="h-4.5 w-4.5 text-[#4A148C]" strokeWidth={2.4} />
-              นำเข้าข้อมูล
-            </button>
-            <button
-              type="button"
-              onClick={() => setIsCreatingState(true)}
-              className="inline-flex h-12 items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-[#EA80FC] to-[#4A148C] px-4 text-sm font-black text-[#4A148C] shadow-[0_12px_26px_rgba(170, 0, 255,0.3)] transition hover:brightness-105 active:scale-[0.98]"
-            >
-              <PlusCircle className="h-4.5 w-4.5 text-[#4A148C]" strokeWidth={2.4} />
-              เพิ่มร้านค้า
-            </button>
+            {activeTab === "customers" && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setIsImportOpen(true)}
+                  className="inline-flex h-12 items-center justify-center gap-2 rounded-lg border border-[#EA80FC]/30 bg-white px-4 text-sm font-black text-[#4A148C] transition hover:bg-slate-50 active:scale-[0.98]"
+                >
+                  <Upload className="h-4.5 w-4.5 text-[#4A148C]" strokeWidth={2.4} />
+                  นำเข้าข้อมูล
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsCreatingState(true)}
+                  className="inline-flex h-12 items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-[#EA80FC] to-[#4A148C] px-4 text-sm font-black text-[#4A148C] shadow-[0_12px_26px_rgba(170, 0, 255,0.3)] transition hover:brightness-105 active:scale-[0.98]"
+                >
+                  <PlusCircle className="h-4.5 w-4.5 text-[#4A148C]" strokeWidth={2.4} />
+                  เพิ่มร้านค้า
+                </button>
+              </>
+            )}
           </div>
         </div>
-	      </div>
+      </div>
 
-        <MobileSearchDrawer title="ค้นหาร้านค้า">
-          <div className="space-y-4 p-4">
-            <CustomerSearchBox value={searchTerm} onSearch={setSearchTerm} />
+      <MobileSearchDrawer title={activeTab === "pricing" ? "ค้นหาราคา/สินค้า" : "ค้นหาร้านค้า"}>
+        <div className="space-y-4 p-4">
+          <CustomerSearchBox value={searchTerm} onSearch={setSearchTerm} />
+          {activeTab === "customers" && (
             <button
               type="button"
               onClick={() => setIsImportOpen(true)}
@@ -148,9 +197,11 @@ export function SettingsCustomersPageClient({
               <Upload className="h-4.5 w-4.5" strokeWidth={2.4} />
               นำเข้าข้อมูลจาก CSV
             </button>
-          </div>
-        </MobileSearchDrawer>
+          )}
+        </div>
+      </MobileSearchDrawer>
 
+      {activeTab === "customers" && (
         <button
           type="button"
           onClick={() => setIsCreatingState(true)}
@@ -159,79 +210,106 @@ export function SettingsCustomersPageClient({
         >
           <Plus className="h-7 w-7" strokeWidth={2.6} />
         </button>
+      )}
 
-        <div className="-mx-4 flex w-[calc(100%+2rem)] flex-col gap-4 md:mx-0 md:w-full">
-	        <CustomerSettingsTabs current="customers" />
+      <div className="-mx-4 flex w-[calc(100%+2rem)] flex-col gap-4 md:mx-0 md:w-full">
+        <CustomerSettingsTabs current={activeTab} onTabChange={selectTab} />
 
-          {vehicleOptions.length > 0 && (
-            <div className="relative bg-transparent px-4 sm:px-0 overflow-hidden mb-1 mx-4 sm:mx-0">
-              <div
-                ref={vehicleTabsContainerRef}
-                className="relative flex gap-6 overflow-x-auto pb-1.5 pt-0.5 no-scrollbar scroll-smooth"
-              >
-                <span
-                  className="absolute bottom-0 h-[3px] rounded-full bg-[#4A148C]"
-                  style={{
-                    ...(vehicleUnderlineStyle ?? { left: 0, width: 0 }),
-                    opacity: vehicleUnderlineStyle ? 1 : 0,
-                    transition: "left 300ms cubic-bezier(0.16, 1, 0.3, 1), width 300ms cubic-bezier(0.16, 1, 0.3, 1), opacity 200ms ease-in-out",
-                  }}
-                />
-
-                <button
-                  type="button"
-                  data-active={selectedVehicleId === "__all__"}
-                  onClick={(e) => handleVehicleSelect("__all__", e)}
-                  className={`pb-2.5 text-sm font-black transition-all whitespace-nowrap tracking-wide ${
-                    selectedVehicleId === "__all__"
-                      ? "text-slate-950 scale-[1.03]"
-                      : "text-slate-500 hover:text-slate-800"
-                  }`}
+        {activeTab === "pricing" ? (
+          <SettingsPanel>
+            <div className="border-b border-slate-100 bg-white px-5 py-4 rounded-t-2xl">
+              <div className="flex items-center gap-2">
+                <PackageSearch className="h-5 w-5 text-[#4A148C]" strokeWidth={2.2} />
+                <h2 className="text-xl font-semibold text-slate-900 font-black">สินค้าที่ผูกราคากับร้าน</h2>
+                <span className="ml-1 rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-semibold tabular-nums text-slate-500">
+                  {prices.length}
+                </span>
+              </div>
+              <p className="mt-1 text-xs text-slate-500 font-medium">
+                ตั้งค่าราคาขายเฉพาะรายร้านได้จากที่นี่ กดที่ร้านค้าเพื่อดูและจัดการราคา
+              </p>
+            </div>
+            <SettingsPanelBody className="p-4 md:p-6 bg-white rounded-b-2xl">
+              <CustomerPricePanel 
+                groups={priceGroups} 
+                saleUnits={saleUnits} 
+                externalSearch={searchTerm}
+              />
+            </SettingsPanelBody>
+          </SettingsPanel>
+        ) : (
+          <>
+            {vehicleOptions.length > 0 && (
+              <div className="relative bg-transparent px-4 sm:px-0 overflow-hidden mb-1 mx-4 sm:mx-0">
+                <div
+                  ref={vehicleTabsContainerRef}
+                  className="relative flex gap-6 overflow-x-auto pb-1.5 pt-0.5 no-scrollbar scroll-smooth"
                 >
-                  ทั้งหมด
-                </button>
+                  <span
+                    className="absolute bottom-0 h-[3px] rounded-full bg-[#4A148C]"
+                    style={{
+                      ...(vehicleUnderlineStyle ?? { left: 0, width: 0 }),
+                      opacity: vehicleUnderlineStyle ? 1 : 0,
+                      transition: "left 300ms cubic-bezier(0.16, 1, 0.3, 1), width 300ms cubic-bezier(0.16, 1, 0.3, 1), opacity 200ms ease-in-out",
+                    }}
+                  />
 
-                <button
-                  type="button"
-                  data-active={selectedVehicleId === "__none__"}
-                  onClick={(e) => handleVehicleSelect("__none__", e)}
-                  className={`pb-2.5 text-sm font-black transition-all whitespace-nowrap tracking-wide ${
-                    selectedVehicleId === "__none__"
-                      ? "text-slate-950 scale-[1.03]"
-                      : "text-slate-500 hover:text-slate-800"
-                  }`}
-                >
-                  ไม่ระบุรถประจำร้าน
-                </button>
-
-                {vehicleOptions.map((v) => (
                   <button
-                    key={v.id}
                     type="button"
-                    data-active={selectedVehicleId === v.id}
-                    onClick={(e) => handleVehicleSelect(v.id, e)}
+                    data-active={selectedVehicleId === "__all__"}
+                    onClick={(e) => handleVehicleSelect("__all__", e)}
                     className={`pb-2.5 text-sm font-black transition-all whitespace-nowrap tracking-wide ${
-                      selectedVehicleId === v.id
+                      selectedVehicleId === "__all__"
                         ? "text-slate-950 scale-[1.03]"
                         : "text-slate-500 hover:text-slate-800"
                     }`}
                   >
-                    {v.name}
+                    ทั้งหมด
                   </button>
-                ))}
-              </div>
-            </div>
-          )}
 
-	        <CustomerListPanel 
-	          customers={filteredCustomers} 
-	          reorderEnabled={searchTerm.trim().length === 0}
-	          vehicles={vehicles} 
-	          warehouses={warehouses}
-	          searchTerm={searchTerm}
-	          onEdit={setEditingCustomerState}
-	        />
-	      </div>
+                  <button
+                    type="button"
+                    data-active={selectedVehicleId === "__none__"}
+                    onClick={(e) => handleVehicleSelect("__none__", e)}
+                    className={`pb-2.5 text-sm font-black transition-all whitespace-nowrap tracking-wide ${
+                      selectedVehicleId === "__none__"
+                        ? "text-slate-950 scale-[1.03]"
+                        : "text-slate-500 hover:text-slate-800"
+                    }`}
+                  >
+                    ไม่ระบุรถประจำร้าน
+                  </button>
+
+                  {vehicleOptions.map((v) => (
+                    <button
+                      key={v.id}
+                      type="button"
+                      data-active={selectedVehicleId === v.id}
+                      onClick={(e) => handleVehicleSelect(v.id, e)}
+                      className={`pb-2.5 text-sm font-black transition-all whitespace-nowrap tracking-wide ${
+                        selectedVehicleId === v.id
+                          ? "text-slate-950 scale-[1.03]"
+                          : "text-slate-500 hover:text-slate-800"
+                      }`}
+                    >
+                      {v.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <CustomerListPanel 
+              customers={filteredCustomers} 
+              reorderEnabled={searchTerm.trim().length === 0}
+              vehicles={vehicles} 
+              warehouses={warehouses}
+              searchTerm={searchTerm}
+              onEdit={setEditingCustomerState}
+            />
+          </>
+        )}
+      </div>
 
       {isCreatingState ? (
         <CustomerForm

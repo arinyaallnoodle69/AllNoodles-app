@@ -10,6 +10,7 @@ export type VehicleSummaryProduct = {
   sku: string;
   name: string;
   unit: string;
+  imageUrl: string | null;
   productKind?: string;
   supplierId?: string | null;
   supplierName?: string | null;
@@ -30,6 +31,7 @@ export type VehicleProductSummaryData = {
 };
 
 type OrderRow = {
+  assigned_vehicle_id: string | null;
   id: string;
   customer_id: string;
   warehouse_id?: string | null;
@@ -56,6 +58,7 @@ type DbProduct = {
   product_kind?: string;
   supplier_id?: string | null;
   suppliers?: { name: string } | null;
+  product_images?: Array<{ public_url: string; sort_order: number | null }> | null;
 };
 
 type DbCategory = {
@@ -150,7 +153,7 @@ async function loadSortedProducts(organizationId: string) {
   const [productsResult, categoriesResult, categoryItemsResult] = await Promise.all([
     admin
       .from("products")
-      .select("id, sku, name, unit, display_order, metadata, product_kind, supplier_id, suppliers(name)")
+      .select("id, sku, name, unit, display_order, metadata, product_kind, supplier_id, suppliers(name), product_images(public_url, sort_order)")
       .eq("organization_id", organizationId)
       .eq("is_active", true),
     admin
@@ -178,17 +181,24 @@ async function loadSortedProducts(organizationId: string) {
   const activeProducts = ((productsResult.data ?? []) as DbProduct[]).filter(isActiveProduct);
 
   return sortProductsByCategory(
-    activeProducts.map((product) => ({
-      id: product.id,
-      name: getPackingListProductName(product.name, product.metadata),
-      display_order: product.display_order !== null && product.display_order !== undefined ? Number(product.display_order) : undefined,
-      categoryIds: categoryIdsByProductId.get(product.id) ?? [],
-      sku: product.sku,
-      unit: product.unit,
-      productKind: product.product_kind,
-      supplierId: product.supplier_id ?? null,
-      supplierName: product.suppliers?.name ?? null,
-    })),
+    activeProducts.map((product) => {
+      const sortedImages = [...(product.product_images ?? [])].sort(
+        (a, b) => Number(a.sort_order ?? 0) - Number(b.sort_order ?? 0),
+      );
+
+      return {
+        id: product.id,
+        name: getPackingListProductName(product.name, product.metadata),
+        display_order: product.display_order !== null && product.display_order !== undefined ? Number(product.display_order) : undefined,
+        categoryIds: categoryIdsByProductId.get(product.id) ?? [],
+        sku: product.sku,
+        unit: product.unit,
+        imageUrl: sortedImages[0]?.public_url ?? null,
+        productKind: product.product_kind,
+        supplierId: product.supplier_id ?? null,
+        supplierName: product.suppliers?.name ?? null,
+      };
+    }),
     ((categoriesResult.data ?? []) as DbCategory[]).map((category) => ({
       id: category.id,
       sortOrder: Number(category.sort_order ?? 0),
@@ -208,6 +218,7 @@ export async function getVehicleProductSummaryData(
       .from("orders")
       .select(`
         id,
+        assigned_vehicle_id,
         customer_id,
         customers!inner(default_vehicle_id, vehicles(id, name)),
         delivery_notes!order_id(vehicle_id, status, vehicles(id, name)),
@@ -234,6 +245,7 @@ export async function getVehicleProductSummaryData(
     sku: product.sku,
     name: product.name,
     unit: product.unit || "-",
+    imageUrl: product.imageUrl ?? null,
     productKind: product.productKind,
     supplierId: product.supplierId,
     supplierName: product.supplierName,
@@ -244,10 +256,10 @@ export async function getVehicleProductSummaryData(
     name: vehicle.name,
   }));
 
-  const orders = (ordersResult.data ?? []) as OrderRow[];
+  const orders = (ordersResult.data ?? []) as unknown as OrderRow[];
   const hasUnassignedOrders = orders.some((order) => {
     const activeDeliveryNote = getActiveDeliveryNote(order);
-    const vehicleId = activeDeliveryNote?.vehicle_id ?? order.customers.default_vehicle_id;
+    const vehicleId = activeDeliveryNote?.vehicle_id ?? order.assigned_vehicle_id ?? order.customers.default_vehicle_id;
     return !vehicleId;
   });
 
@@ -261,16 +273,17 @@ export async function getVehicleProductSummaryData(
 
   for (const order of orders) {
     const activeDeliveryNote = getActiveDeliveryNote(order);
-    const vehicleId = activeDeliveryNote?.vehicle_id ?? order.customers.default_vehicle_id;
+    const vehicleId = activeDeliveryNote?.vehicle_id ?? order.assigned_vehicle_id ?? order.customers.default_vehicle_id;
     const resolvedVehicleId = vehicleId ?? "__unassigned__";
     let vehicleIndex = vehicleIndexById.get(resolvedVehicleId);
 
     if (vehicleIndex === undefined) {
       const deliveryVehicleName = activeDeliveryNote?.vehicle_id ? getRelationName(activeDeliveryNote.vehicles) : null;
+      const assignedVehicleName = configuredVehicles.find((vehicle) => vehicle.id === order.assigned_vehicle_id)?.name ?? null;
       const customerVehicleName = getRelationName(order.customers.vehicles);
       vehicles.push({
         id: vehicleId,
-        name: deliveryVehicleName || customerVehicleName || "ยังไม่กำหนดรถ",
+        name: deliveryVehicleName || assignedVehicleName || customerVehicleName || "ยังไม่กำหนดรถ",
       });
       vehicleIndex = vehicles.length - 1;
       vehicleIndexById.set(resolvedVehicleId, vehicleIndex);
@@ -319,6 +332,7 @@ export async function getFactoryOrderSheetData(
       .from("orders")
       .select(`
         id,
+        assigned_vehicle_id,
         customer_id,
         warehouse_id,
         customers!inner(default_vehicle_id, default_warehouse_id, vehicles(id, name), warehouses(id, name)),
@@ -355,6 +369,7 @@ export async function getFactoryOrderSheetData(
     sku: product.sku,
     name: product.name,
     unit: product.unit || "-",
+    imageUrl: product.imageUrl ?? null,
     productKind: product.productKind,
     supplierId: product.supplierId,
     supplierName: product.supplierName,
@@ -378,7 +393,7 @@ export async function getFactoryOrderSheetData(
   );
   const groups = new Map<string, FactoryGroupAccumulator>();
 
-  for (const order of (ordersResult.data ?? []) as OrderRow[]) {
+  for (const order of (ordersResult.data ?? []) as unknown as OrderRow[]) {
     const activeDeliveryNote = getActiveDeliveryNote(order);
     const warehouseId = activeDeliveryNote?.warehouse_id ?? order.warehouse_id ?? order.customers.default_warehouse_id ?? null;
     if (!warehouseId) continue;
@@ -386,11 +401,11 @@ export async function getFactoryOrderSheetData(
     const warehouseName = activeDeliveryNote?.warehouse_id
       ? getRelationName(activeDeliveryNote.warehouses) || warehouseNameById.get(warehouseId) || "ไม่ระบุคลัง"
       : getRelationName(order.customers.warehouses) || warehouseNameById.get(warehouseId) || "ไม่ระบุคลัง";
-    const vehicleId = activeDeliveryNote?.vehicle_id ?? order.customers.default_vehicle_id;
+    const vehicleId = activeDeliveryNote?.vehicle_id ?? order.assigned_vehicle_id ?? order.customers.default_vehicle_id;
     const vehicleKey = vehicleId ?? "__unassigned__";
     const vehicleName = (activeDeliveryNote?.vehicle_id ? getRelationName(activeDeliveryNote.vehicles) : null)
-      || getRelationName(order.customers.vehicles)
       || vehicleNameByKey.get(vehicleKey)
+      || getRelationName(order.customers.vehicles)
       || "ยังไม่กำหนดรถ";
 
     for (const item of order.order_items ?? []) {

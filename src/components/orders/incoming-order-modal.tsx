@@ -25,6 +25,7 @@ import type { OrderProductOption } from "@/lib/orders/manage";
 import type { AddedOrderItemDraft } from "@/components/orders/order-add-product-picker";
 import {
   deleteOrderCascadeActionV3,
+  fetchIncomingOrderDetailAction,
   updateOrderItemsBatchAction,
 } from "@/app/orders/incoming/actions";
 
@@ -71,7 +72,7 @@ const ItemsViewList = memo(({ detail }: { detail: OrderDetailData }) => {
     <div className="space-y-0 py-2">
       {detail.items.map((item) => (
         <div key={item.id} className="w-full overflow-hidden border-b-2 border-slate-300 bg-white transition-shadow active:bg-slate-50">
-          <div className="flex p-5">
+          <div className="flex p-4 sm:p-5">
             {/* Left: Large Image */}
             <div className="relative h-24 w-24 shrink-0 overflow-hidden">
               {item.imageUrl ? (
@@ -84,16 +85,16 @@ const ItemsViewList = memo(({ detail }: { detail: OrderDetailData }) => {
             </div>
 
             {/* Right: Product Detail */}
-            <div className="ml-5 min-w-0 flex-1 flex flex-col justify-center py-1">
+            <div className="ml-4 min-w-0 flex-1 flex flex-col justify-center py-1 sm:ml-5">
               <div className="min-w-0">
-                <p className="mb-1 line-clamp-2 text-xl font-black uppercase leading-relaxed text-slate-950 md:text-2xl">
+                <p className="mb-1 line-clamp-2 text-[18px] font-black uppercase leading-snug text-slate-950 md:text-2xl md:leading-relaxed">
                   <span className="hidden md:inline">{item.sku} - </span>
                   {item.productName}
                 </p>
-                <div className="flex items-center gap-3">
-                  <span className="font-mono text-[11px] font-black uppercase tracking-tighter text-slate-950 md:hidden">{item.sku}</span>
+                <div className="flex items-center gap-2.5 md:gap-3">
+                  <span className="font-mono text-[10px] font-black uppercase tracking-tighter text-slate-950 md:hidden">{item.sku}</span>
                   <span className="h-3 w-px bg-slate-200 md:hidden" />
-                  <span className="text-[14px] font-black text-slate-500 md:text-[18px]">฿{formatTHB(item.unitPrice)} / {item.unit}</span>
+                  <span className="text-[13px] font-black text-slate-500 md:text-[18px]">฿{formatTHB(item.unitPrice)} / {item.unit}</span>
                 </div>
               </div>
 
@@ -116,15 +117,15 @@ const ItemsViewList = memo(({ detail }: { detail: OrderDetailData }) => {
           </div>
 
           {/* Bottom Bar: Action Values */}
-          <div className="flex items-center border-t border-slate-100 bg-slate-50 px-5 py-4">
-            <div className="flex flex-1 items-center justify-center pr-4 text-center">
-              <p className="text-lg font-black text-slate-950 tabular-nums">
+          <div className="grid grid-cols-[minmax(0,1fr)_1px_minmax(0,1fr)] items-center border-t border-slate-100 bg-slate-50 px-4 py-3 sm:flex sm:px-5 sm:py-4">
+            <div className="flex min-w-0 items-center justify-center pr-3 text-center sm:flex-1 sm:pr-4">
+              <p className="whitespace-nowrap text-[15px] font-black text-slate-950 tabular-nums sm:text-lg">
                 จำนวนสั่ง : {item.quantity.toLocaleString("th-TH")} {item.unit}
               </p>
             </div>
-            <div className="mx-1 h-8 w-px shrink-0 bg-slate-300" />
-            <div className="flex flex-1 items-center justify-center pl-4 text-center">
-              <p className="text-lg font-black text-slate-950 tabular-nums">
+            <div className="h-8 w-px shrink-0 bg-slate-300 sm:mx-1" />
+            <div className="flex min-w-0 items-center justify-center pl-3 text-center sm:flex-1 sm:pl-4">
+              <p className="whitespace-nowrap text-[15px] font-black text-slate-950 tabular-nums sm:text-lg">
                 ยอดรวม : ฿{formatTHB(item.lineTotal)}
               </p>
             </div>
@@ -152,16 +153,9 @@ const EditItemsPanel = memo(({
   const [quantityInputs, setQuantityInputs] = useState<Record<string, string>>(
     Object.fromEntries(detail.items.map((i) => [i.id, String(i.quantity)])),
   );
-  const [unitPrices, setUnitPrices] = useState<Record<string, number>>(
-    Object.fromEntries(detail.items.map((i) => [i.id, i.unitPrice])),
-  );
-  const [unitPriceInputs, setUnitPriceInputs] = useState<Record<string, string>>(
-    Object.fromEntries(detail.items.map((i) => [i.id, String(i.unitPrice)])),
-  );
   const [removed, setRemoved] = useState<Set<string>>(new Set());
   const [addedItems, setAddedItems] = useState<AddedOrderItemDraft[]>([]);
   const [addedQuantityInputs, setAddedQuantityInputs] = useState<Record<string, string>>({});
-  const [addedUnitPriceInputs, setAddedUnitPriceInputs] = useState<Record<string, string>>({});
   const [reductionModes, setReductionModes] = useState<Record<string, StockReductionMode>>(
     Object.fromEntries(detail.items.map((item) => [item.id, "return"])),
   );
@@ -174,12 +168,9 @@ const EditItemsPanel = memo(({
     setNotes(detail.notes ?? "");
     setQuantities(Object.fromEntries(detail.items.map((i) => [i.id, i.quantity])));
     setQuantityInputs(Object.fromEntries(detail.items.map((i) => [i.id, String(i.quantity)])));
-    setUnitPrices(Object.fromEntries(detail.items.map((i) => [i.id, i.unitPrice])));
-    setUnitPriceInputs(Object.fromEntries(detail.items.map((i) => [i.id, String(i.unitPrice)])));
     setRemoved(new Set());
     setAddedItems([]);
     setAddedQuantityInputs({});
-    setAddedUnitPriceInputs({});
     setReductionModes(Object.fromEntries(detail.items.map((item) => [item.id, "return"])));
   }, [detail]);
 
@@ -256,23 +247,6 @@ const EditItemsPanel = memo(({
     setQuantityInputs((prev) => ({ ...prev, [itemId]: String(nextValue) }));
   }
 
-  function handleUnitPriceInput(itemId: string, raw: string) {
-    setError(null);
-    setUnitPriceInputs((prev) => ({ ...prev, [itemId]: raw }));
-    const parsed = Number(raw);
-    if (!Number.isFinite(parsed) || raw.trim() === "") return;
-    setUnitPrices((prev) => ({ ...prev, [itemId]: parsed }));
-  }
-
-  function commitUnitPriceInput(itemId: string) {
-    const item = detail.items.find((i) => i.id === itemId);
-    if (!item) return;
-    const parsed = Number(unitPriceInputs[itemId] ?? unitPrices[itemId] ?? item.unitPrice);
-    const nextValue = sanitizeManualUnitPrice(parsed, item.unitPrice);
-    setUnitPrices((prev) => ({ ...prev, [itemId]: nextValue }));
-    setUnitPriceInputs((prev) => ({ ...prev, [itemId]: String(nextValue) }));
-  }
-
   function handleAddedQuantityInput(key: string, raw: string) {
     setError(null);
     setAddedQuantityInputs((prev) => ({ ...prev, [key]: raw }));
@@ -294,27 +268,6 @@ const EditItemsPanel = memo(({
     setAddedQuantityInputs((prev) => ({ ...prev, [key]: String(normalized) }));
   }
 
-  function handleAddedUnitPriceInput(key: string, raw: string) {
-    setError(null);
-    setAddedUnitPriceInputs((prev) => ({ ...prev, [key]: raw }));
-    const parsed = Number(raw);
-    if (!Number.isFinite(parsed) || raw.trim() === "") return;
-    setAddedItems((prev) =>
-      prev.map((item) => (item.key === key ? { ...item, unitPrice: parsed } : item)),
-    );
-  }
-
-  function commitAddedUnitPriceInput(key: string) {
-    const item = addedItems.find((i) => i.key === key);
-    if (!item) return;
-    const parsed = Number(addedUnitPriceInputs[key] ?? item.unitPrice);
-    const normalized = sanitizeManualUnitPrice(parsed, item.unitPrice);
-    setAddedItems((prev) =>
-      prev.map((current) => (current.key === key ? { ...current, unitPrice: normalized } : current)),
-    );
-    setAddedUnitPriceInputs((prev) => ({ ...prev, [key]: String(normalized) }));
-  }
-
   async function handleSave() {
     setIsSaving(true);
     setError(null);
@@ -327,8 +280,7 @@ const EditItemsPanel = memo(({
       );
       const normalizedUnitPrices = Object.fromEntries(
         activeItems.map((item) => {
-          const current = unitPrices[item.id] ?? item.unitPrice;
-          return [item.id, sanitizeManualUnitPrice(current, item.unitPrice)];
+          return [item.id, sanitizeManualUnitPrice(item.unitPrice, item.unitPrice)];
         }),
       );
       const normalizedAddedItems = addedItems.map((item) => ({
@@ -362,7 +314,7 @@ const EditItemsPanel = memo(({
             const original = detail.items.find((i) => i.id === id);
             return (
               original &&
-              (Number(original.quantity) !== qty || Number(original.unitPrice) !== Number(normalizedUnitPrices[id]))
+              Number(original.quantity) !== qty
             );
           })
           .map(([itemId, quantity]) => {
@@ -391,7 +343,7 @@ const EditItemsPanel = memo(({
     }
   }
 
-  const totalAmount = activeItems.reduce((s, i) => s + (quantities[i.id] ?? i.quantity) * (unitPrices[i.id] ?? i.unitPrice), 0) +
+  const totalAmount = activeItems.reduce((s, i) => s + (quantities[i.id] ?? i.quantity) * i.unitPrice, 0) +
                       addedItems.reduce((s, i) => s + i.quantity * i.unitPrice, 0);
 
   function getAddedItemStock(item: AddedOrderItemDraft) {
@@ -425,20 +377,6 @@ const EditItemsPanel = memo(({
       ) : null}
 
       <div className="flex-1 min-w-0 overflow-x-hidden overflow-y-auto px-4 py-4 custom-scrollbar sm:px-5">
-        <div className="mb-4 rounded-2xl border border-slate-200 bg-slate-50 p-4">
-          <label htmlFor="edit-order-notes" className="mb-2 block text-sm font-bold text-slate-700">
-            หมายเหตุ
-          </label>
-          <textarea
-            id="edit-order-notes"
-            rows={3}
-            value={notes}
-            onChange={(event) => setNotes(event.target.value)}
-            placeholder="ใส่หมายเหตุสำหรับออเดอร์นี้"
-            className="min-h-[88px] w-full resize-none rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-[#4A148C]/40 focus:ring-2 focus:ring-[#4A148C]/10"
-          />
-        </div>
-
         <div className="mb-4">
           <OrderAddProductPicker
             addedItems={addedItems}
@@ -537,20 +475,13 @@ const EditItemsPanel = memo(({
                           </div>
                         </td>
                         <td className="px-5 py-4 border-r border-slate-100">
-                          <input
-                            type="number"
-                            inputMode="decimal"
-                            min={0}
-                            step="0.01"
-                            value={(() => { const val = addedUnitPriceInputs[item.key] ?? String(addedUnitPrice); return val === "0" ? "" : val; })()}
-                            onChange={(e) => handleAddedUnitPriceInput(item.key, e.target.value)}
-                            onBlur={() => commitAddedUnitPriceInput(item.key)}
-                            className={`h-9 w-28 rounded-lg border px-2 text-center font-black outline-none transition mx-auto block focus:ring-2 ${
-                              addedUnitPrice <= 0
-                                ? "border-red-500 bg-red-50 text-red-700 focus:border-red-600 focus:ring-red-600/10"
-                                : "border-slate-200 bg-white text-slate-950 focus:border-[#4A148C] focus:ring-[#4A148C]/10"
-                            }`}
-                          />
+                          <div className={`mx-auto flex h-9 w-28 items-center justify-center rounded-lg border px-2 text-center font-black ${
+                            addedUnitPrice <= 0
+                              ? "border-red-500 bg-red-50 text-red-700"
+                              : "border-slate-200 bg-slate-50 text-slate-950"
+                          }`}>
+                            {addedUnitPrice > 0 ? formatTHB(addedUnitPrice) : "-"}
+                          </div>
                           {addedUnitPrice <= 0 ? (
                             <span className="text-[10px] font-black text-red-600 flex items-center justify-center gap-1 mt-1 animate-pulse">
                               <AlertTriangle className="h-3 w-3 text-red-600 shrink-0" />
@@ -590,7 +521,7 @@ const EditItemsPanel = memo(({
                   })}
                   {activeItems.map((item) => {
                     const qty = quantities[item.id] ?? item.quantity;
-                    const unitPrice = unitPrices[item.id] ?? item.unitPrice;
+                    const unitPrice = item.unitPrice;
                     return (
                       <tr key={item.id} className="transition-colors hover:bg-slate-50">
                         <td className="px-5 py-4 border-r border-slate-100">
@@ -609,20 +540,13 @@ const EditItemsPanel = memo(({
                           </div>
                         </td>
                         <td className="px-5 py-4 border-r border-slate-100">
-                          <input
-                            type="number"
-                            inputMode="decimal"
-                            min={0}
-                            step="0.01"
-                            value={(() => { const val = unitPriceInputs[item.id] ?? String(unitPrice); return val === "0" ? "" : val; })()}
-                            onChange={(e) => handleUnitPriceInput(item.id, e.target.value)}
-                            onBlur={() => commitUnitPriceInput(item.id)}
-                            className={`h-9 w-28 rounded-lg border px-2 text-center font-black outline-none transition mx-auto block focus:ring-2 ${
-                              unitPrice <= 0
-                                ? "border-red-500 bg-red-50 text-red-700 focus:border-red-600 focus:ring-red-600/10"
-                                : "border-slate-200 bg-white text-slate-950 focus:border-[#4A148C] focus:ring-[#4A148C]/10"
-                            }`}
-                          />
+                          <div className={`mx-auto flex h-9 w-28 items-center justify-center rounded-lg border px-2 text-center font-black ${
+                            unitPrice <= 0
+                              ? "border-red-500 bg-red-50 text-red-700"
+                              : "border-slate-200 bg-slate-50 text-slate-950"
+                          }`}>
+                            {unitPrice > 0 ? formatTHB(unitPrice) : "-"}
+                          </div>
                           {unitPrice <= 0 ? (
                             <span className="text-[10px] font-black text-red-600 flex items-center justify-center gap-1 mt-1 animate-pulse">
                               <AlertTriangle className="h-3 w-3 text-red-600 shrink-0" />
@@ -728,20 +652,13 @@ const EditItemsPanel = memo(({
                           </div>
                           <div className="border-l border-slate-300 pl-4">
                             <p className="text-[10px] font-black uppercase tracking-[0.12em] text-slate-400">ราคาต่อหน่วย</p>
-                            <input
-                              type="number"
-                              inputMode="decimal"
-                              min={0}
-                              step="0.01"
-                              value={addedUnitPriceInputs[item.key] ?? String(addedUnitPrice)}
-                              onChange={(e) => handleAddedUnitPriceInput(item.key, e.target.value)}
-                              onBlur={() => commitAddedUnitPriceInput(item.key)}
-                              className={`mt-1 h-9 w-full rounded-lg border px-2 text-right text-[15px] font-black outline-none transition focus:ring-2 ${
-                                addedUnitPrice <= 0
-                                  ? "border-red-500 bg-red-50 text-red-700 focus:border-red-600 focus:ring-red-600/10"
-                                  : "border-slate-200 bg-white text-slate-950 focus:border-[#4A148C] focus:ring-[#4A148C]/10"
-                              }`}
-                            />
+                            <p className={`mt-1 flex h-9 w-full items-center justify-end rounded-lg border px-2 text-right text-[15px] font-black ${
+                              addedUnitPrice <= 0
+                                ? "border-red-500 bg-red-50 text-red-700"
+                                : "border-slate-200 bg-slate-50 text-slate-950"
+                            }`}>
+                              {addedUnitPrice > 0 ? formatTHB(addedUnitPrice) : "-"}
+                            </p>
                             {addedUnitPrice <= 0 ? (
                               <span className="text-[10px] font-black text-red-600 flex items-center justify-end gap-1 mt-1 animate-pulse">
                                 <AlertTriangle className="h-3 w-3 text-red-600 shrink-0" />
@@ -778,7 +695,7 @@ const EditItemsPanel = memo(({
               })}
               {activeItems.map((item) => {
                 const qty = quantities[item.id] ?? item.quantity;
-                const unitPrice = unitPrices[item.id] ?? item.unitPrice;
+                const unitPrice = item.unitPrice;
                 return (
                   <article key={item.id} className="bg-white p-5 transition-all active:bg-slate-50">
                     <div className="flex gap-4">
@@ -809,20 +726,13 @@ const EditItemsPanel = memo(({
                           </div>
                           <div className="border-l border-slate-300 pl-4">
                             <p className="text-[10px] font-black uppercase tracking-[0.12em] text-slate-400">ราคาต่อหน่วย</p>
-                            <input
-                              type="number"
-                              inputMode="decimal"
-                              min={0}
-                              step="0.01"
-                              value={unitPriceInputs[item.id] ?? String(unitPrice)}
-                              onChange={(e) => handleUnitPriceInput(item.id, e.target.value)}
-                              onBlur={() => commitUnitPriceInput(item.id)}
-                              className={`mt-1 h-9 w-full rounded-lg border px-2 text-right text-[15px] font-black outline-none transition focus:ring-2 ${
-                                unitPrice <= 0
-                                  ? "border-red-500 bg-red-50 text-red-700 focus:border-red-600 focus:ring-red-600/10"
-                                  : "border-slate-200 bg-white text-slate-950 focus:border-[#4A148C] focus:ring-[#4A148C]/10"
-                              }`}
-                            />
+                            <p className={`mt-1 flex h-9 w-full items-center justify-end rounded-lg border px-2 text-right text-[15px] font-black ${
+                              unitPrice <= 0
+                                ? "border-red-500 bg-red-50 text-red-700"
+                                : "border-slate-200 bg-slate-50 text-slate-950"
+                            }`}>
+                              {unitPrice > 0 ? formatTHB(unitPrice) : "-"}
+                            </p>
                             {unitPrice <= 0 ? (
                               <span className="text-[10px] font-black text-red-600 flex items-center justify-end gap-1 mt-1 animate-pulse">
                                 <AlertTriangle className="h-3 w-3 text-red-600 shrink-0" />
@@ -887,6 +797,20 @@ const EditItemsPanel = memo(({
               })}
             </div>
           </div>
+
+          <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+            <label htmlFor="edit-order-notes" className="mb-2 block text-sm font-bold text-slate-700">
+              หมายเหตุ
+            </label>
+            <textarea
+              id="edit-order-notes"
+              rows={3}
+              value={notes}
+              onChange={(event) => setNotes(event.target.value)}
+              placeholder="ใส่หมายเหตุสำหรับออเดอร์นี้"
+              className="min-h-[88px] w-full resize-none rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-[#4A148C]/40 focus:ring-2 focus:ring-[#4A148C]/10"
+            />
+          </div>
         </div>
       </div>
 
@@ -945,6 +869,13 @@ export function IncomingOrderModal({ allOrders, detail, expandedId, onAfterClose
   const [slideAnim, setSlideAnim] = useState<"slide-left" | "slide-right" | null>(null);
   const [isClosing, setIsClosing] = useState(false);
 
+  // Local active states and caching for instant navigation
+  const [activeOrderId, setActiveOrderId] = useState(expandedId);
+  const [activeDetail, setActiveDetail] = useState<OrderDetailData | null>(detail);
+  const [cachedDetails, setCachedDetails] = useState<Record<string, OrderDetailData>>(() =>
+    detail ? { [expandedId]: detail } : {}
+  );
+
   useEffect(() => {
     setEditMode(startInEditMode);
     setConfirmCancel(startInDeleteMode);
@@ -952,7 +883,14 @@ export function IncomingOrderModal({ allOrders, detail, expandedId, onAfterClose
     setSaveToast(null);
     setIsOpen(true);
     setIsClosing(false);
-  }, [expandedId, startInDeleteMode, startInEditMode]);
+
+    // Sync external props with local states & cache
+    setActiveOrderId(expandedId);
+    setActiveDetail(detail);
+    if (detail) {
+      setCachedDetails((prev) => ({ ...prev, [expandedId]: detail }));
+    }
+  }, [expandedId, detail, startInDeleteMode, startInEditMode]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -966,15 +904,15 @@ export function IncomingOrderModal({ allOrders, detail, expandedId, onAfterClose
   }, []);
 
   useEffect(() => {
-    if (!detail) return;
+    if (!activeDetail) return;
     const preloadTimer = window.setTimeout(() => {
       void loadOrderAddProductPicker();
     }, 120);
 
     return () => window.clearTimeout(preloadTimer);
-  }, [detail]);
+  }, [activeDetail]);
 
-  const currentIndex = allOrders.findIndex((o) => o.id === expandedId);
+  const currentIndex = allOrders.findIndex((o) => o.id === activeOrderId);
   const prevOrder = currentIndex >= 0 && allOrders.length > 1 ? allOrders[(currentIndex - 1 + allOrders.length) % allOrders.length] : null;
   const nextOrder = currentIndex >= 0 && allOrders.length > 1 ? allOrders[(currentIndex + 1) % allOrders.length] : null;
 
@@ -989,9 +927,40 @@ export function IncomingOrderModal({ allOrders, detail, expandedId, onAfterClose
     const target = direction === "prev" ? prevOrder : nextOrder;
     if (!target || navPending) return;
 
+    const targetId = target.id;
     setSlideAnim(direction === "next" ? "slide-left" : "slide-right");
-    startNavTransition(() => {
-      router.replace(buildNavHref(target.id)!, { scroll: false });
+    setActiveOrderId(targetId);
+
+    if (cachedDetails[targetId]) {
+      setActiveDetail(cachedDetails[targetId]);
+      
+      // Update URL in the background
+      const href = buildNavHref(targetId);
+      if (href) {
+        startNavTransition(() => {
+          router.replace(href, { scroll: false });
+        });
+      }
+      return;
+    }
+
+    setActiveDetail(null); // Show loading spinner inside modal body immediately
+    startNavTransition(async () => {
+      try {
+        const result = await fetchIncomingOrderDetailAction(targetId);
+        const newDetail = result.detail;
+        if (newDetail) {
+          setCachedDetails((prev) => ({ ...prev, [targetId]: newDetail }));
+          setActiveDetail(newDetail);
+        }
+      } catch (err) {
+        console.error("Error navigating order:", err);
+      }
+      
+      const href = buildNavHref(targetId);
+      if (href) {
+        router.replace(href, { scroll: false });
+      }
     });
   }
 
@@ -1018,22 +987,27 @@ export function IncomingOrderModal({ allOrders, detail, expandedId, onAfterClose
   }
 
   async function handleDeleteOrder() {
-    if (!detail) {
+    if (!activeDetail) {
       setDeleteError("ไม่พบออเดอร์ที่ต้องการลบ");
       return;
     }
     setDeleteError(null);
+
+    // Invalidate local cache for this order before deleting it
+    setCachedDetails((prev) => {
+      const next = { ...prev };
+      delete next[activeOrderId];
+      return next;
+    });
+
     const fd = new FormData();
-    fd.set("orderId", detail.id);
+    fd.set("orderId", activeDetail.id);
     const result = await deleteOrderCascadeActionV3(fd);
     if ("error" in result && result.error) {
       setDeleteError(result.error);
       return;
     }
     close();
-    window.setTimeout(() => {
-      router.refresh();
-    }, 140);
   }
 
   async function openEditMode() {
@@ -1053,12 +1027,12 @@ export function IncomingOrderModal({ allOrders, detail, expandedId, onAfterClose
 
   if (!isOpen) return null;
 
-  const deliveryNumber = detail
-    ? detail.deliveryNumber || (detail.orderNumber.startsWith("DN") ? detail.orderNumber : null)
+  const deliveryNumber = activeDetail
+    ? activeDetail.deliveryNumber || (activeDetail.orderNumber.startsWith("DN") ? activeDetail.orderNumber : null)
     : null;
 
-  const hasUnpricedItems = detail
-    ? detail.items.some((item) => item.unitPrice === null || item.unitPrice === undefined || Number(item.unitPrice) <= 0)
+  const hasUnpricedItems = activeDetail
+    ? activeDetail.items.some((item) => item.unitPrice === null || item.unitPrice === undefined || Number(item.unitPrice) <= 0)
     : false;
 
   return (
@@ -1110,7 +1084,7 @@ export function IncomingOrderModal({ allOrders, detail, expandedId, onAfterClose
       <div className={`absolute inset-0 bg-slate-950/45 backdrop-blur-[2px] ${isClosing ? "backdrop-out" : "animate-fade-in"}`} onClick={close} />
 
       {/* Main Container */}
-      <div className={`${isClosing ? "animate-slide-up-premium" : "animate-slide-down-premium"} relative z-10 flex h-full w-full max-w-[100vw] min-w-0 flex-col overflow-x-hidden overflow-y-hidden bg-white shadow-2xl lg:h-[90vh] lg:max-w-4xl lg:rounded-[2.5rem]`}>
+      <div className={`${isClosing ? "animate-slide-up-premium" : "animate-slide-down-premium"} relative z-10 flex h-full w-full max-w-[100vw] min-w-0 flex-col overflow-x-hidden overflow-y-hidden bg-white shadow-2xl lg:h-[90vh] lg:max-w-4xl lg:rounded-[2.5rem] dashboard-modal-content incoming-order-modal-content`}>
         {saveToast ? (
           <div className="absolute inset-0 z-[100] flex items-center justify-center bg-slate-950/45 backdrop-blur-[2px]" onClick={() => setSaveToast(null)}>
             <div className="m-anim flex w-[calc(100%-2.5rem)] max-w-sm flex-col items-center gap-4 rounded-3xl border border-emerald-200 bg-white p-6 text-center shadow-[0_22px_60px_rgba(16,185,129,0.18)] relative" onClick={(e) => e.stopPropagation()}>
@@ -1136,18 +1110,26 @@ export function IncomingOrderModal({ allOrders, detail, expandedId, onAfterClose
           <div className="flex items-center justify-between gap-4 relative z-10">
             <div className="min-w-0 flex-1">
               <h2 className="text-2xl font-black text-white leading-normal line-clamp-1">
-                {detail ? detail.customer.name : "กำลังโหลดข้อมูล..."}
+                {activeDetail ? (
+                  <>
+                    <span className="font-mono text-[0.85em] font-bold opacity-75" translate="no">
+                      {activeDetail.customer.code}
+                    </span>
+                    {" - "}
+                    {activeDetail.customer.name}
+                  </>
+                ) : (
+                  "กำลังโหลดข้อมูล..."
+                )}
               </h2>
               <div className="mt-1 flex flex-wrap items-center gap-2">
-                <span className="font-mono text-[11px] font-black uppercase tracking-widest text-white/50 md:text-[18px]">{detail ? detail.customer.code : "—"}</span>
-                <span className="h-2 w-px bg-white/20" />
                 {deliveryNumber ? (
                   <>
                     <span className="font-mono text-[11px] font-black tracking-tight text-white/80 md:text-[18px]">{deliveryNumber}</span>
                     <span className="h-2 w-px bg-white/20" />
                   </>
                 ) : null}
-                <span className="text-[11px] font-black tracking-tight text-white/80 md:text-[18px]">{detail ? formatDisplayDate(detail.orderDate) : "—"}</span>
+                <span className="text-[11px] font-black tracking-tight text-white/80 md:text-[18px]">{activeDetail ? formatDisplayDate(activeDetail.orderDate) : "—"}</span>
               </div>
             </div>
             <button
@@ -1164,7 +1146,7 @@ export function IncomingOrderModal({ allOrders, detail, expandedId, onAfterClose
                 <Clock className="h-3.5 w-3.5 text-white/50" />
                 รับออเดอร์
               </span>
-              <span className="text-[10px] font-black text-white/40 uppercase tracking-[0.2em]">{detail ? detail.channelLabel : "—"}</span>
+              <span className="text-[10px] font-black text-white/40 uppercase tracking-[0.2em]">{activeDetail ? activeDetail.channelLabel : "—"}</span>
             </div>
 
             <div className="flex items-center gap-2">
@@ -1220,7 +1202,7 @@ export function IncomingOrderModal({ allOrders, detail, expandedId, onAfterClose
 
         {/* Content Body */}
         <div className={`relative flex-1 min-w-0 overflow-x-hidden overflow-y-hidden bg-white ${slideAnim ? (slideAnim === "slide-left" ? "c-slide-l" : "c-slide-r") : ""}`}>
-          {!detail ? (
+          {!activeDetail ? (
             <div className="absolute inset-0 flex flex-col items-center justify-center bg-white z-50">
               <div className="relative flex items-center justify-center">
                 <div className="absolute h-14 w-14 rounded-full border-4 border-[#4A148C]/10" />
@@ -1280,10 +1262,15 @@ export function IncomingOrderModal({ allOrders, detail, expandedId, onAfterClose
             </div>
           ) : editMode ? (
             <EditItemsPanel
-              detail={detail}
+              detail={activeDetail}
               onDone={(message) => {
                 if (message) {
                   setSaveToast(message);
+                  setCachedDetails((prev) => {
+                    const next = { ...prev };
+                    delete next[activeOrderId];
+                    return next;
+                  });
                   router.refresh();
                   window.setTimeout(() => {
                     setSaveToast(null);
@@ -1311,7 +1298,7 @@ export function IncomingOrderModal({ allOrders, detail, expandedId, onAfterClose
                     </p>
                   </div>
                 )}
-                <ItemsViewList detail={detail} />
+                <ItemsViewList detail={activeDetail} />
               </div>
 
               {/* Sticky Bottom Actions */}
@@ -1320,12 +1307,12 @@ export function IncomingOrderModal({ allOrders, detail, expandedId, onAfterClose
                   <div className="min-w-0">
                     <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 leading-none mb-1.5">ยอดรวมสุทธิ</p>
                     <p className="text-3xl font-black text-slate-950 tabular-nums tracking-tighter leading-none">
-                      ฿{formatTHB(detail.totalAmount)}
+                      ฿{formatTHB(activeDetail.totalAmount)}
                     </p>
                   </div>
                   <div className="text-right">
                     <span className="inline-flex h-7 items-center rounded-lg bg-slate-100 px-3 text-[11px] font-black text-slate-950 uppercase tracking-widest">
-                      {detail.items.length} รายการ
+                      {activeDetail.items.length} รายการ
                     </span>
                   </div>
                 </div>

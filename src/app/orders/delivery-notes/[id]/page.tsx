@@ -10,13 +10,17 @@ export const metadata = { title: "บิลส่งของ" };
 
 type Props = { 
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ autoprint?: string }>;
+  searchParams: Promise<{ 
+    autoprint?: string;
+    show_amount?: string;
+  }>;
 };
 
 export default async function DeliveryNotePrintPage({ params, searchParams }: Props) {
   const { id } = await params;
-  const { autoprint: autoprintParam } = await searchParams;
+  const { autoprint: autoprintParam, show_amount: showAmountParam } = await searchParams;
   const autoprint = autoprintParam === "1";
+  const showAmount = showAmountParam !== "0";
   const session = await requireAppRole("admin");
   const supabase = getSupabaseAdmin();
   const { data: deliveryNoteRow } = await supabase
@@ -52,7 +56,7 @@ export default async function DeliveryNotePrintPage({ params, searchParams }: Pr
       </div>
 
       <EditQuantitiesForm deliveryNoteId={id} items={dn.items} />
-      <DeliveryNoteLayout dns={[dn]} />
+      <DeliveryNoteLayout dns={[dn]} showAmount={showAmount} />
     </>
   );
 }

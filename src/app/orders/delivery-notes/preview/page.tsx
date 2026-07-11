@@ -16,6 +16,7 @@ type Props = {
     date?: string;
     customer_ids?: string;
     note_ids?: string;
+    show_amount?: string;
   }>;
 };
 
@@ -39,6 +40,7 @@ export default async function DeliveryNotePreviewPage({ searchParams }: Props) {
     .split(",")
     .map((id) => id.trim())
     .filter(Boolean);
+  const showAmount = params.show_amount !== "0";
 
   if (noteIds.length === 0 && (!date || customerIds.length === 0)) {
     return (
@@ -106,7 +108,7 @@ export default async function DeliveryNotePreviewPage({ searchParams }: Props) {
       </div>
 
       <div className="min-h-screen bg-slate-50 py-10 print:bg-white print:py-0">
-        <DeliveryNoteLayout dns={validPrintData} showIntermediateFooter logoDataUrl={logoDataUrl} />
+        <DeliveryNoteLayout dns={validPrintData} showIntermediateFooter logoDataUrl={logoDataUrl} showAmount={showAmount} />
       </div>
     </>
   );

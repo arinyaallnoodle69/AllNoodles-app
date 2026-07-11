@@ -42,6 +42,7 @@ type OrderDetailAdminClient = ReturnType<typeof getSupabaseAdmin> & {
 };
 
 type OrderRow = {
+  assigned_vehicle_id: string | null;
   created_at: string;
   customer_id: string;
   fulfillment_status: string | null;
@@ -98,8 +99,11 @@ type ProductImageRow = {
 };
 
 type DeliveryNoteRow = {
+  created_at?: string;
   delivery_number: string;
   order_id?: string | null;
+  status?: string;
+  vehicle_id?: string | null;
 };
 
 export type OrderDetailItem = {
@@ -304,9 +308,9 @@ export async function getOrderDetailById(
     productIds.length > 0
       ? admin
           .from("products")
-          .select("id, sku, name, unit, stock_quantity")
+          .select("id, sku, name, unit, stock_quantity, display_order")
           .in("id", productIds)
-          .order("name", { ascending: true })
+          .order("display_order", { ascending: true })
       : Promise.resolve({ data: [], error: null }),
     productIds.length > 0
       ? admin
@@ -401,7 +405,7 @@ export async function getIncomingOrders(
 
   let query = admin
     .from("orders")
-    .select("id, customer_id, order_number, order_date, status, fulfillment_status, total_amount, metadata, created_at, notes, warehouse_id")
+    .select("id, customer_id, order_number, order_date, status, fulfillment_status, total_amount, metadata, created_at, notes, warehouse_id, assigned_vehicle_id")
     .eq("organization_id", organizationId);
 
   // If searchTerm is provided, we search across all dates (Global Search)
@@ -445,7 +449,7 @@ export async function getIncomingOrders(
       if (missingOrderIds.length > 0) {
         const { data: additionalOrders } = await admin
           .from("orders")
-          .select("id, customer_id, order_number, order_date, status, fulfillment_status, total_amount, metadata, created_at, notes")
+          .select("id, customer_id, order_number, order_date, status, fulfillment_status, total_amount, metadata, created_at, notes, warehouse_id, assigned_vehicle_id")
           .in("id", missingOrderIds);
           
         if (additionalOrders) {
@@ -457,37 +461,67 @@ export async function getIncomingOrders(
 
   const customerIds = Array.from(new Set(orders.map((order: OrderRow) => order.customer_id)));
 
-  const customersResult =
+  const orderIds = orders.map((order: OrderRow) => order.id);
+  const [customersResult, deliveryNotesResult] = await Promise.all([
     customerIds.length > 0
-      ? await admin
+      ? admin
           .from("customers")
-          .select("id, customer_code, name, address, default_vehicle_id")
+          .select("id, customer_code, name, address, default_vehicle_id, sort_order")
           .in("id", customerIds)
-          .order("name", { ascending: true })
-      : { data: [], error: null };
+          .order("sort_order", { ascending: true })
+      : Promise.resolve({ data: [], error: null }),
+    orderIds.length > 0
+      ? admin
+          .from("delivery_notes")
+          .select("order_id, vehicle_id, status, created_at")
+          .in("order_id", orderIds)
+          .order("created_at", { ascending: true })
+      : Promise.resolve({ data: [], error: null }),
+  ]);
 
   if (customersResult.error) {
     throw new Error(customersResult.error.message ?? "Failed to load customers.");
+  }
+  if (deliveryNotesResult.error) {
+    throw new Error(deliveryNotesResult.error.message ?? "Failed to load delivery notes.");
   }
 
   const customerMap = new Map(
     (customersResult.data ?? []).map((customer) => [customer.id, customer]),
   );
-  const vehicleIds = Array.from(
-    new Set(
-      (customersResult.data ?? [])
-        .map((customer) => customer.default_vehicle_id)
-        .filter((id): id is string => Boolean(id)),
-    ),
-  );
-  const vehiclesResult =
+  const activeDeliveryNoteByOrderId = new Map<string, DeliveryNoteRow>();
+  for (const note of deliveryNotesResult.data ?? []) {
+    if (
+      note.order_id &&
+      note.status !== "cancelled" &&
+      !activeDeliveryNoteByOrderId.has(note.order_id)
+    ) {
+      activeDeliveryNoteByOrderId.set(note.order_id, note);
+    }
+  }
+
+  const vehicleIds = Array.from(new Set([
+    ...(customersResult.data ?? []).map((customer) => customer.default_vehicle_id),
+    ...orders.map((order: OrderRow) => order.assigned_vehicle_id),
+    ...Array.from(activeDeliveryNoteByOrderId.values()).map((note) => note.vehicle_id ?? null),
+  ].filter((id): id is string => Boolean(id))));
+
+  const [vehiclesResult, itemsResult] = await Promise.all([
     vehicleIds.length > 0
-      ? await admin
+      ? admin
           .from("vehicles")
-          .select("id, name")
+          .select("id, name, sort_order")
           .in("id", vehicleIds)
-          .order("name", { ascending: true })
-      : { data: [], error: null };
+          .order("sort_order", { ascending: true })
+      : Promise.resolve({ data: [], error: null }),
+    orderIds.length > 0
+      ? admin
+          .from("order_items")
+          .select("order_id, product_id")
+          .in("order_id", orderIds)
+          .order("order_id", { ascending: true })
+      : Promise.resolve({ data: [], error: null }),
+  ]);
 
   if (vehiclesResult.error) {
     throw new Error(vehiclesResult.error.message ?? "Failed to load vehicles.");
@@ -496,17 +530,6 @@ export async function getIncomingOrders(
   const vehicleNameMap = new Map(
     (vehiclesResult.data ?? []).map((vehicle) => [vehicle.id, vehicle.name]),
   );
-
-  const orderIds = orders.map((order: OrderRow) => order.id);
-
-  const itemsResult =
-    orderIds.length > 0
-      ? await admin
-          .from("order_items")
-          .select("order_id, product_id")
-          .in("order_id", orderIds)
-          .order("order_id", { ascending: true })
-      : ({ data: [], error: null } as const);
 
   const orderProductSets = new Map<string, Set<string>>();
   for (const item of itemsResult.data ?? []) {
@@ -521,6 +544,12 @@ export async function getIncomingOrders(
   return orders
     .map((order: OrderRow) => {
       const customer = customerMap.get(order.customer_id);
+      const activeDeliveryNote = activeDeliveryNoteByOrderId.get(order.id);
+      const vehicleId =
+        activeDeliveryNote?.vehicle_id ??
+        order.assigned_vehicle_id ??
+        customer?.default_vehicle_id ??
+        null;
 
       return {
         channelLabel: getChannelLabel(order.metadata),
@@ -536,10 +565,8 @@ export async function getIncomingOrders(
         fulfillmentStatus: order.fulfillment_status,
         status: order.status,
         totalAmount: normalizeNumber(order.total_amount),
-        vehicleId: customer?.default_vehicle_id ?? null,
-        vehicleName: customer?.default_vehicle_id
-          ? (vehicleNameMap.get(customer.default_vehicle_id) ?? null)
-          : null,
+        vehicleId,
+        vehicleName: vehicleId ? (vehicleNameMap.get(vehicleId) ?? null) : null,
         warehouseId: order.warehouse_id,
         warehouseName: order.warehouse_id ? (warehouseNameMap.get(order.warehouse_id) ?? null) : null,
       } satisfies IncomingOrderListItem;

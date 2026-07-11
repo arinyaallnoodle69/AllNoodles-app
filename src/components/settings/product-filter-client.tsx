@@ -2,7 +2,7 @@
 
 import { useActionState, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Download, FileDown, ListFilter, Loader2, Plus, Search, Upload, X } from "lucide-react";
+import { ChevronDown, Download, FileDown, FileSpreadsheet, ListFilter, Loader2, Plus, Search, Upload, X } from "lucide-react";
 import { importProductsFromExcelAction } from "@/app/dashboard/settings/actions";
 import { MobileSearchDrawer } from "@/components/mobile-search/mobile-search-drawer";
 import { ProductList } from "@/components/settings/product-list";
@@ -305,6 +305,7 @@ export function ProductFilterClient({
   const [mobileFilterDrawer, setMobileFilterDrawer] = useState<"brand" | "category" | null>(null);
   const [isMobileFilterDrawerClosing, setIsMobileFilterDrawerClosing] = useState(false);
   const mobileFilterDrawerTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [showFileActions, setShowFileActions] = useState(false);
   const [importState, importAction, isImportPending] = useActionState(
     importProductsFromExcelAction,
     initialImportState,
@@ -329,8 +330,16 @@ export function ProductFilterClient({
         if (trimmed) seen.add(trimmed);
       }
     }
-    return Array.from(seen).sort((a, b) => a.localeCompare(b, "th"));
-  }, [allProducts, selectedCategory]);
+
+    const brandOrderMap = new Map(brands.map((b, index) => [b.name.trim().toLowerCase(), index]));
+
+    return Array.from(seen).sort((a, b) => {
+      const idxA = brandOrderMap.get(a.toLowerCase()) ?? Infinity;
+      const idxB = brandOrderMap.get(b.toLowerCase()) ?? Infinity;
+      if (idxA !== idxB) return idxA - idxB;
+      return a.localeCompare(b, "th");
+    });
+  }, [allProducts, selectedCategory, brands]);
 
 
 
@@ -630,34 +639,71 @@ export function ProductFilterClient({
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <a
-              href="/settings/products/template"
-              className="hidden items-center gap-2 rounded-lg border border-[#4A148C]/20 bg-white px-4 py-2 text-xs font-black text-[#4A148C] transition-colors hover:bg-slate-50 lg:flex btn-press"
-            >
-              <FileDown className="h-3.5 w-3.5" strokeWidth={2.5} />
-              เทมเพลต
-            </a>
-            <button
-              type="button"
-              onClick={openImportFilePicker}
-              disabled={isImportPending}
-              className="hidden items-center gap-2 rounded-lg border border-[#4A148C]/20 bg-white px-4 py-2 text-xs font-black text-[#4A148C] transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60 lg:flex btn-press"
-            >
-              {isImportPending ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" strokeWidth={2.5} />
-              ) : (
-                <Upload className="h-3.5 w-3.5" strokeWidth={2.5} />
-              )}
-              นำเข้า Excel
-            </button>
-            <button
-              type="button"
-              onClick={handleExport}
-              className="hidden items-center gap-2 rounded-lg border border-[#4A148C]/20 bg-white px-4 py-2 text-xs font-black text-[#4A148C] transition-colors hover:bg-slate-50 lg:flex btn-press"
-            >
-              <Download className="h-3.5 w-3.5" strokeWidth={2.5} />
-              ส่งออกข้อมูล
-            </button>
+            <div className="relative hidden lg:block">
+              {/* Main Trigger Button */}
+              <button
+                type="button"
+                onClick={() => setShowFileActions(prev => !prev)}
+                className={`flex items-center gap-2 rounded-lg border px-4 py-2 text-xs font-black transition-all btn-press whitespace-nowrap ${
+                  showFileActions
+                    ? "border-[#EA80FC] bg-[#F3E5F5] text-[#4A148C]"
+                    : "border-[#4A148C]/20 bg-white text-[#4A148C] hover:bg-slate-50"
+                }`}
+              >
+                <FileSpreadsheet className="h-3.5 w-3.5" strokeWidth={2.5} />
+                เครื่องมือจัดการไฟล์
+                <ChevronDown 
+                  className={`h-3.5 w-3.5 transition-transform duration-300 ${showFileActions ? "rotate-180" : ""}`} 
+                  strokeWidth={2.5} 
+                />
+              </button>
+
+              {/* Slide-Down Dropdown Menu */}
+              <div 
+                className="absolute right-0 top-full mt-2 z-50 flex w-48 flex-col gap-1 rounded-xl border border-[#EA80FC]/35 bg-white p-2 shadow-[0_10px_30px_rgba(74,20,140,0.08)] transition-all duration-300 ease-in-out origin-top"
+                style={{
+                  opacity: showFileActions ? 1 : 0,
+                  transform: showFileActions ? "translateY(0) scale(1)" : "translateY(-12px) scale(0.95)",
+                  pointerEvents: showFileActions ? "auto" : "none",
+                }}
+              >
+                <a
+                  href="/settings/products/template"
+                  className="flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-xs font-black text-[#4A148C] transition-colors hover:bg-[#F3E5F5]/50 active:bg-[#F3E5F5]"
+                  onClick={() => setShowFileActions(false)}
+                >
+                  <FileDown className="h-4 w-4" strokeWidth={2.2} />
+                  ดาวน์โหลดเทมเพลต
+                </a>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowFileActions(false);
+                    openImportFilePicker();
+                  }}
+                  disabled={isImportPending}
+                  className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-left text-xs font-black text-[#4A148C] transition-colors hover:bg-[#F3E5F5]/50 active:bg-[#F3E5F5] disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {isImportPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin" strokeWidth={2.2} />
+                  ) : (
+                    <Upload className="h-4 w-4" strokeWidth={2.2} />
+                  )}
+                  นำเข้า Excel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowFileActions(false);
+                    handleExport();
+                  }}
+                  className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-left text-xs font-black text-[#4A148C] transition-colors hover:bg-[#F3E5F5]/50 active:bg-[#F3E5F5]"
+                >
+                  <Download className="h-4 w-4" strokeWidth={2.2} />
+                  ส่งออกข้อมูล
+                </button>
+              </div>
+            </div>
             {children}
           </div>
         </div>

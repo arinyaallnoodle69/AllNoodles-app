@@ -354,7 +354,6 @@ function calcDataColWidth(count: number, availableMm: number, minMm = 6) {
 function StandardPackingListPage({ page, data }: { page: StandardPageDef; data: PackingListData }) {
   const columnWidth = calcDataColWidth(Math.max(page.pageProducts.length, 1), 261, 5);
   const categoryGroups = buildHeaderGroups(page.pageProducts, "category");
-  const brandGroups = buildHeaderGroups(page.pageProducts, "brand");
   const categoryPaletteByKey = new Map(
     categoryGroups.map((group, index) => [
       group.key,
@@ -402,25 +401,6 @@ function StandardPackingListPage({ page, data }: { page: StandardPageDef; data: 
                       style={{ backgroundColor: palette.header }}
                     >
                       <span className="packing-header-label packing-header-label--category">
-                        {insertZeroWidthSpaces(group.label)}
-                      </span>
-                    </th>
-                  );
-                })}
-              </tr>
-              <tr>
-                <th className="packing-col packing-col--store packing-col--group-label">แบรนด์</th>
-                {brandGroups.map((group) => {
-                  const product = page.pageProducts[group.startIndex];
-                  const palette = product ? getCategoryPalette(product) : COLUMN_COLOR_GROUPS[0];
-                  return (
-                    <th
-                      key={`brand-${group.startIndex}-${group.label}`}
-                      className="packing-col packing-col--brand"
-                      colSpan={group.span}
-                      style={{ backgroundColor: palette.rowA }}
-                    >
-                      <span className="packing-header-label packing-header-label--brand">
                         {insertZeroWidthSpaces(group.label)}
                       </span>
                     </th>
@@ -627,7 +607,7 @@ function PackingListStyles() {
           display: block !important;
           margin: 0 !important;
           padding: 0 !important;
-          line-height: 1 !important;
+          line-height: 1.22 !important;
         }
 
         .packing-sheet-shell {
@@ -637,7 +617,7 @@ function PackingListStyles() {
           padding: 0 !important;
           display: block !important;
           overflow: hidden !important;
-          line-height: 1 !important;
+          line-height: 1.22 !important;
         }
 
         .packing-sheet {
@@ -778,7 +758,7 @@ function PackingListStyles() {
       .packing-header__org {
         font-size: 7.2pt;
         font-weight: 800;
-        line-height: 1;
+        line-height: 1.22;
         letter-spacing: 0.04em;
         text-transform: uppercase;
         color: #4A148C;
@@ -792,7 +772,7 @@ function PackingListStyles() {
       .packing-header__title {
         margin: 0;
         font-size: 12.8pt;
-        line-height: 1;
+        line-height: 1.18;
         font-weight: 800;
         color: #0f172a;
         white-space: nowrap;
@@ -805,7 +785,7 @@ function PackingListStyles() {
       .packing-header__date {
         font-size: 6.8pt;
         font-weight: 700;
-        line-height: 1;
+        line-height: 1.24;
         color: #475569;
         white-space: nowrap;
       }
@@ -815,7 +795,7 @@ function PackingListStyles() {
         text-align: center;
         font-size: 13.8pt;
         font-weight: 800;
-        line-height: 1;
+        line-height: 1.18;
         color: #0f172a;
         white-space: nowrap;
         overflow: hidden;
@@ -828,7 +808,7 @@ function PackingListStyles() {
         align-items: center;
         font-size: 7.5pt;
         font-weight: 700;
-        line-height: 1;
+        line-height: 1.24;
         color: #475569;
         white-space: nowrap;
       }
@@ -861,9 +841,9 @@ function PackingListStyles() {
         height: var(--standard-row-height);
       }
 
-            .packing-table:not(.packing-table--transposed) .packing-cell--store {
+      .packing-table:not(.packing-table--transposed) .packing-cell--store {
         font-size: 9.8pt;
-        line-height: 0.98;
+        line-height: 1.16;
       }
 
       .packing-table:not(.packing-table--transposed) .packing-cell--qty,
@@ -919,11 +899,12 @@ function PackingListStyles() {
       .packing-col--store {
         width: 24mm;
         min-width: 24mm;
-        padding: 1.2mm 1mm;
+        padding: 1mm 1mm 0.75mm;
         background: #ffffff;
         color: #0f172a;
         font-size: 8.2pt;
         font-weight: 800;
+        line-height: 1.2;
         text-align: left;
         white-space: nowrap;
       }
@@ -937,48 +918,33 @@ function PackingListStyles() {
         text-align: center;
       }
 
-      .packing-col--category,
-      .packing-col--brand {
+      .packing-col--category {
         min-height: 3.8mm;
-        padding: 0.25mm 0.6mm;
-        overflow: hidden;
+        padding: 0.45mm 0.6mm 0.3mm;
+        overflow: visible;
         text-align: center;
         vertical-align: middle;
       }
 
       .packing-col--category {
-        height: 3.8mm;
+        height: 4.2mm;
         font-size: 7.4pt;
+        line-height: 1.18;
         font-weight: 900;
         color: #0f172a;
-      }
-
-      .packing-col--brand {
-        height: 8.6mm;
-        font-size: 6.1pt;
-        font-weight: 800;
-        line-height: 1;
-        color: #334155;
       }
 
       .packing-header-label {
         width: 100%;
         min-width: 0;
-        overflow: hidden;
+        overflow: visible;
+        line-height: 1.18;
       }
 
       .packing-header-label--category {
         display: block;
         text-overflow: ellipsis;
         white-space: nowrap;
-      }
-
-      .packing-header-label--brand {
-        display: -webkit-box;
-        white-space: normal;
-        overflow-wrap: anywhere;
-        -webkit-box-orient: vertical;
-        -webkit-line-clamp: 3;
       }
 
       .packing-col--transpose-product {
@@ -1011,51 +977,51 @@ function PackingListStyles() {
         align-items: center;
         justify-content: center;
         gap: 0.35mm;
-        min-height: 22mm;
-        padding: 0.45mm 0.05mm;
+        min-height: 13.8mm;
+        padding: 0.75mm 0.15mm 0.45mm;
         width: 100%;
         min-width: 0;
         overflow: hidden;
       }
 
-                        .packing-product-header__name {
-        display: flex;
+      .packing-product-header__name {
+        display: -webkit-box;
         align-items: center;
-        justify-content: flex-start;
-        flex: 1;
-        font-size: 6.4pt;
-        line-height: 1;
-        font-weight: 700;
+        justify-content: center;
+        font-size: 5.7pt;
+        line-height: 1.18;
+        font-weight: 800;
         color: #0f172a;
-        width: auto;
+        width: 100%;
         max-width: 100%;
-        height: 18.4mm;
+        min-height: 0;
+        max-height: 10.2mm;
         min-width: 0;
         overflow: hidden;
-        white-space: nowrap;
-        word-break: normal;
-        overflow-wrap: normal;
-        text-align: left;
-        writing-mode: vertical-rl;
+        white-space: normal;
+        word-break: break-word;
+        overflow-wrap: anywhere;
+        text-align: center;
+        writing-mode: horizontal-tb;
         text-orientation: mixed;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 3;
         padding: 0;
         box-sizing: border-box;
       }
 
       .packing-product-header__icon {
         display: inline-block;
-        margin-bottom: 0.35mm;
-        margin-right: 0;
+        margin-right: 0.35mm;
         font-family: "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", "Sarabun", sans-serif;
-        font-size: 7.2pt;
-        line-height: 1;
-        writing-mode: horizontal-tb;
+        font-size: 6.2pt;
+        line-height: 1.15;
       }
 
       .packing-product-header__unit {
         font-size: 5.8pt;
         font-weight: 700;
-        line-height: 1;
+        line-height: 1.15;
         color: #475569;
         text-align: center;
         padding-left: 0;
@@ -1117,7 +1083,7 @@ function PackingListStyles() {
         text-align: left;
         font-size: 8.8pt;
         font-weight: 700;
-        line-height: 1.05;
+        line-height: 1.16;
         color: #0f172a;
         overflow: hidden;
         text-overflow: ellipsis;
@@ -1142,7 +1108,7 @@ function PackingListStyles() {
         overflow: hidden;
         font-size: 8.4pt;
         font-weight: 700;
-        line-height: 1;
+        line-height: 1.16;
         color: #0f172a;
         -webkit-box-orient: vertical;
         -webkit-line-clamp: 2;

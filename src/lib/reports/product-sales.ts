@@ -49,16 +49,30 @@ export async function getCustomersForFilter(
   const supabase = getSupabaseAdmin();
   const { data } = await supabase
     .from("customers")
-    .select("id, name, default_vehicle_id")
+    .select("id, name, default_vehicle_id, sort_order")
     .eq("organization_id", organizationId)
     .eq("is_active", true)
-    .order("name", { ascending: true });
+    .order("sort_order", { ascending: true });
 
   return ((data ?? []) as { id: string; name: string; default_vehicle_id: string | null }[]).map((c) => ({
     id: c.id,
     name: c.name,
     defaultVehicleId: c.default_vehicle_id,
   }));
+}
+
+export async function getCategoriesForFilter(
+  organizationId: string,
+): Promise<string[]> {
+  const supabase = getSupabaseAdmin();
+  const { data } = await supabase
+    .from("product_categories")
+    .select("name")
+    .eq("organization_id", organizationId)
+    .eq("is_active", true)
+    .order("sort_order", { ascending: true });
+
+  return (data ?? []).map((c) => c.name);
 }
 
 export async function getProductsForFilter(

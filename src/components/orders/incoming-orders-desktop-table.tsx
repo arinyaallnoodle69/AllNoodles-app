@@ -1,15 +1,18 @@
 "use client";
 
 import { Fragment, memo, useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Building2, Check, ChevronDown, ChevronUp, Loader2 } from "lucide-react";
 import { fetchIncomingOrderDetailAction } from "@/app/orders/incoming/actions";
 import { DesktopOrderDetail } from "@/components/orders/desktop-order-detail";
 import { IncomingOrderDateButton } from "@/components/orders/incoming-order-date-button";
 import { IncomingOrderVehicleSelect } from "@/components/orders/incoming-order-vehicle-select";
 import { IncomingOrderVehicleFilter } from "@/components/orders/incoming-order-vehicle-filter";
+import { IncomingOrdersVehicleTransfer } from "@/components/orders/incoming-orders-vehicle-transfer";
 import { OrderDeliveryActionButton } from "@/components/orders/order-delivery-action-button";
 import type { IncomingOrderListItem, OrderDetailData } from "@/lib/orders/detail";
 import type { OrderVehicleOption } from "@/lib/orders/manage";
+import type { VehicleTransferDateOption } from "@/lib/orders/vehicle-transfer";
 
 type IncomingOrdersDesktopTableProps = {
   billedByCustomerDate: Record<string, boolean>;
@@ -21,6 +24,7 @@ type IncomingOrdersDesktopTableProps = {
   searchTerm: string;
   selectedCustomerIds: string[];
   vehicles: OrderVehicleOption[];
+  vehicleTransferDates: VehicleTransferDateOption[];
 };
 
 function formatCurrency(value: number) {
@@ -233,7 +237,24 @@ export const IncomingOrdersDesktopTable = memo(function IncomingOrdersDesktopTab
   searchTerm,
   selectedCustomerIds,
   vehicles,
+  vehicleTransferDates,
 }: IncomingOrdersDesktopTableProps) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const urlVehicleId = searchParams.get("vehicle") || "__all__";
+  const [selectedVehicleId, setSelectedVehicleId] = useState(urlVehicleId);
+
+  // Sync state if URL changes from outside (e.g. back button)
+  useEffect(() => {
+    setSelectedVehicleId(urlVehicleId);
+  }, [urlVehicleId]);
+
+  const filteredOrders = useMemo(() => {
+    if (selectedVehicleId === "__all__") return orders;
+    if (selectedVehicleId === "__none__") return orders.filter((o) => !o.vehicleId);
+    return orders.filter((o) => o.vehicleId === selectedVehicleId);
+  }, [orders, selectedVehicleId]);
+
   const [expandedOrderId, setExpandedOrderId] = useState(initialExpandedOrderId);
   const [detailByOrderId, setDetailByOrderId] = useState<Record<string, OrderDetailData>>(() =>
     initialExpandedOrderId && initialExpandedDetail
@@ -250,7 +271,7 @@ export const IncomingOrdersDesktopTable = memo(function IncomingOrdersDesktopTab
   const stickyScrollRef = useRef<HTMLDivElement | null>(null);
   const stickyScrollInnerRef = useRef<HTMLDivElement | null>(null);
 
-  const visibleOrderIds = useMemo(() => new Set(orders.map((order) => order.id)), [orders]);
+  const visibleOrderIds = useMemo(() => new Set(filteredOrders.map((order) => order.id)), [filteredOrders]);
 
   useEffect(() => {
     setExpandedOrderId(initialExpandedOrderId);
@@ -280,13 +301,29 @@ export const IncomingOrdersDesktopTable = memo(function IncomingOrdersDesktopTab
     const threshold = 4;
 
     const syncWidths = () => {
+      if (!main) return;
       const rect = main.getBoundingClientRect();
-      setStickyFrame({ left: rect.left, width: rect.width });
-      stickyInner.style.width = `${main.scrollWidth}px`;
-      sticky.scrollLeft = main.scrollLeft;
-      const maxScrollLeft = Math.max(0, main.scrollWidth - main.clientWidth);
-      setCanScrollLeft(main.scrollLeft > threshold);
-      setCanScrollRight(maxScrollLeft - main.scrollLeft > threshold);
+      
+      setStickyFrame((prev) => {
+        if (prev.left === rect.left && prev.width === rect.width) return prev;
+        return { left: rect.left, width: rect.width };
+      });
+
+      const scrollWidth = main.scrollWidth;
+      if (stickyInner && stickyInner.style.width !== `${scrollWidth}px`) {
+        stickyInner.style.width = `${scrollWidth}px`;
+      }
+
+      if (sticky && sticky.scrollLeft !== main.scrollLeft) {
+        sticky.scrollLeft = main.scrollLeft;
+      }
+
+      const maxScrollLeft = Math.max(0, scrollWidth - main.clientWidth);
+      const newCanScrollLeft = main.scrollLeft > threshold;
+      const newCanScrollRight = maxScrollLeft - main.scrollLeft > threshold;
+
+      setCanScrollLeft((prev) => (prev !== newCanScrollLeft ? newCanScrollLeft : prev));
+      setCanScrollRight((prev) => (prev !== newCanScrollRight ? newCanScrollRight : prev));
     };
 
     const onMainScroll = () => {
@@ -307,15 +344,13 @@ export const IncomingOrdersDesktopTable = memo(function IncomingOrdersDesktopTab
     main.addEventListener("scroll", onMainScroll, { passive: true });
     sticky.addEventListener("scroll", onStickyScroll, { passive: true });
     window.addEventListener("resize", syncWidths);
-    window.addEventListener("scroll", syncWidths, { passive: true });
 
     return () => {
       main.removeEventListener("scroll", onMainScroll);
       sticky.removeEventListener("scroll", onStickyScroll);
       window.removeEventListener("resize", syncWidths);
-      window.removeEventListener("scroll", syncWidths);
     };
-  }, [orders.length, expandedOrderId]);
+  }, [filteredOrders.length, expandedOrderId]);
 
   async function toggleOrder(orderId: string) {
     setDetailError(null);
@@ -352,17 +387,32 @@ export const IncomingOrdersDesktopTable = memo(function IncomingOrdersDesktopTab
         <div className="flex items-center justify-between border-b border-[#EA80FC]/30 bg-white px-4 py-3 xl:px-6 xl:py-4">
           <div>
             <h3 className="text-lg font-black text-[#4A148C] xl:text-xl">ตารางรายการคำสั่งซื้อล่าสุด</h3>
-            <p className="mt-1 text-sm font-semibold text-[#4A148C] xl:text-base">
-              จัดการและติดตามสถานะออเดอร์ในวันที่เลือกจากจุดเดียว
-            </p>
-            <IncomingOrderVehicleFilter vehicles={vehicles} />
+            <IncomingOrderVehicleFilter
+              vehicles={vehicles}
+              activeVehicleId={selectedVehicleId}
+              onVehicleChange={(id) => {
+                setSelectedVehicleId(id);
+                const params = new URLSearchParams(window.location.search);
+                if (id === "__all__") {
+                  params.delete("vehicle");
+                } else {
+                  params.set("vehicle", id);
+                }
+                startTransition(() => {
+                  router.replace(`/orders/incoming?${params.toString()}`, { scroll: false });
+                });
+              }}
+            />
             <p className="mt-1 hidden text-xs font-semibold text-[#4A148C] lg:block xl:hidden">
               ↔ เลื่อนซ้าย-ขวาเพื่อดูข้อมูลเพิ่มเติม
             </p>
           </div>
-          <div className="flex items-center gap-2 rounded-full border border-[#EA80FC]/45 bg-[#F3E5F5] px-3 py-1.5 text-sm font-black text-[#4A148C] xl:text-base">
-            <span className="h-2.5 w-2.5 rounded-full bg-[#EA80FC]" />
-            รายการทั้งหมด
+          <div className="flex items-center gap-2">
+            <IncomingOrdersVehicleTransfer dateOptions={vehicleTransferDates} />
+            <div className="flex items-center gap-2 rounded-full border border-[#EA80FC]/45 bg-[#F3E5F5] px-3 py-1.5 text-sm font-black text-[#4A148C] xl:text-base">
+              <span className="h-2.5 w-2.5 rounded-full bg-[#EA80FC]" />
+              รายการทั้งหมด
+            </div>
           </div>
         </div>
 
@@ -377,7 +427,7 @@ export const IncomingOrdersDesktopTable = memo(function IncomingOrdersDesktopTab
           <div
             ref={mainScrollRef}
             data-horizontal-scroll="true"
-            className="overflow-x-auto touch-pan-x pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            className="overflow-x-auto touch-pan-x touch-pan-y pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
           >
             <table className="w-full min-w-[1180px] border-collapse text-left">
             <thead className="bg-[#4A148C] text-white">
@@ -392,14 +442,14 @@ export const IncomingOrdersDesktopTable = memo(function IncomingOrdersDesktopTab
               </tr>
             </thead>
             <tbody className="divide-y divide-[#EA80FC]/18">
-              {orders.length === 0 ? (
+              {filteredOrders.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="px-6 py-12 text-center text-sm font-semibold text-slate-500 bg-slate-50/50">
                     ไม่พบรายการคำสั่งซื้อสำหรับรถส่งของคันนี้
                   </td>
                 </tr>
               ) : (
-                orders.map((order, index) => {
+                filteredOrders.map((order, index) => {
                   const orderKey = `${order.customerId}_${order.orderDate}`;
                   const isExpanded = expandedOrderId === order.id && visibleOrderIds.has(order.id);
                   const detail = detailByOrderId[order.id] ?? null;
@@ -412,7 +462,7 @@ export const IncomingOrdersDesktopTable = memo(function IncomingOrdersDesktopTab
                       key={order.id}
                       order={order}
                       index={index}
-                      orders={orders}
+                      orders={filteredOrders}
                       isExpanded={isExpanded}
                       isLoading={isLoading}
                       detail={detail}

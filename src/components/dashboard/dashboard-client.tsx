@@ -125,7 +125,7 @@ function DashboardStatCard({
 
   return (
     <div
-      className={`relative overflow-hidden rounded-[1.1rem] border border-[#eef2f7] bg-white pl-2.5 pr-2.5 shadow-[0_10px_22px_rgba(15,23,42,0.045)] ${compact ? "pb-3 pt-3" : "pb-4 pt-4"} ${className}`}
+      className={`relative overflow-hidden rounded-[1.1rem] border border-[#eef2f7] bg-white pl-2.5 pr-2.5 shadow-[0_10px_22px_rgba(15,23,42,0.045)] dashboard-stat-card ${compact ? "pb-3 pt-3" : "pb-4 pt-4"} ${className}`}
     >
       <div className="flex items-center gap-1.5">
         <div
@@ -133,7 +133,7 @@ function DashboardStatCard({
         >
           {icon}
         </div>
-        <span className="min-w-0 whitespace-nowrap text-[17px] font-extrabold leading-none text-[#4A148C] sm:text-[18px] md:text-[21px]">
+        <span className="min-w-0 whitespace-nowrap text-[17px] font-extrabold leading-none text-[#4A148C] sm:text-[18px] md:text-xl">
           {title}
         </span>
       </div>
@@ -145,7 +145,7 @@ function DashboardStatCard({
           >
             {value}
           </p>
-          <p className={`${compact ? "mt-1" : "mt-2"} text-[12.5px] font-extrabold text-slate-500`}>
+          <p className={`${compact ? "mt-1" : "mt-2"} text-[12.5px] font-extrabold text-slate-500 md:text-[16px]`}>
             {unit}
           </p>
         </div>
@@ -356,7 +356,7 @@ export function DashboardClient({
   const dailySummaryRows = [...dailyPerformanceRows].reverse().slice(0, 7);
 
   return (
-    <div className="min-h-screen bg-background pb-24 font-apple-ui text-slate-800">
+    <div className="min-h-screen bg-background pb-24 font-apple-ui text-slate-800 dashboard-mobile-large-text">
       <header className="relative mx-auto mb-2 max-w-7xl overflow-hidden px-5 pt-4">
         <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
           <div>
@@ -482,7 +482,7 @@ export function DashboardClient({
                   stores: storeStatusSummary.allStores,
                 });
               }}
-              className="group flex w-full items-center gap-5 rounded-[1.35rem] border border-slate-200 bg-white p-5 text-left shadow-sm transition-all hover:border-[#4A148C]/30 hover:shadow-md active:scale-[0.99] md:p-7"
+              className="group flex w-full items-center gap-5 rounded-[1.35rem] border border-slate-200 bg-white p-5 text-left shadow-sm transition-all hover:border-[#4A148C]/30 hover:shadow-md active:scale-[0.99] dashboard-store-card md:p-7"
             >
               <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-3xl bg-[#EA80FC] text-[#4A148C] transition-colors group-hover:bg-[#EA80FC] group-hover:text-[#4A148C] md:h-20 md:w-20">
                 <Store className="h-7 w-7 md:h-10 md:w-10" strokeWidth={2} />
@@ -514,7 +514,7 @@ export function DashboardClient({
                     stores: storeStatusSummary.unorderedStores,
                   });
                 }}
-                className="group flex items-center gap-4 rounded-[1.35rem] border border-slate-200 bg-white p-4 text-left shadow-sm transition-all hover:border-rose-200 hover:shadow-md active:scale-[0.98] md:p-6"
+                className="group flex items-center gap-4 rounded-[1.35rem] border border-slate-200 bg-white p-4 text-left shadow-sm transition-all hover:border-rose-200 hover:shadow-md active:scale-[0.98] dashboard-store-card md:p-6"
               >
                 <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-rose-50 text-rose-600 transition-colors group-hover:bg-rose-600 group-hover:text-white md:h-16 md:w-16">
                   <ShoppingBag className="h-6 w-6 md:h-8 md:w-8" strokeWidth={2} />
@@ -538,7 +538,7 @@ export function DashboardClient({
                     stores: storeStatusSummary.orderedStores,
                   });
                 }}
-                className="group flex items-center gap-4 rounded-[1.35rem] border border-slate-200 bg-white p-4 text-left shadow-sm transition-all hover:border-emerald-200 hover:shadow-md active:scale-[0.98] md:p-6"
+                className="group flex items-center gap-4 rounded-[1.35rem] border border-slate-200 bg-white p-4 text-left shadow-sm transition-all hover:border-emerald-200 hover:shadow-md active:scale-[0.98] dashboard-store-card md:p-6"
               >
                 <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600 transition-colors group-hover:bg-emerald-600 group-hover:text-white md:h-16 md:w-16">
                   <ClipboardList className="h-6 w-6 md:h-8 md:w-8" strokeWidth={2} />
@@ -647,17 +647,17 @@ export function DashboardClient({
                 <table className="w-full text-sm">
                   <thead className="border-b border-slate-100 bg-slate-50/50 text-slate-500">
                     <tr>
-                      <th className="pl-5 pr-1 py-3 text-left text-[12px] font-black sm:pl-4 sm:pr-4 sm:text-[13px]">วัน</th>
-                      <th className="px-1 py-3 text-right text-[12px] font-black sm:px-4 sm:text-[13px]">ยอดขาย</th>
-                      <th className="px-1 py-3 text-right text-[12px] font-black sm:px-4 sm:text-[13px]">ต้นทุน</th>
-                      <th className="pl-1 pr-5 py-3 text-right text-[12px] font-black sm:pl-4 sm:pr-4 sm:text-[13px]">กำไร</th>
+                      <th className="pl-5 pr-1 py-3 text-left text-sm font-black sm:pl-4 sm:pr-4 sm:text-base">วัน</th>
+                      <th className="px-1 py-3 text-right text-sm font-black sm:px-4 sm:text-base">ยอดขาย</th>
+                      <th className="px-1 py-3 text-right text-sm font-black sm:px-4 sm:text-base">ต้นทุน</th>
+                      <th className="pl-1 pr-5 py-3 text-right text-sm font-black sm:pl-4 sm:pr-4 sm:text-base">กำไร</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 bg-white">
                     {dailySummaryRows.map((row, index) => (
                       <tr key={row.isoDate} className="hover:bg-slate-50/30 transition-colors">
                         <td
-                          className={`whitespace-nowrap pl-5 pr-1 py-3.5 text-[12px] font-bold sm:pl-4 sm:pr-4 ${
+                          className={`whitespace-nowrap pl-5 pr-1 py-3.5 text-sm font-bold sm:pl-4 sm:pr-4 sm:text-base ${
                             index === 0 ? "text-slate-900 font-extrabold" : "text-slate-700"
                           }`}
                         >
@@ -665,13 +665,13 @@ export function DashboardClient({
                             ? `${toThaiShortDate(row.isoDate)} (วันนี้)`
                             : toThaiShortDate(row.isoDate)}
                         </td>
-                        <td className="whitespace-nowrap px-1 py-3.5 text-right text-[12px] font-black tabular-nums text-emerald-600 sm:px-4">
+                        <td className="whitespace-nowrap px-1 py-3.5 text-right text-sm font-black tabular-nums text-emerald-600 sm:px-4 sm:text-base">
                           {fmtMoney(row.revenue)}
                         </td>
-                        <td className="whitespace-nowrap px-1 py-3.5 text-right text-[12px] font-semibold tabular-nums text-rose-600 sm:px-4">
+                        <td className="whitespace-nowrap px-1 py-3.5 text-right text-sm font-semibold tabular-nums text-rose-600 sm:px-4 sm:text-base">
                           {fmtMoney(row.cost)}
                         </td>
-                        <td className="whitespace-nowrap pl-1 pr-5 py-3.5 text-right text-[12px] font-black tabular-nums text-teal-600 sm:pl-4 sm:pr-4">
+                        <td className="whitespace-nowrap pl-1 pr-5 py-3.5 text-right text-sm font-black tabular-nums text-teal-600 sm:pl-4 sm:pr-4 sm:text-base">
                           {fmtMoney(row.profit)}
                         </td>
                       </tr>
@@ -700,7 +700,7 @@ export function DashboardClient({
             className="absolute inset-0 cursor-default"
             onClick={closeViewingStores}
           />
-          <div className={`relative z-10 w-full max-w-xl overflow-hidden rounded-t-[3rem] bg-white pb-12 pt-4 shadow-2xl sm:rounded-[3rem] ${
+          <div className={`relative z-10 w-full max-w-xl overflow-hidden rounded-t-[3rem] bg-white pb-12 pt-4 shadow-2xl sm:rounded-[3rem] dashboard-modal-content dashboard-stores-modal ${
             isViewingStoresClosing ? "animate-drawer-slide-out" : "animate-drawer-slide-in"
           }`}>
             <div className="mb-6 flex justify-center">
@@ -852,7 +852,7 @@ export function DashboardClient({
             className="absolute inset-0 cursor-default"
             onClick={closeLineOrdersDrawer}
           />
-          <aside className={`relative flex h-[86dvh] w-full max-w-lg flex-col overflow-hidden rounded-t-[2rem] bg-white shadow-[0_-24px_70px_rgba(15,23,42,0.24)] sm:h-full sm:rounded-l-[2rem] sm:rounded-tr-none ${
+          <aside className={`relative flex h-[86dvh] w-full max-w-lg flex-col overflow-hidden rounded-t-[2rem] bg-white shadow-[0_-24px_70px_rgba(15,23,42,0.24)] sm:h-full sm:rounded-l-[2rem] sm:rounded-tr-none dashboard-modal-content dashboard-line-orders-modal ${
             isLineOrdersDrawerClosing ? "animate-drawer-slide-out" : "animate-drawer-slide-in"
           }`}>
             <div className="flex shrink-0 items-start justify-between gap-4 border-b border-slate-100 px-5 py-5 pt-[max(1.25rem,env(safe-area-inset-top))] sm:px-6">

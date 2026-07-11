@@ -195,7 +195,7 @@ export function SettingsMobileBottomNav() {
         </div>
       </div>
 
-      <nav className="fixed inset-x-0 bottom-0 z-40 lg:hidden">
+      <nav className="fixed inset-x-0 bottom-0 z-40 lg:hidden settings-mobile-bottom-nav-bar">
         <div className="relative w-full">
           {/* Curved Background with Notch */}
           <div className="absolute inset-x-0 bottom-0 -z-10 h-[calc(100%+20px)]">

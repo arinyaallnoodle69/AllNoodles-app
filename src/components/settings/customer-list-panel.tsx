@@ -86,7 +86,7 @@ function MobileCustomerCard({
 }: MobileCustomerCardProps) {
   return (
     <div
-      className={`select-none px-4 py-3.5 transition [-webkit-touch-callout:none] [-webkit-user-select:none] [user-select:none] ${
+      className={`select-none px-4 py-6 transition [-webkit-touch-callout:none] [-webkit-user-select:none] [user-select:none] ${
         isDragging
           ? "relative z-20 scale-[1.035] rounded-2xl bg-white shadow-[0_22px_46px_rgba(74,20,140,0.24)] ring-2 ring-[#EA80FC]/35"
           : "bg-white"
@@ -502,8 +502,8 @@ export function CustomerListPanel({
       if (pointerY !== null) {
         const bottomNavOffset = 126;
         const edgeSize = 300;
-        const baseSpeed = 16;
-        const maxSpeed = 70;
+        const baseSpeed = 5;
+        const maxSpeed = 22;
         const effectiveBottom = Math.max(260, window.innerHeight - bottomNavOffset);
         let delta = 0;
 
@@ -601,7 +601,7 @@ export function CustomerListPanel({
           </div>
         ) : (
           <>
-            <div className="divide-y divide-slate-200 sm:hidden">
+            <div className="divide-y divide-slate-300 sm:hidden">
               {enableMobileReorder ? (
                 <DndContext
                   id="customer-list-mobile-dnd"
@@ -652,7 +652,7 @@ export function CustomerListPanel({
               ) : null}
               <div className={enableMobileReorder ? "hidden" : "contents"}>
               {visibleCustomers.map((customer, index) => (
-                <div key={customer.id} className="px-4 py-3.5">
+                <div key={customer.id} className="px-4 py-6">
                   <div className="flex items-start gap-2.5">
                     <div className="w-6 shrink-0 pt-2 text-center text-base font-black tabular-nums text-[#4A148C]">
                       {(index + 1).toLocaleString("th-TH")}

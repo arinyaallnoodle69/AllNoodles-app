@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { LayoutList } from "lucide-react";
 
 type PrintPackingListButtonProps = {
@@ -24,6 +24,16 @@ export function PrintPackingListButton({
       }`,
     [date, endDate, layout],
   );
+
+  useEffect(() => {
+    const handlePageShow = () => {
+      setLoading(false);
+    };
+    window.addEventListener("pageshow", handlePageShow);
+    return () => {
+      window.removeEventListener("pageshow", handlePageShow);
+    };
+  }, []);
 
   function handlePrint() {
     if (loading) return;

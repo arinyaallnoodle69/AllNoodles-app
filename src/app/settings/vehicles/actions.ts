@@ -196,3 +196,48 @@ export async function deleteVehicleAction(vehicleId: string): Promise<{ error?: 
   revalidateVehiclePaths();
   return {};
 }
+
+export async function updateVehicleOrderAction(vehicleIds: string[]): Promise<{ error?: string }> {
+  const session = await requireAppRole("admin");
+  const admin = getSupabaseAdmin();
+  const uniqueVehicleIds = [...new Set(vehicleIds.map((id) => id.trim()).filter(Boolean))];
+
+  if (uniqueVehicleIds.length === 0) {
+    return { error: "ไม่พบรายการรถที่ต้องการจัดเรียง" };
+  }
+
+  const { data: vehicles, error: lookupError } = await admin
+    .from("vehicles")
+    .select("id")
+    .eq("organization_id", session.organizationId)
+    .eq("is_active", true)
+    .in("id", uniqueVehicleIds);
+
+  if (lookupError || (vehicles ?? []).length !== uniqueVehicleIds.length) {
+    return { error: "รายการรถไม่ถูกต้อง กรุณารีเฟรชหน้าแล้วลองใหม่" };
+  }
+
+  const vehiclesTable = admin.from("vehicles") as unknown as {
+    update(values: { sort_order: number }): {
+      eq(column: string, value: string): {
+        eq(column: string, value: string): Promise<{ error: { message?: string } | null }>;
+      };
+    };
+  };
+
+  const updates = uniqueVehicleIds.map((id, index) =>
+    vehiclesTable
+      .update({ sort_order: index })
+      .eq("organization_id", session.organizationId)
+      .eq("id", id),
+  );
+
+  const results = await Promise.all(updates);
+  if (results.some((result) => result.error)) {
+    return { error: "บันทึกลำดับรถไม่สำเร็จ กรุณาลองใหม่อีกครั้ง" };
+  }
+
+  revalidateVehiclePaths();
+  return {};
+}
+

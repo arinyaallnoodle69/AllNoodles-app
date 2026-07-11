@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { Boxes, Package, PackageSearch, Store, Truck, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 
 export type PackingListSummaryProduct = {
   key: string;
@@ -13,10 +14,12 @@ export type PackingListSummaryProduct = {
   imageUrl?: string | null;
   vehicleId: string | null;
   vehicleName: string | null;
+  display_order?: number;
 };
 
 export type PackingListSummaryStore = {
   id: string;
+  customerId?: string;
   customerCode: string;
   customerName: string;
   date: string;
@@ -31,6 +34,7 @@ export type PackingListSummaryStore = {
     name: string;
     unit: string;
     quantity: number;
+    display_order?: number;
   }>;
 };
 
@@ -129,7 +133,12 @@ export function PackingListSummaryButton({
 
     return Array.from(map.values()).map((group) => ({
       ...group,
-      products: [...group.products].sort((a, b) => a.name.localeCompare(b.name, "th") || a.sku.localeCompare(b.sku, "th")),
+      products: [...group.products].sort((a, b) => {
+        const orderA = a.display_order ?? 0;
+        const orderB = b.display_order ?? 0;
+        if (orderA !== orderB) return orderA - orderB;
+        return a.name.localeCompare(b.name, "th") || a.sku.localeCompare(b.sku, "th");
+      }),
     }));
   }, [products]);
 
@@ -146,14 +155,15 @@ export function PackingListSummaryButton({
       map.set(vehicleKey, current);
     }
 
+    const storeIndexMap = new Map(stores.map((s, index) => [s.id, index]));
+
     return Array.from(map.values()).map((group) => ({
       ...group,
-      stores: [...group.stores].sort(
-        (a, b) =>
-          a.date.localeCompare(b.date) ||
-          a.customerCode.localeCompare(b.customerCode, "th") ||
-          a.customerName.localeCompare(b.customerName, "th"),
-      ),
+      stores: [...group.stores].sort((a, b) => {
+        const idxA = storeIndexMap.get(a.id) ?? Infinity;
+        const idxB = storeIndexMap.get(b.id) ?? Infinity;
+        return idxA - idxB;
+      }),
     }));
   }, [stores]);
 
@@ -190,14 +200,14 @@ export function PackingListSummaryButton({
       <button
         type="button"
         onClick={() => setIsOpen(true)}
-        className="inline-flex items-center gap-2 rounded-full border border-[#4A148C]/15 bg-[#F3E5F5] px-3.5 py-1.5 text-[13px] font-bold text-[#4A148C] shadow-sm transition hover:bg-[#EA80FC] active:scale-[0.98]"
+        className="inline-flex items-center gap-2 whitespace-nowrap rounded-full border border-[#4A148C]/15 bg-[#F3E5F5] px-3.5 py-1.5 text-[13px] font-bold text-[#4A148C] shadow-sm transition hover:bg-[#EA80FC] active:scale-[0.98] md:gap-2 md:px-6 md:py-2.5 md:text-sm"
       >
         <PackageSearch className="h-4 w-4" strokeWidth={2.4} />
         สรุปสินค้า
       </button>
 
-      {isOpen ? (
-        <div className="fixed inset-0 z-[140] flex items-center justify-center">
+      {isOpen && typeof document !== "undefined" ? createPortal(
+        <div className="fixed inset-0 z-[600] flex items-center justify-center">
           <button
             type="button"
             aria-label="ปิดสรุปสินค้า"
@@ -207,110 +217,89 @@ export function PackingListSummaryButton({
 
           <div className="absolute inset-0 flex flex-col overflow-hidden bg-slate-50 shadow-2xl md:inset-x-[8%] md:inset-y-[6%] md:rounded-[2.5rem] md:border-2 md:border-[#EA80FC]/35 md:shadow-[0_24px_70px_rgba(142, 36, 170,0.25)] animate-in fade-in zoom-in-95 duration-300">
             <div className="flex h-full flex-col">
-              {/* Header */}
-              <div className="relative overflow-hidden border-b border-[#EA80FC]/40 bg-gradient-to-r from-[#061F47] to-[#0A3375] text-white">
-                {/* Decorative Gold Top Edge */}
-                <div className="h-1.5 w-full bg-gradient-to-r from-[#EA80FC] via-[#F3E5AB] to-[#EA80FC]" />
+              {/* Modern & Compact Header */}
+              <div className="relative overflow-hidden border-b border-[#EA80FC]/30 bg-[#4A148C] text-white">
+                {/* Top thin gold edge */}
+                <div className="h-1 w-full bg-gradient-to-r from-[#EA80FC] via-[#F3E5AB] to-[#EA80FC]" />
                 
-                {/* Main Header Content */}
-                <div className="px-4 py-4 md:px-7 md:py-6">
+                {/* Main Header Content - Reduced padding */}
+                <div className="px-4 py-3 md:px-6 md:py-4">
                   {/* Mobile Drag Indicator */}
-                  <div className="mb-3 flex justify-center md:hidden">
-                    <div className="h-1 w-12 rounded-full bg-white/20" />
+                  <div className="mb-2 flex justify-center md:hidden">
+                    <div className="h-1 w-10 rounded-full bg-white/20" />
                   </div>
 
-                  <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-                    {/* Title & Badge */}
-                    <div className="flex items-start gap-3 md:gap-4">
-                      <div className="hidden sm:flex size-12 shrink-0 items-center justify-center rounded-xl border border-[#EA80FC]/30 bg-white/5 text-[#EA80FC] shadow-inner backdrop-blur-md">
-                        <PackageSearch className="h-6 w-6" strokeWidth={2} />
-                      </div>
-                      <div className="min-w-0">
-                        <span className="inline-flex items-center gap-1 rounded-md bg-[#EA80FC]/10 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-[#F3E5AB] border border-[#EA80FC]/20">
-                          <span className="h-1 w-1 rounded-full bg-[#EA80FC] animate-pulse" />
-                          รายงานสรุปสินค้า
+                  <div className="flex items-center justify-between gap-4">
+                    {/* Title & Info Group */}
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="inline-flex items-center gap-1 rounded bg-[#EA80FC]/20 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider text-[#F3E5AB]">
+                          สรุปยอดสินค้า
                         </span>
-                        <h2 className="mt-1 text-lg font-black tracking-tight text-white md:text-2xl">
-                          สรุปสินค้าตามวันจัดส่ง
-                        </h2>
-                        <p className="mt-0.5 font-mono text-[11px] font-bold text-[#F3E5AB]/75">
-                          ประจำวันที่: {dateLabel}
+                        <p className="font-mono text-[11px] font-black text-[#F3E5AB]/85">
+                          {dateLabel}
                         </p>
                       </div>
-                    </div>
-
-                    {/* KPI Stats & Close Button */}
-                    <div className="flex items-center justify-between gap-3 md:justify-end md:gap-4">
-                      <div className="flex flex-wrap items-center gap-2 md:gap-3">
-                        <div className="rounded-xl border border-white/10 bg-white/5 px-2.5 py-1.5 text-left backdrop-blur-xs min-w-[70px] sm:min-w-[90px]">
-                          <p className="text-[9px] font-bold text-[#F3E5AB]/70 uppercase leading-none">ร้านค้า</p>
-                          <p className="mt-0.5 font-mono text-[14px] font-black text-white leading-none">
-                            {stores.length} <span className="text-[10px] font-normal text-white/70">ร้าน</span>
-                          </p>
-                        </div>
-                        <div className="rounded-xl border border-white/10 bg-white/5 px-2.5 py-1.5 text-left backdrop-blur-xs min-w-[70px] sm:min-w-[90px]">
-                          <p className="text-[9px] font-bold text-[#F3E5AB]/70 uppercase leading-none">ชนิดสินค้า</p>
-                          <p className="mt-0.5 font-mono text-[14px] font-black text-white leading-none">
-                            {products.length} <span className="text-[10px] font-normal text-white/70">ชนิด</span>
-                          </p>
-                        </div>
-                        <div className="rounded-xl border border-white/10 bg-white/5 px-2.5 py-1.5 text-left backdrop-blur-xs min-w-[85px] sm:min-w-[105px]">
-                          <p className="text-[9px] font-bold text-[#F3E5AB]/70 uppercase leading-none">จำนวนส่งรวม</p>
-                          <p className="mt-0.5 font-mono text-[14px] font-black text-white leading-none">
-                            {products.reduce((acc, p) => acc + p.quantity, 0).toLocaleString("th-TH")}
-                            <span className="text-[10px] font-normal text-white/70"> ชิ้น</span>
-                          </p>
-                        </div>
+                      <h2 className="mt-0.5 text-[1.2rem] font-black tracking-tight text-white leading-tight md:text-xl">
+                        สรุปสินค้าตามวันจัดส่ง
+                      </h2>
+                      
+                      {/* Compact Stats Row - Replaces bulky cards */}
+                      <div className="mt-1.5 flex flex-wrap items-center gap-x-2.5 gap-y-0.5 text-[11.5px] font-bold text-white/70">
+                        <span>{stores.length} ร้านค้า</span>
+                        <span className="h-2 w-px bg-white/25" />
+                        <span>{products.length} ชนิดสินค้า</span>
+                        <span className="h-2 w-px bg-white/25" />
+                        <span className="text-[#F3E5AB]">{products.reduce((acc, p) => acc + p.quantity, 0).toLocaleString("th-TH")} ชิ้น</span>
                       </div>
-
-                      <button
-                        type="button"
-                        onClick={() => setIsOpen(false)}
-                        className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg border border-[#EA80FC]/30 bg-white/5 text-[#F3E5AB] shadow-sm transition-all duration-200 hover:border-[#EA80FC] hover:bg-white/10 active:scale-95"
-                        aria-label="ปิดหน้าต่าง"
-                      >
-                        <X className="h-4.5 w-4.5" strokeWidth={2.5} />
-                      </button>
                     </div>
+
+                    {/* Close Button on Right */}
+                    <button
+                      type="button"
+                      onClick={() => setIsOpen(false)}
+                      className="inline-flex size-9 shrink-0 items-center justify-center rounded-xl bg-white/10 text-white/80 transition hover:bg-white/20 hover:text-white active:scale-95"
+                      aria-label="ปิดหน้าต่าง"
+                    >
+                      <X className="h-5 w-5" strokeWidth={2.5} />
+                    </button>
                   </div>
 
-                  {/* Segmented Tabs Navigation */}
-                  <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-t border-white/10 pt-4">
-                    <div className="w-full sm:max-w-xs md:max-w-md">
-                      <div className="relative flex rounded-xl bg-black/20 p-1 border border-white/5">
+                  {/* Compact Tabs Row */}
+                  <div className="mt-3.5 flex items-center justify-between border-t border-white/10 pt-2.5">
+                    <div className="w-full sm:max-w-xs md:max-w-sm">
+                      <div className="relative flex rounded-xl bg-black/25 p-0.5 border border-white/5">
                         <button
                           type="button"
                           onClick={() => setActiveTab("products")}
-                          className={`flex-grow flex items-center justify-center gap-1.5 rounded-lg py-2 text-xs font-black uppercase tracking-wider transition-all duration-200 ${
+                          className={`flex-grow flex items-center justify-center gap-1.5 rounded-lg py-1.5 text-xs font-black uppercase tracking-wider transition-all duration-200 ${
                             activeTab === "products"
-                              ? "bg-[#EA80FC] text-[#4A148C] shadow-md font-extrabold"
+                              ? "bg-[#EA80FC] text-[#4A148C] shadow-sm font-extrabold"
                               : "text-slate-300 hover:text-white hover:bg-white/5"
                           }`}
                         >
                           <Boxes className="h-3.5 w-3.5" strokeWidth={2.4} />
-                          สรุปยอดรวมสินค้า
+                          สรุปยอดสินค้า
                         </button>
                         
                         <button
                           type="button"
                           onClick={() => setActiveTab("stores")}
-                          className={`flex-grow flex items-center justify-center gap-1.5 rounded-lg py-2 text-xs font-black uppercase tracking-wider transition-all duration-200 ${
+                          className={`flex-grow flex items-center justify-center gap-1.5 rounded-lg py-1.5 text-xs font-black uppercase tracking-wider transition-all duration-200 ${
                             activeTab === "stores"
-                              ? "bg-[#EA80FC] text-[#4A148C] shadow-md font-extrabold"
+                              ? "bg-[#EA80FC] text-[#4A148C] shadow-sm font-extrabold"
                               : "text-slate-300 hover:text-white hover:bg-white/5"
                           }`}
                         >
                           <Store className="h-3.5 w-3.5" strokeWidth={2.4} />
-                          แยกตามรายร้านค้า
+                          แยกรายร้านค้า
                         </button>
                       </div>
                     </div>
                     
-                    <div className="hidden md:block text-right">
-                      <p className="text-[10px] font-bold text-[#F3E5AB]/60">
-                        * ข้อมูลสรุปและคัดแยกแยกตามสายส่งรถยนต์แต่ละคัน
-                      </p>
-                    </div>
+                    <p className="hidden md:block text-[10px] font-bold text-[#F3E5AB]/65">
+                      * จัดเรียงแยกตามสายส่งรถยนต์แต่ละคัน
+                    </p>
                   </div>
                 </div>
               </div>
@@ -534,7 +523,7 @@ export function PackingListSummaryButton({
 
           {/* Store Detail Mobile Drawer/Sheet */}
           {mobileStore ? (
-            <div className="absolute inset-0 z-[150] md:hidden animate-in fade-in duration-200">
+            <div className="absolute inset-0 z-[610] md:hidden animate-in fade-in duration-200">
               <button
                 type="button"
                 aria-label="ปิดรายละเอียดร้านค้า"
@@ -591,7 +580,8 @@ export function PackingListSummaryButton({
               </div>
             </div>
           ) : null}
-        </div>
+        </div>,
+        document.body
       ) : null}
     </>
   );

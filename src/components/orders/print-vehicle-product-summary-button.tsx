@@ -26,6 +26,16 @@ export function PrintVehicleProductSummaryButton({
     router.prefetch(url);
   }, [router, url]);
 
+  useEffect(() => {
+    const handlePageShow = () => {
+      setLoading(false);
+    };
+    window.addEventListener("pageshow", handlePageShow);
+    return () => {
+      window.removeEventListener("pageshow", handlePageShow);
+    };
+  }, []);
+
   function handleOpen() {
     if (loading) return;
     setLoading(true);

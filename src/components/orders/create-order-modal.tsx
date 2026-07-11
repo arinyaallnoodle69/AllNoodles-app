@@ -119,32 +119,6 @@ function CreateOrderPortal({ children }: { children: React.ReactNode }) {
   return createPortal(children, document.body);
 }
 
-const codeCollator = new Intl.Collator("th", {
-  numeric: true,
-  sensitivity: "base",
-});
-
-function getCodeSequence(code: string) {
-  const match = code.trim().match(/(\d+)/);
-  return match ? Number.parseInt(match[1], 10) : Number.POSITIVE_INFINITY;
-}
-
-function compareCustomerCode(left: OrderCustomerOption, right: OrderCustomerOption) {
-  const leftSequence = getCodeSequence(left.code);
-  const rightSequence = getCodeSequence(right.code);
-
-  if (leftSequence !== rightSequence) {
-    return leftSequence - rightSequence;
-  }
-
-  const codeComparison = codeCollator.compare(left.code.trim(), right.code.trim());
-
-  if (codeComparison !== 0) {
-    return codeComparison;
-  }
-
-  return left.name.localeCompare(right.name, "th");
-}
 
 function ActionPopup({
   message,
@@ -734,6 +708,7 @@ function ProductSelectModal({
   const deferredQuery = React.useDeferredValue(query);
   const [selectedCategoryId, setSelectedCategoryId] = useState("__all__");
   const [selectedBrand, setSelectedBrand] = useState("__all__");
+  const [priceFilter, setPriceFilter] = useState<"all" | "priced">("all");
   const [expandedCategoryId, setExpandedCategoryId] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [selections, setSelections] = useState<Record<string, ProductSelection>>({});
@@ -750,7 +725,7 @@ function ProductSelectModal({
 
   useEffect(() => {
     setDisplayLimit(40);
-  }, [selectedCategoryId, selectedBrand, query]);
+  }, [selectedCategoryId, selectedBrand, priceFilter, query]);
 
   const handleCategorySelect = (id: string, e?: React.MouseEvent<HTMLButtonElement>) => {
     setSelectedCategoryId(id);
@@ -945,6 +920,11 @@ function ProductSelectModal({
       if (!matchesCategory) return false;
       const matchesBrand = selectedBrand === "__all__" || product.brand === selectedBrand;
       if (!matchesBrand) return false;
+      if (priceFilter === "priced") {
+        const defaultUnit = getUnits(product).find((unit) => unit.isDefault) ?? getUnits(product)[0] ?? null;
+        const linkedPrice = defaultUnit ? getUnitPrice(product.id, defaultUnit.id, priceMap) : 0;
+        if (linkedPrice <= 0) return false;
+      }
       if (!normalized) return true;
       return (
         normalizeSearch(product.name).includes(normalized) ||
@@ -954,7 +934,7 @@ function ProductSelectModal({
       );
     });
     return result;
-  }, [products, deferredQuery, selectedBrand, selectedCategoryId]);
+  }, [products, deferredQuery, selectedBrand, selectedCategoryId, priceFilter, priceMap]);
 
   const handleSelectProduct = useCallback((productId: string, selected: boolean) => {
     setSelectedIds((prev) => {
@@ -1077,6 +1057,7 @@ function ProductSelectModal({
       setSaving(false);
       setSelectedCategoryId("__all__");
       setSelectedBrand("__all__");
+      setPriceFilter("all");
       setExpandedCategoryId(null);
       setCostWarningInfo(null);
       setMobileFilterDrawer(null);
@@ -1225,9 +1206,36 @@ function ProductSelectModal({
             </div>
           </div>
 
+          <div className="bg-white">
+            <div className="grid w-full grid-cols-2 overflow-hidden border-y border-[#4A148C]">
+              <button
+                type="button"
+                onClick={() => setPriceFilter("all")}
+                className={`h-11 text-center text-sm font-black transition-all ${
+                  priceFilter === "all"
+                    ? "bg-[#4A148C] text-white"
+                    : "bg-white text-[#4A148C] hover:bg-[#F3E5F5]/50"
+                }`}
+              >
+                ทั้งหมด
+              </button>
+              <button
+                type="button"
+                onClick={() => setPriceFilter("priced")}
+                className={`h-11 border-l border-[#4A148C] text-center text-sm font-black transition-all ${
+                  priceFilter === "priced"
+                    ? "bg-[#4A148C] text-white"
+                    : "bg-white text-[#4A148C] hover:bg-[#F3E5F5]/50"
+                }`}
+              >
+                ผูกราคาแล้ว
+              </button>
+            </div>
+          </div>
+
           {/* Mobile category & brand filters */}
           {categoryOptions.length > 0 ? (
-            <div className="border-t border-[#EA80FC]/15 bg-white lg:hidden">
+            <div className="bg-white lg:hidden">
               <div className="flex items-center gap-5 px-4 sm:px-8">
                 <button
                   type="button"
@@ -1423,46 +1431,74 @@ function ProductSelectModal({
             </nav>
           </aside>
 
-          <section className="min-h-0 overflow-auto bg-white">
-            {productsLoading ? (
-              <div className="flex h-full min-h-64 flex-col items-center justify-center gap-3 text-slate-500">
-                <Loader2 className="h-8 w-8 animate-spin text-[#4A148C]" />
-                <p className="text-sm font-black">กำลังโหลดสินค้า...</p>
+          <section className="flex min-h-0 flex-col bg-white">
+            <div className="shrink-0 border-b border-[#EA80FC]/15 bg-white px-4 py-3">
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setPriceFilter("all")}
+                  className={`rounded-full px-4 py-1.5 text-sm font-black transition-all ${
+                    priceFilter === "all"
+                      ? "bg-[#4A148C] text-white shadow-sm"
+                      : "bg-slate-100 text-slate-500 hover:bg-slate-200"
+                  }`}
+                >
+                  ทั้งหมด
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPriceFilter("priced")}
+                  className={`rounded-full px-4 py-1.5 text-sm font-black transition-all ${
+                    priceFilter === "priced"
+                      ? "bg-[#4A148C] text-white shadow-sm"
+                      : "bg-slate-100 text-slate-500 hover:bg-slate-200"
+                  }`}
+                >
+                  ผูกราคาแล้ว
+                </button>
               </div>
-            ) : filteredProducts.length === 0 ? (
-              <div className="flex h-full min-h-64 flex-col items-center justify-center gap-3 text-slate-400">
-                <Search className="h-10 w-10" strokeWidth={1.7} />
-                <p className="text-sm font-black">ไม่พบสินค้าที่ตรงกับตัวกรอง</p>
-              </div>
-            ) : (
-              <table className="w-full min-w-[56rem] table-fixed border-collapse">
-                <thead className="sticky top-0 z-10 bg-[#4A148C] text-white">
-                  <tr>
-                    <th className="w-12 px-3 py-3 text-center text-xs font-black" aria-label="เลือก" />
-                    <th className="w-28 px-3 py-3 text-left text-xs font-black">รหัสสินค้า</th>
-                    <th className="px-3 py-3 text-left text-xs font-black">รูปและชื่อสินค้า</th>
-                    <th className="w-32 px-3 py-3 text-center text-xs font-black">สต็อก</th>
-                    <th className="w-44 px-3 py-3 text-center text-xs font-black">จำนวน</th>
-                    <th className="w-44 px-3 py-3 text-right text-xs font-black">ราคาขาย</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredProducts.map((product) => (
-                    <DesktopProductTableRow
-                      key={product.id}
-                      product={product}
-                      isSelected={selectedIds.has(product.id)}
-                      selection={selections[product.id]}
-                      onSelect={handleSelectProduct}
-                      onUpdateSelection={handleUpdateSelection}
-                      priceMap={priceMap}
-                      noCustomer={noCustomer}
-                      selectedWarehouseId={selectedWarehouseId}
-                    />
-                  ))}
-                </tbody>
-              </table>
-            )}
+            </div>
+            <div className="min-h-0 flex-1 overflow-auto">
+              {productsLoading ? (
+                <div className="flex h-full min-h-64 flex-col items-center justify-center gap-3 text-slate-500">
+                  <Loader2 className="h-8 w-8 animate-spin text-[#4A148C]" />
+                  <p className="text-sm font-black">กำลังโหลดสินค้า...</p>
+                </div>
+              ) : filteredProducts.length === 0 ? (
+                <div className="flex h-full min-h-64 flex-col items-center justify-center gap-3 text-slate-400">
+                  <Search className="h-10 w-10" strokeWidth={1.7} />
+                  <p className="text-sm font-black">ไม่พบสินค้าที่ตรงกับตัวกรอง</p>
+                </div>
+              ) : (
+                <table className="w-full min-w-[56rem] table-fixed border-collapse">
+                  <thead className="sticky top-0 z-10 bg-[#4A148C] text-white">
+                    <tr>
+                      <th className="w-12 px-3 py-3 text-center text-xs font-black" aria-label="เลือก" />
+                      <th className="w-28 px-3 py-3 text-left text-xs font-black">รหัสสินค้า</th>
+                      <th className="px-3 py-3 text-left text-xs font-black">รูปและชื่อสินค้า</th>
+                      <th className="w-32 px-3 py-3 text-center text-xs font-black">สต็อก</th>
+                      <th className="w-44 px-3 py-3 text-center text-xs font-black">จำนวน</th>
+                      <th className="w-44 px-3 py-3 text-right text-xs font-black">ราคาขาย</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredProducts.map((product) => (
+                      <DesktopProductTableRow
+                        key={product.id}
+                        product={product}
+                        isSelected={selectedIds.has(product.id)}
+                        selection={selections[product.id]}
+                        onSelect={handleSelectProduct}
+                        onUpdateSelection={handleUpdateSelection}
+                        priceMap={priceMap}
+                        noCustomer={noCustomer}
+                        selectedWarehouseId={selectedWarehouseId}
+                      />
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
           </section>
         </div>
 
@@ -1842,7 +1878,7 @@ export function CreateOrderModal({
   );
   const selectedCustomerOrderCount = customerId ? customerOrderCountsByDate[customerId] ?? 0 : 0;
   const orderedCustomers = useMemo(
-    () => customers.toSorted(compareCustomerCode),
+    () => customers,
     [customers],
   );
 

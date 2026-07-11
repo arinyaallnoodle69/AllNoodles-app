@@ -21,12 +21,45 @@ function getVehiclePalette(columnIndex: number) {
   return VEHICLE_COLUMN_PALETTES[columnIndex % VEHICLE_COLUMN_PALETTES.length] ?? VEHICLE_COLUMN_PALETTES[0];
 }
 
-function VehicleSummarySheet({ data }: { data: VehicleProductSummaryData }) {
+type VehicleSummarySheetDef = {
+  key: string;
+  data: VehicleProductSummaryData;
+  vehicleIndex: number;
+};
+
+function buildVehicleSheets(data: VehicleProductSummaryData): VehicleSummarySheetDef[] {
+  return data.vehicles
+    .map((vehicle, vehicleIndex) => {
+      const rows = data.products
+        .map((product, productIndex) => ({
+          product,
+          qty: data.qty[productIndex]?.[vehicleIndex] ?? 0,
+        }))
+        .filter((row) => row.qty > 0);
+
+      if (rows.length === 0) return null;
+
+      return {
+        key: vehicle.id ?? "__unassigned__",
+        vehicleIndex,
+        data: {
+          ...data,
+          products: rows.map((row) => row.product),
+          vehicles: [vehicle],
+          qty: rows.map((row) => [row.qty]),
+        },
+      };
+    })
+    .filter((sheet): sheet is VehicleSummarySheetDef => sheet !== null);
+}
+
+function VehicleSummarySheet({ data, vehicleIndex }: { data: VehicleProductSummaryData; vehicleIndex: number }) {
   const productCount = Math.max(data.products.length, 1);
   const rowHeightMm = Math.max(4.8, Math.min(8.4, 270 / productCount));
+  const thumbSizeMm = Math.max(3.6, Math.min(8.2, rowHeightMm - 0.7));
 
   return (
-    <section className="packing-sheet vehicle-summary-sheet">
+    <section className="packing-sheet vehicle-summary-sheet" data-capture-width="794" data-capture-height="1123">
       <div className="vehicle-summary-sheet__inner">
         <header className="vehicle-summary-header">
           <div className="vehicle-summary-header__brand">All Noodles</div>
@@ -34,7 +67,7 @@ function VehicleSummarySheet({ data }: { data: VehicleProductSummaryData }) {
             <h1 className="vehicle-summary-header__title">สรุปสินค้าตามรถ</h1>
             <div className="vehicle-summary-header__meta-inline">
               <span>{data.dateLabel}</span>
-              <span>{data.vehicles.length.toLocaleString("th-TH")} คัน</span>
+              <span>{data.vehicles[0]?.name ?? "ยังไม่ได้กำหนดรถ"}</span>
               <span>{data.products.length.toLocaleString("th-TH")} รายการ</span>
             </div>
           </div>
@@ -43,14 +76,19 @@ function VehicleSummarySheet({ data }: { data: VehicleProductSummaryData }) {
         <div className="vehicle-summary-table-wrap">
           <table
             className="vehicle-summary-table"
-            style={{ "--summary-row-height": `${rowHeightMm}mm` } as CSSProperties}
+            style={
+              {
+                "--summary-row-height": `${rowHeightMm}mm`,
+                "--summary-thumb-size": `${thumbSizeMm}mm`,
+              } as CSSProperties
+            }
           >
             <thead>
               <tr>
                 <th className="vehicle-summary-table__index-col">ลำดับ</th>
                 <th className="vehicle-summary-table__product-col">สินค้า / หน่วย</th>
-                {data.vehicles.map((vehicle, columnIndex) => {
-                  const palette = getVehiclePalette(columnIndex);
+                {data.vehicles.map((vehicle) => {
+                  const palette = getVehiclePalette(vehicleIndex);
                   return (
                     <th
                       key={vehicle.id ?? "unassigned"}
@@ -69,13 +107,23 @@ function VehicleSummarySheet({ data }: { data: VehicleProductSummaryData }) {
                   <td className="vehicle-summary-table__index-cell">{rowIndex + 1}</td>
                   <td className="vehicle-summary-table__product-cell">
                     <div className="vehicle-summary-table__product-line">
-                      <span className="vehicle-summary-table__product-name" title={product.name}>
-                        {product.name}
+                      <span className="vehicle-summary-table__product-image" aria-hidden="true">
+                        {product.imageUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={product.imageUrl} alt="" crossOrigin="anonymous" />
+                        ) : (
+                          <span className="vehicle-summary-table__product-image-placeholder" />
+                        )}
                       </span>
-                      <span className="vehicle-summary-table__product-unit">{product.unit}</span>
+                      <span className="vehicle-summary-table__product-text">
+                        <span className="vehicle-summary-table__product-name" title={product.name}>
+                          {product.name}
+                        </span>
+                        <span className="vehicle-summary-table__product-unit">{product.unit}</span>
+                      </span>
                     </div>
                   </td>
-                  {data.vehicles.map((vehicle, vehicleIndex) => {
+                  {data.vehicles.map((vehicle, currentVehicleIndex) => {
                     const palette = getVehiclePalette(vehicleIndex);
                     return (
                       <td
@@ -83,7 +131,7 @@ function VehicleSummarySheet({ data }: { data: VehicleProductSummaryData }) {
                         className="vehicle-summary-table__qty-cell"
                         style={{ backgroundColor: palette.body, borderColor: palette.border }}
                       >
-                        {formatQty(data.qty[rowIndex]?.[vehicleIndex] ?? 0)}
+                        {formatQty(data.qty[rowIndex]?.[currentVehicleIndex] ?? 0)}
                       </td>
                     );
                   })}
@@ -131,6 +179,13 @@ function VehicleSummaryStyles() {
           margin: 0 !important;
           border: none !important;
           box-shadow: none !important;
+          break-after: page;
+          page-break-after: always;
+        }
+
+        .packing-sheet:last-child {
+          break-after: auto;
+          page-break-after: auto;
         }
       }
 
@@ -314,8 +369,8 @@ function VehicleSummaryStyles() {
       }
 
       .vehicle-summary-table__product-col {
-        width: 56mm;
-        min-width: 56mm;
+        width: 64mm;
+        min-width: 64mm;
         padding: 0.35mm 0.8mm;
         background: #ffffff;
         text-align: center;
@@ -339,27 +394,62 @@ function VehicleSummaryStyles() {
       }
 
       .vehicle-summary-table__product-cell {
-        padding: 0 0.8mm;
-        text-align: center;
+        padding: 0 0.9mm;
+        text-align: left;
         background: #ffffff;
       }
 
       .vehicle-summary-table__product-line {
         display: flex;
         align-items: center;
-        justify-content: center;
-        gap: 0.15mm;
+        justify-content: flex-start;
+        gap: 1.1mm;
         min-height: 100%;
+      }
+
+      .vehicle-summary-table__product-image {
+        display: flex;
+        width: var(--summary-thumb-size);
+        height: var(--summary-thumb-size);
+        flex: 0 0 var(--summary-thumb-size);
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+        background: #ffffff;
+      }
+
+      .vehicle-summary-table__product-image img {
+        display: block;
+        max-width: 100%;
+        max-height: 100%;
+        object-fit: contain;
+      }
+
+      .vehicle-summary-table__product-image-placeholder {
+        display: block;
+        width: 5.2mm;
+        height: 5.2mm;
+        border: 1px solid #e2e8f0;
+        background: #f8fafc;
+      }
+
+      .vehicle-summary-table__product-text {
+        display: flex;
+        min-width: 0;
+        flex: 1;
+        align-items: baseline;
+        justify-content: center;
+        gap: 0.5mm;
       }
 
       .vehicle-summary-table__product-name {
         min-width: 0;
         flex: 0 1 auto;
-        max-width: calc(100% - 9mm);
+        max-width: calc(100% - 8mm);
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
-        font-size: 11.2pt;
+        font-size: 10.4pt;
         font-weight: 700;
         line-height: 1;
         color: #0f172a;
@@ -370,7 +460,7 @@ function VehicleSummaryStyles() {
         padding-left: 0.4mm;
         margin-left: 0.1mm;
         border-left: 1px solid #000000;
-        font-size: 9pt;
+        font-size: 8.4pt;
         font-weight: 700;
         line-height: 1;
         color: #0f172a;
@@ -387,12 +477,16 @@ function VehicleSummaryStyles() {
 }
 
 export function VehicleProductSummaryLayout({ data }: { data: VehicleProductSummaryData }) {
+  const sheets = buildVehicleSheets(data);
+
   return (
     <>
       <VehicleSummaryStyles />
-      <div className="packing-sheet-shell" data-capture-width="794" data-capture-height="1123">
-        <VehicleSummarySheet data={data} />
-      </div>
+      {sheets.map((sheet) => (
+        <div key={sheet.key} className="packing-sheet-shell" data-capture-width="794" data-capture-height="1123">
+          <VehicleSummarySheet data={sheet.data} vehicleIndex={sheet.vehicleIndex} />
+        </div>
+      ))}
     </>
   );
 }

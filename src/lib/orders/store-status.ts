@@ -76,10 +76,10 @@ export async function getOrderStoreStatusSummary(
   const [customersResult, ordersResult, vehiclesResult] = await Promise.all([
     admin
       .from("customers")
-      .select("id, customer_code, name, default_vehicle_id")
+      .select("id, customer_code, name, default_vehicle_id, sort_order")
       .eq("organization_id", organizationId)
       .eq("is_active", true)
-      .order("customer_code", { ascending: true }),
+      .order("sort_order", { ascending: true }),
     admin
       .from("orders")
       .select("id, customer_id, created_at")

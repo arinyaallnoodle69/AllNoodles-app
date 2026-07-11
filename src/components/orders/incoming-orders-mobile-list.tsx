@@ -1,10 +1,13 @@
 "use client";
 
-import { Fragment, useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { IncomingOrderOpenCard } from "./incoming-order-open-card";
 import { IncomingOrderVehicleFilter } from "./incoming-order-vehicle-filter";
+import { IncomingOrdersVehicleTransfer } from "./incoming-orders-vehicle-transfer";
 import type { OrderVehicleOption } from "@/lib/orders/manage";
+import type { VehicleTransferDateOption } from "@/lib/orders/vehicle-transfer";
 
 type MobileListOrder = {
   id: string;
@@ -38,6 +41,7 @@ type IncomingOrdersMobileListProps = {
   currentListDate: string;
   searchTerm?: string;
   selectedCustomerIds?: string[];
+  vehicleTransferDates: VehicleTransferDateOption[];
 };
 
 export function IncomingOrdersMobileList({
@@ -46,25 +50,42 @@ export function IncomingOrdersMobileList({
   currentListDate,
   searchTerm,
   selectedCustomerIds = [],
+  vehicleTransferDates,
 }: IncomingOrdersMobileListProps) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const [, startTransition] = useTransition();
+  const [selectedVehicleId, setSelectedVehicleId] = useState(() => {
+    if (typeof window !== "undefined") {
+      return new URLSearchParams(window.location.search).get("vehicle") || "__all__";
+    }
+    return searchParams.get("vehicle") || "__all__";
+  });
+
+  const filteredOrders = useMemo(() => {
+    if (selectedVehicleId === "__all__") return orders;
+    if (selectedVehicleId === "__none__") return orders.filter((o) => !o.vehicleId);
+    return orders.filter((o) => o.vehicleId === selectedVehicleId);
+  }, [orders, selectedVehicleId]);
+
   const [visibleCount, setVisibleCount] = useState(15);
-  const [prevOrders, setPrevOrders] = useState(orders);
+  const [prevOrders, setPrevOrders] = useState(filteredOrders);
   const sensorRef = useRef<HTMLDivElement | null>(null);
 
-  // Reset pagination count when orders list changes (e.g. new search or date filter)
-  if (orders !== prevOrders) {
-    setPrevOrders(orders);
+  // Reset pagination count when filtered orders list changes
+  if (filteredOrders !== prevOrders) {
+    setPrevOrders(filteredOrders);
     setVisibleCount(15);
   }
 
   useEffect(() => {
     const sensor = sensorRef.current;
-    if (!sensor || visibleCount >= orders.length) return;
+    if (!sensor || visibleCount >= filteredOrders.length) return;
 
     const observer = new IntersectionObserver(
       (entries) => {
         if (entries[0].isIntersecting) {
-          setVisibleCount((prev) => Math.min(prev + 15, orders.length));
+          setVisibleCount((prev) => Math.min(prev + 15, filteredOrders.length));
         }
       },
       { rootMargin: "200px" } // Pre-load when within 200px of bottom
@@ -74,20 +95,35 @@ export function IncomingOrdersMobileList({
     return () => {
       observer.unobserve(sensor);
     };
-  }, [orders.length, visibleCount]);
+  }, [filteredOrders.length, visibleCount]);
 
-  const visibleOrders = orders.slice(0, visibleCount);
-  const hasMore = visibleCount < orders.length;
+  const visibleOrders = filteredOrders.slice(0, visibleCount);
+  const hasMore = visibleCount < filteredOrders.length;
 
   return (
     <div className="bg-white">
       {/* Mobile Vehicle Filter Header */}
       <div className="px-4 py-3 border-b border-[#EA80FC]/20">
-        <h3 className="text-base font-black text-[#4A148C]">ตารางรายการคำสั่งซื้อล่าสุด</h3>
-        <p className="mt-0.5 text-xs font-semibold text-[#4A148C]">
-          จัดการและติดตามสถานะออเดอร์ในวันที่เลือกจากจุดเดียว
-        </p>
-        <IncomingOrderVehicleFilter vehicles={vehicles} />
+        <div className="flex items-center justify-between gap-3">
+          <h3 className="min-w-0 text-base font-black text-[#4A148C]">ตารางรายการคำสั่งซื้อล่าสุด</h3>
+          <IncomingOrdersVehicleTransfer dateOptions={vehicleTransferDates} variant="mobile" />
+        </div>
+        <IncomingOrderVehicleFilter
+          vehicles={vehicles}
+          activeVehicleId={selectedVehicleId}
+          onVehicleChange={(id) => {
+            setSelectedVehicleId(id);
+            const params = new URLSearchParams(window.location.search);
+            if (id === "__all__") {
+              params.delete("vehicle");
+            } else {
+              params.set("vehicle", id);
+            }
+            startTransition(() => {
+              router.replace(`/orders/incoming?${params.toString()}`, { scroll: false });
+            });
+          }}
+        />
       </div>
 
       {visibleOrders.length === 0 ? (

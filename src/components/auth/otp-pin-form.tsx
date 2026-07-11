@@ -94,11 +94,11 @@ export function OtpPinForm({ disabled, error, next, action }: OtpPinFormProps) {
         })}
       </div>
 
-      <div className="mt-3 h-5 text-center">
+      <div className="mt-3 h-6 text-center">
         {isSubmitting ? (
-          <p className="text-sm font-semibold text-[#4A148C]">กำลังเข้า...</p>
+          <p className="text-base font-semibold text-[#4A148C]">กำลังเข้า...</p>
         ) : error ? (
-          <p className="text-sm font-semibold text-rose-600">{error}</p>
+          <p className="text-base font-semibold text-rose-600">{error}</p>
         ) : null}
       </div>
 
@@ -114,7 +114,7 @@ export function OtpPinForm({ disabled, error, next, action }: OtpPinFormProps) {
                 onClick={removeDigit}
                 disabled={disabled || isSubmitting || digits.length === 0}
                 aria-disabled={disabled || isSubmitting || digits.length === 0}
-                className={`${instrumentSansClass} flex aspect-square items-center justify-center rounded-full bg-white text-base font-bold text-accent-700 shadow-[0_14px_30px_rgba(4,53,106,0.10)] hover:bg-accent-50 disabled:cursor-not-allowed disabled:opacity-60`}
+                className={`${instrumentSansClass} flex aspect-square items-center justify-center rounded-full bg-white text-lg font-bold text-accent-700 shadow-[0_14px_30px_rgba(4,53,106,0.10)] hover:bg-accent-50 disabled:cursor-not-allowed disabled:opacity-60 sm:text-xl`}
               >
                 ลบ
               </button>
@@ -131,10 +131,10 @@ export function OtpPinForm({ disabled, error, next, action }: OtpPinFormProps) {
               aria-label={`ใส่เลข ${key}`}
               className={`${instrumentSansClass} group flex aspect-square flex-col items-center justify-center rounded-full bg-white text-slate-800 shadow-[0_14px_32px_rgba(4,53,106,0.10)] hover:bg-accent-50 disabled:cursor-not-allowed disabled:opacity-60`}
             >
-              <span className="text-[1.85rem] font-medium leading-none tracking-[-0.01em] text-slate-800 sm:text-[2rem]">
+              <span className="text-[2.25rem] font-medium leading-none tracking-[-0.01em] text-slate-800 sm:text-[2.5rem]">
                 {key}
               </span>
-              <span className="mt-1 text-[0.58rem] font-semibold uppercase tracking-[0.22em] text-slate-600 group-hover:text-slate-700">
+              <span className="mt-1 text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-slate-600 group-hover:text-slate-700 sm:text-[0.75rem]">
                 {key === "1"
                   ? ""
                   : key === "2"

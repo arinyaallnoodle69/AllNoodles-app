@@ -281,7 +281,7 @@ export function StockReceiveForm({
         onClick={handleClose}
         className="absolute inset-0"
       />
-      <div className={`relative flex h-full w-full max-w-[1180px] flex-col overflow-hidden bg-[#f6f8fb] shadow-[0_18px_44px_rgba(15,23,42,0.08)] rounded-[28px] border border-[#dbe4f0] transition-all duration-500 ${
+      <div className={`relative flex h-full w-full max-w-[1180px] flex-col overflow-hidden bg-[#f6f8fb] shadow-[0_18px_44px_rgba(15,23,42,0.08)] rounded-[28px] border border-[#dbe4f0] transition-all duration-500 dashboard-modal-content stock-receive-modal-content ${
         isClosing ? "scale-95 translate-y-4" : "scale-100 translate-y-0"
       } h-[92dvh] sm:h-[88dvh]`}>
 

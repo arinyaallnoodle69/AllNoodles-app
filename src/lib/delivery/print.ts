@@ -5,6 +5,7 @@ import { getSupabaseAdmin } from "@/lib/supabase/admin";
 export type DeliveryNotePrintData = {
   deliveryNumber: string;
   deliveryDate: string;
+  createdAt?: string | null;
   orderNumber: string | null;
   warehouseName: string | null;
   totalAmount: number;
@@ -159,10 +160,10 @@ export async function getDeliveryNotePrintData(
 ): Promise<DeliveryNotePrintData | null> {
   const supabase = getSupabaseAdmin();
   const headerSelect = `
-      id, delivery_number, delivery_date, total_amount, notes,
+      id, delivery_number, delivery_date, total_amount, notes, created_at, vehicle_id, vehicles(id, name),
       customers!inner(name, customer_code, address, default_vehicle_id, vehicles(id, name)),
       organizations!inner(name, metadata),
-      orders(order_number, warehouse_id, warehouses:warehouse_id(name))
+      orders(order_number, warehouse_id, assigned_vehicle_id, assigned_vehicle:assigned_vehicle_id(id, name), warehouses:warehouse_id(name))
     `;
 
   const fetchHeaderBy = async (field: "id" | "delivery_number") =>
@@ -185,6 +186,44 @@ export async function getDeliveryNotePrintData(
 
   if (dnError || !dn) return null;
 
+  const header = dn as unknown as {
+    created_at: string | null;
+    customers: {
+      address: string | null;
+      customer_code: string;
+      default_vehicle_id: string | null;
+      name: string;
+      vehicles: { id: string; name: string } | { id: string; name: string }[] | null;
+    };
+    delivery_date: string;
+    delivery_number: string;
+    id: string;
+    notes: string | null;
+    orders: {
+      assigned_vehicle?: { id: string; name: string } | { id: string; name: string }[] | null;
+      assigned_vehicle_id?: string | null;
+      order_number: string | null;
+      warehouses: { name: string } | null;
+    } | Array<{
+      assigned_vehicle?: { id: string; name: string } | { id: string; name: string }[] | null;
+      assigned_vehicle_id?: string | null;
+      order_number: string | null;
+      warehouses: { name: string } | null;
+    }> | null;
+    organizations: { metadata: unknown };
+    total_amount: number | string | null;
+    vehicle_id: string | null;
+    vehicles: { id: string; name: string } | { id: string; name: string }[] | null;
+  };
+  const relatedOrder = Array.isArray(header.orders) ? header.orders[0] : header.orders;
+  const assignedOrder = relatedOrder as unknown as {
+    assigned_vehicle_id?: string | null;
+    assigned_vehicle?: { id: string; name: string } | { id: string; name: string }[] | null;
+  } | null;
+  const relationName = (
+    relation: { id: string; name: string } | { id: string; name: string }[] | null | undefined,
+  ) => Array.isArray(relation) ? relation[0]?.name ?? null : relation?.name ?? null;
+
   // 2. DN items with product details
   const { data: items, error: itemsError } = await supabase
     .from("delivery_note_items")
@@ -192,7 +231,7 @@ export async function getDeliveryNotePrintData(
       id, quantity_delivered, sale_unit_label, unit_price, line_total,
       products!inner(name, sku, unit, display_order)
     `)
-    .eq("delivery_note_id", dn.id)
+    .eq("delivery_note_id", header.id)
     .eq("organization_id", organizationId);
 
   if (itemsError || !items) return null;
@@ -212,8 +251,8 @@ export async function getDeliveryNotePrintData(
   };
 
   const meta =
-    typeof dn.organizations?.metadata === "object" && dn.organizations.metadata !== null
-      ? (dn.organizations.metadata as Record<string, unknown>)
+    typeof header.organizations?.metadata === "object" && header.organizations.metadata !== null
+      ? (header.organizations.metadata as Record<string, unknown>)
       : {} as Record<string, unknown>;
 
   const logoUrl = (meta.logo_url as string) ?? null;
@@ -221,12 +260,13 @@ export async function getDeliveryNotePrintData(
   const orgPhone = (meta.phone as string) ?? null;
 
   return {
-    deliveryNumber: dn.delivery_number,
-    deliveryDate: dn.delivery_date,
-    orderNumber: dn.orders?.order_number ?? null,
-    warehouseName: (dn.orders?.warehouses as { name: string } | null)?.name ?? null,
-    totalAmount: toNum(dn.total_amount),
-    notes: dn.notes ?? null,
+    deliveryNumber: header.delivery_number,
+    deliveryDate: header.delivery_date,
+    createdAt: header.created_at,
+    orderNumber: relatedOrder?.order_number ?? null,
+    warehouseName: relatedOrder?.warehouses?.name ?? null,
+    totalAmount: toNum(header.total_amount),
+    notes: header.notes ?? null,
     organization: {
       name: PRINT_ORGANIZATION_NAME,
       logoUrl,
@@ -234,11 +274,18 @@ export async function getDeliveryNotePrintData(
       phone: orgPhone,
     },
     customer: {
-      name: dn.customers.name,
-      code: dn.customers.customer_code,
-      address: dn.customers.address,
-      vehicleId: (dn.customers.default_vehicle_id as string | null) ?? null,
-      vehicleName: (dn.customers.vehicles as { id: string; name: string } | null)?.name ?? null,
+      name: header.customers.name,
+      code: header.customers.customer_code,
+      address: header.customers.address ?? "-",
+      vehicleId:
+        header.vehicle_id ??
+        assignedOrder?.assigned_vehicle_id ??
+        header.customers.default_vehicle_id ??
+        null,
+      vehicleName:
+        relationName(header.vehicles) ??
+        relationName(assignedOrder?.assigned_vehicle) ??
+        relationName(header.customers.vehicles),
     },
     items: sortDeliveryItems(
       (items as RawItem[]).map((item) => ({

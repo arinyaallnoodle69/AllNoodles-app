@@ -335,13 +335,17 @@ export function OrderCustomerFilter({
         <>
           <div
             aria-hidden="true"
-            onClick={() => setIsOpen(false)}
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsOpen(false);
+            }}
             className="fixed inset-0 z-[70] bg-slate-950/45 backdrop-blur-[2px]"
           />
           <div
             role="dialog"
             aria-modal="true"
             aria-label="เลือกร้านค้า"
+            onClick={(e) => e.stopPropagation()}
             className="fixed inset-x-0 bottom-0 z-[71] rounded-t-[2rem] bg-white shadow-[0_-24px_64px_rgba(15,23,42,0.18)]"
           >
             <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
@@ -351,7 +355,10 @@ export function OrderCustomerFilter({
               </div>
               <button
                 type="button"
-                onClick={() => setIsOpen(false)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsOpen(false);
+                }}
                 className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-500"
                 aria-label="ปิดเลือกร้านค้า"
               >

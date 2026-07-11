@@ -19,6 +19,7 @@ type Props = {
     customers?: string;
     note_ids?: string;
     autoprint?: string;
+    show_amount?: string;
   }>;
 };
 
@@ -30,6 +31,8 @@ type RawDeliveryPrintRow = {
   total_amount: number | string | null;
   notes: string | null;
   customer_id: string;
+  vehicle_id: string | null;
+  vehicles: { id: string; name: string } | { id: string; name: string }[] | null;
   customers: {
     id: string;
     name: string;
@@ -43,8 +46,18 @@ type RawDeliveryPrintRow = {
     metadata: Record<string, unknown> | null;
   };
   orders:
-    | { order_number: string | null; warehouses: { name: string | null } | null }
-    | { order_number: string | null; warehouses: { name: string | null } | null }[]
+    | {
+        assigned_vehicle_id: string | null;
+        assigned_vehicle: { id: string; name: string } | { id: string; name: string }[] | null;
+        order_number: string | null;
+        warehouses: { name: string | null } | null;
+      }
+    | {
+        assigned_vehicle_id: string | null;
+        assigned_vehicle: { id: string; name: string } | { id: string; name: string }[] | null;
+        order_number: string | null;
+        warehouses: { name: string | null } | null;
+      }[]
     | null;
   delivery_note_items: {
     id: string;
@@ -97,6 +110,14 @@ function getWarehouseName(order: RawDeliveryPrintRow["orders"]) {
   return order.warehouses?.name ?? null;
 }
 
+function getOrderVehicle(order: RawDeliveryPrintRow["orders"]) {
+  const resolvedOrder = Array.isArray(order) ? order[0] : order;
+  return {
+    id: resolvedOrder?.assigned_vehicle_id ?? null,
+    name: getVehicleName(resolvedOrder?.assigned_vehicle ?? null),
+  };
+}
+
 function buildPrintData(rows: RawDeliveryPrintRow[]): DeliveryNotePrintData[] {
   const groupMap = new Map<string, RawDeliveryPrintRow[]>();
 
@@ -109,6 +130,12 @@ function buildPrintData(rows: RawDeliveryPrintRow[]): DeliveryNotePrintData[] {
 
   return Array.from(groupMap.values()).map((groupRows) => {
     const base = groupRows[0];
+    const orderVehicle = getOrderVehicle(base.orders);
+    const vehicleId = base.vehicle_id ?? orderVehicle.id ?? base.customers.default_vehicle_id;
+    const vehicleName =
+      getVehicleName(base.vehicles) ??
+      orderVehicle.name ??
+      getVehicleName(base.customers.vehicles);
     const organizationMetadata = base.organizations.metadata ?? {};
     const itemMap = new Map<
       string,
@@ -168,6 +195,7 @@ function buildPrintData(rows: RawDeliveryPrintRow[]): DeliveryNotePrintData[] {
     return {
       deliveryNumber,
       deliveryDate: base.delivery_date,
+      createdAt: base.created_at,
       orderNumber: getOrderNumber(base.orders),
       warehouseName: getWarehouseName(base.orders),
       totalAmount,
@@ -182,8 +210,8 @@ function buildPrintData(rows: RawDeliveryPrintRow[]): DeliveryNotePrintData[] {
         name: base.customers.name || "Unknown",
         code: base.customers.customer_code || "Unknown",
         address: base.customers.address || "Unknown",
-        vehicleId: base.customers.default_vehicle_id || null,
-        vehicleName: getVehicleName(base.customers.vehicles),
+        vehicleId,
+        vehicleName,
       },
       items,
     } satisfies DeliveryNotePrintData;
@@ -213,6 +241,7 @@ export default async function DeliveryBatchPrintPage({ searchParams }: Props) {
     .map((id) => id.trim())
     .filter(Boolean);
   const autoprint = params.autoprint === "1";
+  const showAmount = params.show_amount !== "0";
 
   const dateLabel =
     date === endDate
@@ -223,10 +252,10 @@ export default async function DeliveryBatchPrintPage({ searchParams }: Props) {
   let query = supabase
     .from("delivery_notes")
     .select(`
-      id, delivery_number, delivery_date, total_amount, notes, customer_id, created_at,
+      id, delivery_number, delivery_date, total_amount, notes, customer_id, created_at, vehicle_id, vehicles(id, name),
       customers!inner(id, name, customer_code, address, default_vehicle_id, vehicles(id, name)),
       organizations!inner(name, metadata),
-      orders(order_number, warehouses:warehouse_id(name)),
+      orders(order_number, assigned_vehicle_id, assigned_vehicle:assigned_vehicle_id(id, name), warehouses:warehouse_id(name)),
       delivery_note_items(
         id, quantity_delivered, unit_price, line_total,
         products!inner(name, sku, unit, display_order)
@@ -287,7 +316,7 @@ export default async function DeliveryBatchPrintPage({ searchParams }: Props) {
           <p className="text-sm text-slate-400">{dateLabel}</p>
         </div>
       ) : (
-        <DeliveryNoteLayout dns={dns} logoDataUrl={logoDataUrl} />
+        <DeliveryNoteLayout dns={dns} logoDataUrl={logoDataUrl} showAmount={showAmount} />
       )}
     </>
   );

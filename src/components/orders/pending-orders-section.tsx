@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+import { createPortal } from "react-dom";
 import { AlertTriangle, CheckCircle2, Loader2, Package2, Printer, Search, Share2, Truck, X } from "lucide-react";
 import {
   createDeliveryNoteAction,
@@ -590,11 +591,11 @@ function StoreDeliveryModal({
             </p>
             {/* Vehicle selector */}
             <div className="mt-4 flex flex-wrap items-center gap-2">
-              <span className="text-sm font-semibold text-slate-700">รถจัดส่ง</span>
+              <span className="text-sm font-semibold text-slate-700">รถจัดส่ง:</span>
               {vehicles.length === 0 ? (
                 <span className="text-sm text-slate-400">ยังไม่มีข้อมูลรถ</span>
               ) : defaultVehicleId && defaultVehicleName ? (
-                <span className="rounded-full border border-[#4A148C]/15 bg-[#4A148C]/20 px-3 py-1 text-sm font-semibold text-[#4A148C]">
+                <span className="border-b border-[#4A148C] px-1 py-0.5 text-sm font-bold text-[#4A148C]">
                   {defaultVehicleName}
                 </span>
               ) : (
@@ -602,10 +603,10 @@ function StoreDeliveryModal({
                   value={selectedVehicleId ?? ""}
                   onChange={(e) => setSelectedVehicleId(e.target.value || null)}
                   className={[
-                    "rounded-xl border px-3 py-2 text-sm font-semibold transition",
+                    "border-b border-t-0 border-l-0 border-r-0 rounded-none bg-transparent px-1 py-0.5 text-sm font-semibold outline-none focus:ring-0 transition cursor-pointer",
                     selectedVehicleId
-                      ? "border-slate-200 text-slate-800"
-                      : "border-orange-400 bg-orange-50 text-orange-700",
+                      ? "border-slate-300 text-slate-800 focus:border-slate-500"
+                      : "border-orange-400 text-orange-700 focus:border-orange-500",
                   ].join(" ")}
                 >
                   <option value="">— กรุณาเลือกรถจัดส่ง —</option>
@@ -955,10 +956,11 @@ function AllStoresDeliveryModal({
   const [isPrintingSelected, setIsPrintingSelected] = useState(false);
   const [isSharingSelected, setIsSharingSelected] = useState(false);
   const [previewSelectedPdfFile, setPreviewSelectedPdfFile] = useState<File | null>(null);
+  const [showAmount, setShowAmount] = useState(true);
   const printFallbackTimerRef = useRef<number | null>(null);
   const normalizedQuery = query.trim().toLocaleLowerCase("th");
 
-  // Extract unique vehicles dynamically from stores list
+  // Extract unique vehicles dynamically from the persisted list used by this modal.
   const uniqueVehicles = useMemo(() => {
     const map = new Map<string, string>();
     stores.forEach((store) => {
@@ -974,6 +976,41 @@ function AllStoresDeliveryModal({
   const hasUnassigned = useMemo(() => {
     return stores.some((store) => !store.vehicleId);
   }, [stores]);
+
+  const vehicleTabsContainerRef = useRef<HTMLDivElement>(null);
+  const [vehicleUnderlineStyle, setVehicleUnderlineStyle] = useState<React.CSSProperties | null>(null);
+  const [shouldAnimate, setShouldAnimate] = useState(false);
+
+  useEffect(() => {
+    const container = vehicleTabsContainerRef.current;
+    if (!container) return;
+
+    const activeBtn = container.querySelector(
+      `button[data-active="true"]`
+    ) as HTMLButtonElement | null;
+
+    if (activeBtn) {
+      const nextLeft = activeBtn.offsetLeft;
+      const nextWidth = activeBtn.offsetWidth;
+
+      setShouldAnimate(false);
+
+      setVehicleUnderlineStyle((prev) => {
+        if (prev && prev.left === nextLeft && prev.width === nextWidth) {
+          return prev;
+        }
+        return { left: nextLeft, width: nextWidth };
+      });
+    } else {
+      setVehicleUnderlineStyle(null);
+    }
+  }, [activeTab, uniqueVehicles]);
+
+  const handleTabClick = (id: string, e: React.MouseEvent<HTMLButtonElement>) => {
+    e.currentTarget.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+    setShouldAnimate(true);
+    setActiveTab(id);
+  };
 
   // Tab statistics: total vs selected stores per tab
   const tabStats = useMemo(() => {
@@ -1077,7 +1114,7 @@ function AllStoresDeliveryModal({
     if (deliveryNoteIds.length === 0) return;
     
     setIsPrintingSelected(true);
-    const printUrl = `/delivery/print?note_ids=${encodeURIComponent(deliveryNoteIds.join(","))}&date=${date}${endDate ? `&endDate=${endDate}` : ""}&autoprint=1`;
+    const printUrl = `/delivery/print?note_ids=${encodeURIComponent(deliveryNoteIds.join(","))}&date=${date}${endDate ? `&endDate=${endDate}` : ""}&autoprint=1&show_amount=${showAmount ? "1" : "0"}`;
 
     const iframe = document.createElement("iframe");
     iframe.style.cssText = "position:fixed;top:-9999px;left:-9999px;width:1px;height:1px;";
@@ -1119,6 +1156,7 @@ function AllStoresDeliveryModal({
     params.set("date", date);
     if (endDate) params.set("endDate", endDate);
     if (autoprint) params.set("autoprint", "1");
+    params.set("show_amount", showAmount ? "1" : "0");
     return `/delivery/print?${params.toString()}`;
   }
 
@@ -1165,7 +1203,7 @@ function AllStoresDeliveryModal({
   }
 
   return (
-    <div className="fixed inset-0 z-[200] flex items-end justify-center bg-[#4A148C]/45 p-0 backdrop-blur-[3px] sm:items-center sm:p-5">
+    <div className="fixed inset-0 z-[700] flex items-end justify-center bg-[#4A148C]/45 p-0 backdrop-blur-[3px] sm:items-center sm:p-5">
       <div className="flex h-[100dvh] w-full flex-col overflow-hidden border-[#EA80FC]/40 bg-white shadow-[0_28px_80px_rgba(142, 36, 170,0.22)] sm:max-h-[92vh] sm:max-w-6xl sm:border">
         <div className="flex h-1 w-full shrink-0">
           <div className="h-full flex-1 bg-[#4A148C]" />
@@ -1198,131 +1236,127 @@ function AllStoresDeliveryModal({
               <X className="h-4 w-4" strokeWidth={2.4} />
             </button>
           </div>
+
+          <div className="mt-3.5 flex flex-wrap items-center gap-x-4 gap-y-1.5 border-t border-[#EA80FC]/15 pt-3.5 text-[11px] font-black text-[#4A148C] sm:text-xs">
+            <div>
+              ร้านค้าในแท็บนี้: <strong className="text-[#4A148C] font-black">{currentTabTotalCount}</strong>
+            </div>
+            <div className="h-3 w-px bg-[#EA80FC]/25 hidden sm:block" />
+            <div>
+              เลือกพิมพ์ในแท็บนี้: <strong className="text-[#EA80FC] font-black">{currentTabSelectedCount}</strong>
+            </div>
+            <div className="h-3 w-px bg-[#EA80FC]/25 hidden sm:block" />
+            <div>
+              รอบ/ยอดรวมกลุ่มนี้: <strong className="text-[#4A148C] font-black">{selectedRounds} รอบ · {formatMoney(selectedTotal)}</strong>
+            </div>
+          </div>
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto bg-[#F7F8FA] px-3 py-3 sm:px-6 sm:py-5">
-          <div className="grid grid-cols-3 gap-2 sm:gap-4">
-            <div className="flex flex-col items-center justify-center border border-[#EA80FC]/25 bg-white p-2 text-center sm:items-start sm:p-4 sm:text-left">
-              <p className="text-[9px] font-black uppercase tracking-[0.16em] text-[#4A148C] sm:text-xs">ร้านค้าในแท็บนี้</p>
-              <p className="text-lg font-black text-[#4A148C] sm:mt-1 sm:text-2xl">{currentTabTotalCount}</p>
-            </div>
-            <div className="flex flex-col items-center justify-center border border-[#EA80FC]/55 bg-[#EA80FC]/10 p-2 text-center sm:items-start sm:p-4 sm:text-left">
-              <p className="text-[9px] font-black uppercase tracking-[0.16em] text-[#4A148C] sm:text-xs">เลือกพิมพ์ในแท็บนี้</p>
-              <p className="text-lg font-black text-[#EA80FC] sm:mt-1 sm:text-2xl">{currentTabSelectedCount}</p>
-            </div>
-            <div className="flex flex-col items-center justify-center border border-[#EA80FC]/25 bg-white p-2 text-center sm:items-start sm:p-4 sm:text-left">
-              <p className="text-[9px] font-black uppercase tracking-[0.16em] text-[#4A148C] sm:text-xs">รอบ / ยอดรวมกลุ่มนี้</p>
-              <p className="mt-0.5 text-[10px] font-black text-[#4A148C] sm:mt-1 sm:text-lg">
-                {selectedRounds} รอบ · {formatMoney(selectedTotal)}
-              </p>
-            </div>
-          </div>
-
-          <div className="mt-4 flex gap-1.5 overflow-x-auto pb-1.5 scrollbar-none sm:mt-5 sm:gap-2">
-            <button
-              type="button"
-              onClick={() => setActiveTab("all")}
-              className={`relative flex items-center gap-1.5 border px-4 py-2 text-xs font-black uppercase tracking-[0.08em] transition active:scale-95 sm:px-5 sm:py-2.5 sm:text-sm ${
-                activeTab === "all"
-                  ? "border-[#4A148C] bg-[#4A148C] text-white"
-                  : "border-[#EA80FC]/30 bg-white text-[#4A148C] hover:border-[#EA80FC] hover:bg-[#EA80FC]/10"
-              }`}
-            >
-              <span>ทั้งหมด</span>
-              <span
-                className={`inline-flex items-center justify-center rounded-full px-1.5 py-0.5 text-[10px] font-black ${
-                  activeTab === "all" ? "bg-white/20 text-white" : "bg-[#EA80FC]/15 text-[#4A148C]"
-                }`}
-              >
-                {tabStats.all.selected > 0 ? `${tabStats.all.selected}/${tabStats.all.total}` : tabStats.all.total}
-              </span>
-            </button>
-
-            {uniqueVehicles.map((vehicle) => {
-              const stats = tabStats[vehicle.id] || { total: 0, selected: 0 };
-              const isActive = activeTab === vehicle.id;
-              return (
-                <button
-                  key={vehicle.id}
-                  type="button"
-                  onClick={() => setActiveTab(vehicle.id)}
-                  className={`relative flex items-center gap-1.5 border px-4 py-2 text-xs font-black uppercase tracking-[0.08em] transition active:scale-95 sm:px-5 sm:py-2.5 sm:text-sm ${
-                    isActive
-                      ? "border-[#4A148C] bg-[#4A148C] text-white"
-                      : "border-[#EA80FC]/30 bg-white text-[#4A148C] hover:border-[#EA80FC] hover:bg-[#EA80FC]/10"
-                  }`}
-                >
-                  <Truck className="h-3.5 w-3.5" strokeWidth={isActive ? 2.5 : 2} />
-                  <span>{vehicle.name}</span>
-                  <span
-                    className={`inline-flex items-center justify-center rounded-full px-1.5 py-0.5 text-[10px] font-black ${
-                      isActive
-                      ? "bg-white/20 text-white"
-                      : stats.selected > 0
-                          ? "bg-[#EA80FC]/20 text-[#4A148C]"
-                          : "bg-[#EA80FC]/15 text-[#4A148C]"
-                    }`}
-                  >
-                    {stats.selected > 0 ? `${stats.selected}/${stats.total}` : stats.total}
-                  </span>
-                </button>
-              );
-            })}
-
-            {hasUnassigned && (
-              <button
-                type="button"
-                onClick={() => setActiveTab("unassigned")}
-                className={`relative flex items-center gap-1.5 border px-4 py-2 text-xs font-black uppercase tracking-[0.08em] transition active:scale-95 sm:px-5 sm:py-2.5 sm:text-sm ${
-                  activeTab === "unassigned"
-                    ? "border-[#4A148C] bg-[#4A148C] text-white"
-                    : "border-[#EA80FC]/30 bg-white text-[#4A148C] hover:border-[#EA80FC] hover:bg-[#EA80FC]/10"
-                }`}
-              >
-                <span>ยังไม่กำหนดรถ</span>
-                <span
-                  className={`inline-flex items-center justify-center rounded-full px-1.5 py-0.5 text-[10px] font-black ${
-                    activeTab === "unassigned"
-                      ? "bg-white/20 text-white"
-                      : tabStats.unassigned.selected > 0
-                        ? "bg-[#EA80FC]/20 text-[#4A148C]"
-                        : "bg-[#EA80FC]/15 text-[#4A148C]"
-                  }`}
-                >
-                  {tabStats.unassigned.selected > 0 ? `${tabStats.unassigned.selected}/${tabStats.unassigned.total}` : tabStats.unassigned.total}
-                </span>
-              </button>
-            )}
-          </div>
-
-          <div className="mt-3 border border-[#EA80FC]/30 bg-white p-2 sm:mt-4 sm:p-3">
-            <div className="flex flex-col gap-2 md:flex-row md:items-center">
+          <div className="mb-2">
+            <div className="flex flex-row items-center gap-2">
               <label className="relative block flex-1">
-                <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#4A148C] sm:left-4 sm:h-4 sm:w-4" strokeWidth={2.2} />
+                <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#4A148C]" strokeWidth={2.2} />
                 <input
                   type="search"
                   value={query}
                   onChange={(event) => setQuery(event.target.value)}
                   placeholder="ค้นหาร้านค้า..."
-                  className="w-full border border-[#EA80FC]/30 bg-white py-2 pl-9 pr-3 text-xs font-black text-[#4A148C] outline-none transition placeholder:text-[#4A148C] focus:border-[#EA80FC] focus:ring-2 focus:ring-[#EA80FC]/20 sm:py-3 sm:pl-11 sm:pr-4 sm:text-sm"
+                  className="h-9 w-full border border-[#EA80FC]/30 bg-white pl-8 pr-3 text-xs font-black text-[#4A148C] outline-none transition placeholder:text-[#4A148C]/70 focus:border-[#EA80FC] focus:ring-1 focus:ring-[#EA80FC]/20"
                 />
               </label>
-              <div className="grid grid-cols-2 gap-2 md:flex md:shrink-0">
+              <div className="grid grid-cols-2 gap-1.5 shrink-0 w-44 sm:w-52">
                 <button
                   type="button"
                   onClick={selectAllStores}
-                  className="bg-[#4A148C] px-3 py-2 text-[11px] font-black uppercase tracking-[0.08em] text-white transition hover:bg-[#4A148C] sm:px-4 sm:py-3 sm:text-sm"
+                  className="h-9 w-full bg-[#4A148C] text-[10px] sm:text-xs font-black text-white transition hover:bg-[#4A148C] active:scale-95"
                 >
-                  เลือกทั้งหมดในแท็บ
+                  เลือกทั้งหมด
                 </button>
                 <button
                   type="button"
                   onClick={clearSelection}
-                  className="border border-[#EA80FC]/45 bg-white px-3 py-2 text-[11px] font-black uppercase tracking-[0.08em] text-[#4A148C] transition hover:border-[#EA80FC] hover:bg-[#EA80FC]/10 sm:px-4 sm:py-3 sm:text-sm"
+                  className="h-9 w-full border border-[#EA80FC]/45 bg-white text-[10px] sm:text-xs font-black text-[#4A148C] transition hover:border-[#EA80FC] hover:bg-[#EA80FC]/10 active:scale-95"
                 >
-                  ล้างที่เลือกในแท็บ
+                  ล้างที่เลือก
                 </button>
               </div>
+            </div>
+          </div>
+
+          <div className="relative bg-transparent overflow-hidden mt-3 mb-1.5 w-full">
+            <div
+              ref={vehicleTabsContainerRef}
+              className="relative flex gap-6 overflow-x-auto pb-2 pt-0.5 no-scrollbar scroll-smooth"
+            >
+              {/* Underline indicator */}
+              <span
+                className="absolute bottom-0 h-[3px] rounded-full bg-[#4A148C]"
+                style={{
+                  ...(vehicleUnderlineStyle ?? { left: 0, width: 0 }),
+                  opacity: vehicleUnderlineStyle ? 1 : 0,
+                  transition: shouldAnimate
+                    ? "left 300ms cubic-bezier(0.16, 1, 0.3, 1), width 300ms cubic-bezier(0.16, 1, 0.3, 1), opacity 200ms ease-in-out"
+                    : "none",
+                }}
+              />
+
+              <button
+                type="button"
+                data-active={activeTab === "all"}
+                onClick={(e) => handleTabClick("all", e)}
+                className={`pb-1.5 text-sm font-black transition-all whitespace-nowrap tracking-wide bg-transparent border-0 outline-none ${
+                  activeTab === "all"
+                    ? "text-[#4A148C] scale-[1.03]"
+                    : "text-slate-500 hover:text-slate-800"
+                }`}
+              >
+                <span>ทั้งหมด</span>
+                <span className="text-xs opacity-75 ml-1">
+                  ({tabStats.all.selected > 0 ? `${tabStats.all.selected}/${tabStats.all.total}` : tabStats.all.total})
+                </span>
+              </button>
+
+              {uniqueVehicles.map((vehicle) => {
+                const stats = tabStats[vehicle.id] || { total: 0, selected: 0 };
+                const isActive = activeTab === vehicle.id;
+                return (
+                  <button
+                    key={vehicle.id}
+                    type="button"
+                    data-active={isActive}
+                    onClick={(e) => handleTabClick(vehicle.id, e)}
+                    className={`pb-1.5 text-sm font-black transition-all whitespace-nowrap tracking-wide bg-transparent border-0 outline-none ${
+                      isActive
+                        ? "text-[#4A148C] scale-[1.03]"
+                        : "text-slate-500 hover:text-slate-800"
+                    }`}
+                  >
+                    <span>{vehicle.name}</span>
+                    <span className="text-xs opacity-75 ml-1">
+                      ({stats.selected > 0 ? `${stats.selected}/${stats.total}` : stats.total})
+                    </span>
+                  </button>
+                );
+              })}
+
+              {hasUnassigned && (
+                <button
+                  type="button"
+                  data-active={activeTab === "unassigned"}
+                  onClick={(e) => handleTabClick("unassigned", e)}
+                  className={`pb-1.5 text-sm font-black transition-all whitespace-nowrap tracking-wide bg-transparent border-0 outline-none ${
+                    activeTab === "unassigned"
+                      ? "text-[#4A148C] scale-[1.03]"
+                      : "text-slate-500 hover:text-slate-800"
+                  }`}
+                >
+                  <span>ยังไม่กำหนดรถ</span>
+                  <span className="text-xs opacity-75 ml-1">
+                    ({tabStats.unassigned.selected > 0 ? `${tabStats.unassigned.selected}/${tabStats.unassigned.total}` : tabStats.unassigned.total})
+                  </span>
+                </button>
+              )}
             </div>
           </div>
 
@@ -1408,9 +1442,17 @@ function AllStoresDeliveryModal({
 
         <div className="border-t border-[#EA80FC]/30 bg-white px-4 py-4 sm:px-6">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-sm font-black text-[#4A148C]">
-              เลือกแล้ว {currentTabSelectedCount} ร้าน จากทั้งหมด {currentTabTotalCount} ร้านในกลุ่มนี้ (รวมเลือกทั้งหมด {printSelectedIds.size} ร้าน)
-            </p>
+            <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
+              <label className="inline-flex items-center gap-2 cursor-pointer text-sm font-black text-[#4A148C]">
+                <input
+                  type="checkbox"
+                  checked={showAmount}
+                  onChange={(e) => setShowAmount(e.target.checked)}
+                  className="h-4 w-4 rounded border-[#EA80FC]/30 text-[#4A148C] focus:ring-[#4A148C]"
+                />
+                <span>แสดงจำนวนเงิน</span>
+              </label>
+            </div>
             <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-row">
               <button
                 type="button"
@@ -1493,9 +1535,12 @@ export function AllStoresDeliveryButton({
         <Printer className="h-3.5 w-3.5 md:h-4.5 md:w-4.5" strokeWidth={2.5} />
         พิมพ์บิลส่งของทุกร้านค้า
       </button>
-      {open && (
-        <AllStoresDeliveryModal date={date} endDate={endDate} stores={stores} onClose={() => setOpen(false)} />
-      )}
+      {open && typeof document !== "undefined"
+        ? createPortal(
+            <AllStoresDeliveryModal date={date} endDate={endDate} stores={stores} onClose={() => setOpen(false)} />,
+            document.body,
+          )
+        : null}
     </>
   );
 }

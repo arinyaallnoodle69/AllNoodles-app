@@ -33,6 +33,9 @@ async function VehicleProductSummaryPage({ searchParams }: Props) {
 
   const summaryData = await getVehicleProductSummaryData(session.organizationId, date, endDate);
   const hasData = summaryData.products.length > 0;
+  const activeVehicleCount = summaryData.vehicles.filter((_, vehicleIndex) =>
+    summaryData.qty.some((row) => (row[vehicleIndex] ?? 0) > 0),
+  ).length;
 
   return (
     <>
@@ -91,7 +94,7 @@ async function VehicleProductSummaryPage({ searchParams }: Props) {
       >
         <span style={{ fontSize: "15px", fontWeight: 800, color: "#4A148C" }}>สรุปสินค้าตามรถ</span>
         <span className="vehicle-summary-toolbar__meta" style={{ fontSize: "13px", color: "#64748b", fontWeight: 700 }}>
-          {summaryData.dateLabel} · {summaryData.vehicles.length} รถ
+          {summaryData.dateLabel} · {activeVehicleCount} รถ
         </span>
         <div className="vehicle-summary-toolbar__actions" style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "nowrap" }}>
           <PackingListPrintButton

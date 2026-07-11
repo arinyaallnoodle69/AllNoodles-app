@@ -51,6 +51,7 @@ type OrderItemRow = {
 };
 
 type OrderWithRelations = {
+  assigned_vehicle_id: string | null;
   id: string;
   order_date: string;
   customers: OrderCustomer;
@@ -145,6 +146,7 @@ async function PackingListPage({ searchParams }: Props) {
     .from("orders")
     .select(`
       id,
+      assigned_vehicle_id,
       order_date,
       customers!inner(id, name, customer_code, default_vehicle_id, vehicles(id, name)),
       delivery_notes!order_id(vehicle_id, status, vehicles(id, name)),
@@ -264,7 +266,7 @@ async function PackingListPage({ searchParams }: Props) {
     ]),
   );
 
-  const rawOrders = (ordersResult.data ?? []) as OrderWithRelations[];
+  const rawOrders = (ordersResult.data ?? []) as unknown as OrderWithRelations[];
   const ordersByDate = new Map<string, OrderWithRelations[]>();
 
   for (const order of rawOrders) {
@@ -290,10 +292,15 @@ async function PackingListPage({ searchParams }: Props) {
             ? [order.delivery_notes]
             : [];
         const activeDeliveryNote = deliveryNotes.find((note) => note.status !== "cancelled");
-        const vehicleId = activeDeliveryNote?.vehicle_id ?? customer.default_vehicle_id;
+        const vehicleId =
+          activeDeliveryNote?.vehicle_id ??
+          order.assigned_vehicle_id ??
+          customer.default_vehicle_id;
         const vehicleName = activeDeliveryNote?.vehicle_id
           ? getVehicleName(activeDeliveryNote.vehicles)
-          : getVehicleName(customer.vehicles);
+          : order.assigned_vehicle_id
+            ? vehicles.find((vehicle) => vehicle.id === order.assigned_vehicle_id)?.name ?? null
+            : getVehicleName(customer.vehicles);
         const resolvedVehicleName =
           vehicleName ||
           (vehicleId ? vehicles.find((vehicle) => vehicle.id === vehicleId)?.name : null) ||

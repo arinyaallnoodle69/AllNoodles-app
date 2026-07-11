@@ -72,10 +72,10 @@ function LoginShell({
           </div>
 
           <div className="mb-3 text-center">
-            <h1 className="text-[1.65rem] font-black tracking-tight text-[#4A148C]">
+            <h1 className="text-[1.95rem] font-black tracking-tight text-[#4A148C] sm:text-3xl">
               เข้าสู่ระบบ
             </h1>
-            <p className="mt-1 text-sm font-semibold text-[#667085]">
+            <p className="mt-1 text-base font-semibold text-[#667085]">
               กรอกรหัส PIN เพื่อจัดการระบบ All Noodles
             </p>
           </div>

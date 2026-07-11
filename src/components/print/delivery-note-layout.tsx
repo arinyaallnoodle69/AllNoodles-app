@@ -21,6 +21,7 @@ type Props = {
   dns: DeliveryNotePrintData[];
   showIntermediateFooter?: boolean;
   logoDataUrl?: string;
+  showAmount?: boolean;
 };
 
 function buildNotePages(dns: DeliveryNotePrintData[]) {
@@ -60,6 +61,24 @@ function formatShortThaiDate(date: string) {
   return `${day}/${month}/${String(buddhistYear).slice(-2)}`;
 }
 
+function formatShortThaiDateWithTime(date: string) {
+  const formattedDate = formatShortThaiDate(date);
+
+  try {
+    const dateObj = new Date();
+    const timeStr = new Intl.DateTimeFormat("th-TH", {
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: false,
+      timeZone: "Asia/Bangkok",
+    }).format(dateObj);
+    return `${formattedDate} ${timeStr}`;
+  } catch {
+    return formattedDate;
+  }
+}
+
 function DeliveryNoteHeader({ notePage, logoDataUrl }: { notePage: DeliveryNotePage; logoDataUrl?: string }) {
   const { dn, pageIndex, totalPages } = notePage;
 
@@ -75,7 +94,7 @@ function DeliveryNoteHeader({ notePage, logoDataUrl }: { notePage: DeliveryNoteP
         </div>
       </div>
 
-      <div className="dn-title">บิลส่งของ</div>
+      <div className="dn-title"></div>
 
       <div className="dn-doc-meta">
         <div className="dn-meta-row">
@@ -84,7 +103,7 @@ function DeliveryNoteHeader({ notePage, logoDataUrl }: { notePage: DeliveryNoteP
         </div>
         <div className="dn-meta-row">
           <span>วันที่</span>
-          <strong>{formatShortThaiDate(dn.deliveryDate)}</strong>
+          <strong>{formatShortThaiDateWithTime(dn.deliveryDate)}</strong>
         </div>
         <div className="dn-meta-row">
           <span>หน้า</span>
@@ -125,7 +144,7 @@ function CustomerBlock({ dn }: { dn: DeliveryNotePrintData }) {
   );
 }
 
-function DeliveryItemsTable({ items }: { items: DeliveryNotePrintData["items"] }) {
+function DeliveryItemsTable({ items, showAmount = true }: { items: DeliveryNotePrintData["items"]; showAmount?: boolean }) {
   return (
     <table className="dn-table">
       <thead>
@@ -135,8 +154,7 @@ function DeliveryItemsTable({ items }: { items: DeliveryNotePrintData["items"] }
           <th className="dn-col-name">รายการสินค้า</th>
           <th className="dn-col-qty">จำนวน</th>
           <th className="dn-col-unit">หน่วย</th>
-          <th className="dn-col-price">ราคา</th>
-          <th className="dn-col-total">จำนวนเงิน</th>
+          {showAmount && <th className="dn-col-total">จำนวนเงิน</th>}
         </tr>
       </thead>
       <tbody>
@@ -147,8 +165,7 @@ function DeliveryItemsTable({ items }: { items: DeliveryNotePrintData["items"] }
             <td className="dn-col-name">{item.productName}</td>
             <td className="dn-col-qty">{fmtQty(item.quantityDelivered)}</td>
             <td className="dn-col-unit">{item.saleUnitLabel}</td>
-            <td className="dn-col-price">{fmt(item.unitPrice)}</td>
-            <td className="dn-col-total">{fmt(item.lineTotal)}</td>
+            {showAmount && <td className="dn-col-total">{fmt(item.lineTotal)}</td>}
           </tr>
         ))}
       </tbody>
@@ -156,14 +173,16 @@ function DeliveryItemsTable({ items }: { items: DeliveryNotePrintData["items"] }
   );
 }
 
-function DeliveryNoteFooter({ dn }: { dn: DeliveryNotePrintData }) {
+function DeliveryNoteFooter({ dn, showAmount = true }: { dn: DeliveryNotePrintData; showAmount?: boolean }) {
   return (
     <footer className="dn-footer">
-      <div className="dn-total-box">
-        <div className="dn-baht-text">{bahtText(dn.totalAmount)}</div>
-        <div className="dn-total-label">รวมทั้งสิ้น</div>
-        <div className="dn-total-value dn-mono">{fmt(dn.totalAmount)}</div>
-      </div>
+      {showAmount && (
+        <div className="dn-total-box">
+          <div className="dn-baht-text">{bahtText(dn.totalAmount)}</div>
+          <div className="dn-total-label">รวมทั้งสิ้น</div>
+          <div className="dn-total-value dn-mono">{fmt(dn.totalAmount)}</div>
+        </div>
+      )}
 
       <div className="dn-notes">
         <span>หมายเหตุ :</span>
@@ -188,21 +207,21 @@ function DeliveryNoteFooter({ dn }: { dn: DeliveryNotePrintData }) {
   );
 }
 
-function DeliveryNotePageView({ notePage, logoDataUrl }: { notePage: DeliveryNotePage; logoDataUrl?: string }) {
+function DeliveryNotePageView({ notePage, logoDataUrl, showAmount = true }: { notePage: DeliveryNotePage; logoDataUrl?: string; showAmount?: boolean }) {
   const { dn, items } = notePage;
 
   return (
     <div className="dn-page-content">
       <DeliveryNoteHeader notePage={notePage} logoDataUrl={logoDataUrl} />
       <CustomerBlock dn={dn} />
-      <DeliveryItemsTable items={items} />
+      <DeliveryItemsTable items={items} showAmount={showAmount} />
       <div className="dn-flex-spacer" />
-      <DeliveryNoteFooter dn={dn} />
+      <DeliveryNoteFooter dn={dn} showAmount={showAmount} />
     </div>
   );
 }
 
-export function DeliveryNoteLayout({ dns, logoDataUrl }: Props) {
+export function DeliveryNoteLayout({ dns, logoDataUrl, showAmount = true }: Props) {
   const notePages = buildNotePages(dns);
 
   return (
@@ -527,7 +546,7 @@ export function DeliveryNoteLayout({ dns, logoDataUrl }: Props) {
 
       {notePages.map((notePage) => (
         <div key={notePage.key} className="note-page" data-delivery-note-page="true">
-          <DeliveryNotePageView notePage={notePage} logoDataUrl={logoDataUrl} />
+          <DeliveryNotePageView notePage={notePage} logoDataUrl={logoDataUrl} showAmount={showAmount} />
         </div>
       ))}
     </>

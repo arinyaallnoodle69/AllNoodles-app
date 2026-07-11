@@ -211,10 +211,10 @@ async function getOrderStoreSummaries(
       .in("id", customerIds),
     admin
       .from("vehicles")
-      .select("id, name")
+      .select("id, name, sort_order")
       .eq("organization_id", organizationId)
       .eq("is_active", true)
-      .order("name", { ascending: true }),
+      .order("sort_order", { ascending: true }),
   ]);
 
   const vehicles = ((vehiclesResult.data ?? []) as { id: string; name: string }[]);

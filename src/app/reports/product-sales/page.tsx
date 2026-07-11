@@ -11,6 +11,7 @@ import {
   getProductSalesRanking,
   getCustomersForFilter,
   getProductsForFilter,
+  getCategoriesForFilter,
   type ProductSalesRow,
 } from "@/lib/reports/product-sales";
 import { getActiveWarehouses } from "@/lib/warehouses";
@@ -344,7 +345,7 @@ async function ProductSalesReportContent({ searchParams }: PageProps) {
   const page = Math.max(1, parseInt(params.page ?? "1", 10) || 1);
   const pageSize = params.pageSize ? parseInt(params.pageSize, 10) : DEFAULT_PAGE_SIZE;
 
-  const [{ rows, allRows, summary, total }, customers, products, warehouses] = await Promise.all([
+  const [{ rows, allRows, summary, total }, customers, products, categories, warehouses] = await Promise.all([
     getProductSalesRanking({
       organizationId: session.organizationId,
       fromDate,
@@ -357,6 +358,7 @@ async function ProductSalesReportContent({ searchParams }: PageProps) {
     }),
     getCustomersForFilter(session.organizationId),
     getProductsForFilter(session.organizationId),
+    getCategoriesForFilter(session.organizationId),
     getActiveWarehouses(session.organizationId),
   ]);
 
@@ -407,7 +409,7 @@ async function ProductSalesReportContent({ searchParams }: PageProps) {
               </div>
               <div>
                 <label className="mb-1.5 block text-xs font-bold uppercase tracking-widest text-slate-400">สินค้า</label>
-                <ProductFilter products={products} selectedIds={selectedProductIds} />
+                <ProductFilter products={products} selectedIds={selectedProductIds} categories={categories} />
               </div>
               <div>
                 <label className="mb-1.5 block text-xs font-bold uppercase tracking-widest text-slate-400">ร้านค้า</label>
@@ -431,7 +433,7 @@ async function ProductSalesReportContent({ searchParams }: PageProps) {
               <form method="GET" action="/reports/product-sales" className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-end">
                 <div className="w-full sm:min-w-[200px] sm:flex-1 lg:min-w-[260px] lg:max-w-[340px] lg:flex-[1.05]">
                   <label className="mb-1.5 block text-xs font-bold uppercase tracking-widest text-slate-400">สินค้า</label>
-                  <ProductFilter products={products} selectedIds={selectedProductIds} />
+                  <ProductFilter products={products} selectedIds={selectedProductIds} categories={categories} />
                 </div>
                 <div className="w-full sm:min-w-[200px] sm:flex-1">
                   <label className="mb-1.5 block text-xs font-bold uppercase tracking-widest text-slate-400">ร้านค้า</label>

@@ -18,7 +18,6 @@ import {
   Package2,
   Save,
   Trash2,
-  Warehouse,
   X,
 } from "lucide-react";
 import {
@@ -125,7 +124,6 @@ type ProductFormBodyProps = {
   onClose: () => void;
   onPendingChange?: (pending: boolean) => void;
   onSubmitSuccess: () => void;
-  suppliers: SettingsSupplier[];
 };
 
 function ProductFormBody({
@@ -136,7 +134,6 @@ function ProductFormBody({
   onClose,
   onPendingChange,
   onSubmitSuccess,
-  suppliers,
 }: ProductFormBodyProps) {
   const formId = useId();
   const isEditing = editingProduct !== null;
@@ -155,7 +152,7 @@ function ProductFormBody({
   const [isStartingCamera, setIsStartingCamera] = useState(false);
   const [baseUnit, setBaseUnit] = useState(editingProduct?.baseUnit ?? "kg");
   const legacyProductKind = editingProduct?.productKind ?? "stock";
-  const [supplierId, setSupplierId] = useState(editingProduct?.supplierId ?? "");
+  const supplierId = editingProduct?.supplierId ?? "";
   const [baseCostPrice, setBaseCostPrice] = useState(
     editingProduct ? (Number(editingProduct.costPrice) === 0 ? "" : String(editingProduct.costPrice)) : "",
   );
@@ -195,8 +192,6 @@ function ProductFormBody({
     editingProduct?.categoryIds[0] ?? "",
   );
   const [description, setDescription] = useState(editingProduct?.description ?? "");
-  const [packingListBrand, setPackingListBrand] = useState(editingProduct?.packingListBrand ?? "");
-  const [packingListIcon, setPackingListIcon] = useState(editingProduct?.packingListIcon ?? "");
   const [packingListName, setPackingListName] = useState(editingProduct?.packingListName ?? "");
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -688,8 +683,6 @@ function ProductFormBody({
       selectedCategoryId === (editingProduct.categoryIds[0] ?? "") &&
       supplierId === (editingProduct.supplierId ?? "") &&
       description === (editingProduct.description ?? "") &&
-      packingListBrand === (editingProduct.packingListBrand ?? "") &&
-      packingListIcon === (editingProduct.packingListIcon ?? "") &&
       packingListName === (editingProduct.packingListName ?? "");
 
     const sameSaleUnits = JSON.stringify(initialSaleUnits) === JSON.stringify(currentSaleUnits);
@@ -710,8 +703,6 @@ function ProductFormBody({
     selectedCategoryId,
     supplierId,
     description,
-    packingListBrand,
-    packingListIcon,
     packingListName,
     saleUnits,
     keptExistingUrls,
@@ -875,13 +866,6 @@ function ProductFormBody({
                 </div>
               </div>
 
-              <div>
-                <label className={productFieldLabelClass} htmlFor="product-stock-quantity">สต็อกเริ่มต้น</label>
-                <div className="relative">
-                  <Warehouse className="absolute left-3 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-slate-800" strokeWidth={2.3} />
-                  <input id="product-stock-quantity" name="stockQuantity" type="number" step="1" required defaultValue={editingProduct?.stockQuantity ?? 0} className={`${productInputClass} pl-10`} placeholder="0" />
-                </div>
-              </div>
               <div className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
                 <div className="space-y-1">
                   <label className={productFieldLabelClass} htmlFor="product-packing-list-name">ชื่อย่อสำหรับใบจัดของ</label>
@@ -896,35 +880,9 @@ function ProductFormBody({
                     ใช้เฉพาะตอนพิมพ์ใบจัดของ หากไม่กรอก ระบบจะใช้ชื่อสินค้าหลักแทน
                   </p>
                 </div>
-                <div className="grid gap-3 sm:grid-cols-[0.8fr_1.2fr]">
-                  <div>
-                    <label className={productFieldLabelClass} htmlFor="product-packing-list-icon">ไอคอน/อีโมจิ</label>
-                    <input
-                      id="product-packing-list-icon"
-                      value={packingListIcon}
-                      onChange={(e) => setPackingListIcon(e.target.value)}
-                      className={productInputClass}
-                      placeholder="เช่น 🍜"
-                    />
-                  </div>
-                  <div>
-                    <label className={productFieldLabelClass} htmlFor="product-packing-list-brand">แบรนด์ในใบจัดของ</label>
-                    <input
-                      id="product-packing-list-brand"
-                      value={packingListBrand}
-                      onChange={(e) => setPackingListBrand(e.target.value)}
-                      className={productInputClass}
-                      placeholder="ไม่กรอก = ใช้แบรนด์หลัก"
-                    />
-                  </div>
-                </div>
                 <div className="rounded-xl border border-dashed border-slate-300 bg-white px-4 py-3">
                   <p className="text-[11px] font-black uppercase tracking-[0.14em] text-slate-800">ตัวอย่างในใบจัดของ</p>
-                  <p className="mt-1 text-[11px] font-black uppercase tracking-[0.12em] text-slate-500">
-                    {(packingListBrand || brand || "แบรนด์").trim()}
-                  </p>
                   <p className="mt-2 text-sm font-black leading-snug text-slate-950">
-                    {packingListIcon.trim() ? <span className="mr-1">{packingListIcon.trim()}</span> : null}
                     {(packingListName || basicFormValues.name || editingProduct?.name || "ชื่อสินค้าจะแสดงตรงนี้").trim()}
                   </p>
                 </div>
@@ -938,11 +896,12 @@ function ProductFormBody({
               {/* Hidden inputs to pass metadata via FormData */}
               <input type="hidden" name="brand" value={brand} />
               <input type="hidden" name="description" value={description} />
-              <input type="hidden" name="packingListBrand" value={packingListBrand} />
-              <input type="hidden" name="packingListIcon" value={packingListIcon} />
+              <input type="hidden" name="packingListBrand" value="" />
+              <input type="hidden" name="packingListIcon" value="" />
               <input type="hidden" name="packingListName" value={packingListName} />
               <input type="hidden" name="productKind" value={legacyProductKind} />
               <input type="hidden" name="supplierId" value={supplierId} />
+              <input type="hidden" name="stockQuantity" value={editingProduct?.stockQuantity ?? 0} />
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="sm:col-span-1">
                   <label className={productFieldLabelClass} htmlFor="product-brand">แบรนด์</label>
@@ -995,35 +954,6 @@ function ProductFormBody({
                   )}
                 </div>
 
-                <div className="sm:col-span-1">
-                  <label className={productFieldLabelClass} htmlFor="product-supplier">ผลิตจากโรงงาน</label>
-                  <div className="relative">
-                    <select
-                      id="product-supplier"
-                      value={supplierId}
-                      onChange={(e) => setSupplierId(e.target.value)}
-                      className={`${productSelectClass} pr-10`}
-                      disabled={suppliers.length === 0}
-                    >
-                      <option value="">ไม่ระบุโรงงาน</option>
-                      {suppliers.map((supplier) => (
-                        <option key={supplier.id} value={supplier.id}>
-                          {supplier.code ? `${supplier.code} - ${supplier.name}` : supplier.name}
-                        </option>
-                      ))}
-                    </select>
-                    <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-slate-800">
-                      <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                        <path fillRule="evenodd" d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
-                      </svg>
-                    </span>
-                  </div>
-                  {suppliers.length === 0 ? (
-                    <p className="mt-1.5 text-xs font-bold text-slate-800">
-                      ยังไม่มีผู้ขายในระบบ กรุณาเพิ่มจากหน้าจัดการผู้ขายก่อน
-                    </p>
-                  ) : null}
-                </div>
               </div>
 
               <div>
@@ -1564,7 +1494,6 @@ export function ProductForm({
   nextSku,
   productList,
   returnHref,
-  suppliers,
   onClose,
 }: ProductFormProps) {
   const router = useRouter();
@@ -1712,7 +1641,7 @@ export function ProductForm({
           </div>
           {!isEditing ? (
             <p className="mt-1 text-xs font-bold leading-5 text-slate-800">
-              สร้างสินค้าใหม่พร้อมรูปภาพและข้อมูลสต็อกเริ่มต้น
+              สร้างสินค้าใหม่พร้อมรูปภาพและข้อมูลสินค้า
             </p>
           ) : null}
         </div>
@@ -1728,7 +1657,6 @@ export function ProductForm({
           onClose={closeModal}
           onPendingChange={setIsSubmitting}
           onSubmitSuccess={handleSubmitSuccess}
-          suppliers={suppliers}
         />
       </div>
     </div>

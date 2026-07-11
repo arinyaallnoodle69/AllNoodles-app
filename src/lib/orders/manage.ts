@@ -65,23 +65,6 @@ function getCodeSequence(code: string) {
   return match ? Number.parseInt(match[1], 10) : Number.POSITIVE_INFINITY;
 }
 
-function compareCustomerCode(left: OrderCustomerOption, right: OrderCustomerOption) {
-  const leftSequence = getCodeSequence(left.code);
-  const rightSequence = getCodeSequence(right.code);
-
-  if (leftSequence !== rightSequence) {
-    return leftSequence - rightSequence;
-  }
-
-  const codeComparison = codeCollator.compare(left.code.trim(), right.code.trim());
-
-  if (codeComparison !== 0) {
-    return codeComparison;
-  }
-
-  return left.name.localeCompare(right.name, "th");
-}
-
 function compareProductSku(left: OrderProductOption, right: OrderProductOption) {
   const leftSequence = getCodeSequence(left.sku);
   const rightSequence = getCodeSequence(right.sku);
@@ -144,10 +127,10 @@ export async function getCustomersForOrder(orgId: string): Promise<OrderCustomer
   const admin = getSupabaseAdmin() as unknown as ManageAdmin;
   const { data } = await admin
     .from("customers")
-    .select("id, customer_code, name, default_warehouse_id, default_vehicle_id")
+    .select("id, customer_code, name, default_warehouse_id, default_vehicle_id, sort_order")
     .eq("organization_id", orgId)
     .eq("is_active", true)
-    .order("customer_code", { ascending: true });
+    .order("sort_order", { ascending: true });
 
   return (data ?? [])
     .map((c) => ({
@@ -156,8 +139,7 @@ export async function getCustomersForOrder(orgId: string): Promise<OrderCustomer
       defaultVehicleId: c.default_vehicle_id,
       id: c.id,
       name: c.name,
-    }))
-    .toSorted(compareCustomerCode);
+    }));
 }
 
 export async function getVehiclesForOrder(orgId: string): Promise<OrderVehicleOption[]> {

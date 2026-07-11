@@ -187,18 +187,6 @@ export function ProductSettingsTabs({
         )}
       </div>
 
-      <style jsx global>{`
-        @keyframes productSettingsTabIn {
-          from {
-            opacity: 0.72;
-            transform: translateY(4px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-      `}</style>
     </>
   );
 }

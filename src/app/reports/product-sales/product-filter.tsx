@@ -16,9 +16,11 @@ type ProductOption = {
 export function ProductFilter({
   products,
   selectedIds,
+  categories: allCategories = [],
 }: {
   products: ProductOption[];
   selectedIds: string[];
+  categories?: string[];
 }) {
   const [open, setOpen] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set(selectedIds));
@@ -36,8 +38,14 @@ export function ProductFilter({
         if (name) set.add(name);
       }
     }
-    return Array.from(set).sort();
-  }, [products]);
+    const orderMap = new Map(allCategories.map((name, index) => [name.trim().toLowerCase(), index]));
+    return Array.from(set).sort((a, b) => {
+      const idxA = orderMap.get(a.trim().toLowerCase()) ?? Infinity;
+      const idxB = orderMap.get(b.trim().toLowerCase()) ?? Infinity;
+      if (idxA !== idxB) return idxA - idxB;
+      return a.localeCompare(b, "th");
+    });
+  }, [products, allCategories]);
 
   useEffect(() => {
     function onMouseDown(e: MouseEvent) {

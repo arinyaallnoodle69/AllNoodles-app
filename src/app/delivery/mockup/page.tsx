@@ -1,6 +1,7 @@
 import { DeliveryNoteLayout } from "@/components/print/delivery-note-layout";
 import type { DeliveryNotePrintData } from "@/lib/delivery/print";
 
+
 export const metadata = {
   title: "ตัวอย่างบิลส่งของ A4",
 };
@@ -68,7 +69,12 @@ const mockDeliveryNote: DeliveryNotePrintData = {
   items: mockItems,
 };
 
-export default function DeliveryMockupPage() {
+export default async function DeliveryMockupPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}) {
+  await searchParams;
   return (
     <main className="min-h-screen bg-neutral-200 py-6 print:bg-white print:py-0">
       <section className="mx-auto mb-6 w-[210mm] max-w-[calc(100vw-24px)] rounded border border-neutral-300 bg-white px-5 py-4 shadow-sm print:hidden">

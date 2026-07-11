@@ -70,13 +70,13 @@
   --color-stone-650: var(--stone-650);
   --font-sans: var(--font-sans);
   --font-mono: var(--font-sukhumvit);
-  --text-xs: 0.82rem;
-  --text-sm: 0.95rem;
-  --text-base: 1.08rem;
-  --text-lg: 1.25rem;
-  --text-xl: 1.48rem;
-  --text-2xl: 1.75rem;
-  --text-3xl: 2.05rem;
+  --text-xs: 0.95rem;
+  --text-sm: 1.08rem;
+  --text-base: 1.22rem;
+  --text-lg: 1.40rem;
+  --text-xl: 1.62rem;
+  --text-2xl: 1.90rem;
+  --text-3xl: 2.25rem;
   --font-apple-ui: var(--font-sukhumvit), "Sukhumvit Set", "Noto Sans Thai", sans-serif;
   --font-heading: var(--font-sans);
   --color-sidebar-ring: var(--sidebar-ring);
@@ -138,7 +138,7 @@
   overscroll-behavior-x: none;
   font-family: var(--font-sukhumvit), "Sukhumvit Set", "Noto Sans Thai", sans-serif;
   font-weight: 600;
-  font-size: 1rem;
+  font-size: var(--text-base);
   line-height: 1.35;
   color: #1F1A3A;
   background-color: var(--background);
@@ -457,5 +457,283 @@
   * {
     scrollbar-width: thin !important;
     scrollbar-color: #E1BEE7 transparent !important;
+  }
+}
+
+@media (max-width: 767px) {
+  /* Global mobile typography adjustments (large and bold fonts only, container sizes unchanged) */
+  :root {
+    --text-xs: 1.02rem !important;
+    --text-sm: 1.15rem !important;
+    --text-base: 1.28rem !important;
+    --text-lg: 1.42rem !important;
+    --text-xl: 1.62rem !important;
+    --text-2xl: 1.90rem !important;
+    --text-3xl: 2.20rem !important;
+  }
+
+  body {
+    font-size: var(--text-base) !important;
+  }
+
+  body *, 
+  html * {
+    font-weight: 800 !important;
+    letter-spacing: 0 !important;
+  }
+
+  [class*="tracking-"] {
+    letter-spacing: 0 !important;
+  }
+
+  /* Enlarge Tailwind arbitrary/absolute pixel size classes on mobile */
+  .text-\[10px\], [class*="text-[10px]"] { font-size: 11.5px !important; }
+  .text-\[11px\], [class*="text-[11px]"] { font-size: 12.5px !important; }
+  .text-\[12px\], [class*="text-[12px]"] { font-size: 13.5px !important; }
+  .text-\[12\.5px\], [class*="text-[12.5px]"] { font-size: 14px !important; }
+  .text-\[13px\], [class*="text-[13px]"] { font-size: 14.5px !important; }
+  .text-\[14px\], [class*="text-[14px]"] { font-size: 15.5px !important; }
+  .text-\[15px\], [class*="text-[15px]"] { font-size: 16.5px !important; }
+  .text-\[16px\], [class*="text-[16px]"] { font-size: 17.5px !important; }
+  .text-\[18px\], [class*="text-[18px]"] { font-size: 19.5px !important; }
+
+  /* Enlarge and bold dashboard texts ONLY on mobile */
+  .dashboard-mobile-large-text {
+    font-size: 1.05rem !important;
+  }
+  .dashboard-mobile-large-text * {
+    font-weight: 800 !important;
+  }
+
+  /* 1. Date and Time in Header */
+  .dashboard-mobile-large-text header p,
+  .dashboard-mobile-large-text header p span {
+    font-size: 16px !important;
+    font-weight: 900 !important;
+  }
+
+  /* 2. KPI / Stat Cards (e.g. แดชบอร์ดยอดขาย, ออเดอร์, ต้นทุน, กำไร) */
+  .dashboard-stat-card span {
+    font-size: 20px !important; /* Titles (e.g. "ยอดขาย", "ออเดอร์") */
+    font-weight: 900 !important;
+  }
+  .dashboard-stat-card p:first-child {
+    font-size: 27px !important; /* Large numbers */
+    font-weight: 900 !important;
+  }
+  .dashboard-stat-card p:last-child {
+    font-size: 14px !important; /* Units (e.g. "บาท", "รายการ") */
+    font-weight: 900 !important;
+  }
+
+  /* 3. Store Status Cards (e.g. "ยังไม่ได้สั่ง", "สั่งแล้ววันนี้", "ร้านค้าทั้งหมด") */
+  .dashboard-store-card > div > p {
+    font-size: 17px !important; /* Titles */
+    font-weight: 900 !important;
+  }
+  .dashboard-store-card div.flex p,
+  .dashboard-store-card p.text-2xl,
+  .dashboard-store-card p.text-3xl {
+    font-size: 29px !important; /* Number values */
+    font-weight: 900 !important;
+  }
+  .dashboard-store-card div.flex span,
+  .dashboard-store-card span.text-sm {
+    font-size: 14px !important; /* Unit "ร้านค้า" */
+    font-weight: 900 !important;
+  }
+
+  /* 5. Badges in Store List Modal on Mobile */
+  .dashboard-mobile-large-text span.text-emerald-600,
+  .dashboard-mobile-large-text span.text-rose-600 {
+    font-size: 13px !important;
+    font-weight: 900 !important;
+    padding: 3px 8px !important;
+  }
+
+
+
+  /* 7. Stock and Shortage badges inside modals on mobile */
+  div.rounded-lg.border-2 span:first-of-type,
+  .text-\[11px\], [class*="text-[11px]"] {
+    font-size: 15px !important; /* "สต็อก:" badge text */
+    font-weight: 900 !important;
+  }
+  div.rounded-lg.border-2 span:last-of-type,
+  .text-\[15px\], [class*="text-[15px]"] {
+    font-size: 17px !important; /* Stock count number */
+    font-weight: 900 !important;
+  }
+  div.bg-rose-600 span,
+  .text-\[9\.5px\], [class*="text-[9.5px]"] {
+    font-size: 15px !important; /* "ขาด X" badge text */
+    font-weight: 900 !important;
+  }
+
+  /* 8. Dashboard Modals / Drawers font size adjustments on mobile */
+  .dashboard-modal-content {
+    --text-xs: 0.95rem !important;
+    --text-sm: 1.08rem !important;
+    --text-base: 1.20rem !important;
+    --text-lg: 1.35rem !important;
+    --text-xl: 1.55rem !important;
+    --text-2xl: 1.80rem !important;
+    --text-3xl: 2.15rem !important;
+  }
+
+  .dashboard-modal-content .text-\[10px\], .dashboard-modal-content [class*="text-[10px]"] { font-size: 12px !important; }
+  .dashboard-modal-content .text-\[11px\], .dashboard-modal-content [class*="text-[11px]"] { font-size: 13px !important; }
+  .dashboard-modal-content .text-\[12px\], .dashboard-modal-content [class*="text-[12px]"] { font-size: 14px !important; }
+  .dashboard-modal-content .text-\[12\.5px\], .dashboard-modal-content [class*="text-[12.5px]"] { font-size: 14px !important; }
+  .dashboard-modal-content .text-\[13px\], .dashboard-modal-content [class*="text-[13px]"] { font-size: 15px !important; }
+  .dashboard-modal-content .text-\[14px\], .dashboard-modal-content [class*="text-[14px]"] { font-size: 16px !important; }
+  .dashboard-modal-content .text-\[15px\], .dashboard-modal-content [class*="text-[15px]"] { font-size: 17px !important; }
+  .dashboard-modal-content .text-\[16px\], .dashboard-modal-content [class*="text-[16px]"] { font-size: 18px !important; }
+  .dashboard-modal-content .text-\[18px\], .dashboard-modal-content [class*="text-[18px]"] { font-size: 20px !important; }
+
+  /* Compact Modal Header on Mobile */
+  .incoming-order-modal-content > div.shrink-0.bg-\[\#4A148C\] {
+    padding-top: max(0.5rem, env(safe-area-inset-top)) !important;
+    padding-bottom: 0.5rem !important;
+    padding-left: 1rem !important;
+    padding-right: 1rem !important;
+  }
+  .incoming-order-modal-content h2.text-2xl {
+    font-size: 1.35rem !important;
+  }
+  .incoming-order-modal-content h2.text-2xl + div {
+    margin-top: 0.2rem !important;
+  }
+  .incoming-order-modal-content div.mt-3 {
+    margin-top: 0.4rem !important;
+  }
+  
+  /* Compact Modal Footer on Mobile */
+  .incoming-order-modal-content div.shrink-0.border-t-2 {
+    padding-top: 0.5rem !important;
+    padding-bottom: max(0.5rem, env(safe-area-inset-bottom)) !important;
+    padding-left: 1rem !important;
+    padding-right: 1rem !important;
+  }
+  .incoming-order-modal-content div.shrink-0.border-t-2 div.mb-5 {
+    margin-bottom: 0.4rem !important;
+  }
+  .incoming-order-modal-content div.shrink-0.border-t-2 p.text-3xl {
+    font-size: 1.55rem !important;
+  }
+  .incoming-order-modal-content div.shrink-0.border-t-2 button.py-4 {
+    padding-top: 0.65rem !important;
+    padding-bottom: 0.65rem !important;
+  }
+
+}
+
+/* Force all gray fonts on the dashboard page to be dark black */
+.dashboard-mobile-large-text :where(
+  .text-slate-300,
+  .text-slate-400,
+  .text-slate-500,
+  .text-slate-600,
+  .text-slate-700,
+  .text-slate-800,
+  .text-gray-300,
+  .text-gray-400,
+  .text-gray-500,
+  .text-gray-600,
+  .text-stone-650
+) {
+  color: #111111 !important;
+}
+
+/* Make mobile bottom nav text larger and bolder */
+.settings-mobile-bottom-nav-bar span {
+  font-size: 13.5px !important;
+  font-weight: 800 !important;
+}
+
+/* 6. Order Page Cards (Global styles to support tablet/mobile views up to 1023px) */
+.incoming-order-card {
+  padding-top: 8px !important;
+  padding-bottom: 8px !important;
+  padding-left: 12px !important;
+  padding-right: 12px !important;
+}
+.incoming-order-card p,
+.incoming-order-card span,
+.incoming-order-card button,
+.incoming-order-card select,
+.incoming-order-card div {
+  font-weight: 900 !important; /* Make card font extremely bold */
+  line-height: 1.15 !important; /* Compress line-height to maintain original card height */
+  letter-spacing: 0 !important; /* Revert wide Tailwind arbitrary letter-spacing for Thai readability */
+}
+/* Increase margins, padding, and row-gap to make the card taller and columns more spaced */
+.incoming-order-card .mt-4 {
+  margin-top: 18px !important;
+}
+.incoming-order-card .pt-4 {
+  padding-top: 18px !important;
+}
+.incoming-order-card .pt-3 {
+  padding-top: 12px !important;
+}
+.incoming-order-card .grid-cols-2 {
+  row-gap: 22px !important;
+}
+/* Customer Code and Name */
+.incoming-order-card p.line-clamp-2 {
+  font-size: 24px !important;
+  font-weight: 800 !important;
+  color: #000000 !important;
+}
+.incoming-order-card .incoming-order-customer-name {
+  font-size: 24px !important; /* Store name: balanced size */
+  font-weight: 800 !important;
+  color: #000000 !important; /* Absolute pure pitch black */
+}
+.incoming-order-card .incoming-order-customer-code {
+  font-size: 16px !important; /* Keep store code smaller as requested */
+  font-weight: 400 !important; /* Regular font weight for code */
+  color: #94a3b8 !important; /* Soft light gray for code */
+}
+/* Labels (e.g. วันที่ออเดอร์, ช่องทาง, สินค้า, ยอดรวม, การจัดส่ง, เลขจัดส่ง, หมายเหตุ) */
+.incoming-order-card .min-w-0 > p:first-child,
+.incoming-order-card .pl-4 > p:first-child,
+.incoming-order-card span.mr-2 {
+  font-size: 14.5px !important; /* Slightly smaller size as requested */
+  font-weight: 900 !important;
+  color: #64748b !important; /* Slightly lighter gray font color */
+}
+/* Values (e.g. date values, product count, total amount, vehicle name, delivery number) */
+.incoming-order-card .min-w-0 span.truncate,
+.incoming-order-card .pl-4 span,
+.incoming-order-card .pl-4 p,
+.incoming-order-card select,
+.incoming-order-card span.text-emerald-600,
+.incoming-order-card span.text-rose-600,
+.incoming-order-card span.truncate,
+.incoming-order-card span[class*="text-[#EA80FC]"] {
+  font-size: 17px !important;
+  font-weight: 900 !important;
+}
+/* Notes content text */
+.incoming-order-card p.text-sm {
+  font-size: 16px !important;
+  font-weight: 900 !important;
+}
+/* Action button text */
+.incoming-order-card button.inline-flex span {
+  font-size: 16px !important;
+  font-weight: 900 !important;
+}
+
+@keyframes productSettingsTabIn {
+  from {
+    opacity: 0.72;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }

@@ -11,6 +11,7 @@ type SettingsCustomersPageProps = {
   searchParams: Promise<{
     create?: string;
     edit?: string;
+    tab?: string;
   }>;
 };
 
@@ -34,6 +35,9 @@ export default async function SettingsCustomersPage({
       nextCustomerCode={data.nextCustomerCode}
       editingCustomer={editingCustomer}
       createParam={params.create}
+      prices={data.prices}
+      saleUnits={data.saleUnits}
+      initialTab={params.tab === "pricing" ? "pricing" : "customers"}
     />
   );
 }
