@@ -2,7 +2,7 @@
 
 import Link, { useLinkStatus } from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import {
   ArrowRight,
@@ -80,6 +80,8 @@ export function SettingsMobileBottomNav() {
   const [moreOpen, setMoreOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [navigatingHref, setNavigatingHref] = useState<string | null>(null);
+  const settingsModalRef = useRef<HTMLDivElement | null>(null);
+  const settingsTouchStartRef = useRef<{ x: number; y: number } | null>(null);
   const mounted = useSyncExternalStore(
     subscribeToClientMount,
     getClientSnapshot,
@@ -115,6 +117,53 @@ export function SettingsMobileBottomNav() {
     return () => window.removeEventListener("open-mobile-settings-menu", openSettingsMenu);
   }, []);
 
+  useEffect(() => {
+    if (!settingsModalOpen) return;
+
+    const html = document.documentElement;
+    const body = document.body;
+    const previousHtmlOverflowX = html.style.overflowX;
+    const previousBodyOverflowX = body.style.overflowX;
+    const previousHtmlOverscrollX = html.style.overscrollBehaviorX;
+    const previousBodyOverscrollX = body.style.overscrollBehaviorX;
+
+    html.style.overflowX = "hidden";
+    body.style.overflowX = "hidden";
+    html.style.overscrollBehaviorX = "none";
+    body.style.overscrollBehaviorX = "none";
+
+    const settingsModal = settingsModalRef.current;
+    const handleTouchStart = (event: globalThis.TouchEvent) => {
+      const touch = event.touches[0];
+      settingsTouchStartRef.current = touch ? { x: touch.clientX, y: touch.clientY } : null;
+    };
+    const handleTouchMove = (event: globalThis.TouchEvent) => {
+      const start = settingsTouchStartRef.current;
+      const touch = event.touches[0];
+      if (!start || !touch) return;
+
+      const deltaX = Math.abs(touch.clientX - start.x);
+      const deltaY = Math.abs(touch.clientY - start.y);
+
+      if (deltaX > deltaY && deltaX > 6 && event.cancelable) {
+        event.preventDefault();
+      }
+    };
+
+    settingsModal?.addEventListener("touchstart", handleTouchStart, { passive: true });
+    settingsModal?.addEventListener("touchmove", handleTouchMove, { passive: false });
+
+    return () => {
+      settingsModal?.removeEventListener("touchstart", handleTouchStart);
+      settingsModal?.removeEventListener("touchmove", handleTouchMove);
+      html.style.overflowX = previousHtmlOverflowX;
+      body.style.overflowX = previousBodyOverflowX;
+      html.style.overscrollBehaviorX = previousHtmlOverscrollX;
+      body.style.overscrollBehaviorX = previousBodyOverscrollX;
+      settingsTouchStartRef.current = null;
+    };
+  }, [settingsModalOpen]);
+
   const nav = (
     <>
       {moreOpen ? (
@@ -126,7 +175,7 @@ export function SettingsMobileBottomNav() {
 
       {/* More menu drawer */}
       <div
-        className={`fixed inset-x-0 bottom-0 z-[100] rounded-t-[2rem] border-t border-[#EA80FC]/30 bg-[#F3E5F5] shadow-[0_-12px_40px_rgba(142, 36, 170,0.15)] transition-transform duration-300 ease-out lg:hidden ${
+        className={`fixed inset-x-0 bottom-0 z-[100] w-screen max-w-[100dvw] overflow-x-hidden rounded-t-[2rem] border-t border-[#EA80FC]/30 bg-[#F3E5F5] shadow-[0_-12px_40px_rgba(142, 36, 170,0.15)] transition-transform duration-300 ease-out lg:hidden ${
           moreOpen ? "translate-y-0" : "translate-y-full"
         }`}
       >
@@ -195,14 +244,14 @@ export function SettingsMobileBottomNav() {
         </div>
       </div>
 
-      <nav className="fixed inset-x-0 bottom-0 z-40 lg:hidden settings-mobile-bottom-nav-bar">
-        <div className="relative w-full">
+      <nav className="fixed inset-x-0 bottom-0 z-[120] w-screen max-w-[100dvw] overflow-x-clip overflow-y-visible lg:hidden settings-mobile-bottom-nav-bar">
+        <div className="relative w-full max-w-full overflow-x-clip overflow-y-visible pt-3">
           {/* Curved Background with Notch */}
           <div className="absolute inset-x-0 bottom-0 -z-10 h-[calc(100%+20px)]">
             <svg
               viewBox="0 0 400 80"
               preserveAspectRatio="none"
-              className="h-full w-full fill-white drop-shadow-[0_-12px_28px_rgba(15,23,42,0.1)]"
+              className="h-full w-full fill-white"
             >
               <path
                 d="M0 20 H130 C160 20, 160 68, 200 68 C240 68, 240 20, 270 20 H400 V80 H0 Z"
@@ -210,7 +259,7 @@ export function SettingsMobileBottomNav() {
             </svg>
           </div>
 
-          <div className="relative px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-3">
+          <div className="relative px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-5">
             <div className="grid grid-cols-5 items-end">
               {isMember ? (
                 <>
@@ -354,15 +403,15 @@ export function SettingsMobileBottomNav() {
               resetNavigationState();
               openCreateOrder();
             }}
-            className={`absolute -top-3 left-1/2 z-50 flex h-16 w-16 -translate-x-1/2 items-center justify-center rounded-full border-[3px] border-[#EA80FC] bg-white shadow-[0_12px_24px_rgba(142, 36, 170,0.18),0_8px_18px_rgba(170, 0, 255,0.22)] ring-2 ring-white transition-all duration-300 active:scale-90 ${
+            className={`absolute left-1/2 top-0 z-[130] flex h-14 w-14 -translate-x-1/2 items-center justify-center rounded-full border-[3px] border-[#EA80FC] bg-white ring-2 ring-white transition-all duration-300 active:scale-90 ${
               isCreateModalOpen
                 ? "rotate-45"
-                : "hover:shadow-[0_14px_28px_rgba(142, 36, 170,0.22),0_10px_22px_rgba(170, 0, 255,0.28)]"
+                : ""
             }`}
             aria-label="สร้างออเดอร์"
           >
-            <span className="flex h-12 w-12 items-center justify-center rounded-full bg-[#4A148C] shadow-[inset_0_1px_2px_rgba(255,255,255,0.18),0_4px_10px_rgba(142, 36, 170,0.24)]">
-              <Plus className="h-8 w-8 text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.32)]" strokeWidth={3.2} />
+            <span className="flex h-10 w-10 items-center justify-center rounded-full bg-[#4A148C] shadow-[inset_0_1px_2px_rgba(255,255,255,0.18)]">
+              <Plus className="h-7 w-7 text-white" strokeWidth={3.2} />
             </span>
           </button>
         </div>
@@ -370,8 +419,12 @@ export function SettingsMobileBottomNav() {
 
       {/* Settings Full Screen Modal */}
       {settingsModalOpen && (
-        <div className="fixed inset-0 z-[200] bg-[#F3E5F5] animate-in fade-in duration-200 lg:hidden font-[family:var(--font-sarabun)]">
-          <div className="flex h-[68px] items-center justify-between border-b border-[#EA80FC]/70 bg-[#4A148C] px-4 text-white">
+        <div
+          ref={settingsModalRef}
+          className="fixed inset-0 z-[200] w-screen max-w-[100dvw] touch-pan-y overflow-x-hidden overscroll-x-none bg-[#F3E5F5] animate-in fade-in duration-200 lg:hidden font-[family:var(--font-sarabun)]"
+          style={{ touchAction: "pan-y", overscrollBehaviorX: "none" }}
+        >
+          <div className="flex h-[68px] w-full max-w-full min-w-0 items-center justify-between border-b border-[#EA80FC]/70 bg-[#4A148C] px-4 text-white">
             <span className="text-lg font-black tracking-wide text-white">ตั้งค่า</span>
             <button
               onClick={resetNavigationState}
@@ -380,8 +433,11 @@ export function SettingsMobileBottomNav() {
               <X className="h-5 w-5" strokeWidth={2.5} />
             </button>
           </div>
-          <div className="overflow-y-auto p-4 pb-20" style={{ maxHeight: "calc(100vh - 68px)" }}>
-            <div className="grid gap-4">
+          <div
+            className="w-full max-w-full touch-pan-y overflow-x-hidden overscroll-x-none overflow-y-auto p-4 pb-20"
+            style={{ maxHeight: "calc(100vh - 68px)", touchAction: "pan-y", overscrollBehaviorX: "none" }}
+          >
+            <div className="grid w-full min-w-0 max-w-full gap-4">
               {[
                 {
                   description: "เพิ่มสินค้าใหม่ อัปเดตรหัสสินค้า รูปสินค้า และต้นทุน",
@@ -435,6 +491,8 @@ export function SettingsMobileBottomNav() {
                 <Link
                   key={option.href}
                   href={option.href}
+                  draggable={false}
+                  onDragStart={(event) => event.preventDefault()}
                   onClick={(event) => {
                     if (navigatingHref) {
                       event.preventDefault();
@@ -447,9 +505,10 @@ export function SettingsMobileBottomNav() {
                     setNavigatingHref(option.href);
                   }}
                   aria-busy={navigatingHref === option.href}
-                  className={`relative flex items-center gap-4 rounded-[1.35rem] border border-[#EA80FC]/25 bg-white p-4 shadow-[0_12px_30px_rgba(142, 36, 170,0.04)] transition active:scale-[0.98] active:bg-slate-50 ${
+                  className={`relative flex w-full min-w-0 max-w-full touch-pan-y select-none items-center gap-4 overflow-hidden overscroll-x-none rounded-[1.35rem] border border-[#EA80FC]/25 bg-white p-4 shadow-[0_12px_30px_rgba(142, 36, 170,0.04)] transition active:bg-slate-50 ${
                     navigatingHref && navigatingHref !== option.href ? "opacity-55" : ""
                   }`}
+                  style={{ touchAction: "pan-y", overscrollBehaviorX: "none" }}
                 >
                   <SettingsLinkStatus />
                   <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#EA80FC]/25 text-[#4A148C]">

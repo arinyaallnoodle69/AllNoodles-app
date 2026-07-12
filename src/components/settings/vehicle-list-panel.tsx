@@ -156,11 +156,13 @@ function MobileVehicleCard({
           <Truck className="h-5 w-5" strokeWidth={2.2} />
         </div>
 
-        <div className="min-w-0 flex-1">
-          <div className="flex items-start justify-between gap-3">
-            <p className="text-base font-black text-[#1a1a1a]">{vehicle.name}</p>
+        <div className="min-w-0 flex-1 overflow-visible">
+          <div className="grid min-w-0 gap-2">
+            <p className="w-full max-w-full whitespace-nowrap text-[clamp(0.78rem,4vw,1rem)] font-black leading-tight text-[#1a1a1a]">
+              {vehicle.name}
+            </p>
             <span
-              className={`inline-flex rounded-full px-2.5 py-1 text-xs font-black ${
+              className={`inline-flex w-fit rounded-full px-2.5 py-1 text-xs font-black ${
                 vehicle.isActive ? "bg-emerald-50 text-emerald-800" : "bg-slate-100 text-[#1a1a1a]"
               }`}
             >

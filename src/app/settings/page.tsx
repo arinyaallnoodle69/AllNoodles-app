@@ -75,7 +75,10 @@ export default async function SettingsIndexPage() {
       description="เลือกหมวดการตั้งค่าที่ต้องการจัดการต่อได้จากหน้านี้"
       floatingSubmit={false}
     >
-      <div className="grid w-full min-w-0 max-w-full grid-cols-[minmax(0,1fr)] gap-4 overflow-x-hidden md:grid-cols-2 lg:gap-5 xl:grid-cols-5">
+      <div
+        className="grid w-full min-w-0 max-w-full touch-pan-y grid-cols-[minmax(0,1fr)] gap-4 overflow-x-hidden overscroll-x-none md:grid-cols-2 lg:gap-5 xl:grid-cols-5"
+        style={{ touchAction: "pan-y", overscrollBehaviorX: "none" }}
+      >
         {options.map((option) => {
           const Icon = option.icon;
 
@@ -83,7 +86,9 @@ export default async function SettingsIndexPage() {
             <Link
               key={option.href}
               href={option.href}
-              className="group min-w-0 max-w-full overflow-hidden rounded-3xl border border-slate-200 bg-white p-5 shadow-[0_18px_55px_rgba(15,23,42,0.04)] transition hover:-translate-y-0.5 hover:border-[#4A148C]/30 hover:shadow-[0_24px_60px_rgba(4,53,106,0.08)] sm:p-6"
+              draggable={false}
+              className="group min-w-0 max-w-full touch-pan-y select-none overflow-hidden overscroll-x-none rounded-3xl border border-slate-200 bg-white p-5 shadow-[0_18px_55px_rgba(15,23,42,0.04)] transition lg:hover:-translate-y-0.5 lg:hover:border-[#4A148C]/30 lg:hover:shadow-[0_24px_60px_rgba(4,53,106,0.08)] sm:p-6"
+              style={{ touchAction: "pan-y", overscrollBehaviorX: "none" }}
             >
               <div className="flex items-center gap-4 sm:flex-col sm:items-start sm:gap-5">
                 <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#EA80FC]/30 text-[#4A148C]">
@@ -97,7 +102,7 @@ export default async function SettingsIndexPage() {
               <span className="mt-4 inline-flex items-center gap-2 text-sm font-bold text-[#4A148C] sm:mt-5">
                 ไปยังหน้านี้
                 <ArrowRight
-                  className="h-4 w-4 transition group-hover:translate-x-1"
+                  className="h-4 w-4 transition lg:group-hover:translate-x-1"
                   strokeWidth={2.2}
                 />
               </span>

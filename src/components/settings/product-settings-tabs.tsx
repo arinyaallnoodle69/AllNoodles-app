@@ -32,9 +32,9 @@ const tabs: Array<{
   label: string;
   icon: React.ComponentType<{ className?: string; strokeWidth?: number }>;
 }> = [
-  { key: "products", label: "ตารางสินค้า", icon: Package2 },
-  { key: "categories", label: "จัดการหมวดหมู่", icon: FolderTree },
-  { key: "brands", label: "จัดการแบรนด์", icon: Tag },
+  { key: "products", label: "สินค้า", icon: Package2 },
+  { key: "categories", label: "หมวดหมู่", icon: FolderTree },
+  { key: "brands", label: "แบรนด์", icon: Tag },
 ];
 
 function getTabFromLocation() {

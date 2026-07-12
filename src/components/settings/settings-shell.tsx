@@ -131,7 +131,10 @@ export function SettingsShell({
   };
 
   const inner = (
-    <div className="min-h-screen max-w-full overflow-x-clip bg-background font-[family:var(--font-sarabun)] text-slate-900">
+    <div
+      className="min-h-screen max-w-full touch-pan-y overflow-x-clip overscroll-x-none bg-background font-[family:var(--font-sarabun)] text-slate-900"
+      style={{ touchAction: "pan-y", overscrollBehaviorX: "none" }}
+    >
       {!hideHeader ? (
       <div className="relative z-20 hidden overflow-hidden border-b border-[#E1BEE7] bg-white text-[#4A148C] lg:block">
         <div className="relative z-10 mx-auto w-full max-w-[88rem] px-4 py-1.5 lg:px-8 lg:py-4">
@@ -212,7 +215,10 @@ export function SettingsShell({
       </div>
       ) : null}
 
-      <main className={`mx-auto min-w-0 w-full max-w-[88rem] ${fullWidthMobile ? "px-0 sm:px-4" : "px-4"} pb-28 lg:px-3 lg:pb-32 ${hideHeader ? "py-0 lg:py-0" : "py-3 lg:py-4"}`}>
+      <main
+        className={`mx-auto min-w-0 w-full max-w-[100dvw] touch-pan-y overflow-x-clip overscroll-x-none ${fullWidthMobile ? "px-0 sm:px-4" : "px-4"} pb-28 lg:max-w-[88rem] lg:px-3 lg:pb-32 ${hideHeader ? "py-0 lg:py-0" : "py-3 lg:py-4"}`}
+        style={{ touchAction: "pan-y", overscrollBehaviorX: "none" }}
+      >
         {current ? (
           <div className={`${fullWidthMobile ? "" : "-mx-4"} sticky top-[68px] z-30 border-b border-[#E1BEE7]/35 bg-white/95 backdrop-blur px-3 pb-2.5 pt-2.5 lg:hidden`}>
             <button
