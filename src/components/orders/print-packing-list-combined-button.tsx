@@ -13,7 +13,7 @@ type PrintPackingListCombinedButtonProps = {
 export function PrintPackingListCombinedButton({
   date,
   endDate,
-  label = "พิมพ์ใบจัดของ",
+  label = "พิมพ์ใบออเดอร์",
 }: PrintPackingListCombinedButtonProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [loadingType, setLoadingType] = useState<"standard" | "transposed" | null>(null);

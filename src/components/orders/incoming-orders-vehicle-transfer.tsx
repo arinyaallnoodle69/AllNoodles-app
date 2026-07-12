@@ -3,7 +3,7 @@
 import { useEffect, useId, useMemo, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
-import { ArrowRight, ArrowRightLeft, CalendarDays, Loader2, Truck, X } from "lucide-react";
+import { ArrowRightLeft, CalendarDays, Loader2, Store, Truck, X } from "lucide-react";
 
 import { moveIncomingOrdersVehicleAction } from "@/app/orders/incoming/actions";
 import type { VehicleTransferDateOption } from "@/lib/orders/vehicle-transfer";
@@ -35,17 +35,39 @@ export function IncomingOrdersVehicleTransfer({ dateOptions, variant = "desktop"
     () => dateOptions.find((option) => option.date === selectedDate) ?? dateOptions[0],
     [dateOptions, selectedDate],
   );
-  const [fromVehicleId, setFromVehicleId] = useState(selectedDateOption?.vehicles[0]?.id ?? "");
-  const [toVehicleId, setToVehicleId] = useState(selectedDateOption?.vehicles[1]?.id ?? "");
+  const [fromVehicleId, setFromVehicleId] = useState(
+    selectedDateOption?.sourceVehicles[0]?.id ?? "",
+  );
+  const [toVehicleId, setToVehicleId] = useState(
+    selectedDateOption?.vehicles.find(
+      (vehicle) => vehicle.id !== selectedDateOption.sourceVehicles[0]?.id,
+    )?.id ?? "",
+  );
+  const [selectedCustomerIds, setSelectedCustomerIds] = useState<Set<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
-  const sourceVehicle = selectedDateOption?.vehicles.find((vehicle) => vehicle.id === fromVehicleId);
+  const sourceVehicle = selectedDateOption?.sourceVehicles.find(
+    (vehicle) => vehicle.id === fromVehicleId,
+  );
+  const stores = sourceVehicle?.stores ?? [];
   const destinationVehicles = selectedDateOption?.vehicles.filter(
     (vehicle) => vehicle.id !== fromVehicleId,
   ) ?? [];
+  const selectedOrderCount = stores.reduce(
+    (total, store) => selectedCustomerIds.has(store.customerId) ? total + store.orderCount : total,
+    0,
+  );
+  const allSelected = stores.length > 0 && stores.every(
+    (store) => selectedCustomerIds.has(store.customerId),
+  );
   const canSubmit = Boolean(
-    selectedDateOption && sourceVehicle && toVehicleId && fromVehicleId !== toVehicleId && !pending,
+    selectedDateOption &&
+    sourceVehicle &&
+    selectedCustomerIds.size > 0 &&
+    toVehicleId &&
+    fromVehicleId !== toVehicleId &&
+    !pending,
   );
 
   useEffect(() => {
@@ -66,21 +88,46 @@ export function IncomingOrdersVehicleTransfer({ dateOptions, variant = "desktop"
 
   if (dateOptions.length === 0) return null;
 
-  function resetVehicles(date: string) {
+  function selectAllStores(nextSourceVehicleId: string, option = selectedDateOption) {
+    const nextSource = option?.sourceVehicles.find(
+      (vehicle) => vehicle.id === nextSourceVehicleId,
+    );
+    setSelectedCustomerIds(new Set(nextSource?.stores.map((store) => store.customerId) ?? []));
+  }
+
+  function resetForDate(date: string) {
     const option = dateOptions.find((item) => item.date === date) ?? dateOptions[0];
-    setFromVehicleId(option?.vehicles[0]?.id ?? "");
-    setToVehicleId(option?.vehicles[1]?.id ?? "");
+    const nextSourceId = option.sourceVehicles[0]?.id ?? "";
+    setFromVehicleId(nextSourceId);
+    setToVehicleId(option.vehicles.find((vehicle) => vehicle.id !== nextSourceId)?.id ?? "");
+    selectAllStores(nextSourceId, option);
     setError(null);
   }
 
   function handleSourceChange(nextSourceId: string) {
     setFromVehicleId(nextSourceId);
+    setToVehicleId(
+      selectedDateOption?.vehicles.find((vehicle) => vehicle.id !== nextSourceId)?.id ?? "",
+    );
+    selectAllStores(nextSourceId);
     setError(null);
-    if (nextSourceId === toVehicleId) {
-      setToVehicleId(
-        selectedDateOption?.vehicles.find((vehicle) => vehicle.id !== nextSourceId)?.id ?? "",
-      );
-    }
+  }
+
+  function toggleStore(customerId: string) {
+    setSelectedCustomerIds((current) => {
+      const next = new Set(current);
+      if (next.has(customerId)) next.delete(customerId);
+      else next.add(customerId);
+      return next;
+    });
+    setError(null);
+  }
+
+  function toggleAllStores() {
+    setSelectedCustomerIds(
+      allSelected ? new Set() : new Set(stores.map((store) => store.customerId)),
+    );
+    setError(null);
   }
 
   function handleSubmit() {
@@ -89,6 +136,7 @@ export function IncomingOrdersVehicleTransfer({ dateOptions, variant = "desktop"
 
     startTransition(async () => {
       const result = await moveIncomingOrdersVehicleAction({
+        customerIds: Array.from(selectedCustomerIds),
         date: selectedDateOption.date,
         fromVehicleId,
         toVehicleId,
@@ -109,7 +157,7 @@ export function IncomingOrdersVehicleTransfer({ dateOptions, variant = "desktop"
       <button
         type="button"
         onClick={() => {
-          resetVehicles(selectedDateOption?.date ?? dateOptions[0].date);
+          resetForDate(selectedDateOption?.date ?? dateOptions[0].date);
           setOpen(true);
         }}
         className={[
@@ -133,7 +181,7 @@ export function IncomingOrdersVehicleTransfer({ dateOptions, variant = "desktop"
                 role="dialog"
                 aria-modal="true"
                 aria-labelledby={titleId}
-                className="flex max-h-[92dvh] w-full flex-col overflow-hidden rounded-t-2xl bg-white shadow-2xl sm:max-w-xl sm:rounded-2xl"
+                className="flex max-h-[94dvh] w-full flex-col overflow-hidden rounded-t-2xl bg-white shadow-2xl sm:max-w-xl sm:rounded-2xl"
               >
                 <header className="flex items-center justify-between bg-[#4A148C] px-4 py-4 text-white sm:px-5">
                   <div className="flex min-w-0 items-center gap-3">
@@ -141,8 +189,8 @@ export function IncomingOrdersVehicleTransfer({ dateOptions, variant = "desktop"
                       <ArrowRightLeft className="h-5 w-5" strokeWidth={2.4} />
                     </span>
                     <div className="min-w-0">
-                      <h2 id={titleId} className="text-lg font-black">ย้ายออเดอร์ทั้งรถ</h2>
-                      <p className="mt-0.5 text-xs font-semibold text-white/75">ใช้เฉพาะวันที่เลือก ไม่เปลี่ยนรถประจำร้าน</p>
+                      <h2 id={titleId} className="text-lg font-black">ย้ายร้านค้าไปรถคันอื่น</h2>
+                      <p className="mt-0.5 text-xs font-semibold text-white/75">เลือกเฉพาะร้านที่ต้องการในวันที่เลือก</p>
                     </div>
                   </div>
                   <button
@@ -168,7 +216,7 @@ export function IncomingOrdersVehicleTransfer({ dateOptions, variant = "desktop"
                           value={selectedDateOption?.date ?? ""}
                           onChange={(event) => {
                             setSelectedDate(event.target.value);
-                            resetVehicles(event.target.value);
+                            resetForDate(event.target.value);
                           }}
                           disabled={pending}
                           className="h-12 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm font-bold text-slate-900 outline-none focus:border-[#4A148C] focus:ring-2 focus:ring-[#EA80FC]/20"
@@ -184,47 +232,79 @@ export function IncomingOrdersVehicleTransfer({ dateOptions, variant = "desktop"
                       )}
                     </label>
 
-                    <div className="grid items-end gap-3 sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]">
-                      <label className="block min-w-0">
-                        <span className="mb-1.5 block text-sm font-black text-slate-800">ย้ายจากรถ</span>
-                        <select
-                          value={fromVehicleId}
-                          onChange={(event) => handleSourceChange(event.target.value)}
-                          disabled={pending}
-                          className="h-12 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm font-bold text-slate-900 outline-none focus:border-[#4A148C] focus:ring-2 focus:ring-[#EA80FC]/20"
-                        >
-                          {selectedDateOption?.vehicles.map((vehicle) => (
-                            <option key={vehicle.id} value={vehicle.id}>{vehicle.name} ({vehicle.orderCount})</option>
-                          ))}
-                        </select>
-                      </label>
+                    <label className="block min-w-0">
+                      <span className="mb-1.5 block text-sm font-black text-slate-800">ย้ายจากรถ</span>
+                      <select
+                        value={fromVehicleId}
+                        onChange={(event) => handleSourceChange(event.target.value)}
+                        disabled={pending}
+                        className="h-12 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm font-bold text-slate-900 outline-none focus:border-[#4A148C] focus:ring-2 focus:ring-[#EA80FC]/20"
+                      >
+                        {selectedDateOption?.sourceVehicles.map((vehicle) => (
+                          <option key={vehicle.id} value={vehicle.id}>{vehicle.name} ({vehicle.stores.length} ร้าน)</option>
+                        ))}
+                      </select>
+                    </label>
 
-                      <span className="hidden h-12 items-center justify-center text-[#4A148C] sm:flex">
-                        <ArrowRight className="h-5 w-5" strokeWidth={2.5} />
-                      </span>
-
-                      <label className="block min-w-0">
-                        <span className="mb-1.5 block text-sm font-black text-slate-800">ไปรวมกับรถ</span>
-                        <select
-                          value={toVehicleId}
-                          onChange={(event) => {
-                            setToVehicleId(event.target.value);
-                            setError(null);
-                          }}
+                    <div className="overflow-hidden rounded-lg border border-slate-200">
+                      <div className="flex items-center justify-between gap-3 border-b border-slate-200 bg-slate-50 px-3 py-2.5">
+                        <div className="flex min-w-0 items-center gap-2">
+                          <Store className="h-4 w-4 shrink-0 text-[#4A148C]" strokeWidth={2.3} />
+                          <span className="text-sm font-black text-slate-800">เลือกร้านค้า</span>
+                          <span className="text-xs font-bold text-slate-500">{selectedCustomerIds.size}/{stores.length}</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={toggleAllStores}
                           disabled={pending}
-                          className="h-12 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm font-bold text-slate-900 outline-none focus:border-[#4A148C] focus:ring-2 focus:ring-[#EA80FC]/20"
+                          className="shrink-0 text-xs font-black text-[#4A148C] hover:underline disabled:opacity-50"
                         >
-                          {destinationVehicles.map((vehicle) => (
-                            <option key={vehicle.id} value={vehicle.id}>{vehicle.name}</option>
-                          ))}
-                        </select>
-                      </label>
+                          {allSelected ? "ล้างทั้งหมด" : "เลือกทั้งหมด"}
+                        </button>
+                      </div>
+                      <div className="max-h-56 divide-y divide-slate-100 overflow-y-auto">
+                        {stores.map((store) => (
+                          <label
+                            key={store.customerId}
+                            className="flex cursor-pointer items-center gap-3 bg-white px-3 py-3 transition hover:bg-[#F3E5F5]/45"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={selectedCustomerIds.has(store.customerId)}
+                              onChange={() => toggleStore(store.customerId)}
+                              disabled={pending}
+                              className="h-5 w-5 shrink-0 rounded border-slate-300 accent-[#4A148C]"
+                            />
+                            <span className="min-w-0 flex-1">
+                              <span className="block truncate text-sm font-black text-slate-900">{store.customerName}</span>
+                              <span className="mt-0.5 block text-xs font-bold text-slate-500">{store.customerCode} · {store.orderCount} ออเดอร์</span>
+                            </span>
+                          </label>
+                        ))}
+                      </div>
                     </div>
+
+                    <label className="block min-w-0">
+                      <span className="mb-1.5 block text-sm font-black text-slate-800">ย้ายไปยังรถ</span>
+                      <select
+                        value={toVehicleId}
+                        onChange={(event) => {
+                          setToVehicleId(event.target.value);
+                          setError(null);
+                        }}
+                        disabled={pending}
+                        className="h-12 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm font-bold text-slate-900 outline-none focus:border-[#4A148C] focus:ring-2 focus:ring-[#EA80FC]/20"
+                      >
+                        {destinationVehicles.map((vehicle) => (
+                          <option key={vehicle.id} value={vehicle.id}>{vehicle.name}</option>
+                        ))}
+                      </select>
+                    </label>
 
                     <div className="flex items-start gap-3 rounded-lg border border-[#EA80FC]/30 bg-[#F3E5F5]/70 px-3 py-3">
                       <Truck className="mt-0.5 h-5 w-5 shrink-0 text-[#4A148C]" strokeWidth={2.3} />
                       <p className="text-sm font-bold leading-6 text-[#4A148C]">
-                        ออเดอร์ {sourceVehicle?.orderCount ?? 0} รายการจะย้ายไปอยู่รถคันใหม่ และเอกสารพิมพ์ทั้งหมดจะอ้างอิงรถใหม่ทันที
+                        เลือก {selectedCustomerIds.size} ร้าน · {selectedOrderCount} ออเดอร์ เอกสารพิมพ์ของร้านที่เลือกจะอ้างอิงรถใหม่ทันที
                       </p>
                     </div>
 
@@ -247,10 +327,10 @@ export function IncomingOrdersVehicleTransfer({ dateOptions, variant = "desktop"
                     type="button"
                     onClick={handleSubmit}
                     disabled={!canSubmit}
-                    className="inline-flex h-12 items-center justify-center gap-2 rounded-lg bg-[#4A148C] px-4 text-sm font-black text-white transition hover:bg-[#5c1a9e] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-45"
+                    className="inline-flex h-12 items-center justify-center gap-2 rounded-lg bg-[#4A148C] px-3 text-sm font-black text-white transition hover:bg-[#5c1a9e] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-45"
                   >
                     {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRightLeft className="h-4 w-4" strokeWidth={2.4} />}
-                    {pending ? "กำลังย้าย..." : `ย้าย ${sourceVehicle?.orderCount ?? 0} ออเดอร์`}
+                    {pending ? "กำลังย้าย..." : `ย้าย ${selectedCustomerIds.size} ร้าน`}
                   </button>
                 </footer>
               </section>

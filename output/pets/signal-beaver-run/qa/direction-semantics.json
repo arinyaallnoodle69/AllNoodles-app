@@ -1,0 +1,23 @@
+{
+  "ok": true,
+  "reviewed_by": "independent-final-visual-qa",
+  "directions": [
+    {"direction":"000","expected":"up","observed":"up","verdict":"pass","reason":"Face and nose tilt vertically upward with centered horizontal landmarks."},
+    {"direction":"022.5","expected":"up-right","observed":"up-right","verdict":"pass","reason":"Nose and face shift screen-right while muzzle elevation and upward head tilt remain visible."},
+    {"direction":"045","expected":"up-right","observed":"up-right","verdict":"pass","reason":"Nose projects screen-right and the raised face plane clearly reads upward."},
+    {"direction":"067.5","expected":"up-right","observed":"up-right","verdict":"warning","reason":"Nose and profile clearly point screen-right; vertical elevation is subtle and blind review read it down, but labeled loop context confirms up-right."},
+    {"direction":"090","expected":"right","observed":"right","verdict":"pass","reason":"Nose, muzzle, and visible eye point unmistakably screen-right with neutral vertical pitch."},
+    {"direction":"112.5","expected":"down-right","observed":"down-right","verdict":"warning","reason":"Nose and profile point screen-right; lowered pitch is mild and blind vertical review was ambiguous, but labeled loop context confirms down-right."},
+    {"direction":"135","expected":"down-right","observed":"down-right","verdict":"pass","reason":"Nose projects screen-right and the head and muzzle sit visibly lower."},
+    {"direction":"157.5","expected":"down-right","observed":"down-right","verdict":"warning","reason":"Lowered face supplies down evidence; the small screen-right turn was blind-ambiguous but remains correct in the ordered loop."},
+    {"direction":"180","expected":"down","observed":"down","verdict":"pass","reason":"Lowered centered face and muzzle unmistakably point down with no horizontal bias."},
+    {"direction":"202.5","expected":"down-left","observed":"down-left","verdict":"warning","reason":"Lowered muzzle supplies down evidence; the slight screen-left turn was blind-ambiguous but remains correct in the ordered loop."},
+    {"direction":"225","expected":"down-left","observed":"down-left","verdict":"pass","reason":"Nose and muzzle shift screen-left and remain visibly lowered."},
+    {"direction":"247.5","expected":"down-left","observed":"down-left","verdict":"warning","reason":"Nose and profile clearly point screen-left; down pitch is subtle and blind vertical review was ambiguous, but labeled loop context confirms down-left."},
+    {"direction":"270","expected":"left","observed":"left","verdict":"pass","reason":"Nose, muzzle, and visible eye point unmistakably screen-left with neutral vertical pitch."},
+    {"direction":"292.5","expected":"up-left","observed":"up-left","verdict":"pass","reason":"Nose and profile point screen-left and the face plane lifts upward."},
+    {"direction":"315","expected":"up-left","observed":"up-left","verdict":"pass","reason":"Nose and eye shift screen-left while the head and muzzle visibly elevate."},
+    {"direction":"337.5","expected":"up-left","observed":"up-left","verdict":"warning","reason":"Rear-upward head presentation supplies up evidence; screen-left is subtle and blind-ambiguous but labeled loop context confirms up-left."}
+  ],
+  "review_warnings": "Accepted intermediate-only blind uncertainty at 067.5, 112.5, 157.5, 202.5, 247.5, and 337.5 because labeled normal-size poses remain in the intended quadrants and the clockwise loop does not reverse."
+}

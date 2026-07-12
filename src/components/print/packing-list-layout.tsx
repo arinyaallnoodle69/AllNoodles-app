@@ -1,4 +1,8 @@
 import type { CSSProperties } from "react";
+import {
+  buildCategoryPrintPalette,
+  type CategoryPrintPalette,
+} from "@/lib/products/category-print-colors";
 
 export type PackingListStore = {
   id: string;
@@ -15,6 +19,7 @@ export type PackingListProduct = {
   sku: string;
   name: string;
   unit: string;
+  categoryColor?: string | null;
 };
 
 export type PackingListVehicle = {
@@ -55,7 +60,7 @@ const COLUMN_COLOR_GROUPS = [
   { header: "#d0ece5", rowA: "#ebf8f5", rowB: "#f5fcfa" },
   { header: "#efdccd", rowA: "#fbf1ea", rowB: "#fdf7f2" },
   { header: "#e4e4e4", rowA: "#f5f5f5", rowB: "#fafafa" },
-] as const;
+] as const satisfies readonly CategoryPrintPalette[];
 
 type BasePageDef = {
   vehicleId: string | null;
@@ -104,6 +109,10 @@ function vehicleColor(vehicleId: string | null, vehicles: PackingListVehicle[]):
 
 function getColumnPalette(columnIndex: number) {
   return COLUMN_COLOR_GROUPS[Math.floor(columnIndex / 5) % COLUMN_COLOR_GROUPS.length] ?? COLUMN_COLOR_GROUPS[0];
+}
+
+function getCategoryPrintPalette(product: PackingListProduct | undefined, fallback: CategoryPrintPalette) {
+  return buildCategoryPrintPalette(product?.categoryColor, fallback);
 }
 
 function normalizeHeaderLabel(value: string, field: "brand" | "category") {
@@ -355,10 +364,13 @@ function StandardPackingListPage({ page, data }: { page: StandardPageDef; data: 
   const columnWidth = calcDataColWidth(Math.max(page.pageProducts.length, 1), 261, 5);
   const categoryGroups = buildHeaderGroups(page.pageProducts, "category");
   const categoryPaletteByKey = new Map(
-    categoryGroups.map((group, index) => [
-      group.key,
-      COLUMN_COLOR_GROUPS[index % COLUMN_COLOR_GROUPS.length] ?? COLUMN_COLOR_GROUPS[0],
-    ]),
+    categoryGroups.map((group, index) => {
+      const fallback = COLUMN_COLOR_GROUPS[index % COLUMN_COLOR_GROUPS.length] ?? COLUMN_COLOR_GROUPS[0];
+      return [
+        group.key,
+        getCategoryPrintPalette(page.pageProducts[group.startIndex], fallback),
+      ];
+    }),
   );
   const getCategoryPalette = (product: PackingListProduct) =>
     categoryPaletteByKey.get(getProductCategoryKey(product)) ?? COLUMN_COLOR_GROUPS[0];
@@ -425,7 +437,6 @@ function StandardPackingListPage({ page, data }: { page: StandardPageDef; data: 
                             ) : null}
                             {insertZeroWidthSpaces(product.name)}
                           </div>
-                          <span className="packing-product-header__unit">{product.unit}</span>
                         </div>
                       </th>
                     );
@@ -537,7 +548,6 @@ function TransposedPackingListPage({ page, data }: { page: TransposedPageDef; da
                         {product.icon ? <span aria-hidden="true">{product.icon} </span> : null}
                         {product.name}
                       </span>
-                      <span className="packing-transpose-product__unit">{product.unit}</span>
                     </div>
                   </td>
                   {page.pageStoreIndices.map((storeIndex, cellIndex) => {
@@ -634,9 +644,9 @@ function PackingListStyles() {
 
         .packing-sheet__inner {
           padding-top: 0.6mm !important;
-          padding-right: 3mm !important;
+          padding-right: 0.8mm !important;
           padding-bottom: 2.2mm !important;
-          padding-left: 3mm !important;
+          padding-left: 0.8mm !important;
           gap: 0.55mm !important;
         }
 
@@ -717,7 +727,7 @@ function PackingListStyles() {
         display: flex;
         flex-direction: column;
         height: 100%;
-        padding: 1.2mm 3.2mm 2.4mm;
+        padding: 1.2mm 0.8mm 2.4mm;
         gap: 1.2mm;
         box-sizing: border-box;
       }
@@ -928,8 +938,8 @@ function PackingListStyles() {
 
       .packing-col--category {
         height: 4.2mm;
-        font-size: 7.4pt;
-        line-height: 1.18;
+        font-size: 7.8pt;
+        line-height: 1.35;
         font-weight: 900;
         color: #0f172a;
       }
@@ -938,11 +948,13 @@ function PackingListStyles() {
         width: 100%;
         min-width: 0;
         overflow: visible;
-        line-height: 1.18;
+        line-height: 1.35;
       }
 
       .packing-header-label--category {
         display: block;
+        position: relative;
+        top: 0.25mm;
         text-overflow: ellipsis;
         white-space: nowrap;
       }
@@ -975,38 +987,36 @@ function PackingListStyles() {
         display: flex;
         flex-direction: column;
         align-items: center;
-        justify-content: center;
-        gap: 0.35mm;
+        justify-content: flex-start;
+        gap: 0;
+        height: 13.8mm;
         min-height: 13.8mm;
-        padding: 0.75mm 0.15mm 0.45mm;
+        max-height: 13.8mm;
+        padding: 0.35mm 0.15mm 0.15mm;
         width: 100%;
         min-width: 0;
         overflow: hidden;
       }
 
       .packing-product-header__name {
-        display: -webkit-box;
-        align-items: center;
-        justify-content: center;
-        font-size: 5.7pt;
-        line-height: 1.18;
+        display: block;
+        font-size: 6.8pt;
+        line-height: 1.3;
         font-weight: 800;
         color: #0f172a;
         width: 100%;
         max-width: 100%;
         min-height: 0;
-        max-height: 10.2mm;
+        max-height: 13.25mm;
         min-width: 0;
-        overflow: hidden;
+        overflow: visible;
         white-space: normal;
         word-break: break-word;
         overflow-wrap: anywhere;
         text-align: center;
         writing-mode: horizontal-tb;
         text-orientation: mixed;
-        -webkit-box-orient: vertical;
-        -webkit-line-clamp: 3;
-        padding: 0;
+        padding: 0.3mm 0 0.15mm;
         box-sizing: border-box;
       }
 

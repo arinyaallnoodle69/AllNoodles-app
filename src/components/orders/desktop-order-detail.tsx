@@ -140,7 +140,7 @@ export function DesktopOrderDetail({ detail, deliveryNumbers }: Props) {
             {TABLE_COLUMNS.map((column) => (
               <th
                 key={column}
-                className="px-6 py-3.5 text-center text-sm font-bold uppercase tracking-widest text-slate-700"
+                className="whitespace-nowrap px-6 py-3.5 text-center text-sm font-bold uppercase tracking-widest text-slate-700"
               >
                 {column}
               </th>

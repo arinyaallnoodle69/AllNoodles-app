@@ -14,7 +14,6 @@ import {
   History,
   ListFilter,
   Loader2,
-  Lock,
   Minus,
   Package2,
   Plus,
@@ -22,7 +21,6 @@ import {
   ShoppingCart,
   Trash2,
   Truck,
-  Unlock,
   X,
   Boxes,
 } from "lucide-react";
@@ -69,7 +67,6 @@ type ProductSelection = {
   quantity: string;
   unitPrice: string;
   unitId: string | null;
-  isPriceLocked: boolean;
 };
 
 type ProductSelectionField = keyof ProductSelection;
@@ -291,8 +288,9 @@ const ProductRow = React.memo(({
     fixedCostPrice: unit.fixedCostPrice,
   }) : 0;
   const currentPriceNum = selection?.unitPrice ? Number.parseFloat(selection.unitPrice) : 0;
-  const isBelowCost = role !== "member" && Boolean(selection && effectiveCost > 0 && currentPriceNum > 0 && currentPriceNum < (effectiveCost - 0.001));
-  const customerPrice = priceMap[unit?.id ?? product.id] ?? priceMap[product.id] ?? 0;
+  const linkedPrice = unit ? getUnitPrice(product.id, unit.id, priceMap) : 0;
+  const isBelowCost = role !== "member" && linkedPrice <= 0 && Boolean(selection && effectiveCost > 0 && currentPriceNum > 0 && currentPriceNum < (effectiveCost - 0.001));
+  const customerPrice = linkedPrice;
   const displayStockQuantity = getDisplayStockQuantity(product, selectedWarehouseId);
 
   return (
@@ -421,7 +419,7 @@ const ProductRow = React.memo(({
               </div>
             </div>
 
-            {role !== "member" && (
+            {role !== "member" && linkedPrice <= 0 ? (
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <label className={`text-[14px] font-black uppercase tracking-wider ${isBelowCost ? "text-[#FF0000]" : "text-slate-600"}`}>
@@ -441,30 +439,22 @@ const ProductRow = React.memo(({
                   <input
                     type="number"
                     value={selection.unitPrice === "0" ? "" : selection.unitPrice}
-                    disabled={selection.isPriceLocked}
                     onChange={(e) => onUpdateSelection(product.id, "unitPrice", e.target.value)}
-                    className={`h-10 w-full rounded-2xl border-2 pl-4 pr-12 text-xl font-black shadow-md outline-none transition-all ${
-                      selection.isPriceLocked
-                        ? "border-transparent bg-slate-100 text-slate-400 shadow-none"
-                        : "border-transparent bg-white text-slate-950 focus:border-[#4A148C]/30"
-                    } ${isBelowCost ? "!border-[#FF0000] !bg-rose-50 !text-[#FF0000]" : ""}`}
+                    className={`h-10 w-full rounded-2xl border-2 pl-4 pr-12 text-xl font-black shadow-md outline-none transition-all border-transparent bg-white text-slate-950 focus:border-[#4A148C]/30 ${isBelowCost ? "!border-[#FF0000] !bg-rose-50 !text-[#FF0000]" : ""}`}
                   />
-                  <button
-                    type="button"
-                    onClick={() => onUpdateSelection(product.id, "isPriceLocked", !selection.isPriceLocked)}
-                    className={`absolute right-1.5 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-xl transition-all active:scale-90 ${
-                      selection.isPriceLocked
-                        ? "text-slate-400"
-                        : isBelowCost
-                          ? "bg-[#FF0000] text-white"
-                          : "bg-[#4A148C] text-white"
-                    }`}
-                  >
-                    {selection.isPriceLocked ? <Lock className="h-5 w-5" /> : <Unlock className="h-5 w-5" />}
-                  </button>
+                  <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-xs font-black text-slate-500">
+                    บาท
+                  </span>
                 </div>
               </div>
-            )}
+            ) : null}
+
+            {role === "member" && linkedPrice <= 0 ? (
+              <div className="flex items-center gap-2 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-black text-amber-800">
+                <AlertTriangle className="h-5 w-5 shrink-0" strokeWidth={2.2} />
+                <p>สินค้านี้ยังไม่มีราคา</p>
+              </div>
+            ) : null}
           </div>
 
           {isBelowCost && (
@@ -516,11 +506,14 @@ const DesktopProductTableRow = React.memo(({
     units[0] ??
     null;
   const stockQuantity = getDisplayStockQuantity(product, selectedWarehouseId);
+  const linkedPrice = selectedUnit
+    ? getUnitPrice(product.id, selectedUnit.id, priceMap)
+    : 0;
   const currentPrice = selection
-    ? Number(selection.unitPrice)
-    : selectedUnit
-      ? getUnitPrice(product.id, selectedUnit.id, priceMap)
-      : 0;
+    ? linkedPrice > 0
+      ? linkedPrice
+      : Number(selection.unitPrice)
+    : linkedPrice;
 
   function selectRow() {
     onSelect(product.id, !isSelected);
@@ -536,8 +529,7 @@ const DesktopProductTableRow = React.memo(({
     const unitPrice = getUnitPrice(product.id, unit.id, priceMap);
     onUpdateSelection(product.id, "unitId", unit.id);
     onUpdateSelection(product.id, "quantity", String(unit.minOrderQty));
-    onUpdateSelection(product.id, "unitPrice", unitPrice > 0 ? String(unitPrice) : "");
-    onUpdateSelection(product.id, "isPriceLocked", unitPrice > 0);
+    onUpdateSelection(product.id, "unitPrice", unitPrice > 0 ? String(unitPrice) : "0");
   }
 
   function stepQuantity(direction: -1 | 1) {
@@ -659,23 +651,31 @@ const DesktopProductTableRow = React.memo(({
         )}
       </td>
       <td className="w-44 px-3 py-3" onClick={stopRowSelection}>
-        {isSelected && selection && role !== "member" ? (
-          <div className="relative">
-            <input
-              type="number"
-              min="0"
-              step="0.01"
-              value={selection.unitPrice === "0" ? "" : selection.unitPrice}
-              placeholder="ไม่มีราคา"
-              onChange={(event) =>
-                onUpdateSelection(product.id, "unitPrice", event.target.value)
-              }
-              className="h-9 w-full border border-[#EA80FC]/40 bg-white px-3 pr-10 text-right text-sm font-black text-slate-950 outline-none placeholder:text-red-500 focus:border-[#4A148C]"
-            />
-            <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs font-black text-slate-500">
-              บาท
-            </span>
-          </div>
+        {isSelected && selection && selectedUnit ? (
+          role !== "member" && linkedPrice <= 0 ? (
+            <div className="relative">
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={selection.unitPrice === "0" ? "" : selection.unitPrice}
+                placeholder="ไม่มีราคา"
+                onChange={(event) =>
+                  onUpdateSelection(product.id, "unitPrice", event.target.value)
+                }
+                className="h-9 w-full border border-[#EA80FC]/40 bg-white px-3 pr-10 text-right text-sm font-black text-slate-950 outline-none placeholder:text-red-500 focus:border-[#4A148C]"
+              />
+              <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs font-black text-slate-500">
+                บาท
+              </span>
+            </div>
+          ) : linkedPrice > 0 ? (
+            <p className="text-right text-sm font-black text-slate-950">
+              {formatTHB(linkedPrice)} บาท
+            </p>
+          ) : (
+            <p className="text-center text-xs font-black text-amber-700">ยังไม่มีราคา</p>
+          )
         ) : currentPrice > 0 ? (
           <p className="text-right text-sm font-black text-slate-950">
             {formatTHB(currentPrice)} บาท
@@ -683,7 +683,7 @@ const DesktopProductTableRow = React.memo(({
         ) : noCustomer ? (
           <p className="text-center text-xs font-black text-slate-400">กรุณาเลือกร้าน</p>
         ) : (
-          <p className="text-center text-xs font-black text-red-600">ไม่มีราคา</p>
+          <p className="text-center text-xs font-black text-amber-700">ยังไม่มีราคา</p>
         )}
       </td>
     </tr>
@@ -837,8 +837,7 @@ function ProductSelectModal({
       const next = { ...prev };
       for (const productId of Object.keys(next)) {
         const sel = next[productId];
-        // If the price is currently "0" or empty, and it is not manually locked
-        if ((sel.unitPrice === "0" || sel.unitPrice === "") && !sel.isPriceLocked) {
+        if (sel.unitPrice === "0" || sel.unitPrice === "") {
           const product = products.find((p) => p.id === productId);
           if (product) {
             const units = getUnits(product);
@@ -848,7 +847,6 @@ function ProductSelectModal({
               next[productId] = {
                 ...sel,
                 unitPrice: String(price),
-                isPriceLocked: true,
               };
               updated = true;
             }
@@ -954,9 +952,8 @@ function ProductSelectModal({
           ...prev,
           [productId]: {
             quantity: String(defaultUnit?.minOrderQty ?? 1),
-            unitPrice: String(price),
+            unitPrice: price > 0 ? String(price) : "0",
             unitId: defaultUnit?.id ?? null,
-            isPriceLocked: price > 0
           }
         }));
       }
@@ -993,7 +990,8 @@ function ProductSelectModal({
       if (!unit) continue;
 
       const quantity = Number(selection.quantity);
-      const unitPrice = Number(selection.unitPrice);
+      const linkedPrice = getUnitPrice(productId, unit.id, priceMap);
+      const unitPrice = linkedPrice > 0 ? linkedPrice : Number(selection.unitPrice);
 
       if (!Number.isFinite(quantity) || quantity <= 0) {
         showPopup(`จำนวนของ ${product.name} ต้องมากกว่า 0`);
@@ -1003,7 +1001,7 @@ function ProductSelectModal({
         showPopup(`จำนวนของ ${product.name} ไม่ถูกต้องตามขั้นต่ำ/การเพิ่ม`);
         return;
       }
-      if (!Number.isFinite(unitPrice) || unitPrice <= 0) {
+      if (role !== "member" && linkedPrice <= 0 && (!Number.isFinite(unitPrice) || unitPrice <= 0)) {
         showPopup(`กรุณาระบุราคาของ ${product.name}`);
         return;
       }
@@ -1789,6 +1787,7 @@ export function CreateOrderModal({
   hideTrigger,
   initialCustomerId,
 }: Props) {
+  const role = useClientRole();
   const [internalOpen, setInternalOpen] = useState(false);
   const open = propOpen !== undefined ? propOpen : internalOpen;
   const setOpen = onOpenChange ?? setInternalOpen;
@@ -2116,25 +2115,38 @@ export function CreateOrderModal({
 
     if (!targetCustomerId) return;
 
-        const priceItems = selections.map((sel) => ({
-      productId: sel.product.id,
-      productSaleUnitId: sel.unitId,
-      salePrice: sel.unitPrice,
-    }));
+    if (role === "admin") {
+      const priceItems = selections
+        .filter((sel) => {
+          const priceKey = sel.unitId ?? sel.product.id;
+          const linkedPrice = priceMap[priceKey] ?? priceMap[sel.product.id] ?? 0;
+          return linkedPrice <= 0 && sel.unitPrice > 0;
+        })
+        .map((sel) => ({
+          productId: sel.product.id,
+          productSaleUnitId: sel.unitId,
+          salePrice: sel.unitPrice,
+        }));
 
-    void upsertCustomerPricesBatchFromOrderModalAction({
-      customerId: targetCustomerId,
-      items: priceItems,
-    }).catch((err) => {
-      console.error("Background price upsert error:", err);
-    });
+      if (priceItems.length > 0) {
+        void upsertCustomerPricesBatchFromOrderModalAction({
+          customerId: targetCustomerId,
+          items: priceItems,
+        }).catch((err) => {
+          console.error("Background price upsert error:", err);
+        });
+      }
+    }
 
     setPriceMap((prev) => {
       const next = { ...prev };
       for (const sel of selections) {
         const priceKey = sel.unitId ?? sel.product.id;
-        next[sel.product.id] = sel.unitPrice;
-        next[priceKey] = sel.unitPrice;
+        const linkedPrice = prev[priceKey] ?? prev[sel.product.id] ?? 0;
+        if (linkedPrice <= 0 && sel.unitPrice > 0) {
+          next[sel.product.id] = sel.unitPrice;
+          next[priceKey] = sel.unitPrice;
+        }
       }
       return next;
     });
@@ -2218,7 +2230,10 @@ export function CreateOrderModal({
       showSubmitPopup("จำนวนสินค้าบางรายการไม่ตรงตามขั้นต่ำ/จำนวนเพิ่ม กรุณาปรับใหม่ก่อนบันทึก");
       return;
     }
-    if (cart.some((item) => !Number.isFinite(item.unitPrice) || item.unitPrice <= 0)) {
+    if (
+      role !== "member" &&
+      cart.some((item) => !Number.isFinite(item.unitPrice) || item.unitPrice <= 0)
+    ) {
       showSubmitPopup("ยังมีสินค้าที่ยังไม่ตั้งราคา กรุณาใส่ราคามากกว่า 0 ก่อนบันทึกออเดอร์");
       return;
     }
@@ -2740,8 +2755,10 @@ export function CreateOrderModal({
                 )}
 
                 {hasUnpricedItems && activeTab === "create" && (
-                  <div className="mb-3 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700">
-                    มีสินค้าที่ยังไม่ตั้งราคา กรุณาใส่ราคาก่อนบันทึกออเดอร์
+                  <div className="mb-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800">
+                    {role === "member"
+                      ? "มีสินค้าที่ยังไม่มีราคา (รอแอดมินกำหนดราคา)"
+                      : "มีสินค้าที่ยังไม่ตั้งราคา กรุณาใส่ราคาก่อนบันทึกออเดอร์"}
                   </div>
                 )}
 

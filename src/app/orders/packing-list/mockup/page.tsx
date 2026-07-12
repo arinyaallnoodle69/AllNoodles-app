@@ -28,6 +28,15 @@ function getThaiDateLabel(date: Date) {
   }).format(date);
 }
 
+function getThaiTimeLabel(date: Date) {
+  return new Intl.DateTimeFormat("th-TH", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+    timeZone: "Asia/Bangkok",
+  }).format(date);
+}
+
 function buildMockQuantity(productIndex: number, storeIndex: number, vehicleFirstStoreIndices: Set<number>) {
   if (vehicleFirstStoreIndices.has(storeIndex)) {
     return (productIndex % 9) + 1;
@@ -129,9 +138,10 @@ export default async function PackingListMockupPage({ searchParams }: Props) {
     stores.map((__, storeIndex) => buildMockQuantity(productIndex, storeIndex, firstStoreIndexByVehicle)),
   );
 
+  const generatedAt = new Date();
   const mockData: PackingListData = {
     date: new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Bangkok" }),
-    dateLabel: getThaiDateLabel(new Date()),
+    dateLabel: `${getThaiDateLabel(generatedAt)} เวลา ${getThaiTimeLabel(generatedAt)} น.`,
     organizationName: PRINT_ORGANIZATION_NAME,
     stores,
     products,

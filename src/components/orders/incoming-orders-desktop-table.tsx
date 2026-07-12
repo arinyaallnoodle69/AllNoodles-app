@@ -384,36 +384,36 @@ export const IncomingOrdersDesktopTable = memo(function IncomingOrdersDesktopTab
   return (
     <div className="rounded-[1.35rem] border border-[#EA80FC]/35 bg-white shadow-[0_18px_48px_rgba(142, 36, 170,0.08)] lg:block">
       <div className="lg:min-w-0 xl:min-w-[1150px]">
-        <div className="flex items-center justify-between border-b border-[#EA80FC]/30 bg-white px-4 py-3 xl:px-6 xl:py-4">
-          <div>
+        <div className="border-b border-[#EA80FC]/30 bg-white px-4 py-3 xl:px-6 xl:py-4">
+          <div className="flex items-center justify-between gap-4">
             <h3 className="text-lg font-black text-[#4A148C] xl:text-xl">ตารางรายการคำสั่งซื้อล่าสุด</h3>
-            <IncomingOrderVehicleFilter
-              vehicles={vehicles}
-              activeVehicleId={selectedVehicleId}
-              onVehicleChange={(id) => {
-                setSelectedVehicleId(id);
-                const params = new URLSearchParams(window.location.search);
-                if (id === "__all__") {
-                  params.delete("vehicle");
-                } else {
-                  params.set("vehicle", id);
-                }
-                startTransition(() => {
-                  router.replace(`/orders/incoming?${params.toString()}`, { scroll: false });
-                });
-              }}
-            />
-            <p className="mt-1 hidden text-xs font-semibold text-[#4A148C] lg:block xl:hidden">
-              ↔ เลื่อนซ้าย-ขวาเพื่อดูข้อมูลเพิ่มเติม
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <IncomingOrdersVehicleTransfer dateOptions={vehicleTransferDates} />
-            <div className="flex items-center gap-2 rounded-full border border-[#EA80FC]/45 bg-[#F3E5F5] px-3 py-1.5 text-sm font-black text-[#4A148C] xl:text-base">
+            <div className="flex shrink-0 items-center gap-2">
+              <IncomingOrdersVehicleTransfer dateOptions={vehicleTransferDates} />
+              <div className="flex items-center gap-2 rounded-full border border-[#EA80FC]/45 bg-[#F3E5F5] px-3 py-1.5 text-sm font-black text-[#4A148C] xl:text-base">
               <span className="h-2.5 w-2.5 rounded-full bg-[#EA80FC]" />
               รายการทั้งหมด
+              </div>
             </div>
           </div>
+          <IncomingOrderVehicleFilter
+            vehicles={vehicles}
+            activeVehicleId={selectedVehicleId}
+            onVehicleChange={(id) => {
+              setSelectedVehicleId(id);
+              const params = new URLSearchParams(window.location.search);
+              if (id === "__all__") {
+                params.delete("vehicle");
+              } else {
+                params.set("vehicle", id);
+              }
+              startTransition(() => {
+                router.replace(`/orders/incoming?${params.toString()}`, { scroll: false });
+              });
+            }}
+          />
+          <p className="mt-1 hidden text-xs font-semibold text-[#4A148C] lg:block xl:hidden">
+            ↔ เลื่อนซ้าย-ขวาเพื่อดูข้อมูลเพิ่มเติม
+          </p>
         </div>
 
         <div className="relative">

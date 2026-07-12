@@ -13,7 +13,7 @@ type PrintVehicleProductSummaryButtonProps = {
 export function PrintVehicleProductSummaryButton({
   date,
   endDate,
-  label = "พิมพ์สรุปตามรถ",
+  label = "ใบขึ้นของ",
 }: PrintVehicleProductSummaryButtonProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);

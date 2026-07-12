@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, Clock3, KeyRound, MessageCircleMore, Package2, Store, Truck, Factory, Gauge, Warehouse } from "lucide-react";
+import { ArrowRight, Clock3, KeyRound, MessageCircleMore, Package2, Palette, Store, Truck, Factory, Gauge, Warehouse } from "lucide-react";
 import { SettingsShell } from "@/components/settings/settings-shell";
 import { requireAppRole } from "@/lib/auth/authorization";
 
@@ -9,6 +9,12 @@ const options = [
     href: "/settings/products",
     icon: Package2,
     label: "จัดการสินค้า",
+  },
+  {
+    description: "กำหนดสีหมวดหมู่ที่ใช้แยกคอลัมน์ในใบออเดอร์และตัวอย่างก่อนพิมพ์",
+    href: "/settings/products/category-colors",
+    icon: Palette,
+    label: "สีหมวดหมู่ในใบออเดอร์",
   },
   {
     description: "เพิ่มร้านค้า จัดการข้อมูลหน้าร้าน ที่อยู่ และเลือกรถประจำร้าน",
@@ -69,7 +75,7 @@ export default async function SettingsIndexPage() {
       description="เลือกหมวดการตั้งค่าที่ต้องการจัดการต่อได้จากหน้านี้"
       floatingSubmit={false}
     >
-      <div className="grid gap-4 md:grid-cols-2 lg:gap-5 xl:grid-cols-5">
+      <div className="grid w-full min-w-0 max-w-full grid-cols-[minmax(0,1fr)] gap-4 overflow-x-hidden md:grid-cols-2 lg:gap-5 xl:grid-cols-5">
         {options.map((option) => {
           const Icon = option.icon;
 
@@ -77,16 +83,16 @@ export default async function SettingsIndexPage() {
             <Link
               key={option.href}
               href={option.href}
-              className="group rounded-3xl border border-slate-200 bg-white p-5 shadow-[0_18px_55px_rgba(15,23,42,0.04)] transition hover:-translate-y-0.5 hover:border-[#4A148C]/30 hover:shadow-[0_24px_60px_rgba(4,53,106,0.08)] sm:p-6"
+              className="group min-w-0 max-w-full overflow-hidden rounded-3xl border border-slate-200 bg-white p-5 shadow-[0_18px_55px_rgba(15,23,42,0.04)] transition hover:-translate-y-0.5 hover:border-[#4A148C]/30 hover:shadow-[0_24px_60px_rgba(4,53,106,0.08)] sm:p-6"
             >
               <div className="flex items-center gap-4 sm:flex-col sm:items-start sm:gap-5">
                 <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#EA80FC]/30 text-[#4A148C]">
                   <Icon className="h-6 w-6" strokeWidth={2.2} />
                 </div>
-                <h2 className="text-lg font-bold text-slate-950 sm:text-xl">{option.label}</h2>
+                <h2 className="min-w-0 break-words text-lg font-bold text-slate-950 sm:text-xl">{option.label}</h2>
               </div>
 
-              <p className="mt-3 text-sm leading-7 text-slate-500 sm:mt-2">{option.description}</p>
+              <p className="mt-3 max-w-full break-words text-sm leading-7 text-slate-500 [overflow-wrap:anywhere] sm:mt-2">{option.description}</p>
 
               <span className="mt-4 inline-flex items-center gap-2 text-sm font-bold text-[#4A148C] sm:mt-5">
                 ไปยังหน้านี้

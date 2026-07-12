@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { FolderTree, Package2, Tag } from "lucide-react";
+import Link from "next/link";
+import { FolderTree, Package2, Palette, Tag } from "lucide-react";
 import { ProductCategoryManager } from "@/components/settings/product-category-manager";
 import { ProductBrandManager } from "@/components/settings/product-brand-manager";
 import { ProductFilterClient } from "@/components/settings/product-filter-client";
@@ -123,6 +124,13 @@ export function ProductSettingsTabs({
           </button>
         );
       })}
+      <Link
+        href="/settings/products/category-colors"
+        className="inline-flex items-center gap-2 rounded-md px-4 py-2.5 text-sm font-semibold text-[#4A148C] transition hover:bg-slate-50 active:scale-[0.98]"
+      >
+        <Palette className="h-4 w-4" strokeWidth={2.1} />
+        สีหมวดหมู่
+      </Link>
     </div>
   );
 
@@ -152,6 +160,13 @@ export function ProductSettingsTabs({
             </button>
           );
         })}
+        <Link
+          href="/settings/products/category-colors"
+          className="relative flex flex-1 flex-col items-center justify-center gap-0.5 py-2 text-slate-500 transition active:scale-[0.98]"
+        >
+          <Palette className="h-4 w-4 shrink-0" strokeWidth={2.2} />
+          <span className="text-[11px] font-black leading-tight">สีหมวดหมู่</span>
+        </Link>
       </div>
 
       <div className="pt-0">

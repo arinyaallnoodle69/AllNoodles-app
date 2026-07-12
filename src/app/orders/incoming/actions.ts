@@ -48,8 +48,9 @@ type ExistingWarehouseOrderRow = {
 type ActionsAdmin = SupabaseClient<Database>;
 type VehicleTransferRpcAdmin = {
   rpc: (
-    fn: "move_orders_between_vehicles",
+    fn: "move_selected_stores_between_vehicles",
     args: {
+      p_customer_ids: string[];
       p_from_vehicle_id: string;
       p_order_date: string;
       p_organization_id: string;
@@ -59,6 +60,7 @@ type VehicleTransferRpcAdmin = {
     data: Array<{
       moved_delivery_note_count: number;
       moved_order_count: number;
+      moved_store_count: number;
     }> | null;
     error: { message?: string } | null;
   }>;
@@ -559,8 +561,17 @@ export async function moveIncomingOrdersVehicleAction(
     return { error: "ข้อมูลวันที่หรือรถที่เลือกไม่ถูกต้อง" };
   }
 
+  const customerIds = Array.from(
+    new Set(input.customerIds.map((customerId) => customerId.trim()).filter(Boolean)),
+  );
+
+  if (customerIds.length === 0) {
+    return { error: "กรุณาเลือกร้านค้าที่ต้องการย้ายอย่างน้อย 1 ร้าน" };
+  }
+
   const admin = getSupabaseAdmin() as unknown as VehicleTransferRpcAdmin;
-  const { data, error } = await admin.rpc("move_orders_between_vehicles", {
+  const { data, error } = await admin.rpc("move_selected_stores_between_vehicles", {
+    p_customer_ids: customerIds,
     p_from_vehicle_id: input.fromVehicleId,
     p_order_date: input.date,
     p_organization_id: session.organizationId,
@@ -1104,7 +1115,7 @@ export async function upsertCustomerPricesBatchFromOrderModalAction(input: {
     salePrice: number;
   }>;
 }): Promise<{ success: true } | { error: string }> {
-  const session = await requireAnyRole(["admin", "member"]);
+  const session = await requireAppRole("admin");
   const admin = getSupabaseAdmin() as unknown as ActionsAdmin;
 
   const customerId = String(input.customerId ?? "").trim();

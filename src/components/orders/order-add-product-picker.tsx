@@ -328,13 +328,19 @@ export function OrderAddProductPicker({
 
   function getSelectionIssue(product: OrderProductOption, draft: SelectionDraft) {
     const unit = getUnits(product).find((item) => item.id === draft.unitId) ?? getDefaultUnit(product);
-    const price = Number(draft.price);
     if (!unit) return "ไม่พบหน่วยขาย";
-    if (!Number.isFinite(price) || price <= 0) return "กรุณาใส่ราคามากกว่า 0";
 
+    const linkedPrice = getUnitPrice(product.id, unit.id, priceMap);
     if (role === "member") {
       return null;
     }
+
+    if (linkedPrice > 0) {
+      return null;
+    }
+
+    const price = Number(draft.price);
+    if (!Number.isFinite(price) || price <= 0) return "กรุณาใส่ราคามากกว่า 0";
 
     const cost = getEffectiveSaleUnitCost({
       baseCostPrice: product.baseCostPrice,
@@ -363,6 +369,9 @@ export function OrderAddProductPicker({
           return null;
         }
 
+        const linkedPrice = getUnitPrice(product.id, unit.id, priceMap);
+        const unitPrice = linkedPrice > 0 ? linkedPrice : Number(draft.price) || 0;
+
         return {
           imageUrl: product.imageUrl,
           key: `${product.id}:${unit.id ?? "base"}:${crypto.randomUUID()}`,
@@ -372,7 +381,7 @@ export function OrderAddProductPicker({
           quantity: draft.quantity,
           sku: product.sku,
           unitLabel: unit.label,
-          unitPrice: Number(draft.price),
+          unitPrice,
         };
       })
       .filter((item): item is AddedOrderItemDraft => Boolean(item));
@@ -785,7 +794,14 @@ export function OrderAddProductPicker({
                           const selectedUnit =
                             units.find((unit) => unit.id === draft?.unitId) ?? getDefaultUnit(product);
                           const stockQuantity = getDisplayStockQuantity(product, customerWarehouseId);
-                          const currentPrice = draft?.price ? Number(draft.price) : 0;
+                          const linkedPrice = selectedUnit
+                            ? getUnitPrice(product.id, selectedUnit.id, priceMap)
+                            : 0;
+                          const currentPrice = linkedPrice > 0
+                            ? linkedPrice
+                            : draft?.price
+                              ? Number(draft.price)
+                              : 0;
 
                           return (
                             <tr
@@ -861,24 +877,40 @@ export function OrderAddProductPicker({
                                 )}
                               </td>
                               <td className="w-44 px-3 py-3 text-right" onClick={(event) => event.stopPropagation()}>
-                                {draft && selectedUnit && role !== "member" ? (
-                                  <input
-                                    type="number"
-                                    min="0"
-                                    step="0.01"
-                                    value={draft.price}
-                                    onChange={(event) =>
-                                      updateSelection(product.id, (current) => ({
-                                        ...current,
-                                        price: event.target.value,
-                                      }))
-                                    }
-                                    className="ml-auto h-8 w-28 border border-[#EA80FC]/40 bg-white px-2 text-right text-sm font-black text-slate-950 outline-none focus:border-[#4A148C]"
-                                  />
+                                {draft && selectedUnit ? (
+                                  role !== "member" ? (
+                                    (() => {
+                                      const linkedPrice = getUnitPrice(product.id, selectedUnit.id, priceMap);
+                                      if (linkedPrice > 0) {
+                                        return (
+                                          <span className="font-black text-slate-950">
+                                            {formatTHB(linkedPrice)}
+                                          </span>
+                                        );
+                                      }
+                                      return (
+                                        <input
+                                          type="number"
+                                          min="0"
+                                          step="0.01"
+                                          value={draft.price}
+                                          onChange={(event) =>
+                                            updateSelection(product.id, (current) => ({
+                                              ...current,
+                                              price: event.target.value,
+                                            }))
+                                          }
+                                          className="ml-auto h-8 w-28 border border-[#EA80FC]/40 bg-white px-2 text-right text-sm font-black text-slate-950 outline-none focus:border-[#4A148C]"
+                                        />
+                                      );
+                                    })()
+                                  ) : (
+                                    <span className={`font-black ${currentPrice <= 0 ? "text-amber-700" : "text-slate-950"}`}>
+                                      {currentPrice > 0 ? formatTHB(currentPrice) : "ยังไม่มีราคา"}
+                                    </span>
+                                  )
                                 ) : (
-                                  <span className={`font-black ${currentPrice <= 0 ? "text-red-600" : "text-slate-950"}`}>
-                                    {currentPrice > 0 ? formatTHB(currentPrice) : "-"}
-                                  </span>
+                                  <span className="block text-center text-xs font-bold text-slate-300">-</span>
                                 )}
                               </td>
                             </tr>
@@ -916,8 +948,15 @@ export function OrderAddProductPicker({
                       })
                     : 0;
 
-                  const currentPriceNum = draft?.price ? Number.parseFloat(draft.price) : 0;
-                  const isBelowCost = role !== "member" && draft && cost > 0 && currentPriceNum > 0 && currentPriceNum < (cost - 0.001);
+                  const linkedPrice = selectedUnit
+                    ? getUnitPrice(product.id, selectedUnit.id, priceMap)
+                    : 0;
+                  const currentPriceNum = linkedPrice > 0
+                    ? linkedPrice
+                    : draft?.price
+                      ? Number.parseFloat(draft.price)
+                      : 0;
+                  const isBelowCost = role !== "member" && linkedPrice <= 0 && draft && cost > 0 && currentPriceNum > 0 && currentPriceNum < (cost - 0.001);
 
                   return (
                     <div
@@ -1061,6 +1100,17 @@ export function OrderAddProductPicker({
                                 </button>
                               </div>
                             </div>
+
+                            {role === "member" && (() => {
+                              const linkedPrice = getUnitPrice(product.id, selectedUnit.id, priceMap);
+                              if (linkedPrice > 0) return null;
+                              return (
+                                <div className="flex items-center gap-2 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-black text-amber-800">
+                                  <AlertTriangle className="h-5 w-5 shrink-0" strokeWidth={2.2} />
+                                  <p>สินค้านี้ยังไม่มีราคา</p>
+                                </div>
+                              );
+                            })()}
 
                             {role !== "member" && (() => {
                               const linkedPrice = getUnitPrice(product.id, selectedUnit.id, priceMap);

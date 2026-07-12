@@ -623,24 +623,24 @@ const EditItemsPanel = memo(({
                 const addedUnitPrice = sanitizeManualUnitPrice(item.unitPrice, item.unitPrice);
                 return (
                   <article key={item.key} className="bg-white p-5 transition-all active:bg-slate-50">
+                    <div className="mb-4 flex items-start justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <div className="mb-1.5 flex flex-wrap items-center gap-2">
+                          <span className="rounded bg-emerald-600 px-1.5 py-0.5 text-[9px] font-black uppercase text-white">ใหม่</span>
+                          <span className="font-mono text-[11px] font-black uppercase tracking-tighter text-slate-950">{item.sku}</span>
+                        </div>
+                        <h4 className="break-words text-[1.05rem] font-black leading-snug text-slate-950">{item.productName}</h4>
+                      </div>
+                      <button onClick={() => setAddedItems((current) => current.filter((draft) => draft.key !== item.key))} className="shrink-0 rounded-lg p-1.5 text-slate-300 active:text-rose-500">
+                        <Trash2 className="h-5 w-5" strokeWidth={2.3} />
+                      </button>
+                    </div>
                     <div className="flex gap-4">
                       <div className="relative h-20 w-20 shrink-0 overflow-hidden">
                         {item.imageUrl ? <Image src={item.imageUrl} alt={item.productName} fill sizes="80px" className="object-contain" /> : <Package2 className="h-9 w-9 text-slate-200 mx-auto mt-5" />}
                       </div>
                       <div className="min-w-0 flex-1">
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="min-w-0">
-                            <div className="mb-1.5 flex flex-wrap items-center gap-2">
-                              <span className="rounded bg-emerald-600 px-1.5 py-0.5 text-[9px] font-black uppercase text-white">ใหม่</span>
-                              <span className="font-mono text-[11px] font-black uppercase tracking-tighter text-slate-950">{item.sku}</span>
-                            </div>
-                            <h4 className="line-clamp-2 text-[1.1rem] font-black leading-tight text-slate-950">{item.productName}</h4>
-                          </div>
-                          <button onClick={() => setAddedItems((current) => current.filter((draft) => draft.key !== item.key))} className="shrink-0 rounded-lg p-1.5 text-slate-300 active:text-rose-500">
-                            <Trash2 className="h-5 w-5" strokeWidth={2.3} />
-                          </button>
-                        </div>
-                        <div className="mt-4 grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-2 gap-4">
                           <div>
                             <p className="text-[10px] font-black uppercase tracking-[0.12em] text-slate-400">สต็อกสินค้า</p>
                             <div className="mt-1.5 flex items-center">
@@ -698,23 +698,23 @@ const EditItemsPanel = memo(({
                 const unitPrice = item.unitPrice;
                 return (
                   <article key={item.id} className="bg-white p-5 transition-all active:bg-slate-50">
+                    <div className="mb-4 flex items-start justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <div className="mb-1.5 flex flex-wrap items-center gap-2">
+                          <span className="font-mono text-[11px] font-black uppercase tracking-tighter text-slate-950">{item.sku}</span>
+                        </div>
+                        <h4 className="break-words text-[1.05rem] font-black leading-snug text-slate-950">{item.productName}</h4>
+                      </div>
+                      <button onClick={() => setRemoved((current) => new Set([...current, item.id]))} className="shrink-0 rounded-lg p-1.5 text-slate-300 active:text-rose-500">
+                        <Trash2 className="h-5 w-5" strokeWidth={2.3} />
+                      </button>
+                    </div>
                     <div className="flex gap-4">
                       <div className="relative h-20 w-20 shrink-0 overflow-hidden">
                         {item.imageUrl ? <Image src={item.imageUrl} alt={item.productName} fill sizes="80px" className="object-contain" /> : <Package2 className="h-9 w-9 text-slate-200 mx-auto mt-5" />}
                       </div>
                       <div className="min-w-0 flex-1">
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="min-w-0">
-                            <div className="mb-1.5 flex flex-wrap items-center gap-2">
-                              <span className="font-mono text-[11px] font-black uppercase tracking-tighter text-slate-950">{item.sku}</span>
-                            </div>
-                            <h4 className="line-clamp-2 text-[1.1rem] font-black leading-tight text-slate-950">{item.productName}</h4>
-                          </div>
-                          <button onClick={() => setRemoved((current) => new Set([...current, item.id]))} className="shrink-0 rounded-lg p-1.5 text-slate-300 active:text-rose-500">
-                            <Trash2 className="h-5 w-5" strokeWidth={2.3} />
-                          </button>
-                        </div>
-                        <div className="mt-4 grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-2 gap-4">
                           <div>
                             <p className="text-[10px] font-black uppercase tracking-[0.12em] text-slate-400">สต็อกสินค้า</p>
                             <div className="mt-1.5 flex items-center">

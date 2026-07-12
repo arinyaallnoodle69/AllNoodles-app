@@ -131,7 +131,7 @@ export function SettingsShell({
   };
 
   const inner = (
-    <div className="min-h-screen bg-background font-[family:var(--font-sarabun)] text-slate-900">
+    <div className="min-h-screen max-w-full overflow-x-clip bg-background font-[family:var(--font-sarabun)] text-slate-900">
       {!hideHeader ? (
       <div className="relative z-20 hidden overflow-hidden border-b border-[#E1BEE7] bg-white text-[#4A148C] lg:block">
         <div className="relative z-10 mx-auto w-full max-w-[88rem] px-4 py-1.5 lg:px-8 lg:py-4">

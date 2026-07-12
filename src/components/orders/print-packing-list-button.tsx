@@ -14,7 +14,7 @@ export function PrintPackingListButton({
   date,
   endDate,
   layout = "standard",
-  label = "พิมพ์ใบจัดของ",
+  label = "พิมพ์ใบออเดอร์",
 }: PrintPackingListButtonProps) {
   const [loading, setLoading] = useState(false);
   const basePageUrl = useMemo(

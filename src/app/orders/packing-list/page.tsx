@@ -69,7 +69,22 @@ type DbProduct = {
 type DbCategory = {
   id: string;
   name: string;
+  print_color: string | null;
   sort_order: number | string | null;
+};
+
+type SupabaseReadResult<T> = {
+  data: T[] | null;
+  error: { message?: string } | null;
+};
+
+type SupabaseSelectQuery<T> = PromiseLike<SupabaseReadResult<T>> & {
+  eq(column: string, value: boolean | string): SupabaseSelectQuery<T>;
+  order(column: string, options?: { ascending?: boolean }): SupabaseSelectQuery<T>;
+};
+
+type ProductCategoryPrintColorTable = {
+  select(columns: string): SupabaseSelectQuery<DbCategory>;
 };
 
 type GroupedStore = {
@@ -87,6 +102,7 @@ type ProductDescriptor = {
   sku: string;
   name: string;
   unit: string;
+  categoryColor: string | null;
 };
 
 function getVehicleName(value: unknown) {
@@ -115,6 +131,15 @@ function getThaiDateLabel(value: string) {
   }
 }
 
+function getThaiTimeLabel(value: Date) {
+  return new Intl.DateTimeFormat("th-TH", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+    timeZone: "Asia/Bangkok",
+  }).format(value);
+}
+
 function normalizePackingBrand(value: string) {
   return value.trim() || "-";
 }
@@ -135,6 +160,7 @@ export default async function PackingListWrapper({ searchParams }: Props) {
 async function PackingListPage({ searchParams }: Props) {
   const session = await requireAnyRole(["admin", "warehouse"]);
   const params = await searchParams;
+  const generatedAt = new Date();
   const autoprint = params.autoprint === "1";
   const layout: PackingListLayoutMode = params.layout === "transposed" ? "transposed" : "standard";
   const date =
@@ -142,6 +168,7 @@ async function PackingListPage({ searchParams }: Props) {
   const endDate = params.endDate || date;
 
   const admin = getSupabaseAdmin();
+  const productCategories = admin.from("product_categories") as unknown as ProductCategoryPrintColorTable;
   const ordersQueryBase = admin
     .from("orders")
     .select(`
@@ -179,9 +206,8 @@ async function PackingListPage({ searchParams }: Props) {
       .from("products")
       .select("id, name, display_order, metadata")
       .eq("organization_id", session.organizationId),
-    admin
-      .from("product_categories")
-      .select("id, name, sort_order")
+    productCategories
+      .select("id, name, sort_order, print_color")
       .eq("organization_id", session.organizationId)
       .eq("is_active", true),
     admin
@@ -204,9 +230,9 @@ async function PackingListPage({ searchParams }: Props) {
     current.push(item.product_category_id);
     categoryIdsByProductId.set(item.product_id, current);
   }
-  const categoryNameById = new Map(
-    ((categoriesDb.data ?? []) as DbCategory[]).map((category) => [category.id, category.name]),
-  );
+  const categories = categoriesDb.data ?? [];
+  const categoryNameById = new Map(categories.map((category) => [category.id, category.name]));
+  const categoryColorById = new Map(categories.map((category) => [category.id, category.print_color]));
   const categoryNamesByProductId = new Map(
     Array.from(categoryIdsByProductId.entries()).map(([productId, categoryIds]) => [
       productId,
@@ -243,7 +269,7 @@ async function PackingListPage({ searchParams }: Props) {
           : undefined,
       categoryIds: categoryIdsByProductId.get(product.id) ?? [],
     })),
-    (categoriesDb.data ?? []).map((category: DbCategory) => ({
+    categories.map((category) => ({
       id: category.id,
       sortOrder: Number(category.sort_order ?? 0),
     })),
@@ -254,9 +280,23 @@ async function PackingListPage({ searchParams }: Props) {
     productSortIndexMap.set(product.id, index);
   });
   const categoryRankById = new Map(
-    ((categoriesDb.data ?? []) as DbCategory[]).map((category) => [
+    categories.map((category) => [
       category.id,
       Number(category.sort_order ?? 0),
+    ]),
+  );
+  const primaryCategoryIdByProductId = new Map(
+    Array.from(categoryIdsByProductId.entries()).map(([productId, categoryIds]) => [
+      productId,
+      categoryIds
+        .slice()
+        .sort((a, b) => (categoryRankById.get(a) ?? Infinity) - (categoryRankById.get(b) ?? Infinity))[0] ?? null,
+    ]),
+  );
+  const categoryColorByProductId = new Map(
+    Array.from(primaryCategoryIdByProductId.entries()).map(([productId, categoryId]) => [
+      productId,
+      categoryId ? categoryColorById.get(categoryId) ?? null : null,
     ]),
   );
   const categoryRankByProductId = new Map(
@@ -330,6 +370,7 @@ async function PackingListPage({ searchParams }: Props) {
               name: packingListMetaByProductId.get(item.product_id)?.name ?? item.products.name,
               brand: normalizePackingBrand(packingListMetaByProductId.get(item.product_id)?.brand ?? ""),
               category: packingListMetaByProductId.get(item.product_id)?.category ?? "",
+              categoryColor: categoryColorByProductId.get(item.product_id) ?? null,
               icon: packingListMetaByProductId.get(item.product_id)?.icon ?? "",
               unit: item.sale_unit_label,
             });
@@ -361,6 +402,7 @@ async function PackingListPage({ searchParams }: Props) {
           key,
           brand: product.brand,
           category: product.category,
+          categoryColor: product.categoryColor,
           icon: product.icon,
           productId: product.productId,
           sku: product.sku,
@@ -392,7 +434,7 @@ async function PackingListPage({ searchParams }: Props) {
 
       return {
         date: currentDate,
-        dateLabel: getThaiDateLabel(currentDate),
+        dateLabel: `${getThaiDateLabel(currentDate)} เวลา ${getThaiTimeLabel(generatedAt)} น.`,
         organizationName: PRINT_ORGANIZATION_NAME,
         stores: stores.map((store) => ({
           id: store.id,
@@ -404,6 +446,7 @@ async function PackingListPage({ searchParams }: Props) {
           key: product.key,
           brand: product.brand,
           category: product.category,
+          categoryColor: product.categoryColor,
           icon: product.icon,
           sku: product.sku,
           name: product.name,

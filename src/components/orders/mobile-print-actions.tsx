@@ -137,7 +137,7 @@ export function MobilePrintActions({
                         <FileText className="h-5 w-5" strokeWidth={2.5} />
                       </div>
                     }
-                    title="พิมพ์ใบจัดของ (ตารางมาตรฐาน)"
+                    title="พิมพ์ใบออเดอร์ (ตารางมาตรฐาน)"
                     description="พิมพ์ใบจัดชุดสินค้าตามออเดอร์ในรูปแบบตารางมาตรฐาน เหมาะสำหรับการบรรจุทั่วไป"
                     action={<PrintPackingListButton date={date} endDate={endDate} />}
                   />
@@ -148,14 +148,14 @@ export function MobilePrintActions({
                         <Layers className="h-5 w-5" strokeWidth={2.5} />
                       </div>
                     }
-                    title="พิมพ์ใบจัดของ (สลับตาราง)"
+                    title="พิมพ์ใบออเดอร์ (สลับตาราง)"
                     description="พิมพ์ตารางใบจัดสินค้าแบบสลับแกนข้อมูล ช่วยประหยัดหน้ากระดาษและเช็กของง่ายขึ้นในกรณีที่ออเดอร์จำนวนมาก"
                     action={
                       <PrintPackingListButton
                         date={date}
                         endDate={endDate}
                         layout="transposed"
-                        label="พิมพ์ใบจัดของ (สลับตาราง)"
+                        label="พิมพ์ใบออเดอร์ (สลับตาราง)"
                       />
                     }
                   />
@@ -166,7 +166,7 @@ export function MobilePrintActions({
                         <Truck className="h-5 w-5" strokeWidth={2.5} />
                       </div>
                     }
-                    title="พิมพ์ใบสรุปรายการแยกตามรถ"
+                    title="ใบขึ้นของ"
                     description="พิมพ์เอกสารใบสรุปของขึ้นขนส่ง แยกรายละเอียดสินค้าตามรถจัดส่งแต่ละคัน"
                     action={<PrintVehicleProductSummaryButton date={date} endDate={endDate} />}
                   />

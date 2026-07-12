@@ -106,6 +106,8 @@ export function IncomingOrdersMobileList({
       <div className="px-4 py-3 border-b border-[#EA80FC]/20">
         <div className="flex items-center justify-between gap-3">
           <h3 className="min-w-0 text-base font-black text-[#4A148C]">ตารางรายการคำสั่งซื้อล่าสุด</h3>
+        </div>
+        <div className="mt-2 flex justify-end">
           <IncomingOrdersVehicleTransfer dateOptions={vehicleTransferDates} variant="mobile" />
         </div>
         <IncomingOrderVehicleFilter
