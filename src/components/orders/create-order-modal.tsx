@@ -2774,15 +2774,15 @@ export function CreateOrderModal({
                     type="button"
                     onClick={handleSubmit}
                     disabled={pending}
-                    className="action-touch-safe flex h-14 items-center justify-center rounded-2xl border border-[#EA80FC]/75 bg-[#4A148C] px-4 py-4 text-lg font-bold text-white shadow-lg shadow-[#4A148C]/20 transition hover:bg-[#4A148C] disabled:opacity-40 active:scale-[0.98] sm:h-16 sm:text-xl"
+                    className="action-touch-safe flex h-14 min-w-0 items-center justify-center rounded-2xl border border-[#EA80FC]/75 bg-[#4A148C] px-4 py-4 text-lg font-bold text-white shadow-lg shadow-[#4A148C]/20 transition hover:bg-[#4A148C] disabled:opacity-40 active:scale-[0.98] sm:h-16 sm:text-xl"
                   >
                     {pending ? (
-                      <div className="flex items-center gap-2">
+                      <div className="flex min-w-0 items-center gap-2 whitespace-nowrap">
                         <Loader2 className="h-5 w-5 animate-spin" />
-                        <span>กำลังบันทึก...</span>
+                        <span className="whitespace-nowrap">กำลังบันทึก...</span>
                       </div>
                     ) : (
-                      "บันทึกออเดอร์"
+                      <span className="whitespace-nowrap">บันทึก</span>
                     )}
                   </button>
                 </div>

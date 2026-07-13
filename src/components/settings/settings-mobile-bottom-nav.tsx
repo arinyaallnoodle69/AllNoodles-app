@@ -244,7 +244,11 @@ export function SettingsMobileBottomNav() {
         </div>
       </div>
 
-      <nav className="fixed inset-x-0 bottom-0 z-[120] w-screen max-w-[100dvw] overflow-x-clip overflow-y-visible lg:hidden settings-mobile-bottom-nav-bar">
+      <nav
+        className={`fixed inset-x-0 bottom-0 z-40 w-screen max-w-[100dvw] overflow-x-clip overflow-y-visible transition-opacity duration-150 lg:hidden settings-mobile-bottom-nav-bar ${
+          moreOpen || settingsModalOpen ? "pointer-events-none opacity-0" : "opacity-100"
+        }`}
+      >
         <div className="relative w-full max-w-full overflow-x-clip overflow-y-visible pt-3">
           {/* Curved Background with Notch */}
           <div className="absolute inset-x-0 bottom-0 -z-10 h-[calc(100%+20px)]">
@@ -403,7 +407,7 @@ export function SettingsMobileBottomNav() {
               resetNavigationState();
               openCreateOrder();
             }}
-            className={`absolute left-1/2 top-0 z-[130] flex h-14 w-14 -translate-x-1/2 items-center justify-center rounded-full border-[3px] border-[#EA80FC] bg-white ring-2 ring-white transition-all duration-300 active:scale-90 ${
+            className={`absolute left-1/2 top-0 z-50 flex h-14 w-14 -translate-x-1/2 items-center justify-center rounded-full border-[3px] border-[#EA80FC] bg-white ring-2 ring-white transition-all duration-300 active:scale-90 ${
               isCreateModalOpen
                 ? "rotate-45"
                 : ""
