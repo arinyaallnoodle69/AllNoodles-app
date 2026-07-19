@@ -284,7 +284,7 @@ async function ProfitSalesContent({ searchParams }: PageProps) {
                   <div className="mb-1 flex items-start justify-between gap-3">
                     <div className="flex items-center gap-2">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src="/brand/512x512.png" alt="All Noodles" width={40} height={40} className="h-10 w-10 object-contain" />
+                      <img src="/api/brand/logo" alt="All Noodles" width={40} height={40} className="h-10 w-10 object-contain" />
                       <div>
                         <p className="text-sm font-black leading-tight text-[#4A148C]">All Noodles</p>
                         <p className="text-[10px] font-semibold text-slate-500">ระบบรายงานผลกำไรจากการขายสินค้า</p>
@@ -422,7 +422,7 @@ async function ProfitSalesContent({ searchParams }: PageProps) {
                 <div className="mb-1 flex items-start justify-between gap-3">
                   <div className="flex items-center gap-2">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src="/brand/512x512.png" alt="All Noodles" width={40} height={40} className="h-10 w-10 object-contain" />
+                    <img src="/api/brand/logo" alt="All Noodles" width={40} height={40} className="h-10 w-10 object-contain" />
                     <div>
                       <p className="text-sm font-black leading-tight text-[#4A148C]">All Noodles</p>
                       <p className="text-[10px] font-semibold text-slate-500">ระบบรายงานผลกำไรจากการขายสินค้า</p>

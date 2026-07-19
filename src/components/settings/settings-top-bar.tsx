@@ -1,4 +1,3 @@
-import Image from "next/image";
 import Link from "next/link";
 import { Boxes, Files, LayoutDashboard, ReceiptText } from "lucide-react";
 import { SettingsMobileBottomNav } from "@/components/settings/settings-mobile-bottom-nav";
@@ -29,12 +28,12 @@ export function SettingsTopBar({ actions = [] }: SettingsTopBarProps) {
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-2.5 md:grid md:grid-cols-[1fr_auto_1fr] md:gap-6 md:px-8 md:py-3">
           <div className="flex min-w-0 items-center">
             <Link href="/dashboard" className="block shrink-0">
-              <Image
-                src="/brand/512x512.png"
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/api/brand/logo"
                 alt="All Noodles"
                 width={176}
                 height={64}
-                priority
                 className="h-12 w-auto object-contain md:h-14"
               />
             </Link>

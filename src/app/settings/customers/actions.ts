@@ -5,7 +5,7 @@ import { requireAppRole } from "@/lib/auth/authorization";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { resolveGeography } from "@/lib/settings/geography-resolver";
 
-type CreateCustomerField = "address" | "customerCode" | "defaultVehicleId" | "defaultWarehouseId" | "name";
+type CreateCustomerField = "address" | "customerCode" | "defaultVehicleId" | "defaultWarehouseId" | "name" | "outstandingBalance" | "installmentLimit";
 
 export type CreateCustomerActionState = {
   fieldErrors: Partial<Record<CreateCustomerField, string>>;
@@ -173,6 +173,20 @@ function validateCustomerForm(formData: FormData) {
   const address = getAddressPayload(formData.get("addressPayload"));
   const fieldErrors: Partial<Record<CreateCustomerField, string>> = {};
 
+  const rawOutstandingBalance = formData.get("outstandingBalance");
+  const rawInstallmentLimit = formData.get("installmentLimit");
+
+  const outstandingBalance = rawOutstandingBalance !== null && rawOutstandingBalance !== "" ? Number(rawOutstandingBalance) : 0;
+  const installmentLimit = rawInstallmentLimit !== null && rawInstallmentLimit !== "" ? Number(rawInstallmentLimit) : null;
+
+  if (Number.isNaN(outstandingBalance) || outstandingBalance < 0) {
+    fieldErrors.outstandingBalance = "ยอดค้างชำระห้ามติดลบและต้องเป็นตัวเลข";
+  }
+
+  if (installmentLimit !== null && (Number.isNaN(installmentLimit) || installmentLimit < 0)) {
+    fieldErrors.installmentLimit = "ยอดผ่อนชำระต่อวันห้ามติดลบและต้องเป็นตัวเลข";
+  }
+
   if (!name) {
     fieldErrors.name = "กรอกชื่อร้านค้าก่อนบันทึก";
   } else if (name.length > 120) {
@@ -199,6 +213,8 @@ function validateCustomerForm(formData: FormData) {
     address,
     defaultVehicleId: defaultVehicleId || null,
     defaultWarehouseId: defaultWarehouseId || null,
+    outstandingBalance,
+    installmentLimit,
     fieldErrors,
     name,
     success: Object.keys(fieldErrors).length === 0,
@@ -221,7 +237,7 @@ export async function createCustomerAction(
   }
 
   const admin = getSupabaseAdmin();
-  const { address, defaultVehicleId, defaultWarehouseId, name } = validation;
+  const { address, defaultVehicleId, defaultWarehouseId, name, outstandingBalance, installmentLimit } = validation;
   const customerCode = await generateCustomerCode(session.organizationId);
   const nextSortOrder = await getNextCustomerSortOrder(session.organizationId);
 
@@ -304,6 +320,8 @@ export async function createCustomerAction(
     province: address.provinceName || null,
     sort_order: nextSortOrder,
     subdistrict: address.subdistrictName || null,
+    outstanding_balance: outstandingBalance,
+    installment_limit: installmentLimit,
   });
 
   if (error) {
@@ -351,7 +369,7 @@ export async function updateCustomerAction(
   }
 
   const admin = getSupabaseAdmin();
-  const { address, defaultVehicleId, defaultWarehouseId, name } = validation;
+  const { address, defaultVehicleId, defaultWarehouseId, name, outstandingBalance, installmentLimit } = validation;
 
   const { data: customer, error: customerLookupError } = await admin
     .from("customers")
@@ -438,6 +456,8 @@ export async function updateCustomerAction(
       province: address.provinceName || null,
       subdistrict: address.subdistrictName || null,
       updated_at: new Date().toISOString(),
+      outstanding_balance: outstandingBalance,
+      installment_limit: installmentLimit,
     })
     .eq("id", customerId)
     .eq("organization_id", session.organizationId);

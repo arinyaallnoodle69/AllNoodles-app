@@ -31,7 +31,7 @@ function dataUrlToBlob(dataUrl: string): Blob {
 
 function createFileName(base: string, page: number) {
   const safe = base.replace(/[^\w\u0E00-\u0E7F-]+/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "");
-  return `${safe || "packing-list"}-หน้า${page}.png`;
+  return `${safe || "packing-list"}-หน้า${page}.jpg`;
 }
 
 export function PackingListPrintButton({
@@ -72,6 +72,19 @@ export function PackingListPrintButton({
       const timer = setTimeout(preloadFonts, 1200);
       return () => clearTimeout(timer);
     }
+  }, []);
+
+  useEffect(() => {
+    // Reset printing and capturing states on mount and unmount to prevent stuck loader states during navigation
+    setIsPrinting(false);
+    setIsCapturing(false);
+    setShowPreview(false);
+    setErrorMessage(null);
+    return () => {
+      setIsPrinting(false);
+      setIsCapturing(false);
+      setShowPreview(false);
+    };
   }, []);
 
   useEffect(() => {
@@ -160,6 +173,9 @@ export function PackingListPrintButton({
 
       const captured: PreviewImage[] = [];
 
+      const isMobileDevice = typeof window !== "undefined" && /iphone|ipad|ipod|android/i.test(window.navigator.userAgent.toLowerCase());
+      const selectedPixelRatio = isMobileDevice ? 1.25 : 2;
+
       for (let i = 0; i < targets.length; i += 1) {
         const target = targets[i];
         const datasetWidth = Number(target.dataset.captureWidth ?? "");
@@ -167,13 +183,14 @@ export function PackingListPrintButton({
         const captureWidth = datasetWidth || target.offsetWidth || FALLBACK_CAPTURE_WIDTH;
         const captureHeight = datasetHeight || target.offsetHeight || FALLBACK_CAPTURE_HEIGHT;
 
-        const dataUrl = await htmlToImage.toPng(target, {
+        const dataUrl = await htmlToImage.toJpeg(target, {
           backgroundColor: "#ffffff",
           cacheBust: true,
           fontEmbedCSS,
-          pixelRatio: 2,
+          pixelRatio: selectedPixelRatio,
           width: captureWidth,
           height: captureHeight,
+          quality: 0.85,
           style: {
             width: `${captureWidth}px`,
             height: `${captureHeight}px`,

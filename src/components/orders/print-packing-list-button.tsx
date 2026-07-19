@@ -26,11 +26,15 @@ export function PrintPackingListButton({
   );
 
   useEffect(() => {
+    const timer = setTimeout(() => {
+      setLoading(false);
+    }, 0);
     const handlePageShow = () => {
       setLoading(false);
     };
     window.addEventListener("pageshow", handlePageShow);
     return () => {
+      clearTimeout(timer);
       window.removeEventListener("pageshow", handlePageShow);
     };
   }, []);

@@ -304,7 +304,7 @@ async function BillingContent({ searchParams }: PageProps) {
                   <div className="flex items-center gap-2">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
-                      src="/brand/512x512.png"
+                      src="/api/brand/logo"
                       alt="All Noodles"
                       width={40}
                       height={40}

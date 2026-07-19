@@ -106,7 +106,7 @@ const MobileStockCard = memo(({
 
         <div className="min-w-0 flex-1">
           <div className="flex flex-col gap-1">
-            <p className="line-clamp-2 pt-0.5 text-[1.22rem] font-black leading-[1.34] text-slate-950">
+            <p className="line-clamp-2 py-0.5 text-[1.22rem] font-black leading-normal text-slate-950">
               {product.name}
             </p>
             <div className="flex items-center gap-2">
@@ -177,7 +177,6 @@ const MobileStockCard = memo(({
           </div>
         )}
 
-        {/* Adjust Button Section */}
         <div className={`flex ${role === "member" ? "w-full justify-center" : "items-end justify-end pt-4 pl-4"}`}>
           <button
             type="button"
@@ -209,10 +208,10 @@ const DesktopStockRow = memo(({
 
   return (
     <tr className="hover:bg-slate-50 transition-colors group">
-      <td className="whitespace-nowrap border-b border-l border-r border-slate-300 px-5 py-4 text-center font-mono font-bold text-slate-500 uppercase tracking-tight align-middle">
+      <td className="whitespace-nowrap border-b border-l border-r border-slate-300 px-5 py-2.5 text-center font-mono font-bold text-slate-500 uppercase tracking-tight align-middle">
         {product.sku}
       </td>
-      <td className="border-b border-r border-slate-300 px-5 py-4 align-middle">
+      <td className="border-b border-r border-slate-300 px-5 py-2.5 align-middle">
         <div className="flex items-center gap-4">
           <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-xl border border-slate-100 bg-white p-1">
             {product.imageUrl ? (
@@ -230,7 +229,7 @@ const DesktopStockRow = memo(({
             )}
           </div>
           <div className="min-w-0">
-            <p className="line-clamp-2 text-[15px] font-black leading-tight text-slate-900 group-hover:text-[#4A148C]">
+            <p className="line-clamp-2 py-0.5 text-[15px] font-black leading-normal text-slate-900 group-hover:text-[#4A148C]">
               {product.name}
             </p>
             <p className="mt-1 inline-flex items-center gap-1 rounded-full bg-[#F3E5F5] px-2 py-0.5 text-[10px] font-black text-[#4A148C]">
@@ -240,11 +239,11 @@ const DesktopStockRow = memo(({
           </div>
         </div>
       </td>
-      <td className="whitespace-nowrap border-b border-r border-slate-300 px-5 py-4 text-center text-base font-medium text-slate-600 align-middle">
+      <td className="whitespace-nowrap border-b border-r border-slate-300 px-5 py-2.5 text-center text-base font-medium text-slate-600 align-middle">
         {product.unit}
       </td>
       {role !== "member" && (
-        <td className="whitespace-nowrap border-b border-r border-slate-300 px-5 py-4 text-center align-middle">
+        <td className="whitespace-nowrap border-b border-r border-slate-300 px-5 py-2.5 text-center align-middle">
           <div className="flex flex-col gap-1">
             {product.saleUnits.length > 0 ? (
               product.saleUnits.map((unit) => (
@@ -264,7 +263,7 @@ const DesktopStockRow = memo(({
           </div>
         </td>
       )}
-      <td className="whitespace-nowrap border-b border-r border-slate-300 px-5 py-4 text-center align-middle">
+      <td className="whitespace-nowrap border-b border-r border-slate-300 px-5 py-2.5 text-center align-middle">
         <div className="flex flex-col items-center gap-1">
           <span className={`text-base font-bold ${displayStock.onHandQuantity < 0 ? 'text-rose-700' : 'text-[#4A148C]'}`}>
             {formatQuantity(displayStock.onHandQuantity)}
@@ -280,13 +279,10 @@ const DesktopStockRow = memo(({
         </div>
       </td>
       {role !== "member" && (
-        <td className="whitespace-nowrap border-b border-r border-slate-300 px-5 py-4 text-center align-middle">
-          <div className="flex flex-col items-center gap-0.5">
-            <span className="text-base font-bold text-slate-900">
-              ฿{formatMoney(displayStock.stockValue)}
-            </span>
-            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">VALUE</span>
-          </div>
+        <td className="whitespace-nowrap border-b border-r border-slate-300 px-5 py-2.5 text-center align-middle">
+          <span className="text-base font-bold text-slate-900">
+            ฿{formatMoney(displayStock.stockValue)}
+          </span>
         </td>
       )}
     </tr>
@@ -296,8 +292,9 @@ DesktopStockRow.displayName = "DesktopStockRow";
 
 // ─── Main Component ──────────────────────────────────────────────────────────
 
-export function StockList({ products, suppliers = [], warehouses, baseHref = "/stock", onChangeTab }: StockListProps) {
+export function StockList({ products, suppliers = [], warehouses, baseHref = "/stock", onChangeTab, brands }: StockListProps) {
   const role = useClientRole();
+  const canEditStock = role === "admin" || role === "member";
   const searchParams = useSearchParams();
   const { close: closeMobileSearch } = useMobileSearch();
 
@@ -325,7 +322,7 @@ export function StockList({ products, suppliers = [], warehouses, baseHref = "/s
         seen.add(p.categoryName.trim());
       }
     }
-    return Array.from(seen).sort((a, b) => a.localeCompare(b, "th"));
+    return Array.from(seen);
   }, [products]);
 
   const brandOptions = useMemo(() => {
@@ -340,8 +337,19 @@ export function StockList({ products, suppliers = [], warehouses, baseHref = "/s
         if (trimmed) seen.add(trimmed);
       }
     }
-    return Array.from(seen).sort((a, b) => a.localeCompare(b, "th"));
-  }, [products, selectedCategory]);
+    const unsortedBrands = Array.from(seen);
+    if (brands && brands.length > 0) {
+      return unsortedBrands.sort((a, b) => {
+        const indexA = brands.indexOf(a);
+        const indexB = brands.indexOf(b);
+        if (indexA === -1 && indexB === -1) return a.localeCompare(b, "th");
+        if (indexA === -1) return 1;
+        if (indexB === -1) return -1;
+        return indexA - indexB;
+      });
+    }
+    return unsortedBrands.sort((a, b) => a.localeCompare(b, "th"));
+  }, [products, selectedCategory, brands]);
 
   const handleCategorySelect = (category: string, e?: React.MouseEvent<HTMLButtonElement>) => {
     setSelectedCategory(category);
@@ -427,12 +435,12 @@ export function StockList({ products, suppliers = [], warehouses, baseHref = "/s
         ? warehouse
         : "all",
     );
-    if (receive) setReceiveOpen(true);
-    if (adjust) {
+    if (canEditStock && receive) setReceiveOpen(true);
+    if (canEditStock && adjust) {
       setAdjustOpen(true);
       if (product) setAdjustProductId(product);
     }
-  }, [searchParams, warehouses]);
+  }, [canEditStock, searchParams, warehouses]);
 
   const buildCurrentUrl = (params: Record<string, string> = {}) => {
     const nextParams: Record<string, string> = {};
@@ -451,6 +459,7 @@ export function StockList({ products, suppliers = [], warehouses, baseHref = "/s
   };
 
   const handleAdjust = (productId: string) => {
+    if (!canEditStock) return;
     setAdjustProductId(productId);
     setAdjustOpen(true);
     // Silent URL update for deep linking
@@ -462,6 +471,7 @@ export function StockList({ products, suppliers = [], warehouses, baseHref = "/s
   };
 
   const handleReceive = () => {
+    if (!canEditStock) return;
     setReceiveOpen(true);
     window.history.pushState({}, "", buildCurrentUrl({ receive: "1" }));
   };
@@ -481,61 +491,68 @@ export function StockList({ products, suppliers = [], warehouses, baseHref = "/s
     <>
       <div className="sticky top-0 z-40 -mx-3 mb-4 hidden border-b border-[#E1BEE7] bg-white/95 px-4 py-3 shadow-[0_10px_30px_rgba(31,42,68,0.08)] backdrop-blur lg:block">
         <div className="flex flex-col gap-3">
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-            <div className="min-w-0">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between lg:gap-4">
+            <div className="min-w-0 shrink-0">
               <p className="text-lg font-black text-[#4A148C]">จัดการสต็อก</p>
               <p className="text-xs font-semibold text-[#667085]">
                 แสดง {filteredProducts.length.toLocaleString("th-TH")} จาก {products.length.toLocaleString("th-TH")} รายการ
               </p>
             </div>
 
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={handleReceive}
-                className="inline-flex h-12 items-center justify-center gap-2 rounded-lg bg-[#4A148C] px-4 text-sm font-bold text-white shadow-[0_12px_26px_rgba(142, 36, 170,0.22)] transition hover:bg-[#4A148C] active:scale-[0.98]"
-              >
-                <Plus className="h-4.5 w-4.5" strokeWidth={2.4} />
-                รับสินค้าเข้า
-              </button>
-              <button
-                type="button"
-                onClick={() => handleAdjust("")}
-                className="inline-flex h-12 items-center justify-center gap-2 rounded-lg border border-[#4A148C]/20 bg-white px-4 text-sm font-bold text-[#4A148C] transition hover:border-[#4A148C] hover:bg-[#4A148C]/[0.04] active:scale-[0.98]"
-              >
-                <ClipboardEdit className="h-4.5 w-4.5" strokeWidth={2.2} />
-                ปรับปรุงสต็อก
-              </button>
+            <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:gap-3 flex-1 justify-end max-w-5xl">
+              <div className="flex-1 min-w-[12rem] max-w-xs">
+                <label className="relative block w-full">
+                  <Search className="pointer-events-none absolute left-4 top-1/2 h-4.5 w-4.5 -translate-y-1/2 text-[#667085]" strokeWidth={2} />
+                  <input
+                    type="search"
+                    value={searchQuery}
+                    onChange={(event) => setSearchQuery(event.target.value)}
+                    placeholder="ค้นหาสินค้า หรือรหัสสินค้า"
+                    className="h-11 w-full rounded-lg border border-[#D7DEE8] bg-white pl-11 pr-4 text-sm font-semibold text-[#4A148C] outline-none transition placeholder:text-[#667085] focus:border-[#4A148C] focus:ring-2 focus:ring-[#4A148C]/15"
+                  />
+                </label>
+              </div>
+
+              <div className="w-full sm:w-[12rem] shrink-0">
+                <label className="block">
+                  <span className="sr-only">เลือกคลัง</span>
+                  <select
+                    value={selectedWarehouseId}
+                    onChange={(event) => handleWarehouseChange(event.target.value)}
+                    className="h-11 w-full rounded-lg border border-[#D7DEE8] bg-white px-4 text-sm font-bold text-[#4A148C] outline-none focus:border-[#4A148C] focus:ring-2 focus:ring-[#4A148C]/15"
+                  >
+                    {warehouseOptions.map((warehouse) => (
+                      <option key={warehouse.id} value={warehouse.id}>
+                        {warehouse.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+
+              {canEditStock ? (
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    type="button"
+                    onClick={handleReceive}
+                    className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-[#4A148C] px-4 text-sm font-bold text-white shadow-[0_12px_26px_rgba(142,36,170,0.22)] transition hover:bg-[#4A148C] active:scale-[0.98] whitespace-nowrap"
+                  >
+                    <Plus className="h-4.5 w-4.5" strokeWidth={2.4} />
+                    รับสินค้าเข้า
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleAdjust("")}
+                    className="inline-flex h-11 items-center justify-center gap-2 rounded-lg border border-[#4A148C]/20 bg-white px-4 text-sm font-bold text-[#4A148C] transition hover:border-[#4A148C] hover:bg-[#4A148C]/[0.04] active:scale-[0.98] whitespace-nowrap"
+                  >
+                    <ClipboardEdit className="h-4.5 w-4.5" strokeWidth={2.2} />
+                    ปรับปรุงสต็อก
+                  </button>
+                </div>
+              ) : null}
             </div>
           </div>
 
-          <div className="grid gap-3 xl:grid-cols-[minmax(18rem,1fr)_18rem] xl:items-center">
-            <label className="relative block">
-              <Search className="pointer-events-none absolute left-4 top-1/2 h-4.5 w-4.5 -translate-y-1/2 text-[#667085]" strokeWidth={2} />
-              <input
-                type="search"
-                value={searchQuery}
-                onChange={(event) => setSearchQuery(event.target.value)}
-                placeholder="ค้นหาสินค้า หรือรหัสสินค้า"
-                className="h-12 w-full rounded-lg border border-[#D7DEE8] bg-white pl-11 pr-4 text-sm font-semibold text-[#4A148C] outline-none transition placeholder:text-[#667085] focus:border-[#4A148C] focus:ring-2 focus:ring-[#4A148C]/15"
-              />
-            </label>
-
-            <label className="block">
-              <span className="sr-only">เลือกคลัง</span>
-              <select
-                value={selectedWarehouseId}
-                onChange={(event) => handleWarehouseChange(event.target.value)}
-                className="h-12 w-full rounded-lg border border-[#D7DEE8] bg-white px-4 text-sm font-bold text-[#4A148C] outline-none focus:border-[#4A148C] focus:ring-2 focus:ring-[#4A148C]/15"
-              >
-                {warehouseOptions.map((warehouse) => (
-                  <option key={warehouse.id} value={warehouse.id}>
-                    {warehouse.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
 
           {/* Desktop Category Row */}
           {categoryOptions.length > 0 && (
@@ -756,25 +773,29 @@ export function StockList({ products, suppliers = [], warehouses, baseHref = "/s
             </select>
           </label>
 
-          <button
-            type="button"
-            onClick={() => handleAdjust("")}
-            className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-lg border border-[#4A148C]/20 bg-white px-4 text-sm font-bold text-[#4A148C] transition active:scale-[0.98]"
-          >
-            <ClipboardEdit className="h-4.5 w-4.5" strokeWidth={2.2} />
-            ปรับยอด
-          </button>
+          {canEditStock ? (
+            <button
+              type="button"
+              onClick={() => handleAdjust("")}
+              className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-lg border border-[#4A148C]/20 bg-white px-4 text-sm font-bold text-[#4A148C] transition active:scale-[0.98]"
+            >
+              <ClipboardEdit className="h-4.5 w-4.5" strokeWidth={2.2} />
+              ปรับยอด
+            </button>
+          ) : null}
         </div>
       </MobileSearchDrawer>
 
-      <button
-        type="button"
-        onClick={handleReceive}
-        aria-label="รับสินค้าเข้า"
-        className="fixed bottom-[calc(4.75rem+env(safe-area-inset-bottom)+12px)] left-4 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-[#4A148C] text-white shadow-[0_14px_32px_rgba(142, 36, 170,0.32)] transition active:scale-95 lg:hidden"
-      >
-        <PackagePlus className="h-7 w-7" strokeWidth={2.4} />
-      </button>
+      {canEditStock ? (
+        <button
+          type="button"
+          onClick={handleReceive}
+          aria-label="รับสินค้าเข้า"
+          className="fixed bottom-[calc(4.75rem+env(safe-area-inset-bottom)+12px)] left-4 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-[#4A148C] text-white shadow-[0_14px_32px_rgba(142,36,170,0.32)] transition active:scale-95 lg:hidden"
+        >
+          <PackagePlus className="h-7 w-7" strokeWidth={2.4} />
+        </button>
+      ) : null}
 
       <SettingsPanel>
         <SettingsPanelBody className="p-0">
@@ -809,7 +830,7 @@ export function StockList({ products, suppliers = [], warehouses, baseHref = "/s
                         <th
                           key={label}
                           className={[
-                            "whitespace-nowrap px-5 py-4 text-center text-base font-bold text-white",
+                            "whitespace-nowrap px-5 py-2.5 text-center text-base font-bold text-white",
                             i === 0 ? "border-l border-slate-300" : "",
                             i < arr.length - 1
                               ? "border-r border-white/60"
@@ -857,7 +878,7 @@ export function StockList({ products, suppliers = [], warehouses, baseHref = "/s
       </SettingsPanel>
 
       {/* Forms rendered inside the client component for instant response */}
-      {receiveOpen && (
+      {canEditStock && receiveOpen && (
         <StockReceiveForm
           products={products}
           suppliers={suppliers}
@@ -868,7 +889,7 @@ export function StockList({ products, suppliers = [], warehouses, baseHref = "/s
         />
       )}
 
-      {adjustOpen && (
+      {canEditStock && adjustOpen && (
         <StockAdjustForm
           products={products}
           warehouses={warehouses}
@@ -1009,6 +1030,7 @@ type StockListProps = {
   suppliers?: StockSupplierOption[];
   warehouses: StockWarehouseOption[];
   onChangeTab?: (key: "stock" | "history" | "issues") => void;
+  brands?: string[];
 };
 
 type StockWarehouseOption = {

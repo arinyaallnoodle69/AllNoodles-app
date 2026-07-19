@@ -5,6 +5,7 @@ import Image from "next/image";
 import { ChevronRight, X, Package, Loader2, TrendingUp, TrendingDown } from "lucide-react";
 import { fetchStoreProductSalesAction } from "./actions";
 import type { StoreProductRow } from "@/lib/reports/store-sales";
+import { formatDisplayUnit } from "@/app/order/customer/unit-label";
 
 function fmt(n: number) {
   return n.toLocaleString("th-TH", { maximumFractionDigits: 2 });
@@ -177,7 +178,7 @@ export function StoreDetailButton({
                             </span>
                           </div>
                           <p className="mt-0.5 text-xs text-slate-400 tabular-nums">
-                            {fmt(row.totalQty)} {row.unit}
+                            {fmt(row.totalQty)} {formatDisplayUnit(row.unit)}
                           </p>
                         </div>
                       </div>

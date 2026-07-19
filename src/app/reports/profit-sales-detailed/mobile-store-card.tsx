@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import type { ReactNode } from "react";
 import type { DetailedProfitStoreGroup } from "@/lib/reports/profit-sales-detailed";
+import { formatDisplayUnit } from "@/app/order/customer/unit-label";
 
 type MobileStoreCardProps = {
   store: DetailedProfitStoreGroup;
@@ -231,7 +232,7 @@ export function MobileStoreCard({ store, storeUnits }: MobileStoreCardProps) {
                           </div>
                           <div className="shrink-0 text-right">
                             <p className="text-[15px] font-bold text-slate-950">
-                              {item.quantity.toLocaleString("th-TH")} {item.unit}
+                              {item.quantity.toLocaleString("th-TH")} {formatDisplayUnit(item.unit)}
                             </p>
                           </div>
                         </div>

@@ -10,6 +10,7 @@ import {
   ChevronRight,
   ClipboardList,
   HandCoins,
+  Eye,
   Loader2,
   MessageCircle,
   Package2,
@@ -71,9 +72,22 @@ type LineOrderModalState = {
   products: OrderProductOption[];
 };
 
+type FinancialRevealState =
+  | {
+      kind: "metric";
+      title: string;
+      rows: Array<{ label: string; value: string; tone: "green" | "rose" | "teal" }>;
+    }
+  | {
+      kind: "dailyTable";
+      title: string;
+      rows: Array<{ cost: number; isoDate: string; profit: number; revenue: number }>;
+    };
+
 function DashboardStatCard({
   title,
   value,
+  valueNode,
   unit,
   accent,
   icon,
@@ -83,7 +97,8 @@ function DashboardStatCard({
 }: {
   title: string;
   value: string;
-  unit: string;
+  valueNode?: React.ReactNode;
+  unit?: string;
   accent: "blue" | "green" | "line" | "orange" | "teal" | "rose";
   icon: React.ReactNode;
   ghost: React.ReactNode;
@@ -143,11 +158,13 @@ function DashboardStatCard({
           <p
             className={`font-black leading-none tabular-nums tracking-[-0.03em] ${compact ? "text-[1.4rem] sm:text-[2.15rem]" : "text-[1.5rem] sm:text-[2.55rem]"} ${tone.value}`}
           >
-            {value}
+            {valueNode ?? value}
           </p>
-          <p className={`${compact ? "mt-1" : "mt-2"} text-[12.5px] font-extrabold text-slate-500 md:text-[16px]`}>
-            {unit}
-          </p>
+          {unit && (
+            <p className={`${compact ? "mt-1" : "mt-2"} text-[12.5px] font-extrabold text-slate-500 md:text-[16px]`}>
+              {unit}
+            </p>
+          )}
         </div>
 
         <div className={`pointer-events-none absolute bottom-0 right-[-0.15rem] opacity-[0.72] ${tone.ghost}`}>
@@ -155,6 +172,14 @@ function DashboardStatCard({
         </div>
       </div>
     </div>
+  );
+}
+
+function HiddenMetricEye() {
+  return (
+    <span className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-[#E1BEE7] bg-[#F3E5F5] text-[#4A148C] shadow-[0_8px_18px_rgba(74,20,140,0.12)]">
+      <Eye className="h-5.5 w-5.5" strokeWidth={2.7} />
+    </span>
   );
 }
 
@@ -218,6 +243,8 @@ export function DashboardClient({
   const [isLineOrdersDrawerOpen, setIsLineOrdersDrawerOpen] = useState(false);
   const [isLineOrdersDrawerClosing, setIsLineOrdersDrawerClosing] = useState(false);
   const [lineOrderModal, setLineOrderModal] = useState<LineOrderModalState | null>(null);
+  const [financialReveal, setFinancialReveal] = useState<FinancialRevealState | null>(null);
+  const [isFinancialRevealClosing, setIsFinancialRevealClosing] = useState(false);
 
   function closeLineOrdersDrawer() {
     if (isLineOrdersDrawerClosing) return;
@@ -226,6 +253,15 @@ export function DashboardClient({
       setIsLineOrdersDrawerOpen(false);
       setIsLineOrdersDrawerClosing(false);
     }, 450);
+  }
+
+  function closeFinancialReveal() {
+    if (isFinancialRevealClosing) return;
+    setIsFinancialRevealClosing(true);
+    setTimeout(() => {
+      setFinancialReveal(null);
+      setIsFinancialRevealClosing(false);
+    }, 350);
   }
   const [viewingStores, setViewingStores] = useState<StoreListModalState | null>(null);
   const [isViewingStoresClosing, setIsViewingStoresClosing] = useState(false);
@@ -362,11 +398,11 @@ export function DashboardClient({
           <div>
             <div className="flex items-center gap-4 sm:gap-5">
               <div className="relative h-24 w-24 sm:h-28 sm:w-28 shrink-0 overflow-hidden bg-transparent transition-transform hover:scale-105">
-                <Image
-                  src="/brand/512x512.png"
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="/api/brand/logo"
                   alt="All Noodles"
-                  fill
-                  className="object-contain mix-blend-multiply"
+                  className="absolute inset-0 h-full w-full object-contain mix-blend-multiply"
                 />
               </div>
               <div>
@@ -557,32 +593,68 @@ export function DashboardClient({
         </div>
 
         <section className="-mx-2 grid grid-cols-2 gap-2.5 px-2 md:mx-0 md:gap-5 md:px-0 md:grid-cols-3 lg:grid-cols-3">
-          <DashboardStatCard
-            title="ยอดขายวันนี้"
-            value={`฿${fmtMoney(kpi.todayOrderAmount)}`}
-            unit="บาท"
-            accent="green"
-            icon={<TrendingUp className="h-[1.15rem] w-[1.15rem]" strokeWidth={2.15} />}
-            ghost={<BarChart3 className="h-[4.2rem] w-[4.2rem] sm:h-[4.6rem] sm:w-[4.6rem]" strokeWidth={1.15} />}
-          />
+          <button
+            type="button"
+            onClick={() =>
+              setFinancialReveal({
+                kind: "metric",
+                title: "ยอดขายวันนี้",
+                rows: [{ label: "ยอดขายวันนี้", value: `฿${fmtMoney(kpi.todayOrderAmount)}`, tone: "green" }],
+              })
+            }
+            className="block text-left transition-transform active:scale-[0.98]"
+          >
+            <DashboardStatCard
+              title="ยอดขายวันนี้"
+              value=""
+              valueNode={<HiddenMetricEye />}
+              accent="green"
+              icon={<TrendingUp className="h-[1.15rem] w-[1.15rem]" strokeWidth={2.15} />}
+              ghost={<BarChart3 className="h-[4.2rem] w-[4.2rem] sm:h-[4.6rem] sm:w-[4.6rem]" strokeWidth={1.15} />}
+            />
+          </button>
 
-          <DashboardStatCard
-            title="ต้นทุนวันนี้"
-            value={`฿${fmtMoney(kpi.todayCost)}`}
-            unit="บาท"
-            accent="rose"
-            icon={<Wallet className="h-[1.15rem] w-[1.15rem]" strokeWidth={2.15} />}
-            ghost={<Wallet className="h-[4.2rem] w-[4.2rem] sm:h-[4.6rem] sm:w-[4.6rem]" strokeWidth={1.15} />}
-          />
+          <button
+            type="button"
+            onClick={() =>
+              setFinancialReveal({
+                kind: "metric",
+                title: "ต้นทุนวันนี้",
+                rows: [{ label: "ต้นทุนวันนี้", value: `฿${fmtMoney(kpi.todayCost)}`, tone: "rose" }],
+              })
+            }
+            className="block text-left transition-transform active:scale-[0.98]"
+          >
+            <DashboardStatCard
+              title="ต้นทุนวันนี้"
+              value=""
+              valueNode={<HiddenMetricEye />}
+              accent="rose"
+              icon={<Wallet className="h-[1.15rem] w-[1.15rem]" strokeWidth={2.15} />}
+              ghost={<Wallet className="h-[4.2rem] w-[4.2rem] sm:h-[4.6rem] sm:w-[4.6rem]" strokeWidth={1.15} />}
+            />
+          </button>
 
-          <DashboardStatCard
-            title="กำไรสุทธิวันนี้"
-            value={`฿${fmtMoney(kpi.todayNetProfit)}`}
-            unit="บาท"
-            accent="teal"
-            icon={<HandCoins className="h-[1.15rem] w-[1.15rem]" strokeWidth={2.15} />}
-            ghost={<HandCoins className="h-[4.2rem] w-[4.2rem] sm:h-[4.6rem] sm:w-[4.6rem]" strokeWidth={1.15} />}
-          />
+          <button
+            type="button"
+            onClick={() =>
+              setFinancialReveal({
+                kind: "metric",
+                title: "กำไรสุทธิวันนี้",
+                rows: [{ label: "กำไรสุทธิวันนี้", value: `฿${fmtMoney(kpi.todayNetProfit)}`, tone: "teal" }],
+              })
+            }
+            className="block text-left transition-transform active:scale-[0.98]"
+          >
+            <DashboardStatCard
+              title="กำไรสุทธิวันนี้"
+              value=""
+              valueNode={<HiddenMetricEye />}
+              accent="teal"
+              icon={<HandCoins className="h-[1.15rem] w-[1.15rem]" strokeWidth={2.15} />}
+              ghost={<HandCoins className="h-[4.2rem] w-[4.2rem] sm:h-[4.6rem] sm:w-[4.6rem]" strokeWidth={1.15} />}
+            />
+          </button>
 
           <DashboardStatCard
             title="ออเดอร์วันนี้"
@@ -633,62 +705,139 @@ export function DashboardClient({
         <div className="grid grid-cols-1 gap-8">
 
 
-          <section className="rounded-[2rem] border border-slate-100 bg-white p-5 shadow-[0_8px_30px_rgb(0,0,0,0.02)] md:p-6">
-            <div className="mb-4 flex flex-wrap items-center gap-2">
-              <h3 className="text-lg font-black leading-none text-slate-900 md:text-xl">
-                รายงานผลประกอบการรายวัน
-              </h3>
-              <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-black leading-none text-slate-500">
-                7 วันล่าสุด
+          <section
+            role="button"
+            tabIndex={0}
+            onClick={() =>
+              dailySummaryRows.length > 0 &&
+              setFinancialReveal({
+                kind: "dailyTable",
+                title: "รายงานผลประกอบการรายวัน",
+                rows: dailySummaryRows,
+              })
+            }
+            onKeyDown={(event) => {
+              if ((event.key === "Enter" || event.key === " ") && dailySummaryRows.length > 0) {
+                event.preventDefault();
+                setFinancialReveal({
+                  kind: "dailyTable",
+                  title: "รายงานผลประกอบการรายวัน",
+                  rows: dailySummaryRows,
+                });
+              }
+            }}
+            className="cursor-pointer rounded-[2rem] border border-slate-100 bg-white p-5 shadow-[0_8px_30px_rgb(0,0,0,0.02)] transition hover:border-[#E1BEE7] hover:shadow-[0_14px_38px_rgba(74,20,140,0.08)] active:scale-[0.995] md:p-6"
+          >
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <h3 className="text-lg font-black leading-none text-slate-900 md:text-xl">
+                  รายงานผลประกอบการรายวัน
+                </h3>
+                <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-black leading-none text-slate-500">
+                  7 วันล่าสุด
+                </span>
+              </div>
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-[#E1BEE7] bg-[#F3E5F5] px-3 py-1.5 text-xs font-black text-[#4A148C]">
+                <Eye className="h-3.5 w-3.5" strokeWidth={2.4} />
+                กดดูรายงาน
               </span>
             </div>
-            {dailySummaryRows.length > 0 ? (
-              <div className="-mx-5 overflow-x-auto sm:mx-0">
-                <table className="w-full text-sm">
-                  <thead className="border-b border-slate-100 bg-slate-50/50 text-slate-500">
-                    <tr>
-                      <th className="pl-5 pr-1 py-3 text-left text-sm font-black sm:pl-4 sm:pr-4 sm:text-base">วัน</th>
-                      <th className="px-1 py-3 text-right text-sm font-black sm:px-4 sm:text-base">ยอดขาย</th>
-                      <th className="px-1 py-3 text-right text-sm font-black sm:px-4 sm:text-base">ต้นทุน</th>
-                      <th className="pl-1 pr-5 py-3 text-right text-sm font-black sm:pl-4 sm:pr-4 sm:text-base">กำไร</th>
+          </section>
+        </div>
+
+
+      </main>
+
+      {financialReveal || isFinancialRevealClosing ? (
+        <div className={`fixed inset-0 z-[310] flex items-center justify-center bg-slate-950/55 p-4 backdrop-blur-[6px] ${
+          isFinancialRevealClosing ? "animate-backdrop-fade-out" : "animate-backdrop-fade-in"
+        }`}>
+          <button
+            type="button"
+            aria-label="ปิดยอด"
+            className="absolute inset-0 cursor-default"
+            onClick={closeFinancialReveal}
+          />
+          <section className={`relative z-10 max-h-[86dvh] w-full max-w-2xl overflow-hidden rounded-[1.75rem] border border-[#E1BEE7] bg-white shadow-[0_28px_90px_rgba(15,23,42,0.32)] ${
+            isFinancialRevealClosing ? "animate-backdrop-fade-out" : "animate-backdrop-fade-in"
+          }`}>
+            <div className="flex items-start justify-between gap-4 border-b border-[#E1BEE7]/70 bg-[#F3E5F5] px-5 py-4 sm:px-6">
+              <div className="min-w-0">
+                <p className="text-xs font-black uppercase tracking-[0.14em] text-[#8E24AA]">
+                  {financialReveal?.kind === "dailyTable" ? "Daily Performance" : "Private Metric"}
+                </p>
+                <h3 className="mt-1 text-xl font-black leading-tight text-[#4A148C] sm:text-2xl">
+                  {financialReveal?.title}
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={closeFinancialReveal}
+                className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-white text-[#4A148C] shadow-sm transition active:scale-95"
+                aria-label="ปิด"
+              >
+                <X className="h-5.5 w-5.5" strokeWidth={3} />
+              </button>
+            </div>
+
+            {financialReveal?.kind === "metric" ? (
+              <div className="space-y-3 px-5 py-5 sm:px-6">
+                {financialReveal.rows.map((row) => {
+                const toneClass =
+                  row.tone === "green"
+                    ? "bg-emerald-50 text-emerald-700 ring-emerald-600/15"
+                    : row.tone === "rose"
+                      ? "bg-rose-50 text-rose-700 ring-rose-600/15"
+                      : "bg-teal-50 text-teal-700 ring-teal-600/15";
+
+                return (
+                  <div
+                    key={row.label}
+                    className={`rounded-2xl px-4 py-5 ring-1 ${toneClass}`}
+                  >
+                    <p className="text-sm font-black text-current/70">{row.label}</p>
+                    <p className="mt-1 text-4xl font-black leading-none tracking-tight tabular-nums">
+                      {row.value}
+                    </p>
+                  </div>
+                );
+                })}
+              </div>
+            ) : financialReveal?.kind === "dailyTable" ? (
+              <div className="max-h-[66dvh] overflow-auto px-2 py-4 sm:px-6">
+                <table className="w-full table-fixed border-collapse overflow-hidden rounded-2xl text-[10px] sm:text-sm">
+                  <thead>
+                    <tr className="bg-[#4A148C] text-white">
+                      <th className="w-[38%] whitespace-nowrap px-2 py-3 text-left font-black sm:w-[40%] sm:px-3">วัน</th>
+                      <th className="w-[22%] whitespace-nowrap px-1 py-3 text-right font-black sm:w-[20%] sm:px-3">ยอดขาย</th>
+                      <th className="w-[20%] whitespace-nowrap px-1 py-3 text-right font-black sm:px-3">ต้นทุน</th>
+                      <th className="w-[20%] whitespace-nowrap px-1.5 py-3 text-right font-black sm:px-3">กำไร</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100 bg-white">
-                    {dailySummaryRows.map((row, index) => (
-                      <tr key={row.isoDate} className="hover:bg-slate-50/30 transition-colors">
-                        <td
-                          className={`whitespace-nowrap pl-5 pr-1 py-3.5 text-sm font-bold sm:pl-4 sm:pr-4 sm:text-base ${
-                            index === 0 ? "text-slate-900 font-extrabold" : "text-slate-700"
-                          }`}
-                        >
-                          {index === 0
-                            ? `${toThaiShortDate(row.isoDate)} (วันนี้)`
-                            : toThaiShortDate(row.isoDate)}
+                  <tbody className="divide-y divide-[#E1BEE7]/60 bg-white">
+                    {financialReveal.rows.map((row, index) => (
+                      <tr key={row.isoDate} className={index === 0 ? "bg-[#F3E5F5]" : "bg-white"}>
+                        <td className="whitespace-nowrap px-2 py-3 font-black text-slate-800 sm:px-3">
+                          {index === 0 ? `${toThaiShortDate(row.isoDate)} (วันนี้)` : toThaiShortDate(row.isoDate)}
                         </td>
-                        <td className="whitespace-nowrap px-1 py-3.5 text-right text-sm font-black tabular-nums text-emerald-600 sm:px-4 sm:text-base">
-                          {fmtMoney(row.revenue)}
+                        <td className="whitespace-nowrap px-1 py-3 text-right font-black tabular-nums text-emerald-600 sm:px-3">
+                          ฿{fmtMoney(row.revenue)}
                         </td>
-                        <td className="whitespace-nowrap px-1 py-3.5 text-right text-sm font-semibold tabular-nums text-rose-600 sm:px-4 sm:text-base">
-                          {fmtMoney(row.cost)}
+                        <td className="whitespace-nowrap px-1 py-3 text-right font-black tabular-nums text-rose-600 sm:px-3">
+                          ฿{fmtMoney(row.cost)}
                         </td>
-                        <td className="whitespace-nowrap pl-1 pr-5 py-3.5 text-right text-sm font-black tabular-nums text-teal-600 sm:pl-4 sm:pr-4 sm:text-base">
-                          {fmtMoney(row.profit)}
+                        <td className="whitespace-nowrap px-1.5 py-3 text-right font-black tabular-nums text-teal-600 sm:px-3">
+                          ฿{fmtMoney(row.profit)}
                         </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
-            ) : (
-              <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-10 text-center text-sm font-bold text-slate-400">
-                ยังไม่มีข้อมูลผลประกอบการรายวัน
-              </div>
-            )}
+            ) : null}
           </section>
         </div>
-
-
-      </main>
+      ) : null}
 
       {viewingStores || isViewingStoresClosing ? (
         <div className={`fixed inset-0 z-[300] flex items-end justify-center bg-slate-950/60 p-0 backdrop-blur-[6px] sm:items-center sm:p-4 ${

@@ -84,6 +84,8 @@ export type SettingsCustomer = {
   name: string;
   pricingCount: number;
   sortOrder: number;
+  outstandingBalance: number;
+  installmentLimit: number | null;
 };
 
 export type SettingsCustomerAddress = {
@@ -214,6 +216,8 @@ type CustomerRow = {
   province: string | null;
   sort_order: number | string;
   subdistrict: string | null;
+  outstanding_balance: number | string | null;
+  installment_limit: number | string | null;
 };
 
 type VehicleRow = {
@@ -397,7 +401,7 @@ async function fetchSettingsData(organizationId: string): Promise<SettingsData> 
       admin
         .from("customers")
         .select(
-          "id, customer_code, name, address, province, district, subdistrict, postal_code, metadata, default_vehicle_id, default_warehouse_id, sort_order",
+          "id, customer_code, name, address, province, district, subdistrict, postal_code, metadata, default_vehicle_id, default_warehouse_id, sort_order, outstanding_balance, installment_limit",
         )
         .eq("organization_id", organizationId)
         .eq("is_active", true)
@@ -716,6 +720,8 @@ async function fetchSettingsData(organizationId: string): Promise<SettingsData> 
         name: customer.name,
         pricingCount: customerPricingCount.get(customer.id) ?? 0,
         sortOrder: Number(customer.sort_order ?? 0),
+        outstandingBalance: Number(customer.outstanding_balance ?? 0),
+        installmentLimit: customer.installment_limit !== null ? Number(customer.installment_limit) : null,
       };
     }),
     suppliers: suppliers.map((supplier) => ({

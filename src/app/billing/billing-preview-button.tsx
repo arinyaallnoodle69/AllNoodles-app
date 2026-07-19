@@ -14,6 +14,39 @@ import {
 } from "@/components/print/billing-statement-layout";
 
 let cachedFontEmbedCSS: string | null = null;
+const CAPTURE_TIMEOUT_MS = 30000;
+
+function isMobileLikeDevice() {
+  if (typeof window === "undefined") return false;
+  return window.matchMedia("(max-width: 640px), (pointer: coarse)").matches;
+}
+
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number, message: string): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = window.setTimeout(() => reject(new Error(message)), timeoutMs);
+    promise
+      .then((value) => {
+        window.clearTimeout(timer);
+        resolve(value);
+      })
+      .catch((error) => {
+        window.clearTimeout(timer);
+        reject(error);
+      });
+  });
+}
+
+function downloadBlob(blob: Blob, fileName: string) {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = fileName;
+  link.rel = "noopener";
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  window.setTimeout(() => URL.revokeObjectURL(url), 30000);
+}
 
 function dataUrlToBlob(dataUrl: string): Blob {
   const parts = dataUrl.split(",");
@@ -32,6 +65,8 @@ type DeliveryItem = {
   number: string;
   date: string;
   amount: number;
+  isAlreadyBilled?: boolean;
+  billingNumber?: string | null;
 };
 
 type BillingPreviewButtonProps = {
@@ -56,6 +91,7 @@ export function BillingPreviewButton({
   const [isSaving, setIsSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [pageScale, setPageScale] = useState(1);
+  const [savingStatus, setSavingStatus] = useState<string | null>(null);
 
   const previewBodyRef = useRef<HTMLDivElement | null>(null);
 
@@ -69,6 +105,8 @@ export function BillingPreviewButton({
       totalAmount: item.amount,
       notes: null,
     }));
+
+    const existingBillingNumber = deliveries.find((d) => d.billingNumber)?.billingNumber || null;
 
     return buildBillingInvoicePages({
       customer: {
@@ -87,8 +125,8 @@ export function BillingPreviewButton({
       fromDate,
       toDate,
       grandTotal: totalAmount,
-      billingNumber: null,
-      isLocked: false,
+      billingNumber: existingBillingNumber,
+      isLocked: existingBillingNumber !== null,
       rows,
     });
   }, [customerCode, customerName, deliveries, fromDate, toDate, today, totalAmount]);
@@ -146,6 +184,8 @@ export function BillingPreviewButton({
     if (targets.length === 0 || isSaving) return;
 
     setIsSaving(true);
+    setErrorMessage(null);
+    setSavingStatus(null);
     try {
       let fontEmbedCSS: string | undefined;
       if (cachedFontEmbedCSS) {
@@ -167,30 +207,36 @@ export function BillingPreviewButton({
       }
 
       const captured: { dataUrl: string; blob: Blob; name: string }[] = [];
+      const mobileLike = isMobileLikeDevice();
 
       for (let i = 0; i < targets.length; i += 1) {
+        setSavingStatus(`กำลังแปลงหน้า ${i + 1}/${targets.length}`);
         const target = targets[i] as HTMLElement;
         const captureWidth = target.offsetWidth;
         const captureHeight = target.offsetHeight;
 
-        const dataUrl = await htmlToImage.toPng(target, {
-          backgroundColor: "#ffffff",
-          cacheBust: true,
-          fontEmbedCSS,
-          pixelRatio: 2,
-          width: captureWidth,
-          height: captureHeight,
-          style: {
-            width: `${captureWidth}px`,
-            height: `${captureHeight}px`,
-            maxWidth: "none",
-            maxHeight: "none",
-            margin: "0",
-            boxShadow: "none",
-            transform: "none",
-            transformOrigin: "top left",
-          },
-        });
+        const dataUrl = await withTimeout(
+          htmlToImage.toPng(target, {
+            backgroundColor: "#ffffff",
+            cacheBust: true,
+            fontEmbedCSS,
+            pixelRatio: mobileLike ? 1 : 2,
+            width: captureWidth,
+            height: captureHeight,
+            style: {
+              width: `${captureWidth}px`,
+              height: `${captureHeight}px`,
+              maxWidth: "none",
+              maxHeight: "none",
+              margin: "0",
+              boxShadow: "none",
+              transform: "none",
+              transformOrigin: "top left",
+            },
+          }),
+          CAPTURE_TIMEOUT_MS,
+          "Billing image capture timeout",
+        );
 
         const blob = dataUrlToBlob(dataUrl);
         const fileName =
@@ -201,11 +247,9 @@ export function BillingPreviewButton({
         captured.push({ dataUrl, blob, name: fileName });
       }
 
-      const isIOS =
-        /iPad|iPhone|iPod/.test(navigator.userAgent) ||
-        (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+      setSavingStatus("กำลังเปิดเมนูแชร์");
 
-      if (isIOS && navigator.share && navigator.canShare) {
+      if (navigator.share && navigator.canShare) {
         const files = captured.map((item) => new File([item.blob], item.name, { type: "image/png" }));
         if (navigator.canShare({ files })) {
           try {
@@ -224,12 +268,7 @@ export function BillingPreviewButton({
 
       captured.forEach((item, index) => {
         setTimeout(() => {
-          const link = document.createElement("a");
-          link.href = item.dataUrl;
-          link.download = item.name;
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
+          downloadBlob(item.blob, item.name);
         }, index * 600);
       });
     } catch (error) {
@@ -237,6 +276,7 @@ export function BillingPreviewButton({
       setErrorMessage("ไม่สามารถบันทึกรูปภาพได้ กรุณาลองใหม่อีกครั้ง");
     } finally {
       setIsSaving(false);
+      setSavingStatus(null);
     }
   };
 
@@ -346,7 +386,7 @@ export function BillingPreviewButton({
                   className="flex w-full items-center justify-center gap-3 rounded-2xl bg-emerald-600 py-4 text-lg font-black text-white shadow-[0_15px_30px_rgba(16,185,129,0.25)] transition active:scale-95 disabled:opacity-60"
                 >
                   {isSaving ? <Loader2 className="h-6 w-6 animate-spin" /> : <Download className="h-6 w-6" strokeWidth={3} />}
-                  {isSaving ? "กำลังบันทึก..." : pages.length > 1 ? "บันทึกทั้งหมด" : "บันทึกลงเครื่อง"}
+                  {isSaving ? (savingStatus ?? "กำลังบันทึก...") : pages.length > 1 ? "บันทึกทั้งหมด" : "บันทึกลงเครื่อง"}
                 </button>
               </div>
 

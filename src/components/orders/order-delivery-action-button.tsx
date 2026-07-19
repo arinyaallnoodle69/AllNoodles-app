@@ -255,7 +255,7 @@ export function OrderDeliveryActionButton({
                       <div className="mb-2 flex justify-end pr-3 pt-2">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
-                          src="/brand/512x512.png"
+                          src="/api/brand/logo"
                           alt="All Noodles"
                           style={{
                             width: "48px",

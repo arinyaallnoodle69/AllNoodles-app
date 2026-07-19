@@ -20,6 +20,7 @@ export type PackingListProduct = {
   name: string;
   unit: string;
   categoryColor?: string | null;
+  printBackgroundColor?: string | null;
 };
 
 export type PackingListVehicle = {
@@ -112,7 +113,7 @@ function getColumnPalette(columnIndex: number) {
 }
 
 function getCategoryPrintPalette(product: PackingListProduct | undefined, fallback: CategoryPrintPalette) {
-  return buildCategoryPrintPalette(product?.categoryColor, fallback);
+  return buildCategoryPrintPalette(product?.printBackgroundColor ?? product?.categoryColor, fallback);
 }
 
 function normalizeHeaderLabel(value: string, field: "brand" | "category") {

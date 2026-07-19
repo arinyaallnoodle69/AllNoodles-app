@@ -15,6 +15,7 @@ import {
   type ProductSalesRow,
 } from "@/lib/reports/product-sales";
 import { getActiveWarehouses } from "@/lib/warehouses";
+import { formatDisplayUnit } from "@/app/order/customer/unit-label";
 import styles from "./print.module.css";
 import { ProductFilter } from "./product-filter";
 import { PrintButton } from "./print-button";
@@ -114,7 +115,7 @@ function ProductRowScreen({ row, globalRank }: { row: ProductSalesRow; globalRan
       <td className="px-4 py-4 text-center text-base font-bold text-slate-800 tabular-nums whitespace-nowrap">
         {fmt(row.totalQty)}
       </td>
-      <td className="px-4 py-4 text-center text-base font-bold text-slate-500 whitespace-nowrap">{row.unit}</td>
+      <td className="px-4 py-4 text-center text-base font-bold text-slate-500 whitespace-nowrap">{formatDisplayUnit(row.unit)}</td>
       <td className="px-4 py-4 text-center text-base font-bold text-slate-500 tabular-nums whitespace-nowrap">
         {fmtMoney(row.totalCost)}
       </td>
@@ -151,7 +152,7 @@ function ProductRowPrint({ row, globalRank }: { row: ProductSalesRow; globalRank
       <td className="text-center font-bold text-slate-800 tabular-nums whitespace-nowrap border-b border-slate-100">
         {fmt(row.totalQty)}
       </td>
-      <td className="text-center font-bold text-slate-500 whitespace-nowrap border-b border-slate-100">{row.unit}</td>
+      <td className="text-center font-bold text-slate-500 whitespace-nowrap border-b border-slate-100">{formatDisplayUnit(row.unit)}</td>
       <td className="text-center font-bold text-slate-500 tabular-nums whitespace-nowrap border-b border-slate-100">
         {fmtMoney(row.totalCost)}
       </td>
@@ -240,7 +241,7 @@ function ProductCard({ row, globalRank }: { row: ProductSalesRow; globalRank: nu
         <InfoBlockReport
           label="จำนวนที่ขาย"
           icon={<ShoppingCart className="h-4 w-4" strokeWidth={2.2} />}
-          value={`${fmt(row.totalQty)} ${row.unit}`}
+          value={`${fmt(row.totalQty)} ${formatDisplayUnit(row.unit)}`}
         />
         <div className="min-w-0 border-l border-slate-300 pl-4">
           <p className="text-[11px] font-black uppercase tracking-[0.12em] text-slate-950">ยอดขาย</p>
@@ -553,7 +554,7 @@ async function ProductSalesReportContent({ searchParams }: PageProps) {
                   <div className={styles.printHeaderTop}>
                     <div className={styles.printBrand}>
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src="/brand/512x512.png" alt="All Noodles" width="64" height="64" className={styles.printLogo} />
+                      <img src="/api/brand/logo" alt="All Noodles" width="64" height="64" className={styles.printLogo} />
                       <div><p className={styles.printCompanyName}>All Noodles</p><p className={styles.printSubtitle}>สรุปยอดขาย ต้นทุน กำไร และอัตรากำไรของสินค้า</p></div>
                     </div>
                     <div className={styles.printMeta}><p>วันที่พิมพ์: {printedAt.datePart}</p><p>เวลาพิมพ์: {printedAt.timePart} น.</p><p>หน้า: {pageIdx + 1} / {pages.length}</p></div>

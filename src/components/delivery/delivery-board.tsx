@@ -9,6 +9,7 @@ import type { BillingRecordInfo, DeliveryDaySummary, DeliveryEditableItem, Deliv
 import { PrintDailyDeliveryButton } from "@/components/orders/print-daily-delivery-button";
 import { PrintPackingListButton } from "@/components/orders/print-packing-list-button";
 import { ThaiDatePicker } from "@/components/ui/thai-date-picker";
+import { formatDisplayUnit } from "@/app/order/customer/unit-label";
 import { MobileSearchDrawer } from "@/components/mobile-search/mobile-search-drawer";
 
 const ReadOnlyCtx = createContext(false);
@@ -593,7 +594,7 @@ function OrderDetailModal({
                         </p>
                         <p className="font-mono text-xs text-slate-400">{di.productSku}</p>
                         <p className="mt-0.5 text-xs text-slate-500">
-                          {fmtMoneyBaht(di.unitPrice)} / {di.saleUnitLabel}
+                          {fmtMoneyBaht(di.unitPrice)} / {formatDisplayUnit(di.saleUnitLabel)}
                         </p>
                       </div>
                       <div className="shrink-0 text-right">
@@ -740,7 +741,7 @@ function DeliveryCustomerCard({
             </div>
             <div className="mt-1.5 flex items-center justify-between text-xs">
               <span className="text-slate-400">
-                {fmtQty(line.orderedQuantity)} {line.saleUnitLabel} · {fmtMoney(line.unitPrice)} บาท
+                {fmtQty(line.orderedQuantity)} {formatDisplayUnit(line.saleUnitLabel)} · {fmtMoney(line.unitPrice)} บาท
               </span>
               <span className="font-bold text-slate-900">{fmtMoneyBaht(line.deliveredLineTotal)}</span>
             </div>
@@ -882,7 +883,7 @@ function DeliveryCustomerSection({
           <td className="border-r border-slate-100 px-3 py-2 text-left font-semibold text-slate-800">
             {line.productName}
           </td>
-          <td className="border-r border-slate-100 px-3 py-2 text-center text-slate-600">{line.saleUnitLabel}</td>
+          <td className="border-r border-slate-100 px-3 py-2 text-center text-slate-600">{formatDisplayUnit(line.saleUnitLabel)}</td>
           <td className="border-r border-slate-100 px-3 py-2 text-center tabular-nums font-semibold text-slate-600">
             {fmtQty(line.orderedQuantity)}
           </td>

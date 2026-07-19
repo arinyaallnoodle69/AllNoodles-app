@@ -6,6 +6,7 @@ import { MobileSearchDrawer } from "@/components/mobile-search/mobile-search-dra
 import { IncomingOrdersMobileList } from "@/components/orders/incoming-orders-mobile-list";
 import { IncomingOrderDateFilter } from "@/components/orders/incoming-order-date-filter";
 import { OrderCustomerFilter } from "@/components/orders/order-customer-filter";
+import { IncomingOrdersSearchForm } from "@/components/orders/incoming-orders-search-form";
 import { requireAnyRole } from "@/lib/auth/authorization";
 import { normalizeOrderDate, getTodayInBangkok } from "@/lib/orders/date";
 import { getCustomerOrderCountsByDate, getIncomingOrders, getOrderDetailById } from "@/lib/orders/detail";
@@ -531,7 +532,7 @@ export default async function IncomingOrdersPage({ searchParams }: IncomingOrder
     >
       <div className="space-y-6">
         <div className="sticky top-0 z-40 -mx-3 hidden border-b border-[#EA80FC]/35 bg-white/95 px-4 py-3 shadow-[0_14px_34px_rgba(142, 36, 170,0.08)] backdrop-blur lg:block">
-          <div className="flex flex-col gap-3">
+          <IncomingOrdersSearchForm className="flex flex-col gap-3">
             <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
               <div className="min-w-0">
                 <div className="flex items-center gap-3">
@@ -543,20 +544,22 @@ export default async function IncomingOrdersPage({ searchParams }: IncomingOrder
                 </p>
               </div>
 
+              {/* Search Box on the same line as title */}
+              <div className="w-full max-w-md">
+                <label className="relative block">
+                  <Search className="pointer-events-none absolute left-4 top-1/2 h-4.5 w-4.5 -translate-y-1/2 text-[#4A148C]" strokeWidth={2} />
+                  <input
+                    type="search"
+                    name="q"
+                    defaultValue={searchTerm}
+                    placeholder="ค้นหาชื่อร้าน หรือเลขออเดอร์"
+                    className="h-12 w-full rounded-xl border border-[#EA80FC]/35 bg-white pl-11 pr-4 text-sm font-semibold text-[#4A148C] shadow-sm outline-none transition placeholder:text-[#4A148C]/70 focus:border-[#EA80FC] focus:ring-2 focus:ring-[#EA80FC]/20"
+                  />
+                </label>
+              </div>
             </div>
 
-            <form action="/orders/incoming" method="get" className="grid grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-[minmax(14rem,1fr)_14rem_12rem_10rem_10rem_auto]">
-              <label className="relative block">
-                <Search className="pointer-events-none absolute left-4 top-1/2 h-4.5 w-4.5 -translate-y-1/2 text-[#4A148C]" strokeWidth={2} />
-                <input
-                  type="search"
-                  name="q"
-                  defaultValue={searchTerm}
-                  placeholder="ค้นหาชื่อร้าน หรือเลขออเดอร์"
-                  className="h-12 w-full rounded-xl border border-[#EA80FC]/35 bg-white pl-11 pr-4 text-sm font-semibold text-[#4A148C] shadow-sm outline-none transition placeholder:text-[#4A148C]/70 focus:border-[#EA80FC] focus:ring-2 focus:ring-[#EA80FC]/20"
-                />
-              </label>
-
+            <div className="grid grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-[minmax(12rem,1fr)_12rem_12.5rem_12.5rem_auto]">
               <OrderCustomerFilter
                 options={customerOptions}
                 selectedIds={selectedCustomerIds}
@@ -598,8 +601,8 @@ export default async function IncomingOrdersPage({ searchParams }: IncomingOrder
               >
                 ค้นหา
               </button>
-            </form>
-          </div>
+            </div>
+          </IncomingOrdersSearchForm>
         </div>
 
         <div className="fixed bottom-8 right-8 z-40 hidden lg:block [&_.action-touch-safe]:border [&_.action-touch-safe]:border-[#EA80FC]/85 [&_.action-touch-safe]:bg-[#4A148C] [&_.action-touch-safe]:shadow-[0_18px_44px_rgba(142, 36, 170,0.34)] [&_.action-touch-safe]:hover:bg-[#4A148C]">
@@ -616,7 +619,7 @@ export default async function IncomingOrdersPage({ searchParams }: IncomingOrder
         </div>
 
         <MobileSearchDrawer title="ค้นหาออเดอร์">
-          <form action="/orders/incoming" method="get" className="flex flex-col gap-4 pb-24">
+          <IncomingOrdersSearchForm className="flex flex-col gap-4 pb-24">
             <label htmlFor="m-incoming-date" className="text-sm font-semibold text-[#4A148C]">
               วันที่เริ่มต้น
             </label>
@@ -678,7 +681,7 @@ export default async function IncomingOrdersPage({ searchParams }: IncomingOrder
             >
               ค้นหา
             </button>
-          </form>
+          </IncomingOrdersSearchForm>
         </MobileSearchDrawer>
 
         <PendingLineOrdersSection

@@ -260,7 +260,7 @@ function getProductShareMetadata(idWithOptionalUnit: string | undefined, product
       title: "สั่งสินค้า",
       description: "ระบบสั่งสินค้าสำหรับลูกค้า All Noodles",
       url: `${siteUrl}/order`,
-      image: `${siteUrl}/brand/1200x630.png`,
+      image: `${siteUrl}/api/brand/logo`,
     };
   }
 
@@ -277,7 +277,7 @@ function getProductShareMetadata(idWithOptionalUnit: string | undefined, product
     url: `${siteUrl}/order?product=${encodeURIComponent(selectedProduct.id)}`,
     image:
       selectedProduct.product_images[0]?.public_url ||
-      `${siteUrl}/brand/1200x630.png`,
+      `${siteUrl}/api/brand/logo`,
   };
 }
 

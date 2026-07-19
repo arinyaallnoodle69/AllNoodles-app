@@ -1,6 +1,7 @@
 import { PRINT_ORGANIZATION_NAME } from "@/components/print/print-shared";
 import { sortDeliveryPrintDataByCustomerOrder } from "@/lib/delivery/print-ordering";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { formatDisplayUnit } from "@/app/order/customer/unit-label";
 
 export type DeliveryNotePrintData = {
   deliveryNumber: string;
@@ -10,6 +11,10 @@ export type DeliveryNotePrintData = {
   warehouseName: string | null;
   totalAmount: number;
   notes: string | null;
+  previousOutstanding: number;
+  installmentPaid: number;
+  remainingOutstanding: number;
+  isInstallmentPlan: boolean;
   organization: {
     name: string;
     logoUrl: string | null;
@@ -161,6 +166,7 @@ export async function getDeliveryNotePrintData(
   const supabase = getSupabaseAdmin();
   const headerSelect = `
       id, delivery_number, delivery_date, total_amount, notes, created_at, vehicle_id, vehicles(id, name),
+      previous_outstanding, installment_paid, remaining_outstanding, is_installment_plan,
       customers!inner(name, customer_code, address, default_vehicle_id, vehicles(id, name)),
       organizations!inner(name, metadata),
       orders(order_number, warehouse_id, assigned_vehicle_id, assigned_vehicle:assigned_vehicle_id(id, name), warehouses:warehouse_id(name))
@@ -199,6 +205,10 @@ export async function getDeliveryNotePrintData(
     delivery_number: string;
     id: string;
     notes: string | null;
+    previous_outstanding: number | string | null;
+    installment_paid: number | string | null;
+    remaining_outstanding: number | string | null;
+    is_installment_plan: boolean | null;
     orders: {
       assigned_vehicle?: { id: string; name: string } | { id: string; name: string }[] | null;
       assigned_vehicle_id?: string | null;
@@ -267,6 +277,10 @@ export async function getDeliveryNotePrintData(
     warehouseName: relatedOrder?.warehouses?.name ?? null,
     totalAmount: toNum(header.total_amount),
     notes: header.notes ?? null,
+    previousOutstanding: toNum(header.previous_outstanding),
+    installmentPaid: toNum(header.installment_paid),
+    remainingOutstanding: toNum(header.remaining_outstanding),
+    isInstallmentPlan: !!header.is_installment_plan,
     organization: {
       name: PRINT_ORGANIZATION_NAME,
       logoUrl,
@@ -294,7 +308,7 @@ export async function getDeliveryNotePrintData(
         productSku: item.products.sku,
         productName: item.products.name,
         quantityDelivered: toNum(item.quantity_delivered),
-        saleUnitLabel: item.products.unit,
+        saleUnitLabel: formatDisplayUnit(item.sale_unit_label || item.products.unit),
         unitPrice: toNum(item.unit_price),
         lineTotal: toNum(item.line_total),
         display_order: item.products.display_order,

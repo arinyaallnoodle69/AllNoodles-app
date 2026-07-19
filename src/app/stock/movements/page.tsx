@@ -2,7 +2,7 @@ import { StockMobileReceiveButton } from "@/components/settings/stock-list";
 import { StockMovementTable } from "@/components/settings/stock-movement-table";
 import { StockReceiveForm } from "@/components/settings/stock-receive-form";
 
-import { requireAppRole } from "@/lib/auth/authorization";
+import { requireAnyRole } from "@/lib/auth/authorization";
 import { getStockDashboardData } from "@/lib/stock/admin";
 import { getActiveWarehouses } from "@/lib/warehouses";
 
@@ -19,7 +19,7 @@ type StockMovementsPageProps = {
 export default async function StockMovementsPage({
   searchParams,
 }: StockMovementsPageProps) {
-  const session = await requireAppRole("admin");
+  const session = await requireAnyRole(["admin", "member"]);
   const [data, warehouses] = await Promise.all([
     getStockDashboardData(session.organizationId, 50),
     getActiveWarehouses(session.organizationId),

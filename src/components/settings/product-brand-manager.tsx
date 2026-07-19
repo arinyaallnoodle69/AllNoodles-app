@@ -1,17 +1,22 @@
 "use client";
 
-import { useState, useTransition, useMemo } from "react";
+import { useEffect, useRef, useState, useTransition, useMemo } from "react";
 import {
   DndContext,
   closestCenter,
-  PointerSensor,
+  MouseSensor,
+  TouchSensor,
+  KeyboardSensor,
   useSensor,
   useSensors,
+  DragOverlay,
+  DragStartEvent,
   DragEndEvent,
 } from "@dnd-kit/core";
 import {
   arrayMove,
   SortableContext,
+  sortableKeyboardCoordinates,
   useSortable,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
@@ -94,61 +99,59 @@ function SortableBrandRow({ brand, index, onEdit, onDelete }: BrandRowProps) {
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    opacity: isDragging ? 0.4 : 1,
-    zIndex: isDragging ? 50 : 1,
   };
 
   return (
     <div
       ref={setNodeRef}
       style={style}
-      className={`flex flex-col sm:flex-row sm:items-center sm:justify-between bg-white px-4 py-3.5 border-b border-slate-100 gap-3 ${
-        isDragging ? "shadow-md bg-slate-50" : ""
-      }`}
+      className={isDragging ? "relative z-0 opacity-0" : "relative"}
     >
-      <div className="flex items-center gap-3 min-w-0 sm:flex-1 mr-4">
-        <button
-          type="button"
-          ref={setActivatorNodeRef}
-          className="cursor-grab touch-none p-1 text-slate-300 transition-colors hover:text-[#EA80FC] active:cursor-grabbing"
-          aria-label="ลากเพื่อจัดลำดับ"
-          {...attributes}
-          {...listeners}
-        >
-          <GripVertical className="h-5 w-5" strokeWidth={2.3} />
-        </button>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between bg-white px-4 py-3.5 border-b border-slate-100 gap-3 select-none [-webkit-touch-callout:none] [-webkit-user-select:none] [user-select:none]">
+        <div className="flex items-center gap-3 min-w-0 sm:flex-1 mr-4">
+          <button
+            type="button"
+            ref={setActivatorNodeRef}
+            className="cursor-grab touch-none p-1 text-slate-300 transition-colors hover:text-[#EA80FC] active:cursor-grabbing"
+            aria-label="ลากเพื่อจัดลำดับ"
+            {...attributes}
+            {...listeners}
+          >
+            <GripVertical className="h-5 w-5" strokeWidth={2.3} />
+          </button>
 
-        <div className="w-8 shrink-0 text-center text-sm font-black text-[#4A148C] tabular-nums">
-          {index + 1}
+          <div className="w-8 shrink-0 text-center text-sm font-black text-[#4A148C] tabular-nums">
+            {index + 1}
+          </div>
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#4A148C]/10 text-[#4A148C]">
+            <Tag className="h-5 w-5" strokeWidth={2.2} />
+          </div>
+          <div className="min-w-0 sm:flex-1 overflow-x-auto no-scrollbar">
+            <p className="text-base font-bold text-slate-950 whitespace-nowrap">{brand.name}</p>
+            <p className="text-xs font-semibold text-slate-500 whitespace-nowrap">
+              ใช้งานในสินค้า {brand.productCount} รายการ
+            </p>
+          </div>
         </div>
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#4A148C]/10 text-[#4A148C]">
-          <Tag className="h-5 w-5" strokeWidth={2.2} />
-        </div>
-        <div className="min-w-0 sm:flex-1 overflow-x-auto no-scrollbar">
-          <p className="text-base font-bold text-slate-950 whitespace-nowrap">{brand.name}</p>
-          <p className="text-xs font-semibold text-slate-500 whitespace-nowrap">
-            ใช้งานในสินค้า {brand.productCount} รายการ
-          </p>
-        </div>
-      </div>
 
-      <div className="flex items-center justify-end gap-2 shrink-0 self-end sm:self-auto">
-        <button
-          type="button"
-          onClick={() => onEdit(brand)}
-          className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-[#E1BEE7] bg-white text-[#4A148C] transition hover:border-[#EA80FC] hover:bg-[#F3E5F5] active:scale-95"
-          aria-label={`แก้ไข ${brand.name}`}
-        >
-          <PencilLine className="h-4 w-4" strokeWidth={2.2} />
-        </button>
-        <button
-          type="button"
-          onClick={() => onDelete(brand.id, brand.name)}
-          className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-red-200 bg-white text-red-600 transition hover:border-red-300 hover:bg-red-50 active:scale-95"
-          aria-label={`ลบ ${brand.name}`}
-        >
-          <Trash2 className="h-4 w-4" strokeWidth={2.2} />
-        </button>
+        <div className="flex items-center justify-end gap-2 shrink-0 self-end sm:self-auto">
+          <button
+            type="button"
+            onClick={() => onEdit(brand)}
+            className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-[#E1BEE7] bg-white text-[#4A148C] transition hover:border-[#EA80FC] hover:bg-[#F3E5F5] active:scale-95"
+            aria-label={`แก้ไข ${brand.name}`}
+          >
+            <PencilLine className="h-4 w-4" strokeWidth={2.2} />
+          </button>
+          <button
+            type="button"
+            onClick={() => onDelete(brand.id, brand.name)}
+            className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-red-200 bg-white text-red-600 transition hover:border-red-300 hover:bg-red-50 active:scale-95"
+            aria-label={`ลบ ${brand.name}`}
+          >
+            <Trash2 className="h-4 w-4" strokeWidth={2.2} />
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -162,15 +165,124 @@ export function ProductBrandManager({ brands }: ProductBrandManagerProps) {
   const [brandNameInput, setBrandNameInput] = useState("");
   const [isPending, startTransition] = useTransition();
   const [isSaving, setIsSaving] = useState(false);
+
+  const [activeBrandId, setActiveBrandId] = useState<string | null>(null);
+  const dragPointerYRef = useRef<number | null>(null);
+  const dragPointerXRef = useRef<number | null>(null);
+  const dragScrollFrameRef = useRef<number | null>(null);
   const router = useRouter();
 
   const sensors = useSensors(
-    useSensor(PointerSensor, {
+    useSensor(MouseSensor, {
       activationConstraint: {
         distance: 8,
       },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: {
+        delay: 250,
+        tolerance: 5,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
     })
   );
+
+  const activeBrand = activeBrandId
+    ? localBrands.find((brand) => brand.id === activeBrandId) ?? null
+    : null;
+
+  // Custom smooth auto-scroller for mobile touch drag
+  useEffect(() => {
+    if (!activeBrandId) return;
+
+    const html = document.documentElement;
+    const body = document.body;
+    const previousHtmlOverscrollY = html.style.overscrollBehaviorY;
+    const previousBodyOverscrollY = body.style.overscrollBehaviorY;
+    const previousScrollBehavior = html.style.scrollBehavior;
+
+    html.style.overscrollBehaviorY = "contain";
+    body.style.overscrollBehaviorY = "contain";
+    html.style.scrollBehavior = "auto";
+    dragPointerYRef.current = null;
+    dragPointerXRef.current = null;
+
+    const updatePointerY = (event: TouchEvent | PointerEvent) => {
+      if ("touches" in event) {
+        dragPointerXRef.current = event.touches[0]?.clientX ?? null;
+        dragPointerYRef.current = event.touches[0]?.clientY ?? null;
+        return;
+      }
+      dragPointerXRef.current = event.clientX;
+      dragPointerYRef.current = event.clientY;
+    };
+
+    const getScrollableTarget = (x: number, y: number) => {
+      let element = document.elementFromPoint(x, y);
+      while (element && element !== document.body && element !== document.documentElement) {
+        const style = window.getComputedStyle(element);
+        const canScrollY = /(auto|scroll)/.test(style.overflowY);
+        if (canScrollY && element.scrollHeight > element.clientHeight) {
+          return element as HTMLElement;
+        }
+        element = element.parentElement;
+      }
+
+      return (document.scrollingElement || document.documentElement || document.body) as HTMLElement;
+    };
+
+    const autoScroll = () => {
+      const pointerY = dragPointerYRef.current;
+      const pointerX = dragPointerXRef.current ?? Math.round(window.innerWidth / 2);
+      if (pointerY !== null) {
+        const bottomNavOffset = 126;
+        const edgeSize = 300;
+        const baseSpeed = 5;
+        const maxSpeed = 22;
+        const effectiveBottom = Math.max(260, window.innerHeight - bottomNavOffset);
+        let delta = 0;
+
+        if (pointerY > effectiveBottom - edgeSize) {
+          const ratio = (pointerY - (effectiveBottom - edgeSize)) / edgeSize;
+          delta = Math.min(100, Math.round(baseSpeed + ratio * maxSpeed));
+        } else if (pointerY < edgeSize) {
+          const ratio = (edgeSize - pointerY) / edgeSize;
+          delta = -Math.min(100, Math.round(baseSpeed + ratio * maxSpeed));
+        }
+
+        if (delta !== 0) {
+          const scrollTarget = getScrollableTarget(pointerX, Math.min(pointerY, effectiveBottom - 1));
+          if (scrollTarget) {
+            scrollTarget.scrollTop += delta;
+          } else {
+            window.scrollBy({ top: delta, behavior: "auto" });
+          }
+        }
+      }
+
+      dragScrollFrameRef.current = window.requestAnimationFrame(autoScroll);
+    };
+
+    document.addEventListener("touchmove", updatePointerY, { capture: true, passive: true });
+    document.addEventListener("pointermove", updatePointerY, { capture: true, passive: true });
+    dragScrollFrameRef.current = window.requestAnimationFrame(autoScroll);
+
+    return () => {
+      html.style.overscrollBehaviorY = previousHtmlOverscrollY;
+      body.style.overscrollBehaviorY = previousBodyOverscrollY;
+      html.style.scrollBehavior = previousScrollBehavior;
+      dragPointerYRef.current = null;
+      dragPointerXRef.current = null;
+      if (dragScrollFrameRef.current !== null) {
+        window.cancelAnimationFrame(dragScrollFrameRef.current);
+        dragScrollFrameRef.current = null;
+      }
+      document.removeEventListener("touchmove", updatePointerY, { capture: true });
+      document.removeEventListener("pointermove", updatePointerY, { capture: true });
+    };
+  }, [activeBrandId]);
 
   // Synchronize initial prop changes
   const [prevBrands, setPrevBrands] = useState(brands);
@@ -188,8 +300,20 @@ export function ProductBrandManager({ brands }: ProductBrandManagerProps) {
 
   const canReorder = !q && filteredBrands.length > 1;
 
+  function handleDragStart(event: DragStartEvent) {
+    setActiveBrandId(String(event.active.id));
+    if (typeof navigator !== "undefined" && "vibrate" in navigator) {
+      navigator.vibrate?.(12);
+    }
+  }
+
+  function handleDragCancel() {
+    setActiveBrandId(null);
+  }
+
   async function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
+    setActiveBrandId(null);
     if (!over || active.id === over.id || !canReorder) return;
 
     const oldIndex = localBrands.findIndex((brand) => brand.id === active.id);
@@ -337,6 +461,8 @@ export function ProductBrandManager({ brands }: ProductBrandManagerProps) {
                 id="brand-list-dnd"
                 sensors={sensors}
                 collisionDetection={closestCenter}
+                onDragStart={handleDragStart}
+                onDragCancel={handleDragCancel}
                 onDragEnd={handleDragEnd}
                 modifiers={[restrictToVerticalAxis]}
                 autoScroll={false}
@@ -355,6 +481,40 @@ export function ProductBrandManager({ brands }: ProductBrandManagerProps) {
                     />
                   ))}
                 </SortableContext>
+                <DragOverlay
+                  dropAnimation={{ duration: 220, easing: "cubic-bezier(0.2, 0, 0, 1)" }}
+                  zIndex={10000}
+                >
+                  {activeBrand ? (
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between bg-slate-50 px-4 py-3.5 border-b border-slate-100 gap-3 shadow-md opacity-100 rounded-lg select-none [-webkit-touch-callout:none] [-webkit-user-select:none] [user-select:none]">
+                      <div className="flex items-center gap-3 min-w-0 sm:flex-1 mr-4">
+                        <div className="p-1 text-[#4A148C]">
+                          <GripVertical className="h-5 w-5" strokeWidth={2.3} />
+                        </div>
+                        <div className="w-8 shrink-0 text-center text-sm font-black text-[#4A148C] tabular-nums">
+                          {filteredBrands.findIndex((b) => b.id === activeBrand.id) + 1}
+                        </div>
+                        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#4A148C]/10 text-[#4A148C]">
+                          <Tag className="h-5 w-5" strokeWidth={2.2} />
+                        </div>
+                        <div className="min-w-0 sm:flex-1 overflow-x-auto no-scrollbar">
+                          <p className="text-base font-bold text-slate-950 whitespace-nowrap">{activeBrand.name}</p>
+                          <p className="text-xs font-semibold text-slate-500 whitespace-nowrap">
+                            ใช้งานในสินค้า {activeBrand.productCount} รายการ
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-end gap-2 shrink-0 self-end sm:self-auto">
+                        <div className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-[#E1BEE7] bg-white text-[#4A148C]">
+                          <PencilLine className="h-4 w-4" strokeWidth={2.2} />
+                        </div>
+                        <div className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-red-200 bg-white text-red-600">
+                          <Trash2 className="h-4 w-4" strokeWidth={2.2} />
+                        </div>
+                      </div>
+                    </div>
+                  ) : null}
+                </DragOverlay>
               </DndContext>
             ) : (
               filteredBrands.map((brand, index) => (

@@ -30,6 +30,10 @@ type RawDeliveryPrintRow = {
   delivery_date: string;
   total_amount: number | string | null;
   notes: string | null;
+  previous_outstanding: number | string | null;
+  installment_paid: number | string | null;
+  remaining_outstanding: number | string | null;
+  is_installment_plan: boolean | null;
   customer_id: string;
   vehicle_id: string | null;
   vehicles: { id: string; name: string } | { id: string; name: string }[] | null;
@@ -200,6 +204,10 @@ function buildPrintData(rows: RawDeliveryPrintRow[]): DeliveryNotePrintData[] {
       warehouseName: getWarehouseName(base.orders),
       totalAmount,
       notes,
+      previousOutstanding: toNumber(base.previous_outstanding),
+      installmentPaid: toNumber(base.installment_paid),
+      remainingOutstanding: toNumber(base.remaining_outstanding),
+      isInstallmentPlan: !!base.is_installment_plan,
       organization: {
         name: PRINT_ORGANIZATION_NAME,
         logoUrl: (organizationMetadata.logo_url as string) || null,
@@ -220,13 +228,26 @@ function buildPrintData(rows: RawDeliveryPrintRow[]): DeliveryNotePrintData[] {
 
 export default async function DeliveryBatchPrintPage({ searchParams }: Props) {
   const session = await requireAppRole("admin");
+  const supabase = getSupabaseAdmin();
   
-  let logoDataUrl = "";
-  try {
-    const fileBuffer = await readFile(join(process.cwd(), "public", "brand", "512x512.png"));
-    logoDataUrl = `data:image/png;base64,${fileBuffer.toString("base64")}`;
-  } catch (e) {
-    console.error("Failed to load logo on server:", e);
+  // Load the current logo_url from organization metadata
+  const { data: organization } = await supabase
+    .from("organizations")
+    .select("metadata")
+    .eq("id", session.organizationId)
+    .single();
+
+  const organizationMetadata = (organization?.metadata as Record<string, unknown>) || {};
+  const dbLogoUrl = (organizationMetadata.logo_url as string) || null;
+
+  let logoDataUrl = dbLogoUrl || "";
+  if (!logoDataUrl) {
+    try {
+      const fileBuffer = await readFile(join(process.cwd(), "public", "brand", "512x512.png"));
+      logoDataUrl = `data:image/png;base64,${fileBuffer.toString("base64")}`;
+    } catch (e) {
+      console.error("Failed to load logo on server:", e);
+    }
   }
   const params = await searchParams;
   const date = params.date ?? new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Bangkok" });
@@ -248,11 +269,12 @@ export default async function DeliveryBatchPrintPage({ searchParams }: Props) {
       ? formatDateSafe(date)
       : `${formatDateSafe(date, "short")} - ${formatDateSafe(endDate, "short")}`;
 
-  const supabase = getSupabaseAdmin();
+
   let query = supabase
     .from("delivery_notes")
     .select(`
       id, delivery_number, delivery_date, total_amount, notes, customer_id, created_at, vehicle_id, vehicles(id, name),
+      previous_outstanding, installment_paid, remaining_outstanding, is_installment_plan,
       customers!inner(id, name, customer_code, address, default_vehicle_id, vehicles(id, name)),
       organizations!inner(name, metadata),
       orders(order_number, assigned_vehicle_id, assigned_vehicle:assigned_vehicle_id(id, name), warehouses:warehouse_id(name)),

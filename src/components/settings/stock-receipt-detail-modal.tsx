@@ -52,7 +52,7 @@ export function StockReceiptDetailModal({ detail, onClose, onEdit }: Props) {
           <div className="block lg:hidden bg-white text-black shadow-2xl font-[family-name:var(--font-sukhumvit)]">
             <div className="px-6 py-6">
               <div className="flex justify-end mb-2">
-                <Image src="/brand/512x512.png" alt="All Noodles" width={48} height={48} className="object-contain" />
+                <Image src="/api/brand/logo" alt="All Noodles" width={48} height={48} className="object-contain" />
               </div>
 
               <div className="text-center mb-4">
@@ -140,7 +140,7 @@ export function StockReceiptDetailModal({ detail, onClose, onEdit }: Props) {
               <div className="flex gap-4">
                 <div className="relative h-16 w-16 shrink-0">
                   <Image
-                    src="/brand/512x512.png"
+                    src="/api/brand/logo"
                     alt="All Noodles Logo"
                     fill
                     className="object-contain"

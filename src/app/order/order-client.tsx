@@ -2095,12 +2095,12 @@ export default function OrderClient({
       <div className="flex min-h-screen w-full items-center justify-center bg-white px-6">
         <div className="-translate-y-8">
         <div className="flex w-full max-w-md flex-col items-center justify-center text-center">
-        <Image
-          src="/brand/logo1.png"
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/api/brand/logo"
           alt="All Noodles logo"
           width={384}
           height={384}
-          priority
           className="animate-gentle-drop-in mb-2 w-84 max-w-full object-contain sm:w-96"
         />
         <div className="animate-gentle-drop-in-delay-1">
@@ -2566,15 +2566,12 @@ export default function OrderClient({
               <div className="relative h-44 overflow-hidden md:h-60">
 
               {/* Layer 1: blurred brand logo — same for every user */}
-              <Image
-                src="/brand/original.jpg"
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/api/brand/logo"
                 alt=""
-                fill
-                sizes="100vw"
-                className="object-contain object-center scale-90"
-                style={{  }}
+                className="absolute inset-0 h-full w-full object-contain object-center scale-90"
                 aria-hidden
-                priority
               />
               {/* fallback color in case logo hasn't loaded */}
               <div className="absolute inset-0 -z-10 bg-[#4A148C]" />
@@ -2704,12 +2701,12 @@ export default function OrderClient({
             </svg>
           </button>
           <div className="flex items-center gap-2">
-            <Image
-              src="/brand/logo1.png"
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/api/brand/logo"
               alt="Logo"
               width={48}
               height={48}
-              priority
               className="w-12 h-12 object-contain rounded-lg"
             />
             <h1 className="text-xl font-bold text-slate-900 tracking-tight">T&Y Noodle</h1>

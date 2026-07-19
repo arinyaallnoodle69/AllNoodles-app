@@ -1,4 +1,3 @@
-import Image from "next/image";
 import { Suspense } from "react";
 import { OtpPinForm } from "@/components/auth/otp-pin-form";
 import { verifyPin } from "./actions";
@@ -61,12 +60,12 @@ function LoginShell({
         <div className="pointer-events-none absolute -right-20 -top-24 h-44 w-44 rounded-full bg-[#EA80FC]/10 blur-2xl" />
         <div className="relative mx-auto w-full">
           <div className="mb-3 flex justify-center">
-            <Image
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
               src="/brand/logo1.png"
               alt="All Noodles logo"
               width={220}
               height={180}
-              priority
               className="h-auto w-[9rem] drop-shadow-[0_12px_24px_rgba(0,29,63,0.16)] sm:w-[9.75rem]"
             />
           </div>

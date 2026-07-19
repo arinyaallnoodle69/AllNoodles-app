@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import { useEffect, useState } from "react";
 
 function getNextProgress(current: number) {
@@ -45,12 +44,12 @@ export function PageLoader() {
     <div className="flex h-[100dvh] max-h-[100dvh] min-h-[100dvh] touch-none select-none flex-col items-center justify-center overflow-hidden overscroll-none bg-transparent p-6 font-sans">
       <section className="relative flex w-full max-w-[24rem] flex-col items-center px-8 py-10">
         <div className="relative flex h-60 w-60 items-center justify-center">
-          <Image
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
             src="/brand/logo1.png"
             alt="All Noodles"
             width={220}
             height={220}
-            priority
             className="relative z-10 h-[220px] w-[220px] object-contain drop-shadow-[0_18px_44px_rgba(142,36,170,0.22)] animate-pulse"
           />
         </div>

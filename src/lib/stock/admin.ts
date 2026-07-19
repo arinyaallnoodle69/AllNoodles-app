@@ -68,6 +68,7 @@ export type StockDashboardData = {
   reservedTotal: number;
   setupHint: string | null;
   totalOnHandValue: number;
+  brands?: string[];
 };
 
 type ProductRow = {
@@ -337,6 +338,7 @@ export const getStockDashboardData = cache(
       suppliersResult,
       warehouseStocksResult,
       categoriesResult,
+      brandsResult,
     ] = await Promise.all([
       admin.from("products")
         .select(`
@@ -368,6 +370,10 @@ export const getStockDashboardData = cache(
       admin.from("product_categories")
         .select("id, sort_order")
         .eq("organization_id", organizationId),
+      admin.from("product_brands")
+        .select("name, sort_order")
+        .eq("organization_id", organizationId)
+        .order("sort_order", { ascending: true }),
     ]);
 
     const errors = [
@@ -376,6 +382,7 @@ export const getStockDashboardData = cache(
       saleUnitsResult.error,
       movementsResult.error,
       categoriesResult.error,
+      brandsResult.error,
     ].filter(Boolean);
 
     if (errors.length > 0) {
@@ -401,6 +408,7 @@ export const getStockDashboardData = cache(
     const suppliers = (suppliersResult.data ?? []) as SupplierRow[];
     const warehouseStocks = warehouseStocksResult.error ? [] : (warehouseStocksResult.data ?? []);
     const categories = (categoriesResult.data ?? []) as Array<{ id: string; sort_order: number | string }>;
+    const brands = (brandsResult.data ?? []) as Array<{ name: string; sort_order: number | string }>;
 
     const imageMap = new Map<string, string>();
     for (const image of images) {
@@ -472,6 +480,7 @@ export const getStockDashboardData = cache(
 
     const categorySortList = categories.map((c) => ({ id: c.id, sortOrder: Number(c.sort_order) }));
     const normalizedProducts = sortProductsByCategory(mappedProducts, categorySortList);
+    const brandSortList = brands.map((b) => b.name.trim()).filter(Boolean);
 
     return {
       lowStockCount: normalizedProducts.reduce((total, product) => {
@@ -516,6 +525,7 @@ export const getStockDashboardData = cache(
         (total, product) => total + product.onHandQuantity * product.costPrice,
         0,
       ),
+      brands: brandSortList,
     };
   },
 );

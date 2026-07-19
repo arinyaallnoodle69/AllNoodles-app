@@ -1109,7 +1109,7 @@ export async function importProductsFromExcelAction(
     }
 
     const requestedSku = readImportCell(row, headers, ["SKU", "รหัสสินค้า", "รหัส", "sku"]);
-    const baseUnit = readImportCell(row, headers, ["หน่วยหลัก", "หน่วย", "base unit", "unit"]) || "kg";
+    const baseUnit = readImportCell(row, headers, ["หน่วยหลัก", "หน่วย", "base unit", "unit"]) || "กก.";
     const costPrice = parseImportNumber(
       readImportCell(row, headers, ["ราคาทุน", "ต้นทุน", "cost", "cost price"]),
       0,

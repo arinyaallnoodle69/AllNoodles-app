@@ -3,15 +3,17 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import type { LucideIcon } from "lucide-react";
-import { ArrowLeft, ArrowUpRight, ChevronRight, Gauge, KeyRound, Save, Search, X, Clock, Factory, Package2, Store, Truck, Warehouse } from "lucide-react";
+import { ArrowLeft, ArrowUpRight, ChevronRight, Gauge, KeyRound, Save, Search, X, Clock, Factory, Package2, Store, Truck, Warehouse, Image as ImageIcon } from "lucide-react";
 import { LineAppIcon } from "@/components/icons/line-app-icon";
 import { AppSidebarLayout } from "@/components/app-sidebar";
 
-type SettingsSection = "customerData" | "customers" | "loginPin" | "performance" | "products" | "vehicles" | "suppliers" | "orderWindow" | "stock" | "warehouses";
+type SettingsSection = "customerData" | "customers" | "loginPin" | "performance" | "products" | "vehicles" | "suppliers" | "orderWindow" | "stock" | "warehouses" | "logo";
 
 function getSectionIcon(current?: SettingsSection) {
   if (!current) return null;
   switch (current) {
+    case "logo":
+      return ImageIcon;
     case "products":
       return Package2;
     case "customers":

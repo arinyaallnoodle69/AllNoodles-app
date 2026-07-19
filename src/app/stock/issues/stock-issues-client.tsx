@@ -14,6 +14,7 @@ import { ThaiDatePicker } from "@/components/ui/thai-date-picker";
 import { fmtDateTH } from "@/lib/utils/date";
 import type { StockIssueRow } from "@/lib/stock/issues";
 import { loadMoreStockIssuesAction } from "@/app/stock/pagination-actions";
+import { formatDisplayUnit } from "@/app/order/customer/unit-label";
 import { MobileSearchDrawer } from "@/components/mobile-search/mobile-search-drawer";
 import { useMobileSearch } from "@/components/mobile-search/mobile-search-context";
 import { StockTabs } from "@/components/settings/stock-tabs";
@@ -81,7 +82,7 @@ function StockIssueDetailModal({
           <div className="block lg:hidden bg-white text-black shadow-2xl">
             <div className="px-6 py-6">
               <div className="flex justify-end mb-2">
-                <Image src="/brand/512x512.png" alt="All Noodles" width={48} height={48} className="object-contain" />
+                <Image src="/api/brand/logo" alt="All Noodles" width={48} height={48} className="object-contain" />
               </div>
 
               <div className="text-center mb-4">
@@ -111,7 +112,7 @@ function StockIssueDetailModal({
                   <div key={item.id} className="grid grid-cols-[1fr_75px_50px_65px] gap-2 py-3 items-center">
                     <div className="text-[11px] leading-[1.4] line-clamp-2">{item.productName}</div>
                     <div className="text-[12px] text-center font-medium">
-                      {formatQuantity(item.quantity)} {item.unit}
+                      {formatQuantity(item.quantity)} {formatDisplayUnit(item.unit)}
                     </div>
                     <div className="text-[12px] text-center text-slate-500">
                       {formatCurrency(item.quantity > 0 ? item.lineTotal / item.quantity : 0)}
@@ -137,7 +138,7 @@ function StockIssueDetailModal({
             <div className="relative z-10 mb-4 flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
               <div className="flex gap-4">
                 <div className="relative h-16 w-16 shrink-0">
-                  <Image src="/brand/512x512.png" alt="All Noodles Logo" fill className="object-contain" />
+                  <Image src="/api/brand/logo" alt="All Noodles Logo" fill className="object-contain" />
                 </div>
                 <div>
                   <h1 className="text-[20px] font-black leading-tight text-black">All Noodles</h1>
@@ -189,7 +190,7 @@ function StockIssueDetailModal({
                       <td className="px-2 py-2 font-mono text-[11px]">{item.sku}</td>
                       <td className="px-2 py-2 font-bold">{item.productName}</td>
                       <td className="px-2 py-2 text-right">{formatQuantity(item.quantity)}</td>
-                      <td className="px-2 py-2 text-center">{item.unit}</td>
+                      <td className="px-2 py-2 text-center">{formatDisplayUnit(item.unit)}</td>
                       <td className="px-2 py-2 text-right font-black">{formatCurrency(item.lineTotal)}</td>
                     </tr>
                   ))}

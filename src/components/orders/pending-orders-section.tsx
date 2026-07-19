@@ -560,7 +560,7 @@ function StoreDeliveryModal({
       setPreviewPdfFile(pdfFile);
     } catch (error) {
       if (error instanceof Error && error.name === "AbortError") return;
-      console.error("[delivery/share-pdf]", error);
+      console.error("[delivery/share-pdf]", error instanceof Error ? { name: error.name, message: error.message, stack: error.stack } : error);
       window.alert("สร้างหรือแชร์ PDF ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง");
     } finally {
       setIsSharingPdf(false);
@@ -1195,7 +1195,7 @@ function AllStoresDeliveryModal({
       setPreviewSelectedPdfFile(pdfFile);
     } catch (error) {
       if (error instanceof Error && error.name === "AbortError") return;
-      console.error("[delivery/share-pdf]", error);
+      console.error("[delivery/share-pdf]", error instanceof Error ? { name: error.name, message: error.message, stack: error.stack } : error);
       window.alert("สร้างหรือแชร์ PDF ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง");
     } finally {
       setIsSharingSelected(false);

@@ -179,7 +179,7 @@ export function DeliveryPdfPreviewModal({ file, onClose }: DeliveryPdfPreviewMod
   }
 
   return createPortal(
-    <div className="fixed inset-0 z-[500] bg-[#4A148C]/40 p-0 text-[#4A148C] backdrop-blur-sm sm:flex sm:items-center sm:justify-center sm:p-6">
+    <div className="fixed inset-0 z-[900] bg-[#4A148C]/40 p-0 text-[#4A148C] backdrop-blur-sm sm:flex sm:items-center sm:justify-center sm:p-6">
       <div className="grid h-[100dvh] w-full grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden bg-white sm:h-[92vh] sm:max-w-[1280px] sm:border sm:border-[#EA80FC]/40">
         <div className="flex h-1 w-full">
           <div className="h-full flex-1 bg-[#4A148C]" />
@@ -191,7 +191,7 @@ export function DeliveryPdfPreviewModal({ file, onClose }: DeliveryPdfPreviewMod
             <div className="flex min-w-0 items-center gap-3">
               <div className="flex h-12 w-12 shrink-0 items-center justify-center border border-[#EA80FC]/45 bg-white">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src="/brand/512x512.png" alt="All Noodles" className="h-9 w-9 object-contain" />
+                <img src="/api/brand/logo" alt="All Noodles" className="h-9 w-9 object-contain" />
               </div>
               <div className="min-w-0">
                 <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#EA80FC] sm:text-xs">

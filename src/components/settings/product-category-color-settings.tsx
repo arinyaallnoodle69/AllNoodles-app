@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   Check,
@@ -41,6 +42,14 @@ export function ProductCategoryColorSettings({ categories }: ProductCategoryColo
   const [draftColors, setDraftColors] = useState<Record<string, string | null>>(() => getInitialDrafts(categories));
   const [message, setMessage] = useState("");
   const [isPending, startTransition] = useTransition();
+  const router = useRouter();
+
+  useEffect(() => {
+    router.prefetch("/settings/products");
+    router.prefetch("/settings/products?tab=categories");
+    router.prefetch("/settings/products?tab=brands");
+    router.prefetch("/settings/products/product-colors");
+  }, [router]);
 
   const selectedCategory = categories.find((category) => category.id === selectedId) ?? categories[0] ?? null;
   const selectedDraft = selectedCategory ? draftColors[selectedCategory.id] ?? null : null;
@@ -177,6 +186,7 @@ function MobileProductSettingsTabs() {
     { href: "/settings/products?tab=categories", label: "หมวดหมู่", icon: FolderTree, active: false },
     { href: "/settings/products?tab=brands", label: "แบรนด์", icon: Tag, active: false },
     { href: "/settings/products/category-colors", label: "สีหมวดหมู่", icon: Palette, active: true },
+    { href: "/settings/products/product-colors", label: "สีสินค้า", icon: Palette, active: false },
   ];
 
   return (

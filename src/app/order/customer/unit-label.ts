@@ -1,18 +1,24 @@
-const DEFAULT_UNIT_LABEL = "\u0e2b\u0e19\u0e48\u0e27\u0e22";
-const THAI_KILOGRAM_LABEL = "\u0e01\u0e01.";
-const THAI_KILOGRAM_LABEL_WITHOUT_DOT = "\u0e01\u0e01";
+const DEFAULT_UNIT_LABEL = "หน่วย";
+const THAI_KILOGRAM_LABEL = "กก.";
+const THAI_KILOGRAM_LABEL_WITHOUT_DOT = "กก";
 
-export function formatDisplayUnit(unit: string | null | undefined) {
+export function formatDisplayUnit(unit: string | null | undefined): string {
   const normalizedUnit = unit?.trim();
 
   if (!normalizedUnit) return DEFAULT_UNIT_LABEL;
 
+  const lower = normalizedUnit.toLowerCase();
   if (
-    normalizedUnit.toLowerCase() === "kg" ||
+    lower === "kg" ||
+    lower === "kilogram" ||
+    lower === "kilograms" ||
     normalizedUnit === THAI_KILOGRAM_LABEL ||
-    normalizedUnit === THAI_KILOGRAM_LABEL_WITHOUT_DOT
+    normalizedUnit === THAI_KILOGRAM_LABEL_WITHOUT_DOT ||
+    normalizedUnit === "กิโลกรัม" ||
+    normalizedUnit === "ก.ก." ||
+    normalizedUnit === "ก.ก"
   ) {
-    return "Kg";
+    return THAI_KILOGRAM_LABEL;
   }
 
   return normalizedUnit;

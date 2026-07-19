@@ -1806,6 +1806,10 @@ export function CreateOrderModal({
   const [customerOrderCountsByDate, setCustomerOrderCountsByDate] =
     useState<Record<string, number>>(customerOrderCountsToday);
 
+  useEffect(() => {
+    setCustomerOrderCountsByDate(customerOrderCountsToday);
+  }, [customerOrderCountsToday]);
+
 
   const [cart, setCart] = useState<CartItem[]>([]);
   const [customerPickerOpen, setCustomerPickerOpen] = useState(false);
@@ -2261,7 +2265,15 @@ export function CreateOrderModal({
       } else {
         setSuccess(null);
       }
+
+      // Update local ordered counts today state instantly so that the badge "สั่งแล้ววันนี้" appears without reopening
+      setCustomerOrderCountsByDate((prev) => ({
+        ...prev,
+        [customerId]: (prev[customerId] ?? 0) + 1,
+      }));
+
       setShowSuccessOverlay(true);
+      router.refresh();
       
       // Clear overlay after 3 seconds and reset form
       setTimeout(() => {

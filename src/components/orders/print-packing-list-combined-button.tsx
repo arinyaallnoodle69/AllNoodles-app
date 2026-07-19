@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { LayoutList, Layers, FileText, X } from "lucide-react";
 import { createPortal } from "react-dom";
 
@@ -17,6 +17,16 @@ export function PrintPackingListCombinedButton({
 }: PrintPackingListCombinedButtonProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [loadingType, setLoadingType] = useState<"standard" | "transposed" | null>(null);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsOpen(false);
+      setLoadingType(null);
+    }, 0);
+    return () => {
+      clearTimeout(timer);
+    };
+  }, []);
 
   const getUrl = (layout: "standard" | "transposed") => {
     return `/orders/packing-list?date=${date}${endDate ? `&endDate=${endDate}` : ""}${

@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import {
   FileText,
   Loader2,
-  Printer,
   Search,
   ChevronDown,
   X,
@@ -19,8 +18,10 @@ import { useMobileSearch } from "@/components/mobile-search/mobile-search-contex
 import type { BillingCandidate, BillingCustomerOption } from "@/lib/billing/billing-statement";
 import { fmtDateTH } from "@/lib/utils/date";
 import { BillingPreviewButton } from "./billing-preview-button";
+import { BatchBillingPreviewButton } from "./batch-billing-preview-button";
 
 type BillingFormProps = {
+  organizationId: string;
   initialFromDate: string;
   initialToDate: string;
   candidates: BillingCandidate[];
@@ -28,6 +29,7 @@ type BillingFormProps = {
 };
 
 export function BillingForm({
+  organizationId,
   initialFromDate,
   initialToDate,
   candidates,
@@ -37,7 +39,6 @@ export function BillingForm({
   const [isPending, startTransition] = useTransition();
   const [fromDate, setFromDate] = useState(initialFromDate);
   const [toDate, setTodayDate] = useState(initialToDate);
-  const [isPrinting, setIsPrinting] = useState(false);
   const [isCustomerDialogOpen, setIsCustomerDialogOpen] = useState(false);
   const [customerSearch, setCustomerSearch] = useState("");
   const [selectedCustomerIds, setSelectedCustomerIds] = useState<string[]>([]);
@@ -127,57 +128,7 @@ export function BillingForm({
     }, 0);
   }, [visibleCandidates]);
 
-  const handlePrint = () => {
-    if (isPending || isPrinting || visibleCandidates.length === 0) return;
 
-    const selectedByCustomer = visibleCandidates.map(c => ({
-      customerId: c.customerId,
-      deliveryNumbers: c.deliveries.map(d => d.number)
-    })).filter(c => c.deliveryNumbers.length > 0);
-    const deliveryNumbers = selectedByCustomer.flatMap((customer) => customer.deliveryNumbers);
-
-    if (deliveryNumbers.length === 0) {
-      alert("ไม่พบรายการที่เลือกสำหรับพิมพ์");
-      return;
-    }
-
-    setIsPrinting(true);
-    const params = new URLSearchParams({
-      customers: selectedByCustomer.map(c => c.customerId).join(","),
-      deliveries: deliveryNumbers.join(","),
-      from: fromDate,
-      to: toDate,
-      save: "true",
-      autoprint: "1",
-    });
-
-    const printUrl = `/billing/print?${params.toString()}`;
-    const iframe = document.createElement("iframe");
-    iframe.style.cssText = "position:fixed;top:-9999px;left:-9999px;width:1px;height:1px;";
-    iframe.src = printUrl;
-    document.body.appendChild(iframe);
-
-    const done = () => {
-      if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
-      setIsPrinting(false);
-      startTransition(() => {
-        router.refresh();
-      });
-    };
-
-    iframe.onload = () => {
-      const win = iframe.contentWindow;
-      if (!win) return done();
-      win.addEventListener("afterprint", done, { once: true });
-    };
-
-    iframe.onerror = () => {
-      alert("เกิดข้อผิดพลาดในการโหลดหน้าพิมพ์");
-      done();
-    };
-
-    setTimeout(done, 120000);
-  };
 
 
   return (
@@ -651,36 +602,12 @@ export function BillingForm({
             </div>
           </div>
 
-          <button
-            onClick={handlePrint}
-            disabled={isPending || isPrinting || visibleCandidates.length === 0}
-            className="group relative hidden md:flex h-11 sm:h-12 min-w-[120px] sm:w-[240px] items-center justify-center gap-2 bg-[#4A148C] px-4 sm:px-6 text-sm sm:text-base font-black tracking-wide text-white transition-all hover:bg-[#4A148C] active:scale-95 disabled:opacity-50 disabled:grayscale disabled:pointer-events-none rounded-xl sm:rounded-none"
-          >
-            {isPrinting ? (
-              <Loader2 className="h-4 w-4 sm:h-5 sm:w-5 animate-spin" />
-            ) : (
-              <>
-                <Printer className="h-4 w-4 sm:h-5 sm:w-5 transition-transform group-hover:-translate-y-0.5" />
-                <span className="sm:inline">{isPrinting ? "กำลังพิมพ์" : "พิมพ์ใบ"}</span>
-              </>
-            )}
-          </button>
-        </div>
-      )}
-
-      {/* Printing Overlay */}
-      {isPrinting && (
-        <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-300">
-          <div className="flex flex-col items-center bg-white p-16 shadow-2xl animate-in zoom-in-95 duration-300">
-            <div className="relative mb-10">
-              <div className="h-24 w-24 animate-spin rounded-full border-4 border-slate-100 border-t-[#4A148C]"></div>
-              <Printer className="absolute left-1/2 top-1/2 h-10 w-10 -translate-x-1/2 -translate-y-1/2 text-[#4A148C]" />
-            </div>
-            <h3 className="mb-4 text-3xl font-black text-slate-900 text-center">กำลังเตรียมข้อมูลพิมพ์</h3>
-            <p className="max-w-[320px] text-center text-lg font-bold text-slate-500 leading-relaxed">
-              ระบบกำลังบันทึกข้อมูลและเตรียมไฟล์ PDF กรุณารอสักครู่ครับ
-            </p>
-          </div>
+          <BatchBillingPreviewButton
+            organizationId={organizationId}
+            candidates={visibleCandidates}
+            fromDate={fromDate}
+            toDate={toDate}
+          />
         </div>
       )}
     </div>

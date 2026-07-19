@@ -66,9 +66,17 @@ export function ProductSettingsTabs({
   const switchFrameRef = useRef<number | null>(null);
   const router = useRouter();
 
+  // Sync state with prop changes from client-side router navigation
   useEffect(() => {
-    // Prefetch category-colors page so navigation feels instant
+    setActiveTab(initialTab);
+    setContentTab(initialTab);
+  }, [initialTab]);
+
+  useEffect(() => {
+    // Prefetch category-colors and product-colors pages so navigation feels instant
     router.prefetch("/settings/products/category-colors");
+    router.prefetch("/settings/products/product-colors");
+    
     function handlePopState() {
       const nextTab = getTabFromLocation();
       setActiveTab(nextTab);
@@ -135,6 +143,13 @@ export function ProductSettingsTabs({
         <Palette className="h-4 w-4" strokeWidth={2.1} />
         สีหมวดหมู่
       </Link>
+      <Link
+        href="/settings/products/product-colors"
+        className="inline-flex items-center gap-2 rounded-md px-4 py-2.5 text-sm font-semibold text-[#4A148C] transition hover:bg-slate-50 active:scale-[0.98]"
+      >
+        <Palette className="h-4 w-4" strokeWidth={2.1} />
+        สีพื้นหลังสินค้า
+      </Link>
     </div>
   );
 
@@ -170,6 +185,13 @@ export function ProductSettingsTabs({
         >
           <Palette className="h-4 w-4 shrink-0" strokeWidth={2.2} />
           <span className="text-[11px] font-black leading-tight">สีหมวดหมู่</span>
+        </Link>
+        <Link
+          href="/settings/products/product-colors"
+          className="relative flex flex-1 flex-col items-center justify-center gap-0.5 py-2 text-slate-500 transition active:scale-[0.98]"
+        >
+          <Palette className="h-4 w-4 shrink-0" strokeWidth={2.2} />
+          <span className="text-[11px] font-black leading-tight">สีสินค้า</span>
         </Link>
       </div>
 

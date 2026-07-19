@@ -27,12 +27,22 @@ export function PrintVehicleProductSummaryButton({
   }, [router, url]);
 
   useEffect(() => {
-    const handlePageShow = () => {
+    const resetLoading = () => {
       setLoading(false);
     };
-    window.addEventListener("pageshow", handlePageShow);
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") resetLoading();
+    };
+
+    window.addEventListener("pagehide", resetLoading);
+    window.addEventListener("pageshow", resetLoading);
+    window.addEventListener("focus", resetLoading);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
     return () => {
-      window.removeEventListener("pageshow", handlePageShow);
+      window.removeEventListener("pagehide", resetLoading);
+      window.removeEventListener("pageshow", resetLoading);
+      window.removeEventListener("focus", resetLoading);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, []);
 

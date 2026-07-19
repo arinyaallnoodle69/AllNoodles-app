@@ -15,19 +15,19 @@ export default function manifest(): MetadataRoute.Manifest {
     orientation: "portrait",
     icons: [
       {
-        src: "/brand/192x192.png",
+        src: "/api/brand/logo",
         sizes: "192x192",
         type: "image/png",
         purpose: "any",
       },
       {
-        src: "/brand/512x512.png",
+        src: "/api/brand/logo",
         sizes: "512x512",
         type: "image/png",
         purpose: "maskable",
       },
       {
-        src: "/brand/180x182.png",
+        src: "/api/brand/logo",
         sizes: "180x180",
         type: "image/png",
         purpose: "any",

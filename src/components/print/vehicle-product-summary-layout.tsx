@@ -86,7 +86,8 @@ function VehicleSummarySheet({ data, vehicleIndex }: { data: VehicleProductSumma
             <thead>
               <tr>
                 <th className="vehicle-summary-table__index-col">ลำดับ</th>
-                <th className="vehicle-summary-table__product-col">สินค้า / หน่วย</th>
+                <th className="vehicle-summary-table__product-col">สินค้า</th>
+                <th className="vehicle-summary-table__unit-col">หน่วย</th>
                 {data.vehicles.map((vehicle) => {
                   const palette = getVehiclePalette(vehicleIndex);
                   return (
@@ -119,10 +120,10 @@ function VehicleSummarySheet({ data, vehicleIndex }: { data: VehicleProductSumma
                         <span className="vehicle-summary-table__product-name" title={product.name}>
                           {product.name}
                         </span>
-                        <span className="vehicle-summary-table__product-unit">{product.unit}</span>
                       </span>
                     </div>
                   </td>
+                  <td className="vehicle-summary-table__unit-cell">{product.unit}</td>
                   {data.vehicles.map((vehicle, currentVehicleIndex) => {
                     const palette = getVehiclePalette(vehicleIndex);
                     return (
@@ -369,13 +370,35 @@ function VehicleSummaryStyles() {
       }
 
       .vehicle-summary-table__product-col {
-        width: 64mm;
-        min-width: 64mm;
-        padding: 0.35mm 0.8mm;
+        width: 118mm;
+        min-width: 118mm;
+        padding: 0.5mm 0.8mm 0.25mm;
         background: #ffffff;
         text-align: center;
         font-size: 9.8pt;
         font-weight: 800;
+        line-height: 1.22;
+      }
+
+      .vehicle-summary-table__unit-col,
+      .vehicle-summary-table__unit-cell {
+        width: 13mm;
+        min-width: 13mm;
+      }
+
+      .vehicle-summary-table__unit-col {
+        background: #ffffff;
+        font-size: 8.6pt;
+        font-weight: 800;
+        line-height: 1.22;
+      }
+
+      .vehicle-summary-table__unit-cell {
+        background: #ffffff;
+        font-size: 8.4pt;
+        font-weight: 700;
+        line-height: 1.48;
+        color: #0f172a;
       }
 
       .vehicle-summary-table__vehicle-col {
@@ -394,7 +417,7 @@ function VehicleSummaryStyles() {
       }
 
       .vehicle-summary-table__product-cell {
-        padding: 0 0.9mm;
+        padding: 0.35mm 0.9mm 0.1mm;
         text-align: left;
         background: #ffffff;
       }
@@ -437,32 +460,22 @@ function VehicleSummaryStyles() {
         display: flex;
         min-width: 0;
         flex: 1;
-        align-items: baseline;
-        justify-content: center;
+        align-items: center;
+        justify-content: flex-start;
         gap: 0.5mm;
       }
 
       .vehicle-summary-table__product-name {
+        display: block;
         min-width: 0;
         flex: 0 1 auto;
-        max-width: calc(100% - 8mm);
-        overflow: hidden;
-        text-overflow: ellipsis;
+        max-width: none;
+        overflow: visible;
+        text-overflow: clip;
         white-space: nowrap;
         font-size: 10.4pt;
         font-weight: 700;
-        line-height: 1;
-        color: #0f172a;
-      }
-
-      .vehicle-summary-table__product-unit {
-        flex-shrink: 0;
-        padding-left: 0.4mm;
-        margin-left: 0.1mm;
-        border-left: 1px solid #000000;
-        font-size: 8.4pt;
-        font-weight: 700;
-        line-height: 1;
+        line-height: 1.48;
         color: #0f172a;
       }
 

@@ -7,11 +7,13 @@ import {
   AutoScrollActivator,
   closestCenter,
   DndContext,
-  KeyboardSensor,
   MouseSensor,
   TouchSensor,
+  KeyboardSensor,
   useSensor,
   useSensors,
+  DragOverlay,
+  type DragStartEvent,
   type DragEndEvent,
 } from "@dnd-kit/core";
 import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
@@ -81,6 +83,7 @@ function SortableCategoryRow({
     attributes,
     listeners,
     setNodeRef,
+    setActivatorNodeRef,
     transform,
     transition,
     isDragging,
@@ -89,7 +92,7 @@ function SortableCategoryRow({
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    opacity: isDragging ? 0.62 : 1,
+    opacity: isDragging ? 0.4 : 1,
     zIndex: isDragging ? 50 : 1,
   };
 
@@ -107,18 +110,19 @@ function SortableCategoryRow({
         }
       }}
       className={cx(
-        "grid w-full grid-cols-[4rem_minmax(12rem,1fr)_8rem_8rem_7rem] items-center border-t border-[#EA80FC]/15 px-4 py-4 text-left transition hover:bg-[#F3E5F5]/45",
+        "grid w-full grid-cols-[4rem_minmax(12rem,1fr)_8rem_8rem_7rem] items-center border-t border-[#EA80FC]/15 px-4 py-4 text-left transition-colors hover:bg-[#F3E5F5]/45",
         isActive && "bg-[#F3E5F5]/70",
-        isDragging && "relative shadow-[0_18px_42px_rgba(74,20,140,0.18)]",
+        isDragging ? "relative shadow-md bg-slate-50" : "",
       )}
     >
       <span className="flex items-center gap-2 text-sm font-black text-slate-950">
         <span>{index + 1}</span>
         <button
           type="button"
+          ref={setActivatorNodeRef}
           {...attributes}
           {...listeners}
-          className="inline-flex cursor-grab text-slate-400 transition hover:text-[#4A148C] active:cursor-grabbing"
+          className="inline-flex cursor-grab touch-none text-slate-400 transition hover:text-[#4A148C] active:cursor-grabbing"
           aria-label={`ลากเพื่อย้ายลำดับหมวดหมู่ ${category.name}`}
           onClick={(event) => event.stopPropagation()}
         >
@@ -152,6 +156,124 @@ function SortableCategoryRow({
         ) : null}
       </span>
     </div>
+  );
+}
+
+function SortableCategoryMobileRow({
+  category,
+  index,
+  isActive,
+  isPending,
+  onOpenCategoryProductModal,
+  onOpenMobileRenameCategoryModal,
+  onDeleteCategory,
+}: {
+  category: SettingsProductCategory;
+  index: number;
+  isActive: boolean;
+  isPending: boolean;
+  onOpenCategoryProductModal: (categoryId: string) => void;
+  onOpenMobileRenameCategoryModal: (category: SettingsProductCategory) => void;
+  onDeleteCategory: (category: SettingsProductCategory) => void;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    setActivatorNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: category.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  return (
+    <article
+      ref={setNodeRef}
+      style={style}
+      className={cx(
+        "border-y border-[#EA80FC]/25 bg-white px-4 py-4 shadow-[0_12px_26px_rgba(74,20,140,0.06)] transition-colors",
+        isActive && "border-[#EA80FC]/55 bg-[#F3E5F5]/45",
+        isDragging ? "relative z-0 opacity-0" : "",
+      )}
+    >
+      <div className="flex items-center gap-3">
+        {/* Grip Handle */}
+        <button
+          type="button"
+          ref={setActivatorNodeRef}
+          {...attributes}
+          {...listeners}
+          className="cursor-grab touch-none p-1 text-slate-400 transition-colors hover:text-[#EA80FC] active:cursor-grabbing"
+          aria-label={`ลากเพื่อย้ายลำดับหมวดหมู่ ${category.name}`}
+          onClick={(event) => event.stopPropagation()}
+        >
+          <GripVertical className="h-5 w-5" strokeWidth={2.3} />
+        </button>
+
+        <div className="w-8 shrink-0 text-center text-lg font-black text-[#4A148C] tabular-nums">
+          {index + 1}
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex min-w-0 items-start justify-between gap-3">
+            <button
+              type="button"
+              onClick={() => onOpenCategoryProductModal(category.id)}
+              className="min-w-0 text-left"
+            >
+              <span className="block overflow-hidden text-ellipsis whitespace-nowrap py-0.5 text-xl font-black leading-[1.45] text-slate-950">
+                {category.name}
+              </span>
+              <span className="mt-1 flex items-center gap-2 text-sm font-black text-slate-800">
+                <Tag className="h-4 w-4 text-[#4A148C]" strokeWidth={2.4} />
+                {category.productCount} สินค้า
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => onOpenCategoryProductModal(category.id)}
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-[#EA80FC]/35 bg-[#F3E5F5] text-[#4A148C] shadow-[0_10px_22px_rgba(74,20,140,0.12)] transition active:scale-95"
+              aria-label={`แก้ไขสินค้าในหมวด ${category.name}`}
+            >
+              <PencilLine className="h-5 w-5" strokeWidth={2.5} />
+            </button>
+          </div>
+
+          <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2">
+            <button
+              type="button"
+              onClick={() => onOpenCategoryProductModal(category.id)}
+              className="inline-flex items-center gap-2 text-sm font-black text-[#4A148C] underline decoration-2 decoration-[#EA80FC]/55 underline-offset-4"
+            >
+              เลือกสินค้า
+              <PencilLine className="h-4 w-4" strokeWidth={2.4} />
+            </button>
+            <button
+              type="button"
+              onClick={() => onOpenMobileRenameCategoryModal(category)}
+              className="inline-flex items-center gap-2 text-sm font-black text-slate-950 underline decoration-2 decoration-slate-300 underline-offset-4"
+            >
+              แก้ชื่อ
+              <PencilLine className="h-4 w-4 text-[#4A148C]" strokeWidth={2.4} />
+            </button>
+            <button
+              type="button"
+              onClick={() => onDeleteCategory(category)}
+              disabled={isPending}
+              className="inline-flex items-center gap-2 text-sm font-black text-rose-700 underline decoration-2 decoration-rose-200 underline-offset-4 disabled:opacity-50"
+            >
+              ลบ
+              <Trash2 className="h-4 w-4" strokeWidth={2.4} />
+            </button>
+          </div>
+        </div>
+      </div>
+    </article>
   );
 }
 
@@ -203,6 +325,15 @@ export function ProductCategoryManager({
     return () => window.cancelAnimationFrame(frame);
   }, [nameModalMode]);
 
+  const [activeCategoryId, setActiveCategoryId] = useState<string | null>(null);
+  const dragPointerYRef = useRef<number | null>(null);
+  const dragPointerXRef = useRef<number | null>(null);
+  const dragScrollFrameRef = useRef<number | null>(null);
+
+  const activeCategory = activeCategoryId
+    ? localCategories.find((cat) => cat.id === activeCategoryId) ?? null
+    : null;
+
   const sensors = useSensors(
     useSensor(MouseSensor, {
       activationConstraint: {
@@ -219,6 +350,97 @@ export function ProductCategoryManager({
       coordinateGetter: sortableKeyboardCoordinates,
     }),
   );
+
+  // Custom smooth auto-scroller for mobile touch drag
+  useEffect(() => {
+    if (!activeCategoryId) return;
+
+    const html = document.documentElement;
+    const body = document.body;
+    const previousHtmlOverscrollY = html.style.overscrollBehaviorY;
+    const previousBodyOverscrollY = body.style.overscrollBehaviorY;
+    const previousScrollBehavior = html.style.scrollBehavior;
+
+    html.style.overscrollBehaviorY = "contain";
+    body.style.overscrollBehaviorY = "contain";
+    html.style.scrollBehavior = "auto";
+    dragPointerYRef.current = null;
+    dragPointerXRef.current = null;
+
+    const updatePointerY = (event: TouchEvent | PointerEvent) => {
+      if ("touches" in event) {
+        dragPointerXRef.current = event.touches[0]?.clientX ?? null;
+        dragPointerYRef.current = event.touches[0]?.clientY ?? null;
+        return;
+      }
+      dragPointerXRef.current = event.clientX;
+      dragPointerYRef.current = event.clientY;
+    };
+
+    const getScrollableTarget = (x: number, y: number) => {
+      let element = document.elementFromPoint(x, y);
+      while (element && element !== document.body && element !== document.documentElement) {
+        const style = window.getComputedStyle(element);
+        const canScrollY = /(auto|scroll)/.test(style.overflowY);
+        if (canScrollY && element.scrollHeight > element.clientHeight) {
+          return element as HTMLElement;
+        }
+        element = element.parentElement;
+      }
+
+      return (document.scrollingElement || document.documentElement || document.body) as HTMLElement;
+    };
+
+    const autoScroll = () => {
+      const pointerY = dragPointerYRef.current;
+      const pointerX = dragPointerXRef.current ?? Math.round(window.innerWidth / 2);
+      if (pointerY !== null) {
+        const bottomNavOffset = 126;
+        const edgeSize = 300;
+        const baseSpeed = 5;
+        const maxSpeed = 22;
+        const effectiveBottom = Math.max(260, window.innerHeight - bottomNavOffset);
+        let delta = 0;
+
+        if (pointerY > effectiveBottom - edgeSize) {
+          const ratio = (pointerY - (effectiveBottom - edgeSize)) / edgeSize;
+          delta = Math.min(100, Math.round(baseSpeed + ratio * maxSpeed));
+        } else if (pointerY < edgeSize) {
+          const ratio = (edgeSize - pointerY) / edgeSize;
+          delta = -Math.min(100, Math.round(baseSpeed + ratio * maxSpeed));
+        }
+
+        if (delta !== 0) {
+          const scrollTarget = getScrollableTarget(pointerX, Math.min(pointerY, effectiveBottom - 1));
+          if (scrollTarget) {
+            scrollTarget.scrollTop += delta;
+          } else {
+            window.scrollBy({ top: delta, behavior: "auto" });
+          }
+        }
+      }
+
+      dragScrollFrameRef.current = window.requestAnimationFrame(autoScroll);
+    };
+
+    document.addEventListener("touchmove", updatePointerY, { capture: true, passive: true });
+    document.addEventListener("pointermove", updatePointerY, { capture: true, passive: true });
+    dragScrollFrameRef.current = window.requestAnimationFrame(autoScroll);
+
+    return () => {
+      html.style.overscrollBehaviorY = previousHtmlOverscrollY;
+      body.style.overscrollBehaviorY = previousBodyOverscrollY;
+      html.style.scrollBehavior = previousScrollBehavior;
+      dragPointerYRef.current = null;
+      dragPointerXRef.current = null;
+      if (dragScrollFrameRef.current !== null) {
+        window.cancelAnimationFrame(dragScrollFrameRef.current);
+        dragScrollFrameRef.current = null;
+      }
+      document.removeEventListener("touchmove", updatePointerY, { capture: true });
+      document.removeEventListener("pointermove", updatePointerY, { capture: true });
+    };
+  }, [activeCategoryId]);
 
   const activeCategoryCount = localCategories.filter((category) => category.isActive).length;
   const hiddenCategoryCount = Math.max(localCategories.length - activeCategoryCount, 0);
@@ -418,8 +640,20 @@ export function ProductCategoryManager({
     setIsProductModalOpen(true);
   }
 
+  function handleDragStart(event: DragStartEvent) {
+    setActiveCategoryId(String(event.active.id));
+    if (typeof navigator !== "undefined" && "vibrate" in navigator) {
+      navigator.vibrate?.(12);
+    }
+  }
+
+  function handleDragCancel() {
+    setActiveCategoryId(null);
+  }
+
   function handleCategoryDragEnd(event: DragEndEvent) {
     const { active, over } = event;
+    setActiveCategoryId(null);
     if (!over || active.id === over.id || normalizedCategorySearch) return;
 
     let updatedCategories: SettingsProductCategory[] = [];
@@ -676,79 +910,72 @@ export function ProductCategoryManager({
                 ไม่พบหมวดหมู่ที่ค้นหา
               </SettingsEmptyState>
             ) : (
-              filteredCategories.map((category, index) => {
-                const isActive = !isCreating && category.id === selectedCategoryId;
+              <DndContext
+                id="product-category-list-dnd-mobile"
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragStart={handleDragStart}
+                onDragCancel={handleDragCancel}
+                onDragEnd={handleCategoryDragEnd}
+                modifiers={[restrictToVerticalAxis]}
+                autoScroll={false}
+              >
+                <SortableContext
+                  items={filteredCategories.map((category) => category.id)}
+                  strategy={verticalListSortingStrategy}
+                  disabled={Boolean(normalizedCategorySearch)}
+                >
+                  {filteredCategories.map((category, index) => {
+                    const isActive = !isCreating && category.id === selectedCategoryId;
 
-                return (
-                  <article
-                    key={category.id}
-                    className={cx(
-                      "border-y border-[#EA80FC]/25 bg-white px-4 py-4 shadow-[0_12px_26px_rgba(74,20,140,0.06)] transition",
-                      isActive && "border-[#EA80FC]/55 bg-[#F3E5F5]/45",
-                    )}
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 shrink-0 text-center text-lg font-black text-[#4A148C] tabular-nums">
-                        {index + 1}
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex min-w-0 items-start justify-between gap-3">
-                          <button
-                            type="button"
-                            onClick={() => openCategoryProductModal(category.id)}
-                            className="min-w-0 text-left"
-                          >
-                            <span className="block truncate text-xl font-black leading-tight text-slate-950">
-                              {category.name}
-                            </span>
-                            <span className="mt-1 flex items-center gap-2 text-sm font-black text-slate-800">
-                              <Tag className="h-4 w-4 text-[#4A148C]" strokeWidth={2.4} />
-                              {category.productCount} สินค้า
-                            </span>
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={() => openCategoryProductModal(category.id)}
-                            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-[#EA80FC]/35 bg-[#F3E5F5] text-[#4A148C] shadow-[0_10px_22px_rgba(74,20,140,0.12)] transition active:scale-95"
-                            aria-label={`แก้ไขสินค้าในหมวด ${category.name}`}
-                          >
-                            <PencilLine className="h-5 w-5" strokeWidth={2.5} />
-                          </button>
+                    return (
+                      <SortableCategoryMobileRow
+                        key={category.id}
+                        category={category}
+                        index={index}
+                        isActive={isActive}
+                        isPending={isPending}
+                        onOpenCategoryProductModal={openCategoryProductModal}
+                        onOpenMobileRenameCategoryModal={openMobileRenameCategoryModal}
+                        onDeleteCategory={handleDeleteCategory}
+                      />
+                    );
+                  })}
+                </SortableContext>
+                <DragOverlay
+                  dropAnimation={{ duration: 220, easing: "cubic-bezier(0.2, 0, 0, 1)" }}
+                  zIndex={10000}
+                >
+                  {activeCategory ? (
+                    <div className="border-y border-[#EA80FC]/55 bg-slate-50 px-4 py-4 shadow-md opacity-100 rounded-lg select-none [-webkit-touch-callout:none] [-webkit-user-select:none] [user-select:none]">
+                      <div className="flex items-center gap-3">
+                        <div className="p-1 text-[#4A148C]">
+                          <GripVertical className="h-5 w-5" strokeWidth={2.3} />
                         </div>
-
-                        <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2">
-                          <button
-                            type="button"
-                            onClick={() => openCategoryProductModal(category.id)}
-                            className="inline-flex items-center gap-2 text-sm font-black text-[#4A148C] underline decoration-2 decoration-[#EA80FC]/55 underline-offset-4"
-                          >
-                            เลือกสินค้า
-                            <PencilLine className="h-4 w-4" strokeWidth={2.4} />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => openMobileRenameCategoryModal(category)}
-                            className="inline-flex items-center gap-2 text-sm font-black text-slate-950 underline decoration-2 decoration-slate-300 underline-offset-4"
-                          >
-                            แก้ชื่อ
-                            <PencilLine className="h-4 w-4 text-[#4A148C]" strokeWidth={2.4} />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleDeleteCategory(category)}
-                            disabled={isPending}
-                            className="inline-flex items-center gap-2 text-sm font-black text-rose-700 underline decoration-2 decoration-rose-200 underline-offset-4 disabled:opacity-50"
-                          >
-                            ลบ
-                            <Trash2 className="h-4 w-4" strokeWidth={2.4} />
-                          </button>
+                        <div className="w-8 shrink-0 text-center text-lg font-black text-[#4A148C] tabular-nums">
+                          {filteredCategories.findIndex((c) => c.id === activeCategory.id) + 1}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex min-w-0 items-start justify-between gap-3">
+                            <div className="min-w-0 text-left">
+                              <span className="block truncate text-xl font-black leading-tight text-slate-950">
+                                {activeCategory.name}
+                              </span>
+                              <span className="mt-1 flex items-center gap-2 text-sm font-black text-slate-800">
+                                <Tag className="h-4 w-4 text-[#4A148C]" strokeWidth={2.4} />
+                                {activeCategory.productCount} สินค้า
+                              </span>
+                            </div>
+                            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-[#EA80FC]/35 bg-[#F3E5F5] text-[#4A148C]">
+                              <PencilLine className="h-5 w-5" strokeWidth={2.5} />
+                            </div>
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </article>
-                );
-              })
+                  ) : null}
+                </DragOverlay>
+              </DndContext>
             )}
           </div>
         </div>
@@ -856,7 +1083,7 @@ export function ProductCategoryManager({
                     )}
 
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-base font-black text-slate-950">{product.name}</p>
+                      <p className="truncate text-base font-black text-slate-950 py-0.5">{product.name}</p>
                       <div className="mt-1 flex flex-wrap items-center gap-2">
                         <span className="font-mono text-xs font-black text-[#4A148C]">
                           {product.sku}
@@ -1069,7 +1296,7 @@ export function ProductCategoryManager({
                         )}
 
                         <div className="min-w-0 flex-1">
-                          <p className="line-clamp-2 min-h-[2.25rem] text-[14px] font-black leading-tight text-black sm:min-h-0 sm:truncate sm:text-base">
+                          <p className="line-clamp-2 min-h-[2.5rem] text-[14px] font-black leading-normal text-black py-0.5 sm:min-h-0 sm:truncate sm:text-base">
                             {product.name}
                           </p>
                           <div className="mt-1 flex flex-wrap items-center justify-center gap-1.5 sm:justify-start sm:gap-2">

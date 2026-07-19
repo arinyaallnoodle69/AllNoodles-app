@@ -15,6 +15,7 @@ import { StoreFilter } from "../product-sales/store-filter";
 import { PrintButton } from "../product-sales/print-button";
 import styles from "./print.module.css";
 import { MobileStoreCard } from "./mobile-store-card";
+import { formatDisplayUnit } from "@/app/order/customer/unit-label";
 
 export const metadata = {
   title: "รายงานสินค้าและกำไรแยกตามสาขา",
@@ -414,7 +415,7 @@ async function DetailedProfitContent({ searchParams }: PageProps) {
                             <td className="px-4 py-2 font-mono font-medium text-slate-500">{item.productSku}</td>
                             <td className="px-4 py-2 font-semibold text-[#0b1c30]">{item.productName}</td>
                             <td className="px-4 py-2 text-right font-mono font-medium text-[#0b1c30]">{item.quantity.toLocaleString("th-TH")}</td>
-                            <td className="px-4 py-2 text-slate-600">{item.unit}</td>
+                            <td className="px-4 py-2 text-slate-600">{formatDisplayUnit(item.unit)}</td>
                             <td className="px-4 py-2 text-right font-mono text-slate-500">{formatMoney(item.costPrice)}</td>
                             <td className="px-4 py-2 text-right font-mono text-slate-500">{formatMoney(item.costPrice * item.quantity)}</td>
                             <td className="px-4 py-2 text-right font-mono font-medium text-[#0b1c30]">{formatMoney(item.salesAmount)}</td>
@@ -435,7 +436,7 @@ async function DetailedProfitContent({ searchParams }: PageProps) {
                             {store.totalQuantity.toLocaleString("th-TH")}
                           </td>
                           <td className="px-4 py-2.5 bg-white font-bold text-slate-600 text-[14px]">
-                            {Array.from(new Set(store.items.map(item => item.unit).filter(Boolean))).join(", ") || "หน่วย"}
+                            {Array.from(new Set(store.items.map(item => formatDisplayUnit(item.unit)).filter(Boolean))).join(", ") || "หน่วย"}
                           </td>
                           <td className="px-4 py-2.5 bg-white"></td>
                           <td className="px-4 py-2.5 text-right font-mono font-black text-slate-500 bg-white text-[15px]">
@@ -471,7 +472,7 @@ async function DetailedProfitContent({ searchParams }: PageProps) {
                         {report.summary.totalQuantity.toLocaleString("th-TH")}
                       </td>
                       <td className="px-4 py-4 bg-neutral-100 font-bold text-black text-[15px]">
-                        {Array.from(new Set(report.stores.flatMap(s => s.items.map(item => item.unit)).filter(Boolean))).join(", ") || "หน่วย"}
+                        {Array.from(new Set(report.stores.flatMap(s => s.items.map(item => formatDisplayUnit(item.unit))).filter(Boolean))).join(", ") || "หน่วย"}
                       </td>
                       <td className="px-4 py-4 bg-neutral-100"></td>
                       <td className="px-4 py-4 text-right font-mono font-black text-[16px] text-black">
@@ -498,7 +499,7 @@ async function DetailedProfitContent({ searchParams }: PageProps) {
             {currentPageStores.length > 0 ? (
               currentPageStores.map((store) => {
                 const storeUnits = Array.from(
-                  new Set(store.items.map((item) => item.unit).filter(Boolean)),
+                  new Set(store.items.map((item) => formatDisplayUnit(item.unit)).filter(Boolean)),
                 ).join(", ") || "หน่วย";
 
                 return (
@@ -564,7 +565,7 @@ async function DetailedProfitContent({ searchParams }: PageProps) {
                 <div className={styles.printHeader}>
                   <div className="mb-1 flex items-start justify-between gap-3">
                     <div className="flex items-center gap-2">
-                      <Image src="/brand/512x512.png" alt="T&Y Noodle" width={40} height={40} className="h-10 w-10 object-contain" />
+                      <Image src="/api/brand/logo" alt="T&Y Noodle" width={40} height={40} className="h-10 w-10 object-contain" />
                       <div>
                         <p className="text-sm font-black leading-tight text-[#4A148C]">T&Y Noodle</p>
                         <p className="text-[10px] font-semibold text-slate-500">ระบบรายงานผลกำไรจากการขายสินค้า</p>
@@ -601,7 +602,7 @@ async function DetailedProfitContent({ searchParams }: PageProps) {
                   <div className={styles.printHeader}>
                     <div className="mb-1 flex items-start justify-between gap-3">
                       <div className="flex items-center gap-2">
-                        <Image src="/brand/512x512.png" alt="T&Y Noodle" width={40} height={40} className="h-10 w-10 object-contain" />
+                        <Image src="/api/brand/logo" alt="T&Y Noodle" width={40} height={40} className="h-10 w-10 object-contain" />
                         <div>
                           <p className="text-sm font-black leading-tight text-[#4A148C]">T&Y Noodle</p>
                           <p className="text-[10px] font-semibold text-slate-500">ระบบรายงานผลกำไรจากการขายสินค้า</p>
@@ -656,7 +657,7 @@ async function DetailedProfitContent({ searchParams }: PageProps) {
                               <td className="px-2 py-1 font-mono text-slate-500">{item.productSku}</td>
                               <td className="px-2 py-1 font-semibold text-[#0b1c30]">{item.productName}</td>
                               <td className="px-2 py-1 text-right font-mono text-[#0b1c30]">{item.quantity.toLocaleString("th-TH")}</td>
-                              <td className="px-2 py-1 text-slate-600">{item.unit}</td>
+                              <td className="px-2 py-1 text-slate-600">{formatDisplayUnit(item.unit)}</td>
                               <td className="px-2 py-1 text-right font-mono text-slate-500">{formatMoney(item.costPrice)}</td>
                               <td className="px-2 py-1 text-right font-mono text-slate-500">{formatMoney(item.costPrice * item.quantity)}</td>
                               <td className="px-2 py-1 text-right font-mono text-[#0b1c30]">{formatMoney(item.salesAmount)}</td>
@@ -677,7 +678,7 @@ async function DetailedProfitContent({ searchParams }: PageProps) {
                                 {group.store.totalQuantity.toLocaleString("th-TH")}
                               </td>
                               <td className="px-2 py-1.5 bg-neutral-50 font-bold text-black text-[10px]">
-                                {Array.from(new Set(group.store.items.map(item => item.unit).filter(Boolean))).join(", ") || "หน่วย"}
+                                {Array.from(new Set(group.store.items.map(item => formatDisplayUnit(item.unit)).filter(Boolean))).join(", ") || "หน่วย"}
                               </td>
                               <td className="px-2 py-1.5 bg-neutral-50"></td>
                               <td className="px-2 py-1.5 text-right font-mono font-black text-black bg-neutral-50 text-[11px]">
@@ -707,7 +708,7 @@ async function DetailedProfitContent({ searchParams }: PageProps) {
                             {report.summary.totalQuantity.toLocaleString("th-TH")}
                           </td>
                           <td className="px-2 py-2 bg-neutral-100 font-bold text-black text-[10px]">
-                            {Array.from(new Set(report.stores.flatMap(s => s.items.map(item => item.unit)).filter(Boolean))).join(", ") || "หน่วย"}
+                            {Array.from(new Set(report.stores.flatMap(s => s.items.map(item => formatDisplayUnit(item.unit))).filter(Boolean))).join(", ") || "หน่วย"}
                           </td>
                           <td className="px-2 py-2 bg-neutral-100"></td>
                           <td className="px-2 py-2 text-right font-mono font-black text-black text-[11px]">

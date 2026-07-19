@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, Clock3, KeyRound, MessageCircleMore, Package2, Palette, Store, Truck, Factory, Gauge, Warehouse } from "lucide-react";
+import { ArrowRight, Clock3, KeyRound, MessageCircleMore, Package2, Palette, Store, Truck, Factory, Gauge, Warehouse, Image as ImageIcon } from "lucide-react";
 import { SettingsShell } from "@/components/settings/settings-shell";
 import { requireAppRole } from "@/lib/auth/authorization";
 
@@ -21,6 +21,12 @@ const options = [
     href: "/settings/customers",
     icon: Store,
     label: "จัดการร้านค้า",
+  },
+  {
+    description: "อัปโหลดและเปลี่ยนรูปโลโก้ร้านค้า สำหรับพิมพ์หัวบิล หน้าจอหลัก และระบบ",
+    href: "/settings/logo",
+    icon: ImageIcon,
+    label: "ตั้งค่าโลโก้ร้านค้า",
   },
   {
     description: "เพิ่มรายชื่อผู้ขายหรือโรงงานที่คุณสั่งซื้อสินค้า เพื่อใช้บันทึกรับเข้าสต็อก",

@@ -62,7 +62,7 @@ export function OrderReceiptCard({
       <div style={{ display: "flex", justifyContent: "flex-end", padding: "8px 16px 0" }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src="/brand/512x512.png"
+          src="/api/brand/logo"
           alt="All Noodles"
           style={{ objectFit: "contain", display: "inline-block", width: "56px", height: "56px" }}
         />

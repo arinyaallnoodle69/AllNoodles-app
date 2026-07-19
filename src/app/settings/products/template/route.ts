@@ -47,7 +47,7 @@ export async function GET() {
     [
       { value: "" },
       { value: "ตัวอย่างสินค้า" },
-      { value: "kg" },
+      { value: "กก." },
       { value: 50 },
       { value: 0 },
       { value: firstSupplier },
@@ -56,7 +56,7 @@ export async function GET() {
       { value: "" },
       { value: "" },
       { value: "พร้อมขาย" },
-      { value: "kg" },
+      { value: "กก." },
       { value: 1 },
       { value: 1 },
       { value: "" },

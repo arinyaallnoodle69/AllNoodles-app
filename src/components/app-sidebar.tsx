@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -26,6 +25,7 @@ import {
   Factory,
   KeyRound,
   Warehouse,
+  Image as ImageIcon,
 } from "lucide-react";
 import { signOut } from "@/app/login/actions";
 import { LineAppIcon } from "@/components/icons/line-app-icon";
@@ -87,12 +87,12 @@ function MobileTopBar() {
       <div className="flex h-full items-center gap-3 px-4">
         {/* Logo */}
         <Link href={homeHref} className="block shrink-0">
-          <Image
-            src="/brand/512x512.png"
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/api/brand/logo"
             alt="All Noodles"
             width={176}
             height={64}
-            priority
             className="h-10 w-auto object-contain"
           />
         </Link>
@@ -152,6 +152,7 @@ const settingsNavItems = [
   { href: "/settings/warehouses", icon: Warehouse, label: "จัดการคลัง" },
   { href: "/settings/order-window", icon: Clock, label: "เวลารับออเดอร์" },
   { href: "/settings/login-pin", icon: KeyRound, label: "ตั้งค่า PIN" },
+  { href: "/settings/logo", icon: ImageIcon, label: "ตั้งค่าโลโก้ร้านค้า" },
 ] as const;
 
 function isActive(href: string, pathname: string): boolean {
@@ -367,12 +368,12 @@ export function AppSidebarLayout({
           >
             {!collapsed && (
               <Link href={homeHref} className="flex min-w-0 shrink items-center gap-2.5">
-                <Image
-                  src="/brand/512x512.png"
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="/api/brand/logo"
                   alt="All Noodles"
                   width={176}
                   height={64}
-                  priority
                   className="h-12 w-auto object-contain"
                 />
                 <span className="truncate text-base font-bold tracking-tight text-[#4A148C]">

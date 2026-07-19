@@ -1,6 +1,33 @@
 const DELIVERY_SHEET_WIDTH_MM = 210;
 const DELIVERY_SHEET_HEIGHT_MM = 297;
 
+let cachedFontEmbedCSS: string | null = null;
+
+function isWebKitOrSafari() {
+  if (typeof window === "undefined") return false;
+  const ua = window.navigator.userAgent.toLowerCase();
+  const isIOS = /iphone|ipad|ipod/.test(ua);
+  const isSafari = ua.includes("safari") && !ua.includes("chrome") && !ua.includes("chromium") && !ua.includes("android");
+  const isLine = ua.includes("line");
+  return isIOS || isSafari || isLine;
+}
+
+export async function preloadDeliveryFontEmbedCSS() {
+  if (typeof window === "undefined" || cachedFontEmbedCSS) return;
+  try {
+    const { getFontEmbedCSS } = await import("html-to-image");
+    cachedFontEmbedCSS = await Promise.race([
+      getFontEmbedCSS(document.body),
+      new Promise<string>((_, reject) =>
+        window.setTimeout(() => reject(new Error("Font CSS preload timeout")), 2000)
+      ),
+    ]);
+    console.log("[FontPreloader:DeliveryPDF] Web fonts pre-loaded and cached successfully.");
+  } catch (e) {
+    console.warn("[FontPreloader:DeliveryPDF] Failed to background-preload fonts:", e);
+  }
+}
+
 function downloadBlob(blob: Blob, fileName: string) {
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
@@ -54,16 +81,51 @@ export async function createDeliveryPdfFileFromDocument(sourceDocument: Document
     return null;
   }
 
-  const [{ toCanvas }, { jsPDF }] = await Promise.all([
+  const [{ toJpeg, getFontEmbedCSS }, { jsPDF }, html2canvas] = await Promise.all([
     import("html-to-image"),
     import("jspdf"),
+    import("html2canvas").then((mod) => mod.default),
   ]);
 
-  await Promise.all([
-    document.fonts.ready,
-    sourceDocument.fonts?.ready ?? Promise.resolve(),
-  ]);
-  await waitForDocumentImages(sourceDocument);
+  if (!cachedFontEmbedCSS) {
+    try {
+      cachedFontEmbedCSS = await Promise.race([
+        getFontEmbedCSS(sourceDocument.body || document.body),
+        new Promise<string>((_, reject) =>
+          window.setTimeout(() => reject(new Error("Font CSS embed timeout")), 2000)
+        ),
+      ]);
+    } catch (e) {
+      console.warn("Failed to get font embed CSS:", e);
+    }
+  }
+
+  // Wait for fonts to be ready with a timeout
+  try {
+    await Promise.race([
+      Promise.all([
+        document.fonts.ready,
+        sourceDocument.fonts?.ready ?? Promise.resolve(),
+      ]),
+      new Promise((_, reject) =>
+        window.setTimeout(() => reject(new Error("Fonts ready timeout")), 2000)
+      ),
+    ]);
+  } catch (e) {
+    console.warn("Fonts ready timed out, continuing anyway:", e);
+  }
+
+  // Wait for images to load with a timeout
+  try {
+    await Promise.race([
+      waitForDocumentImages(sourceDocument),
+      new Promise((_, reject) =>
+        window.setTimeout(() => reject(new Error("Images load timeout")), 2500)
+      ),
+    ]);
+  } catch (e) {
+    console.warn("Images load timed out, continuing anyway:", e);
+  }
 
   // Give iOS WebKit a tiny moment to settle and paint fonts/images
   await new Promise((resolve) => window.setTimeout(resolve, 300));
@@ -75,34 +137,60 @@ export async function createDeliveryPdfFileFromDocument(sourceDocument: Document
     compress: true,
   });
 
+  const isWebKit = isWebKitOrSafari();
+  const isMobileDevice = typeof window !== "undefined" && /iphone|ipad|ipod|android/i.test(window.navigator.userAgent.toLowerCase());
+  const selectedPixelRatio = isMobileDevice ? 1.25 : 1.7;
+
   for (const [index, page] of pages.entries()) {
     if (index > 0) {
       pdf.addPage([DELIVERY_SHEET_WIDTH_MM, DELIVERY_SHEET_HEIGHT_MM], "portrait");
     }
 
     // Warm-up call to force WebKit/Safari to decode and cache cloned image elements
-    try {
-      await toCanvas(page, {
-        backgroundColor: "#ffffff",
-        height: page.offsetHeight,
-        pixelRatio: 1.7,
-        width: page.offsetWidth,
-      });
-      // Small pause to let Safari process the decoded image caching
-      await new Promise((resolve) => window.setTimeout(resolve, 100));
-    } catch (e) {
-      console.warn("Warm-up toCanvas failed:", e);
+    if (isWebKit) {
+      try {
+        await toJpeg(page, {
+          backgroundColor: "#ffffff",
+          height: page.offsetHeight,
+          pixelRatio: selectedPixelRatio,
+          width: page.offsetWidth,
+          fontEmbedCSS: cachedFontEmbedCSS || undefined,
+          quality: 0.8,
+        });
+        // Small pause to let Safari process the decoded image caching
+        await new Promise((resolve) => window.setTimeout(resolve, 100));
+      } catch (e) {
+        console.warn("Warm-up toJpeg failed:", e);
+      }
     }
 
-    const canvas = await toCanvas(page, {
-      backgroundColor: "#ffffff",
-      height: page.offsetHeight,
-      pixelRatio: 1.7,
-      width: page.offsetWidth,
-    });
-    const imageDataUrl = canvas.toDataURL("image/png");
+    let imageDataUrl: string;
+    try {
+      imageDataUrl = await toJpeg(page, {
+        backgroundColor: "#ffffff",
+        height: page.offsetHeight,
+        pixelRatio: selectedPixelRatio,
+        width: page.offsetWidth,
+        fontEmbedCSS: cachedFontEmbedCSS || undefined,
+        quality: 0.8,
+      });
+    } catch (captureErr) {
+      console.warn("html-to-image failed, falling back to html2canvas:", captureErr);
+      const canvas = await html2canvas(page, {
+        width: page.offsetWidth,
+        height: page.offsetHeight,
+        scale: isMobileDevice ? 1.25 : 1.7,
+        backgroundColor: "#ffffff",
+        useCORS: true,
+        logging: false,
+      });
+      imageDataUrl = canvas.toDataURL("image/jpeg", 0.8);
+    }
 
-    pdf.addImage(imageDataUrl, "PNG", 0, 0, DELIVERY_SHEET_WIDTH_MM, DELIVERY_SHEET_HEIGHT_MM);
+    pdf.addImage(imageDataUrl, "JPEG", 0, 0, DELIVERY_SHEET_WIDTH_MM, DELIVERY_SHEET_HEIGHT_MM);
+
+    // Yield control to the main thread to keep UI responsive between rendering pages
+    await new Promise((resolve) => window.setTimeout(resolve, 0));
   }
 
   const pdfBlob = pdf.output("blob");
@@ -186,3 +274,13 @@ export async function shareDeliveryPdfFromUrl(url: string, fileName?: string) {
   if (!pdfFile) return;
   await sharePreparedDeliveryPdf(pdfFile);
 }
+
+if (typeof window !== "undefined") {
+  // Preload web fonts in the background to make PDF generation instant
+  window.setTimeout(() => {
+    preloadDeliveryFontEmbedCSS().catch((e) => {
+      console.warn("[FontPreloader] Failed to background-preload fonts:", e);
+    });
+  }, 1200);
+}
+

@@ -19,6 +19,7 @@ type UnifiedStockClientProps = {
   initialIssues: StockIssueRow[];
   initialWarehouseId: string;
   initialDate: string;
+  brands?: string[];
 };
 
 export function UnifiedStockClient({
@@ -30,17 +31,13 @@ export function UnifiedStockClient({
   initialIssues,
   initialWarehouseId,
   initialDate,
+  brands,
 }: UnifiedStockClientProps) {
   const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState<"stock" | "history" | "issues">(initialTab);
 
-  // Lazy loaded states
-  const [historyData, setHistoryData] = useState<StockHistoryRow[] | null>(
-    initialTab === "history" ? initialHistory : null
-  );
-  const [issuesData, setIssuesData] = useState<StockIssueRow[] | null>(
-    initialTab === "issues" ? initialIssues : null
-  );
+  const [historyData, setHistoryData] = useState<StockHistoryRow[] | null>(initialHistory);
+  const [issuesData, setIssuesData] = useState<StockIssueRow[] | null>(initialIssues);
 
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   const [isLoadingIssues, setIsLoadingIssues] = useState(false);
@@ -110,6 +107,7 @@ export function UnifiedStockClient({
         warehouses={warehouses}
         baseHref="/stock"
         onChangeTab={handleTabChange}
+        brands={brands}
       />
     );
   }

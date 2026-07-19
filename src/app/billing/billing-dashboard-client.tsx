@@ -10,6 +10,7 @@ import { HistoryTable } from "./history-table";
 import { fmt } from "@/components/print/print-shared";
 
 type Props = {
+  organizationId: string;
   candidates: BillingCandidate[];
   allCustomers: BillingCustomerOption[];
   initialFrom: string;
@@ -35,6 +36,7 @@ function EmptyHistory() {
 }
 
 export function BillingDashboardClient({
+  organizationId,
   candidates,
   allCustomers,
   initialFrom,
@@ -131,6 +133,7 @@ export function BillingDashboardClient({
           <section>
             <div className="border-y md:border border-slate-200 bg-white p-4 md:p-8 shadow-none md:shadow-md">
               <BillingForm
+                organizationId={organizationId}
                 initialFromDate={initialFrom}
                 initialToDate={initialTo}
                 candidates={candidates}

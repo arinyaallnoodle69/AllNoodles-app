@@ -528,7 +528,7 @@ async function StoreSalesReportContent({ searchParams }: PageProps) {
                   <div className={styles.printHeaderTop}>
                     <div className={styles.printBrand}>
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src="/brand/512x512.png" alt="All Noodles" width="64" height="64" className={styles.printLogo} />
+                      <img src="/api/brand/logo" alt="All Noodles" width="64" height="64" className={styles.printLogo} />
                       <div><p className={styles.printCompanyName}>All Noodles</p><p className={styles.printSubtitle}>รายงานยอดขาย กำไร และอันดับร้านค้า</p></div>
                     </div>
                     <div className={styles.printMeta}><p>วันที่พิมพ์: {printedAt.datePart}</p><p>เวลาพิมพ์: {printedAt.timePart} น.</p><p>หน้า: {pageIdx + 1} / {pages.length}</p></div>

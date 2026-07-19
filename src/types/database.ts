@@ -446,11 +446,13 @@ export type Database = {
           default_warehouse_id: string | null
           district: string | null
           id: string
+          installment_limit: number | null
           is_active: boolean
           line_user_id: string | null
           metadata: Json
           name: string
           organization_id: string
+          outstanding_balance: number
           phone: string | null
           postal_code: string | null
           province: string | null
@@ -466,11 +468,13 @@ export type Database = {
           default_warehouse_id?: string | null
           district?: string | null
           id?: string
+          installment_limit?: number | null
           is_active?: boolean
           line_user_id?: string | null
           metadata?: Json
           name: string
           organization_id: string
+          outstanding_balance?: number
           phone?: string | null
           postal_code?: string | null
           province?: string | null
@@ -486,11 +490,13 @@ export type Database = {
           default_warehouse_id?: string | null
           district?: string | null
           id?: string
+          installment_limit?: number | null
           is_active?: boolean
           line_user_id?: string | null
           metadata?: Json
           name?: string
           organization_id?: string
+          outstanding_balance?: number
           phone?: string | null
           postal_code?: string | null
           province?: string | null
@@ -695,9 +701,13 @@ export type Database = {
           dispatch_status: string
           dispatched_at: string | null
           id: string
+          is_installment_plan: boolean
+          installment_paid: number
           notes: string | null
           order_id: string
           organization_id: string
+          previous_outstanding: number
+          remaining_outstanding: number
           status: string
           total_amount: number
           updated_at: string
@@ -714,9 +724,13 @@ export type Database = {
           dispatch_status?: string
           dispatched_at?: string | null
           id?: string
+          is_installment_plan?: boolean
+          installment_paid?: number
           notes?: string | null
           order_id: string
           organization_id: string
+          previous_outstanding?: number
+          remaining_outstanding?: number
           status?: string
           total_amount?: number
           updated_at?: string
@@ -733,9 +747,13 @@ export type Database = {
           dispatch_status?: string
           dispatched_at?: string | null
           id?: string
+          is_installment_plan?: boolean
+          installment_paid?: number
           notes?: string | null
           order_id?: string
           organization_id?: string
+          previous_outstanding?: number
+          remaining_outstanding?: number
           status?: string
           total_amount?: number
           updated_at?: string
@@ -1816,6 +1834,7 @@ export type Database = {
           metadata: Json
           name: string
           organization_id: string
+          print_background_color: string | null
           product_kind: string
           reserved_quantity: number
           sku: string
@@ -1833,6 +1852,7 @@ export type Database = {
           metadata?: Json
           name: string
           organization_id: string
+          print_background_color?: string | null
           product_kind?: string
           reserved_quantity?: number
           sku: string
@@ -1850,6 +1870,7 @@ export type Database = {
           metadata?: Json
           name?: string
           organization_id?: string
+          print_background_color?: string | null
           product_kind?: string
           reserved_quantity?: number
           sku?: string

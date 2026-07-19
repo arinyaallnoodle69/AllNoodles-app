@@ -46,6 +46,7 @@ async function BillingPageContent({ searchParams }: BillingPageProps) {
   return (
     <AppSidebarLayout>
       <BillingDashboardClient
+        organizationId={session.organizationId}
         candidates={candidates}
         allCustomers={allCustomers}
         initialFrom={from}

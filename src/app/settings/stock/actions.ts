@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath, revalidateTag, updateTag } from "next/cache";
-import { requireAppRole } from "@/lib/auth/authorization";
+import { requireAnyRole } from "@/lib/auth/authorization";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { getStockReceiptDetail, type StockReceiptDetail } from "@/lib/stock/admin";
 import { createActionClient } from "@/lib/supabase/action";
@@ -56,7 +56,7 @@ function getNumber(formData: FormData, key: string) {
 }
 
 export async function getStockReceiptDetailAction(receiptId: string): Promise<StockReceiptDetail | null> {
-  const session = await requireAppRole("admin");
+  const session = await requireAnyRole(["admin", "member"]);
   return getStockReceiptDetail(session.organizationId, receiptId);
 }
 
@@ -64,7 +64,7 @@ export async function receiveStockAction(
   _prevState: ReceiveStockActionState,
   formData: FormData,
 ): Promise<ReceiveStockActionState> {
-  const session = await requireAppRole("admin");
+  const session = await requireAnyRole(["admin", "member"]);
 
   const itemsJson = getText(formData, "itemsJson");
   let items: ReceiveStockItemInput[] = [];
@@ -218,7 +218,7 @@ export async function bulkReceiveStockAction(
   notes: string = "รับเข้าจากการตั้งเตือนสต็อกไม่พอ",
   warehouseId?: string,
 ) {
-  const session = await requireAppRole("admin");
+  const session = await requireAnyRole(["admin", "member"]);
   const admin = getSupabaseAdmin();
 
   if (!warehouseId) {
@@ -268,7 +268,7 @@ export async function adjustStockAction(
   _prevState: AdjustStockActionState,
   formData: FormData,
 ): Promise<AdjustStockActionState> {
-  const session = await requireAppRole("admin");
+  const session = await requireAnyRole(["admin", "member"]);
   const admin = getSupabaseAdmin();
 
   const productId = getText(formData, "productId");
@@ -317,7 +317,7 @@ export async function updateStockReceiptAction(
   _prevState: UpdateStockReceiptActionState,
   formData: FormData,
 ): Promise<UpdateStockReceiptActionState> {
-  const session = await requireAppRole("admin");
+  const session = await requireAnyRole(["admin", "member"]);
   const admin = getSupabaseAdmin();
 
   const receiptId = getText(formData, "receiptId");

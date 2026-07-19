@@ -2,9 +2,11 @@ import type { VehicleProductSummaryData } from "@/lib/orders/vehicle-product-sum
 import type { CSSProperties } from "react";
 
 const SHEET_W = "210mm";
-const SHEET_H = "148mm";
+const SHEET_H = "297mm";
 const SCREEN_SHEET_W = "794px";
-const SCREEN_SHEET_H = "559px";
+const SCREEN_SHEET_H = "1123px";
+const ITEMS_PER_PAGE = 25;
+const ROW_HEIGHT_MM = 10.4;
 
 const VEHICLE_COLUMN_PALETTES = [
   { header: "#EA80FC", body: "#F3E5F5", border: "#000000" },
@@ -22,11 +24,7 @@ function getVehiclePalette(columnIndex: number) {
   return VEHICLE_COLUMN_PALETTES[columnIndex % VEHICLE_COLUMN_PALETTES.length] ?? VEHICLE_COLUMN_PALETTES[0];
 }
 
-function FactoryOrderSheet({ data }: { data: VehicleProductSummaryData }) {
-  const productCount = Math.max(data.products.length, 1);
-  // A5 Landscape height is 148mm. Header/paddings are ~28mm. Available height for table rows is ~115mm.
-  const rowHeightMm = Math.max(4.0, Math.min(8.0, 115 / productCount));
-
+function FactoryOrderSheet({ data, startIndex }: { data: VehicleProductSummaryData; startIndex: number }) {
   return (
     <section className="packing-sheet vehicle-summary-sheet">
       <div className="vehicle-summary-sheet__inner">
@@ -49,12 +47,13 @@ function FactoryOrderSheet({ data }: { data: VehicleProductSummaryData }) {
         <div className="vehicle-summary-table-wrap">
           <table
             className="vehicle-summary-table"
-            style={{ "--summary-row-height": `${rowHeightMm}mm` } as CSSProperties}
+            style={{ "--summary-row-height": `${ROW_HEIGHT_MM}mm` } as CSSProperties}
           >
             <thead>
               <tr>
                 <th className="vehicle-summary-table__index-col">ลำดับ</th>
-                <th className="vehicle-summary-table__product-col">สินค้า / หน่วย</th>
+                <th className="vehicle-summary-table__product-col">สินค้า</th>
+                <th className="vehicle-summary-table__unit-col">หน่วย</th>
                 {data.vehicles.map((vehicle, columnIndex) => {
                   const palette = getVehiclePalette(columnIndex);
                   return (
@@ -72,15 +71,15 @@ function FactoryOrderSheet({ data }: { data: VehicleProductSummaryData }) {
             <tbody>
               {data.products.map((product, rowIndex) => (
                 <tr key={product.id}>
-                  <td className="vehicle-summary-table__index-cell">{rowIndex + 1}</td>
+                  <td className="vehicle-summary-table__index-cell">{startIndex + rowIndex + 1}</td>
                   <td className="vehicle-summary-table__product-cell">
                     <div className="vehicle-summary-table__product-line">
                       <span className="vehicle-summary-table__product-name" title={product.name}>
                         {product.name}
                       </span>
-                      <span className="vehicle-summary-table__product-unit">{product.unit}</span>
                     </div>
                   </td>
+                  <td className="vehicle-summary-table__unit-cell">{product.unit}</td>
                   {data.vehicles.map((vehicle, vehicleIndex) => {
                     const palette = getVehiclePalette(vehicleIndex);
                     return (
@@ -103,10 +102,31 @@ function FactoryOrderSheet({ data }: { data: VehicleProductSummaryData }) {
   );
 }
 
+function buildFactoryOrderPages(data: VehicleProductSummaryData): Array<{ data: VehicleProductSummaryData; startIndex: number }> {
+  const pages = [];
+  const productCount = data.products.length;
+  const totalPages = Math.max(1, Math.ceil(productCount / ITEMS_PER_PAGE));
+
+  for (let pageIndex = 0; pageIndex < totalPages; pageIndex += 1) {
+    const startIndex = pageIndex * ITEMS_PER_PAGE;
+    const endIndex = startIndex + ITEMS_PER_PAGE;
+    pages.push({
+      startIndex,
+      data: {
+        ...data,
+        products: data.products.slice(startIndex, endIndex),
+        qty: data.qty.slice(startIndex, endIndex),
+      },
+    });
+  }
+
+  return pages;
+}
+
 function FactoryOrderStyles() {
   return (
     <style>{`
-      @page { size: A5 landscape; margin: 0; }
+      @page { size: A4 portrait; margin: 0; }
 
       @media print {
         html, body {
@@ -133,7 +153,7 @@ function FactoryOrderStyles() {
 
         .packing-sheet {
           width: 210mm !important;
-          height: 148mm !important;
+          height: 297mm !important;
           margin: 0 !important;
           border: none !important;
           box-shadow: none !important;
@@ -272,7 +292,7 @@ function FactoryOrderStyles() {
       }
 
       .vehicle-summary-table-wrap {
-        flex: 1;
+        flex: 0 0 auto;
         min-height: 0;
         border: 1.2px solid #000000;
         display: flex;
@@ -282,7 +302,7 @@ function FactoryOrderStyles() {
 
       .vehicle-summary-table {
         width: 100%;
-        height: 100%;
+        height: auto;
         border-collapse: collapse;
         table-layout: fixed;
       }
@@ -333,13 +353,35 @@ function FactoryOrderStyles() {
       }
 
       .vehicle-summary-table__product-col {
-        width: 50mm;
-        min-width: 50mm;
-        padding: 0.35mm 0.8mm;
+        width: 96mm;
+        min-width: 96mm;
+        padding: 0.5mm 0.8mm 0.25mm;
         background: #ffffff;
         text-align: center;
         font-size: 9pt;
         font-weight: 800;
+        line-height: 1.25;
+      }
+
+      .vehicle-summary-table__unit-col,
+      .vehicle-summary-table__unit-cell {
+        width: 13mm;
+        min-width: 13mm;
+      }
+
+      .vehicle-summary-table__unit-col {
+        background: #ffffff;
+        font-size: 8pt;
+        font-weight: 800;
+        line-height: 1.25;
+      }
+
+      .vehicle-summary-table__unit-cell {
+        background: #ffffff;
+        font-size: 8pt;
+        font-weight: 700;
+        line-height: 1.55;
+        color: #0f172a;
       }
 
       .vehicle-summary-table__vehicle-col {
@@ -358,7 +400,7 @@ function FactoryOrderStyles() {
       }
 
       .vehicle-summary-table__product-cell {
-        padding: 0 0.8mm;
+        padding: 0.35mm 0.8mm 0.1mm;
         text-align: center;
         background: #ffffff;
       }
@@ -366,32 +408,22 @@ function FactoryOrderStyles() {
       .vehicle-summary-table__product-line {
         display: flex;
         align-items: center;
-        justify-content: center;
+        justify-content: flex-start;
         gap: 0.15mm;
         min-height: 100%;
       }
 
       .vehicle-summary-table__product-name {
+        display: block;
         min-width: 0;
         flex: 0 1 auto;
-        max-width: calc(100% - 8mm);
-        overflow: hidden;
-        text-overflow: ellipsis;
+        max-width: none;
+        overflow: visible;
+        text-overflow: clip;
         white-space: nowrap;
         font-size: 10pt;
         font-weight: 700;
-        line-height: 1.35;
-        color: #0f172a;
-      }
-
-      .vehicle-summary-table__product-unit {
-        flex-shrink: 0;
-        padding-left: 0.4mm;
-        margin-left: 0.1mm;
-        border-left: 1px solid #000000;
-        font-size: 8pt;
-        font-weight: 700;
-        line-height: 1.35;
+        line-height: 1.55;
         color: #0f172a;
       }
 
@@ -406,12 +438,21 @@ function FactoryOrderStyles() {
 }
 
 export function FactoryOrderSheetLayout({ data }: { data: VehicleProductSummaryData }) {
+  const pages = buildFactoryOrderPages(data);
+
   return (
     <>
       <FactoryOrderStyles />
-      <div className="packing-sheet-shell" data-capture-width="559" data-capture-height="794">
-        <FactoryOrderSheet data={data} />
-      </div>
+      {pages.map((page) => (
+        <div
+          key={`${page.data.factoryName ?? "factory"}-${page.startIndex}`}
+          className="packing-sheet-shell"
+          data-capture-width="794"
+          data-capture-height="1123"
+        >
+          <FactoryOrderSheet data={page.data} startIndex={page.startIndex} />
+        </div>
+      ))}
     </>
   );
 }

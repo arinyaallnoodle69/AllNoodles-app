@@ -64,6 +64,7 @@ type DbProduct = {
   name: string;
   display_order: number | null;
   metadata: unknown;
+  print_background_color: string | null;
 };
 
 type DbCategory = {
@@ -103,6 +104,7 @@ type ProductDescriptor = {
   name: string;
   unit: string;
   categoryColor: string | null;
+  printBackgroundColor: string | null;
 };
 
 function getVehicleName(value: unknown) {
@@ -204,7 +206,7 @@ async function PackingListPage({ searchParams }: Props) {
     }),
     admin
       .from("products")
-      .select("id, name, display_order, metadata")
+      .select("id, name, display_order, metadata, print_background_color")
       .eq("organization_id", session.organizationId),
     productCategories
       .select("id, name, sort_order, print_color")
@@ -247,6 +249,9 @@ async function PackingListPage({ searchParams }: Props) {
         : null;
     return !metadata?.deleted;
   });
+  const productPrintBackgroundColorById = new Map(
+    dbProductsList.map((product: DbProduct) => [product.id, product.print_background_color]),
+  );
 
   const packingListMetaByProductId = new Map(
     dbProductsList.map((product: DbProduct) => [
@@ -371,6 +376,7 @@ async function PackingListPage({ searchParams }: Props) {
               brand: normalizePackingBrand(packingListMetaByProductId.get(item.product_id)?.brand ?? ""),
               category: packingListMetaByProductId.get(item.product_id)?.category ?? "",
               categoryColor: categoryColorByProductId.get(item.product_id) ?? null,
+              printBackgroundColor: productPrintBackgroundColorById.get(item.product_id) ?? null,
               icon: packingListMetaByProductId.get(item.product_id)?.icon ?? "",
               unit: item.sale_unit_label,
             });
@@ -403,6 +409,7 @@ async function PackingListPage({ searchParams }: Props) {
           brand: product.brand,
           category: product.category,
           categoryColor: product.categoryColor,
+          printBackgroundColor: product.printBackgroundColor,
           icon: product.icon,
           productId: product.productId,
           sku: product.sku,
@@ -447,6 +454,7 @@ async function PackingListPage({ searchParams }: Props) {
           brand: product.brand,
           category: product.category,
           categoryColor: product.categoryColor,
+          printBackgroundColor: product.printBackgroundColor,
           icon: product.icon,
           sku: product.sku,
           name: product.name,
@@ -511,7 +519,7 @@ async function PackingListPage({ searchParams }: Props) {
             hidePrintOnMobile
           />
           <a
-            href="/orders/incoming"
+            href={`/orders/incoming?date=${date}${endDate ? `&endDate=${endDate}` : ""}`}
             style={{
               fontSize: "13px",
               fontWeight: 700,

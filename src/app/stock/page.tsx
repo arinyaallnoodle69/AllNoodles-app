@@ -1,6 +1,6 @@
 import { requireAnyRole } from "@/lib/auth/authorization";
-import { getStockDashboardData, getStockHistoryData, type StockHistoryRow } from "@/lib/stock/admin";
-import { getStockIssueHistoryData, type StockIssueRow } from "@/lib/stock/issues";
+import { getStockDashboardData, getStockHistoryData } from "@/lib/stock/admin";
+import { getStockIssueHistoryData } from "@/lib/stock/issues";
 import { getActiveWarehouses } from "@/lib/warehouses";
 import { UnifiedStockClient } from "@/components/settings/unified-stock-client";
 
@@ -24,19 +24,12 @@ export default async function StockPage({ searchParams }: { searchParams: Search
   const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Bangkok" }).format(new Date());
   const date = params.date || today;
 
-  const [data, warehouses] = await Promise.all([
+  const [data, warehouses, initialHistory, initialIssues] = await Promise.all([
     getStockDashboardData(session.organizationId),
     getActiveWarehouses(session.organizationId),
+    getStockHistoryData(session.organizationId, 50, 0, warehouseId),
+    getStockIssueHistoryData(session.organizationId, 50, 0, date, warehouseId),
   ]);
-
-  let initialHistory: StockHistoryRow[] = [];
-  let initialIssues: StockIssueRow[] = [];
-
-  if (tab === "history") {
-    initialHistory = await getStockHistoryData(session.organizationId, 50, 0, warehouseId);
-  } else if (tab === "issues") {
-    initialIssues = await getStockIssueHistoryData(session.organizationId, 50, 0, date, warehouseId);
-  }
 
   return (
     <>
@@ -56,6 +49,7 @@ export default async function StockPage({ searchParams }: { searchParams: Search
         initialIssues={initialIssues}
         initialWarehouseId={warehouseId}
         initialDate={date}
+        brands={data.brands}
       />
     </>
   );

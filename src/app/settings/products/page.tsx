@@ -47,6 +47,7 @@ export default async function SettingsProductsPage({
       ) : null}
 
       <ProductSettingsTabs
+        key={activeTab}
         products={data.products}
         categories={data.productCategories}
         brands={data.productBrands}

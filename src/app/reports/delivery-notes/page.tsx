@@ -18,6 +18,7 @@ import { AppSidebarLayout } from "@/components/app-sidebar";
 import { ThaiDatePicker } from "@/components/ui/thai-date-picker";
 import { PageLoader } from "@/components/page-loader";
 import { requireAppSession } from "@/lib/auth/authorization";
+import { formatDisplayUnit } from "@/app/order/customer/unit-label";
 import { getTodayInBangkok } from "@/lib/orders/date";
 import { getCustomersForDeliveryNoteReport, getDeliveryNotesReport, type DeliveryNoteReportRow } from "@/lib/reports/delivery-notes";
 import styles from "./print.module.css";
@@ -162,7 +163,7 @@ function DeliveryNoteRows({ row }: { row: DeliveryNoteReportRow }) {
             </div>
           </td>
           <td className="border-l border-[#4A148C]/10 px-4 py-2 text-center text-sm font-semibold text-slate-700 whitespace-nowrap">{fmt(line.quantityDelivered)}</td>
-          <td className="border-l border-[#4A148C]/10 px-4 py-2 text-center text-sm text-slate-500 whitespace-nowrap">{line.saleUnitLabel}</td>
+          <td className="border-l border-[#4A148C]/10 px-4 py-2 text-center text-sm text-slate-500 whitespace-nowrap">{formatDisplayUnit(line.saleUnitLabel)}</td>
           <td className="border-l border-[#4A148C]/10 px-4 py-2 text-center text-sm text-slate-600 whitespace-nowrap">{fmtMoney(line.lineCost)}</td>
           <td className="border-l border-[#4A148C]/10 px-4 py-2 text-center text-sm font-semibold text-[#4A148C] whitespace-nowrap">{fmtMoney(line.lineTotal)}</td>
           <td className={`border-l border-[#4A148C]/10 px-4 py-2 text-center text-sm font-semibold whitespace-nowrap ${line.profit >= 0 ? "text-emerald-600" : "text-red-500"}`}>
@@ -237,7 +238,7 @@ function DeliveryNoteMobileCard({ row }: { row: DeliveryNoteReportRow }) {
               <div className="bg-white px-3 py-2 text-center shadow-[0_8px_18px_rgba(27,27,33,0.1)]">
                 <p className="text-sm text-slate-400">จำนวน</p>
                 <p className="mt-0.5 text-base font-bold text-slate-800">
-                  {fmt(line.quantityDelivered)} <span className="text-sm font-normal text-slate-400">{line.saleUnitLabel}</span>
+                  {fmt(line.quantityDelivered)} <span className="text-sm font-normal text-slate-400">{formatDisplayUnit(line.saleUnitLabel)}</span>
                 </p>
               </div>
               <div className="bg-white px-3 py-2 text-center shadow-[0_8px_18px_rgba(27,27,33,0.1)]">
@@ -681,7 +682,7 @@ async function DeliveryNotesReportContent({ searchParams }: PageProps) {
                           <div className={styles.printHeaderTop}>
                             <div className={styles.printBrand}>
                               {/* eslint-disable-next-line @next/next/no-img-element */}
-                              <img src="/brand/512x512.png" alt="All Noodles" width="64" height="64" className={styles.printLogo} />
+                              <img src="/api/brand/logo" alt="All Noodles" width="64" height="64" className={styles.printLogo} />
                               <div>
                                 <p className={styles.printCompanyName}>All Noodles</p>
                                 <p className={styles.printSubtitle}>สรุปรายใบจัดส่ง ต้นทุน ยอดขาย กำไร และอัตรากำไร</p>

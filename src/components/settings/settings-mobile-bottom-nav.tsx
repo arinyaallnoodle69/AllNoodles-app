@@ -25,6 +25,7 @@ import {
   Truck,
   Warehouse,
   X,
+  Image as ImageIcon,
 } from "lucide-react";
 import { signOut } from "@/app/login/actions";
 import { useCreateOrder } from "@/components/orders/create-order-context";
@@ -249,9 +250,9 @@ export function SettingsMobileBottomNav() {
           moreOpen || settingsModalOpen ? "pointer-events-none opacity-0" : "opacity-100"
         }`}
       >
-        <div className="relative w-full max-w-full overflow-x-clip overflow-y-visible pt-3">
+        <div className="relative w-full max-w-full overflow-x-clip overflow-y-visible pt-2">
           {/* Curved Background with Notch */}
-          <div className="absolute inset-x-0 bottom-0 -z-10 h-[calc(100%+20px)]">
+          <div className="absolute inset-x-0 bottom-0 -z-10 h-[calc(100%+10px)]">
             <svg
               viewBox="0 0 400 80"
               preserveAspectRatio="none"
@@ -263,7 +264,7 @@ export function SettingsMobileBottomNav() {
             </svg>
           </div>
 
-          <div className="relative px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-5">
+          <div className="relative px-2 pb-[max(0.35rem,env(safe-area-inset-bottom))] pt-4">
             <div className="grid grid-cols-5 items-end">
               {isMember ? (
                 <>
@@ -274,11 +275,11 @@ export function SettingsMobileBottomNav() {
                       <Link
                         href="/orders/incoming"
                         onClick={resetNavigationState}
-                        className={`flex flex-col items-center justify-center gap-1 rounded-2xl px-1 py-2 text-[10px] font-medium transition ${
+                        className={`flex flex-col items-center justify-center gap-1 rounded-2xl px-1 py-1.5 text-[9px] font-medium transition ${
                           active ? "text-[#4A148C]" : "text-slate-500 hover:text-slate-900"
                         }`}
                       >
-                        <ClipboardList className={`h-5 w-5 transition-colors ${active ? "text-[#4A148C]" : "text-slate-500"}`} strokeWidth={active ? 2.8 : 2.2} />
+                        <ClipboardList className={`h-[22px] w-[22px] transition-colors ${active ? "text-[#4A148C]" : "text-slate-500"}`} strokeWidth={active ? 2.8 : 2.2} />
                         <span className={`whitespace-nowrap transition-all ${active ? "font-bold scale-105" : ""}`}>ออเดอร์</span>
                       </Link>
                     );
@@ -291,11 +292,11 @@ export function SettingsMobileBottomNav() {
                       <Link
                         href="/stock"
                         onClick={resetNavigationState}
-                        className={`flex flex-col items-center justify-center gap-1 rounded-2xl px-1 py-2 text-[10px] font-medium transition ${
+                        className={`flex flex-col items-center justify-center gap-1 rounded-2xl px-1 py-1.5 text-[9px] font-medium transition ${
                           active ? "text-[#4A148C]" : "text-slate-500 hover:text-slate-900"
                         }`}
                       >
-                        <Boxes className={`h-5 w-5 transition-colors ${active ? "text-[#4A148C]" : "text-slate-500"}`} strokeWidth={active ? 2.8 : 2.2} />
+                        <Boxes className={`h-[22px] w-[22px] transition-colors ${active ? "text-[#4A148C]" : "text-slate-500"}`} strokeWidth={active ? 2.8 : 2.2} />
                         <span className={`whitespace-nowrap transition-all ${active ? "font-bold scale-105" : ""}`}>สต็อก</span>
                       </Link>
                     );
@@ -311,11 +312,11 @@ export function SettingsMobileBottomNav() {
                       <Link
                         href="/billing"
                         onClick={resetNavigationState}
-                        className={`flex flex-col items-center justify-center gap-1 rounded-2xl px-1 py-2 text-[10px] font-medium transition ${
+                        className={`flex flex-col items-center justify-center gap-1 rounded-2xl px-1 py-1.5 text-[9px] font-medium transition ${
                           active ? "text-[#4A148C]" : "text-slate-500 hover:text-slate-900"
                         }`}
                       >
-                        <Receipt className={`h-5 w-5 transition-colors ${active ? "text-[#4A148C]" : "text-slate-500"}`} strokeWidth={active ? 2.8 : 2.2} />
+                        <Receipt className={`h-[22px] w-[22px] transition-colors ${active ? "text-[#4A148C]" : "text-slate-500"}`} strokeWidth={active ? 2.8 : 2.2} />
                         <span className={`whitespace-nowrap transition-all ${active ? "font-bold scale-105" : ""}`}>ใบวางบิล</span>
                       </Link>
                     );
@@ -325,9 +326,9 @@ export function SettingsMobileBottomNav() {
                   <form action={signOut} className="w-full flex items-center justify-center">
                     <button
                       type="submit"
-                      className="flex w-full flex-col items-center justify-center gap-1 rounded-2xl px-1 py-2 text-[10px] font-medium transition text-slate-500 hover:text-slate-900"
+                      className="flex w-full flex-col items-center justify-center gap-1 rounded-2xl px-1 py-1.5 text-[9px] font-medium transition text-slate-500 hover:text-slate-900"
                     >
-                      <LogOut className="h-5 w-5 text-slate-500" strokeWidth={2.2} />
+                      <LogOut className="h-[22px] w-[22px] text-slate-500" strokeWidth={2.2} />
                       <span className="whitespace-nowrap">ออกระบบ</span>
                     </button>
                   </form>
@@ -344,13 +345,13 @@ export function SettingsMobileBottomNav() {
                         key={href}
                         href={href}
                         onClick={resetNavigationState}
-                        className={`flex flex-col items-center justify-center gap-1 rounded-2xl px-1 py-2 text-[10px] font-medium transition ${
+                        className={`flex flex-col items-center justify-center gap-1 rounded-2xl px-1 py-1.5 text-[9px] font-medium transition ${
                           active
                             ? "text-[#4A148C]"
                             : "text-slate-500 hover:text-slate-900"
                         }`}
                       >
-                        <Icon className={`h-5 w-5 transition-colors ${active ? "text-[#4A148C]" : "text-slate-500"}`} strokeWidth={active ? 2.8 : 2.2} />
+                        <Icon className={`h-[22px] w-[22px] transition-colors ${active ? "text-[#4A148C]" : "text-slate-500"}`} strokeWidth={active ? 2.8 : 2.2} />
                         <span className={`whitespace-nowrap transition-all ${active ? "font-bold scale-105" : ""}`}>{label}</span>
                       </Link>
                     );
@@ -368,13 +369,13 @@ export function SettingsMobileBottomNav() {
                         key={href}
                         href={href}
                         onClick={resetNavigationState}
-                        className={`flex flex-col items-center justify-center gap-1 rounded-2xl px-1 py-2 text-[10px] font-medium transition ${
+                        className={`flex flex-col items-center justify-center gap-1 rounded-2xl px-1 py-1.5 text-[9px] font-medium transition ${
                           active
                             ? "text-[#4A148C]"
                             : "text-slate-500 hover:text-slate-900"
                         }`}
                       >
-                        <Icon className={`h-5 w-5 transition-colors ${active ? "text-[#4A148C]" : "text-slate-500"}`} strokeWidth={active ? 2.8 : 2.2} />
+                        <Icon className={`h-[22px] w-[22px] transition-colors ${active ? "text-[#4A148C]" : "text-slate-500"}`} strokeWidth={active ? 2.8 : 2.2} />
                         <span className={`whitespace-nowrap transition-all ${active ? "font-bold scale-105" : ""}`}>{label}</span>
                       </Link>
                     );
@@ -387,13 +388,13 @@ export function SettingsMobileBottomNav() {
                       setNavigatingHref(null);
                       setMoreOpen(true);
                     }}
-                    className={`flex flex-col items-center justify-center gap-1 rounded-2xl px-1 py-2 text-[10px] font-medium transition ${
+                    className={`flex flex-col items-center justify-center gap-1 rounded-2xl px-1 py-1.5 text-[9px] font-medium transition ${
                       moreActive
                         ? "text-[#4A148C]"
                         : "text-slate-500 hover:text-slate-900"
                     }`}
                   >
-                    <MoreHorizontal className={`h-5 w-5 transition-colors ${moreActive ? "text-[#4A148C]" : "text-slate-500"}`} strokeWidth={2.4} />
+                    <MoreHorizontal className={`h-[22px] w-[22px] transition-colors ${moreActive ? "text-[#4A148C]" : "text-slate-500"}`} strokeWidth={2.4} />
                     <span className={`whitespace-nowrap ${moreActive ? "font-bold" : ""}`}>เพิ่มเติม</span>
                   </button>
                 </>
@@ -491,6 +492,12 @@ export function SettingsMobileBottomNav() {
                   icon: KeyRound,
                   label: "ตั้งค่า PIN",
                 },
+                {
+                  description: "อัปโหลดและจัดการโลโก้ของร้านค้าที่จะแสดงในหัวบิลและระบบสั่งสินค้า",
+                  href: "/settings/logo",
+                  icon: ImageIcon,
+                  label: "ตั้งค่าโลโก้ร้านค้า",
+                },
               ].map((option) => (
                 <Link
                   key={option.href}
@@ -516,7 +523,7 @@ export function SettingsMobileBottomNav() {
                 >
                   <SettingsLinkStatus />
                   <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#EA80FC]/25 text-[#4A148C]">
-                    <option.icon className="h-5.5 w-5.5" strokeWidth={2.2} />
+                    <option.icon className="h-5 w-5" strokeWidth={2.2} />
                   </div>
                   <div className="flex-1 min-w-0">
                     <h3 className="text-base font-bold text-slate-950 truncate">{option.label}</h3>
@@ -539,3 +546,4 @@ export function SettingsMobileBottomNav() {
   if (!mounted) return null;
   return createPortal(nav, document.body);
 }
+

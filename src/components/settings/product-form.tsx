@@ -150,7 +150,7 @@ function ProductFormBody({
   const [cameraError, setCameraError] = useState("");
   const [isCameraOpen, setIsCameraOpen] = useState(false);
   const [isStartingCamera, setIsStartingCamera] = useState(false);
-  const [baseUnit, setBaseUnit] = useState(editingProduct?.baseUnit ?? "kg");
+  const [baseUnit, setBaseUnit] = useState(editingProduct?.baseUnit ?? "กก.");
   const legacyProductKind = editingProduct?.productKind ?? "stock";
   const supplierId = editingProduct?.supplierId ?? "";
   const [baseCostPrice, setBaseCostPrice] = useState(
@@ -179,7 +179,7 @@ function ProductFormBody({
           fixedCostPrice: "",
           id: "",
           key: crypto.randomUUID(),
-          label: editingProduct?.baseUnit ?? "kg",
+          label: editingProduct?.baseUnit ?? "กก.",
           minOrderQty: String(INTEGER_ORDER_PRESET_QTY),
           orderPreset: "integer" as OrderPreset,
           stepOrderQty: String(INTEGER_ORDER_PRESET_QTY),
@@ -861,7 +861,7 @@ function ProductFormBody({
                       );
                     }}
                     className={productInputClass}
-                    placeholder="เช่น kg, แพ็ค, ชิ้น"
+                    placeholder="เช่น กก., แพ็ค, ชิ้น"
                   />
                 </div>
               </div>
