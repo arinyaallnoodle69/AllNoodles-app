@@ -656,31 +656,27 @@ export function ProductCategoryManager({
     setActiveCategoryId(null);
     if (!over || active.id === over.id || normalizedCategorySearch) return;
 
-    let updatedCategories: SettingsProductCategory[] = [];
+    const oldIndex = localCategories.findIndex((item) => item.id === active.id);
+    const newIndex = localCategories.findIndex((item) => item.id === over.id);
 
-    setLocalCategories((items) => {
-      const oldIndex = items.findIndex((item) => item.id === active.id);
-      const newIndex = items.findIndex((item) => item.id === over.id);
+    if (oldIndex < 0 || newIndex < 0) return;
 
-      if (oldIndex < 0 || newIndex < 0) {
-        updatedCategories = items;
-        return items;
-      }
+    const previousCategories = localCategories;
+    const updatedCategories = arrayMove(localCategories, oldIndex, newIndex).map((category, index) => ({
+      ...category,
+      sortOrder: index,
+    }));
 
-      updatedCategories = arrayMove(items, oldIndex, newIndex).map((category, index) => ({
-        ...category,
-        sortOrder: index,
-      }));
-      return updatedCategories;
-    });
+    setLocalCategories(updatedCategories);
 
     startTransition(async () => {
       try {
         await updateProductCategoryOrder(updatedCategories.map((category) => category.id));
+        router.refresh();
       } catch (error) {
         console.error("Failed to update category order:", error);
         setFeedback({ tone: "error", message: "บันทึกลำดับหมวดหมู่ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง" });
-        setLocalCategories(categories);
+        setLocalCategories(previousCategories);
       }
     });
   }
