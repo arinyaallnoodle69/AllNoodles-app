@@ -109,6 +109,11 @@ export function DeliveryPdfPreviewModal({ file, onClose }: DeliveryPdfPreviewMod
     }
 
     if (isMobileStandalone) {
+      downloadPreparedDeliveryPdf(file);
+      return;
+    }
+
+    if (isMobileStandalone) {
       window.alert(
         isUploading
           ? "ระบบกำลังจัดเตรียมไฟล์ PDF กรุณารอสักครู่..."
@@ -140,6 +145,20 @@ export function DeliveryPdfPreviewModal({ file, onClose }: DeliveryPdfPreviewMod
           // Fallback if navigator.share is not supported: open in new window
           window.open(publicUrl, "_blank");
         }
+      } catch (error) {
+        if (error instanceof Error && error.name === "AbortError") return;
+        console.error("[delivery/share-pdf]", error);
+        window.alert("แชร์ PDF ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง");
+      } finally {
+        setIsSharing(false);
+      }
+      return;
+    }
+
+    if (isMobileStandalone) {
+      setIsSharing(true);
+      try {
+        await sharePreparedDeliveryPdf(file);
       } catch (error) {
         if (error instanceof Error && error.name === "AbortError") return;
         console.error("[delivery/share-pdf]", error);
@@ -221,7 +240,7 @@ export function DeliveryPdfPreviewModal({ file, onClose }: DeliveryPdfPreviewMod
               type="button"
               onClick={handleDownload}
               className={`inline-flex h-12 items-center gap-2 bg-[#EA80FC] px-6 text-sm font-black uppercase tracking-[0.14em] text-[#4A148C] transition hover:bg-[#4A148C] active:scale-[0.98] ${
-                isMobileStandalone && !publicUrl ? "opacity-50 cursor-not-allowed" : ""
+                isLineBrowser && isMobileStandalone && !publicUrl ? "opacity-50 cursor-not-allowed" : ""
               }`}
             >
               <Download className="h-4 w-4" strokeWidth={2.6} />
@@ -232,7 +251,7 @@ export function DeliveryPdfPreviewModal({ file, onClose }: DeliveryPdfPreviewMod
               onClick={handleShare}
               disabled={isSharing}
               className={`inline-flex h-12 items-center gap-2 bg-[#4A148C] px-6 text-sm font-black uppercase tracking-[0.14em] text-white transition hover:bg-[#4A148C] active:scale-[0.98] disabled:opacity-60 ${
-                isMobileStandalone && !publicUrl ? "opacity-50 cursor-not-allowed" : ""
+                isLineBrowser && isMobileStandalone && !publicUrl ? "opacity-50 cursor-not-allowed" : ""
               }`}
             >
               {isSharing ? (
@@ -281,7 +300,7 @@ export function DeliveryPdfPreviewModal({ file, onClose }: DeliveryPdfPreviewMod
                   title="ตัวอย่าง PDF บิลส่งของ"
                   className="flex-1 min-h-[60dvh] w-full bg-white border-0"
                 />
-              ) : isMobileStandalone ? (
+              ) : isLineBrowser && isMobileStandalone ? (
                 // Fallback warning for standalone PWA if upload fails
                 <div className="flex flex-col items-center justify-center gap-6 p-6 py-12 text-center bg-white h-full min-h-[62dvh] overflow-y-auto">
                   <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-amber-50 text-amber-500 border border-amber-200">
@@ -384,7 +403,7 @@ export function DeliveryPdfPreviewModal({ file, onClose }: DeliveryPdfPreviewMod
             type="button"
             onClick={handleDownload}
             className={`inline-flex h-14 items-center justify-center gap-2 bg-[#EA80FC] text-sm font-black uppercase tracking-[0.12em] text-[#4A148C] transition active:scale-95 ${
-              isMobileStandalone && !publicUrl ? "opacity-50" : ""
+              isLineBrowser && isMobileStandalone && !publicUrl ? "opacity-50" : ""
             }`}
           >
             <Download className="h-5 w-5" strokeWidth={2.8} />
@@ -395,7 +414,7 @@ export function DeliveryPdfPreviewModal({ file, onClose }: DeliveryPdfPreviewMod
             onClick={handleShare}
             disabled={isSharing}
             className={`inline-flex h-14 items-center justify-center gap-2 bg-[#4A148C] text-sm font-black uppercase tracking-[0.12em] text-white transition active:scale-95 disabled:opacity-60 ${
-              isMobileStandalone && !publicUrl ? "opacity-50" : ""
+              isLineBrowser && isMobileStandalone && !publicUrl ? "opacity-50" : ""
             }`}
           >
             {isSharing ? (
