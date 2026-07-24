@@ -1,29 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
-import { Download, Loader2, ReceiptText, X } from "lucide-react";
+import { useState } from "react";
+import { Loader2, Truck } from "lucide-react";
 import { createPortal } from "react-dom";
-import * as htmlToImage from "html-to-image";
-import { fetchIncomingOrderDetailAction } from "@/app/orders/incoming/actions";
-import { formatDisplayUnit } from "@/app/order/customer/unit-label";
-import { PrintStoreDeliveryButton } from "@/components/orders/print-store-delivery-button";
-import type { OrderDetailData } from "@/lib/orders/detail";
-import { fmtDateTH } from "@/lib/utils/date";
-
-let cachedFontEmbedCSS: string | null = null;
-
-function formatCurrency(value: number) {
-  return value.toLocaleString("th-TH", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
-}
-
-function formatQuantity(value: number) {
-  return value.toLocaleString("th-TH", {
-    maximumFractionDigits: 2,
-  });
-}
+import { getDeliveryFormDataAction } from "@/app/orders/delivery-actions";
+import { StoreDeliveryModal } from "@/components/orders/pending-orders-section";
+import type { DeliveryFormData } from "@/lib/delivery/admin";
 
 type OrderDeliveryActionButtonProps = {
   customerId: string;
@@ -32,306 +14,79 @@ type OrderDeliveryActionButtonProps = {
   iconOnly?: boolean;
   label?: string;
   orderId?: string;
+  vehicles?: { id: string; name: string }[];
+  defaultVehicleId?: string | null;
+  defaultVehicleName?: string | null;
 };
 
 export function OrderDeliveryActionButton({
-  customerId,
-  customerName,
-  date,
+  customerName = "ร้านค้าไม่ทราบชื่อ",
   iconOnly = false,
-  label = "ดูใบยืนยัน",
+  label = "พิมพ์บิลส่งของ",
+  vehicles = [],
+  defaultVehicleId = null,
+  defaultVehicleName = null,
   orderId,
 }: OrderDeliveryActionButtonProps) {
-  const [isTouchLayout, setIsTouchLayout] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
-  const [isOpen, setIsOpen] = useState(false);
-  const [detail, setDetail] = useState<OrderDetailData | null>(null);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const receiptCardRef = useRef<HTMLDivElement | null>(null);
-  const [mounted, setMounted] = useState(false);
+  const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [orders, setOrders] = useState<DeliveryFormData[] | null>(null);
 
-  useEffect(() => {
-    setMounted(true);
-    if (typeof window === "undefined") return;
-
-    const mediaQuery = window.matchMedia("(pointer: coarse)");
-    const update = () => setIsTouchLayout(mediaQuery.matches);
-    update();
-    mediaQuery.addEventListener("change", update);
-    return () => mediaQuery.removeEventListener("change", update);
-  }, []);
-
-  const receiptItems = useMemo(
-    () =>
-      (detail?.items ?? []).map((item) => ({
-        lineTotal: item.lineTotal,
-        name: item.productName,
-        quantity: item.quantity,
-        saleUnitLabel: formatDisplayUnit(item.unit),
-        unitPrice: item.unitPrice,
-      })),
-    [detail],
-  );
-
-  async function openReceipt() {
-    if (isLoading || !orderId || !customerName) return;
-
-    setErrorMessage(null);
-    setIsLoading(true);
+  async function handleOpen() {
+    if (loading || !orderId) return;
+    setLoading(true);
     try {
-      const result = await fetchIncomingOrderDetailAction(orderId);
-      if (result.error || !result.detail) {
-        setErrorMessage(result.error ?? "โหลดใบยืนยันคำสั่งซื้อไม่สำเร็จ");
-        return;
-      }
-      setDetail(result.detail);
-      setIsOpen(true);
-    } catch {
-      setErrorMessage("โหลดใบยืนยันคำสั่งซื้อไม่สำเร็จ");
-    } finally {
-      setIsLoading(false);
-    }
-  }
-
-  async function saveReceiptAsImage() {
-    if (!receiptCardRef.current || isSaving) return;
-
-    setIsSaving(true);
-    try {
-      let fontEmbedCSS: string | undefined = undefined;
-      if (cachedFontEmbedCSS) {
-        fontEmbedCSS = cachedFontEmbedCSS;
+      const data = await getDeliveryFormDataAction(orderId);
+      if (data) {
+        setOrders([data]);
+        setOpen(true);
       } else {
-        try {
-          await Promise.race([
-            document.fonts.ready,
-            new Promise((_, reject) => setTimeout(() => reject(new Error("Font load timeout")), 2000))
-          ]);
-          fontEmbedCSS = await Promise.race([
-            htmlToImage.getFontEmbedCSS(document.body),
-            new Promise<string>((_, reject) => setTimeout(() => reject(new Error("Font CSS embed timeout")), 2000))
-          ]);
-          cachedFontEmbedCSS = fontEmbedCSS;
-        } catch (e) {
-          console.warn("Failed to embed fonts (timed out or error), proceeding without embedded fonts:", e);
-        }
+        alert("ไม่พบข้อมูลออเดอร์สำหรับจัดส่ง");
       }
-
-      // Capture DIRECTLY from the visible element!
-      const dataUrl = await htmlToImage.toPng(receiptCardRef.current, {
-        backgroundColor: "#ffffff",
-        cacheBust: true,
-        fontEmbedCSS,
-        pixelRatio: 2,
-      });
-
-      const fileName = `All Noodles-${detail?.orderNumber ?? "order"}.png`;
-
-      // Check if iOS
-      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
-                    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-
-      if (isIOS && navigator.share && navigator.canShare) {
-        try {
-          const res = await fetch(dataUrl);
-          const blob = await res.blob();
-          const file = new File([blob], fileName, { type: "image/png" });
-
-          if (navigator.canShare({ files: [file] })) {
-            await navigator.share({
-              files: [file],
-              title: "ใบยืนยันคำสั่งซื้อ",
-            });
-            return;
-          }
-        } catch (err) {
-          console.error("[WebShare:IncomingOrder]", err);
-          if (err instanceof Error && err.name === "AbortError") {
-            return; // Stay on the page if cancelled!
-          }
-          // Fallback to normal download if WebShare fails
-        }
-      }
-
-      const downloadLink = document.createElement("a");
-      downloadLink.href = dataUrl;
-      downloadLink.download = fileName;
-      downloadLink.rel = "noopener";
-      document.body.appendChild(downloadLink);
-      downloadLink.click();
-      document.body.removeChild(downloadLink);
-    } catch (error) {
-      console.error("Save image error:", error);
-      setErrorMessage("บันทึกรูปใบยืนยันไม่สำเร็จ");
+    } catch (err) {
+      console.error("[OrderDeliveryActionButton] error:", err);
+      alert("ไม่สามารถดึงข้อมูลบิลจัดส่งได้");
     } finally {
-      setIsSaving(false);
+      setLoading(false);
     }
-  }
-
-  if (!isTouchLayout) {
-    return (
-      <PrintStoreDeliveryButton
-        date={date}
-        customerId={customerId}
-        label="พิมพ์บิลส่งของ"
-        iconOnly={iconOnly}
-      />
-    );
-  }
-
-  if (!orderId || !customerName) {
-    return (
-      <PrintStoreDeliveryButton
-        date={date}
-        customerId={customerId}
-        label="พิมพ์บิลส่งของ"
-        iconOnly={iconOnly}
-      />
-    );
   }
 
   return (
     <>
       <button
         type="button"
-        onClick={openReceipt}
-        disabled={isLoading}
+        onClick={handleOpen}
+        disabled={loading}
         aria-label={label}
         title={label}
         className={[
           "inline-flex items-center justify-center border border-[#4A148C] bg-[#4A148C] text-white transition hover:bg-[#4A148C] active:scale-95 disabled:opacity-50",
-          iconOnly ? "size-10 shrink-0 rounded-full p-0 leading-none" : "min-h-9 w-full gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold",
+          iconOnly
+            ? "size-10 shrink-0 rounded-full p-0 leading-none"
+            : "min-h-9 w-full gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold",
         ].join(" ")}
       >
-        {isLoading ? (
+        {loading ? (
           <Loader2 className="h-4.5 w-4.5 animate-spin" strokeWidth={2.2} />
         ) : (
-          <ReceiptText className="h-4.5 w-4.5" strokeWidth={2.2} />
+          <Truck className="h-4.5 w-4.5" strokeWidth={2.2} />
         )}
-        {iconOnly ? null : isLoading ? "กำลังโหลด..." : label}
+        {iconOnly ? null : loading ? "กำลังโหลด..." : label}
       </button>
 
-      {mounted && isOpen && detail
+      {open && orders && orders.length > 0 && typeof document !== "undefined"
         ? createPortal(
-            <div
-              className="fixed inset-0 z-[500] flex items-center justify-center bg-black/40 p-1 sm:p-4 backdrop-blur-sm animate-in fade-in duration-200"
-              onClick={(event) => {
-                if (event.target === event.currentTarget) setIsOpen(false);
+            <StoreDeliveryModal
+              customerName={customerName}
+              orders={orders}
+              defaultVehicleId={defaultVehicleId}
+              defaultVehicleName={defaultVehicleName}
+              vehicles={vehicles}
+              onClose={() => {
+                setOpen(false);
+                setOrders(null);
               }}
-            >
-              {/* Floating Close Button inside viewport for perfect mobile visibility */}
-              <button
-                onClick={() => setIsOpen(false)}
-                className="fixed top-4 right-4 z-[550] flex items-center gap-1.5 rounded-full bg-black/70 px-4 py-2 text-white shadow-lg backdrop-blur-md transition active:scale-95 hover:bg-black/80"
-              >
-                <X className="h-5 w-5" strokeWidth={3} />
-                <span className="text-sm font-bold tracking-tight">ปิดหน้าต่างนี้</span>
-              </button>
-
-              <div
-                className="relative w-full max-w-[480px] animate-in zoom-in-95 duration-300"
-                onClick={(event) => event.stopPropagation()}
-              >
-                <div className="flex justify-start mb-4">
-                  <button
-                    type="button"
-                    onClick={saveReceiptAsImage}
-                    disabled={isSaving}
-                    className="inline-flex items-center gap-2 rounded-full border border-[#EA80FC]/70 bg-[#4A148C] px-5 py-2 text-sm font-bold text-white transition-all hover:bg-[#4A148C] active:scale-95 disabled:opacity-60 shadow-md shadow-[#4A148C]/20"
-                  >
-                    {isSaving ? (
-                      <Loader2 className="h-4.5 w-4.5 animate-spin" />
-                    ) : (
-                      <Download className="h-4.5 w-4.5" strokeWidth={2.5} />
-                    )}
-                    บันทึกรูป
-                  </button>
-                </div>
-
-                <div className="scrollbar-hide max-h-[85vh] overflow-y-auto">
-                  <div className="bg-white text-black shadow-2xl" ref={receiptCardRef}>
-                    <div className="px-2 py-5 sm:px-6 sm:py-6">
-                      <div className="mb-2 flex justify-end pr-3 pt-2">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src="/api/brand/logo"
-                          alt="All Noodles"
-                          style={{
-                            width: "48px",
-                            height: "48px",
-                            objectFit: "contain",
-                          }}
-                        />
-                      </div>
-
-                      <div className="mb-4 text-center">
-                        <div className="text-[11px] leading-relaxed text-black font-extrabold">
-                          All Noodles - ใบยืนยันคำสั่งซื้อ
-                        </div>
-                        <div className="mt-0.5 text-[14px] font-black leading-tight">
-                          เลขที่ออเดอร์: {detail.orderNumber}
-                        </div>
-                        <div className="mt-1 text-[12px] leading-relaxed text-black font-semibold">
-                          {fmtDateTH(detail.createdAt)}
-                        </div>
-                      </div>
-
-                      <div className="mb-4 h-[2px] bg-black" />
-
-                      <div className="mb-3">
-                        <span className="text-[12px] font-bold">ชื่อลูกค้า:</span>
-                        <span className="text-[12px]"> {customerName}</span>
-                      </div>
-
-                      <div className="grid grid-cols-[1fr_80px_60px_65px] gap-1 sm:gap-2 border-b border-[#cccccc] py-2">
-                        <span className="text-left text-[12px] font-black">สินค้า</span>
-                        <span className="text-right text-[12px] font-black">จำนวน</span>
-                        <span className="text-right text-[12px] font-black">ราคา</span>
-                        <span className="text-right text-[12px] font-black">รวม</span>
-                      </div>
-
-                      <div className="divide-y divide-[#cccccc]">
-                        {receiptItems.map((item, index) => (
-                          <div
-                            key={index}
-                            className="grid grid-cols-[1fr_80px_60px_65px] items-center gap-1 sm:gap-2 py-3"
-                          >
-                            <div className="text-[11px] leading-[1.4] break-words whitespace-normal overflow-visible">{item.name}</div>
-                            <div className="text-right text-[12px] font-medium">
-                              {formatQuantity(item.quantity)} {item.saleUnitLabel}
-                            </div>
-                            <div className="text-right text-[12px] text-black font-medium">
-                              {formatCurrency(item.unitPrice)}
-                            </div>
-                            <div className="text-right text-[12px] font-bold">
-                              {formatCurrency(item.lineTotal)}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-
-                      <div className="mb-4 mt-4 h-[1px] bg-[#cccccc]" />
-
-                      <div className="mb-6 flex items-center justify-between px-1">
-                        <span className="text-[13px] font-black">ยอดรวมทั้งหมด:</span>
-                        <span className="text-[16px] font-black text-[#4A148C] underline decoration-double decoration-slate-300 underline-offset-4">
-                          {formatCurrency(detail.totalAmount)}
-                        </span>
-                      </div>
-
-                      {/* Button moved to top */}
-
-                      {errorMessage ? (
-                        <div className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700">
-                          {errorMessage}
-                        </div>
-                      ) : null}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>,
+            />,
             document.body,
           )
         : null}

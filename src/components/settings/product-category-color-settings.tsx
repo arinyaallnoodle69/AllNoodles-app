@@ -1,16 +1,19 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   Check,
+  CheckCircle2,
   FolderTree,
   Package2,
   Palette,
   RotateCcw,
   Save,
   Tag,
+  X,
+  XCircle,
 } from "lucide-react";
 import { saveProductCategoryPrintColorAction } from "@/app/settings/products/category-colors/actions";
 import {
@@ -41,7 +44,12 @@ export function ProductCategoryColorSettings({ categories }: ProductCategoryColo
   const [savedColors, setSavedColors] = useState<Record<string, string | null>>(() => getInitialDrafts(categories));
   const [draftColors, setDraftColors] = useState<Record<string, string | null>>(() => getInitialDrafts(categories));
   const [message, setMessage] = useState("");
-  const [isPending, startTransition] = useTransition();
+  const [isLoading, setIsLoading] = useState(false);
+  const [toast, setToast] = useState<{
+    show: boolean;
+    message: string;
+    type: "success" | "error";
+  }>({ show: false, message: "", type: "success" });
   const router = useRouter();
 
   useEffect(() => {
@@ -50,6 +58,15 @@ export function ProductCategoryColorSettings({ categories }: ProductCategoryColo
     router.prefetch("/settings/products?tab=brands");
     router.prefetch("/settings/products/product-colors");
   }, [router]);
+
+  useEffect(() => {
+    if (toast.show) {
+      const timer = setTimeout(() => {
+        setToast((t) => ({ ...t, show: false }));
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [toast.show]);
 
   const selectedCategory = categories.find((category) => category.id === selectedId) ?? categories[0] ?? null;
   const selectedDraft = selectedCategory ? draftColors[selectedCategory.id] ?? null : null;
@@ -92,31 +109,97 @@ export function ProductCategoryColorSettings({ categories }: ProductCategoryColo
     const normalizedColor = selectedDraft === null ? null : normalizePrintColor(selectedDraft);
     if (selectedDraft !== null && !normalizedColor) {
       setMessage("รหัสสีต้องเป็นรูปแบบ #RRGGBB");
+      setToast({ show: true, message: "รหัสสีต้องเป็นรูปแบบ #RRGGBB", type: "error" });
       return;
     }
 
-    startTransition(async () => {
-      const result = await saveProductCategoryPrintColorAction({
-        categoryId: selectedCategory.id,
-        color: normalizedColor,
+    setIsLoading(true);
+    saveProductCategoryPrintColorAction({
+      categoryId: selectedCategory.id,
+      color: normalizedColor,
+    })
+      .then((result) => {
+        setMessage(result.message);
+        if (result.status === "success") {
+          setSavedColors((current) => ({
+            ...current,
+            [selectedCategory.id]: normalizedColor,
+          }));
+          setDraftColors((current) => ({
+            ...current,
+            [selectedCategory.id]: normalizedColor,
+          }));
+          setToast({ show: true, message: "บันทึกสีหมวดหมู่สำเร็จแล้ว", type: "success" });
+          router.refresh();
+        } else {
+          setToast({ show: true, message: result.message || "บันทึกสีหมวดหมู่ไม่สำเร็จ", type: "error" });
+        }
+      })
+      .catch((error) => {
+        console.error("[handleSave]", error);
+        setMessage("เกิดข้อผิดพลาดในการบันทึก");
+        setToast({ show: true, message: "เกิดข้อผิดพลาดในการบันทึก", type: "error" });
+      })
+      .finally(() => {
+        setIsLoading(false);
       });
-
-      setMessage(result.message);
-      if (result.status === "success") {
-        setSavedColors((current) => ({
-          ...current,
-          [selectedCategory.id]: normalizedColor,
-        }));
-        setDraftColors((current) => ({
-          ...current,
-          [selectedCategory.id]: normalizedColor,
-        }));
-      }
-    });
   }
 
   return (
     <div className="min-h-screen bg-white text-slate-950">
+      <style>{`
+        @keyframes toastSlideIn {
+          from { transform: translateX(120%); opacity: 0; }
+          to { transform: translateX(0); opacity: 1; }
+        }
+        .animate-toast-in {
+          animation: toastSlideIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+      `}</style>
+
+      {/* Toast Notification */}
+      {toast.show && (
+        <div
+          className={`fixed top-6 right-6 z-[9999] animate-toast-in flex w-96 max-w-[calc(100vw-3rem)] items-start gap-3 rounded-2xl border p-4 shadow-lg font-[family:var(--font-sarabun)] ${
+            toast.type === "success"
+              ? "border-emerald-100 bg-white shadow-[0_16px_48px_rgba(16,185,129,0.16)]"
+              : "border-rose-100 bg-white shadow-[0_16px_48px_rgba(244,63,94,0.16)]"
+          }`}
+        >
+          {toast.type === "success" ? (
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-50">
+              <CheckCircle2 className="h-5 w-5 text-emerald-500" strokeWidth={2.5} />
+            </div>
+          ) : (
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-rose-50">
+              <XCircle className="h-5 w-5 text-rose-500" strokeWidth={2.5} />
+            </div>
+          )}
+          <div className="flex-1 min-w-0 pt-0.5">
+            <p
+              className={`text-[10px] font-black uppercase tracking-[0.2em] ${
+                toast.type === "success" ? "text-emerald-500" : "text-rose-500"
+              }`}
+            >
+              {toast.type === "success" ? "บันทึกสำเร็จ" : "เกิดข้อผิดพลาด"}
+            </p>
+            <p
+              className={`mt-1 text-sm font-black ${
+                toast.type === "success" ? "text-emerald-800" : "text-rose-800"
+              }`}
+            >
+              {toast.message}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setToast((t) => ({ ...t, show: false }))}
+            className="text-slate-400 hover:text-slate-600 transition p-1 rounded-full hover:bg-slate-100"
+          >
+            <X className="h-4 w-4" strokeWidth={2.5} />
+          </button>
+        </div>
+      )}
       <main className="hidden min-w-0 lg:block">
         <MobileProductSettingsTabs />
 
@@ -138,7 +221,7 @@ export function ProductCategoryColorSettings({ categories }: ProductCategoryColo
             selectedCategory={selectedCategory}
             selectedColor={normalizedSelectedColor}
             isDirty={isDirty}
-            isPending={isPending}
+            isPending={isLoading}
             message={message}
             onHexChange={handleHexChange}
             onPickColor={setSelectedColor}
@@ -167,7 +250,7 @@ export function ProductCategoryColorSettings({ categories }: ProductCategoryColo
             selectedCategory={selectedCategory}
             selectedColor={normalizedSelectedColor}
             isDirty={isDirty}
-            isPending={isPending}
+            isPending={isLoading}
             message={message}
             onHexChange={handleHexChange}
             onPickColor={setSelectedColor}

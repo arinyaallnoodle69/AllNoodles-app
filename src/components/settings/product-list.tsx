@@ -38,6 +38,7 @@ import { restrictToVerticalAxis } from '@dnd-kit/modifiers';
 type ProductListProps = {
   products: SettingsProduct[];
   onEdit: (product: SettingsProduct) => void;
+  canReorder?: boolean;
 };
 
 function formatCost(value: number) {
@@ -281,8 +282,9 @@ function SortableMobileCard({
   onEdit, 
   deleteFormId, 
   defaultUnit,
-  displayIndex
-}: Omit<MobileCardProps, "isDragging" | "dragHandle">) {
+  displayIndex,
+  canReorder
+}: Omit<MobileCardProps, "isDragging" | "dragHandle"> & { canReorder: boolean }) {
   const {
     attributes,
     isDragging,
@@ -291,7 +293,7 @@ function SortableMobileCard({
     setNodeRef,
     transform,
     transition,
-  } = useSortable({ id: product.id });
+  } = useSortable({ id: product.id, disabled: !canReorder });
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -312,17 +314,19 @@ function SortableMobileCard({
         displayIndex={displayIndex}
         isDragging={false}
         dragHandle={
-          <button
-            type="button"
-            ref={setActivatorNodeRef}
-            className="cursor-grab touch-none p-1 text-slate-300 transition-colors hover:text-[#EA80FC] active:cursor-grabbing"
-            aria-label="ลากเพื่อจัดลำดับ"
-            onClick={(e) => e.stopPropagation()}
-            {...attributes}
-            {...listeners}
-          >
-            <GripVertical className="h-5 w-5" strokeWidth={2.3} />
-          </button>
+          canReorder ? (
+            <button
+              type="button"
+              ref={setActivatorNodeRef}
+              className="cursor-grab touch-none p-1 text-slate-300 transition-colors hover:text-[#EA80FC] active:cursor-grabbing"
+              aria-label="ลากเพื่อจัดลำดับ"
+              onClick={(e) => e.stopPropagation()}
+              {...attributes}
+              {...listeners}
+            >
+              <GripVertical className="h-5 w-5" strokeWidth={2.3} />
+            </button>
+          ) : null
         }
       />
     </div>
@@ -413,12 +417,14 @@ function SortableDesktopRow({
   onEdit,
   deleteFormId,
   defaultUnit,
+  canReorder,
 }: {
   product: SettingsProduct;
   index: number;
   onEdit: (product: SettingsProduct) => void;
   deleteFormId: string;
   defaultUnit: { effectiveCostPrice: number } | null | undefined;
+  canReorder: boolean;
 }) {
   const {
     attributes,
@@ -428,7 +434,7 @@ function SortableDesktopRow({
     transform,
     transition,
     isDragging
-  } = useSortable({ id: product.id });
+  } = useSortable({ id: product.id, disabled: !canReorder });
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -448,15 +454,17 @@ function SortableDesktopRow({
       <td className="border-b border-r border-[#EEF1F5] px-4 py-2 text-center align-middle text-sm font-bold tabular-nums text-[#4A148C]">
         <span className="inline-flex items-center gap-2">
           <span>{index + 1}</span>
-          <span
-            ref={setActivatorNodeRef}
-            {...attributes}
-            {...listeners}
-            className="inline-flex cursor-grab touch-none text-slate-300 hover:text-[#EA80FC] active:cursor-grabbing"
-            aria-label="ลากเพื่อย้ายลำดับ"
-          >
-            <GripVertical className="h-4 w-4" />
-          </span>
+          {canReorder && (
+            <span
+              ref={setActivatorNodeRef}
+              {...attributes}
+              {...listeners}
+              className="inline-flex cursor-grab touch-none text-slate-300 hover:text-[#EA80FC] active:cursor-grabbing"
+              aria-label="ลากเพื่อย้ายลำดับ"
+            >
+              <GripVertical className="h-4 w-4" />
+            </span>
+          )}
         </span>
       </td>
 
@@ -539,7 +547,7 @@ function SortableDesktopRow({
 }
 
 // ─── Main Component ────────────────────────────────────────────────────────
-export function ProductList({ products, onEdit }: ProductListProps) {
+export function ProductList({ products, onEdit, canReorder = true }: ProductListProps) {
   const [localProducts, setLocalProducts] = useState(products);
   const [isPending, startTransition] = useTransition();
 
@@ -611,24 +619,20 @@ export function ProductList({ products, onEdit }: ProductListProps) {
     const { active, over } = event;
     setActiveProductId(null);
     
-    if (over && active.id !== over.id) {
-      let updatedItems: typeof localProducts = [];
+    if (over && active.id !== over.id && canReorder) {
+      const oldIndex = localProducts.findIndex((i) => i.id === active.id);
+      const newIndex = localProducts.findIndex((i) => i.id === over.id);
       
-      setLocalProducts((items) => {
-        const oldIndex = items.findIndex((i) => i.id === active.id);
-        const newIndex = items.findIndex((i) => i.id === over.id);
-        
-        updatedItems = arrayMove(items, oldIndex, newIndex);
-        return updatedItems;
-      });
+      if (oldIndex < 0 || newIndex < 0) return;
       
-      // Call server action to persist order OUTSIDE of state setter
+      const updatedItems = arrayMove(localProducts, oldIndex, newIndex);
+      setLocalProducts(updatedItems);
+      
       startTransition(async () => {
         try {
           await updateProductOrder(updatedItems.map(i => i.id));
         } catch (error) {
           console.error("Failed to update product order:", error);
-          // Revert on error if needed, but optimistic update is usually fine for UI
         }
       });
     }
@@ -797,6 +801,7 @@ export function ProductList({ products, onEdit }: ProductListProps) {
                             onEdit={onEdit}
                             deleteFormId={deleteFormId}
                             defaultUnit={defaultUnit}
+                            canReorder={canReorder}
                           />
                         );
                       })}
@@ -834,6 +839,7 @@ export function ProductList({ products, onEdit }: ProductListProps) {
                         deleteFormId={deleteFormId}
                         defaultUnit={defaultUnit}
                         displayIndex={index + 1}
+                        canReorder={canReorder}
                       />
                     );
                   })}

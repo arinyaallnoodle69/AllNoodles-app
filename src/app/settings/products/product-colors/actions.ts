@@ -74,8 +74,6 @@ export async function saveProductPrintBackgroundColorsAction(input: {
   }
 
   revalidatePath("/settings/products/product-colors");
-  revalidatePath("/orders/packing-list");
-  revalidatePath("/orders/packing-list/mockup");
 
   return { status: "success", message: `บันทึกสีสินค้า ${updates.length.toLocaleString("th-TH")} รายการแล้ว` };
 }

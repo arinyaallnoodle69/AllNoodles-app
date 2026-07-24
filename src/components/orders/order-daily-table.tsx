@@ -140,7 +140,7 @@ function StoreDetailPanel({ date, detail }: { date: string; detail: OrderStoreDe
             <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-slate-600">
               <span>
                 ออเดอร์{" "}
-                <span className="font-medium text-slate-700">
+                <span className={`font-medium ${item.fulfillmentMode === "fresh" ? "text-emerald-700" : "text-slate-700"}`}>
                   {item.orderedQuantity.toLocaleString("th-TH")}
                 </span>
                 <span className="ml-0.5 text-xs text-slate-400">{item.productUnit}</span>
@@ -149,7 +149,9 @@ function StoreDetailPanel({ date, detail }: { date: string; detail: OrderStoreDe
               <span>
                 สต็อก{" "}
                 <span className="font-medium text-slate-700">
-                  {item.currentStockQuantity.toLocaleString("th-TH")}
+                  {item.fulfillmentMode === "fresh"
+                    ? `ขายแล้ว ${item.orderedQuantity.toLocaleString("th-TH")}`
+                    : item.currentStockQuantity.toLocaleString("th-TH")}
                 </span>
               </span>
               <span>·</span>
@@ -239,7 +241,13 @@ function StoreDetailPanel({ date, detail }: { date: string; detail: OrderStoreDe
 
                 {/* สต็อก */}
                 <td className="border-r border-slate-300 px-4 py-3 text-center tabular-nums text-slate-700">
-                  {item.currentStockQuantity.toLocaleString("th-TH")}
+                  {item.fulfillmentMode === "fresh" ? (
+                    <span className="font-bold text-emerald-700">
+                      ขายแล้ว {item.orderedQuantity.toLocaleString("th-TH")}
+                    </span>
+                  ) : (
+                    item.currentStockQuantity.toLocaleString("th-TH")
+                  )}
                 </td>
 
                 {/* ราคา/หน่วย */}

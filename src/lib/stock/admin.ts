@@ -32,6 +32,10 @@ export type StockProductOption = {
     reservedQuantity: number;
     warehouseId: string;
   }[];
+  warehouseModes: {
+    mode: ProductWarehouseFulfillmentMode;
+    warehouseId: string;
+  }[];
   categoryName: string | null;
   brandName: string | null;
   sku: string;
@@ -120,6 +124,14 @@ type ProductWarehouseStockRow = {
   warehouse_id: string;
 };
 
+type ProductWarehouseFulfillmentMode = "disabled" | "fresh" | "stock";
+
+type ProductWarehouseFulfillmentModeRow = {
+  mode: ProductWarehouseFulfillmentMode | string | null;
+  product_id: string;
+  warehouse_id: string;
+};
+
 type WarehouseStockQuery = {
   eq: (column: string, value: string) => Promise<{
     data: ProductWarehouseStockRow[] | null;
@@ -128,8 +140,18 @@ type WarehouseStockQuery = {
 };
 
 type WarehouseStockAdmin = {
-  from: (table: "product_warehouse_stocks") => {
-    select: (columns: string) => WarehouseStockQuery;
+  from: {
+    (table: "product_warehouse_stocks"): {
+      select: (columns: string) => WarehouseStockQuery;
+    };
+    (table: "product_warehouse_fulfillment_modes"): {
+      select: (columns: string) => {
+        eq: (column: string, value: string) => Promise<{
+          data: ProductWarehouseFulfillmentModeRow[] | null;
+          error: { message?: string } | null;
+        }>;
+      };
+    };
   };
 };
 
@@ -337,6 +359,7 @@ export const getStockDashboardData = cache(
       movementsResult,
       suppliersResult,
       warehouseStocksResult,
+      warehouseModesResult,
       categoriesResult,
       brandsResult,
     ] = await Promise.all([
@@ -367,6 +390,10 @@ export const getStockDashboardData = cache(
         .from("product_warehouse_stocks")
         .select("product_id, warehouse_id, stock_quantity, reserved_quantity")
         .eq("organization_id", organizationId),
+      (admin as unknown as WarehouseStockAdmin)
+        .from("product_warehouse_fulfillment_modes")
+        .select("product_id, warehouse_id, mode")
+        .eq("organization_id", organizationId),
       admin.from("product_categories")
         .select("id, sort_order")
         .eq("organization_id", organizationId),
@@ -383,6 +410,7 @@ export const getStockDashboardData = cache(
       movementsResult.error,
       categoriesResult.error,
       brandsResult.error,
+      warehouseModesResult.error,
     ].filter(Boolean);
 
     if (errors.length > 0) {
@@ -407,6 +435,7 @@ export const getStockDashboardData = cache(
     const movements = (movementsResult.data ?? []) as MovementRow[];
     const suppliers = (suppliersResult.data ?? []) as SupplierRow[];
     const warehouseStocks = warehouseStocksResult.error ? [] : (warehouseStocksResult.data ?? []);
+    const warehouseModes = (warehouseModesResult.data ?? []) as ProductWarehouseFulfillmentModeRow[];
     const categories = (categoriesResult.data ?? []) as Array<{ id: string; sort_order: number | string }>;
     const brands = (brandsResult.data ?? []) as Array<{ name: string; sort_order: number | string }>;
 
@@ -430,6 +459,16 @@ export const getStockDashboardData = cache(
       const current = warehouseStockMap.get(stock.product_id) ?? [];
       current.push(stock);
       warehouseStockMap.set(stock.product_id, current);
+    }
+    const warehouseModeMap = new Map<string, StockProductOption["warehouseModes"]>();
+    for (const row of warehouseModes) {
+      const mode: ProductWarehouseFulfillmentMode = row.mode === "fresh" ? "fresh" : "stock";
+      const current = warehouseModeMap.get(row.product_id) ?? [];
+      current.push({
+        mode,
+        warehouseId: row.warehouse_id,
+      });
+      warehouseModeMap.set(row.product_id, current);
     }
 
     const mappedProducts = products.map((product) => {
@@ -473,6 +512,7 @@ export const getStockDashboardData = cache(
           reservedQuantity: Number(stock.reserved_quantity),
           warehouseId: stock.warehouse_id,
         })),
+        warehouseModes: warehouseModeMap.get(product.id) ?? [],
         sku: product.sku,
         unit: product.unit,
       };

@@ -18,15 +18,23 @@ export default async function StockPage({ searchParams }: { searchParams: Search
   const session = await requireAnyRole(["admin", "member"]);
   const params = await searchParams;
   const tab = params.tab || "stock";
-  const warehouseId = params.warehouse || "all";
   
   // Default to today's date in Thailand timezone if not provided
   const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Bangkok" }).format(new Date());
   const date = params.date || today;
 
-  const [data, warehouses, initialHistory, initialIssues] = await Promise.all([
+  const [data, warehouses] = await Promise.all([
     getStockDashboardData(session.organizationId),
     getActiveWarehouses(session.organizationId),
+  ]);
+
+  const requestedWarehouseId = params.warehouse;
+  const warehouseId =
+    requestedWarehouseId && warehouses.some((warehouse) => warehouse.id === requestedWarehouseId)
+      ? requestedWarehouseId
+      : warehouses[0]?.id ?? "";
+
+  const [initialHistory, initialIssues] = await Promise.all([
     getStockHistoryData(session.organizationId, 50, 0, warehouseId),
     getStockIssueHistoryData(session.organizationId, 50, 0, date, warehouseId),
   ]);

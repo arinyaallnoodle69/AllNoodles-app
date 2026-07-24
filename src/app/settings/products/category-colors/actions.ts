@@ -56,7 +56,6 @@ export async function saveProductCategoryPrintColorAction(input: {
   }
 
   revalidatePath("/settings/products/category-colors");
-  revalidatePath("/orders/packing-list");
 
   return { status: "success", message: "บันทึกสีหมวดหมู่แล้ว" };
 }

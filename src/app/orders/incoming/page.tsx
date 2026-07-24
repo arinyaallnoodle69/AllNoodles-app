@@ -528,6 +528,7 @@ export default async function IncomingOrdersPage({ searchParams }: IncomingOrder
       title="คำสั่งซื้อ"
       description=""
       floatingSubmit={false}
+      fullWidthDesktop
       hideHeader
     >
       <div className="space-y-6">

@@ -74,6 +74,10 @@ function getRemainingSaleUnitQty(item: DeliveryItemData) {
 
   const deliveredQty =
     item.saleUnitRatio > 0 ? item.deliveredBaseQty / item.saleUnitRatio : item.deliveredBaseQty;
+  if (deliveredQty > 0) {
+    return deliveredQty;
+  }
+
   return Math.max(0, item.orderedQty - deliveredQty);
 }
 
@@ -145,6 +149,8 @@ function DeliveryModal({
   const [loading, setLoading] = useState(true);
   const [qtys, setQtys] = useState<Record<string, string>>({});
   const [notes, setNotes] = useState("");
+  const [previousOutstanding, setPreviousOutstanding] = useState("");
+  const [installmentPaid, setInstallmentPaid] = useState("");
   const [isPending, startTransition] = useTransition();
   const [actionState, setActionState] = useState<CreateDeliveryState | null>(null);
   const deliveryItems = useMemo(() => formData?.items ?? [], [formData]);
@@ -161,6 +167,8 @@ function DeliveryModal({
             defaultQty > 0 ? formatNum(defaultQty, 3).replace(/,/g, "") : "";
         }
         setQtys(init);
+        setPreviousOutstanding(data.outstandingBalance?.toString() ?? "0");
+        setInstallmentPaid(data.installmentLimit?.toString() ?? "");
       }
       setLoading(false);
     });
@@ -203,6 +211,8 @@ function DeliveryModal({
     fd.set("deliveryDate", formData.orderDate);
     fd.set("notes", notes);
     fd.set("items", JSON.stringify(itemsPayload));
+    fd.set("previousOutstanding", previousOutstanding);
+    fd.set("installmentPaid", installmentPaid);
 
     startTransition(async () => {
       const result = await createDeliveryNoteAction(null, fd);
@@ -326,8 +336,40 @@ function DeliveryModal({
                 );
               })}
 
+              {/* Outstanding Balance & Installment inputs */}
+              <div className="grid grid-cols-2 gap-3 pt-2">
+                <div>
+                  <label className="mb-1.5 block text-xs font-bold text-slate-500">
+                    ยอดค้างชำระเดิม (บาท)
+                  </label>
+                  <input
+                    type="number"
+                    step="any"
+                    min="0"
+                    value={previousOutstanding}
+                    onChange={(e) => setPreviousOutstanding(e.target.value)}
+                    placeholder="0"
+                    className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-800 outline-none transition focus:border-[#4A148C] focus:ring-2 focus:ring-[#4A148C]/10"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-xs font-bold text-slate-500">
+                    ยอดผ่อนชำระวันนี้ (บาท)
+                  </label>
+                  <input
+                    type="number"
+                    step="any"
+                    min="0"
+                    value={installmentPaid}
+                    onChange={(e) => setInstallmentPaid(e.target.value)}
+                    placeholder="เว้นว่างเพื่อจ่ายหมด"
+                    className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-[#4A148C] outline-none transition focus:border-[#4A148C] focus:ring-2 focus:ring-[#4A148C]/10"
+                  />
+                </div>
+              </div>
+
               {/* Notes */}
-              <div className="pt-1">
+              <div className="pt-2">
                 <label className="mb-1.5 block text-xs font-semibold text-slate-500">
                   หมายเหตุ (ถ้ามี)
                 </label>
@@ -407,7 +449,7 @@ function DeliveryModal({
 
 // Store-level delivery modal (combines all order rounds of one store)
 
-function StoreDeliveryModal({
+export function StoreDeliveryModal({
   customerName,
   orders,
   onClose,
@@ -435,6 +477,12 @@ function StoreDeliveryModal({
     return init;
   });
   const [notes, setNotes] = useState("");
+  const [previousOutstanding, setPreviousOutstanding] = useState(() => {
+    return orders[0]?.outstandingBalance?.toString() ?? "0";
+  });
+  const [installmentPaid, setInstallmentPaid] = useState(() => {
+    return orders[0]?.installmentLimit?.toString() ?? "";
+  });
   const [selectedVehicleId, setSelectedVehicleId] = useState<string | null>(defaultVehicleId);
   const [isPending, startTransition] = useTransition();
   const [results, setResults] = useState<CreateDeliveryState[]>([]);
@@ -494,6 +542,8 @@ function StoreDeliveryModal({
     fd.set("notes", notes);
     fd.set("items", JSON.stringify(buildDeliveryItemsPayload()));
     if (selectedVehicleId) fd.set("vehicleId", selectedVehicleId);
+    fd.set("previousOutstanding", previousOutstanding);
+    fd.set("installmentPaid", installmentPaid);
     return fd;
   }
 
@@ -831,8 +881,39 @@ function StoreDeliveryModal({
           </table>
         </div>
 
-          {/* Notes */}
+          {/* Outstanding Balance & Installment inputs */}
+          <div className="grid grid-cols-2 gap-3 mt-4 pt-1">
+            <div>
+              <label className="mb-1.5 block text-xs font-bold text-slate-500">
+                ยอดค้างชำระเดิม (บาท)
+              </label>
+              <input
+                type="number"
+                step="any"
+                min="0"
+                value={previousOutstanding}
+                onChange={(e) => setPreviousOutstanding(e.target.value)}
+                placeholder="0"
+                className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-800 outline-none transition focus:border-[#4A148C] focus:ring-2 focus:ring-[#4A148C]/10"
+              />
+            </div>
+            <div>
+              <label className="mb-1.5 block text-xs font-bold text-slate-500">
+                ยอดผ่อนชำระวันนี้ (บาท)
+              </label>
+              <input
+                type="number"
+                step="any"
+                min="0"
+                value={installmentPaid}
+                onChange={(e) => setInstallmentPaid(e.target.value)}
+                placeholder="เว้นว่างเพื่อจ่ายหมด"
+                className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-[#4A148C] outline-none transition focus:border-[#4A148C] focus:ring-2 focus:ring-[#4A148C]/10"
+              />
+            </div>
+          </div>
 
+          {/* Notes */}
           <div className="mt-4 pt-1">
             <label className="mb-1.5 block text-xs font-semibold text-slate-500">
               หมายเหตุ (ถ้ามี)

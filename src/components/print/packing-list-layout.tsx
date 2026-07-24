@@ -113,7 +113,14 @@ function getColumnPalette(columnIndex: number) {
 }
 
 function getCategoryPrintPalette(product: PackingListProduct | undefined, fallback: CategoryPrintPalette) {
-  return buildCategoryPrintPalette(product?.printBackgroundColor ?? product?.categoryColor, fallback);
+  return buildCategoryPrintPalette(product?.categoryColor, fallback);
+}
+
+function getProductPalette(product: PackingListProduct | undefined, categoryPalette: CategoryPrintPalette) {
+  if (product?.printBackgroundColor) {
+    return buildCategoryPrintPalette(product.printBackgroundColor, categoryPalette);
+  }
+  return categoryPalette;
 }
 
 function normalizeHeaderLabel(value: string, field: "brand" | "category") {
@@ -424,12 +431,13 @@ function StandardPackingListPage({ page, data }: { page: StandardPageDef; data: 
                 <th className="packing-col packing-col--store">ร้านค้า</th>
                 {(() => {
                   return page.pageProducts.map((product) => {
-                    const palette = getCategoryPalette(product);
+                    const categoryPalette = getCategoryPalette(product);
+                    const productPalette = getProductPalette(product, categoryPalette);
                     return (
                       <th
                         key={product.key}
                         className="packing-col packing-col--product"
-                        style={{ width: columnWidth, backgroundColor: palette.header }}
+                        style={{ width: columnWidth, backgroundColor: productPalette.header }}
                       >
                                                 <div className="packing-product-header">
                           <div className="packing-product-header__name">
@@ -456,12 +464,13 @@ function StandardPackingListPage({ page, data }: { page: StandardPageDef; data: 
                     {page.pageProductIndices.map((productIndex, cellIndex) => {
                       const value = data.qty[productIndex]?.[storeIndex] ?? 0;
                       const product = page.pageProducts[cellIndex];
-                      const palette = product ? getCategoryPalette(product) : COLUMN_COLOR_GROUPS[0];
+                      const categoryPalette = product ? getCategoryPalette(product) : COLUMN_COLOR_GROUPS[0];
+                      const productPalette = product ? getProductPalette(product, categoryPalette) : COLUMN_COLOR_GROUPS[0];
                       return (
                         <td
                           key={`${store.id}-${productIndex}`}
                           className={value > 0 ? "packing-cell packing-cell--qty" : "packing-cell packing-cell--empty"}
-                          style={{ backgroundColor: rowIndex % 2 === 0 ? palette.rowA : palette.rowB }}
+                          style={{ backgroundColor: rowIndex % 2 === 0 ? productPalette.rowA : productPalette.rowB }}
                         >
                           {value > 0 ? value.toLocaleString("th-TH") : ""}
                         </td>

@@ -184,13 +184,19 @@ export function DesktopOrderDetail({ detail, deliveryNumbers }: Props) {
               </td>
 
               <td className="px-6 py-4 text-center">
-                <span
-                  className={`text-base font-bold tabular-nums ${
-                    item.stockQuantity < 0 ? "text-rose-800" : "text-slate-600"
-                  }`}
-                >
-                  {item.stockQuantity.toLocaleString("th-TH")}
-                </span>
+                {item.fulfillmentMode === "fresh" ? (
+                  <span className="text-base font-bold tabular-nums text-emerald-700">
+                    ขายแล้ว {item.quantity.toLocaleString("th-TH")}
+                  </span>
+                ) : (
+                  <span
+                    className={`text-base font-bold tabular-nums ${
+                      item.stockQuantity < 0 ? "text-rose-800" : "text-slate-600"
+                    }`}
+                  >
+                    {item.stockQuantity.toLocaleString("th-TH")}
+                  </span>
+                )}
               </td>
 
               <td className="px-6 py-4 text-center text-base font-bold tabular-nums text-slate-600">

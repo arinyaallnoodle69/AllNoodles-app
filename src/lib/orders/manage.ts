@@ -37,6 +37,12 @@ type SaleUnitRow = {
   unit_label: string;
 };
 type VehicleRow = { id: string; name: string };
+type ProductWarehouseFulfillmentMode = "disabled" | "fresh" | "stock";
+type ProductWarehouseFulfillmentModeRow = {
+  mode: ProductWarehouseFulfillmentMode | string | null;
+  product_id: string;
+  warehouse_id: string;
+};
 
 // Typed admin client
 
@@ -45,13 +51,14 @@ type SelectChain<T> = {
   order: (
     col: string,
     opts: { ascending: boolean },
-  ) => Promise<{ data: T[] | null; error: { message?: string } | null }>;
-};
+  ) => SelectChain<T>;
+} & Promise<{ data: T[] | null; error: { message?: string } | null }>;
 
 type ManageAdmin = ReturnType<typeof getSupabaseAdmin> & {
   from(table: "customers"): { select: (cols: string) => SelectChain<CustomerRow> };
   from(table: "products"): { select: (cols: string) => SelectChain<ProductRow> };
   from(table: "product_sale_units"): { select: (cols: string) => SelectChain<SaleUnitRow> };
+  from(table: "product_warehouse_fulfillment_modes"): { select: (cols: string) => SelectChain<ProductWarehouseFulfillmentModeRow> };
   from(table: "vehicles"): { select: (cols: string) => SelectChain<VehicleRow> };
 };
 
@@ -114,6 +121,10 @@ export type OrderProductOption = {
     stockQuantity: number;
     warehouseId: string;
   }[];
+  warehouseModes: {
+    mode: ProductWarehouseFulfillmentMode;
+    warehouseId: string;
+  }[];
   display_order?: number;
 };
 
@@ -167,9 +178,9 @@ export async function getProductsForOrder(orgId: string): Promise<OrderProductOp
   cacheTag(`settings-${orgId}`);
   cacheTag(`stock-${orgId}`);
   cacheLife("max");
-  const admin = getSupabaseAdmin();
+  const admin = getSupabaseAdmin() as unknown as ManageAdmin;
 
-  const [productsRes, saleUnitsRes, productImagesRes, categoriesRes, categoryItemsRes] =
+  const [productsRes, saleUnitsRes, productImagesRes, categoriesRes, categoryItemsRes, warehouseModesRes] =
     await Promise.all([
       admin
         .from("products")
@@ -202,6 +213,10 @@ export async function getProductsForOrder(orgId: string): Promise<OrderProductOp
         .select("product_category_id, product_id")
         .eq("organization_id", orgId)
         .order("created_at", { ascending: true }),
+      admin
+        .from("product_warehouse_fulfillment_modes")
+        .select("product_id, warehouse_id, mode")
+        .eq("organization_id", orgId),
     ]);
 
   if (productsRes.error) {
@@ -214,6 +229,16 @@ export async function getProductsForOrder(orgId: string): Promise<OrderProductOp
     (productsRes.data ?? []).map((product) => product.id),
   );
   const warehouseStockMap = createWarehouseStockMap(warehouseStocks);
+  const warehouseModeMap = new Map<string, OrderProductOption["warehouseModes"]>();
+  for (const row of ((warehouseModesRes.data ?? []) as ProductWarehouseFulfillmentModeRow[]) ?? []) {
+    const mode: ProductWarehouseFulfillmentMode = row.mode === "fresh" ? "fresh" : "stock";
+    const current = warehouseModeMap.get(row.product_id) ?? [];
+    current.push({
+      mode,
+      warehouseId: row.warehouse_id,
+    });
+    warehouseModeMap.set(row.product_id, current);
+  }
 
   const productUnitMap = new Map((productsRes.data ?? []).map(p => [p.id, p.unit]));
   const byProduct = new Map<string, OrderProductOption["saleUnits"]>();
@@ -280,6 +305,7 @@ export async function getProductsForOrder(orgId: string): Promise<OrderProductOp
         stockQuantity: stock.stockQuantity,
         warehouseId: stock.warehouseId,
       })),
+      warehouseModes: warehouseModeMap.get(p.id) ?? [],
       display_order: p.display_order ?? undefined,
     };
   });

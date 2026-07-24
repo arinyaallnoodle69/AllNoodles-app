@@ -41,6 +41,10 @@ export function UnifiedStockClient({
 
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   const [isLoadingIssues, setIsLoadingIssues] = useState(false);
+  const fallbackWarehouseId =
+    initialWarehouseId && warehouses.some((warehouse) => warehouse.id === initialWarehouseId)
+      ? initialWarehouseId
+      : warehouses[0]?.id ?? "";
 
   // Sync tab from searchParams on load/history changes
   useEffect(() => {
@@ -56,7 +60,11 @@ export function UnifiedStockClient({
       const fetchHistory = async () => {
         setIsLoadingHistory(true);
         try {
-          const warehouse = searchParams.get("warehouse") || "all";
+          const requestedWarehouse = searchParams.get("warehouse");
+          const warehouse =
+            requestedWarehouse && warehouses.some((item) => item.id === requestedWarehouse)
+              ? requestedWarehouse
+              : fallbackWarehouseId;
           const res = await loadMoreStockHistoryAction(0, 50, warehouse);
           setHistoryData(res);
         } catch (e) {
@@ -67,7 +75,7 @@ export function UnifiedStockClient({
       };
       fetchHistory();
     }
-  }, [activeTab, historyData, searchParams]);
+  }, [activeTab, fallbackWarehouseId, historyData, searchParams, warehouses]);
 
   // Load issues client-side if needed
   useEffect(() => {
@@ -75,7 +83,11 @@ export function UnifiedStockClient({
       const fetchIssues = async () => {
         setIsLoadingIssues(true);
         try {
-          const warehouse = searchParams.get("warehouse") || "all";
+          const requestedWarehouse = searchParams.get("warehouse");
+          const warehouse =
+            requestedWarehouse && warehouses.some((item) => item.id === requestedWarehouse)
+              ? requestedWarehouse
+              : fallbackWarehouseId;
           const date = searchParams.get("date") || initialDate;
           const res = await loadMoreStockIssuesAction(0, 50, warehouse, date);
           setIssuesData(res);
@@ -87,7 +99,7 @@ export function UnifiedStockClient({
       };
       fetchIssues();
     }
-  }, [activeTab, issuesData, initialDate, searchParams]);
+  }, [activeTab, fallbackWarehouseId, issuesData, initialDate, searchParams, warehouses]);
 
   const handleTabChange = (key: "stock" | "history" | "issues") => {
     setActiveTab(key);
@@ -96,7 +108,11 @@ export function UnifiedStockClient({
     window.history.pushState({}, "", `/stock?${params.toString()}`);
   };
 
-  const selectedWarehouseId = searchParams.get("warehouse") || initialWarehouseId;
+  const requestedWarehouseId = searchParams.get("warehouse");
+  const selectedWarehouseId =
+    requestedWarehouseId && warehouses.some((warehouse) => warehouse.id === requestedWarehouseId)
+      ? requestedWarehouseId
+      : fallbackWarehouseId;
   const selectedDate = searchParams.get("date") || initialDate;
 
   if (activeTab === "stock") {
@@ -105,6 +121,7 @@ export function UnifiedStockClient({
         products={products}
         suppliers={suppliers}
         warehouses={warehouses}
+        initialWarehouseId={selectedWarehouseId}
         baseHref="/stock"
         onChangeTab={handleTabChange}
         brands={brands}

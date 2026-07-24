@@ -35,27 +35,54 @@ type DisplayStock = {
   stockValue: number;
 };
 
+type WarehouseFulfillmentMode = "disabled" | "fresh" | "stock";
+
 function getDefaultUnit(product: StockProductOption) {
   return product.saleUnits.find((unit) => unit.isDefault) || product.saleUnits[0];
 }
 
 function getDisplayStock(product: StockProductOption, warehouseId: string): DisplayStock {
   const defaultUnit = getDefaultUnit(product);
-  const warehouseStock = warehouseId === "all"
-    ? null
-    : product.warehouseStocks.find((stock) => stock.warehouseId === warehouseId);
-  const onHandQuantity = warehouseId === "all"
-    ? product.onHandQuantity
-    : (warehouseStock?.onHandQuantity ?? 0);
-  const reservedQuantity = warehouseId === "all"
-    ? product.reservedQuantity
-    : (warehouseStock?.reservedQuantity ?? 0);
+  const warehouseStock = product.warehouseStocks.find((stock) => stock.warehouseId === warehouseId);
+  const onHandQuantity = warehouseStock?.onHandQuantity ?? 0;
+  const reservedQuantity = warehouseStock?.reservedQuantity ?? 0;
 
   return {
     onHandQuantity,
     reservedQuantity,
     stockValue: onHandQuantity * (defaultUnit?.effectiveCostPrice ?? 0),
   };
+}
+
+function getWarehouseFulfillmentMode(
+  product: StockProductOption,
+  warehouseId: string,
+): WarehouseFulfillmentMode {
+  return product.warehouseModes.find((mode) => mode.warehouseId === warehouseId)?.mode === "fresh" ? "fresh" : "stock";
+}
+
+function WarehouseModeBadge({ mode }: { mode: WarehouseFulfillmentMode }) {
+  if (mode === "fresh") {
+    return (
+      <span className="inline-flex w-fit items-center justify-center rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-black text-emerald-700">
+        ผลิตสด
+      </span>
+    );
+  }
+
+  if (mode === "disabled") {
+    return (
+      <span className="inline-flex w-fit items-center justify-center rounded-full border border-slate-200 bg-slate-100 px-2.5 py-1 text-[11px] font-black text-slate-500">
+        ไม่ใช้
+      </span>
+    );
+  }
+
+  return (
+    <span className="inline-flex w-fit items-center justify-center rounded-full border border-[#4A148C]/20 bg-[#F3E5F5] px-2.5 py-1 text-[11px] font-black text-[#4A148C]">
+      ใช้สต็อก
+    </span>
+  );
 }
 
 function buildUrl(baseHref: string, params: Record<string, string>) {
@@ -69,11 +96,13 @@ function buildUrl(baseHref: string, params: Record<string, string>) {
 const MobileStockCard = memo(({ 
   product, 
   displayStock,
+  fulfillmentMode,
   selectedWarehouseName,
   onAdjust
 }: { 
   product: StockProductOption; 
   displayStock: DisplayStock;
+  fulfillmentMode: WarehouseFulfillmentMode;
   selectedWarehouseName: string;
   onAdjust: (productId: string) => void;
 }) => {
@@ -127,6 +156,7 @@ const MobileStockCard = memo(({
               <Warehouse className="h-3.5 w-3.5" strokeWidth={2.5} />
               {selectedWarehouseName}
             </span>
+            <WarehouseModeBadge mode={fulfillmentMode} />
           </div>
         </div>
       </div>
@@ -196,11 +226,13 @@ MobileStockCard.displayName = "MobileStockCard";
 const DesktopStockRow = memo(({ 
   product, 
   displayStock,
+  fulfillmentMode,
   selectedWarehouseName,
   onAdjust
 }: { 
   product: StockProductOption; 
   displayStock: DisplayStock;
+  fulfillmentMode: WarehouseFulfillmentMode;
   selectedWarehouseName: string;
   onAdjust: (productId: string) => void;
 }) => {
@@ -241,6 +273,9 @@ const DesktopStockRow = memo(({
       </td>
       <td className="whitespace-nowrap border-b border-r border-slate-300 px-5 py-2.5 text-center text-base font-medium text-slate-600 align-middle">
         {product.unit}
+      </td>
+      <td className="whitespace-nowrap border-b border-r border-slate-300 px-5 py-2.5 text-center align-middle">
+        <WarehouseModeBadge mode={fulfillmentMode} />
       </td>
       {role !== "member" && (
         <td className="whitespace-nowrap border-b border-r border-slate-300 px-5 py-2.5 text-center align-middle">
@@ -292,7 +327,7 @@ DesktopStockRow.displayName = "DesktopStockRow";
 
 // ─── Main Component ──────────────────────────────────────────────────────────
 
-export function StockList({ products, suppliers = [], warehouses, baseHref = "/stock", onChangeTab, brands }: StockListProps) {
+export function StockList({ products, suppliers = [], warehouses, initialWarehouseId, baseHref = "/stock", onChangeTab, brands }: StockListProps) {
   const role = useClientRole();
   const canEditStock = role === "admin" || role === "member";
   const searchParams = useSearchParams();
@@ -303,17 +338,19 @@ export function StockList({ products, suppliers = [], warehouses, baseHref = "/s
   const [adjustOpen, setAdjustOpen] = useState(false);
   const [adjustProductId, setAdjustProductId] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedWarehouseId, setSelectedWarehouseId] = useState("all");
+  const fallbackWarehouseId =
+    initialWarehouseId && warehouses.some((warehouse) => warehouse.id === initialWarehouseId)
+      ? initialWarehouseId
+      : warehouses[0]?.id ?? "";
+  const [selectedWarehouseId, setSelectedWarehouseId] = useState(fallbackWarehouseId);
   const [selectedCategory, setSelectedCategory] = useState<string | "__all__">("__all__");
   const [selectedBrand, setSelectedBrand] = useState<string | "__all__">("__all__");
   const [mobileFilterDrawer, setMobileFilterDrawer] = useState<"brand" | "category" | null>(null);
   const [isMobileFilterDrawerClosing, setIsMobileFilterDrawerClosing] = useState(false);
 
-  const selectedWarehouseName = selectedWarehouseId === "all"
-    ? "ทุกคลัง"
-    : (warehouses.find((warehouse) => warehouse.id === selectedWarehouseId)?.name ?? "คลังสินค้า");
+  const selectedWarehouseName = warehouses.find((warehouse) => warehouse.id === selectedWarehouseId)?.name ?? "คลังสินค้า";
 
-  const selectedFormWarehouseId = selectedWarehouseId === "all" ? "" : selectedWarehouseId;
+  const selectedFormWarehouseId = selectedWarehouseId;
 
   const categoryOptions = useMemo(() => {
     const seen = new Set<string>();
@@ -413,38 +450,35 @@ export function StockList({ products, suppliers = [], warehouses, baseHref = "/s
     });
   }, [products, searchQuery, selectedBrand, selectedCategory]);
 
-  const warehouseOptions = [
-    { id: "all", name: "ทุกคลัง", subtitle: "ดูยอดรวมทั้งหมด" },
-    ...warehouses.map((warehouse) => ({
+  const warehouseOptions = warehouses.map((warehouse) => ({
       id: warehouse.id,
       name: warehouse.name,
       subtitle: warehouse.slug,
-    })),
-  ];
+    }));
 
   // Sync with URL on mount only (or when URL changes externally)
   useEffect(() => {
     const receive = searchParams.get("receive") === "1";
     const adjust = searchParams.get("adjust") === "1";
     const product = searchParams.get("product") || "";
-    const warehouse = searchParams.get("warehouse") || "all";
+    const warehouse = searchParams.get("warehouse") || fallbackWarehouseId;
 
     // eslint-disable-next-line react-hooks/set-state-in-effect -- Initial sync with URL params
     setSelectedWarehouseId(
-      warehouse !== "all" && warehouses.some((item) => item.id === warehouse)
+      warehouse && warehouses.some((item) => item.id === warehouse)
         ? warehouse
-        : "all",
+        : fallbackWarehouseId,
     );
     if (canEditStock && receive) setReceiveOpen(true);
     if (canEditStock && adjust) {
       setAdjustOpen(true);
       if (product) setAdjustProductId(product);
     }
-  }, [canEditStock, searchParams, warehouses]);
+  }, [canEditStock, fallbackWarehouseId, searchParams, warehouses]);
 
   const buildCurrentUrl = (params: Record<string, string> = {}) => {
     const nextParams: Record<string, string> = {};
-    if (selectedWarehouseId !== "all") {
+    if (selectedWarehouseId) {
       nextParams.warehouse = selectedWarehouseId;
     }
 
@@ -454,7 +488,7 @@ export function StockList({ products, suppliers = [], warehouses, baseHref = "/s
   const handleWarehouseChange = (warehouseId: string) => {
     setSelectedWarehouseId(warehouseId);
     closeMobileSearch();
-    const params: Record<string, string> = warehouseId === "all" ? {} : { warehouse: warehouseId };
+    const params: Record<string, string> = warehouseId ? { warehouse: warehouseId } : {};
     window.history.pushState({}, "", buildUrl(baseHref, params));
   };
 
@@ -483,7 +517,7 @@ export function StockList({ products, suppliers = [], warehouses, baseHref = "/s
     window.history.pushState(
       {},
       "",
-      selectedWarehouseId === "all" ? baseHref : buildUrl(baseHref, { warehouse: selectedWarehouseId }),
+      selectedWarehouseId ? buildUrl(baseHref, { warehouse: selectedWarehouseId }) : baseHref,
     );
   };
 
@@ -805,12 +839,14 @@ export function StockList({ products, suppliers = [], warehouses, baseHref = "/s
               <div className="grid gap-0 lg:hidden">
                 {filteredProducts.map((product) => {
                   const displayStock = getDisplayStock(product, selectedWarehouseId);
+                  const fulfillmentMode = getWarehouseFulfillmentMode(product, selectedWarehouseId);
 
                   return (
                     <MobileStockCard
                       key={product.id}
                       product={product}
                       displayStock={displayStock}
+                      fulfillmentMode={fulfillmentMode}
                       selectedWarehouseName={selectedWarehouseName}
                       onAdjust={handleAdjust}
                     />
@@ -824,8 +860,8 @@ export function StockList({ products, suppliers = [], warehouses, baseHref = "/s
                   <thead>
                     <tr style={{ backgroundColor: "#4A148C" }}>
                       {(role === "member"
-                        ? ["รหัสสินค้า", "ชื่อสินค้า", "หน่วย", "คงเหลือ"]
-                        : ["รหัสสินค้า", "ชื่อสินค้า", "หน่วย", "ต้นทุน / หน่วย", "คงเหลือ", "มูลค่าสต็อก"]
+                        ? ["รหัสสินค้า", "ชื่อสินค้า", "หน่วย", "โหมด", "คงเหลือ"]
+                        : ["รหัสสินค้า", "ชื่อสินค้า", "หน่วย", "โหมด", "ต้นทุน / หน่วย", "คงเหลือ", "มูลค่าสต็อก"]
                       ).map((label, i, arr) => (
                         <th
                           key={label}
@@ -845,12 +881,14 @@ export function StockList({ products, suppliers = [], warehouses, baseHref = "/s
                   <tbody>
                     {filteredProducts.map((product) => {
                       const displayStock = getDisplayStock(product, selectedWarehouseId);
+                      const fulfillmentMode = getWarehouseFulfillmentMode(product, selectedWarehouseId);
 
                       return (
                         <DesktopStockRow
                           key={product.id}
                           product={product}
                           displayStock={displayStock}
+                          fulfillmentMode={fulfillmentMode}
                           selectedWarehouseName={selectedWarehouseName}
                           onAdjust={handleAdjust}
                         />
@@ -1029,6 +1067,7 @@ type StockListProps = {
   products: StockProductOption[];
   suppliers?: StockSupplierOption[];
   warehouses: StockWarehouseOption[];
+  initialWarehouseId?: string;
   onChangeTab?: (key: "stock" | "history" | "issues") => void;
   brands?: string[];
 };

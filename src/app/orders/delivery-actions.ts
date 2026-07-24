@@ -604,6 +604,12 @@ export async function createDeliveryNoteAction(
     return { status: "error", message: "ต้องใส่จำนวนส่งอย่างน้อย 1 รายการ" };
   }
 
+  const rawPreviousOutstanding = formData.get("previousOutstanding");
+  const rawInstallmentPaid = formData.get("installmentPaid");
+
+  const previousOutstanding = rawPreviousOutstanding !== null && rawPreviousOutstanding !== "" ? Number(rawPreviousOutstanding) : null;
+  const installmentPaid = rawInstallmentPaid !== null && rawInstallmentPaid !== "" ? Number(rawInstallmentPaid) : null;
+
   const admin = getSupabaseAdmin() as unknown as RpcAdmin;
   const warehouseResult = await getOrderRequiredWarehouse(session.organizationId, orderIds[0]);
 
@@ -622,6 +628,8 @@ export async function createDeliveryNoteAction(
     p_notes: notes || null,
     p_created_by: session.userId,
     p_items: items,
+    p_previous_outstanding: previousOutstanding,
+    p_installment_paid: installmentPaid,
   });
 
   if (error) {

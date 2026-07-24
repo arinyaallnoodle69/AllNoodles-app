@@ -53,6 +53,8 @@ export type DeliveryFormData = {
   customerId: string;
   customerName: string;
   customerCode: string;
+  outstandingBalance?: number;
+  installmentLimit?: number | null;
   items: DeliveryItemData[];
 };
 
@@ -98,6 +100,8 @@ type RawOrderRow = {
   customers: {
     name: string;
     customer_code: string;
+    outstanding_balance?: number | string | null;
+    installment_limit?: number | string | null;
   };
 };
 
@@ -287,7 +291,7 @@ export async function getOrderItemsForDelivery(
   // 1. Order header
   const { data: orderRow, error: orderError } = await supabase
     .from("orders")
-    .select("id, order_number, order_date, customer_id, warehouse_id, customers!inner(name, customer_code)")
+    .select("id, order_number, order_date, customer_id, warehouse_id, customers!inner(name, customer_code, outstanding_balance, installment_limit)")
     .eq("id", orderId)
     .eq("organization_id", organizationId)
     .single();
@@ -295,6 +299,14 @@ export async function getOrderItemsForDelivery(
   if (orderError || !orderRow) return null;
 
   const order = orderRow as RawOrderRow;
+
+  // 1.5 Fetch existing delivery note if any to load saved outstanding/installment values
+  const { data: dnRow } = await supabase
+    .from("delivery_notes")
+    .select("previous_outstanding, installment_paid")
+    .eq("order_id", orderId)
+    .eq("status", "confirmed")
+    .maybeSingle();
 
   // 2. Order items with product details
   const { data: itemRows, error: itemsError } = await supabase
@@ -383,6 +395,8 @@ export async function getOrderItemsForDelivery(
     customerId: order.customer_id,
     customerName: order.customers.name,
     customerCode: order.customers.customer_code,
+    outstandingBalance: dnRow ? toNum(dnRow.previous_outstanding) : toNum(order.customers.outstanding_balance),
+    installmentLimit: dnRow ? (dnRow.installment_paid !== null ? toNum(dnRow.installment_paid) : null) : (order.customers.installment_limit !== null && order.customers.installment_limit !== undefined ? toNum(order.customers.installment_limit) : null),
     items,
   };
 }

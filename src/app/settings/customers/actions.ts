@@ -369,7 +369,7 @@ export async function updateCustomerAction(
   }
 
   const admin = getSupabaseAdmin();
-  const { address, defaultVehicleId, defaultWarehouseId, name, outstandingBalance, installmentLimit } = validation;
+  const { address, defaultVehicleId, defaultWarehouseId, name } = validation;
 
   const { data: customer, error: customerLookupError } = await admin
     .from("customers")
@@ -456,8 +456,6 @@ export async function updateCustomerAction(
       province: address.provinceName || null,
       subdistrict: address.subdistrictName || null,
       updated_at: new Date().toISOString(),
-      outstanding_balance: outstandingBalance,
-      installment_limit: installmentLimit,
     })
     .eq("id", customerId)
     .eq("organization_id", session.organizationId);

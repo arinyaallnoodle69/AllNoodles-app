@@ -10,6 +10,7 @@ import { IncomingOrderVehicleSelect } from "@/components/orders/incoming-order-v
 import { IncomingOrderVehicleFilter } from "@/components/orders/incoming-order-vehicle-filter";
 import { IncomingOrdersVehicleTransfer } from "@/components/orders/incoming-orders-vehicle-transfer";
 import { OrderDeliveryActionButton } from "@/components/orders/order-delivery-action-button";
+import { OrderReceiptActionButton } from "@/components/orders/order-receipt-action-button";
 import type { IncomingOrderListItem, OrderDetailData } from "@/lib/orders/detail";
 import type { OrderVehicleOption } from "@/lib/orders/manage";
 import type { VehicleTransferDateOption } from "@/lib/orders/vehicle-transfer";
@@ -190,14 +191,25 @@ const IncomingOrderRow = memo(function IncomingOrderRow({
                 <ChevronDown className="h-4.5 w-4.5" strokeWidth={2.2} />
               )}
             </button>
+            <OrderReceiptActionButton
+              customerId={order.customerId}
+              customerName={order.customerName}
+              date={order.orderDate}
+              iconOnly
+              label="ดูใบยืนยัน"
+              orderId={order.id}
+            />
             {hasDelivery ? (
               <OrderDeliveryActionButton
                 customerId={order.customerId}
                 customerName={order.customerName}
                 date={order.orderDate}
                 iconOnly
-                label="ดูใบยืนยัน"
+                label="พิมพ์บิลส่งของ"
                 orderId={order.id}
+                vehicles={vehicles}
+                defaultVehicleId={order.vehicleId}
+                defaultVehicleName={order.vehicleName}
               />
             ) : null}
           </div>

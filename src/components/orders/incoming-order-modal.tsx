@@ -63,6 +63,22 @@ function getDisplayStockQuantity(product: OrderProductOption, warehouseId: strin
     ?? product.stockQuantity;
 }
 
+function WarehouseModeBadge({ mode }: { mode: "disabled" | "fresh" | "stock" }) {
+  if (mode === "fresh") {
+    return (
+      <span className="inline-flex items-center justify-center whitespace-nowrap rounded-lg bg-emerald-50 px-2.5 py-1 text-[11px] font-black text-emerald-700 ring-1 ring-emerald-200">
+        ผลิตสด
+      </span>
+    );
+  }
+
+  return (
+    <span className="inline-flex items-center justify-center whitespace-nowrap rounded-lg bg-[#4A148C]/10 px-2.5 py-1 text-[11px] font-black text-[#4A148C] ring-1 ring-[#4A148C]/15">
+      ใช้สต็อก
+    </span>
+  );
+}
+
 type StockReductionMode = "return" | "lost";
 
 // Sub-components
@@ -99,6 +115,14 @@ const ItemsViewList = memo(({ detail }: { detail: OrderDetailData }) => {
               </div>
 
               <div className="mt-3 flex h-8 items-center gap-2.5">
+                <WarehouseModeBadge mode={item.fulfillmentMode} />
+                {item.fulfillmentMode === "fresh" ? (
+                  <div className="flex h-full shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg border-2 border-emerald-600 bg-emerald-600 px-2 text-white shadow-sm">
+                    <Boxes className="h-4 w-4" />
+                    <span className="text-[11px] font-black uppercase tracking-[0.08em]">ขายแล้ว:</span>
+                    <span className="text-[15px] font-black tabular-nums">{item.quantity.toLocaleString("th-TH")}</span>
+                  </div>
+                ) : (
                 <div
                   className={`flex h-full shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg border-2 px-2 ${item.stockQuantity < 0 ? "bg-[#FF0000] border-[#FF0000] text-white shadow-sm" : "bg-[#4A148C] border-[#4A148C] text-white shadow-sm"}`}
                 >
@@ -106,7 +130,8 @@ const ItemsViewList = memo(({ detail }: { detail: OrderDetailData }) => {
                   <span className="text-[11px] font-black uppercase tracking-[0.08em]">สต็อก:</span>
                   <span className="text-[15px] font-black tabular-nums">{item.stockQuantity.toLocaleString("th-TH")}</span>
                 </div>
-                {item.shortQuantity > 0 && (
+                )}
+                {item.fulfillmentMode !== "fresh" && item.shortQuantity > 0 && (
                   <div className="flex h-full min-w-0 items-center gap-1.5 whitespace-nowrap border border-rose-700 bg-rose-600 px-2 shadow-sm">
                     <AlertTriangle className="h-3.5 w-3.5 text-white" />
                     <span className="text-[9.5px] font-black uppercase tracking-[0.08em] text-white">ขาด {item.shortQuantity}</span>
@@ -354,6 +379,14 @@ const EditItemsPanel = memo(({
     return Math.floor(getDisplayStockQuantity(product, detail.warehouseId) / ratio);
   }
 
+  function getAddedItemFulfillmentMode(item: AddedOrderItemDraft) {
+    const product = products.find((p) => p.id === item.productId);
+    if (!product || !detail.warehouseId) return "stock";
+    return product.warehouseModes.find((mode) => mode.warehouseId === detail.warehouseId)?.mode === "fresh"
+      ? "fresh"
+      : "stock";
+  }
+
   function isQuantityReduced(itemId: string, currentQuantity: number) {
     const original = detail.items.find((item) => item.id === itemId);
     return original ? currentQuantity < Number(original.quantity) : false;
@@ -453,6 +486,7 @@ const EditItemsPanel = memo(({
                 <tbody className="divide-y divide-slate-300 bg-white">
                   {addedItems.map((item) => {
                     const stock = getAddedItemStock(item);
+                    const fulfillmentMode = getAddedItemFulfillmentMode(item);
                     const addedUnitPrice = sanitizeManualUnitPrice(item.unitPrice, item.unitPrice);
                     return (
                       <tr key={item.key} className="transition-colors hover:bg-emerald-50/30">
@@ -491,9 +525,15 @@ const EditItemsPanel = memo(({
                         </td>
                         <td className="px-5 py-4 text-center font-black text-slate-950 border-r border-slate-100">฿{formatTHB(item.quantity * addedUnitPrice)}</td>
                         <td className="px-5 py-4 text-center border-r border-slate-100">
-                          <span className={`inline-flex min-w-[60px] justify-center rounded-lg px-2 py-1 text-xs font-black shadow-sm ${stock < 0 ? "bg-[#FF0000] text-white" : "bg-[#4A148C] text-white"}`}>
-                            {stock.toLocaleString("th-TH")}
-                          </span>
+                          {fulfillmentMode === "fresh" ? (
+                            <span className="inline-flex min-w-[78px] justify-center rounded-lg bg-emerald-600 px-2 py-1 text-xs font-black text-white shadow-sm">
+                              ขายแล้ว {item.quantity.toLocaleString("th-TH")}
+                            </span>
+                          ) : (
+                            <span className={`inline-flex min-w-[60px] justify-center rounded-lg px-2 py-1 text-xs font-black shadow-sm ${stock < 0 ? "bg-[#FF0000] text-white" : "bg-[#4A148C] text-white"}`}>
+                              {stock.toLocaleString("th-TH")}
+                            </span>
+                          )}
                         </td>
                         <td className="px-5 py-4">
                           <div className="flex items-center justify-center gap-3">
@@ -556,9 +596,15 @@ const EditItemsPanel = memo(({
                         </td>
                         <td className="px-5 py-4 text-center font-black text-slate-950 border-r border-slate-100">฿{formatTHB(qty * unitPrice)}</td>
                         <td className="px-5 py-4 text-center border-r border-slate-100">
-                          <span className={`inline-flex min-w-[60px] justify-center rounded-lg px-2 py-1 text-xs font-black shadow-sm ${item.stockQuantity < 0 ? "bg-[#FF0000] text-white" : "bg-[#4A148C] text-white"}`}>
-                            {item.stockQuantity.toLocaleString("th-TH")}
-                          </span>
+                          {item.fulfillmentMode === "fresh" ? (
+                            <span className="inline-flex min-w-[78px] justify-center rounded-lg bg-emerald-600 px-2 py-1 text-xs font-black text-white shadow-sm">
+                              ขายแล้ว {qty.toLocaleString("th-TH")}
+                            </span>
+                          ) : (
+                            <span className={`inline-flex min-w-[60px] justify-center rounded-lg px-2 py-1 text-xs font-black shadow-sm ${item.stockQuantity < 0 ? "bg-[#FF0000] text-white" : "bg-[#4A148C] text-white"}`}>
+                              {item.stockQuantity.toLocaleString("th-TH")}
+                            </span>
+                          )}
                         </td>
                         <td className="px-5 py-4">
                           <div className="flex flex-col items-center gap-2">
@@ -620,6 +666,7 @@ const EditItemsPanel = memo(({
             <div className="divide-y divide-slate-300/80 bg-slate-50/30 md:hidden border-b border-slate-300">
               {addedItems.map((item) => {
                 const stock = getAddedItemStock(item);
+                const fulfillmentMode = getAddedItemFulfillmentMode(item);
                 const addedUnitPrice = sanitizeManualUnitPrice(item.unitPrice, item.unitPrice);
                 return (
                   <article key={item.key} className="bg-white p-5 transition-all active:bg-slate-50">
@@ -644,10 +691,17 @@ const EditItemsPanel = memo(({
                           <div>
                             <p className="text-[10px] font-black uppercase tracking-[0.12em] text-slate-400">สต็อกสินค้า</p>
                             <div className="mt-1.5 flex items-center">
-                              <span className={`inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-[13.5px] font-black shadow-sm ${stock < 0 ? "bg-[#FF0000] text-white" : "bg-[#4A148C] text-white"}`}>
-                                <Boxes className="h-3.5 w-3.5" />
-                                {stock.toLocaleString("th-TH")}
-                              </span>
+                              {fulfillmentMode === "fresh" ? (
+                                <span className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-2.5 py-1 text-[13.5px] font-black text-white shadow-sm">
+                                  <Boxes className="h-3.5 w-3.5" />
+                                  ขายแล้ว {item.quantity.toLocaleString("th-TH")}
+                                </span>
+                              ) : (
+                                <span className={`inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-[13.5px] font-black shadow-sm ${stock < 0 ? "bg-[#FF0000] text-white" : "bg-[#4A148C] text-white"}`}>
+                                  <Boxes className="h-3.5 w-3.5" />
+                                  {stock.toLocaleString("th-TH")}
+                                </span>
+                              )}
                             </div>
                           </div>
                           <div className="border-l border-slate-300 pl-4">
@@ -718,10 +772,17 @@ const EditItemsPanel = memo(({
                           <div>
                             <p className="text-[10px] font-black uppercase tracking-[0.12em] text-slate-400">สต็อกสินค้า</p>
                             <div className="mt-1.5 flex items-center">
-                              <span className={`inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-[13.5px] font-black shadow-sm ${item.stockQuantity < 0 ? "bg-[#FF0000] text-white" : "bg-[#4A148C] text-white"}`}>
-                                <Boxes className="h-3.5 w-3.5" />
-                                {item.stockQuantity.toLocaleString("th-TH")}
-                              </span>
+                              {item.fulfillmentMode === "fresh" ? (
+                                <span className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-2.5 py-1 text-[13.5px] font-black text-white shadow-sm">
+                                  <Boxes className="h-3.5 w-3.5" />
+                                  ขายแล้ว {qty.toLocaleString("th-TH")}
+                                </span>
+                              ) : (
+                                <span className={`inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-[13.5px] font-black shadow-sm ${item.stockQuantity < 0 ? "bg-[#FF0000] text-white" : "bg-[#4A148C] text-white"}`}>
+                                  <Boxes className="h-3.5 w-3.5" />
+                                  {item.stockQuantity.toLocaleString("th-TH")}
+                                </span>
+                              )}
                             </div>
                           </div>
                           <div className="border-l border-slate-300 pl-4">

@@ -255,43 +255,7 @@ export function CustomerForm({
                     </select>
                   </div>
 
-                  <div className="flex flex-col gap-2">
-                    <label className={settingsFieldLabelClass} htmlFor="outstanding-balance">
-                      ยอดค้างชำระสะสมเดิม (บาท)
-                    </label>
-                    <input
-                      id="outstanding-balance"
-                      name="outstandingBalance"
-                      type="number"
-                      step="any"
-                      min="0"
-                      defaultValue={initialCustomer?.outstandingBalance ?? 0}
-                      className={getInputClass(showFieldErrors && Boolean(fieldErrors?.outstandingBalance))}
-                      placeholder="เช่น 4000"
-                    />
-                    <p className="text-sm text-slate-500">
-                      ยอดหนี้สะสมเดิมของร้านค้าที่ค้างจ่ายอยู่
-                    </p>
-                  </div>
-
-                  <div className="flex flex-col gap-2">
-                    <label className={settingsFieldLabelClass} htmlFor="installment-limit">
-                      ยอดผ่อนชำระต่อวัน (บาท)
-                    </label>
-                    <input
-                      id="installment-limit"
-                      name="installmentLimit"
-                      type="number"
-                      step="any"
-                      min="0"
-                      defaultValue={initialCustomer?.installmentLimit ?? ""}
-                      className={getInputClass(showFieldErrors && Boolean(fieldErrors?.installmentLimit))}
-                      placeholder="ปล่อยว่างหากต้องการเรียกเก็บเต็มจำนวน"
-                    />
-                    <p className="text-sm text-slate-500">
-                      ยอดหักชำระหนี้ค้างส่งต่อวัน (เว้นว่างไว้เพื่อปิดระบบผ่อนชำระ)
-                    </p>
-                  </div>
+                  {/* Financial settings moved to Order flow */}
                 </SettingsPanelBody>
               </SettingsPanel>
 

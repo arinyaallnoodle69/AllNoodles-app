@@ -4,6 +4,7 @@ import { cacheLife, cacheTag } from "next/cache";
 
 import type { Json } from "@/types/database";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { createWarehouseStockMap, getProductWarehouseStockSnapshots } from "@/lib/stock/warehouse-stocks";
 import { normalizeSearch } from "@/lib/utils/search";
 import { getActiveWarehouses } from "@/lib/warehouses";
 
@@ -37,6 +38,7 @@ type OrderDetailAdminClient = ReturnType<typeof getSupabaseAdmin> & {
     (table: "delivery_notes"): FlexibleTable<DeliveryNoteRow>;
     (table: "products"): FlexibleTable<ProductRow>;
     (table: "product_images"): FlexibleTable<ProductImageRow>;
+    (table: "product_warehouse_fulfillment_modes"): FlexibleTable<ProductWarehouseFulfillmentModeRow>;
     (table: "vehicles"): FlexibleTable<VehicleRow>;
   };
 };
@@ -98,6 +100,14 @@ type ProductImageRow = {
   sort_order: number | string;
 };
 
+type ProductWarehouseFulfillmentMode = "disabled" | "fresh" | "stock";
+
+type ProductWarehouseFulfillmentModeRow = {
+  mode: ProductWarehouseFulfillmentMode | string | null;
+  product_id: string;
+  warehouse_id: string;
+};
+
 type DeliveryNoteRow = {
   created_at?: string;
   delivery_number: string;
@@ -115,6 +125,7 @@ export type OrderDetailItem = {
   productSaleUnitId: string | null;
   productName: string;
   quantity: number;
+  fulfillmentMode: ProductWarehouseFulfillmentMode;
   shortQuantity: number;
   sku: string;
   stockQuantity: number;
@@ -304,7 +315,7 @@ export async function getOrderDetailById(
   const orderItems = orderItemsResult.data ?? [];
   const productIds = Array.from(new Set(orderItems.map((item) => item.product_id)));
 
-  const [productsResult, imagesResult] = await Promise.all([
+  const [productsResult, imagesResult, modesResult, warehouseStocks] = await Promise.all([
     productIds.length > 0
       ? admin
           .from("products")
@@ -319,6 +330,17 @@ export async function getOrderDetailById(
           .in("product_id", productIds)
           .order("sort_order", { ascending: true })
       : Promise.resolve({ data: [], error: null }),
+    productIds.length > 0 && order.warehouse_id
+      ? admin
+          .from("product_warehouse_fulfillment_modes")
+          .select("product_id, warehouse_id, mode")
+          .eq("organization_id", organizationId)
+          .eq("warehouse_id", order.warehouse_id)
+          .in("product_id", productIds)
+      : Promise.resolve({ data: [], error: null }),
+    productIds.length > 0 && order.warehouse_id
+      ? getProductWarehouseStockSnapshots(organizationId, productIds, order.warehouse_id)
+      : Promise.resolve([]),
   ]);
 
   if (productsResult.error) {
@@ -328,8 +350,18 @@ export async function getOrderDetailById(
   if (imagesResult.error) {
     throw new Error(imagesResult.error.message ?? "Failed to load product images.");
   }
+  if (modesResult.error) {
+    throw new Error(modesResult.error.message ?? "Failed to load warehouse product modes.");
+  }
 
   const productMap = new Map((productsResult.data ?? []).map((product) => [product.id, product]));
+  const warehouseStockMap = createWarehouseStockMap(warehouseStocks);
+  const modeByProductId = new Map<string, ProductWarehouseFulfillmentMode>(
+    ((modesResult.data ?? []) as ProductWarehouseFulfillmentModeRow[]).map((row) => [
+      row.product_id,
+      row.mode === "fresh" ? "fresh" : "stock",
+    ]),
+  );
   const imageMap = new Map<string, string>();
 
   for (const image of imagesResult.data ?? []) {
@@ -342,7 +374,13 @@ export async function getOrderDetailById(
     const product = productMap.get(item.product_id);
     const quantity = normalizeNumber(item.quantity);
     const saleUnitRatio = normalizeNumber(item.sale_unit_ratio) || 1;
-    const stockQuantity = Math.floor(normalizeNumber(product?.stock_quantity) / saleUnitRatio);
+    const fulfillmentMode = modeByProductId.get(item.product_id) ?? "stock";
+    const baseStockQuantity =
+      warehouseStockMap.get(item.product_id)?.[0]?.stockQuantity ??
+      normalizeNumber(product?.stock_quantity);
+    const stockQuantity = fulfillmentMode === "fresh"
+      ? quantity
+      : Math.floor(baseStockQuantity / saleUnitRatio);
 
     return {
       id: item.id,
@@ -353,7 +391,8 @@ export async function getOrderDetailById(
       productSaleUnitId: item.product_sale_unit_id,
       productName: product?.name ?? "สินค้าไม่ทราบชื่อ",
       quantity,
-      shortQuantity: Math.max(quantity - stockQuantity, 0),
+      fulfillmentMode,
+      shortQuantity: fulfillmentMode === "fresh" ? 0 : Math.max(quantity - stockQuantity, 0),
       sku: product?.sku ?? "-",
       stockQuantity,
       unit: product?.unit ?? "-",

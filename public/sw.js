@@ -131,13 +131,8 @@ self.addEventListener("fetch", (event) => {
     ["style", "script", "image", "font", "manifest"].includes(request.destination);
 
   if (!isStaticAsset) {
-    event.respondWith(
-      fetch(request).catch(async () => {
-        const cached = await caches.match(request);
-        if (cached) return cleanResponse(cached);
-        return getOfflineResponse();
-      }),
-    );
+    // Let the browser handle dynamic/non-static requests (RSC payloads, APIs, Server Actions) natively.
+    // This prevents connection/socket leaks in iOS standalone PWA WebKit and improves network speed.
     return;
   }
 

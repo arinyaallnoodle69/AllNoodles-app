@@ -12,6 +12,15 @@ type RpcResult = Promise<{ data: unknown; error: QueryError }>;
 
 type OrdersSelectResult = Promise<{ data: OrderRoundRow[] | null; error: QueryError }>;
 
+type SelectChain<T> = {
+  eq: (column: string, value: string | number | boolean | null) => SelectChain<T>;
+  in: (column: string, values: Array<string | number>) => SelectChain<T>;
+} & Promise<{ data: T[] | null; error: QueryError }>;
+
+type FlexibleTable<T> = {
+  select: (columns: string) => SelectChain<T>;
+};
+
 type OrdersSelectChain = {
   eq: (column: string, value: string) => OrdersSelectChain;
   order: (column: string, options: { ascending: boolean }) => OrdersSelectResult;
@@ -22,8 +31,19 @@ type OrdersTable = {
 };
 
 type OrderAdminClient = ReturnType<typeof getSupabaseAdmin> & {
-  from: (table: "orders") => OrdersTable;
+  from: {
+    (table: "orders"): OrdersTable;
+    (table: "product_warehouse_fulfillment_modes"): FlexibleTable<ProductWarehouseFulfillmentModeRow>;
+  };
   rpc: (fn: string, params: Record<string, unknown>) => RpcResult;
+};
+
+type ProductWarehouseFulfillmentMode = "disabled" | "fresh" | "stock";
+
+type ProductWarehouseFulfillmentModeRow = {
+  mode: ProductWarehouseFulfillmentMode | string | null;
+  product_id: string;
+  warehouse_id: string;
 };
 
 type SummaryRow = {
@@ -97,6 +117,7 @@ export type OrderItemAggregate = {
   currentStockQuantity: number;
   deliverableQuantity: number;
   deliveredQuantity: number;
+  fulfillmentMode: ProductWarehouseFulfillmentMode;
   imageUrl: string | null;
   lineTotal: number;
   orderRounds: number;
@@ -326,16 +347,36 @@ async function getOrderStoreDetail(
   const itemRows = (itemsData ?? []) as ItemAggregateRow[];
   const productIds = Array.from(new Set(itemRows.map((row) => row.product_id)));
   const productBaseMap = new Map<string, { stockQuantity: number; unit: string }>();
+  const fulfillmentModeByProductId = new Map<string, ProductWarehouseFulfillmentMode>();
   const warehouseId =
     (((roundsData ?? []) as OrderRoundRow[]).find((row) => row.warehouse_id)?.warehouse_id) ?? null;
 
   if (productIds.length > 0) {
     if (warehouseId) {
-      const warehouseStocks = await getProductWarehouseStockSnapshots(
-        organizationId,
-        productIds,
-        warehouseId,
-      );
+      const [warehouseStocks, modesResult] = await Promise.all([
+        getProductWarehouseStockSnapshots(
+          organizationId,
+          productIds,
+          warehouseId,
+        ),
+        supabase
+          .from("product_warehouse_fulfillment_modes")
+          .select("product_id, warehouse_id, mode")
+          .eq("organization_id", organizationId)
+          .eq("warehouse_id", warehouseId)
+          .in("product_id", productIds),
+      ]);
+
+      if (modesResult.error) {
+        throw new Error(modesResult.error.message ?? "Failed to load product fulfillment modes.");
+      }
+
+      for (const row of (modesResult.data ?? []) as ProductWarehouseFulfillmentModeRow[]) {
+        fulfillmentModeByProductId.set(
+          row.product_id,
+          row.mode === "fresh" ? "fresh" : "stock",
+        );
+      }
 
       for (const [productId, rows] of createWarehouseStockMap(warehouseStocks).entries()) {
         productBaseMap.set(productId, {
@@ -378,6 +419,12 @@ async function getOrderStoreDetail(
 
   const shortBaseByProduct = new Map<string, number>();
   for (const [productId, orderedBase] of orderedBaseByProduct.entries()) {
+    const fulfillmentMode = fulfillmentModeByProductId.get(productId) ?? "stock";
+    if (fulfillmentMode === "fresh") {
+      shortBaseByProduct.set(productId, 0);
+      continue;
+    }
+
     const stockBase = productBaseMap.get(productId)?.stockQuantity ?? 0;
     shortBaseByProduct.set(productId, Math.max(0, orderedBase - stockBase));
   }
@@ -391,13 +438,19 @@ async function getOrderStoreDetail(
       stockQuantity: normalizeNumeric(row.current_stock_quantity) * ratio,
       unit: "",
     };
+    const fulfillmentMode = fulfillmentModeByProductId.get(row.product_id) ?? "stock";
     const shortBaseQuantity = shortBaseByProduct.get(row.product_id) ?? 0;
+    const currentStockQuantity =
+      fulfillmentMode === "fresh"
+        ? normalizeNumeric(row.ordered_quantity)
+        : normalizeNumeric(row.current_stock_quantity);
 
     return {
       currentStockBaseQuantity: productBase.stockQuantity,
-      currentStockQuantity: normalizeNumeric(row.current_stock_quantity),
+      currentStockQuantity,
       deliverableQuantity: normalizeNumeric(row.deliverable_quantity),
       deliveredQuantity,
+      fulfillmentMode,
       imageUrl: row.image_url ?? null,
       lineTotal: normalizeNumeric(row.line_total),
       orderRounds: normalizeNumeric(row.order_rounds),

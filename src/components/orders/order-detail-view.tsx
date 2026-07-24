@@ -265,7 +265,15 @@ export function OrderDetailView({ detail }: OrderDetailViewProps) {
                     {formatNumber(item.quantity)} {item.unit}
                   </td>
                   <td className="border-b border-r border-slate-200 px-4 py-4 text-base text-slate-700">
-                    {formatNumber(item.stockQuantity)} {item.unit}
+                    {item.fulfillmentMode === "fresh" ? (
+                      <span className="font-semibold text-emerald-700">
+                        ขายแล้ว {formatNumber(item.quantity)} {item.unit}
+                      </span>
+                    ) : (
+                      <>
+                        {formatNumber(item.stockQuantity)} {item.unit}
+                      </>
+                    )}
                   </td>
                   <td className="border-b border-r border-slate-200 px-4 py-4 text-base text-slate-700">
                     {item.unitPrice > 0 ? (

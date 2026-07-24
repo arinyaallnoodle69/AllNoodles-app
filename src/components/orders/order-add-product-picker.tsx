@@ -129,6 +129,35 @@ function getDisplayStockQuantity(product: OrderProductOption, warehouseId: strin
     ?? product.stockQuantity;
 }
 
+function getWarehouseFulfillmentMode(product: OrderProductOption, warehouseId: string | null) {
+  if (!warehouseId) return "stock";
+  return product.warehouseModes.find((mode) => mode.warehouseId === warehouseId)?.mode === "fresh" ? "fresh" : "stock";
+}
+
+function WarehouseModeBadge({ mode }: { mode: "disabled" | "fresh" | "stock" }) {
+  if (mode === "fresh") {
+    return (
+      <span className="inline-flex items-center justify-center rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[11px] font-black text-emerald-700">
+        ผลิตสด
+      </span>
+    );
+  }
+
+  if (mode === "disabled") {
+    return (
+      <span className="inline-flex items-center justify-center rounded-full border border-slate-200 bg-slate-100 px-2 py-0.5 text-[11px] font-black text-slate-500">
+        ไม่ใช้
+      </span>
+    );
+  }
+
+  return (
+    <span className="inline-flex items-center justify-center rounded-full border border-[#4A148C]/20 bg-[#F3E5F5] px-2 py-0.5 text-[11px] font-black text-[#4A148C]">
+      ใช้สต็อก
+    </span>
+  );
+}
+
 export function OrderAddProductPicker({
   addedItems,
   customerId,
@@ -776,12 +805,13 @@ export function OrderAddProductPicker({
                       <p className="text-sm font-black">ไม่พบสินค้าที่ตรงกับตัวกรอง</p>
                     </div>
                   ) : (
-                    <table className="w-full min-w-[56rem] table-fixed border-collapse">
+                    <table className="w-full min-w-[62rem] table-fixed border-collapse">
                       <thead className="sticky top-0 z-10 bg-[#4A148C] text-white">
                         <tr>
                           <th className="w-12 px-3 py-3 text-center text-xs font-black" aria-label="เลือก" />
                           <th className="w-28 px-3 py-3 text-left text-xs font-black">รหัสสินค้า</th>
                           <th className="px-3 py-3 text-left text-xs font-black">รูปและชื่อสินค้า</th>
+                          <th className="w-28 px-3 py-3 text-center text-xs font-black">โหมด</th>
                           <th className="w-32 px-3 py-3 text-center text-xs font-black">สต็อก</th>
                           <th className="w-44 px-3 py-3 text-center text-xs font-black">จำนวน</th>
                           <th className="w-44 px-3 py-3 text-right text-xs font-black">ราคาขาย</th>
@@ -794,6 +824,7 @@ export function OrderAddProductPicker({
                           const selectedUnit =
                             units.find((unit) => unit.id === draft?.unitId) ?? getDefaultUnit(product);
                           const stockQuantity = getDisplayStockQuantity(product, customerWarehouseId);
+                          const fulfillmentMode = getWarehouseFulfillmentMode(product, customerWarehouseId);
                           const linkedPrice = selectedUnit
                             ? getUnitPrice(product.id, selectedUnit.id, priceMap)
                             : 0;
@@ -841,12 +872,21 @@ export function OrderAddProductPicker({
                                   </div>
                                 </div>
                               </td>
+                              <td className="w-28 px-3 py-3 text-center">
+                                <WarehouseModeBadge mode={fulfillmentMode} />
+                              </td>
                               <td className="w-32 px-3 py-3 text-center">
-                                <span className={`text-sm font-black ${
-                                  stockQuantity < 0 ? "text-red-600" : "text-slate-950"
-                                }`}>
-                                  {stockQuantity.toLocaleString("th-TH")} {product.unit}
-                                </span>
+                                {fulfillmentMode === "fresh" ? (
+                                  <span className="text-sm font-black text-emerald-700">
+                                    ขายแล้ว {(draft?.quantity ?? 0).toLocaleString("th-TH")} {selectedUnit?.label ?? product.unit}
+                                  </span>
+                                ) : (
+                                  <span className={`text-sm font-black ${
+                                    stockQuantity < 0 ? "text-red-600" : "text-slate-950"
+                                  }`}>
+                                    {stockQuantity.toLocaleString("th-TH")} {product.unit}
+                                  </span>
+                                )}
                               </td>
                               <td className="w-44 px-3 py-3" onClick={(event) => event.stopPropagation()}>
                                 {draft && selectedUnit ? (
@@ -939,6 +979,7 @@ export function OrderAddProductPicker({
                   const selectedUnit =
                     units.find((unit) => unit.id === draft?.unitId) ?? getDefaultUnit(product);
                   const issue = draft ? getSelectionIssue(product, draft) : null;
+                  const fulfillmentMode = getWarehouseFulfillmentMode(product, customerWarehouseId);
                   const cost = selectedUnit
                     ? getEffectiveSaleUnitCost({
                         baseCostPrice: product.baseCostPrice,
@@ -1015,14 +1056,22 @@ export function OrderAddProductPicker({
                             {product.name}
                           </p>
                           <div className="mt-2 flex flex-wrap items-center justify-center gap-2 md:justify-start">
-                            <span className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-[13.5px] font-black shadow-sm ${
-                              getDisplayStockQuantity(product, customerWarehouseId) < 0 
-                                ? "bg-[#FF0000] text-white" 
-                                : "bg-[#4A148C] text-white"
-                            }`}>
-                              <Boxes className="h-4 w-4" strokeWidth={2.5} />
-                              สต็อก: {getDisplayStockQuantity(product, customerWarehouseId).toLocaleString("th-TH")} {product.unit}
-                            </span>
+                            <WarehouseModeBadge mode={fulfillmentMode} />
+                            {fulfillmentMode === "fresh" ? (
+                              <span className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-2.5 py-1 text-[13.5px] font-black text-white shadow-sm">
+                                <Boxes className="h-4 w-4" strokeWidth={2.5} />
+                                ขายแล้ว: {(draft?.quantity ?? 0).toLocaleString("th-TH")} {selectedUnit?.label ?? product.unit}
+                              </span>
+                            ) : (
+                              <span className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-[13.5px] font-black shadow-sm ${
+                                getDisplayStockQuantity(product, customerWarehouseId) < 0 
+                                  ? "bg-[#FF0000] text-white" 
+                                  : "bg-[#4A148C] text-white"
+                              }`}>
+                                <Boxes className="h-4 w-4" strokeWidth={2.5} />
+                                สต็อก: {getDisplayStockQuantity(product, customerWarehouseId).toLocaleString("th-TH")} {product.unit}
+                              </span>
+                            )}
                             
                             {cost > 0 && isBelowCost && (
                               <div className="inline-flex items-center rounded-lg bg-[#FF0000] px-2 py-1 text-[10px] font-black text-white animate-pulse">

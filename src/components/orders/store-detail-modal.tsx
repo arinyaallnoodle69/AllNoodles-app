@@ -410,7 +410,7 @@ export function StoreDetailModal({
                           {item.productName}
                         </h4>
                         <div className="flex items-center gap-2 pt-1">
-                          {item.shortQuantity > 0 ? (
+                          {item.fulfillmentMode !== "fresh" && item.shortQuantity > 0 ? (
                             <span className="inline-flex items-center gap-1 rounded-full border border-red-100 bg-red-50 px-2 py-0.5 text-[11px] font-bold text-red-600">
                               <AlertTriangle className="h-3 w-3" strokeWidth={3} />
                               สินค้าขาด {item.shortQuantity}
@@ -441,7 +441,9 @@ export function StoreDetailModal({
                           สต็อกคงเหลือ
                         </p>
                         <p className="mt-1 text-sm font-black text-slate-900">
-                          {item.currentStockQuantity.toLocaleString("th-TH")}
+                          {item.fulfillmentMode === "fresh"
+                            ? `ขายแล้ว ${item.orderedQuantity.toLocaleString("th-TH")}`
+                            : item.currentStockQuantity.toLocaleString("th-TH")}
                           <span className="ml-1 text-[10px] font-bold text-slate-400">
                             {item.productUnit}
                           </span>
@@ -460,7 +462,7 @@ export function StoreDetailModal({
                         </p>
                       </div>
 
-                      {item.shortQuantity > 0 ? (
+                      {item.fulfillmentMode !== "fresh" && item.shortQuantity > 0 ? (
                         <Link
                           href={`/stock?receive=1&product=${item.productId}`}
                           className="inline-flex items-center gap-1.5 rounded-xl bg-[#4A148C] px-4 py-2 text-[12px] font-bold text-white shadow-sm transition active:scale-95"
@@ -542,10 +544,16 @@ export function StoreDetailModal({
                           {item.productUnit}
                         </td>
                         <td className="border-r border-slate-200 px-3 py-3 text-center tabular-nums text-slate-700">
-                          {item.currentStockQuantity.toLocaleString("th-TH")}
+                          {item.fulfillmentMode === "fresh" ? (
+                            <span className="font-bold text-emerald-700">
+                              ขายแล้ว {item.orderedQuantity.toLocaleString("th-TH")}
+                            </span>
+                          ) : (
+                            item.currentStockQuantity.toLocaleString("th-TH")
+                          )}
                         </td>
                         <td className="border-r border-slate-200 px-3 py-3 text-center">
-                          {item.shortQuantity > 0 ? (
+                          {item.fulfillmentMode !== "fresh" && item.shortQuantity > 0 ? (
                             <div className="flex flex-col items-center gap-1">
                               <span className="inline-flex items-center gap-1 font-semibold text-red-700">
                                 <AlertTriangle className="h-3.5 w-3.5" strokeWidth={2.4} />

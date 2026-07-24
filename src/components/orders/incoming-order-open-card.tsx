@@ -6,6 +6,7 @@ import { CalendarDays, Check, ChevronRight, Loader2, Package2, Truck } from "luc
 import { IncomingOrderDateButton } from "@/components/orders/incoming-order-date-button";
 import { IncomingOrderVehicleSelect } from "@/components/orders/incoming-order-vehicle-select";
 import { OrderDeliveryActionButton } from "@/components/orders/order-delivery-action-button";
+import { OrderReceiptActionButton } from "@/components/orders/order-receipt-action-button";
 import type { OrderVehicleOption } from "@/lib/orders/manage";
 
 type IncomingOrderOpenCardProps = {
@@ -135,14 +136,25 @@ export const IncomingOrderOpenCard = memo(function IncomingOrderOpenCard({
             searchTerm={searchTerm}
             selectedCustomerIds={selectedCustomerIds}
           />
+          <OrderReceiptActionButton
+            customerId={customerId}
+            customerName={customerName}
+            date={orderDate}
+            iconOnly
+            label="ดูใบยืนยัน"
+            orderId={orderId}
+          />
           {hasDelivery ? (
             <OrderDeliveryActionButton
               customerId={customerId}
               customerName={customerName}
               date={orderDate}
               iconOnly
-              label="ดูใบยืนยัน"
+              label="พิมพ์บิลส่งของ"
               orderId={orderId}
+              vehicles={vehicles}
+              defaultVehicleId={vehicleId}
+              defaultVehicleName={vehicleName}
             />
           ) : null}
         </div>

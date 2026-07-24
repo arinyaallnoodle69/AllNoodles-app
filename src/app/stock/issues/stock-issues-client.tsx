@@ -225,14 +225,18 @@ export function StockIssuesClient({
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterDate, setFilterDate] = useState(initialDate);
-  const [selectedWarehouseId, setSelectedWarehouseId] = useState(initialWarehouseId);
+  const fallbackWarehouseId =
+    initialWarehouseId && warehouses.some((warehouse) => warehouse.id === initialWarehouseId)
+      ? initialWarehouseId
+      : warehouses[0]?.id ?? "";
+  const [selectedWarehouseId, setSelectedWarehouseId] = useState(fallbackWarehouseId);
   const [selectedIssue, setSelectedIssue] = useState<StockIssueRow | null>(null);
   const { close: closeSearch } = useMobileSearch();
 
   const [prevInitialWarehouseId, setPrevInitialWarehouseId] = useState(initialWarehouseId);
   if (initialWarehouseId !== prevInitialWarehouseId) {
     setPrevInitialWarehouseId(initialWarehouseId);
-    setSelectedWarehouseId(initialWarehouseId);
+    setSelectedWarehouseId(fallbackWarehouseId);
     setAllIssues(initialIssues);
     setHasMore(initialIssues.length === LIMIT);
   }
@@ -242,15 +246,12 @@ export function StockIssuesClient({
     setHasMore(initialIssues.length === LIMIT);
   }, [initialIssues]);
 
-  const warehouseOptions = [
-    { id: "all", name: "ทุกคลังสินค้า" },
-    ...warehouses.map((w) => ({ id: w.id, name: w.name })),
-  ];
+  const warehouseOptions = warehouses.map((w) => ({ id: w.id, name: w.name }));
 
   const handleWarehouseChange = async (warehouseId: string) => {
     setSelectedWarehouseId(warehouseId);
     const params = new URLSearchParams(window.location.search);
-    if (warehouseId !== "all") {
+    if (warehouseId) {
       params.set("warehouse", warehouseId);
     } else {
       params.delete("warehouse");
