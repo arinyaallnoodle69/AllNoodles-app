@@ -13,7 +13,10 @@ import {
 import type { CreateDeliveryState } from "@/app/orders/delivery-actions";
 import type { DeliveryFormData, DeliveryItemData, PendingOrder } from "@/lib/delivery/admin";
 import { DeliveryPdfPreviewModal } from "@/components/print/delivery-pdf-preview-modal";
-import { createDeliveryPdfFileFromUrl } from "@/components/print/share-delivery-pdf";
+import {
+  createDeliveryPdfPreviewFromUrl,
+  type DeliveryPdfPreview,
+} from "@/components/print/share-delivery-pdf";
 
 // Helpers
 
@@ -487,7 +490,7 @@ export function StoreDeliveryModal({
   const [isPending, startTransition] = useTransition();
   const [results, setResults] = useState<CreateDeliveryState[]>([]);
   const [isSharingPdf, setIsSharingPdf] = useState(false);
-  const [previewPdfFile, setPreviewPdfFile] = useState<File | null>(null);
+  const [previewPdf, setPreviewPdf] = useState<DeliveryPdfPreview | null>(null);
 
   const hasAnyQty = groupedItems.some((g) => parseFloat(qtys[g.groupKey] ?? "0") > 0);
 
@@ -500,7 +503,7 @@ export function StoreDeliveryModal({
   const isSubmitting = isPending || isSharingPdf;
 
   useEffect(() => {
-    setPreviewPdfFile(null);
+    setPreviewPdf(null);
   }, [notes, qtys, selectedVehicleId]);
 
   function buildDeliveryItemsPayload() {
@@ -606,8 +609,8 @@ export function StoreDeliveryModal({
         ? `/delivery/print?note_ids=${encodeURIComponent(result.deliveryId)}&date=${orders[0].orderDate}`
         : `/delivery/print?date=${orders[0].orderDate}&customer=${orders[0].customerId}`;
 
-      const pdfFile = await createDeliveryPdfFileFromUrl(printUrl, `delivery-note-${orders[0].orderDate}`);
-      setPreviewPdfFile(pdfFile);
+      const pdf = await createDeliveryPdfPreviewFromUrl(printUrl, `delivery-note-${orders[0].orderDate}`);
+      setPreviewPdf(pdf);
     } catch (error) {
       if (error instanceof Error && error.name === "AbortError") return;
       console.error("[delivery/share-pdf]", error instanceof Error ? { name: error.name, message: error.message, stack: error.stack } : error);
@@ -1011,8 +1014,12 @@ export function StoreDeliveryModal({
           </div>
         </div>
       </div>
-      {previewPdfFile ? (
-        <DeliveryPdfPreviewModal file={previewPdfFile} onClose={() => setPreviewPdfFile(null)} />
+      {previewPdf ? (
+        <DeliveryPdfPreviewModal
+          file={previewPdf.file}
+          previewImages={previewPdf.previewImages}
+          onClose={() => setPreviewPdf(null)}
+        />
       ) : null}
     </div>
   );
@@ -1036,7 +1043,7 @@ function AllStoresDeliveryModal({
   );
   const [isPrintingSelected, setIsPrintingSelected] = useState(false);
   const [isSharingSelected, setIsSharingSelected] = useState(false);
-  const [previewSelectedPdfFile, setPreviewSelectedPdfFile] = useState<File | null>(null);
+  const [previewSelectedPdf, setPreviewSelectedPdf] = useState<DeliveryPdfPreview | null>(null);
   const [showAmount, setShowAmount] = useState(true);
   const printFallbackTimerRef = useRef<number | null>(null);
   const normalizedQuery = query.trim().toLocaleLowerCase("th");
@@ -1167,7 +1174,7 @@ function AllStoresDeliveryModal({
   }, []);
 
   useEffect(() => {
-    setPreviewSelectedPdfFile(null);
+    setPreviewSelectedPdf(null);
   }, [activeTab, printSelectedIds]);
 
   function selectAllStores() {
@@ -1269,11 +1276,11 @@ function AllStoresDeliveryModal({
     setIsSharingSelected(true);
 
     try {
-      const pdfFile = await createDeliveryPdfFileFromUrl(
+      const pdf = await createDeliveryPdfPreviewFromUrl(
         buildSelectedDeliveryPrintUrl(deliveryNoteIds),
         `delivery-notes-${date}${endDate ? `-to-${endDate}` : ""}`,
       );
-      setPreviewSelectedPdfFile(pdfFile);
+      setPreviewSelectedPdf(pdf);
     } catch (error) {
       if (error instanceof Error && error.name === "AbortError") return;
       console.error("[delivery/share-pdf]", error instanceof Error ? { name: error.name, message: error.message, stack: error.stack } : error);
@@ -1583,10 +1590,11 @@ function AllStoresDeliveryModal({
           </div>
         </div>
       </div>
-      {previewSelectedPdfFile ? (
+      {previewSelectedPdf ? (
         <DeliveryPdfPreviewModal
-          file={previewSelectedPdfFile}
-          onClose={() => setPreviewSelectedPdfFile(null)}
+          file={previewSelectedPdf.file}
+          previewImages={previewSelectedPdf.previewImages}
+          onClose={() => setPreviewSelectedPdf(null)}
         />
       ) : null}
     </div>

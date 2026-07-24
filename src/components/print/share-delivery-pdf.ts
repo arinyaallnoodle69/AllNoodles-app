@@ -3,6 +3,11 @@ const DELIVERY_SHEET_HEIGHT_MM = 297;
 
 let cachedFontEmbedCSS: string | null = null;
 
+export type DeliveryPdfPreview = {
+  file: File;
+  previewImages: string[];
+};
+
 function isWebKitOrSafari() {
   if (typeof window === "undefined") return false;
   const ua = window.navigator.userAgent.toLowerCase();
@@ -71,7 +76,10 @@ async function waitForDocumentImages(sourceDocument: Document) {
   await Promise.all(images.map((image) => waitForImage(image)));
 }
 
-export async function createDeliveryPdfFileFromDocument(sourceDocument: Document, fileName?: string) {
+export async function createDeliveryPdfPreviewFromDocument(
+  sourceDocument: Document,
+  fileName?: string,
+): Promise<DeliveryPdfPreview | null> {
   const pages = Array.from(
     sourceDocument.querySelectorAll<HTMLElement>("[data-delivery-note-page='true']"),
   );
@@ -140,6 +148,7 @@ export async function createDeliveryPdfFileFromDocument(sourceDocument: Document
   const isWebKit = isWebKitOrSafari();
   const isMobileDevice = typeof window !== "undefined" && /iphone|ipad|ipod|android/i.test(window.navigator.userAgent.toLowerCase());
   const selectedPixelRatio = isMobileDevice ? 1.25 : 1.7;
+  const previewImages: string[] = [];
 
   for (const [index, page] of pages.entries()) {
     if (index > 0) {
@@ -187,6 +196,7 @@ export async function createDeliveryPdfFileFromDocument(sourceDocument: Document
       imageDataUrl = canvas.toDataURL("image/jpeg", 0.8);
     }
 
+    previewImages.push(imageDataUrl);
     pdf.addImage(imageDataUrl, "JPEG", 0, 0, DELIVERY_SHEET_WIDTH_MM, DELIVERY_SHEET_HEIGHT_MM);
 
     // Yield control to the main thread to keep UI responsive between rendering pages
@@ -195,7 +205,13 @@ export async function createDeliveryPdfFileFromDocument(sourceDocument: Document
 
   const pdfBlob = pdf.output("blob");
   const pdfFileName = buildDeliveryPdfFileName(fileName);
-  return new File([pdfBlob], pdfFileName, { type: "application/pdf" });
+  const file = new File([pdfBlob], pdfFileName, { type: "application/pdf" });
+  return { file, previewImages };
+}
+
+export async function createDeliveryPdfFileFromDocument(sourceDocument: Document, fileName?: string) {
+  const result = await createDeliveryPdfPreviewFromDocument(sourceDocument, fileName);
+  return result?.file ?? null;
 }
 
 export async function sharePreparedDeliveryPdf(pdfFile: File) {
@@ -239,7 +255,10 @@ function waitForIframeLoad(iframe: HTMLIFrameElement) {
   });
 }
 
-export async function createDeliveryPdfFileFromUrl(url: string, fileName?: string) {
+export async function createDeliveryPdfPreviewFromUrl(
+  url: string,
+  fileName?: string,
+): Promise<DeliveryPdfPreview | null> {
   const iframe = document.createElement("iframe");
   iframe.style.cssText = [
     "position:fixed",
@@ -263,10 +282,15 @@ export async function createDeliveryPdfFileFromUrl(url: string, fileName?: strin
     // Add a 1000ms delay to give iOS WebKit time to paint the styles/fonts of the iframe content before capture
     await new Promise((resolve) => window.setTimeout(resolve, 1000));
     
-    return await createDeliveryPdfFileFromDocument(frameDocument, fileName);
+    return await createDeliveryPdfPreviewFromDocument(frameDocument, fileName);
   } finally {
     iframe.remove();
   }
+}
+
+export async function createDeliveryPdfFileFromUrl(url: string, fileName?: string) {
+  const result = await createDeliveryPdfPreviewFromUrl(url, fileName);
+  return result?.file ?? null;
 }
 
 export async function shareDeliveryPdfFromUrl(url: string, fileName?: string) {
@@ -283,4 +307,3 @@ if (typeof window !== "undefined") {
     });
   }, 1200);
 }
-

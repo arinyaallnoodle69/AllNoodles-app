@@ -11,10 +11,15 @@ import { uploadTempPdfAction } from "@/app/orders/pdf-actions";
 
 type DeliveryPdfPreviewModalProps = {
   file: File;
+  previewImages?: string[];
   onClose: () => void;
 };
 
-export function DeliveryPdfPreviewModal({ file, onClose }: DeliveryPdfPreviewModalProps) {
+export function DeliveryPdfPreviewModal({
+  file,
+  previewImages = [],
+  onClose,
+}: DeliveryPdfPreviewModalProps) {
   const [isSharing, setIsSharing] = useState(false);
   const [isLineBrowser, setIsLineBrowser] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
@@ -293,8 +298,25 @@ export function DeliveryPdfPreviewModal({ file, onClose }: DeliveryPdfPreviewMod
                   <Loader2 className="h-10 w-10 animate-spin text-[#4A148C]" strokeWidth={2.5} />
                   <p className="text-sm font-semibold text-slate-600">กำลังจัดเตรียมไฟล์ PDF ชั่วคราวบนเซิร์ฟเวอร์...</p>
                 </div>
+              ) : previewImages.length > 0 ? (
+                <div className="h-full min-h-0 overflow-y-auto bg-[#F6F7FA] px-2 py-3">
+                  <div className="mx-auto flex w-full max-w-[760px] flex-col gap-3">
+                    {previewImages.map((imageUrl, index) => (
+                      <div
+                        key={`${file.name}-${index}`}
+                        className="overflow-hidden border border-[#EA80FC]/30 bg-white shadow-sm"
+                      >
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={imageUrl}
+                          alt={`หน้า ${index + 1}`}
+                          className="block h-auto w-full"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
               ) : publicUrl ? (
-                // Google Docs Viewer renders the PDF beautifully on all mobile views!
                 <iframe
                   src={`https://docs.google.com/viewer?url=${encodeURIComponent(publicUrl)}&embedded=true`}
                   title="ตัวอย่าง PDF บิลส่งของ"

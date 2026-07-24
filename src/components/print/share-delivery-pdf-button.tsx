@@ -3,7 +3,10 @@
 import { Loader2, Share2 } from "lucide-react";
 import { useState } from "react";
 import { DeliveryPdfPreviewModal } from "@/components/print/delivery-pdf-preview-modal";
-import { createDeliveryPdfFileFromDocument } from "@/components/print/share-delivery-pdf";
+import {
+  createDeliveryPdfPreviewFromDocument,
+  type DeliveryPdfPreview,
+} from "@/components/print/share-delivery-pdf";
 
 type ShareDeliveryPdfButtonProps = {
   fileName?: string;
@@ -13,7 +16,7 @@ export function ShareDeliveryPdfButton({
   fileName,
 }: ShareDeliveryPdfButtonProps) {
   const [isSharing, setIsSharing] = useState(false);
-  const [previewFile, setPreviewFile] = useState<File | null>(null);
+  const [previewPdf, setPreviewPdf] = useState<DeliveryPdfPreview | null>(null);
 
   async function handlePreparePdf() {
     if (isSharing) return;
@@ -21,8 +24,8 @@ export function ShareDeliveryPdfButton({
     setIsSharing(true);
 
     try {
-      const pdfFile = await createDeliveryPdfFileFromDocument(document, fileName);
-      setPreviewFile(pdfFile);
+      const pdf = await createDeliveryPdfPreviewFromDocument(document, fileName);
+      setPreviewPdf(pdf);
     } catch (error) {
       if (error instanceof Error && error.name === "AbortError") {
         return;
@@ -50,8 +53,12 @@ export function ShareDeliveryPdfButton({
         )}
         {isSharing ? "กำลังสร้าง PDF..." : "ส่งออก PDF"}
       </button>
-      {previewFile ? (
-        <DeliveryPdfPreviewModal file={previewFile} onClose={() => setPreviewFile(null)} />
+      {previewPdf ? (
+        <DeliveryPdfPreviewModal
+          file={previewPdf.file}
+          previewImages={previewPdf.previewImages}
+          onClose={() => setPreviewPdf(null)}
+        />
       ) : null}
     </>
   );
