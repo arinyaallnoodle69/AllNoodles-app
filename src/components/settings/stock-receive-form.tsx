@@ -20,6 +20,7 @@ import {
   Trash2,
   AlertCircle,
   Sparkles,
+  ListFilter,
 } from "lucide-react";
 import {
   useActionState,
@@ -82,6 +83,7 @@ export function StockReceiveForm({
   const [receiveDate, setReceiveDate] = useState(new Date().toISOString().split("T")[0]);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const [selectedBrand, setSelectedBrand] = useState<string>("all");
   const [receiptImage, setReceiptImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isSupplierDrawerOpen, setIsSupplierDrawerOpen] = useState(false);
@@ -91,6 +93,14 @@ export function StockReceiveForm({
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
   const deferredQuery = useDeferredValue(searchQuery);
+  const selectedWarehouse = useMemo(
+    () => warehouses.find((warehouse) => warehouse.id === warehouseId) ?? null,
+    [warehouseId, warehouses],
+  );
+
+  useEffect(() => {
+    setWarehouseId(defaultWarehouseId);
+  }, [defaultWarehouseId]);
 
   const categories = useMemo(() => {
     const cats = new Set<string>();
@@ -100,12 +110,34 @@ export function StockReceiveForm({
     return Array.from(cats).sort();
   }, [products]);
 
+  const brands = useMemo(() => {
+    const filteredByCategory =
+      selectedCategory === "all"
+        ? products
+        : products.filter((product) => product.categoryName === selectedCategory);
+    const items = new Set<string>();
+    filteredByCategory.forEach((product) => {
+      if (product.brandName) items.add(product.brandName);
+    });
+    return Array.from(items).sort();
+  }, [products, selectedCategory]);
+
+  useEffect(() => {
+    if (selectedBrand !== "all" && !brands.includes(selectedBrand)) {
+      setSelectedBrand("all");
+    }
+  }, [brands, selectedBrand]);
+
   const filteredProducts = useMemo(() => {
     let result = products;
 
     // Category Filter
     if (selectedCategory !== "all") {
       result = result.filter(p => p.categoryName === selectedCategory);
+    }
+
+    if (selectedBrand !== "all") {
+      result = result.filter(p => p.brandName === selectedBrand);
     }
 
     // Search Query
@@ -118,7 +150,7 @@ export function StockReceiveForm({
     }
 
     return result;
-  }, [deferredQuery, products, selectedCategory]);
+  }, [deferredQuery, products, selectedBrand, selectedCategory]);
 
   const toggleProduct = (productId: string) => {
     setSelections(prev => {
@@ -274,16 +306,16 @@ export function StockReceiveForm({
   };
 
   return (
-    <div className={`fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/45 p-3 sm:p-4 transition-all duration-300 ${
+    <div className={`fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/45 p-0 sm:p-4 transition-all duration-300 ${
       isClosing ? "opacity-0" : "opacity-100"
     }`}>
       <div
         onClick={handleClose}
         className="absolute inset-0"
       />
-      <div className={`relative flex h-full w-full max-w-[1180px] flex-col overflow-hidden bg-[#f6f8fb] shadow-[0_18px_44px_rgba(15,23,42,0.08)] rounded-[28px] border border-[#dbe4f0] transition-all duration-500 dashboard-modal-content stock-receive-modal-content ${
+      <div className={`relative flex h-full w-full max-w-[1180px] flex-col overflow-hidden bg-[#f6f8fb] shadow-[0_18px_44px_rgba(15,23,42,0.08)] rounded-none border border-[#dbe4f0] transition-all duration-500 dashboard-modal-content stock-receive-modal-content sm:rounded-[28px] ${
         isClosing ? "scale-95 translate-y-4" : "scale-100 translate-y-0"
-      } h-[92dvh] sm:h-[88dvh]`}>
+      } h-[100dvh] sm:h-[88dvh]`}>
 
         {/* Validation Alert Popup */}
         {displayErrorMessage && (
@@ -304,15 +336,15 @@ export function StockReceiveForm({
           </div>
         )}
 
-        {/* Header - Technical Clean Style */}
-        <div className="shrink-0 bg-white px-6 py-5 border-b border-[#dbe4f0] flex flex-col gap-4">
+        {/* Header */}
+        <div className="shrink-0 border-b border-[#dbe4f0] bg-white px-4 py-3 sm:px-6 sm:py-4">
           <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-xl sm:text-2xl font-black text-[#4A148C] tracking-tight">
-                รับสินค้าเข้าคลัง (Receive Inventory)
+            <div className="min-w-0">
+              <h2 className="truncate text-xl font-black tracking-tight text-[#4A148C] sm:text-2xl">
+                รับสินค้าเข้าคลัง
               </h2>
-              <p className="text-[12px] font-bold text-slate-400 mt-0.5 uppercase tracking-wider">
-                Field Operations Guide
+              <p className="mt-0.5 truncate text-sm font-black text-slate-600">
+                {selectedWarehouse?.name ?? "ยังไม่ได้เลือกคลัง"}
               </p>
             </div>
 
@@ -324,41 +356,10 @@ export function StockReceiveForm({
               <X className="h-5 w-5" strokeWidth={2.2} />
             </button>
           </div>
-
-          {/* Sequential Process Map - Steps timeline */}
-          <div className="flex items-center gap-3 overflow-x-auto py-1 no-scrollbar">
-            {[
-              { num: "01", label: "ข้อมูลพื้นฐาน" },
-              { num: "02", label: "เลือกสินค้า" },
-              { num: "03", label: "ยืนยันการรับเข้า" },
-            ].map((s, idx) => {
-              const currentNum = idx + 1;
-              const isActive = step === currentNum;
-              const isCompleted = step > currentNum;
-
-              return (
-                <div key={s.num} className="flex items-center gap-2 shrink-0">
-                  <div className={`h-8 px-3 rounded-full flex items-center gap-1.5 text-xs font-black transition-all ${
-                    isActive
-                      ? "bg-[#4A148C] text-white"
-                      : isCompleted
-                      ? "bg-[#e9f8ef] text-[#16a34a] border border-[#16a34a]/10"
-                      : "bg-slate-100 text-slate-400"
-                  }`}>
-                    {isCompleted ? <Check className="h-3.5 w-3.5" strokeWidth={3} /> : <span>{s.num}</span>}
-                    <span>{s.label}</span>
-                  </div>
-                  {idx < 2 && (
-                    <div className="h-0.5 w-6 bg-[#dbe4f0]" />
-                  )}
-                </div>
-              );
-            })}
-          </div>
         </div>
 
         {/* Content Container */}
-        <div className="relative flex flex-1 flex-col overflow-y-auto p-5 sm:p-6">
+        <div className="relative flex flex-1 flex-col overflow-y-auto p-3 sm:p-6">
           
           {/* Step 1: Info */}
           {step === 1 && (
@@ -383,18 +384,17 @@ export function StockReceiveForm({
                   <label className="text-xs font-black uppercase tracking-widest text-slate-400 flex items-center gap-2">
                     <Package2 className="h-4 w-4 text-[#4A148C]" /> คลังสินค้าปลายทาง
                   </label>
-                  <select
-                    value={warehouseId}
-                    onChange={(event) => setWarehouseId(event.target.value)}
-                    className="h-12 w-full rounded-full border border-[#dbe4f0] bg-white px-5 text-sm font-bold text-[#4A148C] outline-none transition focus:border-[#4A148C] focus:ring-1 focus:ring-[#4A148C]/20"
-                  >
-                    <option value="">เลือกคลังปลายทาง...</option>
-                    {warehouses.map((warehouse) => (
-                      <option key={warehouse.id} value={warehouse.id}>
-                        {warehouse.name}
-                      </option>
-                    ))}
-                  </select>
+                  <div className="flex min-h-12 w-full items-center justify-between gap-3 rounded-full border border-[#dbe4f0] bg-slate-50 px-5">
+                    <span className="min-w-0 truncate text-sm font-black text-[#4A148C]">
+                      {selectedWarehouse?.name ?? "ยังไม่ได้เลือกคลัง"}
+                    </span>
+                    <span className="shrink-0 rounded-full bg-white px-3 py-1 text-[11px] font-black uppercase tracking-wide text-slate-500">
+                      {selectedWarehouse?.slug ?? "warehouse"}
+                    </span>
+                  </div>
+                  <p className="px-1 text-xs font-bold text-slate-500">
+                    รับเข้าคลังตามหน้าสต็อกที่กำลังเปิดอยู่ หากต้องการเปลี่ยนคลังให้กลับไปเลือกคลังด้านนอกก่อน
+                  </p>
                 </div>
 
                 {/* Supplier Selection Button */}
@@ -437,51 +437,117 @@ export function StockReceiveForm({
 
           {/* Step 2: Product Search & Qty */}
           {step === 2 && (
-            <div className="flex flex-col flex-1 gap-6 max-w-[840px] mx-auto w-full">
+            <div className="flex flex-1 flex-col gap-3 w-full sm:mx-auto sm:max-w-[840px] sm:gap-6">
               
               {/* Filter Area */}
-              <div className="bg-white border border-[#dbe4f0] rounded-[24px] p-5 shadow-sm space-y-4">
+              <div className="space-y-3 border-b border-[#eadcf3] bg-white px-0 pb-3 sm:rounded-[24px] sm:border sm:border-[#dbe4f0] sm:p-5 sm:shadow-sm">
                 <div className="relative">
-                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                  <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 sm:left-4" />
                   <input
                     type="text"
                     placeholder="พิมพ์ค้นหาสินค้าเพื่อรับเข้า..."
-                    className="w-full h-11 pl-11 pr-4 bg-slate-50 border border-[#dbe4f0] rounded-full outline-none focus:border-[#4A148C] transition-all text-sm font-bold placeholder:text-slate-400"
+                    className="h-10 w-full rounded-xl border border-[#dbe4f0] bg-slate-50 pl-10 pr-3 text-sm font-bold outline-none transition-all placeholder:text-slate-400 focus:border-[#4A148C] sm:h-11 sm:rounded-full sm:pl-11 sm:pr-4"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                   />
                 </div>
 
-                {/* Category tags */}
-                <div className="flex flex-wrap gap-2 pt-1">
-                  <button
-                    onClick={() => setSelectedCategory("all")}
-                    className={`px-4 py-1.5 rounded-full text-xs font-black transition ${
-                      selectedCategory === "all"
-                        ? "bg-[#4A148C] text-white"
-                        : "bg-slate-50 text-slate-500 border border-[#dbe4f0]/50 hover:bg-slate-100"
-                    }`}
-                  >
-                    ทั้งหมด
-                  </button>
-                  {categories.map(cat => (
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
                     <button
-                      key={cat}
-                      onClick={() => setSelectedCategory(cat)}
-                      className={`px-4 py-1.5 rounded-full text-xs font-black transition ${
-                        selectedCategory === cat
-                          ? "bg-[#4A148C] text-white"
-                          : "bg-slate-50 text-slate-500 border border-[#dbe4f0]/50 hover:bg-slate-100"
-                      }`}
+                      type="button"
+                      aria-label="เปิดรายการหมวดหมู่ทั้งหมด"
+                      className="flex h-10 shrink-0 items-center gap-1.5 text-sm font-black text-[#4A148C] sm:h-12"
                     >
-                      {cat}
+                      หมวดหมู่
+                      <ListFilter className="h-4 w-4" strokeWidth={2.5} />
                     </button>
-                  ))}
+                    <div className="no-scrollbar flex min-w-0 flex-1 items-center gap-5 overflow-x-auto">
+                      <button
+                        type="button"
+                        onClick={() => setSelectedCategory("all")}
+                        className={`relative h-10 shrink-0 px-0 text-sm font-black transition sm:h-12 ${
+                          selectedCategory === "all"
+                            ? "text-[#4A148C]"
+                            : "text-slate-500 hover:text-slate-950"
+                        }`}
+                      >
+                        ทุกหมวดหมู่
+                        {selectedCategory === "all" && (
+                          <span className="absolute inset-x-0 bottom-0 h-1 rounded-full bg-[#4A148C]" />
+                        )}
+                      </button>
+                      {categories.map(cat => (
+                        <button
+                          type="button"
+                          key={cat}
+                          onClick={() => setSelectedCategory(cat)}
+                          className={`relative h-10 shrink-0 px-0 text-sm font-black transition sm:h-12 ${
+                            selectedCategory === cat
+                              ? "text-[#4A148C]"
+                              : "text-slate-500 hover:text-slate-950"
+                          }`}
+                        >
+                          {cat}
+                          {selectedCategory === cat && (
+                            <span className="absolute inset-x-0 bottom-0 h-1 rounded-full bg-[#4A148C]" />
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 </div>
+
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      aria-label="เปิดรายการแบรนด์ทั้งหมด"
+                      className="flex h-10 shrink-0 items-center gap-1.5 text-sm font-black text-[#4A148C] sm:h-12"
+                    >
+                      แบรนด์
+                      <ListFilter className="h-4 w-4" strokeWidth={2.5} />
+                    </button>
+                    <div className="no-scrollbar flex min-w-0 flex-1 items-center gap-5 overflow-x-auto">
+                      <button
+                        type="button"
+                        onClick={() => setSelectedBrand("all")}
+                        className={`relative h-10 shrink-0 px-0 text-sm font-black transition sm:h-12 ${
+                          selectedBrand === "all"
+                            ? "text-[#4A148C]"
+                            : "text-slate-500 hover:text-slate-950"
+                        }`}
+                      >
+                        ทั้งหมด
+                        {selectedBrand === "all" && (
+                          <span className="absolute inset-x-0 bottom-0 h-1 rounded-full bg-[#4A148C]" />
+                        )}
+                      </button>
+                      {brands.map(brand => (
+                        <button
+                          type="button"
+                          key={brand}
+                          onClick={() => setSelectedBrand(brand)}
+                          className={`relative h-10 shrink-0 px-0 text-sm font-black transition sm:h-12 ${
+                            selectedBrand === brand
+                              ? "text-[#4A148C]"
+                              : "text-slate-500 hover:text-slate-950"
+                          }`}
+                        >
+                          {brand}
+                          {selectedBrand === brand && (
+                            <span className="absolute inset-x-0 bottom-0 h-1 rounded-full bg-[#4A148C]" />
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
               </div>
 
               {/* Product selection cards grid */}
-              <div className="space-y-3">
+              <div className="space-y-2 sm:space-y-3">
                 {filteredProducts.map((p) => {
                   const isSelected = !!selections[p.id];
                   return (
@@ -495,14 +561,14 @@ export function StockReceiveForm({
                     >
                       <button
                         onClick={() => toggleProduct(p.id)}
-                        className="flex w-full items-center gap-4 px-5 py-4 text-left"
+                        className="flex w-full items-center gap-3 px-3 py-3 text-left sm:gap-4 sm:px-5 sm:py-4"
                       >
                         <div className={`h-6 w-6 shrink-0 flex items-center justify-center rounded-md border transition-all ${
                           isSelected ? "bg-[#4A148C] border-[#4A148C] text-white" : "border-slate-300 text-transparent"
                         }`}>
                           <Check className="h-4 w-4" strokeWidth={3} />
                         </div>
-                        <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-xl border border-slate-100 bg-white">
+                        <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-xl border border-slate-100 bg-white sm:h-14 sm:w-14">
                           {p.imageUrl ? (
                             <Image src={p.imageUrl} alt={p.name} fill className="object-contain p-1" />
                           ) : (
@@ -511,14 +577,14 @@ export function StockReceiveForm({
                         </div>
                         <div className="min-w-0 flex-1">
                           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{p.sku}</p>
-                          <h4 className="text-base font-black text-slate-900 leading-snug line-clamp-1">{p.name}</h4>
-                          <div className="mt-1 flex items-center gap-3 text-xs text-slate-500 font-bold">
+                          <h4 className="max-h-[2.9em] overflow-hidden text-sm font-black leading-snug text-slate-900 sm:text-base">{p.name}</h4>
+                          <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs font-bold text-slate-500">
                             <span>คงเหลือ: <strong className="text-slate-800">{p.onHandQuantity} {p.unit}</strong></span>
                             {role !== "member" && (
-                              <>
+                              <span className="hidden items-center gap-3 sm:flex">
                                 <span className="h-1 w-1 bg-slate-300 rounded-full" />
                                 <span>ทุนเริ่มต้น: <strong className="text-slate-800">฿{p.costPrice.toLocaleString()}</strong></span>
-                              </>
+                              </span>
                             )}
                           </div>
                         </div>
