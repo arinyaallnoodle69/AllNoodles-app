@@ -1554,6 +1554,72 @@ export async function updateProductOrder(productIds: string[]) {
   return { success: true };
 }
 
+export async function moveProductOrder(
+  draggedId: string,
+  targetId: string,
+  position: "before" | "after"
+) {
+  const session = await requireAppRole("admin");
+  const admin = getSupabaseAdmin();
+
+  // 1. Fetch all products of the organization ordered by current display_order and sku
+  const { data: products, error: fetchError } = await admin
+    .from("products")
+    .select("id, display_order")
+    .eq("organization_id", session.organizationId)
+    .order("display_order", { ascending: true })
+    .order("sku", { ascending: true });
+
+  if (fetchError || !products) {
+    throw new Error(`Failed to fetch products for reordering: ${fetchError?.message || "No data"}`);
+  }
+
+  const ids = products.map((p) => p.id);
+  const oldIndex = ids.indexOf(draggedId);
+  const targetIndex = ids.indexOf(targetId);
+
+  if (oldIndex < 0 || targetIndex < 0) {
+    throw new Error("Product not found in organization catalog");
+  }
+
+  // 2. Perform the relative movement in-memory
+  const updatedIds = [...ids];
+  updatedIds.splice(oldIndex, 1);
+  const remainingTargetIndex = updatedIds.indexOf(targetId);
+  const insertIndex = position === "before" ? remainingTargetIndex : remainingTargetIndex + 1;
+  updatedIds.splice(insertIndex, 0, draggedId);
+
+  // 3. Batch update any product whose display_order does not match its index to resolve duplicates/gaps
+  const updates: Promise<{ error: { message: string } | null }>[] = [];
+  for (let i = 0; i < updatedIds.length; i++) {
+    const id = updatedIds[i];
+    const orig = products.find((p) => p.id === id);
+    if (!orig || orig.display_order !== i) {
+      updates.push(
+        Promise.resolve(
+          admin
+            .from("products")
+            .update({ display_order: i })
+            .eq("organization_id", session.organizationId)
+            .eq("id", id)
+        )
+      );
+    }
+  }
+
+  if (updates.length > 0) {
+    const results = await Promise.all(updates);
+    for (const res of results) {
+      if (res.error) {
+        throw new Error(`Failed to update product order: ${res.error.message}`);
+      }
+    }
+  }
+
+  revalidateSettingsSurfaces(session.organizationId);
+  return { success: true };
+}
+
 export async function updateProductCategoryOrder(categoryIds: string[]) {
   const session = await requireAppRole("admin");
   const admin = getSupabaseAdmin();

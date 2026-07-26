@@ -764,7 +764,7 @@ export function ProductFilterClient({
           <ProductList 
             products={filteredProducts} 
             onEdit={setEditingProduct} 
-            canReorder={selectedCategory === "__all__" && selectedBrand === "__all__" && !searchQuery}
+            canReorder={!searchQuery}
           />
         </div>
       </div>

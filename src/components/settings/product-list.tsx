@@ -3,7 +3,7 @@
 import { useState, useTransition, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { GripVertical, MoreVertical, Package2, Pencil, Power, History, Trash2, LoaderCircle } from "lucide-react";
-import { setProductActive, updateProductOrder } from "@/app/dashboard/settings/actions";
+import { setProductActive, moveProductOrder } from "@/app/dashboard/settings/actions";
 import { DeleteProductButton } from "@/components/settings/delete-product-button";
 import { ProductCostHistoryButton } from "@/components/settings/product-cost-history-button";
 import { ProductImagePreview } from "@/components/settings/product-image-preview";
@@ -628,11 +628,14 @@ export function ProductList({ products, onEdit, canReorder = true }: ProductList
       const updatedItems = arrayMove(localProducts, oldIndex, newIndex);
       setLocalProducts(updatedItems);
       
+      const position = newIndex < oldIndex ? "before" : "after";
+      
       startTransition(async () => {
         try {
-          await updateProductOrder(updatedItems.map(i => i.id));
+          await moveProductOrder(String(active.id), String(over.id), position);
         } catch (error) {
           console.error("Failed to update product order:", error);
+          setLocalProducts(products);
         }
       });
     }

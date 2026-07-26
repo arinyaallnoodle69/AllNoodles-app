@@ -88,71 +88,40 @@ type ProductRow = {
   metadata: Record<string, unknown> | null;
   product_category_items: Array<{
     product_categories: {
+      id: string;
       name: string;
     } | null;
   }>;
+  product_images: Array<{
+    public_url: string;
+    sort_order: number;
+  }>;
+  product_sale_units: Array<{
+    base_unit_quantity: number | string;
+    cost_mode: string | null;
+    fixed_cost_price: number | string | null;
+    id: string;
+    is_active: boolean;
+    is_default: boolean;
+    sort_order: number | string;
+  }>;
+  product_warehouse_stocks: Array<{
+    warehouse_id: string;
+    stock_quantity: number | string;
+    reserved_quantity: number | string;
+  }>;
+  product_warehouse_fulfillment_modes: Array<{
+    warehouse_id: string;
+    mode: string;
+  }>;
 };
 
-type ProductImageRow = {
-  product_id: string;
-  public_url: string;
-  sort_order: number;
-};
-
-type StockSaleUnitRow = {
-  base_unit_quantity: number | string;
-  cost_mode: string | null;
-  fixed_cost_price: number | string | null;
-  id: string;
-  is_active: boolean;
-  is_default: boolean;
-  product_id: string;
-  sort_order: number | string;
-  unit_label: string;
-};
+type ProductWarehouseFulfillmentMode = "disabled" | "fresh" | "stock";
 
 type SupplierRow = {
   id: string;
   name: string;
   supplier_code: string;
-};
-
-type ProductWarehouseStockRow = {
-  product_id: string;
-  reserved_quantity: number | string;
-  stock_quantity: number | string;
-  warehouse_id: string;
-};
-
-type ProductWarehouseFulfillmentMode = "disabled" | "fresh" | "stock";
-
-type ProductWarehouseFulfillmentModeRow = {
-  mode: ProductWarehouseFulfillmentMode | string | null;
-  product_id: string;
-  warehouse_id: string;
-};
-
-type WarehouseStockQuery = {
-  eq: (column: string, value: string) => Promise<{
-    data: ProductWarehouseStockRow[] | null;
-    error: { message?: string } | null;
-  }>;
-};
-
-type WarehouseStockAdmin = {
-  from: {
-    (table: "product_warehouse_stocks"): {
-      select: (columns: string) => WarehouseStockQuery;
-    };
-    (table: "product_warehouse_fulfillment_modes"): {
-      select: (columns: string) => {
-        eq: (column: string, value: string) => Promise<{
-          data: ProductWarehouseFulfillmentModeRow[] | null;
-          error: { message?: string } | null;
-        }>;
-      };
-    };
-  };
 };
 
 type MovementRow = {
@@ -354,46 +323,29 @@ export const getStockDashboardData = cache(
 
     const [
       productsResult,
-      imagesResult,
-      saleUnitsResult,
       movementsResult,
       suppliersResult,
-      warehouseStocksResult,
-      warehouseModesResult,
       categoriesResult,
       brandsResult,
     ] = await Promise.all([
-      admin.from("products")
+      (admin as any).from("products")
         .select(`
           id, sku, name, cost_price, stock_quantity, reserved_quantity, unit, is_active, display_order, metadata,
-          product_category_items(product_categories(id, name))
+          product_category_items(product_categories(id, name)),
+          product_images(public_url, sort_order),
+          product_sale_units(id, unit_label, base_unit_quantity, is_active, is_default, sort_order, cost_mode, fixed_cost_price),
+          product_warehouse_stocks(warehouse_id, stock_quantity, reserved_quantity),
+          product_warehouse_fulfillment_modes(warehouse_id, mode)
         `)
         .eq("organization_id", organizationId)
         .order("display_order", { ascending: true })
-        .order("sku", { ascending: true }),
-      admin.from("product_images")
-        .select("product_id, public_url, sort_order")
-        .eq("organization_id", organizationId)
-        .order("sort_order", { ascending: true }),
-      admin.from("product_sale_units")
-        .select("id, product_id, unit_label, base_unit_quantity, is_active, is_default, sort_order, cost_mode, fixed_cost_price")
-        .eq("organization_id", organizationId)
-        .eq("is_active", true)
-        .order("sort_order", { ascending: true }),
+        .order("sku", { ascending: true }) as Promise<any>,
       movementsPromise,
       admin.from("suppliers")
         .select("id, name, supplier_code")
         .eq("organization_id", organizationId)
         .eq("is_active", true)
         .order("name", { ascending: true }),
-      (admin as unknown as WarehouseStockAdmin)
-        .from("product_warehouse_stocks")
-        .select("product_id, warehouse_id, stock_quantity, reserved_quantity")
-        .eq("organization_id", organizationId),
-      (admin as unknown as WarehouseStockAdmin)
-        .from("product_warehouse_fulfillment_modes")
-        .select("product_id, warehouse_id, mode")
-        .eq("organization_id", organizationId),
       admin.from("product_categories")
         .select("id, sort_order")
         .eq("organization_id", organizationId),
@@ -405,12 +357,9 @@ export const getStockDashboardData = cache(
 
     const errors = [
       productsResult.error,
-      imagesResult.error,
-      saleUnitsResult.error,
       movementsResult.error,
       categoriesResult.error,
       brandsResult.error,
-      warehouseModesResult.error,
     ].filter(Boolean);
 
     if (errors.length > 0) {
@@ -429,51 +378,24 @@ export const getStockDashboardData = cache(
       };
     }
 
-    const products = (productsResult.data ?? []) as ProductRow[];
-    const images = (imagesResult.data ?? []) as ProductImageRow[];
-    const saleUnits = (saleUnitsResult.data ?? []) as StockSaleUnitRow[];
+    const products = (productsResult.data ?? []) as any as ProductRow[];
     const movements = (movementsResult.data ?? []) as MovementRow[];
     const suppliers = (suppliersResult.data ?? []) as SupplierRow[];
-    const warehouseStocks = warehouseStocksResult.error ? [] : (warehouseStocksResult.data ?? []);
-    const warehouseModes = (warehouseModesResult.data ?? []) as ProductWarehouseFulfillmentModeRow[];
     const categories = (categoriesResult.data ?? []) as Array<{ id: string; sort_order: number | string }>;
     const brands = (brandsResult.data ?? []) as Array<{ name: string; sort_order: number | string }>;
 
-    const imageMap = new Map<string, string>();
-    for (const image of images) {
-      if (!imageMap.has(image.product_id)) {
-        imageMap.set(image.product_id, image.public_url);
-      }
-    }
-
-    const saleUnitMap = new Map<string, StockSaleUnitRow[]>();
-    for (const saleUnit of saleUnits) {
-      const current = saleUnitMap.get(saleUnit.product_id) ?? [];
-      current.push(saleUnit);
-      saleUnitMap.set(saleUnit.product_id, current);
-    }
-
     const productMap = new Map(products.map((product) => [product.id, product]));
-    const warehouseStockMap = new Map<string, ProductWarehouseStockRow[]>();
-    for (const stock of warehouseStocks) {
-      const current = warehouseStockMap.get(stock.product_id) ?? [];
-      current.push(stock);
-      warehouseStockMap.set(stock.product_id, current);
-    }
-    const warehouseModeMap = new Map<string, StockProductOption["warehouseModes"]>();
-    for (const row of warehouseModes) {
-      const mode: ProductWarehouseFulfillmentMode = row.mode === "fresh" ? "fresh" : "stock";
-      const current = warehouseModeMap.get(row.product_id) ?? [];
-      current.push({
-        mode,
-        warehouseId: row.warehouse_id,
-      });
-      warehouseModeMap.set(row.product_id, current);
-    }
 
     const mappedProducts = products.map((product) => {
       const baseCostPrice = Number(product.cost_price);
-      const productSaleUnits = (saleUnitMap.get(product.id) ?? [])
+
+      // Sort images and extract the first one
+      const sortedImages = (product.product_images ?? [])
+        .toSorted((a, b) => Number(a.sort_order) - Number(b.sort_order));
+      const imageUrl = sortedImages[0]?.public_url ?? null;
+
+      const productSaleUnits = (product.product_sale_units ?? [])
+        .filter((su) => su.is_active)
         .toSorted((a, b) => Number(a.sort_order) - Number(b.sort_order))
         .map((su) => {
           const baseUnitQuantity = Number(su.base_unit_quantity);
@@ -490,8 +412,16 @@ export const getStockDashboardData = cache(
         });
 
       const categoryIds = (product.product_category_items ?? [])
-        .map((item) => (item as unknown as { product_categories?: { id: string } | null })?.product_categories?.id)
+        .map((item) => item?.product_categories?.id)
         .filter(Boolean) as string[];
+
+      const warehouseModes = (product.product_warehouse_fulfillment_modes ?? []).map((row) => {
+        const mode: ProductWarehouseFulfillmentMode = row.mode === "fresh" ? "fresh" : "stock";
+        return {
+          mode,
+          warehouseId: row.warehouse_id,
+        };
+      });
 
       return {
         costPrice: baseCostPrice,
@@ -499,7 +429,7 @@ export const getStockDashboardData = cache(
         display_order: product.display_order !== null ? Number(product.display_order) : null,
         categoryIds,
         id: product.id,
-        imageUrl: imageMap.get(product.id) ?? null,
+        imageUrl,
         categoryName: product.product_category_items?.[0]?.product_categories?.name ?? null,
         brandName: (product.metadata as { brand?: string })?.brand ?? null,
         isActive: product.is_active,
@@ -507,12 +437,12 @@ export const getStockDashboardData = cache(
         onHandQuantity: Number(product.stock_quantity),
         reservedQuantity: Number(product.reserved_quantity),
         saleUnits: productSaleUnits,
-        warehouseStocks: (warehouseStockMap.get(product.id) ?? []).map((stock) => ({
+        warehouseStocks: (product.product_warehouse_stocks ?? []).map((stock) => ({
           onHandQuantity: Number(stock.stock_quantity),
           reservedQuantity: Number(stock.reserved_quantity),
           warehouseId: stock.warehouse_id,
         })),
-        warehouseModes: warehouseModeMap.get(product.id) ?? [],
+        warehouseModes,
         sku: product.sku,
         unit: product.unit,
       };

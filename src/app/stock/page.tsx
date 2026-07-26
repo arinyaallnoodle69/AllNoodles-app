@@ -35,8 +35,12 @@ export default async function StockPage({ searchParams }: { searchParams: Search
       : warehouses[0]?.id ?? "";
 
   const [initialHistory, initialIssues] = await Promise.all([
-    getStockHistoryData(session.organizationId, 50, 0, warehouseId),
-    getStockIssueHistoryData(session.organizationId, 50, 0, date, warehouseId),
+    tab === "history"
+      ? getStockHistoryData(session.organizationId, 50, 0, warehouseId)
+      : Promise.resolve(null),
+    tab === "issues"
+      ? getStockIssueHistoryData(session.organizationId, 50, 0, date, warehouseId)
+      : Promise.resolve(null),
   ]);
 
   return (

@@ -15,8 +15,8 @@ type UnifiedStockClientProps = {
   suppliers: StockSupplierOption[];
   warehouses: { id: string; name: string; slug: string }[];
   initialTab: "stock" | "history" | "issues";
-  initialHistory: StockHistoryRow[];
-  initialIssues: StockIssueRow[];
+  initialHistory: StockHistoryRow[] | null;
+  initialIssues: StockIssueRow[] | null;
   initialWarehouseId: string;
   initialDate: string;
   brands?: string[];
