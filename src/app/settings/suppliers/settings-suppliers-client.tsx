@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import Link from "next/link";
 import { Plus, Search, MapPin, PencilLine, Trash2, Factory } from "lucide-react";
 import { MobileSearchDrawer } from "@/components/mobile-search/mobile-search-drawer";
 import { SettingsShell } from "@/components/settings/settings-shell";
@@ -33,7 +32,14 @@ export function SettingsSuppliersPageClient({
   }
 
   const [searchTerm, setSearchTerm] = useState("");
-  const showCreateForm = createParam !== undefined;
+  const [showCreateForm, setShowCreateForm] = useState(createParam !== undefined);
+  const [editing, setEditing] = useState<SettingsSupplier | null>(editingSupplier);
+
+  function closeModal() {
+    setShowCreateForm(false);
+    setEditing(null);
+    window.history.replaceState(null, "", "/settings/suppliers");
+  }
 
   const filteredSuppliers = initialSuppliers.filter(s => 
     s.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -70,13 +76,14 @@ export function SettingsSuppliersPageClient({
               />
             </label>
 
-            <Link
-              href="/settings/suppliers?create"
+            <button
+              type="button"
+              onClick={() => setShowCreateForm(true)}
               className="inline-flex h-12 items-center justify-center gap-2 rounded-lg bg-[#4A148C] px-4 text-sm font-bold text-white shadow-[0_12px_26px_rgba(142, 36, 170,0.22)] transition hover:bg-[#4A148C] active:scale-[0.98]"
             >
               <Plus className="h-4.5 w-4.5" strokeWidth={2.4} />
               เพิ่มผู้ขาย
-            </Link>
+            </button>
           </div>
         </div>
       </div>
@@ -94,13 +101,14 @@ export function SettingsSuppliersPageClient({
         </label>
       </MobileSearchDrawer>
 
-      <Link
-        href="/settings/suppliers?create"
+      <button
+        type="button"
+        onClick={() => setShowCreateForm(true)}
         aria-label="เพิ่มผู้ขาย"
         className="fixed bottom-[calc(4.75rem+env(safe-area-inset-bottom)+12px)] left-4 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-[#4A148C] text-white shadow-[0_14px_32px_rgba(142, 36, 170,0.32)] transition active:scale-95 lg:hidden"
       >
         <Plus className="h-7 w-7" strokeWidth={2.6} />
-      </Link>
+      </button>
 
       <div className="space-y-6">
         {/* Suppliers Grid */}
@@ -124,13 +132,14 @@ export function SettingsSuppliersPageClient({
                   </div>
                   
                   <div className="flex gap-1 opacity-0 transition-opacity group-hover:opacity-100 max-lg:opacity-100">
-                    <Link
-                      href={`/settings/suppliers?edit=${supplier.id}`}
+                    <button
+                      type="button"
+                      onClick={() => setEditing(supplier)}
                       className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-50 text-slate-400 transition hover:bg-[#4A148C]/20 hover:text-[#4A148C]"
                       title="แก้ไข"
                     >
                       <PencilLine className="h-4.5 w-4.5" />
-                    </Link>
+                    </button>
                     <button
                       onClick={() => handleDelete(supplier.id, supplier.name)}
                       disabled={isDeleting}
@@ -169,12 +178,15 @@ export function SettingsSuppliersPageClient({
         <SupplierForm
           defaultCode={nextSupplierCode}
           returnHref="/settings/suppliers"
+          onClose={closeModal}
         />
       )}
-      {editingSupplier && (
+      {editing && (
         <SupplierForm
-          initialSupplier={editingSupplier}
+          key={editing.id}
+          initialSupplier={editing}
           returnHref="/settings/suppliers"
+          onClose={closeModal}
         />
       )}
     </SettingsShell>

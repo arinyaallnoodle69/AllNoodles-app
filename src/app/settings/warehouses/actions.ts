@@ -490,7 +490,7 @@ export async function updateWarehouseProductFulfillmentModesAction(
         mode,
         organization_id: session.organizationId,
         product_id: productId,
-        supplier_id: mode === "fresh" ? supplierId : null,
+        supplier_id: mode === "disabled" ? null : supplierId,
         warehouse_id: warehouseId,
       };
     })
@@ -683,7 +683,7 @@ export async function importWarehouseProductModesAction(
         mode,
         organization_id: session.organizationId,
         product_id: product.id,
-        supplier_id: mode === "fresh" ? supplier?.id ?? null : null,
+        supplier_id: mode === "disabled" ? null : supplier?.id ?? null,
         warehouse_id: warehouse.id,
       });
     }

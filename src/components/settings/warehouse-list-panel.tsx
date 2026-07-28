@@ -9,6 +9,7 @@ import { AlertTriangle, Box, Boxes, CheckCircle2, ChevronRight, Download, Info, 
 import { importWarehouseProductModesAction, toggleWarehouseAction, deleteWarehouseAction, updateWarehouseProductFulfillmentModesAction } from "@/app/settings/warehouses/actions";
 import type { WarehouseProductModeImportState } from "@/app/settings/warehouses/actions";
 import type { WarehouseFormItem } from "@/components/settings/warehouse-form";
+import { useWarehouseModal } from "@/components/settings/warehouse-modal";
 import { Button } from "@/components/ui/button";
 
 type WarehouseWithCustomerCount = WarehouseFormItem & {
@@ -98,7 +99,7 @@ function WarehouseProductModeImportModal({
           <div className="rounded-xl border border-[#EA80FC]/40 bg-[#FDF4FF] p-4">
             <p className="text-sm font-black text-[#1a1a1a]">รูปแบบไฟล์</p>
             <p className="mt-1 text-xs font-semibold leading-relaxed text-slate-600">
-              ใช้คอลัมน์ SKU, โหมดของแต่ละคลัง และโรงงานของแต่ละคลัง หากตั้งเป็นผลิตสดต้องระบุโรงงาน
+              ใช้คอลัมน์ SKU, โหมดของแต่ละคลัง และโรงงานของแต่ละคลัง โดยโหมดใช้สต็อกหรือผลิตสดสามารถระบุโรงงานได้
             </p>
             <a
               href="/settings/warehouses/template"
@@ -439,17 +440,17 @@ function ProductModeEditModal({
           </div>
 
           {/* Supplier/Factory Selection */}
-          {tempMode === "fresh" && (
+          {tempMode !== "disabled" && (
             <div className="space-y-2.5">
               <label className="text-sm font-black text-black block">
-                ระบุโรงงานผู้ผลิตสด
+                ระบุโรงงาน
               </label>
               <select
                 value={tempSupplierId}
                 onChange={(event) => setTempSupplierId(event.target.value)}
                 className="h-11 w-full rounded-xl border border-[#D7DEE8] bg-white px-3 text-sm font-black text-black outline-none transition focus:border-[#4A148C] focus:ring-2 focus:ring-[#4A148C]/15"
               >
-                <option value="">เลือกโรงงานผลิตสด</option>
+                <option value="">เลือกโรงงาน</option>
                 {suppliers.map((supplier) => (
                   <option key={supplier.id} value={supplier.id}>
                     {supplier.name}
@@ -478,7 +479,7 @@ function ProductModeEditModal({
           <button
             type="button"
             onClick={() => {
-              onSave(product.id, tempMode, tempMode === "fresh" ? tempSupplierId : "");
+              onSave(product.id, tempMode, tempMode === "disabled" ? "" : tempSupplierId);
               onClose();
             }}
             className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#4A148C] px-6 text-sm font-black text-white shadow-[0_12px_26px_rgba(74,20,140,0.2)] transition active:scale-[0.98]"
@@ -651,7 +652,7 @@ function WarehouseProductModeManagerModal({
             <div key={product.id}>
               <input type="hidden" name="productId" value={product.id} />
               <input type="hidden" name="mode" value={modes[product.id] ?? "stock"} />
-              <input type="hidden" name="supplierId" value={(modes[product.id] ?? "stock") === "fresh" ? (supplierIds[product.id] ?? "") : ""} />
+              <input type="hidden" name="supplierId" value={(modes[product.id] ?? "stock") === "disabled" ? "" : (supplierIds[product.id] ?? "")} />
             </div>
           ))}
         </div>
@@ -1039,7 +1040,7 @@ function WarehouseProductModeManagerModal({
                       <tr className="text-xs font-black text-slate-500 uppercase tracking-wider">
                         <th className="p-4">สินค้า</th>
                         <th className="p-4 w-[240px]">วิธีจัดการสินค้า</th>
-                        <th className="p-4 w-[220px]">โรงงานผลิตสด</th>
+                        <th className="p-4 w-[220px]">โรงงาน</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-150 bg-white">
@@ -1048,7 +1049,7 @@ function WarehouseProductModeManagerModal({
                         const supplierId = supplierIds[product.id] ?? "";
                         const originalMode = product.modeByWarehouseId[warehouseId] ?? "stock";
                         const originalSupplierId = product.supplierIdByWarehouseId[warehouseId] ?? "";
-                        const isUnsaved = mode !== originalMode || (mode === "fresh" && supplierId !== originalSupplierId);
+                        const isUnsaved = mode !== originalMode || (mode !== "disabled" && supplierId !== originalSupplierId);
 
                         return (
                           <tr key={product.id} className="hover:bg-slate-50/50 transition">
@@ -1095,7 +1096,7 @@ function WarehouseProductModeManagerModal({
                               <div className="grid grid-cols-3 gap-1">
                                 <button
                                   type="button"
-                                  onClick={() => handleSaveProductMode(product.id, "stock", "")}
+                                  onClick={() => handleSaveProductMode(product.id, "stock", supplierId)}
                                   className={`h-8 rounded-lg text-[10px] font-black border transition ${
                                     mode === "stock"
                                       ? "border-emerald-500 bg-emerald-500 text-white shadow-sm"
@@ -1132,9 +1133,9 @@ function WarehouseProductModeManagerModal({
                               <select
                                 value={supplierId}
                                 onChange={(event) => handleSaveProductMode(product.id, mode, event.target.value)}
-                                disabled={mode !== "fresh"}
+                                disabled={mode === "disabled"}
                                 className={`h-9 w-full rounded-lg border px-2 text-xs font-bold outline-none transition ${
-                                  mode === "fresh"
+                                  mode !== "disabled"
                                     ? !supplierId
                                       ? "border-red-300 bg-red-50/30 text-red-700 focus:border-red-500 focus:ring-2 focus:ring-red-500/15 animate-pulse"
                                       : "border-[#D7DEE8] bg-white text-[#4A148C] focus:border-[#4A148C] focus:ring-2 focus:ring-[#4A148C]/15"
@@ -1164,7 +1165,7 @@ function WarehouseProductModeManagerModal({
                     const supplierName = suppliers.find((s) => s.id === supplierId)?.name || "ไม่ได้เลือก";
                     const originalMode = product.modeByWarehouseId[warehouseId] ?? "stock";
                     const originalSupplierId = product.supplierIdByWarehouseId[warehouseId] ?? "";
-                    const isUnsaved = mode !== originalMode || (mode === "fresh" && supplierId !== originalSupplierId);
+                    const isUnsaved = mode !== originalMode || (mode !== "disabled" && supplierId !== originalSupplierId);
 
                     return (
                       <div
@@ -1227,7 +1228,7 @@ function WarehouseProductModeManagerModal({
                           {mode === "stock" && (
                             <span className="inline-flex w-full items-center justify-center gap-1 rounded-xl border border-emerald-200 bg-emerald-50 px-2 py-1 text-[10px] font-black text-emerald-800 shadow-sm">
                               <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                              ใช้สต็อก
+                              ใช้สต็อก{supplierId ? `: ${supplierName}` : ""}
                             </span>
                           )}
                           {mode === "fresh" && (
@@ -1422,6 +1423,7 @@ function WarehouseProductModeManagerModal({
 }
 
 export function WarehouseListPanel({ products, suppliers, warehouses }: WarehouseListPanelProps) {
+  const { openEdit } = useWarehouseModal();
   const [selectedWarehouseId, setSelectedWarehouseId] = useState<string | null>(
     warehouses.length > 0 ? warehouses[0].id : null
   );
@@ -1454,7 +1456,7 @@ export function WarehouseListPanel({ products, suppliers, warehouses }: Warehous
         <div>
           <p className="text-sm font-black text-[#1a1a1a]">ตั้งค่าโหมดสินค้าตามคลัง</p>
           <p className="mt-0.5 text-xs font-semibold text-slate-500">
-            ดาวน์โหลดเทมเพลต แก้ค่าโหมดและโรงงานผลิตสด แล้วนำเข้ากลับมา
+            ดาวน์โหลดเทมเพลต แก้ค่าโหมดและโรงงาน แล้วนำเข้ากลับมา
           </p>
         </div>
         <div className="flex flex-col gap-2 sm:flex-row">
@@ -1605,13 +1607,11 @@ export function WarehouseListPanel({ products, suppliers, warehouses }: Warehous
                       <Button
                         variant="outline"
                         size="sm"
-                        asChild
                         className="rounded-md h-9 px-3.5 font-bold text-xs tracking-[0.5px] uppercase border-slate-200 text-slate-700 bg-white hover:border-[#4A148C]/30 hover:text-[#4A148C] transition duration-200"
+                        onClick={() => openEdit(activeWarehouse)}
                       >
-                        <Link href={`/settings/warehouses?edit=${activeWarehouse.id}`}>
-                          <PencilLine className="size-3.5 mr-1.5" strokeWidth={2} />
-                          แก้ไข
-                        </Link>
+                        <PencilLine className="size-3.5 mr-1.5" strokeWidth={2} />
+                        แก้ไข
                       </Button>
                       <ToggleButton warehouseId={activeWarehouse.id} isActive={activeWarehouse.isActive} />
                       <DeleteButton
@@ -1737,7 +1737,7 @@ export function WarehouseListPanel({ products, suppliers, warehouses }: Warehous
                                 defaultValue={selectedSupplierId}
                                 className="h-10 rounded-lg border border-[#D7DEE8] bg-white px-3 text-xs font-bold text-[#4A148C] outline-none transition focus:border-[#4A148C] focus:ring-2 focus:ring-[#4A148C]/15"
                               >
-                                <option value="">เลือกโรงงานเมื่อผลิตสด</option>
+                                <option value="">เลือกโรงงาน</option>
                                 {suppliers.map((supplier) => (
                                   <option key={supplier.id} value={supplier.id}>
                                     {supplier.name}

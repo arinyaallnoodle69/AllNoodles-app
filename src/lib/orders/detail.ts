@@ -423,7 +423,51 @@ export async function getOrderDetailById(
   };
 }
 
-export async function getIncomingOrders(
+type EmbeddedOrderItemRow = {
+  product_id: string;
+  quantity: number | string;
+  sale_unit_label: string;
+  products: {
+    name: string;
+    sku: string;
+    display_order: number | null;
+  } | null;
+};
+
+type EmbeddedOrderRow = OrderRow & {
+  customers: (CustomerRow & { sort_order?: number | string | null }) | null;
+  delivery_notes: DeliveryNoteRow[] | null;
+  order_items: EmbeddedOrderItemRow[] | null;
+};
+
+export type IncomingOrderSummaryItemRow = {
+  order_id: string;
+  product_id: string;
+  quantity: number | string;
+  sale_unit_label: string;
+  products: {
+    name: string;
+    sku: string;
+    display_order: number | null;
+  } | null;
+};
+
+export type IncomingOrdersBundle = {
+  orders: IncomingOrderListItem[];
+  productImageById: Record<string, string>;
+  summaryItems: IncomingOrderSummaryItemRow[];
+};
+
+// Single-round-trip select: orders + customer + delivery notes + items (+ product)
+// embedded via PostgREST resource embedding. Replaces the previous 4-step waterfall.
+const INCOMING_ORDERS_SELECT = `
+  id, customer_id, order_number, order_date, status, fulfillment_status, total_amount, metadata, created_at, notes, warehouse_id, assigned_vehicle_id,
+  customers(id, customer_code, name, address, default_vehicle_id, sort_order),
+  delivery_notes(delivery_number, order_id, vehicle_id, status, created_at),
+  order_items(product_id, quantity, sale_unit_label, products(name, sku, display_order))
+`;
+
+export async function getIncomingOrdersBundle(
   organizationId: string,
   {
     orderDate,
@@ -434,9 +478,9 @@ export async function getIncomingOrders(
     endDate?: string | null;
     searchTerm?: string | null;
   },
-): Promise<IncomingOrderListItem[]> {
+): Promise<IncomingOrdersBundle> {
   "use cache";
-  cacheLife({ revalidate: 3 });
+  cacheLife({ revalidate: 30 });
   cacheTag(`orders-${organizationId}`);
 
   const admin = getSupabaseAdmin() as unknown as OrderDetailAdminClient;
@@ -444,7 +488,7 @@ export async function getIncomingOrders(
 
   let query = admin
     .from("orders")
-    .select("id, customer_id, order_number, order_date, status, fulfillment_status, total_amount, metadata, created_at, notes, warehouse_id, assigned_vehicle_id")
+    .select(INCOMING_ORDERS_SELECT)
     .eq("organization_id", organizationId);
 
   // If searchTerm is provided, we search across all dates (Global Search)
@@ -467,7 +511,7 @@ export async function getIncomingOrders(
     throw new Error(ordersResult.error.message ?? "Failed to load incoming orders.");
   }
 
-  let orders = ordersResult.data ?? [];
+  let orders = (ordersResult.data ?? []) as unknown as EmbeddedOrderRow[];
 
   // If searchTerm is provided, also search for delivery notes by delivery_number
   // because the orders table doesn't contain DN numbers directly.
@@ -479,73 +523,74 @@ export async function getIncomingOrders(
       .eq("organization_id", organizationId)
       .ilike("delivery_number", `%${cleanSearch}%`)
       .limit(50);
-    
+
     if (dnOrders && dnOrders.length > 0) {
-      const dnOrderIds = Array.from(new Set(dnOrders.map(d => d.order_id).filter(Boolean))) as string[];
+      const dnOrderIds = Array.from(new Set(dnOrders.map((d) => d.order_id).filter(Boolean))) as string[];
       // Only fetch orders that aren't already in our result set
-      const missingOrderIds = dnOrderIds.filter(id => !orders.some(o => o.id === id));
-      
+      const missingOrderIds = dnOrderIds.filter((id) => !orders.some((o) => o.id === id));
+
       if (missingOrderIds.length > 0) {
         const { data: additionalOrders } = await admin
           .from("orders")
-          .select("id, customer_id, order_number, order_date, status, fulfillment_status, total_amount, metadata, created_at, notes, warehouse_id, assigned_vehicle_id")
+          .select(INCOMING_ORDERS_SELECT)
           .in("id", missingOrderIds);
-          
+
         if (additionalOrders) {
-          orders = [...orders, ...additionalOrders];
+          orders = [...orders, ...(additionalOrders as unknown as EmbeddedOrderRow[])];
         }
       }
     }
   }
 
-  const customerIds = Array.from(new Set(orders.map((order: OrderRow) => order.customer_id)));
-
-  const orderIds = orders.map((order: OrderRow) => order.id);
-  const [customersResult, deliveryNotesResult] = await Promise.all([
-    customerIds.length > 0
-      ? admin
-          .from("customers")
-          .select("id, customer_code, name, address, default_vehicle_id, sort_order")
-          .in("id", customerIds)
-          .order("sort_order", { ascending: true })
-      : Promise.resolve({ data: [], error: null }),
-    orderIds.length > 0
-      ? admin
-          .from("delivery_notes")
-          .select("order_id, vehicle_id, status, created_at")
-          .in("order_id", orderIds)
-          .order("created_at", { ascending: true })
-      : Promise.resolve({ data: [], error: null }),
-  ]);
-
-  if (customersResult.error) {
-    throw new Error(customersResult.error.message ?? "Failed to load customers.");
-  }
-  if (deliveryNotesResult.error) {
-    throw new Error(deliveryNotesResult.error.message ?? "Failed to load delivery notes.");
-  }
-
-  const customerMap = new Map(
-    (customersResult.data ?? []).map((customer) => [customer.id, customer]),
-  );
+  const customerMap = new Map<string, CustomerRow>();
   const activeDeliveryNoteByOrderId = new Map<string, DeliveryNoteRow>();
-  for (const note of deliveryNotesResult.data ?? []) {
-    if (
-      note.order_id &&
-      note.status !== "cancelled" &&
-      !activeDeliveryNoteByOrderId.has(note.order_id)
-    ) {
-      activeDeliveryNoteByOrderId.set(note.order_id, note);
+  const orderProductSets = new Map<string, Set<string>>();
+  const summaryItems: IncomingOrderSummaryItemRow[] = [];
+  const summaryProductIds = new Set<string>();
+
+  for (const order of orders) {
+    if (order.customers) {
+      customerMap.set(order.customers.id, order.customers);
+    }
+
+    // Preserve "first non-cancelled note by created_at" semantics.
+    const notes = [...(order.delivery_notes ?? [])].sort((a, b) =>
+      String(a.created_at ?? "").localeCompare(String(b.created_at ?? "")),
+    );
+    for (const note of notes) {
+      if (
+        note.order_id &&
+        note.status !== "cancelled" &&
+        !activeDeliveryNoteByOrderId.has(note.order_id)
+      ) {
+        activeDeliveryNoteByOrderId.set(note.order_id, note);
+      }
+    }
+
+    for (const item of order.order_items ?? []) {
+      const set = orderProductSets.get(order.id) ?? new Set<string>();
+      set.add(item.product_id);
+      orderProductSets.set(order.id, set);
+      summaryProductIds.add(item.product_id);
+      summaryItems.push({
+        order_id: order.id,
+        product_id: item.product_id,
+        quantity: item.quantity,
+        sale_unit_label: item.sale_unit_label,
+        products: item.products,
+      });
     }
   }
 
   const vehicleIds = Array.from(new Set([
-    ...(customersResult.data ?? []).map((customer) => customer.default_vehicle_id),
-    ...orders.map((order: OrderRow) => order.assigned_vehicle_id),
+    ...Array.from(customerMap.values()).map((customer) => customer.default_vehicle_id),
+    ...orders.map((order) => order.assigned_vehicle_id),
     ...Array.from(activeDeliveryNoteByOrderId.values()).map((note) => note.vehicle_id ?? null),
   ].filter((id): id is string => Boolean(id))));
 
-  const [vehiclesResult, itemsResult] = await Promise.all([
+  const summaryProductIdList = Array.from(summaryProductIds);
+
+  const [vehiclesResult, imagesResult] = await Promise.all([
     vehicleIds.length > 0
       ? admin
           .from("vehicles")
@@ -553,35 +598,39 @@ export async function getIncomingOrders(
           .in("id", vehicleIds)
           .order("sort_order", { ascending: true })
       : Promise.resolve({ data: [], error: null }),
-    orderIds.length > 0
+    summaryProductIdList.length > 0
       ? admin
-          .from("order_items")
-          .select("order_id, product_id")
-          .in("order_id", orderIds)
-          .order("order_id", { ascending: true })
+          .from("product_images")
+          .select("product_id, public_url, sort_order")
+          .in("product_id", summaryProductIdList)
+          .order("sort_order", { ascending: true })
       : Promise.resolve({ data: [], error: null }),
   ]);
 
   if (vehiclesResult.error) {
     throw new Error(vehiclesResult.error.message ?? "Failed to load vehicles.");
   }
+  if (imagesResult.error) {
+    throw new Error(imagesResult.error.message ?? "Failed to load product images.");
+  }
 
   const vehicleNameMap = new Map(
     (vehiclesResult.data ?? []).map((vehicle) => [vehicle.id, vehicle.name]),
   );
 
-  const orderProductSets = new Map<string, Set<string>>();
-  for (const item of itemsResult.data ?? []) {
-    const set = orderProductSets.get(item.order_id) ?? new Set<string>();
-    set.add(item.product_id);
-    orderProductSets.set(item.order_id, set);
+  // Primary (lowest sort_order) image per product, same as the previous catalog-wide map.
+  const productImageById: Record<string, string> = {};
+  for (const image of (imagesResult.data ?? []) as ProductImageRow[]) {
+    if (!(image.product_id in productImageById)) {
+      productImageById[image.product_id] = image.public_url;
+    }
   }
 
   const warehouses = await getActiveWarehouses(organizationId);
   const warehouseNameMap = new Map(warehouses.map((w) => [w.id, w.name]));
 
-  return orders
-    .map((order: OrderRow) => {
+  const mappedOrders = orders
+    .map((order) => {
       const customer = customerMap.get(order.customer_id);
       const activeDeliveryNote = activeDeliveryNoteByOrderId.get(order.id);
       const vehicleId =
@@ -610,7 +659,7 @@ export async function getIncomingOrders(
         warehouseName: order.warehouse_id ? (warehouseNameMap.get(order.warehouse_id) ?? null) : null,
       } satisfies IncomingOrderListItem;
     })
-    .filter((order: IncomingOrderListItem) => {
+    .filter((order) => {
       if (!normalizedSearch) {
         return true;
       }
@@ -622,6 +671,24 @@ export async function getIncomingOrders(
         normalizeSearch(order.channelLabel).includes(normalizedSearch)
       );
     });
+
+  return {
+    orders: mappedOrders,
+    productImageById,
+    summaryItems,
+  };
+}
+
+export async function getIncomingOrders(
+  organizationId: string,
+  opts: {
+    orderDate: string;
+    endDate?: string | null;
+    searchTerm?: string | null;
+  },
+): Promise<IncomingOrderListItem[]> {
+  const bundle = await getIncomingOrdersBundle(organizationId, opts);
+  return bundle.orders;
 }
 
 export async function getCustomerOrderCountsByDate(
@@ -630,7 +697,7 @@ export async function getCustomerOrderCountsByDate(
   endDate?: string,
 ): Promise<Record<string, number>> {
   "use cache";
-  cacheLife({ revalidate: 3 });
+  cacheLife({ revalidate: 30 });
   cacheTag(`orders-${organizationId}`);
 
   const admin = getSupabaseAdmin() as unknown as OrderDetailAdminClient;

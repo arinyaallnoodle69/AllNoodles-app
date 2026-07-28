@@ -132,7 +132,6 @@ export type OrderProductOption = {
 
 export async function getCustomersForOrder(orgId: string): Promise<OrderCustomerOption[]> {
   "use cache";
-  cacheTag(`orders-${orgId}`);
   cacheTag(`settings-${orgId}`);
   cacheLife("max");
   const admin = getSupabaseAdmin() as unknown as ManageAdmin;
@@ -155,7 +154,6 @@ export async function getCustomersForOrder(orgId: string): Promise<OrderCustomer
 
 export async function getVehiclesForOrder(orgId: string): Promise<OrderVehicleOption[]> {
   "use cache";
-  cacheTag(`orders-${orgId}`);
   cacheTag(`settings-${orgId}`);
   cacheLife("max");
   const admin = getSupabaseAdmin() as unknown as ManageAdmin;

@@ -16,6 +16,7 @@ import type { SettingsVehicle } from "@/lib/settings/admin";
 type VehicleFormProps = {
   initialVehicle?: SettingsVehicle;
   returnHref: string;
+  onClose?: () => void;
 };
 
 const initialCreateVehicleState: CreateVehicleActionState = {
@@ -30,7 +31,7 @@ function getInputClass(hasError: boolean) {
 
 const vehicleFieldLabelClass = `${settingsFieldLabelClass} !font-black !text-[#1a1a1a]`;
 
-export function VehicleForm({ initialVehicle, returnHref }: VehicleFormProps) {
+export function VehicleForm({ initialVehicle, returnHref, onClose }: VehicleFormProps) {
   const router = useRouter();
   const action = initialVehicle
     ? updateVehicleAction.bind(null, initialVehicle.id)
@@ -69,13 +70,21 @@ export function VehicleForm({ initialVehicle, returnHref }: VehicleFormProps) {
       clearTimeout(closeTimerRef.current);
     }
     closeTimerRef.current = setTimeout(() => {
-      router.replace(returnHref);
+      if (onClose) {
+        onClose();
+      } else {
+        router.replace(returnHref);
+      }
     }, 380);
   }
 
   const handleSuccess = useEffectEvent(() => {
     startTransition(() => {
-      router.replace(returnHref);
+      if (onClose) {
+        onClose();
+      } else {
+        router.replace(returnHref);
+      }
       router.refresh();
     });
   });

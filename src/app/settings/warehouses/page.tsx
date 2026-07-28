@@ -1,7 +1,10 @@
-import Link from "next/link";
-import { Plus, Search } from "lucide-react";
+import { Search } from "lucide-react";
 import { MobileSearchDrawer } from "@/components/mobile-search/mobile-search-drawer";
-import { WarehouseForm, type WarehouseMetadata } from "@/components/settings/warehouse-form";
+import { type WarehouseMetadata } from "@/components/settings/warehouse-form";
+import {
+  WarehouseCreateButton,
+  WarehouseModalProvider,
+} from "@/components/settings/warehouse-modal";
 import { WarehouseListPanel } from "@/components/settings/warehouse-list-panel";
 import { SettingsShell } from "@/components/settings/settings-shell";
 import { requireAppRole } from "@/lib/auth/authorization";
@@ -262,11 +265,13 @@ export default async function SettingsWarehousesPage({
           .some((value) => String(value).toLocaleLowerCase("th").includes(normalizedSearch)),
       )
     : warehouses;
-  const editingWarehouse = params.edit
-    ? (warehouses.find((w) => w.id === params.edit) ?? null)
-    : null;
 
   return (
+    <WarehouseModalProvider
+      warehouses={warehouses}
+      initialCreate={params.create === "1"}
+      initialEditId={params.edit ?? null}
+    >
     <SettingsShell
       current="warehouses"
       title="จัดการคลัง"
@@ -300,13 +305,7 @@ export default async function SettingsWarehousesPage({
             >
               ค้นหา
             </button>
-            <Link
-              href="/settings/warehouses?create=1"
-              className="inline-flex h-12 items-center justify-center gap-2 rounded-lg bg-[#4A148C] px-4 text-sm font-bold text-white shadow-[0_12px_26px_rgba(142, 36, 170,0.22)] transition hover:bg-[#4A148C] active:scale-[0.98]"
-            >
-              <Plus className="h-4.5 w-4.5" strokeWidth={2.4} />
-              เพิ่มคลัง
-            </Link>
+            <WarehouseCreateButton variant="desktop" />
           </form>
         </div>
       </div>
@@ -332,22 +331,12 @@ export default async function SettingsWarehousesPage({
         </form>
       </MobileSearchDrawer>
 
-      <Link
-        href="/settings/warehouses?create=1"
-        aria-label="เพิ่มคลัง"
-        className="fixed bottom-[calc(4.75rem+env(safe-area-inset-bottom)+12px)] left-4 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-[#4A148C] text-white shadow-[0_14px_32px_rgba(142, 36, 170,0.32)] transition active:scale-95 lg:hidden"
-      >
-        <Plus className="h-7 w-7" strokeWidth={2.6} />
-      </Link>
+      <WarehouseCreateButton variant="fab" />
 
       <div className="mx-auto flex w-full max-w-[1024px] flex-col gap-8 animate-fade-in">
         <WarehouseListPanel products={productModeItems} suppliers={suppliers} warehouses={filteredWarehouses} />
       </div>
-
-      {params.create === "1" ? <WarehouseForm returnHref="/settings/warehouses" /> : null}
-      {editingWarehouse ? (
-        <WarehouseForm initialWarehouse={editingWarehouse} returnHref="/settings/warehouses" />
-      ) : null}
     </SettingsShell>
+    </WarehouseModalProvider>
   );
 }

@@ -226,7 +226,6 @@ export function DashboardClient({
   overview,
   storeStatusSummary,
   stockProducts,
-  stockSuppliers,
   stockWarehouses,
   today,
   orderDate,
@@ -1133,7 +1132,6 @@ export function DashboardClient({
       {isStockModalOpen ? (
         <StockReceiveForm
           products={stockProducts}
-          suppliers={stockSuppliers}
           warehouses={stockWarehouses}
           returnHref="/dashboard"
           onClose={() => setIsStockModalOpen(false)}

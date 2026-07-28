@@ -12,14 +12,12 @@ import {
   Save,
   Search,
   X,
-  Factory,
   Calendar,
   ChevronRight,
   Camera,
   ImagePlus,
   Trash2,
   AlertCircle,
-  Sparkles,
   ListFilter,
 } from "lucide-react";
 import {
@@ -34,13 +32,12 @@ import {
 } from "react";
 import { receiveStockAction } from "@/app/settings/stock/actions";
 import type { ReceiveStockActionState } from "@/app/settings/stock/actions";
-import type { StockProductOption, StockSupplierOption } from "@/lib/stock/admin";
+import type { StockProductOption } from "@/lib/stock/admin";
 import { ThaiDatePicker } from "@/components/ui/thai-date-picker";
 import { useClientRole } from "@/lib/auth/client-role";
 
 type StockReceiveFormProps = {
   products: StockProductOption[];
-  suppliers: StockSupplierOption[];
   warehouses: StockWarehouseOption[];
   returnHref: string;
   defaultWarehouseId?: string;
@@ -61,7 +58,6 @@ const initialReceiveStockState: ReceiveStockActionState = {
 
 export function StockReceiveForm({
   products,
-  suppliers,
   warehouses,
   returnHref,
   defaultWarehouseId = "",
@@ -74,11 +70,9 @@ export function StockReceiveForm({
     initialReceiveStockState,
   );
 
-  // Flow: 1: Info (Supplier/Date/Warehouse), 2: Products (Search/Select), 3: Photo & Submit
+  // Flow: 1: Info (Date/Warehouse), 2: Products (Search/Select), 3: Photo & Submit
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [selections, setSelections] = useState<Record<string, Record<string, string>>>({});
-  const [supplierId, setSupplierId] = useState("");
-  const [supplierName, setSupplierName] = useState("");
   const [warehouseId, setWarehouseId] = useState(defaultWarehouseId);
   const [receiveDate, setReceiveDate] = useState(new Date().toISOString().split("T")[0]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -86,7 +80,6 @@ export function StockReceiveForm({
   const [selectedBrand, setSelectedBrand] = useState<string>("all");
   const [receiptImage, setReceiptImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [isSupplierDrawerOpen, setIsSupplierDrawerOpen] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
@@ -97,6 +90,16 @@ export function StockReceiveForm({
     () => warehouses.find((warehouse) => warehouse.id === warehouseId) ?? null,
     [warehouseId, warehouses],
   );
+  const stockProducts = useMemo(
+    () =>
+      warehouseId
+        ? products.filter(
+            (product) =>
+              (product.warehouseModes.find((mode) => mode.warehouseId === warehouseId)?.mode ?? "stock") === "stock",
+          )
+        : products,
+    [products, warehouseId],
+  );
 
   useEffect(() => {
     setWarehouseId(defaultWarehouseId);
@@ -104,23 +107,23 @@ export function StockReceiveForm({
 
   const categories = useMemo(() => {
     const cats = new Set<string>();
-    products.forEach(p => {
+    stockProducts.forEach(p => {
       if (p.categoryName) cats.add(p.categoryName);
     });
     return Array.from(cats).sort();
-  }, [products]);
+  }, [stockProducts]);
 
   const brands = useMemo(() => {
     const filteredByCategory =
       selectedCategory === "all"
-        ? products
-        : products.filter((product) => product.categoryName === selectedCategory);
+        ? stockProducts
+        : stockProducts.filter((product) => product.categoryName === selectedCategory);
     const items = new Set<string>();
     filteredByCategory.forEach((product) => {
       if (product.brandName) items.add(product.brandName);
     });
     return Array.from(items).sort();
-  }, [products, selectedCategory]);
+  }, [stockProducts, selectedCategory]);
 
   useEffect(() => {
     if (selectedBrand !== "all" && !brands.includes(selectedBrand)) {
@@ -128,8 +131,15 @@ export function StockReceiveForm({
     }
   }, [brands, selectedBrand]);
 
+  useEffect(() => {
+    if (selectedCategory !== "all" && !categories.includes(selectedCategory)) {
+      setSelectedCategory("all");
+      setSelectedBrand("all");
+    }
+  }, [categories, selectedCategory]);
+
   const filteredProducts = useMemo(() => {
-    let result = products;
+    let result = stockProducts;
 
     // Category Filter
     if (selectedCategory !== "all") {
@@ -150,7 +160,14 @@ export function StockReceiveForm({
     }
 
     return result;
-  }, [deferredQuery, products, selectedBrand, selectedCategory]);
+  }, [deferredQuery, selectedBrand, selectedCategory, stockProducts]);
+
+  const getProductFactoryName = (product: StockProductOption) => {
+    return (
+      product.warehouseModes.find((mode) => mode.warehouseId === warehouseId)?.supplierName?.trim() ||
+      "ไม่ระบุโรงงาน"
+    );
+  };
 
   const toggleProduct = (productId: string) => {
     setSelections(prev => {
@@ -159,7 +176,7 @@ export function StockReceiveForm({
         delete next[productId];
         return next;
       }
-      const p = products.find(prod => prod.id === productId);
+      const p = stockProducts.find(prod => prod.id === productId);
       const defaultUnitId = p?.saleUnits.find(u => u.isDefault)?.id || p?.saleUnits[0]?.id;
       return {
         ...prev,
@@ -237,8 +254,8 @@ export function StockReceiveForm({
     setSuccessMessage(null);
 
     const formData = new FormData();
-    formData.append("supplierId", supplierId);
-    formData.append("supplierName", supplierName);
+    formData.append("supplierId", "");
+    formData.append("supplierName", "ตามการตั้งค่าโรงงานของคลัง");
     formData.append("warehouseId", warehouseId);
     formData.append("receivedAt", receiveDate);
     formData.append("notes", "");
@@ -248,7 +265,8 @@ export function StockReceiveForm({
     }
 
     const items = Object.entries(selections).flatMap(([pid, units]) => {
-      const p = products.find(prod => prod.id === pid);
+      const p = stockProducts.find(prod => prod.id === pid);
+      if (!p) return [];
       return Object.entries(units).map(([uid, qty]) => {
         const unit = p?.saleUnits.find(u => u.id === uid);
         return {
@@ -274,10 +292,6 @@ export function StockReceiveForm({
         return;
       }
 
-      if (!supplierId) {
-        setIsSupplierDrawerOpen(true);
-        return;
-      }
       setStep(2);
       return;
     }
@@ -397,38 +411,10 @@ export function StockReceiveForm({
                   </p>
                 </div>
 
-                {/* Supplier Selection Button */}
-                <div className="space-y-2">
-                  <label className="text-xs font-black uppercase tracking-widest text-slate-400 flex items-center gap-2">
-                    <Factory className="h-4 w-4 text-[#4A148C]" /> ผู้จัดจำหน่าย
-                  </label>
-                  <button
-                    type="button"
-                    onClick={() => setIsSupplierDrawerOpen(true)}
-                    className={`w-full h-14 px-5 flex items-center justify-between bg-white border border-[#dbe4f0] transition-all rounded-full hover:bg-slate-50 ${
-                      supplierId ? "border-[#4A148C]/30" : ""
-                    }`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <Factory className={`h-5 w-5 ${supplierId ? "text-[#4A148C]" : "text-slate-400"}`} />
-                      <span className={`text-sm font-bold ${supplierId ? "text-[#4A148C]" : "text-slate-400"}`}>
-                        {supplierName || "เลือกผู้จัดจำหน่าย..."}
-                      </span>
-                    </div>
-                    <ChevronRight className="h-5 w-5 text-slate-400" strokeWidth={2.5} />
-                  </button>
-                </div>
-              </div>
-
-              {/* Informative field manual banner */}
-              <div className="bg-[#F3E5F5] border border-[#4A148C]/10 rounded-[20px] p-5 flex gap-4">
-                <div className="h-10 w-10 shrink-0 rounded-full bg-white flex items-center justify-center text-[#4A148C] shadow-sm">
-                  <Sparkles size={18} />
-                </div>
-                <div>
-                  <h4 className="text-sm font-black text-[#4A148C]">กรอกข้อมูลให้ครบถ้วน</h4>
-                  <p className="text-xs text-slate-500 mt-1 leading-relaxed">
-                    ระบบจะบันทึกรายการรับเข้าสินค้าเข้าคลังที่ระบุ และคำนวณราคาทุนเฉลี่ยของสินค้าแต่ละหน่วยตามจริงโดยอ้างอิงจากข้อมูลผู้จัดจำหน่าย
+                <div className="rounded-2xl border border-[#4A148C]/10 bg-[#F3E5F5] px-4 py-3">
+                  <h4 className="text-sm font-black text-[#4A148C]">โรงงานใช้ตามที่ตั้งค่าไว้ในคลัง</h4>
+                  <p className="mt-1 text-xs font-bold leading-relaxed text-slate-500">
+                    หน้านี้แสดงเฉพาะสินค้าใช้สต็อกของคลังนี้ จึงไม่ต้องเลือกโรงงานซ้ำตอนรับเข้า
                   </p>
                 </div>
               </div>
@@ -578,6 +564,9 @@ export function StockReceiveForm({
                         <div className="min-w-0 flex-1">
                           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{p.sku}</p>
                           <h4 className="max-h-[2.9em] overflow-hidden text-sm font-black leading-snug text-slate-900 sm:text-base">{p.name}</h4>
+                          <p className="mt-0.5 max-w-full overflow-x-auto whitespace-nowrap py-0.5 text-[11px] font-black leading-[1.45] text-[#4A148C] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                            โรงงาน: {getProductFactoryName(p)}
+                          </p>
                           <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs font-bold text-slate-500">
                             <span>คงเหลือ: <strong className="text-slate-800">{p.onHandQuantity} {p.unit}</strong></span>
                             {role !== "member" && (
@@ -733,9 +722,9 @@ export function StockReceiveForm({
                       ) : "-"}
                     </span>
                   </div>
-                  <div className="flex justify-between py-3">
-                    <span className="text-sm text-slate-500 font-bold">ผู้จัดจำหน่าย</span>
-                    <span className="text-sm font-bold text-[#4A148C]">{supplierName}</span>
+                  <div className="flex justify-between gap-4 py-3">
+                    <span className="text-sm text-slate-500 font-bold">โรงงาน</span>
+                    <span className="text-right text-sm font-bold text-[#4A148C]">ตามการตั้งค่าโรงงานของคลัง</span>
                   </div>
                   <div className="flex justify-between py-3">
                     <span className="text-sm text-slate-500 font-bold">คลังปลายทาง</span>
@@ -790,78 +779,6 @@ export function StockReceiveForm({
             </button>
           )}
         </div>
-
-        {/* Supplier Drawer (Bottom Sheet) */}
-        {isSupplierDrawerOpen && (
-          <div className="absolute inset-0 z-50 flex flex-col justify-end bg-slate-950/40 backdrop-blur-[4px] animate-in fade-in duration-300">
-            <div
-              onClick={() => setIsSupplierDrawerOpen(false)}
-              className="absolute inset-0"
-            />
-            <div className="relative w-full max-h-[80%] bg-[#f6f8fb] rounded-t-[28px] shadow-lg flex flex-col overflow-hidden animate-in slide-in-from-bottom duration-500">
-              
-              <div className="shrink-0 p-5 bg-white border-b border-[#dbe4f0] flex items-center justify-between">
-                <div>
-                  <h3 className="text-lg font-black text-[#4A148C]">เลือกผู้จัดจำหน่าย</h3>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Supplier Directory</p>
-                </div>
-                <button
-                  onClick={() => setIsSupplierDrawerOpen(false)}
-                  className="h-8 w-8 rounded-full border border-[#dbe4f0] flex items-center justify-center text-slate-500 hover:bg-slate-50"
-                >
-                  <X className="h-4 w-4" strokeWidth={2.5} />
-                </button>
-              </div>
-
-              <div className="flex-1 overflow-y-auto p-5 space-y-3 no-scrollbar">
-                {suppliers.map(s => {
-                  const isSelected = supplierId === s.id;
-                  return (
-                    <button
-                      key={s.id}
-                      onClick={() => {
-                        setSupplierId(s.id);
-                        setSupplierName(s.name);
-                        setIsSupplierDrawerOpen(false);
-                      }}
-                      className={`w-full flex items-center justify-between p-5 rounded-[20px] border transition-all text-left bg-white ${
-                        isSelected
-                          ? "border-[#4A148C] shadow-sm shadow-[#4A148C]/5"
-                          : "border-[#dbe4f0] hover:border-slate-300 hover:shadow-sm"
-                      }`}
-                    >
-                      <div className="flex items-center gap-4">
-                        <div className={`h-11 w-11 rounded-xl flex items-center justify-center transition-colors ${
-                          isSelected ? "bg-[#F3E5F5] text-[#4A148C]" : "bg-slate-50 text-slate-400"
-                        }`}>
-                          <Factory size={20} />
-                        </div>
-                        <div>
-                          <p className="font-black text-base text-slate-900">{s.name}</p>
-                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Code: {s.code}</p>
-                        </div>
-                      </div>
-                      <div className={`h-6 w-6 rounded-full border-2 flex items-center justify-center transition-all ${
-                        isSelected ? "bg-[#4A148C] border-[#4A148C]" : "border-slate-200"
-                      }`}>
-                        {isSelected && <Check className="h-3.5 w-3.5 text-white" strokeWidth={4} />}
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-
-              <div className="shrink-0 p-5 bg-white border-t border-[#dbe4f0]">
-                <button
-                  onClick={() => setIsSupplierDrawerOpen(false)}
-                  className="w-full h-12 border border-[#dbe4f0] hover:bg-slate-50 text-slate-600 rounded-full font-bold text-sm transition"
-                >
-                  ยกเลิก
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
 
       </div>
     </div>

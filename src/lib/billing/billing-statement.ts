@@ -414,6 +414,27 @@ export async function getBilledDeliveryNumbersForRange(
   toDate: string,
 ): Promise<Set<string>> {
   const supabase = getSupabaseAdmin();
+
+  // Fast path: extract delivery numbers on the database side (single round
+  // trip, no JSONB snapshot transfer). Falls back to the legacy snapshot
+  // parsing below when the RPC is not deployed yet.
+  const { data: rpcData, error: rpcError } = await (
+    supabase as unknown as {
+      rpc: (
+        name: string,
+        args: Record<string, unknown>,
+      ) => Promise<{ data: unknown; error: { message?: string } | null }>;
+    }
+  ).rpc("get_billed_delivery_numbers", {
+    p_organization_id: organizationId,
+    p_from_date: fromDate,
+    p_to_date: toDate,
+  });
+
+  if (!rpcError && rpcData) {
+    return new Set((rpcData as string[]).filter(Boolean));
+  }
+
   const { data, error } = await supabase
     .from("billing_records")
     .select("snapshot_rows")

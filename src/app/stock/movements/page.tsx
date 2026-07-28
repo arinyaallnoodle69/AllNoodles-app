@@ -47,7 +47,6 @@ export default async function StockMovementsPage({
       {params.receive === "1" ? (
         <StockReceiveForm 
           products={data.products} 
-          suppliers={data.suppliers}
           warehouses={warehouses}
           returnHref="/stock/movements" 
         />

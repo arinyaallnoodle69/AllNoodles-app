@@ -161,7 +161,7 @@ function isActive(href: string, pathname: string): boolean {
 }
 
 function getRoleHomeHref(role: AppRole | null) {
-  if (role === "warehouse") return "/delivery";
+  if (role === "warehouse") return "/orders/packing-list";
   if (role === "member") return "/orders/incoming";
   return "/dashboard";
 }
@@ -178,7 +178,6 @@ function canAccessNavHref(role: AppRole | null, href: string) {
   }
   if (role === "warehouse") {
     return (
-      href === "/delivery" ||
       href === "/orders/packing-list" ||
       href === "/orders/factory-order-sheet" ||
       href === "/orders/vehicle-product-summary"
@@ -189,7 +188,6 @@ function canAccessNavHref(role: AppRole | null, href: string) {
 
 function shouldShowScrollTopButton(pathname: string) {
   return (
-    pathname === "/delivery" ||
     pathname.startsWith("/orders/delivery-notes") ||
     pathname.startsWith("/orders/incoming") ||
     pathname.startsWith("/settings/customers") ||

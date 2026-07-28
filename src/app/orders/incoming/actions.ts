@@ -547,7 +547,6 @@ export async function updateCustomerVehicleFromIncomingOrderAction(
 
   revalidatePath("/orders/incoming");
   revalidatePath("/orders");
-  revalidatePath("/delivery");
   revalidatePath("/settings/customers");
   return { success: true };
 }
@@ -1691,7 +1690,6 @@ export async function updateIncomingOrderDateAction(formData: FormData): Promise
     }
 
 	    invalidateIncomingOrderCaches(session.organizationId);
-	    revalidatePath("/delivery");
 	    revalidatePath("/reports/billing");
 	    revalidateTag(`orders-${session.organizationId}`, "max");
 
@@ -1788,7 +1786,6 @@ export async function updateIncomingOrderDateAction(formData: FormData): Promise
     }
 
 	  invalidateIncomingOrderCaches(session.organizationId);
-	  revalidatePath("/delivery");
 	  revalidatePath("/reports/billing");
 	  revalidateTag(`orders-${session.organizationId}`, "max");
 

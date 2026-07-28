@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import type { Viewport } from "next";
 import { PageLoader } from "@/components/page-loader";
 import { PrintPackingListButton } from "@/components/orders/print-packing-list-button";
 import {
@@ -16,6 +17,12 @@ import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { AutoPrint, PackingListPrintButton } from "./preview/print-button";
 
 export const metadata = { title: "ใบจัดของ" };
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
+  userScalable: true,
+};
 
 type Props = {
   searchParams: Promise<{

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { Viewport } from "next";
 import { requireAnyRole } from "@/lib/auth/authorization";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { getDeliveryNotePrintData, type DeliveryNotePrintData } from "@/lib/delivery/print";
@@ -10,6 +11,12 @@ import { ShareDeliveryPdfButton } from "@/components/print/share-delivery-pdf-bu
 import { PrintButton } from "./print-button";
 
 export const metadata = { title: "พิมพ์บิลส่งของ" };
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
+  userScalable: true,
+};
 
 type Props = {
   searchParams: Promise<{

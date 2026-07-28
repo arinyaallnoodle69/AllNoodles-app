@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import Link from "next/link";
+import type { Viewport } from "next";
 import { AutoPrint, PackingListPrintButton } from "@/app/orders/packing-list/preview/print-button";
 import { PageLoader } from "@/components/page-loader";
 import { FactoryOrderSheetLayout } from "@/components/print/factory-order-sheet-layout";
@@ -7,6 +8,12 @@ import { requireAnyRole } from "@/lib/auth/authorization";
 import { getFactoryOrderSheetData } from "@/lib/orders/vehicle-product-summary";
 
 export const metadata = { title: "พิมพ์ใบสั่งของ" };
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
+  userScalable: true,
+};
 
 type Props = {
   searchParams: Promise<{

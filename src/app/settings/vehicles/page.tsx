@@ -1,7 +1,9 @@
-import Link from "next/link";
-import { Plus, Search } from "lucide-react";
+import { Search } from "lucide-react";
 import { MobileSearchDrawer } from "@/components/mobile-search/mobile-search-drawer";
-import { VehicleForm } from "@/components/settings/vehicle-form";
+import {
+  VehicleCreateButton,
+  VehicleModalProvider,
+} from "@/components/settings/vehicle-modal";
 import { VehicleListPanel } from "@/components/settings/vehicle-list-panel";
 import { SettingsShell } from "@/components/settings/settings-shell";
 import { requireAppRole } from "@/lib/auth/authorization";
@@ -34,11 +36,13 @@ export default async function SettingsVehiclesPage({
           .some((value) => String(value).toLocaleLowerCase("th").includes(normalizedSearch)),
       )
     : data.vehicles;
-  const editingVehicle = params.edit
-    ? (data.vehicles.find((vehicle) => vehicle.id === params.edit) ?? null)
-    : null;
 
   return (
+    <VehicleModalProvider
+      vehicles={data.vehicles}
+      initialCreate={params.create === "1"}
+      initialEditId={params.edit ?? null}
+    >
     <SettingsShell
       current="vehicles"
       title="จัดการรถ"
@@ -72,13 +76,7 @@ export default async function SettingsVehiclesPage({
             >
               ค้นหา
             </button>
-            <Link
-              href="/settings/vehicles?create=1"
-              className="inline-flex h-12 items-center justify-center gap-2 rounded-lg bg-[#4A148C] px-4 text-sm font-black text-white shadow-[0_12px_26px_rgba(142, 36, 170,0.22)] transition hover:bg-[#4A148C] active:scale-[0.98]"
-            >
-              <Plus className="h-4.5 w-4.5" strokeWidth={2.4} />
-              เพิ่มรถ
-            </Link>
+            <VehicleCreateButton variant="desktop" />
           </form>
         </div>
       </div>
@@ -104,22 +102,12 @@ export default async function SettingsVehiclesPage({
         </form>
       </MobileSearchDrawer>
 
-      <Link
-        href="/settings/vehicles?create=1"
-        aria-label="เพิ่มรถ"
-        className="fixed bottom-[calc(4.75rem+env(safe-area-inset-bottom)+12px)] left-4 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-[#4A148C] text-white shadow-[0_14px_32px_rgba(142, 36, 170,0.32)] transition active:scale-95 lg:hidden"
-      >
-        <Plus className="h-7 w-7" strokeWidth={2.6} />
-      </Link>
+      <VehicleCreateButton variant="fab" />
 
       <div className="flex w-full flex-col gap-8">
         <VehicleListPanel vehicles={filteredVehicles} />
       </div>
-
-      {params.create === "1" ? <VehicleForm returnHref="/settings/vehicles" /> : null}
-      {editingVehicle ? (
-        <VehicleForm initialVehicle={editingVehicle} returnHref="/settings/vehicles" />
-      ) : null}
     </SettingsShell>
+    </VehicleModalProvider>
   );
 }

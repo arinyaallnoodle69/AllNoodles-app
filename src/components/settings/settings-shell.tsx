@@ -52,6 +52,7 @@ type Props = {
   headerContentPlacement?: "row" | "below";
   hideHeader?: boolean;
   fullWidthDesktop?: boolean;
+  edgeToEdgeDesktop?: boolean;
   fullWidthMobile?: boolean;
 };
 
@@ -107,6 +108,7 @@ export function SettingsShell({
   headerContentPlacement = "below",
   hideHeader = false,
   fullWidthDesktop = false,
+  edgeToEdgeDesktop = false,
   fullWidthMobile = false,
 }: Props) {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -220,7 +222,7 @@ export function SettingsShell({
       ) : null}
 
       <main
-        className={`mx-auto min-w-0 w-full max-w-[100dvw] touch-pan-y overflow-x-clip overscroll-x-none ${fullWidthMobile ? "px-0 sm:px-4" : "px-4"} pb-28 ${fullWidthDesktop ? "lg:max-w-none lg:px-5 2xl:px-8" : "lg:max-w-[88rem] lg:px-3"} lg:pb-32 ${hideHeader ? "py-0 lg:py-0" : "py-3 lg:py-4"}`}
+        className={`mx-auto min-w-0 w-full max-w-[100dvw] touch-pan-y overflow-x-clip overscroll-x-none ${fullWidthMobile ? "px-0 sm:px-4" : "px-4"} pb-28 ${fullWidthDesktop ? `lg:max-w-none ${edgeToEdgeDesktop ? "lg:px-0" : "lg:px-5 2xl:px-8"}` : "lg:max-w-[88rem] lg:px-3"} lg:pb-32 ${hideHeader ? "py-0 lg:py-0" : "py-3 lg:py-4"}`}
         style={{ touchAction: "pan-y", overscrollBehaviorX: "none" }}
       >
         {current ? (

@@ -79,7 +79,6 @@ function revalidateCustomerSettings(organizationId: string) {
   revalidatePath("/settings/customers");
   revalidatePath("/settings/customers/pricing");
   revalidatePath("/settings/customer-data");
-  revalidatePath("/delivery");
   revalidatePath("/orders");
   revalidateTag(`settings-${organizationId}`, "max");
 }

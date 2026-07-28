@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag, updateTag } from "next/cache";
 import { requireAppRole } from "@/lib/auth/authorization";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
@@ -47,10 +47,14 @@ function getValidationErrorState(fieldErrors: Partial<Record<VehicleField, strin
   };
 }
 
-function revalidateVehiclePaths() {
+function revalidateVehiclePaths(organizationId: string) {
   revalidatePath("/settings");
   revalidatePath("/settings/customers");
   revalidatePath("/settings/vehicles");
+  revalidateTag(`settings-${organizationId}`, "max");
+  revalidateTag(`orders-${organizationId}`, "max");
+  updateTag(`settings-${organizationId}`);
+  updateTag(`orders-${organizationId}`);
 }
 
 export async function createVehicleAction(
@@ -92,7 +96,7 @@ export async function createVehicleAction(
     };
   }
 
-  revalidateVehiclePaths();
+  revalidateVehiclePaths(session.organizationId);
 
   return {
     fieldErrors: {},
@@ -158,7 +162,7 @@ export async function updateVehicleAction(
     };
   }
 
-  revalidateVehiclePaths();
+  revalidateVehiclePaths(session.organizationId);
 
   return {
     fieldErrors: {},
@@ -193,7 +197,7 @@ export async function deleteVehicleAction(vehicleId: string): Promise<{ error?: 
     return { error: "ลบรถไม่สำเร็จ กรุณาลองอีกครั้ง" };
   }
 
-  revalidateVehiclePaths();
+  revalidateVehiclePaths(session.organizationId);
   return {};
 }
 
@@ -237,7 +241,7 @@ export async function updateVehicleOrderAction(vehicleIds: string[]): Promise<{ 
     return { error: "บันทึกลำดับรถไม่สำเร็จ กรุณาลองใหม่อีกครั้ง" };
   }
 
-  revalidateVehiclePaths();
+  revalidateVehiclePaths(session.organizationId);
   return {};
 }
 

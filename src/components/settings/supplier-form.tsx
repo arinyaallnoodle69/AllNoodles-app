@@ -19,6 +19,7 @@ type SupplierFormProps = {
   defaultCode?: string;
   initialSupplier?: SettingsSupplier;
   returnHref: string;
+  onClose?: () => void;
 };
 
 const initialState: SupplierActionState = {
@@ -34,6 +35,7 @@ export function SupplierForm({
   defaultCode = "",
   initialSupplier,
   returnHref,
+  onClose,
 }: SupplierFormProps) {
   const router = useRouter();
   const isEditMode = Boolean(initialSupplier);
@@ -56,13 +58,21 @@ export function SupplierForm({
       clearTimeout(closeTimerRef.current);
     }
     closeTimerRef.current = setTimeout(() => {
-      router.replace(returnHref);
+      if (onClose) {
+        onClose();
+      } else {
+        router.replace(returnHref);
+      }
     }, 380);
   }
 
   const handleSuccess = useEffectEvent(() => {
     startTransition(() => {
-      router.replace(returnHref);
+      if (onClose) {
+        onClose();
+      } else {
+        router.replace(returnHref);
+      }
       router.refresh();
     });
   });
@@ -84,20 +94,20 @@ export function SupplierForm({
   const showFeedback = hasSubmitted && state.status !== "idle";
 
   return (
-    <div className={`fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/45 p-3 sm:p-4 ${isClosing ? "animate-fade-out" : "animate-fade-in"}`}>
-      <div className={`flex max-h-[96dvh] w-full max-w-5xl flex-col overflow-hidden rounded-[1.75rem] border border-slate-200 bg-white shadow-[0_28px_80px_rgba(15,23,42,0.22)] ${isClosing ? "animate-slide-up-premium" : "animate-slide-down-premium"}`}>
-        <div className="flex items-start justify-between gap-4 border-b border-slate-100 px-6 py-5">
+    <div className={`fixed inset-0 z-[100] flex items-end justify-center bg-slate-950/45 p-0 sm:items-center sm:p-4 ${isClosing ? "animate-fade-out" : "animate-fade-in"}`}>
+      <div className={`flex h-[calc(100dvh-0.75rem)] max-h-[calc(100dvh-0.75rem)] w-full max-w-5xl flex-col overflow-hidden rounded-t-[1.5rem] border border-slate-200 bg-white shadow-[0_28px_80px_rgba(15,23,42,0.22)] sm:h-auto sm:max-h-[96dvh] sm:rounded-[1.75rem] ${isClosing ? "animate-slide-up-premium" : "animate-slide-down-premium"}`}>
+        <div className="flex shrink-0 items-start justify-between gap-3 border-b border-slate-100 px-4 py-3 sm:gap-4 sm:px-6 sm:py-5">
           <div>
-            <p className="text-xs font-medium uppercase tracking-[0.18em] text-slate-400">
+            <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-slate-400 sm:text-xs sm:tracking-[0.18em]">
               {isEditMode ? "แก้ไขผู้ขาย" : "เพิ่มผู้ขาย"}
             </p>
             <div className="mt-1 flex items-center gap-2 text-slate-950">
               {isEditMode ? (
-                <PencilLine className="h-6 w-6 text-[#4A148C]" strokeWidth={2.2} />
+                <PencilLine className="h-5 w-5 text-[#4A148C] sm:h-6 sm:w-6" strokeWidth={2.2} />
               ) : (
-                <CirclePlus className="h-6 w-6 text-[#4A148C]" strokeWidth={2.2} />
+                <CirclePlus className="h-5 w-5 text-[#4A148C] sm:h-6 sm:w-6" strokeWidth={2.2} />
               )}
-              <h3 className="text-2xl font-semibold tracking-[-0.02em]">
+              <h3 className="line-clamp-1 py-0.5 text-xl font-semibold leading-snug tracking-[-0.02em] sm:text-2xl">
                 {isEditMode ? initialSupplier?.name : "รายการผู้ขายใหม่"}
               </h3>
             </div>
@@ -106,7 +116,7 @@ export function SupplierForm({
           <button
             type="button"
             onClick={closeModal}
-            className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 transition hover:bg-slate-50"
+            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 transition hover:bg-slate-50 sm:h-10 sm:w-10"
             aria-label="ปิด"
           >
             <X className="h-5 w-5" strokeWidth={2.2} />
@@ -137,11 +147,11 @@ export function SupplierForm({
             </div>
           ) : null}
 
-          <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5 sm:px-6 sm:py-6">
-            <div className="space-y-8">
+          <div className="min-h-0 flex-1 overflow-y-auto px-3 py-3 sm:px-6 sm:py-6">
+            <div className="space-y-4 sm:space-y-8">
               <SettingsPanel>
                 <SettingsPanelHeader icon="factory" title="ข้อมูลผู้ขาย" description="" />
-                <SettingsPanelBody className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                <SettingsPanelBody className="grid grid-cols-1 gap-4 sm:gap-6 md:grid-cols-2">
                   <div className="flex flex-col gap-2">
                     <label className={settingsFieldLabelClass} htmlFor="supplier-code">
                       รหัสผู้ขาย
@@ -184,18 +194,18 @@ export function SupplierForm({
             </div>
           </div>
 
-          <div className="flex shrink-0 items-center justify-end gap-3 border-t border-slate-100 bg-white px-5 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:px-6">
+          <div className="flex shrink-0 items-center justify-end gap-3 border-t border-slate-100 bg-white px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:px-6 sm:py-4 sm:pb-[max(1rem,env(safe-area-inset-bottom))]">
             <button
               type="button"
               onClick={closeModal}
-              className="rounded-xl border border-slate-200 px-4 py-3 text-sm font-medium text-slate-600 transition hover:bg-slate-50"
+              className="h-11 rounded-xl border border-slate-200 px-4 text-sm font-medium text-slate-600 transition hover:bg-slate-50"
             >
               ยกเลิก
             </button>
             <button
               type="submit"
               disabled={isPending}
-              className="inline-flex items-center gap-2 rounded-xl bg-[#4A148C] px-5 py-3 text-sm font-medium text-white shadow-[0_12px_30px_rgba(142, 36, 170,0.22)] transition hover:bg-[#4A148C] disabled:cursor-not-allowed disabled:opacity-60"
+              className="inline-flex h-11 items-center gap-2 rounded-xl bg-[#4A148C] px-5 text-sm font-medium text-white shadow-[0_12px_30px_rgba(142, 36, 170,0.22)] transition hover:bg-[#4A148C] disabled:cursor-not-allowed disabled:opacity-60"
             >
               <Save className="h-4 w-4" strokeWidth={2.2} />
               บันทึกผู้ขาย

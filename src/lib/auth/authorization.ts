@@ -41,7 +41,7 @@ export async function requireAnyRole(
 
 /** Default landing page per role after login or when redirected away. */
 export function roleHomePage(role: AppSessionPayload["role"]): string {
-  if (role === "warehouse") return "/delivery";
+  if (role === "warehouse") return "/orders/packing-list";
   if (role === "member") return "/orders/incoming";
   return "/dashboard";
 }

@@ -44,7 +44,7 @@ const SHEET_W = "297mm";
 const SHEET_H = "210mm";
 const SCREEN_SHEET_W = "1123px";
 const SCREEN_SHEET_H = "794px";
-const STANDARD_PRODUCTS_PER_PAGE = 45;
+const STANDARD_PRODUCTS_PER_PAGE = 38;
 const STANDARD_STORES_PER_PAGE = 25;
 const TRANSPOSED_PRODUCTS_PER_PAGE = 25;
 const TRANSPOSED_STORES_PER_PAGE = 37;
@@ -939,17 +939,17 @@ function PackingListStyles() {
       }
 
       .packing-col--category {
-        min-height: 3.8mm;
-        padding: 0.45mm 0.6mm 0.3mm;
-        overflow: visible;
+        min-height: 7mm;
+        padding: 0.45mm 0.35mm 0.3mm;
+        overflow: hidden;
         text-align: center;
         vertical-align: middle;
       }
 
       .packing-col--category {
-        height: 4.2mm;
-        font-size: 7.8pt;
-        line-height: 1.35;
+        height: 7mm;
+        font-size: 7pt;
+        line-height: 1.15;
         font-weight: 900;
         color: #0f172a;
       }
@@ -962,11 +962,15 @@ function PackingListStyles() {
       }
 
       .packing-header-label--category {
-        display: block;
+        display: -webkit-box;
         position: relative;
-        top: 0.25mm;
-        text-overflow: ellipsis;
-        white-space: nowrap;
+        top: 0;
+        overflow: hidden;
+        white-space: normal;
+        word-break: break-word;
+        overflow-wrap: anywhere;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 2;
       }
 
       .packing-col--transpose-product {
@@ -999,25 +1003,22 @@ function PackingListStyles() {
         align-items: center;
         justify-content: flex-start;
         gap: 0;
-        height: 13.8mm;
-        min-height: 13.8mm;
-        max-height: 13.8mm;
+        min-height: 17mm;
         padding: 0.35mm 0.15mm 0.15mm;
         width: 100%;
         min-width: 0;
-        overflow: hidden;
+        overflow: visible;
       }
 
       .packing-product-header__name {
         display: block;
-        font-size: 6.8pt;
-        line-height: 1.3;
+        font-size: 6.2pt;
+        line-height: 1.2;
         font-weight: 800;
         color: #0f172a;
         width: 100%;
         max-width: 100%;
         min-height: 0;
-        max-height: 13.25mm;
         min-width: 0;
         overflow: visible;
         white-space: normal;

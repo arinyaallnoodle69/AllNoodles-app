@@ -8,7 +8,8 @@ import { createActionClient } from "@/lib/supabase/action";
 import type { Json } from "@/types/database";
 
 const STOCK_RECEIPT_IMAGES_BUCKET = "stock-receipts";
-const MISSING_WAREHOUSE_MESSAGE = "กรุณาเลือกคลังก่อนทำรายการสต็อค";
+const MISSING_WAREHOUSE_MESSAGE = "กรุณาเลือกคลังก่อนทำรายการสต็อก";
+const DEFAULT_RECEIPT_SUPPLIER_NAME = "ไม่ระบุโรงงาน";
 
 type ReceiveStockField = "productId" | "totalQuantity";
 type ReceiveStockItemInput = {
@@ -16,6 +17,25 @@ type ReceiveStockItemInput = {
   quantityReceived: number;
   unit: string;
   unitCost: number;
+  unitRatio?: number;
+};
+
+type WarehouseProductFactoryRow = {
+  product_id: string;
+  mode: string | null;
+  supplier_id: string | null;
+  suppliers: { name: string | null } | Array<{ name: string | null }> | null;
+};
+
+type ReceiveStockReceiptGroup = {
+  items: ReceiveStockItemInput[];
+  supplierId: string | null;
+  supplierName: string;
+};
+
+type WarehouseProductModeSelectQuery = {
+  eq(column: string, value: string): WarehouseProductModeSelectQuery;
+  in(column: string, values: string[]): Promise<{ data: unknown[] | null; error: { message?: string } | null }>;
 };
 
 export type ReceiveStockActionState = {
@@ -53,6 +73,81 @@ function getText(formData: FormData, key: string) {
 function getNumber(formData: FormData, key: string) {
   const value = Number(String(formData.get(key) ?? "").replace(/,/g, "").trim());
   return Number.isFinite(value) ? value : Number.NaN;
+}
+
+function getSupplierName(row: WarehouseProductFactoryRow) {
+  const suppliers = row.suppliers;
+  const supplier = Array.isArray(suppliers) ? suppliers[0] : suppliers;
+  return supplier?.name?.trim() || DEFAULT_RECEIPT_SUPPLIER_NAME;
+}
+
+async function generateReceiptNumber(admin: ReturnType<typeof getSupabaseAdmin>, organizationId: string) {
+  const { data: generatedNumber, error: generateError } = await admin.rpc("generate_receipt_number", {
+    p_organization_id: organizationId,
+  });
+
+  if (!generateError && generatedNumber) {
+    return String(generatedNumber);
+  }
+
+  return `RCV-${Date.now()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+}
+
+async function buildReceiveStockReceiptGroups(
+  admin: ReturnType<typeof getSupabaseAdmin>,
+  organizationId: string,
+  warehouseId: string,
+  items: ReceiveStockItemInput[],
+): Promise<{ groups: ReceiveStockReceiptGroup[]; error?: string }> {
+  const productIds = Array.from(new Set(items.map((item) => item.productId).filter(Boolean)));
+
+  const productWarehouseModesTable = (admin as unknown as {
+    from(table: "product_warehouse_fulfillment_modes"): {
+      select(columns: string): WarehouseProductModeSelectQuery;
+    };
+  }).from("product_warehouse_fulfillment_modes");
+
+  const { data, error } = await productWarehouseModesTable
+    .select("product_id, mode, supplier_id, suppliers(name)")
+    .eq("organization_id", organizationId)
+    .eq("warehouse_id", warehouseId)
+    .in("product_id", productIds);
+
+  if (error) {
+    return { groups: [], error: error.message ?? "ไม่สามารถตรวจสอบการตั้งค่าโรงงานของสินค้าได้" };
+  }
+
+  const rows = (data ?? []) as WarehouseProductFactoryRow[];
+  const modeByProductId = new Map(rows.map((row) => [row.product_id, row]));
+  const groupsBySupplier = new Map<string, ReceiveStockReceiptGroup>();
+
+  for (const item of items) {
+    const row = modeByProductId.get(item.productId);
+
+    if (row?.mode && row.mode !== "stock") {
+      return {
+        groups: [],
+        error: "มีสินค้าที่ไม่ได้ตั้งเป็นใช้สต็อกในคลังนี้ กรุณาตรวจสอบหน้าจัดการคลัง",
+      };
+    }
+
+    const supplierId = row?.supplier_id ?? null;
+    const supplierName = row ? getSupplierName(row) : DEFAULT_RECEIPT_SUPPLIER_NAME;
+    const groupKey = supplierId ?? "__no_supplier__";
+    const group = groupsBySupplier.get(groupKey);
+
+    if (group) {
+      group.items.push(item);
+    } else {
+      groupsBySupplier.set(groupKey, {
+        items: [item],
+        supplierId,
+        supplierName,
+      });
+    }
+  }
+
+  return { groups: Array.from(groupsBySupplier.values()) };
 }
 
 export async function getStockReceiptDetailAction(receiptId: string): Promise<StockReceiptDetail | null> {
@@ -94,28 +189,11 @@ export async function receiveStockAction(
   }
 
   const receiptNumberInput = getText(formData, "receiptNumber");
-  let receiptNumber = receiptNumberInput;
-
-  const admin = getSupabaseAdmin();
-
-  if (!receiptNumber) {
-    const { data: generatedNumber, error: generateError } = await admin.rpc("generate_receipt_number", {
-      p_organization_id: session.organizationId,
-    });
-
-    if (!generateError && generatedNumber) {
-      receiptNumber = generatedNumber;
-    } else {
-      receiptNumber = `RCV-${Date.now()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
-    }
-  }
-
-  const supplierId = getText(formData, "supplierId") || null;
-  const supplierName = getText(formData, "supplierName") || "ผู้ขาย";
   const warehouseId = getText(formData, "warehouseId");
   const receivedAt = getText(formData, "receivedAt");
   const notes = getText(formData, "notes");
   const imageFile = formData.get("receiptImage") as File | null;
+  const admin = getSupabaseAdmin();
 
   if (!warehouseId) {
     return {
@@ -133,13 +211,54 @@ export async function receiveStockAction(
     };
   }
 
+  if (items.some((item) => !item.productId || item.quantityReceived <= 0 || !item.unit)) {
+    return {
+      fieldErrors: {},
+      message: "ข้อมูลสินค้ารับเข้าไม่ถูกต้อง กรุณาตรวจสอบสินค้า จำนวน และหน่วย",
+      status: "error",
+    };
+  }
+
+  const { groups, error: groupError } = await buildReceiveStockReceiptGroups(
+    admin,
+    session.organizationId,
+    warehouseId,
+    items,
+  );
+
+  if (groupError) {
+    return {
+      fieldErrors: {},
+      message: groupError,
+      status: "error",
+    };
+  }
+
+  if (groups.length === 0) {
+    return {
+      fieldErrors: {},
+      message: "ไม่พบรายการสินค้าที่สามารถรับเข้าคลังได้",
+      status: "error",
+    };
+  }
+
+  const receiptNumbers = await Promise.all(
+    groups.map((_, index) => {
+      if (receiptNumberInput) {
+        return groups.length === 1 ? receiptNumberInput : `${receiptNumberInput}-${index + 1}`;
+      }
+
+      return generateReceiptNumber(admin, session.organizationId);
+    }),
+  );
+
   let receiptUrl: string | null = null;
 
   if (imageFile && imageFile.size > 0) {
     try {
       const supabase = await createActionClient();
       const fileExt = imageFile.name.split(".").pop() || "jpg";
-      const fileName = `${session.organizationId}/${receiptNumber}.${fileExt}`;
+      const fileName = `${session.organizationId}/${receiptNumbers[0]}.${fileExt}`;
       const buffer = Buffer.from(await imageFile.arrayBuffer());
 
       const { error: uploadError } = await supabase.storage
@@ -173,25 +292,29 @@ export async function receiveStockAction(
     }
   }
 
-  const { error } = await admin.rpc("create_inventory_receipt", {
-    p_created_by: session.userId,
-    p_items: items,
-    p_notes: notes,
-    p_organization_id: session.organizationId,
-    p_receipt_number: receiptNumber,
-    p_received_at: receivedAt ? new Date(receivedAt).toISOString() : new Date().toISOString(),
-    p_supplier_name: supplierName,
-    p_warehouse_id: warehouseId,
-    p_receipt_url: receiptUrl,
-    p_supplier_id: supplierId,
-  });
+  const receivedAtIso = receivedAt ? new Date(receivedAt).toISOString() : new Date().toISOString();
 
-  if (error) {
-    return {
-      fieldErrors: {},
-      message: error.message ?? "ระบบบันทึกรับเข้าไม่สำเร็จ",
-      status: "error",
-    };
+  for (const [index, group] of groups.entries()) {
+    const { error } = await admin.rpc("create_inventory_receipt", {
+      p_created_by: session.userId,
+      p_items: group.items,
+      p_notes: notes,
+      p_organization_id: session.organizationId,
+      p_receipt_number: receiptNumbers[index],
+      p_received_at: receivedAtIso,
+      p_supplier_name: group.supplierName,
+      p_warehouse_id: warehouseId,
+      p_receipt_url: receiptUrl,
+      p_supplier_id: group.supplierId,
+    });
+
+    if (error) {
+      return {
+        fieldErrors: {},
+        message: error.message ?? "ระบบบันทึกรับเข้าไม่สำเร็จ",
+        status: "error",
+      };
+    }
   }
 
   revalidatePath("/stock");
@@ -201,7 +324,10 @@ export async function receiveStockAction(
 
   return {
     fieldErrors: {},
-    message: "บันทึกรับสินค้าเข้าเรียบร้อยแล้ว",
+    message:
+      groups.length > 1
+        ? `บันทึกรับสินค้าเข้าเรียบร้อยแล้ว (${groups.length} โรงงาน)`
+        : "บันทึกรับสินค้าเข้าเรียบร้อยแล้ว",
     status: "success",
   };
 }
@@ -225,34 +351,55 @@ export async function bulkReceiveStockAction(
     return { success: false, message: MISSING_WAREHOUSE_MESSAGE };
   }
 
-  let receiptNumber = `RCV-${Date.now()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
-  const { data: generatedNumber, error: generateError } = await admin.rpc("generate_receipt_number", {
-    p_organization_id: session.organizationId,
-  });
-  if (!generateError && generatedNumber) {
-    receiptNumber = generatedNumber;
+  const receiptItems: ReceiveStockItemInput[] = items.map((item) => ({
+    productId: item.productId,
+    quantityReceived: item.quantityReceived,
+    unit: item.unit,
+    unitRatio: item.unitRatio,
+    unitCost: 0,
+  }));
+
+  if (
+    receiptItems.length === 0 ||
+    receiptItems.some((item) => !item.productId || item.quantityReceived <= 0 || !item.unit)
+  ) {
+    return { success: false, message: "ข้อมูลสินค้ารับเข้าไม่ถูกต้อง กรุณาตรวจสอบสินค้า จำนวน และหน่วย" };
   }
 
-  const { error } = await admin.rpc("create_inventory_receipt", {
-    p_created_by: session.userId,
-    p_items: items.map((item) => ({
-      productId: item.productId,
-      quantityReceived: item.quantityReceived,
-      unit: item.unit,
-      unitRatio: item.unitRatio,
-      unitCost: 0,
-    })),
-    p_notes: notes,
-    p_organization_id: session.organizationId,
-    p_receipt_number: receiptNumber,
-    p_received_at: new Date().toISOString(),
-    p_supplier_name: "ดึงข้อมูลสต็อกฉุกเฉิน",
-    p_warehouse_id: warehouseId,
-    p_supplier_id: null,
-  });
+  const { groups, error: groupError } = await buildReceiveStockReceiptGroups(
+    admin,
+    session.organizationId,
+    warehouseId,
+    receiptItems,
+  );
 
-  if (error) {
-    return { success: false, message: error.message ?? "ระบบบันทึกรับเข้าไม่สำเร็จ" };
+  if (groupError) {
+    return { success: false, message: groupError };
+  }
+
+  if (groups.length === 0) {
+    return { success: false, message: "ไม่พบรายการสินค้าที่สามารถรับเข้าคลังได้" };
+  }
+
+  const receiptNumbers = await Promise.all(groups.map(() => generateReceiptNumber(admin, session.organizationId)));
+  const receivedAtIso = new Date().toISOString();
+
+  for (const [index, group] of groups.entries()) {
+    const { error } = await admin.rpc("create_inventory_receipt", {
+      p_created_by: session.userId,
+      p_items: group.items,
+      p_notes: notes,
+      p_organization_id: session.organizationId,
+      p_receipt_number: receiptNumbers[index],
+      p_received_at: receivedAtIso,
+      p_supplier_name: group.supplierName,
+      p_warehouse_id: warehouseId,
+      p_supplier_id: group.supplierId,
+    });
+
+    if (error) {
+      return { success: false, message: error.message ?? "ระบบบันทึกรับเข้าไม่สำเร็จ" };
+    }
   }
 
   revalidatePath("/stock");
@@ -261,7 +408,13 @@ export async function bulkReceiveStockAction(
   revalidatePath("/settings/products");
   revalidatePath("/orders");
 
-  return { success: true, message: "บันทึกรับสินค้าเข้าเรียบร้อยแล้ว" };
+  return {
+    success: true,
+    message:
+      groups.length > 1
+        ? `บันทึกรับสินค้าเข้าเรียบร้อยแล้ว (${groups.length} โรงงาน)`
+        : "บันทึกรับสินค้าเข้าเรียบร้อยแล้ว",
+  };
 }
 
 export async function adjustStockAction(

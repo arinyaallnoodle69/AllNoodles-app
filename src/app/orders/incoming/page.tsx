@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { ClipboardList, Search } from "lucide-react";
 import dynamic from "next/dynamic";
 import { unstable_cache } from "next/cache";
@@ -6,25 +7,35 @@ import { MobileSearchDrawer } from "@/components/mobile-search/mobile-search-dra
 import { IncomingOrdersMobileList } from "@/components/orders/incoming-orders-mobile-list";
 import { IncomingOrderDateFilter } from "@/components/orders/incoming-order-date-filter";
 import { OrderCustomerFilter } from "@/components/orders/order-customer-filter";
-import { IncomingOrdersSearchForm } from "@/components/orders/incoming-orders-search-form";
+import {
+  IncomingOrdersSearchForm,
+  IncomingOrdersSearchSubmitButton,
+} from "@/components/orders/incoming-orders-search-form";
 import { requireAnyRole } from "@/lib/auth/authorization";
-import { normalizeOrderDate, getTodayInBangkok } from "@/lib/orders/date";
-import { getCustomerOrderCountsByDate, getIncomingOrders, getOrderDetailById } from "@/lib/orders/detail";
+import { normalizeOrderDate } from "@/lib/orders/date";
+import {
+  getCustomerOrderCountsByDate,
+  getIncomingOrdersBundle,
+  getOrderDetailById,
+  type IncomingOrderSummaryItemRow,
+} from "@/lib/orders/detail";
 import { getBilledDeliveryNumbersForRange } from "@/lib/billing/billing-statement";
 import { getPendingLineOrders } from "@/lib/orders/line-pending";
 import { getCustomersForOrder, getProductsForOrder, getVehiclesForOrder } from "@/lib/orders/manage";
-import { getDeliveryList } from "@/lib/delivery/delivery-list";
+import { getDeliveryNoteSummariesForRange } from "@/lib/delivery/delivery-list";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { getActiveWarehouses } from "@/lib/warehouses";
 import { buildVehicleTransferDates } from "@/lib/orders/vehicle-transfer";
 import { IncomingOrdersDeliveryActions } from "@/components/orders/incoming-orders-delivery-actions";
+import type { WarehouseOption } from "@/lib/warehouses";
+import type { OrderCustomerOption } from "@/lib/orders/manage";
 import type {
   PackingListSummaryProduct,
   PackingListSummaryStore,
 } from "@/components/orders/packing-list-summary-button";
 
-const CreateOrderModal = dynamic(() =>
-  import("@/components/orders/create-order-modal").then((mod) => mod.CreateOrderModal),
+const LazyCreateOrderModal = dynamic(() =>
+  import("@/components/orders/lazy-create-order-modal").then((mod) => mod.LazyCreateOrderModal),
 );
 const IncomingOrdersDesktopTable = dynamic(() =>
   import("@/components/orders/incoming-orders-desktop-table").then((mod) => mod.IncomingOrdersDesktopTable),
@@ -66,61 +77,6 @@ type IncomingOrdersPageProps = {
   }>;
 };
 
-type IncomingOrderSummaryItemRow = {
-  order_id: string;
-  product_id: string;
-  quantity: number | string;
-  sale_unit_label: string;
-  products: {
-    name: string;
-    sku: string;
-    display_order: number | null;
-  } | null;
-};
-
-const ORDER_SUMMARY_ITEM_CHUNK_SIZE = 50;
-
-async function getOrderSummaryItems(
-  admin: ReturnType<typeof getSupabaseAdmin>,
-  orderIds: string[],
-) {
-  if (orderIds.length === 0) {
-    return { data: [] as IncomingOrderSummaryItemRow[], error: null };
-  }
-
-  const chunks: string[][] = [];
-  for (let index = 0; index < orderIds.length; index += ORDER_SUMMARY_ITEM_CHUNK_SIZE) {
-    chunks.push(orderIds.slice(index, index + ORDER_SUMMARY_ITEM_CHUNK_SIZE));
-  }
-
-  const results = await Promise.all(
-    chunks.map((chunk) =>
-      admin
-        .from("order_items")
-        .select(
-          `
-            order_id,
-            product_id,
-            quantity,
-            sale_unit_label,
-            products!inner(name, sku, display_order)
-          `,
-        )
-        .in("order_id", chunk),
-    ),
-  );
-
-  const error = results.find((result) => result.error)?.error ?? null;
-  if (error) {
-    return { data: [] as IncomingOrderSummaryItemRow[], error };
-  }
-
-  return {
-    data: results.flatMap((result) => (result.data ?? []) as IncomingOrderSummaryItemRow[]),
-    error: null,
-  };
-}
-
 function formatCurrency(value: number) {
   return value.toLocaleString("th-TH", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
@@ -138,19 +94,19 @@ const getCachedPendingLineOrders = (
   unstable_cache(
     () => getPendingLineOrders(orgId, opts),
     ["incoming-pending-line-orders", orgId, opts.orderDate, opts.endDate ?? "", opts.searchTerm ?? ""],
-    { revalidate: 3, tags: [`orders-${orgId}`] },
+    { revalidate: 30, tags: [`orders-${orgId}`] },
   )();
 
-const getCachedDeliveryList = (
+const getCachedDeliveryNoteSummaries = (
   orgId: string,
   from: string,
   to: string,
   keyword: string,
 ) =>
   unstable_cache(
-    () => getDeliveryList(orgId, from, to, keyword),
-    ["incoming-delivery-list", orgId, from, to, keyword],
-    { revalidate: 3, tags: [`orders-${orgId}`] },
+    () => getDeliveryNoteSummariesForRange(orgId, from, to, keyword),
+    ["incoming-delivery-note-summaries", orgId, from, to, keyword],
+    { revalidate: 30, tags: [`orders-${orgId}`] },
   )();
 
 const getCachedBilledDeliveryNumbersArray = (
@@ -164,8 +120,39 @@ const getCachedBilledDeliveryNumbersArray = (
       return Array.from(set);
     },
     ["incoming-billed-delivery-numbers", orgId, fromDate, toDate],
-    { revalidate: 3, tags: [`orders-${orgId}`] },
+    { revalidate: 30, tags: [`orders-${orgId}`] },
   )();
+
+// Streams in independently so the main order list never waits on it.
+async function PendingLineOrdersAsync({
+  orgId,
+  orderDate,
+  endDate,
+  searchTerm,
+  customers,
+  warehouses,
+}: {
+  orgId: string;
+  orderDate: string;
+  endDate: string;
+  searchTerm: string;
+  customers: OrderCustomerOption[];
+  warehouses: WarehouseOption[];
+}) {
+  const pendingLineOrders = await getCachedPendingLineOrders(orgId, {
+    orderDate,
+    endDate,
+    searchTerm,
+  });
+
+  return (
+    <PendingLineOrdersSection
+      customers={customers}
+      pendingOrders={pendingLineOrders}
+      warehouses={warehouses}
+    />
+  );
+}
 
 export default async function IncomingOrdersPage({ searchParams }: IncomingOrdersPageProps) {
   const session = await requireAnyRole(["admin", "member"]);
@@ -188,29 +175,31 @@ export default async function IncomingOrdersPage({ searchParams }: IncomingOrder
   );
 
   const [
-    orders,
+    ordersBundle,
     expandedDetail,
     customers,
-    products,
     vehicles,
-    pendingLineOrders,
     warehouses,
     customerOrderCountsToday,
-    deliveryData,
+    deliveryNoteSummaries,
     billedDeliveryNumbersArray,
+    products,
   ] = await Promise.all([
-    getIncomingOrders(session.organizationId, { orderDate, endDate, searchTerm }),
+    getIncomingOrdersBundle(session.organizationId, { orderDate, endDate, searchTerm }),
     expandedOrderId ? getOrderDetailById(session.organizationId, expandedOrderId) : Promise.resolve(null),
     getCustomersForOrder(session.organizationId),
-    getProductsForOrder(session.organizationId),
     getVehiclesForOrder(session.organizationId),
-    getCachedPendingLineOrders(session.organizationId, { orderDate, endDate, searchTerm }),
     getActiveWarehouses(session.organizationId),
     getCustomerOrderCountsByDate(session.organizationId, orderDate, endDate),
-    getCachedDeliveryList(session.organizationId, orderDate, endDate, searchTerm || ""),
+    getCachedDeliveryNoteSummaries(session.organizationId, orderDate, endDate, searchTerm || ""),
     getCachedBilledDeliveryNumbersArray(session.organizationId, orderDate, endDate),
+    // The full catalog is only needed by the expanded order-detail modal
+    // (add-product picker); skip it entirely on plain list loads.
+    expandedOrderId ? getProductsForOrder(session.organizationId) : Promise.resolve([]),
   ]);
 
+  const orders = ordersBundle.orders;
+  const summaryItems = ordersBundle.summaryItems;
   const billedDeliveryNumbers = new Set(billedDeliveryNumbersArray);
 
   const customerOptions = customers.map((customer) => ({
@@ -219,7 +208,7 @@ export default async function IncomingOrdersPage({ searchParams }: IncomingOrder
     name: customer.name,
     defaultVehicleId: customer.defaultVehicleId,
   }));
-  const productImageById = new Map(products.map((product) => [product.id, product.imageUrl ?? null]));
+  const productImageById = ordersBundle.productImageById;
 
   const activeOrders = orders.filter((order) => order.status !== "cancelled");
   const vehicleTransferDates = session.role === "admin"
@@ -253,14 +242,9 @@ export default async function IncomingOrdersPage({ searchParams }: IncomingOrder
       : null;
 
   const activeOrderIds = activeOrders.map((order) => order.id);
-  const orderSummaryItemsResult = await getOrderSummaryItems(admin, activeOrderIds);
-
-  if (orderSummaryItemsResult.error) {
-    throw new Error(orderSummaryItemsResult.error.message ?? "Failed to load order summary items.");
-  }
 
   const itemsByOrderId = new Map<string, IncomingOrderSummaryItemRow[]>();
-  for (const row of (orderSummaryItemsResult.data ?? []) as IncomingOrderSummaryItemRow[]) {
+  for (const row of summaryItems) {
     const current = itemsByOrderId.get(row.order_id) ?? [];
     current.push(row);
     itemsByOrderId.set(row.order_id, current);
@@ -307,7 +291,7 @@ export default async function IncomingOrdersPage({ searchParams }: IncomingOrder
           name: item.products.name,
           unit,
           quantity,
-          imageUrl: productImageById.get(item.product_id) ?? null,
+          imageUrl: productImageById[item.product_id] ?? null,
           vehicleId: order.vehicleId,
           vehicleName: order.vehicleName,
           display_order: item.products.display_order ?? undefined,
@@ -378,7 +362,8 @@ export default async function IncomingOrdersPage({ searchParams }: IncomingOrder
     delivery_number: string;
   };
 
-  // Fetch direct delivery notes by activeOrderIds in chunks of 40 to solve any deliveryDate vs orderDate mismatches and URL limit errors
+  // Fetch direct delivery notes by activeOrderIds in chunks of 40 to solve any deliveryDate vs orderDate mismatches and URL limit errors.
+  // Chunks run in parallel so large order sets don't serialize into a waterfall.
   const directDeliveries: DirectDeliveryRow[] = [];
   if (activeOrderIds.length > 0) {
     const orderIdChunks: string[][] = [];
@@ -386,14 +371,18 @@ export default async function IncomingOrdersPage({ searchParams }: IncomingOrder
       orderIdChunks.push(activeOrderIds.slice(i, i + 40));
     }
 
-    for (const chunk of orderIdChunks) {
-      const { data, error } = await admin
-        .from("delivery_notes")
-        .select("id, order_id, customer_id, delivery_date, delivery_number")
-        .eq("organization_id", session.organizationId)
-        .in("order_id", chunk)
-        .eq("status", "confirmed");
+    const chunkResults = await Promise.all(
+      orderIdChunks.map((chunk) =>
+        admin
+          .from("delivery_notes")
+          .select("id, order_id, customer_id, delivery_date, delivery_number")
+          .eq("organization_id", session.organizationId)
+          .in("order_id", chunk)
+          .eq("status", "confirmed"),
+      ),
+    );
 
+    for (const { data, error } of chunkResults) {
       if (!error && data) {
         directDeliveries.push(...data);
       }
@@ -403,16 +392,16 @@ export default async function IncomingOrdersPage({ searchParams }: IncomingOrder
   const deliveryMap = new Map<string, string[]>();
   const deliveryIdMap = new Map<string, string[]>();
 
-  for (const item of deliveryData) {
-    const key = `${item.customerId}_${item.deliveryDate}`;
-    deliveryMap.set(
-      key,
-      item.deliveryNotes.map((note) => note.deliveryNumber),
-    );
-    deliveryIdMap.set(
-      key,
-      item.deliveryNotes.map((note) => note.id),
-    );
+  for (const note of deliveryNoteSummaries) {
+    const key = `${note.customerId}_${note.deliveryDate}`;
+
+    const existingNumbers = deliveryMap.get(key) ?? [];
+    existingNumbers.push(note.deliveryNumber);
+    deliveryMap.set(key, existingNumbers);
+
+    const existingIds = deliveryIdMap.get(key) ?? [];
+    existingIds.push(note.id);
+    deliveryIdMap.set(key, existingIds);
   }
 
   // Enrich with direct deliveries using orderDate!
@@ -529,6 +518,7 @@ export default async function IncomingOrdersPage({ searchParams }: IncomingOrder
       description=""
       floatingSubmit={false}
       fullWidthDesktop
+      edgeToEdgeDesktop
       hideHeader
     >
       <div className="space-y-6">
@@ -596,25 +586,16 @@ export default async function IncomingOrdersPage({ searchParams }: IncomingOrder
                 noAutoSubmit={true}
               />
 
-              <button
-                type="submit"
-                className="inline-flex h-12 items-center justify-center rounded-xl border border-[#EA80FC]/70 bg-[#4A148C] px-5 text-sm font-bold text-white shadow-[0_12px_26px_rgba(142, 36, 170,0.24)] transition hover:bg-[#4A148C] active:scale-[0.98]"
-              >
-                ค้นหา
-              </button>
+              <IncomingOrdersSearchSubmitButton className="inline-flex h-12 items-center justify-center gap-2 rounded-xl border border-[#EA80FC]/70 bg-[#4A148C] px-5 text-sm font-bold text-white shadow-[0_12px_26px_rgba(142,36,170,0.24)] transition hover:bg-[#4A148C] disabled:cursor-wait disabled:opacity-80 active:scale-[0.98]" />
             </div>
           </IncomingOrdersSearchForm>
         </div>
 
         <div className="fixed bottom-8 right-8 z-40 hidden lg:block [&_.action-touch-safe]:border [&_.action-touch-safe]:border-[#EA80FC]/85 [&_.action-touch-safe]:bg-[#4A148C] [&_.action-touch-safe]:shadow-[0_18px_44px_rgba(142, 36, 170,0.34)] [&_.action-touch-safe]:hover:bg-[#4A148C]">
           <div className="rounded-full bg-[#EA80FC]/35 p-[2px] shadow-[0_18px_42px_rgba(142, 36, 170,0.28)]">
-            <CreateOrderModal
+            <LazyCreateOrderModal
               autoOpen={autoOpenCreateModal}
               customerOrderCountsToday={customerOrderCountsToday}
-              customers={customers}
-              products={products}
-              vehicles={vehicles}
-              today={getTodayInBangkok()}
             />
           </div>
         </div>
@@ -676,20 +657,20 @@ export default async function IncomingOrdersPage({ searchParams }: IncomingOrder
               </select>
             </div>
 
-            <button
-              type="submit"
-              className="inline-flex h-12 items-center justify-center rounded-xl border border-[#EA80FC]/70 bg-[#4A148C] px-5 text-sm font-bold text-white shadow-[0_12px_26px_rgba(142, 36, 170,0.24)] transition active:scale-[0.98]"
-            >
-              ค้นหา
-            </button>
+            <IncomingOrdersSearchSubmitButton className="inline-flex h-12 items-center justify-center gap-2 rounded-xl border border-[#EA80FC]/70 bg-[#4A148C] px-5 text-sm font-bold text-white shadow-[0_12px_26px_rgba(142,36,170,0.24)] transition disabled:cursor-wait disabled:opacity-80 active:scale-[0.98]" />
           </IncomingOrdersSearchForm>
         </MobileSearchDrawer>
 
-        <PendingLineOrdersSection
-          customers={customers}
-          pendingOrders={pendingLineOrders}
-          warehouses={warehouses}
-        />
+        <Suspense fallback={null}>
+          <PendingLineOrdersAsync
+            orgId={session.organizationId}
+            orderDate={orderDate}
+            endDate={endDate}
+            searchTerm={searchTerm}
+            customers={customers}
+            warehouses={warehouses}
+          />
+        </Suspense>
 
         <section className="relative mt-0 w-full bg-transparent">
           <div className="flex flex-col gap-3 px-1 py-1 sm:py-3">

@@ -58,31 +58,11 @@ function getWarehouseFulfillmentMode(
   product: StockProductOption,
   warehouseId: string,
 ): WarehouseFulfillmentMode {
-  return product.warehouseModes.find((mode) => mode.warehouseId === warehouseId)?.mode === "fresh" ? "fresh" : "stock";
+  return product.warehouseModes.find((mode) => mode.warehouseId === warehouseId)?.mode ?? "stock";
 }
 
-function WarehouseModeBadge({ mode }: { mode: WarehouseFulfillmentMode }) {
-  if (mode === "fresh") {
-    return (
-      <span className="inline-flex w-fit items-center justify-center rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-black text-emerald-700">
-        ผลิตสด
-      </span>
-    );
-  }
-
-  if (mode === "disabled") {
-    return (
-      <span className="inline-flex w-fit items-center justify-center rounded-full border border-slate-200 bg-slate-100 px-2.5 py-1 text-[11px] font-black text-slate-500">
-        ไม่ใช้
-      </span>
-    );
-  }
-
-  return (
-    <span className="inline-flex w-fit items-center justify-center rounded-full border border-[#4A148C]/20 bg-[#F3E5F5] px-2.5 py-1 text-[11px] font-black text-[#4A148C]">
-      ใช้สต็อก
-    </span>
-  );
+function getWarehouseFactoryName(product: StockProductOption, warehouseId: string) {
+  return product.warehouseModes.find((mode) => mode.warehouseId === warehouseId)?.supplierName?.trim() || "ไม่ระบุโรงงาน";
 }
 
 function buildUrl(baseHref: string, params: Record<string, string>) {
@@ -96,54 +76,62 @@ function buildUrl(baseHref: string, params: Record<string, string>) {
 const MobileStockCard = memo(({ 
   product, 
   displayStock,
-  fulfillmentMode,
-  selectedWarehouseName,
+  selectedWarehouseId,
   onAdjust
 }: { 
   product: StockProductOption; 
   displayStock: DisplayStock;
-  fulfillmentMode: WarehouseFulfillmentMode;
-  selectedWarehouseName: string;
+  selectedWarehouseId: string;
   onAdjust: (productId: string) => void;
 }) => {
   const role = useClientRole();
   const defaultUnit = getDefaultUnit(product);
+  const factoryName = getWarehouseFactoryName(product, selectedWarehouseId);
 
   return (
     <article
-      className={`border-b border-slate-300 bg-white px-5 py-6 shadow-[0_4px_20px_rgba(15,23,42,0.08)] last:border-b-0 ${
+      className={`mx-2 mb-4 overflow-hidden rounded-[18px] border border-[#D7E0EA] bg-white shadow-[0_10px_28px_rgba(15,23,42,0.055)] ${
         product.isActive ? "" : "opacity-70"
       }`}
     >
-      <div className="flex items-start gap-4">
-        {/* Product Image */}
-        <div className="relative flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden">
-          {product.imageUrl ? (
-            <Image
-              src={product.imageUrl}
-              alt={product.name}
-              fill
-              sizes="96px"
-              className="object-contain"
-            />
-          ) : (
-            <div className="flex h-full w-full items-center justify-center rounded-2xl bg-slate-50">
-              <Package2 className="h-10 w-10 text-slate-300" strokeWidth={1.5} />
-            </div>
-          )}
+      <div className="grid grid-cols-[7.15rem_minmax(0,1fr)] gap-4 px-4 py-3">
+        <div className="flex min-w-0 flex-col items-stretch gap-2">
+          <div className="relative flex h-20 w-full shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white">
+            {product.imageUrl ? (
+              <Image
+                src={product.imageUrl}
+                alt={product.name}
+                fill
+                sizes="115px"
+                className="object-contain"
+              />
+            ) : (
+              <div className="flex h-full w-full items-center justify-center rounded-xl border border-slate-100 bg-slate-50">
+                <Package2 className="h-9 w-9 text-slate-300" strokeWidth={1.5} />
+              </div>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={() => onAdjust(product.id)}
+            className="flex h-9 w-full items-center justify-center gap-1.5 rounded-xl bg-[#4A148C] px-2 text-[0.84rem] font-black text-white shadow-[0_10px_24px_rgba(74,20,140,0.2)] transition active:scale-95"
+          >
+            <ClipboardEdit className="h-4 w-4" strokeWidth={2.5} />
+            ปรับยอด
+          </button>
         </div>
 
         <div className="min-w-0 flex-1">
-          <div className="flex flex-col gap-1">
-            <p className="line-clamp-2 py-0.5 text-[1.22rem] font-black leading-normal text-slate-950">
+          <div className="flex h-full flex-col justify-center gap-1">
+            <p className="line-clamp-2 py-0.5 text-[1.22rem] font-black leading-[1.38] text-slate-950">
               {product.name}
             </p>
             <div className="flex items-center gap-2">
-              <span className="font-mono text-sm font-bold tracking-tight text-slate-500 uppercase">
+              <span className="font-mono text-[0.92rem] font-bold tracking-tight text-slate-500 uppercase">
                 {product.sku}
               </span>
               <span
-                className={`rounded-full px-2 py-0.5 text-[10px] font-black uppercase tracking-tight shadow-sm ring-1 ring-inset ${
+                className={`rounded-full px-2.5 py-0.5 text-[11px] font-black tracking-tight shadow-sm ring-1 ring-inset ${
                   product.isActive
                     ? "bg-emerald-50 text-emerald-700 ring-emerald-600/20"
                     : "bg-slate-50 text-slate-600 ring-slate-500/20"
@@ -152,71 +140,58 @@ const MobileStockCard = memo(({
                 {product.isActive ? "พร้อมขาย" : "ปิดใช้งาน"}
               </span>
             </div>
-            <span className="mt-1 inline-flex w-fit items-center gap-1 rounded-full bg-[#F3E5F5] px-2.5 py-1 text-[11px] font-black text-[#4A148C]">
-              <Warehouse className="h-3.5 w-3.5" strokeWidth={2.5} />
-              {selectedWarehouseName}
-            </span>
-            <WarehouseModeBadge mode={fulfillmentMode} />
+            <p className="truncate py-0.5 text-[0.92rem] font-black leading-[1.45] text-slate-900">
+              โรงงาน: {factoryName}
+            </p>
           </div>
         </div>
       </div>
 
-      {/* Modern 2x2 Grid for Stock Data */}
-      <div className={`mt-6 ${role === "member" ? "flex flex-col gap-4" : "grid grid-cols-2"} border-t border-slate-200 pt-5`}>
-        {/* Current Stock */}
-        <div className={`space-y-1 ${role === "member" ? "pb-2" : "border-r border-b border-slate-200 pb-4 pr-4"}`}>
-          <div className="flex items-center gap-1.5 text-slate-400">
-            <Boxes className="h-3.5 w-3.5" strokeWidth={2.5} />
-            <p className="text-[10px] font-black uppercase tracking-widest">คงเหลือปัจจุบัน</p>
+      <div
+        className={`grid items-stretch border-t border-[#D7E0EA] bg-white ${
+          role === "member" ? "grid-cols-1" : "grid-cols-3"
+        }`}
+      >
+        <div className="min-w-0 space-y-1 border-r border-[#D7E0EA] px-2.5 py-2.5">
+          <div className="flex min-w-0 items-center gap-1 text-slate-500">
+            <Boxes className="h-3.5 w-3.5 shrink-0" strokeWidth={2.5} />
+            <p className="whitespace-nowrap text-[10px] font-black leading-[1.3]">คงเหลือ</p>
           </div>
-          <div className="flex items-baseline gap-1.5">
-            <span className={`text-[1.5rem] font-black tracking-tight ${displayStock.onHandQuantity < 0 ? 'text-rose-600' : 'text-[#4A148C]'}`}>
+          <div className="flex min-w-0 items-baseline gap-1">
+            <span className={`text-[1.36rem] font-black leading-none tracking-tight ${displayStock.onHandQuantity < 0 ? "text-rose-600" : "text-[#4A148C]"}`}>
               {formatQuantity(displayStock.onHandQuantity)}
             </span>
-            <span className="text-[0.9rem] font-bold text-slate-500">{product.unit}</span>
+            <span className="whitespace-nowrap text-[0.82rem] font-bold text-slate-500">{product.unit}</span>
           </div>
         </div>
 
-        {/* Cost per Unit */}
         {role !== "member" && (
-          <div className="space-y-1 border-b border-slate-200 pb-4 pl-4">
-            <div className="flex items-center gap-1.5 text-slate-400">
-              <Coins className="h-3.5 w-3.5" strokeWidth={2.5} />
-              <p className="text-[10px] font-black uppercase tracking-widest">ต้นทุน / {defaultUnit?.label ?? product.unit}</p>
+          <div className="min-w-0 space-y-1 border-r border-[#D7E0EA] px-2.5 py-2.5">
+            <div className="flex min-w-0 items-center gap-1 text-slate-500">
+              <Coins className="h-3.5 w-3.5 shrink-0" strokeWidth={2.5} />
+              <p className="whitespace-nowrap text-[10px] font-black leading-[1.3]">ต้นทุน</p>
             </div>
             <div className="flex items-baseline gap-1">
-              <span className="text-[1.5rem] font-black tracking-tight text-[#4A148C]">
-                ฿{formatMoney(defaultUnit?.effectiveCostPrice ?? 0)}
+              <span className="text-[1.3rem] font-black leading-none tracking-tight text-[#4A148C]">
+                {formatMoney(defaultUnit?.effectiveCostPrice ?? 0)}
               </span>
             </div>
           </div>
         )}
 
-        {/* Total Value */}
         {role !== "member" && (
-          <div className="space-y-1 border-r border-slate-200 pt-4 pr-4">
-            <div className="flex items-center gap-1.5 text-slate-400">
-              <Wallet className="h-3.5 w-3.5" strokeWidth={2.5} />
-              <p className="text-[10px] font-black uppercase tracking-widest">มูลค่าสต็อกรวม</p>
+          <div className="min-w-0 space-y-1 border-r border-[#D7E0EA] px-2.5 py-2.5">
+            <div className="flex min-w-0 items-center gap-1 text-slate-500">
+              <Wallet className="h-3.5 w-3.5 shrink-0" strokeWidth={2.5} />
+              <p className="whitespace-nowrap text-[10px] font-black leading-[1.3]">มูลค่า</p>
             </div>
             <div className="flex items-baseline gap-1">
-              <span className={`text-[1.35rem] font-black tracking-tight ${displayStock.stockValue < 0 ? 'text-rose-600' : 'text-slate-900'}`}>
-                ฿{formatMoney(displayStock.stockValue)}
+              <span className={`text-[1.3rem] font-black leading-none tracking-tight ${displayStock.stockValue < 0 ? "text-rose-600" : "text-[#4A148C]"}`}>
+                {formatMoney(displayStock.stockValue)}
               </span>
             </div>
           </div>
         )}
-
-        <div className={`flex ${role === "member" ? "w-full justify-center" : "items-end justify-end pt-4 pl-4"}`}>
-          <button
-            type="button"
-            onClick={() => onAdjust(product.id)}
-            className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#4A148C] px-4 text-xs font-black text-white shadow-lg shadow-[#4A148C]/20 transition active:scale-95"
-          >
-            <ClipboardEdit className="h-4 w-4" strokeWidth={2.5} />
-            ปรับยอด
-          </button>
-        </div>
       </div>
     </article>
   );
@@ -226,17 +201,18 @@ MobileStockCard.displayName = "MobileStockCard";
 const DesktopStockRow = memo(({ 
   product, 
   displayStock,
-  fulfillmentMode,
+  selectedWarehouseId,
   selectedWarehouseName,
   onAdjust
 }: { 
   product: StockProductOption; 
   displayStock: DisplayStock;
-  fulfillmentMode: WarehouseFulfillmentMode;
+  selectedWarehouseId: string;
   selectedWarehouseName: string;
   onAdjust: (productId: string) => void;
 }) => {
   const role = useClientRole();
+  const factoryName = getWarehouseFactoryName(product, selectedWarehouseId);
 
   return (
     <tr className="hover:bg-slate-50 transition-colors group">
@@ -275,7 +251,9 @@ const DesktopStockRow = memo(({
         {product.unit}
       </td>
       <td className="whitespace-nowrap border-b border-r border-slate-300 px-5 py-2.5 text-center align-middle">
-        <WarehouseModeBadge mode={fulfillmentMode} />
+        <span className="inline-flex items-center justify-center rounded-full border border-[#4A148C]/15 bg-[#F3E5F5] px-2.5 py-1 text-[11px] font-black leading-[1.35] text-[#4A148C]">
+          {factoryName}
+        </span>
       </td>
       {role !== "member" && (
         <td className="whitespace-nowrap border-b border-r border-slate-300 px-5 py-2.5 text-center align-middle">
@@ -284,14 +262,14 @@ const DesktopStockRow = memo(({
               product.saleUnits.map((unit) => (
                 <div key={unit.id} className="flex items-center justify-center">
                   <span className="text-sm font-bold text-slate-700">
-                    ฿{formatMoney(unit.effectiveCostPrice)}
+                    {formatMoney(unit.effectiveCostPrice)}
                   </span>
                 </div>
               ))
             ) : (
               <div className="flex items-center justify-center">
                 <span className="text-sm font-bold text-slate-700">
-                  ฿{formatMoney(product.costPrice ?? 0)}
+                  {formatMoney(product.costPrice ?? 0)}
                 </span>
               </div>
             )}
@@ -316,7 +294,7 @@ const DesktopStockRow = memo(({
       {role !== "member" && (
         <td className="whitespace-nowrap border-b border-r border-slate-300 px-5 py-2.5 text-center align-middle">
           <span className="text-base font-bold text-slate-900">
-            ฿{formatMoney(displayStock.stockValue)}
+            {formatMoney(displayStock.stockValue)}
           </span>
         </td>
       )}
@@ -327,7 +305,7 @@ DesktopStockRow.displayName = "DesktopStockRow";
 
 // ─── Main Component ──────────────────────────────────────────────────────────
 
-export function StockList({ products, suppliers = [], warehouses, initialWarehouseId, baseHref = "/stock", onChangeTab, brands }: StockListProps) {
+export function StockList({ products, warehouses, initialWarehouseId, baseHref = "/stock", onChangeTab, brands }: StockListProps) {
   const role = useClientRole();
   const canEditStock = role === "admin" || role === "member";
   const searchParams = useSearchParams();
@@ -343,31 +321,37 @@ export function StockList({ products, suppliers = [], warehouses, initialWarehou
       ? initialWarehouseId
       : warehouses[0]?.id ?? "";
   const [selectedWarehouseId, setSelectedWarehouseId] = useState(fallbackWarehouseId);
-  const [selectedCategory, setSelectedCategory] = useState<string | "__all__">("__all__");
+  const [selectedFactory, setSelectedFactory] = useState<string | "__all__">("__all__");
   const [selectedBrand, setSelectedBrand] = useState<string | "__all__">("__all__");
-  const [mobileFilterDrawer, setMobileFilterDrawer] = useState<"brand" | "category" | null>(null);
+  const [mobileFilterDrawer, setMobileFilterDrawer] = useState<"brand" | "factory" | null>(null);
   const [isMobileFilterDrawerClosing, setIsMobileFilterDrawerClosing] = useState(false);
 
   const selectedWarehouseName = warehouses.find((warehouse) => warehouse.id === selectedWarehouseId)?.name ?? "คลังสินค้า";
 
   const selectedFormWarehouseId = selectedWarehouseId;
 
-  const categoryOptions = useMemo(() => {
+  const stockProductsForWarehouse = useMemo(
+    () => products.filter((product) => getWarehouseFulfillmentMode(product, selectedWarehouseId) === "stock"),
+    [products, selectedWarehouseId],
+  );
+
+  const factoryOptions = useMemo(() => {
     const seen = new Set<string>();
-    for (const p of products) {
-      if (p.categoryName) {
-        seen.add(p.categoryName.trim());
+    for (const p of stockProductsForWarehouse) {
+      const factoryName = getWarehouseFactoryName(p, selectedWarehouseId).trim();
+      if (factoryName) {
+        seen.add(factoryName);
       }
     }
-    return Array.from(seen);
-  }, [products]);
+    return Array.from(seen).sort((a, b) => a.localeCompare(b, "th"));
+  }, [selectedWarehouseId, stockProductsForWarehouse]);
 
   const brandOptions = useMemo(() => {
     const seen = new Set<string>();
-    for (const p of products) {
-      const matchesCategory =
-        selectedCategory === "__all__" || p.categoryName === selectedCategory;
-      if (!matchesCategory) continue;
+    for (const p of stockProductsForWarehouse) {
+      const matchesFactory =
+        selectedFactory === "__all__" || getWarehouseFactoryName(p, selectedWarehouseId) === selectedFactory;
+      if (!matchesFactory) continue;
 
       if (p.brandName) {
         const trimmed = p.brandName.trim();
@@ -386,17 +370,16 @@ export function StockList({ products, suppliers = [], warehouses, initialWarehou
       });
     }
     return unsortedBrands.sort((a, b) => a.localeCompare(b, "th"));
-  }, [products, selectedCategory, brands]);
+  }, [stockProductsForWarehouse, selectedFactory, selectedWarehouseId, brands]);
 
-  const handleCategorySelect = (category: string, e?: React.MouseEvent<HTMLButtonElement>) => {
-    setSelectedCategory(category);
-    if (category === "__all__") {
+  const handleFactorySelect = (factory: string, e?: React.MouseEvent<HTMLButtonElement>) => {
+    setSelectedFactory(factory);
+    if (factory === "__all__") {
       setSelectedBrand("__all__");
     } else {
-      // Find what brands are available in the newly selected category
       const availableBrands = new Set<string>();
-      for (const p of products) {
-        if (p.categoryName === category && p.brandName) {
+      for (const p of stockProductsForWarehouse) {
+        if (getWarehouseFactoryName(p, selectedWarehouseId) === factory && p.brandName) {
           const trimmed = p.brandName.trim();
           if (trimmed) availableBrands.add(trimmed);
         }
@@ -417,7 +400,7 @@ export function StockList({ products, suppliers = [], warehouses, initialWarehou
     }
   };
 
-  const openMobileFilterDrawer = (type: "brand" | "category") => {
+  const openMobileFilterDrawer = (type: "brand" | "factory") => {
     setIsMobileFilterDrawerClosing(false);
     setMobileFilterDrawer(type);
   };
@@ -433,8 +416,8 @@ export function StockList({ products, suppliers = [], warehouses, initialWarehou
   const filteredProducts = useMemo(() => {
     const query = normalizeSearch(searchQuery);
 
-    return products.filter((product) => {
-      if (selectedCategory !== "__all__" && product.categoryName !== selectedCategory) {
+    return stockProductsForWarehouse.filter((product) => {
+      if (selectedFactory !== "__all__" && getWarehouseFactoryName(product, selectedWarehouseId) !== selectedFactory) {
         return false;
       }
       if (selectedBrand !== "__all__" && product.brandName !== selectedBrand) {
@@ -448,7 +431,7 @@ export function StockList({ products, suppliers = [], warehouses, initialWarehou
         normalizeSearch(product.unit).includes(query)
       );
     });
-  }, [products, searchQuery, selectedBrand, selectedCategory]);
+  }, [searchQuery, selectedBrand, selectedFactory, selectedWarehouseId, stockProductsForWarehouse]);
 
   const warehouseOptions = warehouses.map((warehouse) => ({
       id: warehouse.id,
@@ -487,6 +470,8 @@ export function StockList({ products, suppliers = [], warehouses, initialWarehou
 
   const handleWarehouseChange = (warehouseId: string) => {
     setSelectedWarehouseId(warehouseId);
+    setSelectedFactory("__all__");
+    setSelectedBrand("__all__");
     closeMobileSearch();
     const params: Record<string, string> = warehouseId ? { warehouse: warehouseId } : {};
     window.history.pushState({}, "", buildUrl(baseHref, params));
@@ -529,7 +514,7 @@ export function StockList({ products, suppliers = [], warehouses, initialWarehou
             <div className="min-w-0 shrink-0">
               <p className="text-lg font-black text-[#4A148C]">จัดการสต็อก</p>
               <p className="text-xs font-semibold text-[#667085]">
-                แสดง {filteredProducts.length.toLocaleString("th-TH")} จาก {products.length.toLocaleString("th-TH")} รายการ
+                แสดง {filteredProducts.length.toLocaleString("th-TH")} จาก {stockProductsForWarehouse.length.toLocaleString("th-TH")} รายการ
               </p>
             </div>
 
@@ -588,41 +573,41 @@ export function StockList({ products, suppliers = [], warehouses, initialWarehou
           </div>
 
 
-          {/* Desktop Category Row */}
-          {categoryOptions.length > 0 && (
+          {/* Desktop Factory Row */}
+          {factoryOptions.length > 0 && (
             <div className="flex items-center gap-5 border-t border-slate-100 pt-3">
               <span className="text-xs font-black uppercase tracking-wider text-slate-400 shrink-0 min-w-[70px]">
-                หมวดหมู่:
+                โรงงาน:
               </span>
               <div className="flex min-w-0 flex-1 items-center gap-6 overflow-x-auto no-scrollbar">
                 <button
                   type="button"
-                  onClick={(e) => handleCategorySelect("__all__", e)}
+                  onClick={(e) => handleFactorySelect("__all__", e)}
                   className={`relative h-10 shrink-0 px-1 text-sm font-black whitespace-nowrap transition-colors ${
-                    selectedCategory === "__all__"
+                    selectedFactory === "__all__"
                       ? "text-[#4A148C]"
                       : "text-slate-500 hover:text-[#4A148C]"
                   }`}
                 >
-                  ทุกหมวดหมู่
-                  {selectedCategory === "__all__" ? (
+                  ทุกโรงงาน
+                  {selectedFactory === "__all__" ? (
                     <span className="absolute inset-x-0 bottom-0 h-0.5 bg-[#4A148C]" />
                   ) : null}
                 </button>
 
-                {categoryOptions.map((c) => (
+                {factoryOptions.map((factory) => (
                   <button
-                    key={c}
+                    key={factory}
                     type="button"
-                    onClick={(e) => handleCategorySelect(c, e)}
+                    onClick={(e) => handleFactorySelect(factory, e)}
                     className={`relative h-10 shrink-0 px-1 text-sm font-black whitespace-nowrap transition-colors ${
-                      selectedCategory === c
+                      selectedFactory === factory
                         ? "text-[#4A148C]"
                         : "text-slate-500 hover:text-[#4A148C]"
                     }`}
                   >
-                    {c}
-                    {selectedCategory === c ? (
+                    {factory}
+                    {selectedFactory === factory ? (
                       <span className="absolute inset-x-0 bottom-0 h-0.5 bg-[#4A148C]" />
                     ) : null}
                   </button>
@@ -678,48 +663,48 @@ export function StockList({ products, suppliers = [], warehouses, initialWarehou
 
       <StockTabs current="stock" onChangeTab={onChangeTab} />
 
-      {/* Mobile-only Category & Brand Filter */}
+      {/* Mobile-only Factory & Brand Filter */}
       <div className="mb-0 mt-2 block w-full max-w-full overflow-hidden border-b border-slate-200 bg-white px-4 py-1 lg:hidden">
-        {categoryOptions.length > 0 && (
+        {factoryOptions.length > 0 && (
           <div className="flex items-center gap-5">
             <button
               type="button"
-              onClick={() => openMobileFilterDrawer("category")}
+              onClick={() => openMobileFilterDrawer("factory")}
               className="flex h-12 shrink-0 items-center gap-1.5 text-sm font-black text-[#4A148C]"
-              aria-label="เปิดรายการหมวดหมู่ทั้งหมด"
+              aria-label="เปิดรายการโรงงานทั้งหมด"
             >
-              หมวดหมู่
+              โรงงาน
               <ListFilter className="h-4 w-4" strokeWidth={2.5} />
             </button>
             <div className="no-scrollbar flex min-w-0 flex-1 items-center gap-6 overflow-x-auto overscroll-x-contain -mx-4 px-4">
               <button
                 type="button"
-                onClick={(e) => handleCategorySelect("__all__", e)}
+                onClick={(e) => handleFactorySelect("__all__", e)}
                 className={`relative h-12 shrink-0 px-1 text-sm font-black whitespace-nowrap transition-colors ${
-                  selectedCategory === "__all__"
+                  selectedFactory === "__all__"
                     ? "text-[#4A148C]"
                     : "text-slate-500"
                 }`}
               >
-                ทุกหมวดหมู่
-                {selectedCategory === "__all__" ? (
+                ทุกโรงงาน
+                {selectedFactory === "__all__" ? (
                   <span className="absolute inset-x-0 bottom-0 h-0.5 bg-[#4A148C]" />
                 ) : null}
               </button>
 
-              {categoryOptions.map((c) => (
+              {factoryOptions.map((factory) => (
                 <button
-                  key={c}
+                  key={factory}
                   type="button"
-                  onClick={(e) => handleCategorySelect(c, e)}
+                  onClick={(e) => handleFactorySelect(factory, e)}
                   className={`relative h-12 shrink-0 px-1 text-sm font-black whitespace-nowrap transition-colors ${
-                    selectedCategory === c
+                    selectedFactory === factory
                       ? "text-[#4A148C]"
                       : "text-slate-500"
                   }`}
                 >
-                  {c}
-                  {selectedCategory === c ? (
+                  {factory}
+                  {selectedFactory === factory ? (
                     <span className="absolute inset-x-0 bottom-0 h-0.5 bg-[#4A148C]" />
                   ) : null}
                 </button>
@@ -836,18 +821,16 @@ export function StockList({ products, suppliers = [], warehouses, initialWarehou
           {filteredProducts.length > 0 ? (
             <>
               {/* Mobile Cards */}
-              <div className="grid gap-0 lg:hidden">
+              <div className="grid gap-0 py-4 lg:hidden">
                 {filteredProducts.map((product) => {
                   const displayStock = getDisplayStock(product, selectedWarehouseId);
-                  const fulfillmentMode = getWarehouseFulfillmentMode(product, selectedWarehouseId);
 
                   return (
                     <MobileStockCard
                       key={product.id}
                       product={product}
                       displayStock={displayStock}
-                      fulfillmentMode={fulfillmentMode}
-                      selectedWarehouseName={selectedWarehouseName}
+                      selectedWarehouseId={selectedWarehouseId}
                       onAdjust={handleAdjust}
                     />
                   );
@@ -860,8 +843,8 @@ export function StockList({ products, suppliers = [], warehouses, initialWarehou
                   <thead>
                     <tr style={{ backgroundColor: "#4A148C" }}>
                       {(role === "member"
-                        ? ["รหัสสินค้า", "ชื่อสินค้า", "หน่วย", "โหมด", "คงเหลือ"]
-                        : ["รหัสสินค้า", "ชื่อสินค้า", "หน่วย", "โหมด", "ต้นทุน / หน่วย", "คงเหลือ", "มูลค่าสต็อก"]
+                        ? ["รหัสสินค้า", "ชื่อสินค้า", "หน่วย", "โรงงาน", "คงเหลือ"]
+                        : ["รหัสสินค้า", "ชื่อสินค้า", "หน่วย", "โรงงาน", "ต้นทุน / หน่วย", "คงเหลือ", "มูลค่าสต็อก"]
                       ).map((label, i, arr) => (
                         <th
                           key={label}
@@ -881,14 +864,13 @@ export function StockList({ products, suppliers = [], warehouses, initialWarehou
                   <tbody>
                     {filteredProducts.map((product) => {
                       const displayStock = getDisplayStock(product, selectedWarehouseId);
-                      const fulfillmentMode = getWarehouseFulfillmentMode(product, selectedWarehouseId);
 
                       return (
                         <DesktopStockRow
                           key={product.id}
                           product={product}
                           displayStock={displayStock}
-                          fulfillmentMode={fulfillmentMode}
+                          selectedWarehouseId={selectedWarehouseId}
                           selectedWarehouseName={selectedWarehouseName}
                           onAdjust={handleAdjust}
                         />
@@ -918,8 +900,7 @@ export function StockList({ products, suppliers = [], warehouses, initialWarehou
       {/* Forms rendered inside the client component for instant response */}
       {canEditStock && receiveOpen && (
         <StockReceiveForm
-          products={products}
-          suppliers={suppliers}
+          products={stockProductsForWarehouse}
           warehouses={warehouses}
           returnHref={baseHref}
           defaultWarehouseId={selectedFormWarehouseId}
@@ -929,7 +910,7 @@ export function StockList({ products, suppliers = [], warehouses, initialWarehou
 
       {canEditStock && adjustOpen && (
         <StockAdjustForm
-          products={products}
+          products={stockProductsForWarehouse}
           warehouses={warehouses}
           returnHref={baseHref}
           defaultProductId={adjustProductId}
@@ -965,7 +946,7 @@ export function StockList({ products, suppliers = [], warehouses, initialWarehou
                   ตัวกรองสต็อก
                 </p>
                 <h3 className="mt-1 text-xl font-black text-slate-950">
-                  {mobileFilterDrawer === "category" ? "เลือกหมวดหมู่" : "เลือกแบรนด์"}
+                  {mobileFilterDrawer === "factory" ? "เลือกโรงงาน" : "เลือกแบรนด์"}
                 </h3>
               </div>
               <button
@@ -979,38 +960,38 @@ export function StockList({ products, suppliers = [], warehouses, initialWarehou
             </header>
 
             <div className="min-h-0 flex-1 overflow-y-auto px-5 py-2">
-              {mobileFilterDrawer === "category" ? (
+              {mobileFilterDrawer === "factory" ? (
                 <>
                   <button
                     type="button"
                     onClick={() => {
-                      handleCategorySelect("__all__");
+                      handleFactorySelect("__all__");
                       closeMobileFilterDrawer();
                     }}
                     className={`flex min-h-14 w-full items-center justify-between border-b border-[#E1BEE7]/70 text-left text-base font-black ${
-                      selectedCategory === "__all__" ? "text-[#4A148C]" : "text-slate-950"
+                      selectedFactory === "__all__" ? "text-[#4A148C]" : "text-slate-950"
                     }`}
                   >
-                    ทุกหมวดหมู่
-                    {selectedCategory === "__all__" ? (
+                    ทุกโรงงาน
+                    {selectedFactory === "__all__" ? (
                       <span className="h-2.5 w-2.5 rounded-full bg-[#4A148C]" />
                     ) : null}
                   </button>
 
-                  {categoryOptions.map((c) => (
+                  {factoryOptions.map((factory) => (
                     <button
-                      key={c}
+                      key={factory}
                       type="button"
                       onClick={() => {
-                        handleCategorySelect(c);
+                        handleFactorySelect(factory);
                         closeMobileFilterDrawer();
                       }}
                       className={`flex min-h-14 w-full items-center justify-between border-b border-[#E1BEE7]/70 text-left text-base font-black ${
-                        selectedCategory === c ? "text-[#4A148C]" : "text-slate-950"
+                        selectedFactory === factory ? "text-[#4A148C]" : "text-slate-950"
                       }`}
                     >
-                      {c}
-                      {selectedCategory === c ? (
+                      {factory}
+                      {selectedFactory === factory ? (
                         <span className="h-2.5 w-2.5 rounded-full bg-[#4A148C]" />
                       ) : null}
                     </button>

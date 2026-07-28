@@ -34,6 +34,8 @@ export type StockProductOption = {
   }[];
   warehouseModes: {
     mode: ProductWarehouseFulfillmentMode;
+    supplierId: string | null;
+    supplierName: string | null;
     warehouseId: string;
   }[];
   categoryName: string | null;
@@ -113,6 +115,8 @@ type ProductRow = {
   product_warehouse_fulfillment_modes: Array<{
     warehouse_id: string;
     mode: string;
+    supplier_id: string | null;
+    suppliers: { name: string | null } | Array<{ name: string | null }> | null;
   }>;
 };
 
@@ -328,18 +332,26 @@ export const getStockDashboardData = cache(
       categoriesResult,
       brandsResult,
     ] = await Promise.all([
-      (admin as any).from("products")
+      (admin as unknown as { from: (table: string) => {
+        select: (columns: string) => {
+          eq: (column: string, value: string) => {
+            order: (column: string, options: { ascending: boolean }) => {
+              order: (column: string, options: { ascending: boolean }) => Promise<{ data: unknown; error: { message?: string } | null }>;
+            };
+          };
+        };
+      } }).from("products")
         .select(`
           id, sku, name, cost_price, stock_quantity, reserved_quantity, unit, is_active, display_order, metadata,
           product_category_items(product_categories(id, name)),
           product_images(public_url, sort_order),
           product_sale_units(id, unit_label, base_unit_quantity, is_active, is_default, sort_order, cost_mode, fixed_cost_price),
           product_warehouse_stocks(warehouse_id, stock_quantity, reserved_quantity),
-          product_warehouse_fulfillment_modes(warehouse_id, mode)
+          product_warehouse_fulfillment_modes(warehouse_id, mode, supplier_id, suppliers(name))
         `)
         .eq("organization_id", organizationId)
         .order("display_order", { ascending: true })
-        .order("sku", { ascending: true }) as Promise<any>,
+        .order("sku", { ascending: true }),
       movementsPromise,
       admin.from("suppliers")
         .select("id, name, supplier_code")
@@ -378,13 +390,14 @@ export const getStockDashboardData = cache(
       };
     }
 
-    const products = (productsResult.data ?? []) as any as ProductRow[];
+    const products = (productsResult.data ?? []) as unknown as ProductRow[];
     const movements = (movementsResult.data ?? []) as MovementRow[];
     const suppliers = (suppliersResult.data ?? []) as SupplierRow[];
     const categories = (categoriesResult.data ?? []) as Array<{ id: string; sort_order: number | string }>;
     const brands = (brandsResult.data ?? []) as Array<{ name: string; sort_order: number | string }>;
 
     const productMap = new Map(products.map((product) => [product.id, product]));
+    const supplierNameById = new Map(suppliers.map((supplier) => [supplier.id, supplier.name]));
 
     const mappedProducts = products.map((product) => {
       const baseCostPrice = Number(product.cost_price);
@@ -416,9 +429,15 @@ export const getStockDashboardData = cache(
         .filter(Boolean) as string[];
 
       const warehouseModes = (product.product_warehouse_fulfillment_modes ?? []).map((row) => {
-        const mode: ProductWarehouseFulfillmentMode = row.mode === "fresh" ? "fresh" : "stock";
+        const mode: ProductWarehouseFulfillmentMode =
+          row.mode === "fresh" || row.mode === "disabled" ? row.mode : "stock";
+        const modeSupplierId = row.supplier_id ?? null;
+        const suppliers = row.suppliers;
+        const supplier = Array.isArray(suppliers) ? suppliers[0] : suppliers;
         return {
           mode,
+          supplierId: modeSupplierId,
+          supplierName: supplier?.name?.trim() || (modeSupplierId ? supplierNameById.get(modeSupplierId)?.trim() : null) || null,
           warehouseId: row.warehouse_id,
         };
       });

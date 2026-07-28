@@ -403,7 +403,8 @@ export async function getPendingLineOrders(
   let query = admin
     .from<PendingOrderRow>("line_pending_orders")
     .select(
-      "id, line_order_customer_id, line_user_id, line_display_name, line_picture_url, order_date, created_at, status, converted_order_id",
+      `id, line_order_customer_id, line_user_id, line_display_name, line_picture_url, order_date, created_at, status, converted_order_id,
+       line_pending_order_items(id, pending_order_id, product_id, product_sale_unit_id, sale_unit_label, sale_unit_ratio, quantity, quantity_in_base_unit, sort_order, products(name, sku, unit))`,
     )
     .eq("organization_id", organizationId)
     .eq("status", "pending_link");
@@ -426,40 +427,35 @@ export async function getPendingLineOrders(
     throw new Error(error.message ?? "Failed to load pending LINE orders.");
   }
 
-  const rows = pendingOrders ?? [];
+  const rows = (pendingOrders ?? []) as (PendingOrderRow & {
+    line_pending_order_items:
+      | (PendingItemRow & {
+          products: { name: string; sku: string; unit: string } | null;
+        })[]
+      | null;
+  })[];
   if (rows.length === 0) {
     return [];
   }
 
-  const pendingIds = rows.map((row) => row.id);
-  const { data: items } = await admin
-    .from<PendingItemRow>("line_pending_order_items")
-    .select("id, pending_order_id, product_id, product_sale_unit_id, sale_unit_label, sale_unit_ratio, quantity, quantity_in_base_unit, sort_order")
-    .in("pending_order_id", pendingIds)
-    .order("sort_order", { ascending: true });
-
-  const productIds = Array.from(new Set((items ?? []).map((item) => item.product_id)));
-  const { data: products } = productIds.length
-    ? await admin
-        .from<ProductRow>("products")
-        .select("id, name, sku, unit, cost_price, reserved_quantity, stock_quantity")
-        .in("id", productIds)
-    : { data: [] as ProductRow[] | null };
-
-  const productById = new Map((products ?? []).map((product) => [product.id, product]));
+  // Items arrive embedded in a single round trip; sort_order ordering is
+  // reapplied here to match the previous .order("sort_order") query.
   const itemsByPendingId = new Map<string, PendingLineOrderItem[]>();
-  for (const item of items ?? []) {
-    const product = productById.get(item.product_id);
-    const list = itemsByPendingId.get(item.pending_order_id) ?? [];
-    list.push({
-      id: item.id,
-      productId: item.product_id,
-      productName: product?.name ?? "-",
-      quantity: Number(item.quantity) || 0,
-      saleUnitLabel: product?.unit ?? item.sale_unit_label,
-      sku: product?.sku ?? "-",
-    });
-    itemsByPendingId.set(item.pending_order_id, list);
+  for (const row of rows) {
+    const items = [...(row.line_pending_order_items ?? [])].sort(
+      (a, b) => Number(a.sort_order) - Number(b.sort_order),
+    );
+    itemsByPendingId.set(
+      row.id,
+      items.map((item) => ({
+        id: item.id,
+        productId: item.product_id,
+        productName: item.products?.name ?? "-",
+        quantity: Number(item.quantity) || 0,
+        saleUnitLabel: item.products?.unit ?? item.sale_unit_label,
+        sku: item.products?.sku ?? "-",
+      })),
+    );
   }
 
   const search = opts.searchTerm?.trim().toLocaleLowerCase("th") ?? "";

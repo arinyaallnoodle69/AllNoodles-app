@@ -118,7 +118,7 @@ export async function GET() {
         const row = modeByProductWarehouse.get(`${product.id}:${warehouse.id}`);
         return [
           { value: modeLabel(row?.mode ?? "stock") },
-          { value: row?.mode === "fresh" ? (row.suppliers?.name ?? "") : "" },
+          { value: row?.mode === "disabled" ? "" : (row?.suppliers?.name ?? "") },
         ];
       }),
     ]),

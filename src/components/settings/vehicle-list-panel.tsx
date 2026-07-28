@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   useEffect,
@@ -46,6 +45,7 @@ import {
 } from "lucide-react";
 import { deleteVehicleAction, updateVehicleOrderAction } from "@/app/settings/vehicles/actions";
 import type { SettingsVehicle } from "@/lib/settings/admin";
+import { useVehicleModal } from "@/components/settings/vehicle-modal";
 import {
   SettingsEmptyState,
   SettingsPanel,
@@ -56,7 +56,7 @@ type VehicleListPanelProps = {
   vehicles: SettingsVehicle[];
 };
 
-// ─── Customer count button ────────────────────────────────────────────────────
+// Customer count button
 
 function CustomerCountButton({
   onClick,
@@ -79,16 +79,17 @@ function CustomerCountButton({
   );
 }
 
-// ─── Delete / action buttons ──────────────────────────────────────────────────
+// Delete / action buttons
 
-function ActionButtons({ vehicleId }: { vehicleId: string }) {
+function ActionButtons({ vehicle }: { vehicle: SettingsVehicle }) {
   const router = useRouter();
+  const { openEdit } = useVehicleModal();
   const [isDeleting, setIsDeleting] = useState(false);
 
   async function handleDelete() {
     if (!window.confirm("ต้องการลบรถคันนี้ใช่ไหม?")) return;
     setIsDeleting(true);
-    const result = await deleteVehicleAction(vehicleId);
+    const result = await deleteVehicleAction(vehicle.id);
     if (result.error) {
       alert(result.error);
     } else {
@@ -99,13 +100,14 @@ function ActionButtons({ vehicleId }: { vehicleId: string }) {
 
   return (
     <div className="flex items-center gap-2">
-      <Link
-        href={`/settings/vehicles?edit=${vehicleId}`}
+      <button
+        type="button"
+        onClick={() => openEdit(vehicle)}
         className="inline-flex items-center gap-1.5 rounded-lg border border-[#E1BEE7] bg-white px-3 py-1.5 text-xs font-black text-[#4A148C] transition hover:border-[#EA80FC] hover:bg-[#F3E5F5] active:scale-95"
       >
         <PencilLine className="h-3.5 w-3.5" strokeWidth={2.2} />
         แก้ไข
-      </Link>
+      </button>
 
       <button
         type="button"
@@ -120,7 +122,7 @@ function ActionButtons({ vehicleId }: { vehicleId: string }) {
   );
 }
 
-// ─── Mobile card ──────────────────────────────────────────────────────────────
+// Mobile card
 
 type MobileVehicleCardProps = {
   vehicle: SettingsVehicle;
@@ -189,7 +191,7 @@ function MobileVehicleCard({
           </div>
 
           <div className="mt-4">
-            <ActionButtons vehicleId={vehicle.id} />
+            <ActionButtons vehicle={vehicle} />
           </div>
         </div>
       </div>
@@ -197,7 +199,7 @@ function MobileVehicleCard({
   );
 }
 
-// ─── Sortable mobile card ─────────────────────────────────────────────────────
+// Sortable mobile card
 
 function SortableMobileVehicleCard({
   vehicle,
@@ -242,7 +244,7 @@ function SortableMobileVehicleCard({
   );
 }
 
-// ─── Desktop row ──────────────────────────────────────────────────────────────
+// Desktop row
 
 type DesktopVehicleRowProps = {
   vehicle: SettingsVehicle;
@@ -304,13 +306,13 @@ function DesktopVehicleRow({
         </span>
       </td>
       <td className="px-6 py-4">
-        <ActionButtons vehicleId={vehicle.id} />
+        <ActionButtons vehicle={vehicle} />
       </td>
     </tr>
   );
 }
 
-// ─── Sortable desktop row ─────────────────────────────────────────────────────
+// Sortable desktop row
 
 function SortableDesktopVehicleRow({
   vehicle,
@@ -356,7 +358,7 @@ function SortableDesktopVehicleRow({
   );
 }
 
-// ─── Main panel ───────────────────────────────────────────────────────────────
+// Main panel
 
 export function VehicleListPanel({ vehicles }: VehicleListPanelProps) {
   const [orderedVehicles, setOrderedVehicles] = useState(vehicles);
@@ -544,7 +546,7 @@ export function VehicleListPanel({ vehicles }: VehicleListPanelProps) {
             </div>
           ) : (
             <>
-              {/* ── Mobile list ── */}
+              {/* Mobile list */}
               <div className="divide-y divide-slate-100 sm:hidden">
                 {enableMobileReorder ? (
                   <DndContext
@@ -610,7 +612,7 @@ export function VehicleListPanel({ vehicles }: VehicleListPanelProps) {
                 ) : null}
               </div>
 
-              {/* ── Desktop table ── */}
+              {/* Desktop table */}
               <div className="hidden overflow-x-auto sm:block">
                 <DndContext
                   id="vehicle-list-desktop-dnd"
@@ -695,7 +697,7 @@ export function VehicleListPanel({ vehicles }: VehicleListPanelProps) {
         </SettingsPanelBody>
       </SettingsPanel>
 
-      {/* ── Customer list modal ── */}
+      {/* Customer list modal */}
       {selectedVehicle ? (
         <div className="fixed inset-0 z-[220] flex items-end justify-center bg-slate-950/50 p-0 backdrop-blur-sm sm:items-center sm:p-4">
           <div className="flex max-h-[92vh] w-full max-w-3xl flex-col rounded-t-[32px] bg-white shadow-[0_24px_80px_rgba(15,23,42,0.25)] sm:rounded-[32px]">

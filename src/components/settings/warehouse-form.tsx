@@ -46,6 +46,8 @@ export type WarehouseFormItem = {
 type WarehouseFormProps = {
   initialWarehouse?: WarehouseFormItem;
   returnHref: string;
+  /** When provided, closing happens instantly via callback instead of a URL round trip. */
+  onClose?: () => void;
 };
 
 const initialState: WarehouseActionState = {
@@ -54,7 +56,7 @@ const initialState: WarehouseActionState = {
   status: "idle",
 };
 
-export function WarehouseForm({ initialWarehouse, returnHref }: WarehouseFormProps) {
+export function WarehouseForm({ initialWarehouse, returnHref, onClose }: WarehouseFormProps) {
   const router = useRouter();
   const action = initialWarehouse
     ? updateWarehouseAction.bind(null, initialWarehouse.id)
@@ -85,14 +87,25 @@ export function WarehouseForm({ initialWarehouse, returnHref }: WarehouseFormPro
   const isEditMode = Boolean(initialWarehouse);
 
   function closeModal() {
-    router.replace(returnHref);
+    if (onClose) {
+      onClose();
+    } else {
+      router.replace(returnHref);
+    }
   }
 
   const handleSuccess = useEffectEvent(() => {
-    startTransition(() => {
-      router.replace(returnHref);
-      router.refresh();
-    });
+    if (onClose) {
+      onClose();
+      startTransition(() => {
+        router.refresh();
+      });
+    } else {
+      startTransition(() => {
+        router.replace(returnHref);
+        router.refresh();
+      });
+    }
   });
 
   useEffect(() => {
