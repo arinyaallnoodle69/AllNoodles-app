@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath, revalidateTag } from "next/cache";
+import { revalidatePath, revalidateTag, updateTag } from "next/cache";
 import { after } from "next/server";
 import { requireAppRole, requireAnyRole } from "@/lib/auth/authorization";
 import { linkLineCustomerAndConvertPendingOrders } from "@/lib/orders/line-pending";
@@ -24,6 +24,9 @@ function invalidateIncomingOrderCaches(organizationId: string) {
   revalidateTag(`orders-${organizationId}`, "max");
   revalidateTag(`settings-${organizationId}`, "max");
   revalidateTag(`stock-${organizationId}`, "max");
+  updateTag(`orders-${organizationId}`);
+  updateTag(`settings-${organizationId}`);
+  updateTag(`stock-${organizationId}`);
   revalidatePath("/orders/incoming");
   revalidatePath("/orders");
   revalidatePath("/billing");
@@ -545,8 +548,7 @@ export async function updateCustomerVehicleFromIncomingOrderAction(
       .eq("organization_id", session.organizationId);
   }
 
-  revalidatePath("/orders/incoming");
-  revalidatePath("/orders");
+  invalidateIncomingOrderCaches(session.organizationId);
   revalidatePath("/settings/customers");
   return { success: true };
 }
@@ -2137,9 +2139,7 @@ export async function deleteOrderAction(formData: FormData): Promise<ActionResul
     }
   }
 
-  revalidatePath("/orders/incoming");
-  revalidatePath("/orders");
-  revalidatePath("/billing");
+  invalidateIncomingOrderCaches(session.organizationId);
   return { success: true };
 }
 
@@ -2349,9 +2349,7 @@ export async function deleteOrderCascadeActionV2(formData: FormData): Promise<Ac
     }
   }
 
-  revalidatePath("/orders/incoming");
-  revalidatePath("/orders");
-  revalidatePath("/billing");
+  invalidateIncomingOrderCaches(session.organizationId);
   return { success: true };
 }
 
@@ -2627,9 +2625,7 @@ export async function deleteOrderCascadeActionV3(formData: FormData): Promise<Ac
     }
   }
 
-  revalidatePath("/orders/incoming");
-  revalidatePath("/orders");
-  revalidatePath("/billing");
+  invalidateIncomingOrderCaches(session.organizationId);
   return { success: true };
 }
 

@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { fetchIncomingOrderModalDataAction } from "@/app/orders/incoming/actions";
+import { fetchDashboardStockProductsAction } from "@/app/dashboard/actions";
 import { LineAppIcon } from "@/components/icons/line-app-icon";
 import { useCreateOrder } from "@/components/orders/create-order-context";
 import { IncomingOrderModal } from "@/components/orders/incoming-order-modal";
@@ -33,13 +34,11 @@ import type { DashboardOverview } from "@/lib/dashboard/overview";
 import type { IncomingOrderListItem, OrderDetailData } from "@/lib/orders/detail";
 import type { OrderProductOption } from "@/lib/orders/manage";
 import type { OrderStoreStatusSummary } from "@/lib/orders/store-status";
-import type { StockProductOption, StockSupplierOption } from "@/lib/stock/admin";
+import type { StockProductOption } from "@/lib/stock/admin";
 
 type Props = {
   overview: DashboardOverview;
   storeStatusSummary: OrderStoreStatusSummary;
-  stockProducts: StockProductOption[];
-  stockSuppliers: StockSupplierOption[];
   stockWarehouses: {
     id: string;
     name: string;
@@ -225,7 +224,6 @@ function formatThaiDateTime(value: string) {
 export function DashboardClient({
   overview,
   storeStatusSummary,
-  stockProducts,
   stockWarehouses,
   today,
   orderDate,
@@ -239,6 +237,20 @@ export function DashboardClient({
   const [isNavigating, startTransition] = useTransition();
   const { open: openCreateOrder } = useCreateOrder();
   const [isStockModalOpen, setIsStockModalOpen] = useState(false);
+  const [stockProducts, setStockProducts] = useState<StockProductOption[] | null>(null);
+  const [isStockProductsLoading, setIsStockProductsLoading] = useState(false);
+
+  // The stock-receive product catalog is heavy — load it on demand the first
+  // time the user opens the modal, never on the initial dashboard render.
+  function openStockModal() {
+    setIsStockModalOpen(true);
+    if (stockProducts !== null || isStockProductsLoading) return;
+    setIsStockProductsLoading(true);
+    fetchDashboardStockProductsAction()
+      .then((loaded) => setStockProducts(loaded))
+      .catch(() => setStockProducts([]))
+      .finally(() => setIsStockProductsLoading(false));
+  }
   const [isLineOrdersDrawerOpen, setIsLineOrdersDrawerOpen] = useState(false);
   const [isLineOrdersDrawerClosing, setIsLineOrdersDrawerClosing] = useState(false);
   const [lineOrderModal, setLineOrderModal] = useState<LineOrderModalState | null>(null);
@@ -497,7 +509,7 @@ export function DashboardClient({
             </button>
 
             <button
-              onClick={() => setIsStockModalOpen(true)}
+              onClick={openStockModal}
               className="flex min-h-[4.25rem] flex-row items-center justify-center gap-3 rounded-[1rem] border border-[#EA80FC]/30 bg-[#EA80FC] px-4 py-4 text-[#4A148C] shadow-[0_10px_24px_rgba(234,128,252,0.22)] transition-transform active:scale-95"
             >
               <Truck className="h-5 w-5 shrink-0" strokeWidth={2.2} />
@@ -1130,12 +1142,18 @@ export function DashboardClient({
       ) : null}
 
       {isStockModalOpen ? (
-        <StockReceiveForm
-          products={stockProducts}
-          warehouses={stockWarehouses}
-          returnHref="/dashboard"
-          onClose={() => setIsStockModalOpen(false)}
-        />
+        stockProducts === null ? (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/45 p-3">
+            <Loader2 className="h-8 w-8 animate-spin text-white" strokeWidth={2.4} />
+          </div>
+        ) : (
+          <StockReceiveForm
+            products={stockProducts}
+            warehouses={stockWarehouses}
+            returnHref="/dashboard"
+            onClose={() => setIsStockModalOpen(false)}
+          />
+        )
       ) : null}
 
       {expandedOrderId && !lineOrderModal ? (

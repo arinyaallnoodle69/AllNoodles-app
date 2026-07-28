@@ -846,44 +846,77 @@ export async function linkLineCustomerAndConvertPendingOrders(input: {
   const orderNumbers: string[] = [];
   const receiptJobs: Promise<{ orderNumber: string; receiptError: string | null }>[] = [];
 
-  for (const order of allPendingOrders ?? []) {
-    const convertedOrder = await convertSinglePendingOrder({
-      admin,
-      customer,
-      lineUserId: pendingOrder.line_user_id,
-      order,
-      organizationId: input.organizationId,
-      userId: input.userId,
-    });
-    if (convertedOrder) {
-      orderNumbers.push(convertedOrder.orderNumber);
-      
-      const payload = convertedOrder.receiptPayload;
-      receiptJobs.push(
-        (async () => {
-          let receiptError: string | null = null;
-          try {
-            const receiptResult = await generateUploadAndNotifyCustomerReceiptImage(payload);
-            if ("error" in receiptResult) {
-              receiptError = receiptResult.error;
-              console.error("[line-pending:receipt-image]", {
-                error: receiptResult.error,
-                lineUserId: pendingOrder.line_user_id,
-                orderNumber: convertedOrder.orderNumber,
-              });
-            }
-          } catch (error) {
-            receiptError = error instanceof Error ? error.message : String(error);
+  const pendingList = allPendingOrders ?? [];
+
+  // Conversions that share (customer, warehouse, order_date) merge into one
+  // order and accumulate totals by reading the previous conversion's writes,
+  // so they must stay sequential. Different order_dates are independent —
+  // run those groups in bounded parallel batches to avoid a long serial wait.
+  const groupsByOrderDate = new Map<string, PendingOrderRow[]>();
+  for (const order of pendingList) {
+    const key = order.order_date ?? "";
+    const group = groupsByOrderDate.get(key) ?? [];
+    group.push(order);
+    groupsByOrderDate.set(key, group);
+  }
+
+  type ConvertedOrder = NonNullable<Awaited<ReturnType<typeof convertSinglePendingOrder>>>;
+  const convertedByOrderId = new Map<string, ConvertedOrder>();
+
+  const convertGroupSequentially = async (group: PendingOrderRow[]) => {
+    for (const order of group) {
+      const convertedOrder = await convertSinglePendingOrder({
+        admin,
+        customer,
+        lineUserId: pendingOrder.line_user_id,
+        order,
+        organizationId: input.organizationId,
+        userId: input.userId,
+      });
+      if (convertedOrder) {
+        convertedByOrderId.set(order.id, convertedOrder);
+      }
+    }
+  };
+
+  const DATE_GROUP_BATCH = 5;
+  const conversionGroups = Array.from(groupsByOrderDate.values());
+  for (let i = 0; i < conversionGroups.length; i += DATE_GROUP_BATCH) {
+    await Promise.all(
+      conversionGroups.slice(i, i + DATE_GROUP_BATCH).map(convertGroupSequentially),
+    );
+  }
+
+  for (const order of pendingList) {
+    const convertedOrder = convertedByOrderId.get(order.id);
+    if (!convertedOrder) continue;
+    orderNumbers.push(convertedOrder.orderNumber);
+
+    const payload = convertedOrder.receiptPayload;
+    receiptJobs.push(
+      (async () => {
+        let receiptError: string | null = null;
+        try {
+          const receiptResult = await generateUploadAndNotifyCustomerReceiptImage(payload);
+          if ("error" in receiptResult) {
+            receiptError = receiptResult.error;
             console.error("[line-pending:receipt-image]", {
-              error,
+              error: receiptResult.error,
               lineUserId: pendingOrder.line_user_id,
               orderNumber: convertedOrder.orderNumber,
             });
           }
-          return { orderNumber: convertedOrder.orderNumber, receiptError };
-        })()
-      );
-    }
+        } catch (error) {
+          receiptError = error instanceof Error ? error.message : String(error);
+          console.error("[line-pending:receipt-image]", {
+            error,
+            lineUserId: pendingOrder.line_user_id,
+            orderNumber: convertedOrder.orderNumber,
+          });
+        }
+        return { orderNumber: convertedOrder.orderNumber, receiptError };
+      })()
+    );
   }
 
   const receiptResults = await Promise.all(receiptJobs);

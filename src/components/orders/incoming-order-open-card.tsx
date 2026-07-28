@@ -106,7 +106,7 @@ export const IncomingOrderOpenCard = memo(function IncomingOrderOpenCard({
       <div className="pointer-events-none absolute bottom-0 left-0 top-0 w-1 bg-[#4A148C]" />
       <div className="flex items-start gap-3">
         <div className="min-w-0 flex-1">
-          <p className="line-clamp-2 text-[1.18rem] font-bold leading-tight text-slate-950">
+          <p className="line-clamp-2 py-0.5 text-[1.18rem] font-bold leading-[1.42] text-slate-950">
             <span translate="no" className="incoming-order-customer-code">{customerCode}</span> - <span className="incoming-order-customer-name">{customerName}</span>
           </p>
           <div className="mt-1.5 flex flex-wrap items-center gap-2">

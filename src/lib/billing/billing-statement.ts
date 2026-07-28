@@ -271,24 +271,33 @@ async function ensureConfirmedDeliveryNotesForRange(
 
   const { syncDeliveryNoteForOrder } = await import("@/lib/orders/sync-delivery-note");
 
-  for (const [key, orderId] of ordersToSync) {
-    const syncResult = await syncDeliveryNoteForOrder(supabase as never, {
-      orderId,
-      organizationId,
-      userId: actorUserId,
-      skipRevalidate: true,
-    });
+  // ordersToSync dedupes by customer_id::order_date, so no two entries share
+  // the same delivery note. Sync them in small parallel batches instead of one
+  // by one to avoid a long sequential round-trip chain.
+  const SYNC_BATCH_SIZE = 5;
+  const syncEntries = Array.from(ordersToSync.entries());
+  for (let i = 0; i < syncEntries.length; i += SYNC_BATCH_SIZE) {
+    await Promise.all(
+      syncEntries.slice(i, i + SYNC_BATCH_SIZE).map(async ([key, orderId]) => {
+        const syncResult = await syncDeliveryNoteForOrder(supabase as never, {
+          orderId,
+          organizationId,
+          userId: actorUserId,
+          skipRevalidate: true,
+        });
 
-    if ("error" in syncResult) {
-      console.error("[billing] failed to repair delivery note before billing", {
-        error: syncResult.error,
-        key,
-        orderId,
-      });
-      continue;
-    }
+        if ("error" in syncResult) {
+          console.error("[billing] failed to repair delivery note before billing", {
+            error: syncResult.error,
+            key,
+            orderId,
+          });
+          return;
+        }
 
-    existingKeys.add(key);
+        existingKeys.add(key);
+      }),
+    );
   }
 }
 

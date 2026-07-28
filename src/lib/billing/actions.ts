@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag, updateTag } from "next/cache";
 import { revalidateReportPages } from "@/lib/reports/revalidate-report-pages";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import type { SnapshotRow } from "@/lib/billing/billing-statement";
@@ -266,6 +266,8 @@ export async function recordBillingHistoryAction(params: {
   }
 
   revalidatePath("/billing");
+  revalidateTag(`orders-${params.organizationId}`, "max");
+  updateTag(`orders-${params.organizationId}`);
   revalidateReportPages();
   return { success: true, results };
 }
@@ -372,6 +374,8 @@ export async function syncBillingSnapshotsForDeliveryNumbers(params: {
     if (updated > 0) {
       revalidatePath("/billing");
     }
+    revalidateTag(`orders-${params.organizationId}`, "max");
+    updateTag(`orders-${params.organizationId}`);
     revalidateReportPages();
   }
 

@@ -110,7 +110,10 @@ type ProductWarehouseFulfillmentModeRow = {
 
 type DeliveryNoteRow = {
   created_at?: string;
+  customer_id?: string | null;
+  delivery_date?: string | null;
   delivery_number: string;
+  id?: string;
   order_id?: string | null;
   status?: string;
   vehicle_id?: string | null;
@@ -456,6 +459,13 @@ export type IncomingOrdersBundle = {
   orders: IncomingOrderListItem[];
   productImageById: Record<string, string>;
   summaryItems: IncomingOrderSummaryItemRow[];
+  confirmedDeliveries: IncomingOrderDeliveryRow[];
+};
+
+export type IncomingOrderDeliveryRow = {
+  id: string;
+  order_id: string;
+  delivery_number: string;
 };
 
 // Single-round-trip select: orders + customer + delivery notes + items (+ product)
@@ -463,7 +473,7 @@ export type IncomingOrdersBundle = {
 const INCOMING_ORDERS_SELECT = `
   id, customer_id, order_number, order_date, status, fulfillment_status, total_amount, metadata, created_at, notes, warehouse_id, assigned_vehicle_id,
   customers(id, customer_code, name, address, default_vehicle_id, sort_order),
-  delivery_notes(delivery_number, order_id, vehicle_id, status, created_at),
+  delivery_notes(id, delivery_number, order_id, customer_id, delivery_date, vehicle_id, status, created_at),
   order_items(product_id, quantity, sale_unit_label, products(name, sku, display_order))
 `;
 
@@ -544,6 +554,7 @@ export async function getIncomingOrdersBundle(
 
   const customerMap = new Map<string, CustomerRow>();
   const activeDeliveryNoteByOrderId = new Map<string, DeliveryNoteRow>();
+  const confirmedDeliveryById = new Map<string, IncomingOrderDeliveryRow>();
   const orderProductSets = new Map<string, Set<string>>();
   const summaryItems: IncomingOrderSummaryItemRow[] = [];
   const summaryProductIds = new Set<string>();
@@ -564,6 +575,20 @@ export async function getIncomingOrdersBundle(
         !activeDeliveryNoteByOrderId.has(note.order_id)
       ) {
         activeDeliveryNoteByOrderId.set(note.order_id, note);
+      }
+      // Confirmed notes linked to an order — replaces the extra per-load
+      // chunked delivery_notes query the page used to fire.
+      if (
+        note.id &&
+        note.order_id &&
+        note.status === "confirmed" &&
+        !confirmedDeliveryById.has(note.id)
+      ) {
+        confirmedDeliveryById.set(note.id, {
+          id: note.id,
+          order_id: note.order_id,
+          delivery_number: note.delivery_number,
+        });
       }
     }
 
@@ -676,6 +701,7 @@ export async function getIncomingOrdersBundle(
     orders: mappedOrders,
     productImageById,
     summaryItems,
+    confirmedDeliveries: Array.from(confirmedDeliveryById.values()),
   };
 }
 

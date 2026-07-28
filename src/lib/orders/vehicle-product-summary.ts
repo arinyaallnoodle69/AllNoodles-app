@@ -139,7 +139,13 @@ function formatDateLabel(date: string, endDate: string) {
 
 function getActiveDeliveryNote(order: OrderRow) {
   const deliveryNotes = Array.isArray(order.delivery_notes) ? order.delivery_notes : order.delivery_notes ? [order.delivery_notes] : [];
-  return deliveryNotes.find((note: { status: string }) => note.status !== "cancelled") as
+  // Same "first non-cancelled note by created_at" semantics used in
+  // lib/orders/detail.ts — pick deterministically when an order has
+  // multiple notes instead of relying on database row order.
+  const sortedDeliveryNotes = [...deliveryNotes].sort((a: { created_at?: string | null }, b: { created_at?: string | null }) =>
+    String(a.created_at ?? "").localeCompare(String(b.created_at ?? "")),
+  );
+  return sortedDeliveryNotes.find((note: { status: string }) => note.status !== "cancelled") as
     | { status: string; vehicle_id: string | null; warehouse_id?: string | null; vehicles?: unknown; warehouses?: unknown }
     | undefined;
 }
@@ -221,7 +227,7 @@ export async function getVehicleProductSummaryData(
         assigned_vehicle_id,
         customer_id,
         customers!inner(default_vehicle_id, vehicles(id, name)),
-        delivery_notes!order_id(vehicle_id, status, vehicles(id, name)),
+        delivery_notes!order_id(vehicle_id, status, created_at, vehicles(id, name)),
         order_items(product_id, quantity_in_base_unit)
       `)
       .eq("organization_id", organizationId)
@@ -336,7 +342,7 @@ export async function getFactoryOrderSheetData(
         customer_id,
         warehouse_id,
         customers!inner(default_vehicle_id, default_warehouse_id, vehicles(id, name), warehouses(id, name)),
-        delivery_notes!order_id(vehicle_id, warehouse_id, status, vehicles(id, name), warehouses(id, name)),
+        delivery_notes!order_id(vehicle_id, warehouse_id, status, created_at, vehicles(id, name), warehouses(id, name)),
         order_items(product_id, quantity_in_base_unit)
       `)
       .eq("organization_id", organizationId)

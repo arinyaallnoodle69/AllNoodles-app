@@ -42,6 +42,7 @@ type OrderCustomer = {
 };
 
 type DeliveryNoteRow = {
+  created_at?: string | null;
   vehicle_id: string | null;
   status: string;
   vehicles: unknown;
@@ -185,7 +186,7 @@ async function PackingListPage({ searchParams }: Props) {
       assigned_vehicle_id,
       order_date,
       customers!inner(id, name, customer_code, default_vehicle_id, vehicles(id, name)),
-      delivery_notes!order_id(vehicle_id, status, vehicles(id, name)),
+      delivery_notes!order_id(vehicle_id, status, created_at, vehicles(id, name)),
       order_items(
         product_id,
         quantity,
@@ -343,7 +344,13 @@ async function PackingListPage({ searchParams }: Props) {
           : order.delivery_notes
             ? [order.delivery_notes]
             : [];
-        const activeDeliveryNote = deliveryNotes.find((note) => note.status !== "cancelled");
+        // Same "first non-cancelled note by created_at" semantics used in
+        // lib/orders/detail.ts — an order can have multiple notes, so pick
+        // deterministically instead of relying on database row order.
+        const sortedDeliveryNotes = [...deliveryNotes].sort((a, b) =>
+          String(a.created_at ?? "").localeCompare(String(b.created_at ?? "")),
+        );
+        const activeDeliveryNote = sortedDeliveryNotes.find((note) => note.status !== "cancelled");
         const vehicleId =
           activeDeliveryNote?.vehicle_id ??
           order.assigned_vehicle_id ??

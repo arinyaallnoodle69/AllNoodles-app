@@ -72,18 +72,12 @@ async function DashboardDataContent({
         todayNetProfit: 0,
         todayCost: 0,
         submittedOrderCount: 0,
-        pendingDeliveryCount: 0,
-        pendingDeliveryAmount: 0,
-        monthDeliveredAmount: 0,
-        activeCustomerCount: 0,
         lowStockCount: 0,
       },
       recentOrders: [],
       dailyPerformanceRows: [],
       dailyPerformanceRangeStartDate: null,
       dailyPerformanceRangeEndDate: null,
-      stockProducts: [],
-      stockSuppliers: [],
       lineOrders: [],
     };
     storeStatusSummary = {
@@ -98,8 +92,6 @@ async function DashboardDataContent({
     <DashboardClient
       overview={overview}
       storeStatusSummary={storeStatusSummary}
-      stockProducts={overview.stockProducts}
-      stockSuppliers={overview.stockSuppliers}
       stockWarehouses={warehouses}
       today={today}
       orderDate={orderDate}

@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidateTag } from "next/cache";
+import { revalidateTag, updateTag } from "next/cache";
 import { requireAppRole } from "@/lib/auth/authorization";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { getOrderItemsForDelivery, getStoreOrdersForDelivery } from "@/lib/delivery/admin";
@@ -642,6 +642,9 @@ export async function createDeliveryNoteAction(
   revalidateTag(`orders-${session.organizationId}`, "max");
   revalidateTag(`stock-${session.organizationId}`, "max");
   revalidateTag(`settings-${session.organizationId}`, "max");
+  updateTag(`orders-${session.organizationId}`);
+  updateTag(`stock-${session.organizationId}`);
+  updateTag(`settings-${session.organizationId}`);
 
   const deliveryNumber = String(data);
   const { data: dnRow } = await admin
@@ -750,6 +753,9 @@ export async function createBatchDeliveryNotesAction(
     revalidateTag(`orders-${session.organizationId}`, "max");
     revalidateTag(`stock-${session.organizationId}`, "max");
     revalidateTag(`settings-${session.organizationId}`, "max");
+    updateTag(`orders-${session.organizationId}`);
+    updateTag(`stock-${session.organizationId}`);
+    updateTag(`settings-${session.organizationId}`);
   }
 
   return results;

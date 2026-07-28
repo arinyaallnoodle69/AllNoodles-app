@@ -23,7 +23,6 @@ import { getBilledDeliveryNumbersForRange } from "@/lib/billing/billing-statemen
 import { getPendingLineOrders } from "@/lib/orders/line-pending";
 import { getCustomersForOrder, getProductsForOrder, getVehiclesForOrder } from "@/lib/orders/manage";
 import { getDeliveryNoteSummariesForRange } from "@/lib/delivery/delivery-list";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { getActiveWarehouses } from "@/lib/warehouses";
 import { buildVehicleTransferDates } from "@/lib/orders/vehicle-transfer";
 import { IncomingOrdersDeliveryActions } from "@/components/orders/incoming-orders-delivery-actions";
@@ -156,7 +155,6 @@ async function PendingLineOrdersAsync({
 
 export default async function IncomingOrdersPage({ searchParams }: IncomingOrdersPageProps) {
   const session = await requireAnyRole(["admin", "member"]);
-  const admin = getSupabaseAdmin();
   const params = await searchParams;
   const orderDate = normalizeOrderDate(params.date);
   const endDate = params.endDate ? normalizeOrderDate(params.endDate) : orderDate;
@@ -240,8 +238,6 @@ export default async function IncomingOrdersPage({ searchParams }: IncomingOrder
     (!selectedWarehouseId || expandedDetail.warehouseId === selectedWarehouseId)
       ? expandedDetail
       : null;
-
-  const activeOrderIds = activeOrders.map((order) => order.id);
 
   const itemsByOrderId = new Map<string, IncomingOrderSummaryItemRow[]>();
   for (const row of summaryItems) {
@@ -357,37 +353,13 @@ export default async function IncomingOrdersPage({ searchParams }: IncomingOrder
   type DirectDeliveryRow = {
     id: string;
     order_id: string | null;
-    customer_id: string;
-    delivery_date: string;
     delivery_number: string;
   };
 
-  // Fetch direct delivery notes by activeOrderIds in chunks of 40 to solve any deliveryDate vs orderDate mismatches and URL limit errors.
-  // Chunks run in parallel so large order sets don't serialize into a waterfall.
-  const directDeliveries: DirectDeliveryRow[] = [];
-  if (activeOrderIds.length > 0) {
-    const orderIdChunks: string[][] = [];
-    for (let i = 0; i < activeOrderIds.length; i += 40) {
-      orderIdChunks.push(activeOrderIds.slice(i, i + 40));
-    }
-
-    const chunkResults = await Promise.all(
-      orderIdChunks.map((chunk) =>
-        admin
-          .from("delivery_notes")
-          .select("id, order_id, customer_id, delivery_date, delivery_number")
-          .eq("organization_id", session.organizationId)
-          .in("order_id", chunk)
-          .eq("status", "confirmed"),
-      ),
-    );
-
-    for (const { data, error } of chunkResults) {
-      if (!error && data) {
-        directDeliveries.push(...data);
-      }
-    }
-  }
+  // Confirmed delivery notes linked to the visible orders now arrive embedded
+  // in the orders bundle (single cached round trip) — the old per-load chunked
+  // delivery_notes query is gone.
+  const directDeliveries: DirectDeliveryRow[] = ordersBundle.confirmedDeliveries;
 
   const deliveryMap = new Map<string, string[]>();
   const deliveryIdMap = new Map<string, string[]>();

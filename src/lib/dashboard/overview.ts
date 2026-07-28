@@ -1,9 +1,9 @@
 import "server-only";
 
+import { cacheLife, cacheTag } from "next/cache";
 import { getTodayInBangkok } from "@/lib/orders/date";
 import { getRecentDailyPerformance } from "@/lib/reports/sales-overview";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
-import { getStockDashboardData, type StockProductOption, type StockSupplierOption } from "@/lib/stock/admin";
 import type { Json } from "@/types/database";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -14,10 +14,6 @@ export type DashboardKpi = {
   todayNetProfit: number;
   todayCost: number;
   submittedOrderCount: number;
-  pendingDeliveryCount: number;
-  pendingDeliveryAmount: number;
-  monthDeliveredAmount: number;
-  activeCustomerCount: number;
   lowStockCount: number;
 };
 
@@ -57,8 +53,6 @@ export type DashboardOverview = {
   dailyPerformanceRows: DashboardDailyPerformanceRow[];
   dailyPerformanceRangeStartDate: string | null;
   dailyPerformanceRangeEndDate: string | null;
-  stockProducts: StockProductOption[];
-  stockSuppliers: StockSupplierOption[];
   lineOrders: LineOrderOverviewItem[];
 };
 
@@ -120,12 +114,6 @@ function toNum(v: unknown): number {
   const n = Number(v ?? 0);
   return Number.isFinite(n) ? n : 0;
 }
-
-function firstOfMonth(iso: string) {
-  return iso.slice(0, 7) + "-01";
-}
-
-
 
 async function loadTodayNetProfit(
   organizationId: string,
@@ -212,55 +200,83 @@ async function loadTodayNetProfit(
   return { netProfit: totalRevenue - totalCost, totalCost, totalRevenue };
 }
 
+// Lightweight low-stock count — same formula as getStockDashboardData but
+// without the heavy product payload (images, sale units, modes, categories).
+async function loadLowStockCount(organizationId: string): Promise<number> {
+  const supabase = getSupabaseAdmin();
+
+  const [productsRes, warehouseStocksRes] = await Promise.all([
+    supabase.from("products")
+      .select("id, stock_quantity, reserved_quantity, is_active")
+      .eq("organization_id", organizationId),
+    supabase.from("product_warehouse_stocks")
+      .select("product_id, stock_quantity, reserved_quantity")
+      .eq("organization_id", organizationId),
+  ]);
+
+  if (productsRes.error || warehouseStocksRes.error) {
+    return 0;
+  }
+
+  const stocksByProductId = new Map<string, Array<{ stock_quantity: unknown; reserved_quantity: unknown }>>();
+  for (const row of (warehouseStocksRes.data ?? []) as Array<{
+    product_id: string;
+    stock_quantity: unknown;
+    reserved_quantity: unknown;
+  }>) {
+    const current = stocksByProductId.get(row.product_id) ?? [];
+    current.push(row);
+    stocksByProductId.set(row.product_id, current);
+  }
+
+  return ((productsRes.data ?? []) as Array<{
+    id: string;
+    stock_quantity: unknown;
+    reserved_quantity: unknown;
+    is_active: boolean;
+  }>).reduce((total, product) => {
+    if (!product.is_active) return total;
+    const warehouseStocks = stocksByProductId.get(product.id) ?? [];
+    if (warehouseStocks.length === 0) {
+      const availableQuantity = toNum(product.stock_quantity) - toNum(product.reserved_quantity);
+      return total + (availableQuantity <= 5 ? 1 : 0);
+    }
+    return total + warehouseStocks.filter((stock) => {
+      const availableQuantity = toNum(stock.stock_quantity) - toNum(stock.reserved_quantity);
+      return availableQuantity <= 5;
+    }).length;
+  }, 0);
+}
+
 // ─── Query ────────────────────────────────────────────────────────────────────
 
 export async function getDashboardOverview(organizationId: string): Promise<DashboardOverview> {
+  "use cache";
+  cacheLife({ revalidate: 30 });
+  cacheTag(`orders-${organizationId}`);
+  cacheTag(`settings-${organizationId}`);
+  cacheTag(`stock-${organizationId}`);
+
   const supabase = getSupabaseAdmin();
   const today = getTodayInBangkok();
-  const monthStart = firstOfMonth(today);
 
   const [
     todayOrdersRes,
-    pendingDeliveryRes,
-    monthDeliveredRes,
-    activeCustomerRes,
     recentOrdersRes,
-    stockDashboardRes,
+    lowStockCount,
     recentDailyPerformance,
     todayProfitSnapshot,
     pendingLineOrdersRes,
     lineSourceOrdersRes,
   ] = await Promise.all([
-    // 1. Today's submitted/confirmed orders
+    // 1. Today's submitted/confirmed orders (count only, computed on the DB side)
     supabase.from("orders")
-      .select("id, total_amount")
+      .select("id", { count: "exact", head: true })
       .eq("organization_id", organizationId)
       .eq("order_date", today)
       .in("status", ["submitted", "confirmed"]),
 
-    // 3. Pending delivery notes
-    supabase.from("delivery_notes")
-      .select("id, total_amount")
-      .eq("organization_id", organizationId)
-      .eq("status", "confirmed")
-      .eq("dispatch_status", "pending"),
-
-    // 3. This month's delivered amount
-    supabase.from("delivery_notes")
-      .select("total_amount")
-      .eq("organization_id", organizationId)
-      .eq("status", "confirmed")
-      .eq("dispatch_status", "delivered")
-      .gte("delivery_date", monthStart)
-      .lte("delivery_date", today),
-
-    // 4. Active customers
-    supabase.from("customers")
-      .select("id", { count: "exact", head: true })
-      .eq("organization_id", organizationId)
-      .eq("is_active", true),
-
-    // 5. Recent 5 orders
+    // 2. Recent 5 orders
     supabase.from("orders")
       .select("id, order_number, order_date, total_amount, status, customers!inner(name)")
       .eq("organization_id", organizationId)
@@ -268,8 +284,9 @@ export async function getDashboardOverview(organizationId: string): Promise<Dash
       .order("created_at", { ascending: false })
       .limit(5),
 
-    // 8. Stock dashboard data (for low stock count)
-    getStockDashboardData(organizationId, 0, 0),
+    // 8. Low stock count (lightweight — full product payload is lazy-loaded
+    // only when the stock-receive modal opens)
+    loadLowStockCount(organizationId),
 
     // 9. Recent daily performance for dashboard report section
     getRecentDailyPerformance(organizationId, 7, today),
@@ -295,9 +312,6 @@ export async function getDashboardOverview(organizationId: string): Promise<Dash
 
   // ── Process core KPIs ──────────────────────────────────────────────────────
 
-  const todayOrders = (todayOrdersRes.data ?? []) as { id: string; total_amount: unknown }[];
-  const pendingDeliveries = (pendingDeliveryRes.data ?? []) as { id: string; total_amount: unknown }[];
-  const monthDelivered = (monthDeliveredRes.data ?? []) as { total_amount: unknown }[];
   const recentRaw = (recentOrdersRes.data ?? []) as {
     id: string;
     order_number: string;
@@ -322,16 +336,12 @@ export async function getDashboardOverview(organizationId: string): Promise<Dash
     });
 
   const kpi: DashboardKpi = {
-    todayOrderCount: todayOrders.length,
+    todayOrderCount: toNum(todayOrdersRes.count),
     todayOrderAmount: todayDeliveryRevenue,
     todayNetProfit,
     todayCost,
     submittedOrderCount: lineOrderRows.length + lineSourceOrderRows.length,
-    pendingDeliveryCount: pendingDeliveries.length,
-    pendingDeliveryAmount: pendingDeliveries.reduce((s, r) => s + toNum(r.total_amount), 0),
-    monthDeliveredAmount: monthDelivered.reduce((s, r) => s + toNum(r.total_amount), 0),
-    activeCustomerCount: toNum(activeCustomerRes.count),
-    lowStockCount: stockDashboardRes.lowStockCount,
+    lowStockCount,
   };
 
   const recentOrders: RecentOrder[] = recentRaw.map((r) => ({
@@ -482,8 +492,6 @@ export async function getDashboardOverview(organizationId: string): Promise<Dash
     dailyPerformanceRows,
     dailyPerformanceRangeStartDate: recentDailyPerformance.rangeStartDate,
     dailyPerformanceRangeEndDate: recentDailyPerformance.rangeEndDate,
-    stockProducts: stockDashboardRes.products,
-    stockSuppliers: stockDashboardRes.suppliers,
     lineOrders,
   };
 }
