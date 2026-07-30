@@ -60,7 +60,7 @@ export function StockAdjustForm({
   );
 
   const [selectedProductId, setSelectedProductId] = useState(defaultProductId);
-  const [warehouseId, setWarehouseId] = useState(defaultWarehouseId);
+  const warehouseId = defaultWarehouseId;
   const [newQuantity, setNewQuantity] = useState<string>("");
   const [notes, setNotes] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
@@ -73,6 +73,9 @@ export function StockAdjustForm({
   const selectedWarehouseStock = useMemo(() => {
     return selectedProduct?.warehouseStocks.find((stock) => stock.warehouseId === warehouseId) ?? null;
   }, [selectedProduct, warehouseId]);
+  const selectedWarehouse = useMemo(() => {
+    return warehouses.find((warehouse) => warehouse.id === warehouseId) ?? null;
+  }, [warehouseId, warehouses]);
 
   const selectedWarehouseQuantity = selectedWarehouseStock?.onHandQuantity ?? 0;
 
@@ -130,7 +133,7 @@ export function StockAdjustForm({
         onClick={handleClose}
         className="absolute inset-0" 
       />
-      <div className={`relative flex h-full w-full max-w-lg flex-col overflow-hidden bg-[#F3E5F5] shadow-2xl rounded-none sm:rounded-[2.8rem] border border-white/40 ${
+      <div className={`relative z-10 flex h-full w-full max-w-lg flex-col overflow-hidden bg-[#F3E5F5] shadow-2xl rounded-none sm:rounded-[2.8rem] border border-white/40 ${
         isClosing ? "animate-slide-up-premium" : "animate-slide-down-premium"
       }`}>
         
@@ -140,7 +143,8 @@ export function StockAdjustForm({
             <button
               type="button"
               onClick={handleClose}
-              className="h-10 w-10 flex items-center justify-center rounded-full bg-slate-100 text-slate-500 active:scale-90 transition-all"
+              aria-label="ปิดหน้าต่างปรับยอด"
+              className="-ml-2 flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-500 transition-all active:scale-90"
             >
               <X className="h-5 w-5" />
             </button>
@@ -216,19 +220,15 @@ export function StockAdjustForm({
 
               <div className="p-6 space-y-8">
                 <div className="space-y-3">
-                  <label className="text-sm font-black text-slate-400 uppercase tracking-widest pl-2">คลังสินค้า</label>
-                  <select
-                    value={warehouseId}
-                    onChange={(event) => setWarehouseId(event.target.value)}
-                    className="h-16 w-full rounded-3xl border-2 border-slate-100 bg-white px-5 text-lg font-black text-[#4A148C] outline-none transition-all focus:border-[#4A148C]/30"
-                  >
-                    <option value="">เลือกคลัง...</option>
-                    {warehouses.map((warehouse) => (
-                      <option key={warehouse.id} value={warehouse.id}>
-                        {warehouse.name}
-                      </option>
-                    ))}
-                  </select>
+                  <label className="pl-2 text-sm font-black uppercase tracking-widest text-slate-400">คลังสินค้า</label>
+                  <div className="rounded-3xl border-2 border-slate-100 bg-white px-5 py-4">
+                    <p className="text-lg font-black leading-snug text-[#4A148C]">
+                      {selectedWarehouse?.name ?? "ยังไม่ได้เลือกคลัง"}
+                    </p>
+                    <p className="mt-1 text-xs font-bold leading-relaxed text-slate-500">
+                      ใช้คลังตามหน้าสต็อกที่กำลังเปิดอยู่ หากต้องการเปลี่ยนคลังให้ปิดหน้าต่างนี้แล้วเลือกคลังจากหน้าสต็อก
+                    </p>
+                  </div>
                 </div>
 
                 {/* Quantity Input Section */}
@@ -296,7 +296,11 @@ export function StockAdjustForm({
         {selectedProductId && (
           <div className="absolute bottom-0 left-0 right-0 p-6 bg-white/80 backdrop-blur-xl border-t border-slate-100">
             <button
+              type="button"
               onClick={() => {
+                if (!warehouseId) {
+                  return;
+                }
                 const formData = new FormData();
                 formData.append("productId", selectedProductId);
                 formData.append("warehouseId", warehouseId);
@@ -306,7 +310,7 @@ export function StockAdjustForm({
                   formAction(formData);
                 });
               }}
-              disabled={isPending}
+              disabled={isPending || !warehouseId}
               className="w-full h-16 bg-[#4A148C] text-white rounded-[1.5rem] font-black text-xl flex items-center justify-center gap-3 shadow-xl shadow-[#4A148C]/20 disabled:opacity-50 active:scale-[0.98] transition-all"
             >
               {isPending ? (
