@@ -589,8 +589,6 @@ function TransposedPackingListPage({ page, data }: { page: TransposedPageDef; da
 function PackingListStyles() {
   return (
     <style>{`
-      @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;700;800&display=swap');
-
       @page { size: A4 landscape; margin: 0; }
 
       @media print {
@@ -728,7 +726,7 @@ function PackingListStyles() {
         overflow: hidden;
         background: #ffffff;
         border: 1px solid #cbd5e1;
-        font-family: "Sarabun", sans-serif;
+        font-family: var(--font-sukhumvit), "Sukhumvit Set", sans-serif;
         color: #0f172a;
         box-sizing: border-box;
       }
@@ -1034,7 +1032,7 @@ function PackingListStyles() {
       .packing-product-header__icon {
         display: inline-block;
         margin-right: 0.35mm;
-        font-family: "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", "Sarabun", sans-serif;
+        font-family: "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", var(--font-sukhumvit), "Sukhumvit Set", sans-serif;
         font-size: 6.2pt;
         line-height: 1.15;
       }

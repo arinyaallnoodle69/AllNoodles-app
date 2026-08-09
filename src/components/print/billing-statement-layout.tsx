@@ -276,7 +276,7 @@ export const BILLING_INVOICE_STYLES = `
     background: #ffffff;
     padding: 10mm;
     color: #000000;
-    font-family: "Noto Serif Thai";
+    font-family: var(--font-sukhumvit), "Sukhumvit Set", sans-serif;
     display: flex;
     flex-direction: column;
   }

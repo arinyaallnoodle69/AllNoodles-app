@@ -7,39 +7,10 @@ import { getSiteUrl } from "@/lib/site-url";
 import { RootAppLayoutShell } from "@/components/root-layout-shell";
 import { PerformanceReporter } from "@/components/performance/performance-reporter";
 
-const noboto = localFont({
-  src: [
-    {
-      path: "../../public/fonts/Noboto-Regular.ttf",
-      weight: "400",
-      style: "normal",
-    },
-    {
-      path: "../../public/fonts/Noboto-Medium.ttf",
-      weight: "500",
-      style: "normal",
-    },
-    {
-      path: "../../public/fonts/Noboto-Medium.ttf",
-      weight: "600",
-      style: "normal",
-    },
-    {
-      path: "../../public/fonts/Noboto-Medium.ttf",
-      weight: "700",
-      style: "normal",
-    },
-    {
-      path: "../../public/fonts/Noboto-Medium.ttf",
-      weight: "800",
-      style: "normal",
-    },
-    {
-      path: "../../public/fonts/Noboto-Medium.ttf",
-      weight: "900",
-      style: "normal",
-    },
-  ],
+const sukhumvitSet = localFont({
+  src: "../../public/fonts/SukhumvitSet-Medium.ttf",
+  weight: "500",
+  style: "normal",
   display: "swap",
   variable: "--font-sukhumvit",
 });
@@ -117,7 +88,7 @@ export default function RootLayout({
         <link rel="preconnect" href="https://profile.line-scdn.net" crossOrigin="anonymous" />
       </head>
       <body
-        className={`${noboto.variable} ${noboto.className} bg-background text-foreground antialiased`}
+        className={`${sukhumvitSet.variable} ${sukhumvitSet.className} bg-background text-foreground antialiased`}
       >
         <PwaProvider />
         <Suspense fallback={null}>

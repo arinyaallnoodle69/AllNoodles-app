@@ -274,7 +274,7 @@ export function PackingListPrintButton({
         onClick={() => handleOpenPreview("print")}
         disabled={isPrinting || isCapturing}
         className={`${hidePrintOnMobile ? "hidden md:flex" : "flex"} items-center gap-1.5 rounded-lg bg-[#4A148C] px-3.5 py-1.5 text-[13px] font-bold text-white shadow-sm transition hover:bg-[#4A148C] disabled:cursor-not-allowed disabled:opacity-70`}
-        style={{ fontFamily: 'var(--font-sukhumvit), "Sukhumvit Set", "Noto Sans Thai", sans-serif' }}
+        style={{ fontFamily: 'var(--font-sukhumvit), "Sukhumvit Set", sans-serif' }}
       >
         {isCapturing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Printer className="h-4 w-4" />}
         {isCapturing ? "กำลังสร้างตัวอย่าง..." : printButtonText}
@@ -285,7 +285,7 @@ export function PackingListPrintButton({
         onClick={() => handleOpenPreview("save")}
         disabled={isPrinting || isCapturing}
         className={`${hideSaveOnDesktop ? "flex md:hidden" : "flex"} items-center gap-1.5 rounded-lg bg-emerald-600 px-3.5 py-1.5 text-[13px] font-bold text-white shadow-sm transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-70`}
-        style={{ fontFamily: 'var(--font-sukhumvit), "Sukhumvit Set", "Noto Sans Thai", sans-serif' }}
+        style={{ fontFamily: 'var(--font-sukhumvit), "Sukhumvit Set", sans-serif' }}
       >
         {isCapturing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
         {isCapturing ? "กำลังสร้างภาพ..." : "บันทึกรูป"}

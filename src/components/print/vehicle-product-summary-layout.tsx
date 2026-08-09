@@ -254,7 +254,7 @@ function VehicleSummaryStyles() {
         border: 1px solid #000000;
         color: #0f172a;
         box-sizing: border-box;
-        font-family: var(--font-sukhumvit), "Sukhumvit Set", "Noto Sans Thai", sans-serif;
+        font-family: var(--font-sukhumvit), "Sukhumvit Set", sans-serif;
       }
 
       .vehicle-summary-sheet__inner {

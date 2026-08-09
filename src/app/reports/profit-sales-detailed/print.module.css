@@ -15,7 +15,7 @@
   margin: 0 !important;
   box-sizing: border-box !important;
   overflow: hidden !important;
-  font-family: "SukhumvitSet-SemiBold", var(--font-sukhumvit), sans-serif !important;
+  font-family: var(--font-sukhumvit), "Sukhumvit Set", sans-serif !important;
   color: #000000 !important;
   print-color-adjust: exact !important;
   -webkit-print-color-adjust: exact !important;
