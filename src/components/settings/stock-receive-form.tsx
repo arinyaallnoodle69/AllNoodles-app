@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import {
   useActionState,
+  useCallback,
   useDeferredValue,
   useEffect,
   useEffectEvent,
@@ -76,7 +77,7 @@ export function StockReceiveForm({
   const [warehouseId, setWarehouseId] = useState(defaultWarehouseId);
   const [receiveDate, setReceiveDate] = useState(new Date().toISOString().split("T")[0]);
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const [selectedFactory, setSelectedFactory] = useState<string>("all");
   const [selectedBrand, setSelectedBrand] = useState<string>("all");
   const [receiptImage, setReceiptImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -105,25 +106,34 @@ export function StockReceiveForm({
     setWarehouseId(defaultWarehouseId);
   }, [defaultWarehouseId]);
 
-  const categories = useMemo(() => {
-    const cats = new Set<string>();
+  const getProductFactoryFilterName = useCallback((product: StockProductOption) => {
+    return (
+      product.warehouseModes.find((mode) => mode.warehouseId === warehouseId)?.supplierName?.trim() ||
+      "ไม่ระบุโรงงาน"
+    );
+  }, [warehouseId]);
+
+  const factories = useMemo(() => {
+    const items = new Set<string>();
     stockProducts.forEach(p => {
-      if (p.categoryName) cats.add(p.categoryName);
+      const factoryName = getProductFactoryFilterName(p).trim();
+      if (factoryName) items.add(factoryName);
     });
-    return Array.from(cats).sort();
-  }, [stockProducts]);
+    return Array.from(items).sort((a, b) => a.localeCompare(b, "th"));
+  }, [getProductFactoryFilterName, stockProducts]);
 
   const brands = useMemo(() => {
-    const filteredByCategory =
-      selectedCategory === "all"
+    const filteredByFactory =
+      selectedFactory === "all"
         ? stockProducts
-        : stockProducts.filter((product) => product.categoryName === selectedCategory);
+        : stockProducts.filter((product) => getProductFactoryFilterName(product) === selectedFactory);
     const items = new Set<string>();
-    filteredByCategory.forEach((product) => {
-      if (product.brandName) items.add(product.brandName);
+    filteredByFactory.forEach((product) => {
+      const brandName = product.brandName?.trim();
+      if (brandName) items.add(brandName);
     });
-    return Array.from(items).sort();
-  }, [stockProducts, selectedCategory]);
+    return Array.from(items).sort((a, b) => a.localeCompare(b, "th"));
+  }, [getProductFactoryFilterName, stockProducts, selectedFactory]);
 
   useEffect(() => {
     if (selectedBrand !== "all" && !brands.includes(selectedBrand)) {
@@ -132,18 +142,17 @@ export function StockReceiveForm({
   }, [brands, selectedBrand]);
 
   useEffect(() => {
-    if (selectedCategory !== "all" && !categories.includes(selectedCategory)) {
-      setSelectedCategory("all");
+    if (selectedFactory !== "all" && !factories.includes(selectedFactory)) {
+      setSelectedFactory("all");
       setSelectedBrand("all");
     }
-  }, [categories, selectedCategory]);
+  }, [factories, selectedFactory]);
 
   const filteredProducts = useMemo(() => {
     let result = stockProducts;
 
-    // Category Filter
-    if (selectedCategory !== "all") {
-      result = result.filter(p => p.categoryName === selectedCategory);
+    if (selectedFactory !== "all") {
+      result = result.filter(p => getProductFactoryFilterName(p) === selectedFactory);
     }
 
     if (selectedBrand !== "all") {
@@ -160,7 +169,7 @@ export function StockReceiveForm({
     }
 
     return result;
-  }, [deferredQuery, selectedBrand, selectedCategory, stockProducts]);
+  }, [deferredQuery, getProductFactoryFilterName, selectedBrand, selectedFactory, stockProducts]);
 
   const getProductFactoryName = (product: StockProductOption) => {
     return (
@@ -442,40 +451,40 @@ export function StockReceiveForm({
                   <div className="flex items-center gap-2">
                     <button
                       type="button"
-                      aria-label="เปิดรายการหมวดหมู่ทั้งหมด"
+                      aria-label="เปิดรายการโรงงานทั้งหมด"
                       className="flex h-10 shrink-0 items-center gap-1.5 text-sm font-black text-[#4A148C] sm:h-12"
                     >
-                      หมวดหมู่
+                      โรงงาน
                       <ListFilter className="h-4 w-4" strokeWidth={2.5} />
                     </button>
                     <div className="no-scrollbar flex min-w-0 flex-1 items-center gap-5 overflow-x-auto">
                       <button
                         type="button"
-                        onClick={() => setSelectedCategory("all")}
+                        onClick={() => setSelectedFactory("all")}
                         className={`relative h-10 shrink-0 px-0 text-sm font-black transition sm:h-12 ${
-                          selectedCategory === "all"
+                          selectedFactory === "all"
                             ? "text-[#4A148C]"
                             : "text-slate-500 hover:text-slate-950"
                         }`}
                       >
-                        ทุกหมวดหมู่
-                        {selectedCategory === "all" && (
+                        ทุกโรงงาน
+                        {selectedFactory === "all" && (
                           <span className="absolute inset-x-0 bottom-0 h-1 rounded-full bg-[#4A148C]" />
                         )}
                       </button>
-                      {categories.map(cat => (
+                      {factories.map(factory => (
                         <button
                           type="button"
-                          key={cat}
-                          onClick={() => setSelectedCategory(cat)}
+                          key={factory}
+                          onClick={() => setSelectedFactory(factory)}
                           className={`relative h-10 shrink-0 px-0 text-sm font-black transition sm:h-12 ${
-                            selectedCategory === cat
+                            selectedFactory === factory
                               ? "text-[#4A148C]"
                               : "text-slate-500 hover:text-slate-950"
                           }`}
                         >
-                          {cat}
-                          {selectedCategory === cat && (
+                          {factory}
+                          {selectedFactory === factory && (
                             <span className="absolute inset-x-0 bottom-0 h-1 rounded-full bg-[#4A148C]" />
                           )}
                         </button>

@@ -236,6 +236,48 @@ type PriceRow = {
   sale_price: number | string;
 };
 
+const PRICE_FETCH_BATCH_SIZE = 1000;
+
+async function fetchAllCustomerProductPrices(
+  pricesTable: SelectTable,
+  organizationId: string,
+): Promise<{ data: PriceRow[]; error: { message?: string } | null }> {
+  const rows: PriceRow[] = [];
+  let from = 0;
+
+  while (true) {
+    const to = from + PRICE_FETCH_BATCH_SIZE - 1;
+    const result = await (
+      pricesTable as unknown as {
+        select: (columns: string) => {
+          eq: (column: string, value: string) => {
+            order: (column: string, options: { ascending: boolean }) => {
+              range: (from: number, to: number) => Promise<{ data: PriceRow[] | null; error: { message?: string } | null }>;
+            };
+          };
+        };
+      }
+    )
+      .select("customer_id, product_id, product_sale_unit_id, sale_price")
+      .eq("organization_id", organizationId)
+      .order("updated_at", { ascending: false })
+      .range(from, to);
+
+    if (result.error) {
+      return { data: rows, error: result.error };
+    }
+
+    const batch = result.data ?? [];
+    rows.push(...batch);
+
+    if (batch.length < PRICE_FETCH_BATCH_SIZE) {
+      return { data: rows, error: null };
+    }
+
+    from += PRICE_FETCH_BATCH_SIZE;
+  }
+}
+
 type ProductCategoryRow = {
   id: string;
   is_active: boolean;
@@ -415,10 +457,7 @@ async function fetchSettingsData(organizationId: string): Promise<SettingsData> 
         .eq("organization_id", organizationId)
         .eq("is_active", true)
         .order("supplier_code", { ascending: true }),
-      pricesTable
-        .select("customer_id, product_id, product_sale_unit_id, sale_price")
-        .eq("organization_id", organizationId)
-        .order("updated_at", { ascending: false }),
+      fetchAllCustomerProductPrices(pricesTable, organizationId),
       categoriesTable
         .select("id, name, sort_order, is_active")
         .eq("organization_id", organizationId)
