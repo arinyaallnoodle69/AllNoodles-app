@@ -9,6 +9,7 @@ import { StockIssuesClient } from "@/app/stock/issues/stock-issues-client";
 import { loadMoreStockHistoryAction, loadMoreStockIssuesAction } from "@/app/stock/pagination-actions";
 import type { StockProductOption, StockSupplierOption, StockHistoryRow } from "@/lib/stock/admin";
 import type { StockIssueRow } from "@/lib/stock/issues";
+import { invalidateSelectedStockTabCache, type StockTab } from "@/lib/stock/stock-tab-cache";
 
 type UnifiedStockClientProps = {
   products: StockProductOption[];
@@ -34,7 +35,7 @@ export function UnifiedStockClient({
   brands,
 }: UnifiedStockClientProps) {
   const searchParams = useSearchParams();
-  const [activeTab, setActiveTab] = useState<"stock" | "history" | "issues">(initialTab);
+  const [activeTab, setActiveTab] = useState<StockTab>(initialTab);
 
   const [historyData, setHistoryData] = useState<StockHistoryRow[] | null>(initialHistory);
   const [issuesData, setIssuesData] = useState<StockIssueRow[] | null>(initialIssues);
@@ -101,7 +102,10 @@ export function UnifiedStockClient({
     }
   }, [activeTab, fallbackWarehouseId, issuesData, initialDate, searchParams, warehouses]);
 
-  const handleTabChange = (key: "stock" | "history" | "issues") => {
+  const handleTabChange = (key: StockTab) => {
+    const nextData = invalidateSelectedStockTabCache(key, { historyData, issuesData });
+    setHistoryData(nextData.historyData);
+    setIssuesData(nextData.issuesData);
     setActiveTab(key);
     const params = new URLSearchParams(window.location.search);
     params.set("tab", key);
