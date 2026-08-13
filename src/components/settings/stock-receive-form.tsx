@@ -57,6 +57,10 @@ const initialReceiveStockState: ReceiveStockActionState = {
   status: "idle",
 };
 
+function getWarehouseOnHandQuantity(product: StockProductOption, warehouseId: string) {
+  return product.warehouseStocks.find((stock) => stock.warehouseId === warehouseId)?.onHandQuantity ?? 0;
+}
+
 export function StockReceiveForm({
   products,
   warehouses,
@@ -577,7 +581,7 @@ export function StockReceiveForm({
                             โรงงาน: {getProductFactoryName(p)}
                           </p>
                           <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs font-bold text-slate-500">
-                            <span>คงเหลือ: <strong className="text-slate-800">{p.onHandQuantity} {p.unit}</strong></span>
+                            <span>คงเหลือ: <strong className="text-slate-800">{getWarehouseOnHandQuantity(p, warehouseId)} {p.unit}</strong></span>
                             {role !== "member" && (
                               <span className="hidden items-center gap-3 sm:flex">
                                 <span className="h-1 w-1 bg-slate-300 rounded-full" />

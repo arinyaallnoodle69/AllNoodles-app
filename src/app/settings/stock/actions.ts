@@ -4,6 +4,7 @@ import { revalidatePath, revalidateTag, updateTag } from "next/cache";
 import { requireAnyRole } from "@/lib/auth/authorization";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { getStockReceiptDetail, type StockReceiptDetail } from "@/lib/stock/admin";
+import { generateSequentialReceiptNumbers } from "@/lib/stock/receipt-number-sequence";
 import { createActionClient } from "@/lib/supabase/action";
 import type { Json } from "@/types/database";
 
@@ -242,15 +243,13 @@ export async function receiveStockAction(
     };
   }
 
-  const receiptNumbers = await Promise.all(
-    groups.map((_, index) => {
-      if (receiptNumberInput) {
-        return groups.length === 1 ? receiptNumberInput : `${receiptNumberInput}-${index + 1}`;
-      }
-
-      return generateReceiptNumber(admin, session.organizationId);
-    }),
-  );
+  const receiptNumbers = receiptNumberInput
+    ? groups.map((_, index) =>
+        groups.length === 1 ? receiptNumberInput : `${receiptNumberInput}-${index + 1}`,
+      )
+    : await generateSequentialReceiptNumbers(groups.length, () =>
+        generateReceiptNumber(admin, session.organizationId),
+      );
 
   let receiptUrl: string | null = null;
 
@@ -381,7 +380,9 @@ export async function bulkReceiveStockAction(
     return { success: false, message: "ไม่พบรายการสินค้าที่สามารถรับเข้าคลังได้" };
   }
 
-  const receiptNumbers = await Promise.all(groups.map(() => generateReceiptNumber(admin, session.organizationId)));
+  const receiptNumbers = await generateSequentialReceiptNumbers(groups.length, () =>
+    generateReceiptNumber(admin, session.organizationId),
+  );
   const receivedAtIso = new Date().toISOString();
 
   for (const [index, group] of groups.entries()) {

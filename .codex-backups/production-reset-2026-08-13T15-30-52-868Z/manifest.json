@@ -1,0 +1,39 @@
+{
+  "createdAt": "2026-08-13T15:30:53.592Z",
+  "organization": {
+    "id": "c2aa0913-13f7-4b0e-b81c-67c25118d6b3",
+    "name": "เจ๊ญา ขายทุกเส้น"
+  },
+  "warehouses": [
+    {
+      "id": "fbb20b28-f726-457c-99f4-e91ceb4a782c",
+      "slug": "wh01",
+      "name": "คลังกรุงเทพ",
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "id": "5990626e-68f8-4dc5-9b7c-eb67967ff46e",
+      "slug": "wh02",
+      "name": "คลังต่างจังหวัด",
+      "is_active": true,
+      "sort_order": 0
+    }
+  ],
+  "counts": {
+    "orders": 57,
+    "order_items": 174,
+    "delivery_notes": 57,
+    "delivery_note_items": 174,
+    "inventory_receipts": 18,
+    "inventory_receipt_items": 50,
+    "inventory_movements": 372,
+    "product_warehouse_stocks": 95,
+    "order_number_counters": 1,
+    "delivery_note_counters": 0,
+    "delivery_note_counters_monthly": 2,
+    "delivery_note_counters_yearly": 0,
+    "ordersMain": 55,
+    "ordersProvincial": 2
+  }
+}
