@@ -6,7 +6,9 @@ import { Loader2 } from "lucide-react";
 import { IncomingOrderOpenCard } from "./incoming-order-open-card";
 import { IncomingOrderVehicleFilter } from "./incoming-order-vehicle-filter";
 import { IncomingOrdersVehicleTransfer } from "./incoming-orders-vehicle-transfer";
+import { DailySpecialOrderManager } from "./daily-special-order-manager";
 import type { OrderVehicleOption } from "@/lib/orders/manage";
+import type { DailySpecialCatalogProduct, DailySpecialItem } from "@/lib/orders/daily-special-items";
 import type { VehicleTransferDateOption } from "@/lib/orders/vehicle-transfer";
 
 type MobileListOrder = {
@@ -41,6 +43,8 @@ type IncomingOrdersMobileListProps = {
   currentListDate: string;
   searchTerm?: string;
   selectedCustomerIds?: string[];
+  specialCatalog: DailySpecialCatalogProduct[];
+  specialItems: DailySpecialItem[];
   vehicleTransferDates: VehicleTransferDateOption[];
 };
 
@@ -50,6 +54,8 @@ export function IncomingOrdersMobileList({
   currentListDate,
   searchTerm,
   selectedCustomerIds = [],
+  specialCatalog,
+  specialItems,
   vehicleTransferDates,
 }: IncomingOrdersMobileListProps) {
   const router = useRouter();
@@ -107,7 +113,15 @@ export function IncomingOrdersMobileList({
         <div className="flex items-center justify-between gap-3">
           <h3 className="min-w-0 text-base font-black text-[#4A148C]">ตารางรายการคำสั่งซื้อล่าสุด</h3>
         </div>
-        <div className="mt-2 flex justify-end">
+        <div className="mt-2 grid grid-cols-2 items-center gap-2">
+          <DailySpecialOrderManager
+            key={`mobile-special-${currentListDate}`}
+            date={currentListDate}
+            initialItems={specialItems}
+            products={specialCatalog}
+            variant="mobile-compact"
+            vehicles={vehicles}
+          />
           <IncomingOrdersVehicleTransfer dateOptions={vehicleTransferDates} variant="mobile" />
         </div>
         <IncomingOrderVehicleFilter

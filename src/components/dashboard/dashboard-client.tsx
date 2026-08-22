@@ -449,11 +449,11 @@ export function DashboardClient({
               }
               @keyframes slideUpIn {
                 from { transform: translateY(100%); opacity: 0; }
-                to { transform: translateY(0); opacity: 1; }
+                to { transform: none; opacity: 1; }
               }
               @keyframes drawerSlideIn {
                 from { transform: translateY(100%); }
-                to { transform: translateY(0); }
+                to { transform: none; }
               }
               @keyframes drawerSlideOut {
                 from { transform: translateY(0); }

@@ -7,6 +7,7 @@ import { createPortal } from "react-dom";
 
 type PreviewImage = {
   dataUrl: string;
+  previewDataUrl: string;
   blob: Blob;
   name: string;
 };
@@ -15,6 +16,56 @@ const FALLBACK_CAPTURE_WIDTH = 1123;
 const FALLBACK_CAPTURE_HEIGHT = 794;
 
 let cachedFontEmbedCSS: string | null = null;
+
+type RestorableImage = {
+  image: HTMLImageElement;
+  src: string;
+  crossOrigin: string | null;
+};
+
+function blobToDataUrl(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(reader.error ?? new Error("อ่านไฟล์รูปไม่สำเร็จ"));
+    reader.readAsDataURL(blob);
+  });
+}
+
+async function inlineCaptureImages(targets: HTMLElement[]): Promise<RestorableImage[]> {
+  const images = Array.from(new Set(targets.flatMap((target) => Array.from(target.querySelectorAll("img")))));
+  const restorable: RestorableImage[] = [];
+
+  await Promise.all(
+    images.map(async (image) => {
+      const src = image.currentSrc || image.src;
+      if (!src || src.startsWith("data:") || src.startsWith("blob:")) return;
+
+      try {
+        const response = await fetch(src, { cache: "force-cache", mode: "cors" });
+        if (!response.ok) throw new Error(`โหลดรูปไม่สำเร็จ (${response.status})`);
+
+        const dataUrl = await blobToDataUrl(await response.blob());
+        restorable.push({ image, src: image.src, crossOrigin: image.getAttribute("crossorigin") });
+        image.removeAttribute("crossorigin");
+        image.src = dataUrl;
+        await image.decode().catch(() => undefined);
+      } catch (error) {
+        console.warn("[DocumentCapture] Cannot inline product image:", src, error);
+      }
+    }),
+  );
+
+  return restorable;
+}
+
+function restoreCaptureImages(images: RestorableImage[]) {
+  images.forEach(({ image, src, crossOrigin }) => {
+    image.src = src;
+    if (crossOrigin === null) image.removeAttribute("crossorigin");
+    else image.setAttribute("crossorigin", crossOrigin);
+  });
+}
 
 function dataUrlToBlob(dataUrl: string): Blob {
   const parts = dataUrl.split(",");
@@ -31,7 +82,7 @@ function dataUrlToBlob(dataUrl: string): Blob {
 
 function createFileName(base: string, page: number) {
   const safe = base.replace(/[^\w\u0E00-\u0E7F-]+/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "");
-  return `${safe || "packing-list"}-หน้า${page}.jpg`;
+  return `${safe || "packing-list"}-หน้า${page}.png`;
 }
 
 export function PackingListPrintButton({
@@ -145,12 +196,18 @@ export function PackingListPrintButton({
     setShowPreview(true);
     setPreviewImages([]);
 
+    let inlinedImages: RestorableImage[] = [];
+
     try {
       const targets = Array.from(document.querySelectorAll<HTMLElement>(".packing-sheet"));
 
       if (targets.length === 0) {
         throw new Error("ไม่พบหน้าสำหรับสร้างตัวอย่างเอกสาร");
       }
+
+      // html-to-image may omit otherwise visible cross-origin images on some browsers.
+      // Embed every product image before capture so desktop and mobile exports are deterministic.
+      inlinedImages = await inlineCaptureImages(targets);
 
       let fontEmbedCSS: string | undefined;
       if (cachedFontEmbedCSS) {
@@ -174,7 +231,7 @@ export function PackingListPrintButton({
       const captured: PreviewImage[] = [];
 
       const isMobileDevice = typeof window !== "undefined" && /iphone|ipad|ipod|android/i.test(window.navigator.userAgent.toLowerCase());
-      const selectedPixelRatio = isMobileDevice ? 1.25 : 2;
+      const selectedPixelRatio = isMobileDevice ? 2.25 : 3;
 
       for (let i = 0; i < targets.length; i += 1) {
         const target = targets[i];
@@ -183,29 +240,40 @@ export function PackingListPrintButton({
         const captureWidth = datasetWidth || target.offsetWidth || FALLBACK_CAPTURE_WIDTH;
         const captureHeight = datasetHeight || target.offsetHeight || FALLBACK_CAPTURE_HEIGHT;
 
-        const dataUrl = await htmlToImage.toJpeg(target, {
+        const captureStyle = {
+          width: `${captureWidth}px`,
+          height: `${captureHeight}px`,
+          maxWidth: "none",
+          maxHeight: "none",
+          margin: "0",
+          boxShadow: "none",
+          display: "block",
+          transform: "none",
+          transformOrigin: "top left",
+        };
+
+        const previewDataUrl = await htmlToImage.toSvg(target, {
+          backgroundColor: "#ffffff",
+          cacheBust: true,
+          fontEmbedCSS,
+          width: captureWidth,
+          height: captureHeight,
+          style: captureStyle,
+        });
+
+        const dataUrl = await htmlToImage.toPng(target, {
           backgroundColor: "#ffffff",
           cacheBust: true,
           fontEmbedCSS,
           pixelRatio: selectedPixelRatio,
           width: captureWidth,
           height: captureHeight,
-          quality: 0.85,
-          style: {
-            width: `${captureWidth}px`,
-            height: `${captureHeight}px`,
-            maxWidth: "none",
-            maxHeight: "none",
-            margin: "0",
-            boxShadow: "none",
-            display: "block",
-            transform: "none",
-            transformOrigin: "top left",
-          },
+          style: captureStyle,
         });
 
         captured.push({
           dataUrl,
+          previewDataUrl,
           blob: dataUrlToBlob(dataUrl),
           name: createFileName(`${documentTitle}-${dateLabel || "export"}`, i + 1),
         });
@@ -217,6 +285,7 @@ export function PackingListPrintButton({
       setErrorMessage(error instanceof Error ? error.message : "สร้างตัวอย่างเอกสารไม่สำเร็จ");
       setShowPreview(false);
     } finally {
+      restoreCaptureImages(inlinedImages);
       setIsCapturing(false);
     }
   }
@@ -365,7 +434,7 @@ export function PackingListPrintButton({
 
                     <div className="relative w-full overflow-hidden rounded-sm bg-white shadow-[0_40px_100px_rgba(0,0,0,0.6)] ring-1 ring-white/5 transition duration-500 group-hover:scale-[1.02] group-hover:shadow-[0_50px_120px_rgba(0,0,0,0.8)]">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={image.dataUrl} alt={`${documentTitle} หน้า ${index + 1}`} className="block h-auto w-full bg-white" />
+                      <img src={image.previewDataUrl} alt={`${documentTitle} หน้า ${index + 1}`} className="block h-auto w-full bg-white" />
                       <div className="pointer-events-none absolute inset-0 bg-gradient-to-tr from-transparent via-white/5 to-transparent opacity-0 transition-opacity duration-700 group-hover:opacity-100" />
                     </div>
                   </div>

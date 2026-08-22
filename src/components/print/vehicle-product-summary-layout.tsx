@@ -5,6 +5,10 @@ const SHEET_W = "210mm";
 const SHEET_H = "297mm";
 const SCREEN_SHEET_W = "794px";
 const SCREEN_SHEET_H = "1123px";
+const ITEMS_PER_SHEET = 30;
+// Leave a real printer-safe buffer: browser millimetre-to-pixel rounding and
+// printer non-printable margins must not push row 32 beyond the A4 sheet.
+const ROW_HEIGHT_MM = 8.7;
 const VEHICLE_COLUMN_PALETTES = [
   { header: "#EA80FC", body: "#F3E5F5", border: "#000000" },
   { header: "#dcfce7", body: "#f3fdf7", border: "#000000" },
@@ -25,6 +29,10 @@ type VehicleSummarySheetDef = {
   key: string;
   data: VehicleProductSummaryData;
   vehicleIndex: number;
+  rowOffset: number;
+  totalRows: number;
+  pageNumber: number;
+  pageCount: number;
 };
 
 function buildVehicleSheets(data: VehicleProductSummaryData): VehicleSummarySheetDef[] {
@@ -39,24 +47,35 @@ function buildVehicleSheets(data: VehicleProductSummaryData): VehicleSummaryShee
 
       if (rows.length === 0) return null;
 
-      return {
-        key: vehicle.id ?? "__unassigned__",
-        vehicleIndex,
-        data: {
-          ...data,
-          products: rows.map((row) => row.product),
-          vehicles: [vehicle],
-          qty: rows.map((row) => [row.qty]),
-        },
-      };
+      const pageCount = Math.ceil(rows.length / ITEMS_PER_SHEET);
+
+      return Array.from({ length: pageCount }, (_, pageIndex) => {
+        const rowOffset = pageIndex * ITEMS_PER_SHEET;
+        const pageRows = rows.slice(rowOffset, rowOffset + ITEMS_PER_SHEET);
+
+        return {
+          key: `${vehicle.id ?? "__unassigned__"}-${pageIndex + 1}`,
+          vehicleIndex,
+          rowOffset,
+          totalRows: rows.length,
+          pageNumber: pageIndex + 1,
+          pageCount,
+          data: {
+            ...data,
+            products: pageRows.map((row) => row.product),
+            vehicles: [vehicle],
+            qty: pageRows.map((row) => [row.qty]),
+          },
+        };
+      });
     })
-    .filter((sheet): sheet is VehicleSummarySheetDef => sheet !== null);
+    .filter((sheets): sheets is VehicleSummarySheetDef[] => sheets !== null)
+    .flat();
 }
 
-function VehicleSummarySheet({ data, vehicleIndex }: { data: VehicleProductSummaryData; vehicleIndex: number }) {
-  const productCount = Math.max(data.products.length, 1);
-  const rowHeightMm = Math.max(4.8, Math.min(8.4, 270 / productCount));
-  const thumbSizeMm = Math.max(3.6, Math.min(8.2, rowHeightMm - 0.7));
+function VehicleSummarySheet({ sheet }: { sheet: VehicleSummarySheetDef }) {
+  const { data, vehicleIndex, rowOffset, totalRows, pageNumber, pageCount } = sheet;
+  const thumbSizeMm = ROW_HEIGHT_MM - 1;
 
   return (
     <section className="packing-sheet vehicle-summary-sheet" data-capture-width="794" data-capture-height="1123">
@@ -68,7 +87,8 @@ function VehicleSummarySheet({ data, vehicleIndex }: { data: VehicleProductSumma
             <div className="vehicle-summary-header__meta-inline">
               <span>{data.dateLabel}</span>
               <span>{data.vehicles[0]?.name ?? "ยังไม่ได้กำหนดรถ"}</span>
-              <span>{data.products.length.toLocaleString("th-TH")} รายการ</span>
+              <span>{totalRows.toLocaleString("th-TH")} รายการ</span>
+              {pageCount > 1 ? <span>หน้า {pageNumber}/{pageCount}</span> : null}
             </div>
           </div>
         </header>
@@ -78,7 +98,7 @@ function VehicleSummarySheet({ data, vehicleIndex }: { data: VehicleProductSumma
             className="vehicle-summary-table"
             style={
               {
-                "--summary-row-height": `${rowHeightMm}mm`,
+                "--summary-row-height": `${ROW_HEIGHT_MM}mm`,
                 "--summary-thumb-size": `${thumbSizeMm}mm`,
               } as CSSProperties
             }
@@ -105,7 +125,7 @@ function VehicleSummarySheet({ data, vehicleIndex }: { data: VehicleProductSumma
             <tbody>
               {data.products.map((product, rowIndex) => (
                 <tr key={product.id}>
-                  <td className="vehicle-summary-table__index-cell">{rowIndex + 1}</td>
+                  <td className="vehicle-summary-table__index-cell">{rowOffset + rowIndex + 1}</td>
                   <td className="vehicle-summary-table__product-cell">
                     <div className="vehicle-summary-table__product-line">
                       <span className="vehicle-summary-table__product-image" aria-hidden="true">
@@ -149,6 +169,22 @@ function VehicleSummarySheet({ data, vehicleIndex }: { data: VehicleProductSumma
 function VehicleSummaryStyles() {
   return (
     <style>{`
+      @font-face {
+        font-family: "Noto Sans Thai Vehicle Summary";
+        src: url("/fonts/NotoSansThai-Regular.ttf") format("truetype");
+        font-style: normal;
+        font-weight: 400;
+        font-display: swap;
+      }
+
+      @font-face {
+        font-family: "Noto Sans Thai Vehicle Summary";
+        src: url("/fonts/NotoSansThai-Bold.ttf") format("truetype");
+        font-style: normal;
+        font-weight: 700 900;
+        font-display: swap;
+      }
+
       @page { size: A4 portrait; margin: 0; }
 
       @media print {
@@ -251,10 +287,13 @@ function VehicleSummaryStyles() {
         height: ${SHEET_H};
         overflow: hidden;
         background: #ffffff;
-        border: 1px solid #000000;
+        border: 0.75pt solid #000000;
         color: #0f172a;
         box-sizing: border-box;
-        font-family: var(--font-sukhumvit), "Sukhumvit Set", sans-serif;
+        font-family: "Noto Sans Thai Vehicle Summary", "Noto Sans Thai", sans-serif;
+        font-synthesis: none;
+        text-rendering: geometricPrecision;
+        -webkit-font-smoothing: antialiased;
       }
 
       .vehicle-summary-sheet__inner {
@@ -271,7 +310,7 @@ function VehicleSummaryStyles() {
         flex-direction: column;
         gap: 0.15mm;
         padding-bottom: 0.35mm;
-        border-bottom: 1px solid #000000;
+        border-bottom: 0.75pt solid #000000;
       }
 
       .vehicle-summary-header__brand {
@@ -309,17 +348,15 @@ function VehicleSummaryStyles() {
       }
 
       .vehicle-summary-table-wrap {
-        flex: 1;
-        min-height: 0;
-        border: 1.2px solid #000000;
-        display: flex;
-        align-items: stretch;
+        flex: 0 0 auto;
+        border: 0.75pt solid #000000;
+        display: block;
         overflow: hidden;
       }
 
       .vehicle-summary-table {
         width: 100%;
-        height: 100%;
+        height: auto;
         border-collapse: collapse;
         table-layout: fixed;
       }
@@ -335,8 +372,8 @@ function VehicleSummaryStyles() {
 
       .vehicle-summary-table th,
       .vehicle-summary-table td {
-        border-right: 1px solid #000000;
-        border-bottom: 1px solid #000000;
+        border-right: 0.75pt solid #000000;
+        border-bottom: 0.75pt solid #000000;
         padding: 0;
         text-align: center;
         vertical-align: middle;
@@ -366,7 +403,7 @@ function VehicleSummaryStyles() {
       .vehicle-summary-table__index-cell {
         background: #ffffff;
         font-size: 8.8pt;
-        font-weight: 700;
+        font-weight: 800;
       }
 
       .vehicle-summary-table__product-col {
@@ -396,7 +433,7 @@ function VehicleSummaryStyles() {
       .vehicle-summary-table__unit-cell {
         background: #ffffff;
         font-size: 8.4pt;
-        font-weight: 700;
+        font-weight: 800;
         line-height: 1.48;
         color: #0f172a;
       }
@@ -404,7 +441,7 @@ function VehicleSummaryStyles() {
       .vehicle-summary-table__vehicle-col {
         font-size: 9pt;
         font-weight: 800;
-        border-bottom-width: 1px;
+        border-bottom-width: 0.75pt;
       }
 
       .vehicle-summary-table__vehicle-name {
@@ -452,7 +489,7 @@ function VehicleSummaryStyles() {
         display: block;
         width: 5.2mm;
         height: 5.2mm;
-        border: 1px solid #e2e8f0;
+        border: 0.75pt solid #cbd5e1;
         background: #f8fafc;
       }
 
@@ -474,7 +511,7 @@ function VehicleSummaryStyles() {
         text-overflow: clip;
         white-space: nowrap;
         font-size: 10.4pt;
-        font-weight: 700;
+        font-weight: 800;
         line-height: 1.48;
         color: #0f172a;
       }
@@ -497,7 +534,7 @@ export function VehicleProductSummaryLayout({ data }: { data: VehicleProductSumm
       <VehicleSummaryStyles />
       {sheets.map((sheet) => (
         <div key={sheet.key} className="packing-sheet-shell" data-capture-width="794" data-capture-height="1123">
-          <VehicleSummarySheet data={sheet.data} vehicleIndex={sheet.vehicleIndex} />
+          <VehicleSummarySheet sheet={sheet} />
         </div>
       ))}
     </>

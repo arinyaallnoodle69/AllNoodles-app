@@ -44,8 +44,9 @@ const SHEET_W = "297mm";
 const SHEET_H = "210mm";
 const SCREEN_SHEET_W = "1123px";
 const SCREEN_SHEET_H = "794px";
-const STANDARD_PRODUCTS_PER_PAGE = 38;
-const STANDARD_STORES_PER_PAGE = 25;
+const STANDARD_PRODUCTS_PER_PAGE = 50;
+const STANDARD_STORES_PER_PAGE = 33;
+const STANDARD_BODY_HEIGHT_MM = 151;
 const TRANSPOSED_PRODUCTS_PER_PAGE = 25;
 const TRANSPOSED_STORES_PER_PAGE = 37;
 
@@ -145,6 +146,45 @@ function insertZeroWidthSpaces(text: string): string {
   } catch {
     return text;
   }
+}
+
+function splitProductNameForStandardHeader(name: string): string[] {
+  const trimmed = name.trim();
+  if (!trimmed) return [""];
+  if (Array.from(trimmed).length <= 16) return [trimmed];
+
+  let segments: string[] = [];
+  if (typeof Intl !== "undefined" && Intl.Segmenter) {
+    try {
+      const segmenter = new Intl.Segmenter("th", { granularity: "word" });
+      segments = Array.from(segmenter.segment(trimmed), (segment) => segment.segment);
+    } catch {
+      segments = [];
+    }
+  }
+
+  if (segments.length < 2) {
+    const characters = Array.from(trimmed);
+    const midpoint = Math.ceil(characters.length / 2);
+    return [characters.slice(0, midpoint).join(""), characters.slice(midpoint).join("")];
+  }
+
+  let splitIndex = 1;
+  let smallestDifference = Number.POSITIVE_INFINITY;
+  for (let index = 1; index < segments.length; index += 1) {
+    const firstLength = Array.from(segments.slice(0, index).join("").trim()).length;
+    const secondLength = Array.from(segments.slice(index).join("").trim()).length;
+    const difference = Math.abs(firstLength - secondLength);
+    if (difference < smallestDifference) {
+      smallestDifference = difference;
+      splitIndex = index;
+    }
+  }
+
+  return [
+    segments.slice(0, splitIndex).join("").trim(),
+    segments.slice(splitIndex).join("").trim(),
+  ].filter(Boolean);
 }
 
 function buildHeaderGroups(products: PackingListProduct[], field: "brand" | "category") {
@@ -368,6 +408,18 @@ function calcDataColWidth(count: number, availableMm: number, minMm = 6) {
   return `${Math.max(minMm, raw)}mm`;
 }
 
+function getStandardNumberClass(value: number) {
+  const digitCount = Math.abs(Math.trunc(value)).toString().length;
+  if (digitCount >= 5) return " packing-number--xs";
+  if (digitCount >= 4) return " packing-number--sm";
+  if (digitCount >= 3) return " packing-number--md";
+  return "";
+}
+
+function formatStandardQuantity(value: number) {
+  return value.toLocaleString("th-TH", { useGrouping: false });
+}
+
 function StandardPackingListPage({ page, data }: { page: StandardPageDef; data: PackingListData }) {
   const columnWidth = calcDataColWidth(Math.max(page.pageProducts.length, 1), 261, 5);
   const categoryGroups = buildHeaderGroups(page.pageProducts, "category");
@@ -384,7 +436,10 @@ function StandardPackingListPage({ page, data }: { page: StandardPageDef; data: 
     categoryPaletteByKey.get(getProductCategoryKey(product)) ?? COLUMN_COLOR_GROUPS[0];
   const isLastStorePage = page.storeChunk === page.storeTotalChunks;
   const rowCount = page.pageStores.length + (isLastStorePage ? 1 : 0);
-  const rowHeightMm = Math.max(5.9, Math.min(7.1, 151 / Math.max(rowCount, 1)));
+  const rowHeightMm = Math.max(
+    4.45,
+    Math.min(5.2, STANDARD_BODY_HEIGHT_MM / Math.max(rowCount, 1)),
+  );
   const productTotals = isLastStorePage
     ? page.pageProductIndices.map((productIndex) =>
         page.vehicleStoreIndices.reduce((sum, storeIndex) => sum + (data.qty[productIndex]?.[storeIndex] ?? 0), 0),
@@ -392,7 +447,7 @@ function StandardPackingListPage({ page, data }: { page: StandardPageDef; data: 
     : [];
 
   return (
-    <section className="packing-sheet">
+    <section className="packing-sheet packing-sheet--standard">
       <div className="packing-sheet__inner">
         <StandardPackingHeader
           accentColor={page.accentColor}
@@ -433,18 +488,30 @@ function StandardPackingListPage({ page, data }: { page: StandardPageDef; data: 
                   return page.pageProducts.map((product) => {
                     const categoryPalette = getCategoryPalette(product);
                     const productPalette = getProductPalette(product, categoryPalette);
+                    const productNameLines = splitProductNameForStandardHeader(product.name);
+                    const longestLineLength = Math.max(...productNameLines.map((line) => Array.from(line).length));
                     return (
                       <th
                         key={product.key}
                         className="packing-col packing-col--product"
                         style={{ width: columnWidth, backgroundColor: productPalette.header }}
                       >
-                                                <div className="packing-product-header">
-                          <div className="packing-product-header__name">
+                        <div className="packing-product-header">
+                          <div
+                            className={`packing-product-header__name${
+                              longestLineLength > 28
+                                ? " packing-product-header__name--dense"
+                                : longestLineLength > 22
+                                  ? " packing-product-header__name--compact"
+                                  : ""
+                            }`}
+                          >
                             {product.icon ? (
                               <span className="packing-product-header__icon" aria-hidden="true">{product.icon}</span>
                             ) : null}
-                            {insertZeroWidthSpaces(product.name)}
+                            {productNameLines.map((line, lineIndex) => (
+                              <span key={`${product.key}-name-line-${lineIndex}`}>{line}</span>
+                            ))}
                           </div>
                         </div>
                       </th>
@@ -469,10 +536,18 @@ function StandardPackingListPage({ page, data }: { page: StandardPageDef; data: 
                       return (
                         <td
                           key={`${store.id}-${productIndex}`}
-                          className={value > 0 ? "packing-cell packing-cell--qty" : "packing-cell packing-cell--empty"}
+                          className={
+                            value > 0
+                              ? `packing-cell packing-cell--qty${getStandardNumberClass(value)}`
+                              : "packing-cell packing-cell--empty"
+                          }
                           style={{ backgroundColor: rowIndex % 2 === 0 ? productPalette.rowA : productPalette.rowB }}
                         >
-                          {value > 0 ? value.toLocaleString("th-TH") : ""}
+                          {value > 0 ? (
+                            <span className={`packing-number${getStandardNumberClass(value)}`}>
+                              {formatStandardQuantity(value)}
+                            </span>
+                          ) : ""}
                         </td>
                       );
                     })}
@@ -484,8 +559,15 @@ function StandardPackingListPage({ page, data }: { page: StandardPageDef; data: 
                 <tr className="packing-table__total-row">
                   <td className="packing-cell packing-cell--total-label">รวมยอด</td>
                   {productTotals.map((total, index) => (
-                    <td key={`standard-total-${index}`} className="packing-cell packing-cell--total">
-                      {total > 0 ? total.toLocaleString("th-TH") : ""}
+                    <td
+                      key={`standard-total-${index}`}
+                      className="packing-cell packing-cell--total"
+                    >
+                      {total > 0 ? (
+                        <span className={`packing-number${getStandardNumberClass(total)}`}>
+                          {formatStandardQuantity(total)}
+                        </span>
+                      ) : ""}
                     </td>
                   ))}
                 </tr>
@@ -589,6 +671,22 @@ function TransposedPackingListPage({ page, data }: { page: TransposedPageDef; da
 function PackingListStyles() {
   return (
     <style>{`
+      @font-face {
+        font-family: "Noto Sans Thai Packing";
+        src: url("/fonts/NotoSansThai-Regular.ttf") format("truetype");
+        font-style: normal;
+        font-weight: 400;
+        font-display: swap;
+      }
+
+      @font-face {
+        font-family: "Noto Sans Thai Packing";
+        src: url("/fonts/NotoSansThai-Bold.ttf") format("truetype");
+        font-style: normal;
+        font-weight: 700 900;
+        font-display: swap;
+      }
+
       @page { size: A4 landscape; margin: 0; }
 
       @media print {
@@ -651,10 +749,10 @@ function PackingListStyles() {
         }
 
         .packing-sheet__inner {
-          padding-top: 0.6mm !important;
-          padding-right: 0.8mm !important;
-          padding-bottom: 2.2mm !important;
-          padding-left: 0.8mm !important;
+          padding-top: 4mm !important;
+          padding-right: 4mm !important;
+          padding-bottom: 4mm !important;
+          padding-left: 4mm !important;
           gap: 0.55mm !important;
         }
 
@@ -735,7 +833,7 @@ function PackingListStyles() {
         display: flex;
         flex-direction: column;
         height: 100%;
-        padding: 1.2mm 0.8mm 2.4mm;
+        padding: 4mm;
         gap: 1.2mm;
         box-sizing: border-box;
       }
@@ -860,13 +958,48 @@ function PackingListStyles() {
       }
 
       .packing-table:not(.packing-table--transposed) .packing-cell--store {
-        font-size: 9.8pt;
-        line-height: 1.16;
+        overflow: hidden;
+        font-size: 8pt;
+        line-height: 1.05;
+        text-overflow: ellipsis;
       }
 
       .packing-table:not(.packing-table--transposed) .packing-cell--qty,
       .packing-table:not(.packing-table--transposed) .packing-cell--total {
-        font-size: 9.2pt;
+        overflow: hidden;
+        padding: 0;
+        font-size: 6.1pt;
+        white-space: nowrap;
+      }
+
+      .packing-number {
+        display: block;
+        width: 100%;
+        max-width: 100%;
+        overflow: hidden;
+        font-family: Arial, sans-serif;
+        font-size: 8pt;
+        font-weight: 800;
+        font-variant-numeric: tabular-nums;
+        line-height: 1;
+        letter-spacing: -0.03em;
+        text-align: center;
+        white-space: nowrap;
+      }
+
+      .packing-number--md {
+        font-size: 7pt;
+        letter-spacing: -0.05em;
+      }
+
+      .packing-number--sm {
+        font-size: 6pt;
+        letter-spacing: -0.07em;
+      }
+
+      .packing-number--xs {
+        font-size: 5.2pt;
+        letter-spacing: -0.09em;
       }
 
       .packing-header__meta-cell span {
@@ -884,7 +1017,7 @@ function PackingListStyles() {
       .packing-table-wrap {
         flex: 1;
         min-height: 0;
-        border: 1.35px solid #111827;
+        border: 1px solid #000000;
         display: flex;
         align-items: flex-start;
         overflow: hidden;
@@ -898,8 +1031,8 @@ function PackingListStyles() {
 
       .packing-col,
       .packing-cell {
-        border-right: 1px solid #111827;
-        border-bottom: 1px solid #111827;
+        border-right: 1px solid #000000;
+        border-bottom: 1px solid #000000;
         box-sizing: border-box;
       }
 
@@ -996,44 +1129,58 @@ function PackingListStyles() {
       }
 
       .packing-product-header {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: flex-start;
-        gap: 0;
-        min-height: 17mm;
-        padding: 0.35mm 0.15mm 0.15mm;
+        position: relative;
+        height: 26mm;
+        min-height: 26mm;
+        padding: 0;
         width: 100%;
         min-width: 0;
-        overflow: visible;
+        overflow: hidden;
       }
 
       .packing-product-header__name {
-        display: block;
-        font-size: 6.2pt;
-        line-height: 1.2;
-        font-weight: 800;
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        display: flex;
+        width: 24.5mm;
+        height: 4.4mm;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 0;
+        transform: translate(-50%, -50%) rotate(-90deg);
+        transform-origin: center;
+        font-size: 5.9pt;
+        line-height: 1;
+        font-weight: 900;
         color: #0f172a;
-        width: 100%;
-        max-width: 100%;
-        min-height: 0;
-        min-width: 0;
-        overflow: visible;
-        white-space: normal;
-        word-break: break-word;
-        overflow-wrap: anywhere;
+        white-space: nowrap;
         text-align: center;
-        writing-mode: horizontal-tb;
-        text-orientation: mixed;
-        padding: 0.3mm 0 0.15mm;
+        padding: 0;
         box-sizing: border-box;
       }
 
+      .packing-product-header__name > span {
+        display: block;
+        max-width: 100%;
+        white-space: nowrap;
+      }
+
+      .packing-product-header__name--compact {
+        font-size: 5.4pt;
+      }
+
+      .packing-product-header__name--dense {
+        font-size: 5pt;
+      }
+
       .packing-product-header__icon {
-        display: inline-block;
-        margin-right: 0.35mm;
+        position: absolute;
+        right: 100%;
+        margin-right: 0.5mm;
         font-family: "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", var(--font-sukhumvit), "Sukhumvit Set", sans-serif;
-        font-size: 6.2pt;
+        font-size: 5.3pt;
         line-height: 1.15;
       }
 
@@ -1187,6 +1334,49 @@ function PackingListStyles() {
 
       .packing-cell--total {
         background: #ffd400;
+      }
+
+      /* The original 50-item layout uses its own highly legible print face.
+         Keep the transposed layout and every other document unchanged. */
+      .packing-sheet--standard {
+        font-family: "Noto Sans Thai Packing", "Noto Sans Thai", sans-serif;
+        font-synthesis: none;
+        text-rendering: geometricPrecision;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      .packing-sheet--standard .packing-header__org,
+      .packing-sheet--standard .packing-header__title,
+      .packing-sheet--standard .packing-header__date,
+      .packing-sheet--standard .packing-header__vehicle-main,
+      .packing-sheet--standard .packing-header__meta-cell span,
+      .packing-sheet--standard .packing-header__meta-cell strong,
+      .packing-sheet--standard .packing-col,
+      .packing-sheet--standard .packing-cell--store,
+      .packing-sheet--standard .packing-cell--total-label {
+        font-family: "Noto Sans Thai Packing", "Noto Sans Thai", sans-serif;
+      }
+
+      .packing-sheet--standard .packing-cell--store {
+        font-weight: 700;
+      }
+
+      .packing-sheet--standard .packing-product-header__name {
+        font-family: "Noto Sans Thai Packing", "Noto Sans Thai", sans-serif;
+        font-size: 6.2pt;
+        font-weight: 700;
+      }
+
+      .packing-sheet--standard .packing-product-header__name--compact {
+        font-size: 5.7pt;
+      }
+
+      .packing-sheet--standard .packing-product-header__name--dense {
+        font-size: 5.2pt;
+      }
+
+      .packing-sheet--standard .packing-product-header__icon {
+        font-family: "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif;
       }
     `}</style>
   );

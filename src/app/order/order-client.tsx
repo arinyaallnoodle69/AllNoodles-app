@@ -2534,15 +2534,14 @@ export default function OrderClient({
       <style>{`
         @keyframes slideInRight {
           0% { opacity: 0.72; transform: translate3d(100vw, 0, 0); }
-          100% { opacity: 1; transform: translateX(0); }
+          100% { opacity: 1; transform: none; }
         }
         .animate-slide-in-right {
           animation: slideInRight 0.58s cubic-bezier(0.19, 1, 0.22, 1) forwards;
-          will-change: transform, opacity;
         }
         @keyframes modalSlideIn {
           from { transform: translateY(100%); }
-          to { transform: translateY(0); }
+          to { transform: none; }
         }
         @keyframes modalSlideOut {
           from { transform: translateY(0); }

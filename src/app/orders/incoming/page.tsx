@@ -32,6 +32,8 @@ import type {
   PackingListSummaryProduct,
   PackingListSummaryStore,
 } from "@/components/orders/packing-list-summary-button";
+import { DailySpecialOrderManager } from "@/components/orders/daily-special-order-manager";
+import { getDailySpecialCatalog, getDailySpecialItems } from "@/lib/orders/daily-special-items";
 
 const LazyCreateOrderModal = dynamic(() =>
   import("@/components/orders/lazy-create-order-modal").then((mod) => mod.LazyCreateOrderModal),
@@ -182,6 +184,8 @@ export default async function IncomingOrdersPage({ searchParams }: IncomingOrder
     deliveryNoteSummaries,
     billedDeliveryNumbersArray,
     products,
+    specialCatalog,
+    specialItems,
   ] = await Promise.all([
     getIncomingOrdersBundle(session.organizationId, { orderDate, endDate, searchTerm }),
     expandedOrderId ? getOrderDetailById(session.organizationId, expandedOrderId) : Promise.resolve(null),
@@ -194,6 +198,8 @@ export default async function IncomingOrdersPage({ searchParams }: IncomingOrder
     // The full catalog is only needed by the expanded order-detail modal
     // (add-product picker); skip it entirely on plain list loads.
     expandedOrderId ? getProductsForOrder(session.organizationId) : Promise.resolve([]),
+    getDailySpecialCatalog(session.organizationId),
+    getDailySpecialItems(session.organizationId, orderDate),
   ]);
 
   const orders = ordersBundle.orders;
@@ -507,18 +513,28 @@ export default async function IncomingOrdersPage({ searchParams }: IncomingOrder
                 </p>
               </div>
 
-              {/* Search Box on the same line as title */}
-              <div className="w-full max-w-md">
-                <label className="relative block">
-                  <Search className="pointer-events-none absolute left-4 top-1/2 h-4.5 w-4.5 -translate-y-1/2 text-[#4A148C]" strokeWidth={2} />
-                  <input
-                    type="search"
-                    name="q"
-                    defaultValue={searchTerm}
-                    placeholder="ค้นหาชื่อร้าน หรือเลขออเดอร์"
-                    className="h-12 w-full rounded-xl border border-[#EA80FC]/35 bg-white pl-11 pr-4 text-sm font-semibold text-[#4A148C] shadow-sm outline-none transition placeholder:text-[#4A148C]/70 focus:border-[#EA80FC] focus:ring-2 focus:ring-[#EA80FC]/20"
-                  />
-                </label>
+              {/* Fast actions live beside search on desktop. */}
+              <div className="flex w-full items-center justify-end gap-2 lg:max-w-[650px]">
+                <div className="min-w-0 flex-1">
+                  <label className="relative block">
+                    <Search className="pointer-events-none absolute left-4 top-1/2 h-4.5 w-4.5 -translate-y-1/2 text-[#4A148C]" strokeWidth={2} />
+                    <input
+                      type="search"
+                      name="q"
+                      defaultValue={searchTerm}
+                      placeholder="ค้นหาชื่อร้าน หรือเลขออเดอร์"
+                      className="h-12 w-full rounded-xl border border-[#EA80FC]/35 bg-white pl-11 pr-4 text-sm font-semibold text-[#4A148C] shadow-sm outline-none transition placeholder:text-[#4A148C]/70 focus:border-[#EA80FC] focus:ring-2 focus:ring-[#EA80FC]/20"
+                    />
+                  </label>
+                </div>
+                <DailySpecialOrderManager
+                  key={`desktop-special-${orderDate}`}
+                  date={orderDate}
+                  initialItems={specialItems}
+                  products={specialCatalog}
+                  variant="desktop"
+                  vehicles={vehicles}
+                />
               </div>
             </div>
 
@@ -694,6 +710,8 @@ export default async function IncomingOrdersPage({ searchParams }: IncomingOrder
                   vehicleTransferDates={vehicleTransferDates}
                   searchTerm={searchTerm}
                   selectedCustomerIds={selectedCustomerIds}
+                  specialCatalog={specialCatalog}
+                  specialItems={specialItems}
                 />
               </div>
 

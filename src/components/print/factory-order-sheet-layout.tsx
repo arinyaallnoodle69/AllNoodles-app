@@ -5,8 +5,8 @@ const SHEET_W = "210mm";
 const SHEET_H = "297mm";
 const SCREEN_SHEET_W = "794px";
 const SCREEN_SHEET_H = "1123px";
-const ITEMS_PER_PAGE = 25;
-const ROW_HEIGHT_MM = 10.4;
+const ITEMS_PER_PAGE = 15;
+const ROW_HEIGHT_MM = 14;
 
 const VEHICLE_COLUMN_PALETTES = [
   { header: "#EA80FC", body: "#F3E5F5", border: "#000000" },
@@ -35,10 +35,11 @@ function FactoryOrderSheet({ data, startIndex }: { data: VehicleProductSummaryDa
           <div className="vehicle-summary-header__line">
             <div className="vehicle-summary-header__brand">
               โรงงาน : {data.factoryName || "โรงงานอนามัย"}
+              {data.warehouseName ? ` · คลัง : ${data.warehouseName}` : ""}
             </div>
             <div className="vehicle-summary-header__meta-inline">
               <span>{data.dateLabel}</span>
-              <span>{data.vehicles.length.toLocaleString("th-TH")} คัน</span>
+              <span>รวมจาก {(data.sourceVehicleCount ?? data.vehicles.length).toLocaleString("th-TH")} คัน</span>
               <span>{data.products.length.toLocaleString("th-TH")} รายการ</span>
             </div>
           </div>
@@ -234,7 +235,7 @@ function FactoryOrderStyles() {
         display: flex;
         flex-direction: column;
         height: 100%;
-        padding: 2.0mm 3.0mm 2.2mm;
+        padding: 4mm;
         gap: 0.9mm;
         box-sizing: border-box;
       }
@@ -256,7 +257,7 @@ function FactoryOrderStyles() {
       }
 
       .vehicle-summary-header__brand {
-        font-size: 8pt;
+        font-size: 10pt;
         font-weight: 800;
         line-height: 1.25;
         letter-spacing: 0.04em;
@@ -273,7 +274,7 @@ function FactoryOrderStyles() {
 
       .vehicle-summary-header__title {
         margin: 0;
-        font-size: 15pt;
+        font-size: 18pt;
         line-height: 1.25;
         font-weight: 800;
         white-space: nowrap;
@@ -286,7 +287,7 @@ function FactoryOrderStyles() {
         gap: 1.6mm;
         flex-wrap: nowrap;
         white-space: nowrap;
-        font-size: 8pt;
+        font-size: 9.5pt;
         font-weight: 700;
         color: #334155;
       }
@@ -294,7 +295,7 @@ function FactoryOrderStyles() {
       .vehicle-summary-table-wrap {
         flex: 0 0 auto;
         min-height: 0;
-        border: 1.2px solid #000000;
+        border: 1px solid #000000;
         display: flex;
         align-items: stretch;
         overflow: hidden;
@@ -308,7 +309,7 @@ function FactoryOrderStyles() {
       }
 
       .vehicle-summary-table thead tr {
-        height: 8mm;
+        height: 10mm;
       }
 
       .vehicle-summary-table tbody tr,
@@ -336,56 +337,56 @@ function FactoryOrderStyles() {
 
       .vehicle-summary-table__index-col,
       .vehicle-summary-table__index-cell {
-        width: 8mm;
-        min-width: 8mm;
+        width: 10mm;
+        min-width: 10mm;
       }
 
       .vehicle-summary-table__index-col {
         background: #ffffff;
-        font-size: 8pt;
+        font-size: 10pt;
         font-weight: 800;
       }
 
       .vehicle-summary-table__index-cell {
         background: #ffffff;
-        font-size: 8pt;
+        font-size: 10pt;
         font-weight: 700;
       }
 
       .vehicle-summary-table__product-col {
-        width: 96mm;
-        min-width: 96mm;
+        width: 130mm;
+        min-width: 130mm;
         padding: 0.5mm 0.8mm 0.25mm;
         background: #ffffff;
         text-align: center;
-        font-size: 9pt;
+        font-size: 11pt;
         font-weight: 800;
         line-height: 1.25;
       }
 
       .vehicle-summary-table__unit-col,
       .vehicle-summary-table__unit-cell {
-        width: 13mm;
-        min-width: 13mm;
+        width: 18mm;
+        min-width: 18mm;
       }
 
       .vehicle-summary-table__unit-col {
         background: #ffffff;
-        font-size: 8pt;
+        font-size: 10pt;
         font-weight: 800;
         line-height: 1.25;
       }
 
       .vehicle-summary-table__unit-cell {
         background: #ffffff;
-        font-size: 8pt;
+        font-size: 11pt;
         font-weight: 700;
         line-height: 1.55;
         color: #0f172a;
       }
 
       .vehicle-summary-table__vehicle-col {
-        font-size: 8.5pt;
+        font-size: 11pt;
         font-weight: 800;
         border-bottom-width: 1px;
       }
@@ -400,7 +401,7 @@ function FactoryOrderStyles() {
       }
 
       .vehicle-summary-table__product-cell {
-        padding: 0.35mm 0.8mm 0.1mm;
+        padding: 0.6mm 3mm;
         text-align: center;
         background: #ffffff;
       }
@@ -410,7 +411,10 @@ function FactoryOrderStyles() {
         align-items: center;
         justify-content: flex-start;
         gap: 0.15mm;
+        width: 100%;
         min-height: 100%;
+        padding: 0.6mm 3mm;
+        box-sizing: border-box;
       }
 
       .vehicle-summary-table__product-name {
@@ -420,15 +424,15 @@ function FactoryOrderStyles() {
         max-width: none;
         overflow: visible;
         text-overflow: clip;
-        white-space: nowrap;
-        font-size: 10pt;
+        white-space: normal;
+        font-size: 13pt;
         font-weight: 700;
-        line-height: 1.55;
+        line-height: 1.2;
         color: #0f172a;
       }
 
       .vehicle-summary-table__qty-cell {
-        font-size: 10.5pt;
+        font-size: 14pt;
         font-weight: 800;
         line-height: 1.3;
         color: #0f172a;

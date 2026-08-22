@@ -15,6 +15,7 @@ import { getPackingListProductMeta } from "@/lib/orders/packing-list-product-met
 import { sortProductsByCategory } from "@/lib/products/sort-by-category";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { AutoPrint, PackingListPrintButton } from "./preview/print-button";
+import { getDailySpecialPrintItems } from "@/lib/orders/daily-special-items";
 
 export const metadata = { title: "ใบจัดของ" };
 export const viewport: Viewport = {
@@ -101,6 +102,7 @@ type GroupedStore = {
   vehicleId: string | null;
   vehicleName: string | null;
   items: Map<string, number>;
+  specialSort: number;
 };
 
 type ProductDescriptor = {
@@ -202,7 +204,7 @@ async function PackingListPage({ searchParams }: Props) {
       ? ordersQueryBase.gte("order_date", date).lte("order_date", endDate)
       : ordersQueryBase.eq("order_date", date);
 
-  const [vehicleRows, ordersResult, productsDb, categoriesDb, categoryItemsDb] = await Promise.all([
+  const [vehicleRows, ordersResult, productsDb, categoriesDb, categoryItemsDb, specialItems] = await Promise.all([
     admin
       .from("vehicles")
       .select("id, name")
@@ -224,6 +226,7 @@ async function PackingListPage({ searchParams }: Props) {
       .from("product_category_items")
       .select("product_category_id, product_id")
       .eq("organization_id", session.organizationId),
+    getDailySpecialPrintItems(session.organizationId, date, endDate),
   ]);
 
   const vehicles: PackingListVehicle[] = (vehicleRows.data ?? []).map(
@@ -331,6 +334,12 @@ async function PackingListPage({ searchParams }: Props) {
     }
   }
 
+  // A date can legitimately contain only office/claim rows. Keep that date in
+  // the document even when there are no customer orders.
+  for (const item of specialItems) {
+    if (!ordersByDate.has(item.date)) ordersByDate.set(item.date, []);
+  }
+
   const allPackingData: PackingListData[] = Array.from(ordersByDate.entries())
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([currentDate, dateOrders]) => {
@@ -373,6 +382,7 @@ async function PackingListPage({ searchParams }: Props) {
             vehicleId,
             vehicleName: resolvedVehicleName,
             items: new Map(),
+            specialSort: 0,
           };
           groupedStores.set(storeGroupKey, groupedStore);
         }
@@ -398,6 +408,43 @@ async function PackingListPage({ searchParams }: Props) {
         }
       }
 
+      for (const special of specialItems.filter((item) => item.date === currentDate)) {
+        const key = `${special.product.sku.trim().toLowerCase()}||${special.product.unit.trim().toLowerCase()}`;
+        const storeGroupKey = `special_${special.type}_${special.vehicleId}`;
+        let groupedStore = groupedStores.get(storeGroupKey);
+        if (!groupedStore) {
+          groupedStore = {
+            customer: {
+              id: storeGroupKey,
+              name: special.type === "office" ? "เข้าออฟฟิศ" : "เคลม",
+              customer_code: special.type === "office" ? "SPECIAL-OFFICE" : "SPECIAL-CLAIM",
+              default_vehicle_id: special.vehicleId,
+              vehicles: null,
+            },
+            vehicleId: special.vehicleId,
+            vehicleName: special.vehicleName,
+            items: new Map(),
+            specialSort: special.type === "office" ? 1 : 2,
+          };
+          groupedStores.set(storeGroupKey, groupedStore);
+        }
+
+        groupedStore.items.set(key, (groupedStore.items.get(key) ?? 0) + special.quantity);
+        if (!productMap.has(key)) {
+          productMap.set(key, {
+            productId: special.productId,
+            sku: special.product.sku,
+            name: packingListMetaByProductId.get(special.productId)?.name ?? special.product.name,
+            brand: normalizePackingBrand(packingListMetaByProductId.get(special.productId)?.brand ?? ""),
+            category: packingListMetaByProductId.get(special.productId)?.category ?? "",
+            categoryColor: categoryColorByProductId.get(special.productId) ?? null,
+            printBackgroundColor: productPrintBackgroundColorById.get(special.productId) ?? null,
+            icon: packingListMetaByProductId.get(special.productId)?.icon ?? "",
+            unit: special.product.unit,
+          });
+        }
+      }
+
       const stores = Array.from(groupedStores.values())
         .sort((a, b) => {
           const indexA =
@@ -405,6 +452,7 @@ async function PackingListPage({ searchParams }: Props) {
           const indexB =
             b.vehicleId === null ? 999 : (vehicleSortIndexMap.get(b.vehicleId) ?? 998);
           if (indexA !== indexB) return indexA - indexB;
+          if (a.specialSort !== b.specialSort) return a.specialSort - b.specialSort;
           return a.customer.customer_code.localeCompare(b.customer.customer_code);
         })
         .map(

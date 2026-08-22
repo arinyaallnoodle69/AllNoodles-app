@@ -204,23 +204,50 @@ async function loadTodayNetProfit(
 // without the heavy product payload (images, sale units, modes, categories).
 async function loadLowStockCount(organizationId: string): Promise<number> {
   const supabase = getSupabaseAdmin();
+  const warehouseModesQuery = (supabase as unknown as {
+    from(table: "product_warehouse_fulfillment_modes"): {
+      select(columns: string): {
+        eq(column: string, value: string): Promise<{
+          data: Array<{ product_id: string; warehouse_id: string; mode: string }> | null;
+          error: { message?: string } | null;
+        }>;
+      };
+    };
+  }).from("product_warehouse_fulfillment_modes");
 
-  const [productsRes, warehouseStocksRes] = await Promise.all([
+  const [productsRes, warehouseStocksRes, warehouseModesRes] = await Promise.all([
     supabase.from("products")
       .select("id, stock_quantity, reserved_quantity, is_active")
       .eq("organization_id", organizationId),
     supabase.from("product_warehouse_stocks")
-      .select("product_id, stock_quantity, reserved_quantity")
+      .select("product_id, warehouse_id, stock_quantity, reserved_quantity")
+      .eq("organization_id", organizationId),
+    warehouseModesQuery
+      .select("product_id, warehouse_id, mode")
       .eq("organization_id", organizationId),
   ]);
 
-  if (productsRes.error || warehouseStocksRes.error) {
+  if (productsRes.error || warehouseStocksRes.error || warehouseModesRes.error) {
     return 0;
   }
 
-  const stocksByProductId = new Map<string, Array<{ stock_quantity: unknown; reserved_quantity: unknown }>>();
+  const fulfillmentModeByProductWarehouse = new Map<string, string>();
+  for (const row of (warehouseModesRes.data ?? []) as Array<{
+    product_id: string;
+    warehouse_id: string;
+    mode: string;
+  }>) {
+    fulfillmentModeByProductWarehouse.set(`${row.product_id}:${row.warehouse_id}`, row.mode);
+  }
+
+  const stocksByProductId = new Map<string, Array<{
+    warehouse_id: string;
+    stock_quantity: unknown;
+    reserved_quantity: unknown;
+  }>>();
   for (const row of (warehouseStocksRes.data ?? []) as Array<{
     product_id: string;
+    warehouse_id: string;
     stock_quantity: unknown;
     reserved_quantity: unknown;
   }>) {
@@ -238,10 +265,20 @@ async function loadLowStockCount(organizationId: string): Promise<number> {
     if (!product.is_active) return total;
     const warehouseStocks = stocksByProductId.get(product.id) ?? [];
     if (warehouseStocks.length === 0) {
+      const configuredModes = Array.from(fulfillmentModeByProductWarehouse.entries())
+        .filter(([key]) => key.startsWith(`${product.id}:`))
+        .map(([, mode]) => mode);
+      if (configuredModes.length > 0 && !configuredModes.includes("stock")) {
+        return total;
+      }
+
       const availableQuantity = toNum(product.stock_quantity) - toNum(product.reserved_quantity);
       return total + (availableQuantity <= 5 ? 1 : 0);
     }
     return total + warehouseStocks.filter((stock) => {
+      const mode = fulfillmentModeByProductWarehouse.get(`${product.id}:${stock.warehouse_id}`) ?? "stock";
+      if (mode !== "stock") return false;
+
       const availableQuantity = toNum(stock.stock_quantity) - toNum(stock.reserved_quantity);
       return availableQuantity <= 5;
     }).length;

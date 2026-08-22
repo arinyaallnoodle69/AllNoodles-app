@@ -8,9 +8,23 @@ import { RootAppLayoutShell } from "@/components/root-layout-shell";
 import { PerformanceReporter } from "@/components/performance/performance-reporter";
 
 const sukhumvitSet = localFont({
-  src: "../../public/fonts/SukhumvitSet-Medium.ttf",
-  weight: "500",
-  style: "normal",
+  src: [
+    {
+      path: "../../public/fonts/SukhumvitSet-Medium.ttf",
+      weight: "500",
+      style: "normal",
+    },
+    {
+      path: "../../public/fonts/SukhumvitSet-SemiBold.ttf",
+      weight: "600",
+      style: "normal",
+    },
+    {
+      path: "../../public/fonts/SukhumvitSet-Bold.ttf",
+      weight: "700",
+      style: "normal",
+    },
+  ],
   display: "swap",
   variable: "--font-sukhumvit",
 });
@@ -88,7 +102,7 @@ export default function RootLayout({
         <link rel="preconnect" href="https://profile.line-scdn.net" crossOrigin="anonymous" />
       </head>
       <body
-        className={`${sukhumvitSet.variable} ${sukhumvitSet.className} bg-background text-foreground antialiased`}
+        className={`${sukhumvitSet.variable} ${sukhumvitSet.className} bg-background text-foreground`}
       >
         <PwaProvider />
         <Suspense fallback={null}>

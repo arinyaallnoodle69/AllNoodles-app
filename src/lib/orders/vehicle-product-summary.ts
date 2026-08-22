@@ -2,6 +2,7 @@ import "server-only";
 
 import { sortProductsByCategory } from "@/lib/products/sort-by-category";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getDailySpecialPrintItems } from "@/lib/orders/daily-special-items";
 
 type ProductWarehouseFulfillmentMode = "disabled" | "fresh" | "stock";
 
@@ -28,6 +29,8 @@ export type VehicleProductSummaryData = {
   vehicles: VehicleSummaryVehicle[];
   qty: number[][];
   factoryName?: string;
+  warehouseName?: string;
+  sourceVehicleCount?: number;
 };
 
 type OrderRow = {
@@ -82,6 +85,7 @@ type ProductWarehouseFulfillment = {
 
 type FactoryGroupAccumulator = {
   factoryName: string;
+  warehouseName: string;
   productVehicleQty: Map<string, Map<string, number>>;
   vehicleNamesByKey: Map<string, string>;
   vehicleKeys: Set<string>;
@@ -219,7 +223,7 @@ export async function getVehicleProductSummaryData(
 ): Promise<VehicleProductSummaryData> {
   const admin = getSupabaseAdmin();
 
-  const [ordersResult, vehiclesResult, sortedProducts] = await Promise.all([
+  const [ordersResult, vehiclesResult, sortedProducts, specialItems] = await Promise.all([
     admin
       .from("orders")
       .select(`
@@ -241,6 +245,7 @@ export async function getVehicleProductSummaryData(
       .order("sort_order", { ascending: true })
       .order("created_at", { ascending: true }),
     loadSortedProducts(organizationId),
+    getDailySpecialPrintItems(organizationId, date, endDate),
   ]);
 
   if (ordersResult.error) throw new Error(ordersResult.error.message ?? "Failed to load orders for vehicle summary.");
@@ -303,6 +308,22 @@ export async function getVehicleProductSummaryData(
     }
   }
 
+  // Claims are daily, non-sale loading quantities. They appear only on the
+  // packing order row and this vehicle-loading summary; they never touch stock
+  // or delivery notes.
+  for (const item of specialItems.filter((special) => special.type === "claim")) {
+    const productIndex = productIndexById.get(item.productId);
+    if (productIndex === undefined) continue;
+    let vehicleIndex = vehicleIndexById.get(item.vehicleId);
+    if (vehicleIndex === undefined) {
+      vehicles.push({ id: item.vehicleId, name: item.vehicleName });
+      vehicleIndex = vehicles.length - 1;
+      vehicleIndexById.set(item.vehicleId, vehicleIndex);
+      qty.forEach((row) => row.push(0));
+    }
+    qty[productIndex][vehicleIndex] = (qty[productIndex][vehicleIndex] ?? 0) + item.quantity;
+  }
+
   const activeRowIndices = qty.reduce<number[]>((indices, row, index) => {
     if (row.some((value) => value > 0)) {
       indices.push(index);
@@ -333,7 +354,7 @@ export async function getFactoryOrderSheetData(
     };
   }).from("product_warehouse_fulfillment_modes");
 
-  const [ordersResult, vehiclesResult, warehousesResult, modesResult, sortedProducts] = await Promise.all([
+  const [ordersResult, vehiclesResult, warehousesResult, modesResult, sortedProducts, specialItems] = await Promise.all([
     admin
       .from("orders")
       .select(`
@@ -363,6 +384,7 @@ export async function getFactoryOrderSheetData(
       .select("product_id, warehouse_id, mode, supplier_id, suppliers(name)")
       .eq("organization_id", organizationId),
     loadSortedProducts(organizationId),
+    getDailySpecialPrintItems(organizationId, date, endDate),
   ]);
 
   if (ordersResult.error) throw new Error(ordersResult.error.message ?? "Failed to load orders for factory order sheet.");
@@ -426,7 +448,8 @@ export async function getFactoryOrderSheetData(
       let group = groups.get(groupKey);
       if (!group) {
         group = {
-          factoryName: `${warehouseName} / ${supplierName}`,
+          factoryName: supplierName,
+          warehouseName,
           productVehicleQty: new Map(),
           vehicleNamesByKey: new Map(),
           vehicleKeys: new Set(),
@@ -442,6 +465,40 @@ export async function getFactoryOrderSheetData(
     }
   }
 
+  // Office quantities are ordered from the factory but are not sales orders.
+  // Resolve their warehouse from the product's configured fresh-production
+  // mode, keeping the UI fast (vehicle -> products) without an extra step.
+  for (const item of specialItems.filter((special) => special.type === "office")) {
+    const product = productById.get(item.productId);
+    if (!product) continue;
+    const mode = ((modesResult.data ?? []) as ProductModeRow[]).find(
+      (candidate) => candidate.product_id === item.productId && candidate.mode === "fresh",
+    );
+    if (!mode) continue;
+
+    const warehouseName = warehouseNameById.get(mode.warehouse_id) || "ไม่ระบุคลัง";
+    const supplierName = mode.suppliers?.name || product.supplierName || "โรงงานอนามัย";
+    const supplierKey = mode.supplier_id || product.supplierId || supplierName;
+    const groupKey = `${mode.warehouse_id}:${supplierKey}`;
+    let group = groups.get(groupKey);
+    if (!group) {
+      group = {
+        factoryName: supplierName,
+        warehouseName,
+        productVehicleQty: new Map(),
+        vehicleNamesByKey: new Map(),
+        vehicleKeys: new Set(),
+      };
+      groups.set(groupKey, group);
+    }
+
+    const productQty = group.productVehicleQty.get(product.id) ?? new Map<string, number>();
+    productQty.set(item.vehicleId, (productQty.get(item.vehicleId) ?? 0) + item.quantity);
+    group.productVehicleQty.set(product.id, productQty);
+    group.vehicleKeys.add(item.vehicleId);
+    group.vehicleNamesByKey.set(item.vehicleId, item.vehicleName);
+  }
+
   const dateLabel = formatDateLabel(date, endDate);
   const configuredVehicleKeys = configuredVehicles.map((vehicle) => vehicle.id ?? "__unassigned__");
 
@@ -450,22 +507,20 @@ export async function getFactoryOrderSheetData(
       ...configuredVehicleKeys.filter((key) => group.vehicleKeys.has(key)),
       ...Array.from(group.vehicleKeys).filter((key) => !configuredVehicleKeys.includes(key)),
     ];
-    const vehicles = vehicleKeys.map((key) => ({
-      id: key === "__unassigned__" ? null : key,
-      name: group.vehicleNamesByKey.get(key) || vehicleNameByKey.get(key) || "ยังไม่กำหนดรถ",
-    }));
     const groupProducts = products.filter((product) => group.productVehicleQty.has(product.id));
     const qty = groupProducts.map((product) => {
       const productQty = group.productVehicleQty.get(product.id) ?? new Map<string, number>();
-      return vehicleKeys.map((key) => productQty.get(key) ?? 0);
+      return [vehicleKeys.reduce((total, key) => total + (productQty.get(key) ?? 0), 0)];
     });
 
     return {
       organizationName: "All Noodles",
       dateLabel,
       factoryName: group.factoryName,
+      warehouseName: group.warehouseName,
       products: groupProducts,
-      vehicles,
+      sourceVehicleCount: vehicleKeys.length,
+      vehicles: [{ id: "__total__", name: "จำนวนรวม" }],
       qty,
     };
   });

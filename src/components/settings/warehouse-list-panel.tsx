@@ -6,8 +6,8 @@ import Image from "next/image";
 import { useActionState, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { AlertTriangle, Box, Boxes, CheckCircle2, ChevronRight, Download, Info, ListFilter, Loader2, MapPin, Package2, PencilLine, Power, PowerOff, Save, Search, Store, Trash2, Upload, Warehouse, X } from "lucide-react";
-import { importWarehouseProductModesAction, toggleWarehouseAction, deleteWarehouseAction, updateWarehouseProductFulfillmentModesAction } from "@/app/settings/warehouses/actions";
-import type { WarehouseProductModeImportState } from "@/app/settings/warehouses/actions";
+import { importWarehouseProductModesAction, saveWarehouseProductFulfillmentModesAction, toggleWarehouseAction, deleteWarehouseAction, updateWarehouseProductFulfillmentModesAction } from "@/app/settings/warehouses/actions";
+import type { WarehouseProductModeImportState, WarehouseProductModeSaveState } from "@/app/settings/warehouses/actions";
 import type { WarehouseFormItem } from "@/components/settings/warehouse-form";
 import { useWarehouseModal } from "@/components/settings/warehouse-modal";
 import { Button } from "@/components/ui/button";
@@ -44,6 +44,12 @@ type WarehouseListPanelProps = {
 
 const initialImportState: WarehouseProductModeImportState = {
   message: "",
+  status: "idle",
+};
+
+const initialProductModeSaveState: WarehouseProductModeSaveState = {
+  message: "",
+  nonce: 0,
   status: "idle",
 };
 
@@ -507,6 +513,10 @@ function WarehouseProductModeManagerModal({
   warehouseId: string;
   warehouseName: string;
 }) {
+  const [saveState, saveAction, isSaving] = useActionState(
+    saveWarehouseProductFulfillmentModesAction.bind(null, warehouseId),
+    initialProductModeSaveState,
+  );
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [selectedBrand, setSelectedBrand] = useState("all");
@@ -643,8 +653,40 @@ function WarehouseProductModeManagerModal({
     <div className="fixed inset-0 z-[140] flex items-end justify-center bg-slate-950/55 sm:items-center sm:p-4 animate-in fade-in duration-205">
       <div className="absolute inset-0" onClick={onClose} />
       
+      {saveState.status !== "idle" ? (
+        <div
+          key={saveState.nonce}
+          className="pointer-events-none fixed inset-x-3 top-[max(0.75rem,env(safe-area-inset-top))] z-[10030] flex animate-[warehouse-save-toast_1.2s_ease-out_forwards] justify-center sm:top-5"
+        >
+          <div
+            role="status"
+            aria-live="polite"
+            className={`flex items-center gap-2 rounded-2xl border bg-white/95 px-4 py-3 text-sm font-black shadow-[0_14px_36px_rgba(15,23,42,0.18)] backdrop-blur-sm animate-in fade-in slide-in-from-top-2 duration-150 ${
+              saveState.status === "success"
+                ? "border-emerald-200 text-emerald-800"
+                : "border-red-200 text-red-700"
+            }`}
+          >
+            {saveState.status === "success" ? (
+              <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-500" strokeWidth={3} />
+            ) : (
+              <AlertTriangle className="h-5 w-5 shrink-0 text-red-500" strokeWidth={2.5} />
+            )}
+            {saveState.message}
+          </div>
+        </div>
+      ) : null}
+
+      <style>{`
+        @keyframes warehouse-save-toast {
+          0% { opacity: 0; transform: translateY(-8px); }
+          12%, 76% { opacity: 1; transform: none; }
+          100% { opacity: 0; transform: translateY(-4px); }
+        }
+      `}</style>
+
       <form
-        action={updateWarehouseProductFulfillmentModesAction.bind(null, warehouseId)}
+        action={saveAction}
         className="relative flex h-[100dvh] w-full max-w-[100vw] min-w-0 flex-col overflow-hidden rounded-none bg-white shadow-2xl sm:h-[86dvh] sm:max-w-6xl sm:rounded-[2rem] animate-in slide-in-from-bottom-6 duration-300"
       >
         <div className="hidden">
@@ -685,10 +727,11 @@ function WarehouseProductModeManagerModal({
                   {/* Desktop Save Button */}
                   <button
                     type="submit"
-                    className="hidden lg:inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-[#4A148C] px-5 text-sm font-black text-white shadow-[0_8px_20px_rgba(74,20,140,0.2)] transition hover:bg-[#3B0F70] active:scale-95 whitespace-nowrap"
+                    disabled={isSaving}
+                    className="hidden lg:inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-[#4A148C] px-5 text-sm font-black text-white shadow-[0_8px_20px_rgba(74,20,140,0.2)] transition hover:bg-[#3B0F70] active:scale-95 whitespace-nowrap disabled:pointer-events-none disabled:opacity-65"
                   >
-                    <Save className="h-4 w-4" strokeWidth={2.4} />
-                    บันทึกทั้งหมด
+                    {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" strokeWidth={2.4} />}
+                    {isSaving ? "กำลังบันทึก..." : "บันทึกทั้งหมด"}
                   </button>
                   <button
                     type="button"
@@ -1271,9 +1314,11 @@ function WarehouseProductModeManagerModal({
             </button>
             <button
               type="submit"
-              className="rounded-2xl bg-[#4A148C] py-3.5 text-sm font-bold text-white shadow-sm transition hover:bg-[#3B0F70] active:scale-[0.98]"
+              disabled={isSaving}
+              className="flex items-center justify-center gap-2 rounded-2xl bg-[#4A148C] py-3.5 text-sm font-bold text-white shadow-sm transition hover:bg-[#3B0F70] active:scale-[0.98] disabled:pointer-events-none disabled:opacity-65"
             >
-              บันทึกทั้งหมด
+              {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+              {isSaving ? "กำลังบันทึก..." : "บันทึกทั้งหมด"}
             </button>
           </div>
         </div>

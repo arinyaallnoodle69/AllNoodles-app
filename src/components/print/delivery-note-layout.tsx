@@ -170,13 +170,13 @@ function DeliveryItemsTable({
     ? dn.totalAmount + dn.installmentPaid
     : dn.totalAmount + dn.previousOutstanding;
 
-  // Calculate summary rows count
-  const summaryRowsCount = (isLastPage && showAmount && hasOutstanding)
+  // The amount column and totals are part of the standard delivery note.
+  // The modal option controls the additional unit-price column only.
+  const summaryRowsCount = (isLastPage && hasOutstanding)
     ? (dn.isInstallmentPlan ? 4 : 2)
     : 0;
 
-  // Grand total row is always shown if showAmount is true
-  const grandTotalRowHeight = showAmount ? 1 : 0;
+  const grandTotalRowHeight = 1;
 
   // Calculate empty rows needed to pad table height to match ITEMS_PER_NOTE_PAGE
   const emptyRowCount = Math.max(0, ITEMS_PER_NOTE_PAGE - items.length - summaryRowsCount - grandTotalRowHeight);
@@ -189,7 +189,8 @@ function DeliveryItemsTable({
           <th className="dn-col-name">รายการ</th>
           <th className="dn-col-qty">จำนวน</th>
           <th className="dn-col-unit">หน่วย</th>
-          {showAmount && <th className="dn-col-total">จำนวนเงิน</th>}
+          {showAmount && <th className="dn-col-price">ราคา/หน่วย</th>}
+          <th className="dn-col-total">จำนวนเงิน</th>
         </tr>
       </thead>
       <tbody>
@@ -202,11 +203,10 @@ function DeliveryItemsTable({
             </td>
             <td className="dn-col-qty">{formatQty2Dec(item.quantityDelivered)}</td>
             <td className="dn-col-unit">{item.saleUnitLabel}</td>
-            {showAmount && (
-              <td className="dn-col-total">
-                {item.lineTotal > 0 ? fmt(item.lineTotal) : ""}
-              </td>
-            )}
+            {showAmount && <td className="dn-col-price">{item.unitPrice > 0 ? fmt(item.unitPrice) : ""}</td>}
+            <td className="dn-col-total">
+              {item.lineTotal > 0 ? fmt(item.lineTotal) : ""}
+            </td>
           </tr>
         ))}
 
@@ -217,29 +217,30 @@ function DeliveryItemsTable({
             <td className="dn-col-name">&nbsp;</td>
             <td className="dn-col-qty">&nbsp;</td>
             <td className="dn-col-unit">&nbsp;</td>
-            {showAmount && <td className="dn-col-total">&nbsp;</td>}
+            {showAmount && <td className="dn-col-price">&nbsp;</td>}
+            <td className="dn-col-total">&nbsp;</td>
           </tr>
         ))}
 
         {/* Outstanding balances (only on last page) */}
-        {isLastPage && showAmount && hasOutstanding && (
+        {isLastPage && hasOutstanding && (
           <>
             <tr className="dn-row-summary dn-row-summary-first">
-              <td colSpan={4} className="dn-col-summary-label">ยอดสินค้าวันนี้</td>
+              <td colSpan={showAmount ? 5 : 4} className="dn-col-summary-label">ยอดสินค้าวันนี้</td>
               <td className="dn-col-total dn-mono" style={{ textAlign: "right" }}>{fmt(dn.totalAmount)}</td>
             </tr>
             <tr className="dn-row-summary">
-              <td colSpan={4} className="dn-col-summary-label">ยอดค้างชำระเดิม</td>
+              <td colSpan={showAmount ? 5 : 4} className="dn-col-summary-label">ยอดค้างชำระเดิม</td>
               <td className="dn-col-total dn-mono" style={{ textAlign: "right" }}>{fmt(dn.previousOutstanding)}</td>
             </tr>
             {dn.isInstallmentPlan && (
               <>
                 <tr className="dn-row-summary">
-                  <td colSpan={4} className="dn-col-summary-label">หักผ่อนชำระวันนี้</td>
+                  <td colSpan={showAmount ? 5 : 4} className="dn-col-summary-label">หักผ่อนชำระวันนี้</td>
                   <td className="dn-col-total dn-mono" style={{ textAlign: "right" }}>-{fmt(dn.installmentPaid)}</td>
                 </tr>
                 <tr className="dn-row-summary">
-                  <td colSpan={4} className="dn-col-summary-label">คงเหลือยอดค้างเก่า</td>
+                  <td colSpan={showAmount ? 5 : 4} className="dn-col-summary-label">คงเหลือยอดค้างเก่า</td>
                   <td className="dn-col-total dn-mono" style={{ textAlign: "right" }}>{fmt(dn.remainingOutstanding)}</td>
                 </tr>
               </>
@@ -248,15 +249,13 @@ function DeliveryItemsTable({
         )}
 
         {/* Grand total summary row */}
-        {showAmount && (
-          <tr className="dn-summary-row">
-            <td colSpan={2} className="dn-summary-baht">
-              {grandTotal > 0 ? `(${bahtText(grandTotal)})` : ""}
-            </td>
-            <td colSpan={2} className="dn-summary-label">ยอดเงินสุทธิ</td>
-            <td className="dn-summary-value">{fmt(grandTotal)}</td>
-          </tr>
-        )}
+        <tr className="dn-summary-row">
+          <td colSpan={2} className="dn-summary-baht">
+            {grandTotal > 0 ? `(${bahtText(grandTotal)})` : ""}
+          </td>
+          <td colSpan={showAmount ? 3 : 2} className="dn-summary-label">ยอดเงินสุทธิ</td>
+          <td className="dn-summary-value">{fmt(grandTotal)}</td>
+        </tr>
       </tbody>
     </table>
   );
@@ -274,7 +273,7 @@ function DeliveryNoteFooter({ dn }: { dn: DeliveryNotePrintData }) {
         <div className="dn-signature-group">
           <div className="dn-sig-row-lines">
             <div className="dn-sig-underline" />
-            <div className="dn-date-underline">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;/&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;/&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</div>
+            <div className="dn-date-underline"><span /><b>/</b><span /><b>/</b><span /></div>
           </div>
           <div className="dn-sig-row-labels">
             <div className="dn-sig-label">ผู้รับสินค้า</div>
@@ -285,7 +284,7 @@ function DeliveryNoteFooter({ dn }: { dn: DeliveryNotePrintData }) {
         <div className="dn-signature-group">
           <div className="dn-sig-row-lines">
             <div className="dn-sig-underline" />
-            <div className="dn-date-underline">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;/&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;/&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</div>
+            <div className="dn-date-underline"><span /><b>/</b><span /><b>/</b><span /></div>
           </div>
           <div className="dn-sig-row-labels">
             <div className="dn-sig-label">ผู้ส่งสินค้า</div>
@@ -296,7 +295,7 @@ function DeliveryNoteFooter({ dn }: { dn: DeliveryNotePrintData }) {
         <div className="dn-signature-group">
           <div className="dn-sig-row-lines">
             <div className="dn-sig-underline" />
-            <div className="dn-date-underline">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;/&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;/&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</div>
+            <div className="dn-date-underline"><span /><b>/</b><span /><b>/</b><span /></div>
           </div>
           <div className="dn-sig-row-labels">
             <div className="dn-sig-label">ผู้รับเงิน</div>
@@ -555,6 +554,7 @@ export function DeliveryNoteLayout({ dns, showAmount = true }: Props) {
         .dn-col-name { width: auto; text-align: left; }
         .dn-col-qty { width: 22mm; text-align: right; font-weight: bold; }
         .dn-col-unit { width: 16mm; text-align: center; }
+        .dn-col-price { width: 25mm; text-align: right; font-weight: bold; }
         .dn-col-total { width: 25mm; text-align: right; font-weight: bold; }
 
         .dn-row-empty td {
@@ -658,13 +658,21 @@ export function DeliveryNoteLayout({ dns, showAmount = true }: Props) {
         }
 
         .dn-date-underline {
-          width: 25mm;
+          width: 30mm;
           height: 20px;
           border-bottom: 1px solid #000000;
-          text-align: center;
+          display: grid;
+          grid-template-columns: 1fr auto 1fr auto 1fr;
+          align-items: center;
+          column-gap: 1.5mm;
           font-size: 13pt;
           line-height: 20px;
           flex-shrink: 0;
+        }
+
+        .dn-date-underline b {
+          font-weight: 700;
+          line-height: 1;
         }
 
         .dn-sig-row-labels {

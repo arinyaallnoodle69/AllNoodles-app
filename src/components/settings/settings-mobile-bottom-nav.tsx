@@ -82,6 +82,7 @@ export function SettingsMobileBottomNav() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [navigatingHref, setNavigatingHref] = useState<string | null>(null);
   const settingsModalRef = useRef<HTMLDivElement | null>(null);
+  const bottomNavRef = useRef<HTMLElement | null>(null);
   const settingsTouchStartRef = useRef<{ x: number; y: number } | null>(null);
   const mounted = useSyncExternalStore(
     subscribeToClientMount,
@@ -116,6 +117,38 @@ export function SettingsMobileBottomNav() {
 
     window.addEventListener("open-mobile-settings-menu", openSettingsMenu);
     return () => window.removeEventListener("open-mobile-settings-menu", openSettingsMenu);
+  }, []);
+
+  useEffect(() => {
+    const nav = bottomNavRef.current;
+    const viewport = window.visualViewport;
+    if (!nav || !viewport) return;
+
+    let animationFrame = 0;
+    const updateBottomOffset = () => {
+      cancelAnimationFrame(animationFrame);
+      animationFrame = requestAnimationFrame(() => {
+        const layoutHeight = document.documentElement.clientHeight;
+        const visualBottom = viewport.offsetTop + viewport.height;
+        const viewportDifference = Math.max(0, layoutHeight - visualBottom);
+        const keyboardLikelyOpen = layoutHeight - viewport.height > 180;
+        const bottomOffset = keyboardLikelyOpen ? 0 : Math.min(viewportDifference, 120);
+        nav.style.setProperty("--mobile-visual-bottom-offset", `${bottomOffset}px`);
+      });
+    };
+
+    updateBottomOffset();
+    viewport.addEventListener("resize", updateBottomOffset);
+    viewport.addEventListener("scroll", updateBottomOffset);
+    window.addEventListener("resize", updateBottomOffset);
+
+    return () => {
+      cancelAnimationFrame(animationFrame);
+      viewport.removeEventListener("resize", updateBottomOffset);
+      viewport.removeEventListener("scroll", updateBottomOffset);
+      window.removeEventListener("resize", updateBottomOffset);
+      nav.style.removeProperty("--mobile-visual-bottom-offset");
+    };
   }, []);
 
   useEffect(() => {
@@ -246,10 +279,16 @@ export function SettingsMobileBottomNav() {
       </div>
 
       <nav
-        className={`fixed inset-x-0 bottom-0 z-40 w-screen max-w-[100dvw] overflow-x-clip overflow-y-visible transition-opacity duration-150 lg:hidden settings-mobile-bottom-nav-bar ${
+        ref={bottomNavRef}
+        style={{ bottom: "var(--mobile-visual-bottom-offset, 0px)" }}
+        className={`fixed inset-x-0 z-40 w-screen max-w-[100dvw] overflow-x-clip overflow-y-visible transition-opacity duration-150 lg:hidden settings-mobile-bottom-nav-bar ${
           moreOpen || settingsModalOpen ? "pointer-events-none opacity-0" : "opacity-100"
         }`}
       >
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-x-0 top-full h-[calc(var(--mobile-visual-bottom-offset,0px)+2rem)] bg-white"
+        />
         <div className="relative w-full max-w-full overflow-x-clip overflow-y-visible pt-2">
           {/* Curved Background with Notch */}
           <div className="absolute inset-x-0 bottom-0 -z-10 h-[calc(100%+10px)]">

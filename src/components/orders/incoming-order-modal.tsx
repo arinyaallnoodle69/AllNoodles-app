@@ -1107,7 +1107,7 @@ export function IncomingOrderModal({ allOrders, detail, expandedId, onAfterClose
         /* Mobile bottom sheet animations */
         @keyframes mobilePopIn {
           from { transform: translateY(100%); }
-          to { transform: translateY(0); }
+          to { transform: none; }
         }
         @keyframes mobilePopOut {
           from { transform: translateY(0); }
@@ -1117,7 +1117,7 @@ export function IncomingOrderModal({ allOrders, detail, expandedId, onAfterClose
         /* Desktop premium pop/scale animations */
         @keyframes desktopPopIn {
           from { transform: scale(0.96); opacity: 0; }
-          to { transform: scale(1); opacity: 1; }
+          to { transform: none; opacity: 1; }
         }
         @keyframes desktopPopOut {
           from { transform: scale(1); opacity: 1; }

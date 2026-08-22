@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
 import { readSheet } from "read-excel-file/node";
 import { requireAppRole } from "@/lib/auth/authorization";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
@@ -17,6 +17,12 @@ export type WarehouseActionState = {
 export type WarehouseProductModeImportState = {
   errors?: string[];
   message: string;
+  status: "error" | "idle" | "success";
+};
+
+export type WarehouseProductModeSaveState = {
+  message: string;
+  nonce: number;
   status: "error" | "idle" | "success";
 };
 
@@ -456,10 +462,10 @@ export async function deleteWarehouseAction(warehouseId: string): Promise<{ erro
   revalidateWarehousePaths();
 }
 
-export async function updateWarehouseProductFulfillmentModesAction(
+async function updateWarehouseProductFulfillmentModes(
   warehouseId: string,
   formData: FormData,
-): Promise<void> {
+): Promise<WarehouseProductModeSaveState> {
   const session = await requireAppRole("admin");
   const productIds = formData.getAll("productId").map((value) => getTrimmedText(value));
   const modes = formData.getAll("mode").map((value) => getTrimmedText(value));
@@ -475,7 +481,7 @@ export async function updateWarehouseProductFulfillmentModesAction(
 
   if (warehouseError || !warehouse) {
     console.error("Update warehouse product fulfillment modes failed: warehouse not found", warehouseError);
-    return;
+    return { message: "ไม่พบคลังสินค้าที่ต้องการบันทึก", nonce: Date.now(), status: "error" };
   }
 
   const rows = productIds
@@ -503,7 +509,7 @@ export async function updateWarehouseProductFulfillmentModesAction(
     }>;
 
   if (rows.length === 0) {
-    return;
+    return { message: "ไม่มีข้อมูลสินค้าสำหรับบันทึก", nonce: Date.now(), status: "error" };
   }
 
   const warehouseProductModesTable = (admin as unknown as {
@@ -528,10 +534,33 @@ export async function updateWarehouseProductFulfillmentModesAction(
 
   if (error) {
     console.error("Update warehouse product fulfillment modes failed:", error);
-    return;
+    return { message: "บันทึกไม่สำเร็จ กรุณาลองใหม่", nonce: Date.now(), status: "error" };
   }
 
+  updateTag(`settings-${session.organizationId}`);
+  updateTag(`stock-${session.organizationId}`);
   revalidateWarehousePaths();
+  return { message: "บันทึกสำเร็จ", nonce: Date.now(), status: "success" };
+}
+
+export async function updateWarehouseProductFulfillmentModesAction(
+  warehouseId: string,
+  formData: FormData,
+): Promise<void> {
+  await updateWarehouseProductFulfillmentModes(warehouseId, formData);
+}
+
+export async function saveWarehouseProductFulfillmentModesAction(
+  warehouseId: string,
+  _previousState: WarehouseProductModeSaveState,
+  formData: FormData,
+): Promise<WarehouseProductModeSaveState> {
+  try {
+    return await updateWarehouseProductFulfillmentModes(warehouseId, formData);
+  } catch (error) {
+    console.error("Save warehouse product fulfillment modes failed:", error);
+    return { message: "บันทึกไม่สำเร็จ กรุณาลองใหม่", nonce: Date.now(), status: "error" };
+  }
 }
 
 export async function importWarehouseProductModesAction(

@@ -162,7 +162,7 @@ export function IncomingOrdersVehicleTransfer({ dateOptions, variant = "desktop"
         }}
         className={[
           "inline-flex shrink-0 items-center justify-center gap-2 rounded-lg border border-[#4A148C]/25 bg-[#F3E5F5] font-black text-[#4A148C] transition hover:border-[#4A148C]/40 hover:bg-[#EA80FC]/20 active:scale-[0.98]",
-          variant === "mobile" ? "h-9 px-3 text-xs" : "h-10 px-4 text-sm",
+          variant === "mobile" ? "h-9 w-full px-3 text-xs" : "h-10 px-4 text-sm",
         ].join(" ")}
       >
         <ArrowRightLeft className="h-4 w-4" strokeWidth={2.4} />

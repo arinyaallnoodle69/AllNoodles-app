@@ -20,7 +20,6 @@ import {
   Search,
   ShoppingCart,
   Trash2,
-  Truck,
   X,
   Boxes,
 } from "lucide-react";
@@ -595,7 +594,7 @@ const DesktopProductTableRow = React.memo(({
         isSelected ? "bg-[#F3E5F5]/75" : "bg-white hover:bg-[#F3E5F5]/25"
       }`}
     >
-      <td className="w-12 px-3 py-3 text-center">
+      <td className="w-10 px-2 py-3 text-center xl:w-12 xl:px-3">
         <span
           className={`inline-flex h-5 w-5 items-center justify-center border-2 ${
             isSelected ? "border-[#4A148C] bg-[#4A148C]" : "border-slate-300 bg-white"
@@ -604,12 +603,12 @@ const DesktopProductTableRow = React.memo(({
           {isSelected ? <Check className="h-3.5 w-3.5 text-white" strokeWidth={4} /> : null}
         </span>
       </td>
-      <td className="w-28 px-3 py-3 font-mono text-sm font-black text-[#4A148C]">
+      <td className="w-20 px-2 py-3 font-mono text-xs font-black text-[#4A148C] xl:w-28 xl:px-3 xl:text-sm">
         {product.sku}
       </td>
-      <td className="min-w-[18rem] px-3 py-3">
-        <div className="flex items-center gap-3">
-          <div className="relative h-12 w-12 shrink-0 overflow-hidden bg-slate-50">
+      <td className="px-2 py-3 xl:px-3">
+        <div className="flex items-center gap-2 xl:gap-3">
+          <div className="relative h-10 w-10 shrink-0 overflow-hidden bg-slate-50 xl:h-12 xl:w-12">
             {product.imageUrl ? (
               <Image
                 src={product.imageUrl}
@@ -625,7 +624,9 @@ const DesktopProductTableRow = React.memo(({
             )}
           </div>
           <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-black text-slate-950">{product.name}</p>
+            <p className="whitespace-normal break-words text-sm font-black leading-snug text-slate-950">
+              {product.name}
+            </p>
             <div className="mt-1 flex items-center gap-2 text-xs font-bold text-slate-500">
               {product.brand ? <span>{product.brand}</span> : null}
               {units.length > 1 && isSelected ? (
@@ -648,10 +649,10 @@ const DesktopProductTableRow = React.memo(({
           </div>
         </div>
       </td>
-      <td className="w-28 px-3 py-3 text-center">
+      <td className="w-16 px-1.5 py-3 text-center xl:w-24 xl:px-3">
         <WarehouseModeBadge mode={fulfillmentMode} />
       </td>
-      <td className="w-32 px-3 py-3 text-center">
+      <td className="w-24 px-1.5 py-3 text-center xl:w-32 xl:px-3">
         {fulfillmentMode === "fresh" ? (
           <span className="text-sm font-black text-emerald-700">
             ขายแล้ว {Number(selection?.quantity ?? 0).toLocaleString("th-TH")} {selectedUnit?.label ?? product.unit}
@@ -666,7 +667,7 @@ const DesktopProductTableRow = React.memo(({
           </span>
         )}
       </td>
-      <td className="w-44 px-3 py-3" onClick={stopRowSelection}>
+      <td className="w-32 px-1.5 py-3 xl:w-40 xl:px-3" onClick={stopRowSelection}>
         {isSelected && selection && selectedUnit ? (
           <div className="flex items-center justify-center gap-1.5">
             <button
@@ -683,7 +684,7 @@ const DesktopProductTableRow = React.memo(({
               step={getEffectiveStep(selectedUnit.stepOrderQty)}
               value={selection.quantity}
               onChange={(event) => onUpdateSelection(product.id, "quantity", event.target.value)}
-              className="h-8 w-20 border border-[#EA80FC]/40 bg-white px-2 text-center text-sm font-black text-slate-950 outline-none focus:border-[#4A148C]"
+              className="h-8 w-14 border border-[#EA80FC]/40 bg-white px-1 text-center text-sm font-black text-slate-950 outline-none focus:border-[#4A148C] xl:w-20 xl:px-2"
             />
             <button
               type="button"
@@ -698,7 +699,7 @@ const DesktopProductTableRow = React.memo(({
           <p className="text-center text-sm font-bold text-slate-400">-</p>
         )}
       </td>
-      <td className="w-44 px-3 py-3" onClick={stopRowSelection}>
+      <td className="w-32 px-2 py-3 xl:w-40 xl:px-3" onClick={stopRowSelection}>
         {isSelected && selection && selectedUnit ? (
           role !== "member" && linkedPrice <= 0 ? (
             <div className="relative">
@@ -1119,7 +1120,7 @@ function ProductSelectModal({
   return (
     <div className="fixed inset-0 z-[10000] flex items-end justify-center bg-[#001D3F]/70 p-0 backdrop-blur-[2px] sm:items-center sm:p-4">
       <div className="absolute inset-0" onClick={onClose} />
-      <div className="relative flex h-full w-full max-h-full flex-col overflow-hidden border-[#EA80FC]/45 bg-white shadow-[0_30px_90px_rgba(0,29,63,0.35)] sm:h-[90dvh] sm:max-h-[90dvh] sm:max-w-6xl sm:rounded-[2.5rem] sm:border">
+      <div className="relative flex h-full w-full max-h-full flex-col overflow-hidden border-[#EA80FC]/45 bg-white shadow-[0_30px_90px_rgba(0,29,63,0.35)] sm:h-[90dvh] sm:max-h-[90dvh] sm:max-w-6xl sm:rounded-[2.5rem] sm:border lg:max-w-[96vw] 2xl:max-w-[110rem]">
         <ActionPopup message={popupMessage} onClose={() => setPopupMessage(null)} />
         
         {/* Cost Warning Blocking Popup */}
@@ -1378,7 +1379,7 @@ function ProductSelectModal({
         </div>
 
         {/* Desktop category navigation and product table */}
-        <div className="hidden min-h-0 flex-1 grid-cols-[20%_80%] bg-white lg:grid">
+        <div className="hidden min-h-0 flex-1 grid-cols-[13rem_minmax(0,1fr)] bg-white lg:grid xl:grid-cols-[15rem_minmax(0,1fr)]">
           <aside className="min-h-0 overflow-y-auto border-r border-[#EA80FC]/25 bg-[#fbf8ff]">
             <div className="sticky top-0 z-10 border-b border-[#EA80FC]/25 bg-white px-4 py-3">
               <p className="text-xs font-black uppercase tracking-[0.16em] text-[#4A148C]">
@@ -1504,7 +1505,7 @@ function ProductSelectModal({
                 </button>
               </div>
             </div>
-            <div className="min-h-0 flex-1 overflow-auto">
+            <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden">
               {productsLoading ? (
                 <div className="flex h-full min-h-64 flex-col items-center justify-center gap-3 text-slate-500">
                   <Loader2 className="h-8 w-8 animate-spin text-[#4A148C]" />
@@ -1516,16 +1517,16 @@ function ProductSelectModal({
                   <p className="text-sm font-black">ไม่พบสินค้าที่ตรงกับตัวกรอง</p>
                 </div>
               ) : (
-                <table className="w-full min-w-[62rem] table-fixed border-collapse">
+                <table className="w-full table-fixed border-collapse">
                   <thead className="sticky top-0 z-10 bg-[#4A148C] text-white">
                     <tr>
-                      <th className="w-12 px-3 py-3 text-center text-xs font-black" aria-label="เลือก" />
-                      <th className="w-28 px-3 py-3 text-left text-xs font-black">รหัสสินค้า</th>
-                      <th className="px-3 py-3 text-left text-xs font-black">รูปและชื่อสินค้า</th>
-                      <th className="w-28 px-3 py-3 text-center text-xs font-black">โหมด</th>
-                      <th className="w-32 px-3 py-3 text-center text-xs font-black">สต็อก</th>
-                      <th className="w-44 px-3 py-3 text-center text-xs font-black">จำนวน</th>
-                      <th className="w-44 px-3 py-3 text-right text-xs font-black">ราคาขาย</th>
+                      <th className="w-10 px-2 py-3 text-center text-xs font-black xl:w-12 xl:px-3" aria-label="เลือก" />
+                      <th className="w-20 px-2 py-3 text-left text-xs font-black xl:w-28 xl:px-3">รหัสสินค้า</th>
+                      <th className="px-2 py-3 text-left text-xs font-black xl:px-3">รูปและชื่อสินค้า</th>
+                      <th className="w-16 px-1.5 py-3 text-center text-xs font-black xl:w-24 xl:px-3">โหมด</th>
+                      <th className="w-24 px-1.5 py-3 text-center text-xs font-black xl:w-32 xl:px-3">สต็อก</th>
+                      <th className="w-32 px-1.5 py-3 text-center text-xs font-black xl:w-40 xl:px-3">จำนวน</th>
+                      <th className="w-32 px-2 py-3 text-right text-xs font-black xl:w-40 xl:px-3">ราคาขาย</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1845,8 +1846,7 @@ export function CreateOrderModal({
   const [activeTab, setActiveTab] = useState<ModalTab>("create");
   const [productModalOpen, setProductModalOpen] = useState(false);
   const [pending, startTransition] = useTransition();
-  const [success, setSuccess] = useState<{ deliveryNumber: string } | null>(null);
-  const [showSuccessOverlay, setShowSuccessOverlay] = useState(false);
+  const [successToast, setSuccessToast] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [historyNotice, setHistoryNotice] = useState<string | null>(null);
   const [customerId, setCustomerId] = useState("");
@@ -1919,6 +1919,7 @@ export function CreateOrderModal({
   const [editQty, setEditQty] = useState(1);
   const historyRequestId = useRef(0);
   const submitPopupTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const successToastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const productsById = useMemo(
     () => new Map(products.map((product) => [product.id, product])),
@@ -1946,6 +1947,9 @@ export function CreateOrderModal({
     return () => {
       if (submitPopupTimerRef.current) {
         clearTimeout(submitPopupTimerRef.current);
+      }
+      if (successToastTimerRef.current) {
+        clearTimeout(successToastTimerRef.current);
       }
       if (closeTimerRef.current) {
         clearTimeout(closeTimerRef.current);
@@ -2228,17 +2232,24 @@ export function CreateOrderModal({
     setEditingCartIndex(null);
   }
 
-  function resetForm() {
+  function resetForm({
+    keepOrderDate = false,
+    openCustomerPicker = false,
+  }: {
+    keepOrderDate?: boolean;
+    openCustomerPicker?: boolean;
+  } = {}) {
     historyRequestId.current += 1;
     setActiveTab("create");
     setCart([]);
     setCustomerId("");
-    setCustomerPickerOpen(false);
+    setCustomerPickerOpen(openCustomerPicker);
     setCustomerPickerQuery("");
-    setOrderDate(today);
+    if (!keepOrderDate) {
+      setOrderDate(today);
+    }
     setNotes("");
     setError(null);
-    setSuccess(null);
     setHistoryNotice(null);
     setPriceMap({});
     setPricesLoading(false);
@@ -2309,26 +2320,27 @@ export function CreateOrderModal({
         (result.orderNumber && String(result.orderNumber).trim().startsWith("DN")
           ? String(result.orderNumber).trim()
           : "");
-      if (resolvedDeliveryNumber) {
-        setSuccess({ deliveryNumber: resolvedDeliveryNumber });
-      } else {
-        setSuccess(null);
-      }
-
       // Update local ordered counts today state instantly so that the badge "สั่งแล้ววันนี้" appears without reopening
       setCustomerOrderCountsByDate((prev) => ({
         ...prev,
         [customerId]: (prev[customerId] ?? 0) + 1,
       }));
 
-      setShowSuccessOverlay(true);
+      if (successToastTimerRef.current) {
+        clearTimeout(successToastTimerRef.current);
+      }
+      setSuccessToast(
+        resolvedDeliveryNumber
+          ? `บันทึกสำเร็จ • ${resolvedDeliveryNumber}`
+          : "บันทึกออเดอร์สำเร็จ",
+      );
+      successToastTimerRef.current = setTimeout(() => {
+        setSuccessToast(null);
+        successToastTimerRef.current = null;
+      }, 1400);
+
+      resetForm({ keepOrderDate: true, openCustomerPicker: true });
       router.refresh();
-      
-      // Clear overlay after 3 seconds and reset form
-      setTimeout(() => {
-        setShowSuccessOverlay(false);
-        resetForm();
-      }, 2500);
     });
   }
 
@@ -2377,28 +2389,6 @@ export function CreateOrderModal({
           >
             <ActionPopup message={submitPopupMessage} onClose={() => setSubmitPopupMessage(null)} />
 
-            {/* Premium Success Overlay */}
-            {showSuccessOverlay && success && (
-              <div className="absolute inset-0 z-[100] flex items-center justify-center bg-white/60 backdrop-blur-md animate-in fade-in duration-300">
-                <div className="flex w-full max-w-sm flex-col items-center rounded-[2.5rem] border border-[#EA80FC]/40 bg-white p-10 text-center shadow-[0_32px_64px_rgba(0,29,63,0.18)] ring-1 ring-[#EA80FC]/20 animate-in zoom-in-95 duration-500">
-                  <div className="mb-6 flex h-24 w-24 items-center justify-center rounded-full border border-[#EA80FC]/60 bg-emerald-500 text-white shadow-lg shadow-emerald-500/20">
-                    <Check className="h-14 w-14" strokeWidth={4} />
-                  </div>
-                  <h3 className="mb-2 text-3xl font-black tracking-tight text-[#4A148C]">บันทึกสำเร็จ!</h3>
-                  <div className="space-y-1 text-[#4A148C]">
-                    <p className="text-sm font-bold uppercase tracking-widest opacity-80">เลขที่บิลส่งของ</p>
-                    <p className="font-mono text-2xl font-black text-[#4A148C]">{success.deliveryNumber}</p>
-                  </div>
-                  {success.deliveryNumber && (
-                    <div className="mt-4 rounded-2xl border border-[#EA80FC]/35 bg-[#F3E5F5] px-6 py-3">
-                      <p className="mb-0.5 text-[10px] font-black uppercase tracking-widest text-[#4A148C]">บิลส่งของ</p>
-                      <p className="font-mono text-lg font-black text-[#4A148C]">{success.deliveryNumber}</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
             {/* Header */}
             <div className="sticky top-0 z-40 flex shrink-0 items-center justify-between gap-3 border-b border-[#EA80FC]/70 bg-[#4A148C] px-4 py-2.5 pt-[max(0.625rem,env(safe-area-inset-top))] text-white shadow-[0_10px_28px_rgba(142, 36, 170,0.20)] sm:px-5 sm:py-4 sm:pt-4">
               <div className="flex min-w-0 items-center gap-2.5 sm:gap-3">
@@ -2419,36 +2409,6 @@ export function CreateOrderModal({
                 <X className="h-4.5 w-4.5 sm:h-5 sm:w-5" strokeWidth={2.2} />
               </button>
             </div>
-
-            {/* Success banner */}
-            {success && (
-              <div className="shrink-0 bg-emerald-50 px-5 py-4 text-emerald-800 shadow-[inset_0_-1px_0_rgba(16,185,129,0.1)]">
-                <div className="flex items-center justify-between gap-4">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-white shadow-sm">
-                      <Check className="h-6 w-6" strokeWidth={3} />
-                    </div>
-                    <div>
-                      <p className="text-base font-bold leading-tight">บันทึกออเดอร์สำเร็จ!</p>
-                      <p className="mt-1 text-sm font-semibold opacity-90">
-                        บิลส่งของ: <span className="font-mono text-[#4A148C] font-bold">{success.deliveryNumber}</span>
-                      </p>
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setOpen(false);
-                      router.push("/dashboard?date=" + orderDate + "&print=" + success.deliveryNumber);
-                    }}
-                    className="inline-flex items-center gap-2 rounded-xl bg-[#4A148C] px-4 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-[#4A148C]"
-                  >
-                    <Truck className="h-3.5 w-3.5" strokeWidth={2.4} />
-                    ไปที่หน้าพิมพ์
-                  </button>
-                </div>
-              </div>
-            )}
 
             <div className="flex-1 overflow-y-auto">
               <div className="flex flex-col lg:grid lg:grid-cols-2 lg:divide-x lg:divide-[#EA80FC]/25">
@@ -2852,6 +2812,21 @@ export function CreateOrderModal({
           </div>
         </div>
       )}
+
+      {open && successToast ? (
+        <div
+          className="pointer-events-none fixed inset-x-3 top-[max(0.75rem,env(safe-area-inset-top))] z-[10020] flex justify-center sm:inset-x-6 sm:top-5"
+          role="status"
+          aria-live="polite"
+        >
+          <div className="flex max-w-full animate-in items-center gap-2 rounded-2xl border border-emerald-200 bg-white/95 px-4 py-3 text-sm font-black text-emerald-800 shadow-[0_14px_36px_rgba(16,185,129,0.22)] backdrop-blur-sm fade-in slide-in-from-top-2 duration-200 sm:text-base">
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-white">
+              <Check className="h-4 w-4" strokeWidth={3.5} />
+            </span>
+            <span className="min-w-0 truncate">{successToast}</span>
+          </div>
+        </div>
+      ) : null}
 
       {open && customerPickerOpen ? (
         <div className="fixed inset-0 z-[10000] flex items-end justify-center bg-slate-950/50 sm:items-center sm:p-4">

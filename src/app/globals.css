@@ -144,8 +144,8 @@
   background-color: var(--background);
   background-image: none;
   font-feature-settings: "tnum" 1, "lnum" 1;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
   }
 
   button,
@@ -163,16 +163,10 @@
   a,
   button {
   transition:
-    transform 180ms ease,
     background-color 180ms ease,
     border-color 180ms ease,
     color 180ms ease,
     opacity 180ms ease;
-  }
-
-  a:hover,
-  button:hover {
-  transform: translateY(-1px);
   }
 
   ::selection {
@@ -182,8 +176,8 @@
   .font-apple-ui {
   font-family: var(--font-sukhumvit), "Sukhumvit Set", sans-serif;
   font-feature-settings: "tnum" 1, "lnum" 1;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
   }
 
 :where(
@@ -219,7 +213,7 @@
     transform: translateY(-100%);
   }
   100% {
-    transform: translateY(0);
+    transform: none;
   }
 }
 
@@ -233,7 +227,7 @@
     opacity: 0.9;
   }
   100% {
-    transform: translateY(0);
+    transform: none;
     opacity: 1;
   }
 }
@@ -293,7 +287,7 @@
   }
   100% {
     opacity: 1;
-    transform: translateY(0);
+    transform: none;
   }
 }
 

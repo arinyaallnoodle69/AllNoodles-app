@@ -41,7 +41,6 @@ async function FactoryOrderSheetPage({ searchParams }: Props) {
   const hasData = factorySheets.length > 0;
   const firstSheet = factorySheets[0];
   const dateLabel = firstSheet?.dateLabel ?? (date === endDate ? date : `${date} - ${endDate}`);
-  const vehicleCount = new Set(factorySheets.flatMap((sheet) => sheet.vehicles.map((vehicle) => vehicle.id ?? "__unassigned__"))).size;
 
   return (
     <>
@@ -100,7 +99,7 @@ async function FactoryOrderSheetPage({ searchParams }: Props) {
       >
         <span style={{ fontSize: "15px", fontWeight: 800, color: "#4A148C" }}>ใบสั่งของ</span>
         <span className="vehicle-summary-toolbar__meta" style={{ fontSize: "13px", color: "#64748b", fontWeight: 700 }}>
-          {dateLabel} · {vehicleCount} รถ · {factorySheets.length} ใบ
+          {dateLabel} · {factorySheets.length} ใบ
         </span>
         <div className="vehicle-summary-toolbar__actions" style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "nowrap" }}>
           <PackingListPrintButton

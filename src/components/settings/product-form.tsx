@@ -815,7 +815,7 @@ function ProductFormBody({
           </button>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto px-5 py-6 sm:px-6">
+        <div className="min-h-0 flex-1 touch-pan-y overflow-y-auto overscroll-y-contain px-5 py-6 [-webkit-overflow-scrolling:touch] sm:px-6">
           <div className={activeBodyTab === "info" ? "space-y-8" : "hidden"}>
 
             {/* Section: ข้อมูลสินค้า */}
@@ -1557,6 +1557,44 @@ export function ProductForm({
     };
   }, []);
 
+  useEffect(() => {
+    const html = document.documentElement;
+    const body = document.body;
+    const scrollY = window.scrollY;
+    const previousHtmlOverflow = html.style.overflow;
+    const previousHtmlOverscroll = html.style.overscrollBehavior;
+    const previousBodyOverflow = body.style.overflow;
+    const previousBodyOverscroll = body.style.overscrollBehavior;
+    const previousBodyPosition = body.style.position;
+    const previousBodyTop = body.style.top;
+    const previousBodyWidth = body.style.width;
+    const previousBodyPaddingRight = body.style.paddingRight;
+    const scrollbarWidth = Math.max(0, window.innerWidth - html.clientWidth);
+
+    html.style.overflow = "hidden";
+    html.style.overscrollBehavior = "none";
+    body.style.overflow = "hidden";
+    body.style.overscrollBehavior = "none";
+    body.style.position = "fixed";
+    body.style.top = `-${scrollY}px`;
+    body.style.width = "100%";
+    if (scrollbarWidth > 0) {
+      body.style.paddingRight = `${scrollbarWidth}px`;
+    }
+
+    return () => {
+      html.style.overflow = previousHtmlOverflow;
+      html.style.overscrollBehavior = previousHtmlOverscroll;
+      body.style.overflow = previousBodyOverflow;
+      body.style.overscrollBehavior = previousBodyOverscroll;
+      body.style.position = previousBodyPosition;
+      body.style.top = previousBodyTop;
+      body.style.width = previousBodyWidth;
+      body.style.paddingRight = previousBodyPaddingRight;
+      window.scrollTo({ top: scrollY, left: 0, behavior: "auto" });
+    };
+  }, []);
+
   function closeModal() {
     if (isSubmitting || isClosing) return;
     setIsClosing(true);
@@ -1576,9 +1614,9 @@ export function ProductForm({
   }
 
   return (
-    <div className={`fixed inset-0 z-[100] flex items-end justify-center bg-slate-950/45 sm:items-center sm:p-4 ${isClosing ? "animate-fade-out" : "animate-fade-in"}`}>
+    <div className={`fixed inset-0 z-[100] flex items-end justify-center overscroll-none bg-slate-950/45 sm:items-center sm:p-4 ${isClosing ? "animate-fade-out" : "animate-fade-in"}`}>
       <div
-        className={`relative flex max-h-[96dvh] w-full max-w-3xl flex-col overflow-hidden rounded-t-[1.75rem] border border-slate-200 bg-white shadow-[0_28px_80px_rgba(15,23,42,0.22)] sm:rounded-[1.75rem] ${isClosing ? "animate-slide-up-premium" : "animate-slide-down-premium"}`}
+        className={`relative flex max-h-[96dvh] w-full max-w-3xl flex-col overflow-hidden overscroll-none rounded-t-[1.75rem] border border-slate-200 bg-white shadow-[0_28px_80px_rgba(15,23,42,0.22)] sm:rounded-[1.75rem] ${isClosing ? "animate-slide-up-premium" : "animate-slide-down-premium"}`}
       >
         {/* Header */}
         <div className="shrink-0 border-b border-slate-100 px-4 pb-3 pt-4 sm:px-6">
