@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import type { Viewport } from "next";
+import Link from "next/link";
 import { PageLoader } from "@/components/page-loader";
 import { PrintPackingListButton } from "@/components/orders/print-packing-list-button";
 import {
@@ -580,8 +581,9 @@ async function PackingListPage({ searchParams }: Props) {
             dateLabel={mainDateLabel}
             hidePrintOnMobile
           />
-          <a
+          <Link
             href={`/orders/incoming?date=${date}${endDate ? `&endDate=${endDate}` : ""}`}
+            scroll={false}
             style={{
               fontSize: "13px",
               fontWeight: 700,
@@ -593,7 +595,7 @@ async function PackingListPage({ searchParams }: Props) {
             }}
           >
             กลับ
-          </a>
+          </Link>
         </div>
       </div>
 
@@ -611,12 +613,13 @@ async function PackingListPage({ searchParams }: Props) {
           <p style={{ fontSize: "18px", fontWeight: 600, color: "#64748b" }}>
             ไม่มีออเดอร์ในช่วงที่เลือก
           </p>
-          <a
+          <Link
             href="/orders/incoming"
+            scroll={false}
             style={{ marginTop: "8px", color: "#4A148C", fontSize: "14px" }}
           >
             กลับหน้าออเดอร์
-          </a>
+          </Link>
         </div>
       ) : (
         <div className="packing-print-container">

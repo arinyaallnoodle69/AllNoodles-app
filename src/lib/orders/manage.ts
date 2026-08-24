@@ -25,6 +25,7 @@ type ProductImageRow = {
 };
 type ProductCategoryRow = { id: string; name: string; sort_order: number };
 type ProductCategoryItemRow = { product_category_id: string; product_id: string };
+type ProductBrandRow = { name: string; sort_order: number };
 type SaleUnitRow = {
   base_unit_quantity: number | string;
   cost_mode: string | null;
@@ -98,8 +99,10 @@ export type OrderVehicleOption = { id: string; name: string };
 export type OrderProductOption = {
   baseCostPrice: number;
   brand: string;
+  brandSortOrder: number | null;
   categoryIds: string[];
   categoryNames: string[];
+  categorySortOrders: number[];
   id: string;
   imageUrl: string | null;
   name: string;
@@ -178,7 +181,7 @@ export async function getProductsForOrder(orgId: string): Promise<OrderProductOp
   cacheLife("max");
   const admin = getSupabaseAdmin() as unknown as ManageAdmin;
 
-  const [productsRes, saleUnitsRes, productImagesRes, categoriesRes, categoryItemsRes, warehouseModesRes] =
+  const [productsRes, saleUnitsRes, productImagesRes, categoriesRes, categoryItemsRes, brandsRes, warehouseModesRes] =
     await Promise.all([
       admin
         .from("products")
@@ -211,6 +214,11 @@ export async function getProductsForOrder(orgId: string): Promise<OrderProductOp
         .select("product_category_id, product_id")
         .eq("organization_id", orgId)
         .order("created_at", { ascending: true }),
+      admin
+        .from("product_brands")
+        .select("name, sort_order")
+        .eq("organization_id", orgId)
+        .order("sort_order", { ascending: true }),
       admin
         .from("product_warehouse_fulfillment_modes")
         .select("product_id, warehouse_id, mode")
@@ -269,6 +277,12 @@ export async function getProductsForOrder(orgId: string): Promise<OrderProductOp
   }
 
   const categories = ((categoriesRes.data ?? []) as ProductCategoryRow[]) ?? [];
+  const brandSortOrderByName = new Map(
+    (((brandsRes.data ?? []) as ProductBrandRow[]) ?? []).map((brand) => [
+      brand.name.trim(),
+      Number(brand.sort_order),
+    ]),
+  );
   const categoryItemIdsByProductId = new Map<string, Set<string>>();
 
   for (const item of ((categoryItemsRes.data ?? []) as ProductCategoryItemRow[]) ?? []) {
@@ -286,11 +300,15 @@ export async function getProductsForOrder(orgId: string): Promise<OrderProductOp
     const productCategoryIds = categoryItemIdsByProductId.get(p.id) ?? new Set<string>();
     const productCategories = categories.filter((category) => productCategoryIds.has(category.id));
 
+    const brand = typeof metadata.brand === "string" ? metadata.brand.trim() : "";
+
     return {
       baseCostPrice,
-      brand: typeof metadata.brand === "string" ? metadata.brand.trim() : "",
+      brand,
+      brandSortOrder: brandSortOrderByName.get(brand) ?? null,
       categoryIds: productCategories.map((category) => category.id),
       categoryNames: productCategories.map((category) => category.name),
+      categorySortOrders: productCategories.map((category) => Number(category.sort_order)),
       id: p.id,
       imageUrl: firstImageByProductId.get(p.id) ?? null,
       name: p.name,

@@ -50,6 +50,11 @@ export function PrintVehicleProductSummaryButton({
     if (loading) return;
     setLoading(true);
     router.push(url);
+
+    // Next.js can keep this page instance in its client cache. In that case
+    // returning from the document page does not always emit pageshow/focus,
+    // so make sure the button can never remain disabled indefinitely.
+    window.setTimeout(() => setLoading(false), 1000);
   }
 
   return (

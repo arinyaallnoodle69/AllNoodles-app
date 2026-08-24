@@ -4,6 +4,7 @@ import { cacheLife, cacheTag } from "next/cache";
 import { getTodayInBangkok } from "@/lib/orders/date";
 import { getRecentDailyPerformance } from "@/lib/reports/sales-overview";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { isStockShortage } from "@/lib/dashboard/stock-shortage";
 import type { Json } from "@/types/database";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -273,14 +274,14 @@ async function loadLowStockCount(organizationId: string): Promise<number> {
       }
 
       const availableQuantity = toNum(product.stock_quantity) - toNum(product.reserved_quantity);
-      return total + (availableQuantity <= 5 ? 1 : 0);
+      return total + (isStockShortage(availableQuantity) ? 1 : 0);
     }
     return total + warehouseStocks.filter((stock) => {
       const mode = fulfillmentModeByProductWarehouse.get(`${product.id}:${stock.warehouse_id}`) ?? "stock";
       if (mode !== "stock") return false;
 
       const availableQuantity = toNum(stock.stock_quantity) - toNum(stock.reserved_quantity);
-      return availableQuantity <= 5;
+      return isStockShortage(availableQuantity);
     }).length;
   }, 0);
 }

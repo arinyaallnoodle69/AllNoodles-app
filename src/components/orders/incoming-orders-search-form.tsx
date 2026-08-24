@@ -42,7 +42,7 @@ export function IncomingOrdersSearchForm({ children, className }: Props) {
     }
 
     startTransition(() => {
-      router.push(`/orders/incoming?${params.toString()}`);
+      router.push(`/orders/incoming?${params.toString()}`, { scroll: false });
     });
   }
 

@@ -1654,11 +1654,15 @@ export function StoreDeliveryButton({
   const [orders, setOrders] = useState<DeliveryFormData[] | null>(null);
 
   async function handleOpen() {
+    if (loading) return;
     setLoading(true);
-    const data = await getStoreDeliveryDataAction(customerId, date);
-    setOrders(data);
-    setLoading(false);
-    setOpen(true);
+    try {
+      const data = await getStoreDeliveryDataAction(customerId, date);
+      setOrders(data);
+      setOpen(true);
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (

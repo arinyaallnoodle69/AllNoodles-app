@@ -43,6 +43,7 @@ export function PrintPackingListButton({
     if (loading) return;
     setLoading(true);
     window.location.assign(basePageUrl);
+    window.setTimeout(() => setLoading(false), 1000);
   }
 
   return (

@@ -112,6 +112,7 @@ async function FactoryOrderSheetPage({ searchParams }: Props) {
         </div>
         <Link
           href={`/orders/incoming?date=${date}${endDate ? `&endDate=${endDate}` : ""}`}
+          scroll={false}
           style={{
             fontSize: "13px",
             fontWeight: 700,
@@ -140,7 +141,11 @@ async function FactoryOrderSheetPage({ searchParams }: Props) {
           }}
         >
           <p style={{ fontSize: "18px", fontWeight: 600, color: "#64748b" }}>ไม่มีรายการสินค้าผลิตสดสำหรับใบสั่งของนี้</p>
-          <Link href={`/orders/incoming?date=${date}${endDate ? `&endDate=${endDate}` : ""}`} style={{ marginTop: "8px", color: "#4A148C", fontSize: "14px" }}>
+          <Link
+            href={`/orders/incoming?date=${date}${endDate ? `&endDate=${endDate}` : ""}`}
+            scroll={false}
+            style={{ marginTop: "8px", color: "#4A148C", fontSize: "14px" }}
+          >
             กลับหน้ารายการออเดอร์
           </Link>
         </div>

@@ -50,6 +50,7 @@ export function PrintFactoryOrderSheetButton({
     if (loading) return;
     setLoading(true);
     router.push(url);
+    window.setTimeout(() => setLoading(false), 1000);
   }
 
   return (

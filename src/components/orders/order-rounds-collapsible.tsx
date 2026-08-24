@@ -61,7 +61,11 @@ export function OrderRoundsCollapsible({ date, rounds }: Props) {
                   {index + 1}
                 </span>
 
-                <Link href={`/orders/incoming?date=${date}&expanded=${round.id}`} className="min-w-0 flex-1 group">
+                <Link
+                  href={`/orders/incoming?date=${date}&expanded=${round.id}`}
+                  scroll={false}
+                  className="min-w-0 flex-1 group"
+                >
                   <div className="flex items-center gap-2">
                     <span className="font-mono text-sm font-black text-[#4A148C] group-hover:underline">
                       {round.orderNumber}
@@ -81,6 +85,7 @@ export function OrderRoundsCollapsible({ date, rounds }: Props) {
                   <div className="flex shrink-0 items-center gap-2 print:hidden">
                     <Link
                       href={`/orders/incoming?date=${date}&expanded=${round.id}`}
+                      scroll={false}
                       className={`flex h-10 w-10 items-center justify-center rounded-xl transition active:scale-90 ${
                         canManage ? "bg-[#4A148C]/15 text-[#4A148C] hover:bg-[#4A148C]/20" : "cursor-not-allowed bg-slate-100 text-slate-400"
                       }`}
@@ -91,6 +96,7 @@ export function OrderRoundsCollapsible({ date, rounds }: Props) {
                     {canManage ? (
                       <Link
                         href={`/orders/incoming?date=${date}&expanded=${round.id}&delete=1`}
+                        scroll={false}
                         className="flex h-10 w-10 items-center justify-center rounded-xl bg-rose-50 text-rose-600 transition hover:bg-rose-100 active:scale-90"
                         title="ลบออเดอร์"
                       >

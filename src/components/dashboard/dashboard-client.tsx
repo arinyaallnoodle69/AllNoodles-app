@@ -1148,6 +1148,7 @@ export function DashboardClient({
           </div>
         ) : (
           <StockReceiveForm
+            allowWarehouseSelection
             products={stockProducts}
             warehouses={stockWarehouses}
             returnHref="/dashboard"

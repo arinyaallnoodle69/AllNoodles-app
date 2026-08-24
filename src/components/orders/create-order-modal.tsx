@@ -2,7 +2,6 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
 import { createPortal } from "react-dom";
 import {
   AlertCircle,
@@ -918,16 +917,34 @@ function ProductSelectModal({
   };
 
   const categoryOptions = useMemo(() => {
-    const seen = new Map<string, string>();
+    const seen = new Map<string, { id: string; name: string; sortOrder: number }>();
     for (const product of products) {
       for (let i = 0; i < product.categoryIds.length; i++) {
         const id = product.categoryIds[i];
         const name = product.categoryNames[i];
-        if (id && name && !seen.has(id)) seen.set(id, name);
+        const sortOrder = product.categorySortOrders[i] ?? Number.MAX_SAFE_INTEGER;
+        if (id && name && !seen.has(id)) seen.set(id, { id, name, sortOrder });
       }
     }
-    return Array.from(seen.entries()).map(([id, name]) => ({ id, name }));
+    return Array.from(seen.values()).sort(
+      (left, right) => left.sortOrder - right.sortOrder || left.name.localeCompare(right.name, "th"),
+    );
   }, [products]);
+
+  const brandSortOrderByName = useMemo(() => {
+    const result = new Map<string, number>();
+    for (const product of products) {
+      if (!product.brand || product.brandSortOrder === null) continue;
+      result.set(product.brand, product.brandSortOrder);
+    }
+    return result;
+  }, [products]);
+
+  const compareBrands = useCallback((left: string, right: string) => {
+    const leftOrder = brandSortOrderByName.get(left) ?? Number.MAX_SAFE_INTEGER;
+    const rightOrder = brandSortOrderByName.get(right) ?? Number.MAX_SAFE_INTEGER;
+    return leftOrder - rightOrder || left.localeCompare(right, "th");
+  }, [brandSortOrderByName]);
 
   const brandsByCategory = useMemo(() => {
     const result = new Map<string, string[]>();
@@ -941,12 +958,12 @@ function ProductSelectModal({
       }
       result.set(
         category.id,
-        [...brands].sort((left, right) => left.localeCompare(right, "th")),
+        [...brands].sort(compareBrands),
       );
     }
 
     return result;
-  }, [categoryOptions, products]);
+  }, [categoryOptions, compareBrands, products]);
 
   const brandOptions = useMemo(() => {
     if (selectedCategoryId === "__all__") {
@@ -955,10 +972,10 @@ function ProductSelectModal({
         const brand = product.brand.trim();
         if (brand) brands.add(brand);
       }
-      return [...brands].sort((left, right) => left.localeCompare(right, "th"));
+      return [...brands].sort(compareBrands);
     }
     return brandsByCategory.get(selectedCategoryId) ?? [];
-  }, [brandsByCategory, products, selectedCategoryId]);
+  }, [brandsByCategory, compareBrands, products, selectedCategoryId]);
 
   const filteredProducts = useMemo(() => {
     const normalized = normalizeSearch(deferredQuery);
@@ -1841,7 +1858,6 @@ export function CreateOrderModal({
   const [internalOpen, setInternalOpen] = useState(false);
   const open = propOpen !== undefined ? propOpen : internalOpen;
   const setOpen = onOpenChange ?? setInternalOpen;
-  const router = useRouter();
   const [isClosing, setIsClosing] = useState(false);
   const [activeTab, setActiveTab] = useState<ModalTab>("create");
   const [productModalOpen, setProductModalOpen] = useState(false);
@@ -2340,7 +2356,6 @@ export function CreateOrderModal({
       }, 1400);
 
       resetForm({ keepOrderDate: true, openCustomerPicker: true });
-      router.refresh();
     });
   }
 
@@ -2436,9 +2451,11 @@ export function CreateOrderModal({
                                   {selectedCustomer.name}
                                 </p>
                                 <div className="mt-1 flex flex-wrap items-center gap-2">
-                                  <p className="text-sm font-semibold text-[#4A148C]">{selectedCustomer.code}</p>
+                                  <p className="text-sm font-extrabold tracking-[0.02em] text-[#4A148C]">
+                                    {selectedCustomer.code}
+                                  </p>
                                   {selectedCustomerOrderCount > 0 ? (
-                                    <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-bold text-emerald-700 ring-1 ring-emerald-200">
+                                    <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-extrabold leading-none text-emerald-700">
                                       สั่งแล้ววันนี้
                                       {selectedCustomerOrderCount > 1
                                         ? ` ${selectedCustomerOrderCount}`
@@ -2948,10 +2965,12 @@ export function CreateOrderModal({
                         </div>
                         <div className="min-w-0 flex-1">
                           <p className="text-base font-bold leading-snug text-slate-900">{customer.name}</p>
-                          <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-                            <span className="font-mono text-[11px] font-bold text-slate-500">{customer.code}</span>
+                          <div className="mt-2 flex flex-wrap items-center gap-2">
+                            <span className="text-sm font-extrabold tracking-[0.02em] text-[#4A148C]">
+                              {customer.code}
+                            </span>
                             {orderCountToday > 0 ? (
-                              <span className="rounded-full bg-emerald-50 px-1.5 py-0.5 text-[9px] font-bold text-emerald-700 border border-emerald-200">
+                              <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-extrabold leading-none text-emerald-700">
                                 สั่งแล้ววันนี้{orderCountToday > 1 ? ` ${orderCountToday}` : ""}
                               </span>
                             ) : null}

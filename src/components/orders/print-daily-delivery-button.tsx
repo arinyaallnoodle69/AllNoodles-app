@@ -7,20 +7,38 @@ export function PrintDailyDeliveryButton({ date }: { date: string }) {
   const [loading, setLoading] = useState(false);
 
   function handlePrint() {
+    if (loading) return;
     setLoading(true);
     const iframe = document.createElement("iframe");
     iframe.style.cssText = "position:fixed;top:-9999px;left:-9999px;width:1px;height:1px;";
     iframe.src = `/delivery/print?date=${date}`;
     document.body.appendChild(iframe);
 
+    let finished = false;
+    const finish = () => {
+      if (finished) return;
+      finished = true;
+      if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
+      setLoading(false);
+    };
+    const safetyTimer = window.setTimeout(finish, 15000);
+
     iframe.onload = () => {
       const win = iframe.contentWindow;
-      if (!win) return;
+      if (!win) {
+        window.clearTimeout(safetyTimer);
+        finish();
+        return;
+      }
       win.addEventListener("afterprint", () => {
-        if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
-        setLoading(false);
+        window.clearTimeout(safetyTimer);
+        finish();
       });
       setTimeout(() => win.print(), 300);
+    };
+    iframe.onerror = () => {
+      window.clearTimeout(safetyTimer);
+      finish();
     };
   }
 

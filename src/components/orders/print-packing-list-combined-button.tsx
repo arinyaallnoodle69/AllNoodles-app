@@ -38,6 +38,10 @@ export function PrintPackingListCombinedButton({
     setLoadingType(layout);
     const url = getUrl(layout);
     window.location.assign(url);
+    window.setTimeout(() => {
+      setLoadingType(null);
+      setIsOpen(false);
+    }, 1000);
   };
 
   return (

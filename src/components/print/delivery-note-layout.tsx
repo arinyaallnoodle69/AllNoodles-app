@@ -189,7 +189,7 @@ function DeliveryItemsTable({
           <th className="dn-col-name">รายการ</th>
           <th className="dn-col-qty">จำนวน</th>
           <th className="dn-col-unit">หน่วย</th>
-          {showAmount && <th className="dn-col-price">ราคา/หน่วย</th>}
+          {showAmount && <th className="dn-col-price">ราคา</th>}
           <th className="dn-col-total">จำนวนเงิน</th>
         </tr>
       </thead>
@@ -607,26 +607,40 @@ export function DeliveryNoteLayout({ dns, showAmount = true }: Props) {
         }
 
         .dn-flex-spacer {
-          flex: 1 1 auto;
+          flex: 0 0 0;
+          height: 0;
         }
 
         /* Footer & Notes */
         .dn-footer {
-          margin-top: 4mm;
+          margin-top: 2mm;
           flex: 0 0 auto;
         }
 
         .dn-notes {
           border: 1px solid #000000;
-          min-height: 15mm;
-          padding: 2mm 3mm;
-          font-size: 13pt;
-          font-weight: bold;
+          min-height: 22mm;
+          padding: 1mm 3mm 2mm;
           box-sizing: border-box;
+          display: flex;
+          align-items: flex-start;
+          line-height: 1.25;
         }
 
         .dn-notes span {
+          color: #000000;
+          font-size: 17pt;
+          font-weight: 900;
           margin-right: 2mm;
+        }
+
+        .dn-notes strong {
+          color: #c00000;
+          font-size: 20pt;
+          font-weight: 900;
+          line-height: 1.25;
+          overflow-wrap: anywhere;
+          white-space: pre-wrap;
         }
 
         /* Signatures */

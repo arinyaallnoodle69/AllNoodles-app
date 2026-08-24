@@ -18,6 +18,7 @@ import {
   useEffect,
   useEffectEvent,
   useMemo,
+  useRef,
   useState,
   startTransition,
 } from "react";
@@ -65,6 +66,7 @@ export function StockAdjustForm({
   const [notes, setNotes] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const deferredQuery = useDeferredValue(searchQuery);
+  const pageScrollYRef = useRef(0);
 
   const selectedProduct = useMemo(() => {
     return products.find((p) => p.id === selectedProductId);
@@ -88,6 +90,7 @@ export function StockAdjustForm({
   }, [deferredQuery, products]);
 
   const handleSuccess = useEffectEvent(() => {
+    const pageScrollY = pageScrollYRef.current;
     startTransition(() => {
       if (onClose) {
         onClose();
@@ -96,6 +99,12 @@ export function StockAdjustForm({
       }
       router.refresh();
     });
+
+    // A server refresh can restore the page to the top on some mobile browsers.
+    // Keep the stock list exactly where the user was working.
+    requestAnimationFrame(() => window.scrollTo({ top: pageScrollY, behavior: "auto" }));
+    window.setTimeout(() => window.scrollTo({ top: pageScrollY, behavior: "auto" }), 120);
+    window.setTimeout(() => window.scrollTo({ top: pageScrollY, behavior: "auto" }), 350);
   });
 
   useEffect(() => {
@@ -134,7 +143,7 @@ export function StockAdjustForm({
         className="absolute inset-0" 
       />
       <div className={`relative z-10 flex h-full w-full max-w-lg flex-col overflow-hidden bg-[#F3E5F5] shadow-2xl rounded-none sm:rounded-[2.8rem] border border-white/40 ${
-        isClosing ? "animate-slide-up-premium" : "animate-slide-down-premium"
+        isClosing ? "animate-fade-out" : "animate-slide-down-premium"
       }`}>
         
         {/* Header */}
@@ -301,6 +310,7 @@ export function StockAdjustForm({
                 if (!warehouseId) {
                   return;
                 }
+                pageScrollYRef.current = window.scrollY;
                 const formData = new FormData();
                 formData.append("productId", selectedProductId);
                 formData.append("warehouseId", warehouseId);

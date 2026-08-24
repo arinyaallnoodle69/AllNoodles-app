@@ -38,6 +38,7 @@ import { ThaiDatePicker } from "@/components/ui/thai-date-picker";
 import { useClientRole } from "@/lib/auth/client-role";
 
 type StockReceiveFormProps = {
+  allowWarehouseSelection?: boolean;
   products: StockProductOption[];
   warehouses: StockWarehouseOption[];
   returnHref: string;
@@ -62,6 +63,7 @@ function getWarehouseOnHandQuantity(product: StockProductOption, warehouseId: st
 }
 
 export function StockReceiveForm({
+  allowWarehouseSelection = false,
   products,
   warehouses,
   returnHref,
@@ -74,11 +76,13 @@ export function StockReceiveForm({
     receiveStockAction,
     initialReceiveStockState,
   );
+  const automaticWarehouseId =
+    allowWarehouseSelection && warehouses.length === 1 ? warehouses[0].id : "";
 
   // Flow: 1: Info (Date/Warehouse), 2: Products (Search/Select), 3: Photo & Submit
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [selections, setSelections] = useState<Record<string, Record<string, string>>>({});
-  const [warehouseId, setWarehouseId] = useState(defaultWarehouseId);
+  const [warehouseId, setWarehouseId] = useState(defaultWarehouseId || automaticWarehouseId);
   const [receiveDate, setReceiveDate] = useState(new Date().toISOString().split("T")[0]);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedFactory, setSelectedFactory] = useState<string>("all");
@@ -105,10 +109,6 @@ export function StockReceiveForm({
         : products,
     [products, warehouseId],
   );
-
-  useEffect(() => {
-    setWarehouseId(defaultWarehouseId);
-  }, [defaultWarehouseId]);
 
   const getProductFactoryFilterName = useCallback((product: StockProductOption) => {
     return (
@@ -141,12 +141,14 @@ export function StockReceiveForm({
 
   useEffect(() => {
     if (selectedBrand !== "all" && !brands.includes(selectedBrand)) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Keep a dependent filter valid when its options change.
       setSelectedBrand("all");
     }
   }, [brands, selectedBrand]);
 
   useEffect(() => {
     if (selectedFactory !== "all" && !factories.includes(selectedFactory)) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Keep dependent filters valid after warehouse/factory options change.
       setSelectedFactory("all");
       setSelectedBrand("all");
     }
@@ -209,6 +211,24 @@ export function StockReceiveForm({
   };
 
   const selectedCount = Object.keys(selections).length;
+
+  const handleWarehouseChange = (nextWarehouseId: string) => {
+    if (nextWarehouseId === warehouseId) return;
+
+    if (
+      selectedCount > 0 &&
+      !window.confirm("การเปลี่ยนคลังจะล้างสินค้าที่เลือกไว้ ต้องการเปลี่ยนคลังหรือไม่?")
+    ) {
+      return;
+    }
+
+    setWarehouseId(nextWarehouseId);
+    setSelections({});
+    setSearchQuery("");
+    setSelectedFactory("all");
+    setSelectedBrand("all");
+    setValidationError(null);
+  };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -411,16 +431,39 @@ export function StockReceiveForm({
                   <label className="text-xs font-black uppercase tracking-widest text-slate-400 flex items-center gap-2">
                     <Package2 className="h-4 w-4 text-[#4A148C]" /> คลังสินค้าปลายทาง
                   </label>
-                  <div className="flex min-h-12 w-full items-center justify-between gap-3 rounded-full border border-[#dbe4f0] bg-slate-50 px-5">
-                    <span className="min-w-0 truncate text-sm font-black text-[#4A148C]">
-                      {selectedWarehouse?.name ?? "ยังไม่ได้เลือกคลัง"}
-                    </span>
-                    <span className="shrink-0 rounded-full bg-white px-3 py-1 text-[11px] font-black uppercase tracking-wide text-slate-500">
-                      {selectedWarehouse?.slug ?? "warehouse"}
-                    </span>
-                  </div>
+                  {allowWarehouseSelection ? (
+                    <div className="relative">
+                      <select
+                        value={warehouseId}
+                        onChange={(event) => handleWarehouseChange(event.target.value)}
+                        className="h-14 w-full appearance-none rounded-2xl border-2 border-[#dbe4f0] bg-white px-5 pr-12 text-base font-black text-[#4A148C] outline-none transition focus:border-[#4A148C] focus:ring-4 focus:ring-[#4A148C]/10"
+                      >
+                        <option value="">เลือกคลังปลายทาง</option>
+                        {warehouses.map((warehouse) => (
+                          <option key={warehouse.id} value={warehouse.id}>
+                            {warehouse.name}
+                          </option>
+                        ))}
+                      </select>
+                      <ChevronRight
+                        className="pointer-events-none absolute right-4 top-1/2 h-5 w-5 -translate-y-1/2 rotate-90 text-[#4A148C]"
+                        strokeWidth={2.5}
+                      />
+                    </div>
+                  ) : (
+                    <div className="flex min-h-12 w-full items-center justify-between gap-3 rounded-full border border-[#dbe4f0] bg-slate-50 px-5">
+                      <span className="min-w-0 truncate text-sm font-black text-[#4A148C]">
+                        {selectedWarehouse?.name ?? "ยังไม่ได้เลือกคลัง"}
+                      </span>
+                      <span className="shrink-0 rounded-full bg-white px-3 py-1 text-[11px] font-black uppercase tracking-wide text-slate-500">
+                        {selectedWarehouse?.slug ?? "warehouse"}
+                      </span>
+                    </div>
+                  )}
                   <p className="px-1 text-xs font-bold text-slate-500">
-                    รับเข้าคลังตามหน้าสต็อกที่กำลังเปิดอยู่ หากต้องการเปลี่ยนคลังให้กลับไปเลือกคลังด้านนอกก่อน
+                    {allowWarehouseSelection
+                      ? "เลือกคลังที่จะรับสินค้าเข้า ก่อนเลือกสินค้าและระบุจำนวน"
+                      : "รับเข้าคลังตามหน้าสต็อกที่กำลังเปิดอยู่ หากต้องการเปลี่ยนคลังให้กลับไปเลือกคลังด้านนอกก่อน"}
                   </p>
                 </div>
 

@@ -12,6 +12,7 @@ import { getIncomingOrders, getOrderDetailById, type IncomingOrderListItem, type
 import { syncBillingSnapshotsForDeliveryNumbers } from "@/lib/billing/actions";
 import { revalidateDashboardPages } from "@/lib/dashboard/revalidate-dashboard-pages";
 import { mergeItemsIntoOrder, type MergeableOrderItemInput } from "@/lib/orders/merge-order-items";
+import { persistManualOrderThenSchedule } from "@/lib/orders/manual-order-save-boundary";
 import { notifyUpdatedCustomerReceiptForOrder } from "@/lib/orders/notify-customer-receipt";
 import { syncDeliveryNoteForOrder } from "@/lib/orders/sync-delivery-note";
 import { isVehicleTransferInput, type VehicleTransferInput } from "@/lib/orders/vehicle-transfer";
@@ -27,6 +28,16 @@ function invalidateIncomingOrderCaches(organizationId: string) {
   updateTag(`orders-${organizationId}`);
   updateTag(`settings-${organizationId}`);
   updateTag(`stock-${organizationId}`);
+  revalidatePath("/orders/incoming");
+  revalidatePath("/orders");
+  revalidatePath("/billing");
+  revalidateDashboardPages();
+}
+
+function revalidateIncomingOrderCachesEventually(organizationId: string) {
+  revalidateTag(`orders-${organizationId}`, "max");
+  revalidateTag(`settings-${organizationId}`, "max");
+  revalidateTag(`stock-${organizationId}`, "max");
   revalidatePath("/orders/incoming");
   revalidatePath("/orders");
   revalidatePath("/billing");
@@ -1317,6 +1328,7 @@ function mapManualItemsToMergeableInputs(
 }
 
 export async function createManualOrderAction(formData: FormData): Promise<ActionResult> {
+  const saveStartedAt = Date.now();
   const session = await requireAnyRole(["admin", "member"]);
   const admin = getSupabaseAdmin() as unknown as ActionsAdmin;
 
@@ -1442,53 +1454,80 @@ export async function createManualOrderAction(formData: FormData): Promise<Actio
     return { error: mergeResult.error ?? "ไม่สามารถรวมรายการสินค้าในออเดอร์ได้" };
   }
 
-  const syncResult = await syncDeliveryNoteForOrder(admin, {
-    orderId,
-    organizationId: session.organizationId,
-    skipBillingSync: true,
-    skipRevalidate: true,
-    userId: session.userId,
-  });
-
-  if ("error" in syncResult) {
-    console.error("[createManualOrderAction] Delivery Note Sync Error:", syncResult.error);
-    return {
-      success: true,
-      orderNumber: String(effectiveOrderNumber),
-      receiptWarning: `สร้างออเดอร์สำเร็จ แต่ไม่สามารถสร้างใบส่งของอัตโนมัติได้: ${syncResult.error}`,
-    };
-  }
-
-  const syncedDeliveryNumber = String(syncResult.deliveryNumber);
-  effectiveOrderNumber = syncedDeliveryNumber;
-  await admin.from("orders").update({ order_number: syncedDeliveryNumber }).eq("id", orderId);
-
-  after(() => {
-    syncBillingSnapshotsForDeliveryNumbers({
-      organizationId: session.organizationId,
-      customerId,
-      deliveryNumbers: [syncedDeliveryNumber],
-    }).catch((err) => {
-      console.error("Background billing sync error:", err);
-    });
-
-    notifyUpdatedCustomerReceiptForOrder(admin, {
-      orderId,
-      organizationId: session.organizationId,
-    }).catch((err) => {
-      console.error("Background notify error:", err);
-    });
-
-    revalidateDashboardPages();
-  });
-
-  invalidateIncomingOrderCaches(session.organizationId);
-
-  return {
+  const foregroundResult = {
     success: true,
     orderNumber: String(effectiveOrderNumber),
-    deliveryNumber: syncedDeliveryNumber,
-  };
+  } satisfies ActionResult;
+
+  console.info("[createManualOrderAction] Foreground save complete", {
+    durationMs: Date.now() - saveStartedAt,
+    orderId,
+  });
+
+  return persistManualOrderThenSchedule({
+    persist: async () => foregroundResult,
+    schedule: (task) => after(task),
+    reconcile: async () => {
+      const reconciliationStartedAt = Date.now();
+      const syncResult = await syncDeliveryNoteForOrder(admin, {
+        orderId,
+        organizationId: session.organizationId,
+        skipBillingSync: true,
+        skipRevalidate: true,
+        userId: session.userId,
+      });
+
+      if ("error" in syncResult) {
+        console.error("[createManualOrderAction] Deferred delivery-note sync failed", {
+          durationMs: Date.now() - reconciliationStartedAt,
+          error: syncResult.error,
+          orderId,
+        });
+        revalidateIncomingOrderCachesEventually(session.organizationId);
+        return;
+      }
+
+      const syncedDeliveryNumber = String(syncResult.deliveryNumber);
+      const { error: orderNumberError } = await admin
+        .from("orders")
+        .update({ order_number: syncedDeliveryNumber })
+        .eq("id", orderId);
+
+      if (orderNumberError) {
+        console.error("[createManualOrderAction] Deferred order-number sync failed", {
+          error: orderNumberError.message,
+          orderId,
+        });
+      }
+
+      const backgroundResults = await Promise.allSettled([
+        syncBillingSnapshotsForDeliveryNumbers({
+          organizationId: session.organizationId,
+          customerId,
+          deliveryNumbers: [syncedDeliveryNumber],
+        }),
+        notifyUpdatedCustomerReceiptForOrder(admin, {
+          orderId,
+          organizationId: session.organizationId,
+        }),
+      ]);
+
+      for (const [index, result] of backgroundResults.entries()) {
+        if (result.status === "rejected") {
+          console.error(
+            index === 0 ? "Background billing sync error:" : "Background notify error:",
+            result.reason,
+          );
+        }
+      }
+
+      revalidateIncomingOrderCachesEventually(session.organizationId);
+      console.info("[createManualOrderAction] Deferred reconciliation complete", {
+        durationMs: Date.now() - reconciliationStartedAt,
+        orderId,
+      });
+    },
+  });
 }
 export async function linkPendingLineOrderAction(formData: FormData): Promise<ActionResult> {
   const session = await requireAppRole("admin");
