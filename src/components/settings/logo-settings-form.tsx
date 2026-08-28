@@ -131,7 +131,7 @@ export function LogoSettingsForm({ initialLogoUrl }: LogoSettingsFormProps) {
   };
 
   return (
-    <div className="w-full max-w-4xl mx-auto px-4 py-6 font-[family:var(--font-sarabun)]">
+    <div className="w-full max-w-4xl mx-auto px-4 py-6 font-[family:var(--font-noto-sans-thai)]">
       <form action={formAction} id="logo-form" className="space-y-8">
         {/* Hidden input to hold the processed base64 image data */}
         <input type="hidden" name="logoData" value={logoData || ""} />

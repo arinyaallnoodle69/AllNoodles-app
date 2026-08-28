@@ -18,6 +18,7 @@ import {
   Package2,
   Save,
   Trash2,
+  Weight,
   X,
 } from "lucide-react";
 import {
@@ -28,6 +29,7 @@ import {
 import {
   type SaleUnitCostMode,
 } from "@/lib/products/sale-unit-cost";
+import { getUnitWeightInput, parseUnitWeightGrams, type UnitWeightInputUnit } from "@/lib/products/unit-weight";
 import type { SettingsProduct, SettingsProductCategory, SettingsProductBrand, SettingsSupplier } from "@/lib/settings/admin";
 
 type ProductFormProps = {
@@ -115,6 +117,11 @@ function deriveOrderPreset(min: number, step: number | null): OrderPreset {
   return "custom";
 }
 
+function getParsedNumber(value: string) {
+  const parsed = Number(value.replace(/,/g, "").trim());
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
 // Inner form body - remounts via `key` when navigating between products
 type ProductFormBodyProps = {
   categories: SettingsProductCategory[];
@@ -151,6 +158,9 @@ function ProductFormBody({
   const [isCameraOpen, setIsCameraOpen] = useState(false);
   const [isStartingCamera, setIsStartingCamera] = useState(false);
   const [baseUnit, setBaseUnit] = useState(editingProduct?.baseUnit ?? "กก.");
+  const initialWeightInput = getUnitWeightInput(editingProduct?.unitWeightGrams);
+  const [unitWeightValue, setUnitWeightValue] = useState(initialWeightInput.value);
+  const [unitWeightUnit, setUnitWeightUnit] = useState<UnitWeightInputUnit>(initialWeightInput.unit);
   const legacyProductKind = editingProduct?.productKind ?? "stock";
   const supplierId = editingProduct?.supplierId ?? "";
   const [baseCostPrice, setBaseCostPrice] = useState(
@@ -201,6 +211,12 @@ function ProductFormBody({
     editingProduct?.imageUrls ?? [],
   );
   const [prioritizeNewImages, setPrioritizeNewImages] = useState(false);
+  const normalizedUnitWeightGrams = parseUnitWeightGrams(unitWeightValue, unitWeightUnit);
+  const unitWeightGramsFormValue = normalizedUnitWeightGrams === null
+    ? ""
+    : Number.isFinite(normalizedUnitWeightGrams)
+      ? String(normalizedUnitWeightGrams)
+      : "invalid";
 
   const syncBasicFieldsFromForm = useCallback(() => {
     const form = formRef.current;
@@ -630,11 +646,6 @@ function ProductFormBody({
     setIsCameraOpen(false);
   }
 
-  function getParsedNumber(value: string) {
-    const parsed = Number(value.replace(/,/g, "").trim());
-    return Number.isFinite(parsed) ? parsed : 0;
-  }
-
   const hasUnsavedChanges = useMemo(() => {
     if (!isEditing || !editingProduct) {
       return true;
@@ -678,6 +689,7 @@ function ProductFormBody({
       basicFormValues.sku === (editingProduct.sku ?? "") &&
       baseUnit === (editingProduct.baseUnit ?? "") &&
       getParsedNumber(baseCostPrice || "0") === Number(editingProduct.costPrice ?? 0) &&
+      normalizedUnitWeightGrams === editingProduct.unitWeightGrams &&
       getParsedNumber(basicFormValues.stockQuantity || "0") === Number(editingProduct.stockQuantity ?? 0) &&
       brand === (editingProduct.brand ?? "") &&
       selectedCategoryId === (editingProduct.categoryIds[0] ?? "") &&
@@ -699,6 +711,7 @@ function ProductFormBody({
     basicFormValues,
     baseUnit,
     baseCostPrice,
+    normalizedUnitWeightGrams,
     brand,
     selectedCategoryId,
     supplierId,
@@ -864,6 +877,35 @@ function ProductFormBody({
                     placeholder="เช่น กก., แพ็ค, ชิ้น"
                   />
                 </div>
+              </div>
+
+              <div>
+                <label className={productFieldLabelClass} htmlFor="product-unit-weight">น้ำหนักต่อหน่วยขาย</label>
+                <div className="grid grid-cols-[minmax(0,1fr)_104px] gap-2">
+                  <div className="relative">
+                    <Weight className="absolute left-3 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-slate-700" strokeWidth={2.3} />
+                    <input
+                      id="product-unit-weight"
+                      type="number"
+                      min="0.001"
+                      step="0.001"
+                      inputMode="decimal"
+                      value={unitWeightValue}
+                      onChange={(event) => setUnitWeightValue(event.target.value)}
+                      className={`${productInputClass} pl-10`}
+                      placeholder="เช่น 500"
+                    />
+                  </div>
+                  <select value={unitWeightUnit} onChange={(event) => setUnitWeightUnit(event.target.value as UnitWeightInputUnit)} className={productSelectClass} aria-label="หน่วยน้ำหนัก">
+                    <option value="g">กรัม</option>
+                    <option value="kg">กก.</option>
+                  </select>
+                </div>
+                <input type="hidden" name="unitWeightGrams" value={unitWeightGramsFormValue} />
+                <p className="mt-1.5 text-xs font-bold text-slate-600">
+                  น้ำหนักรวมบรรจุภัณฑ์ของสินค้า 1 {baseUnit || "หน่วย"}
+                  {normalizedUnitWeightGrams ? ` · ระบบเก็บ ${normalizedUnitWeightGrams.toLocaleString("th-TH", { maximumFractionDigits: 3 })} กรัม` : ""}
+                </p>
               </div>
 
               <div className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
@@ -1528,6 +1570,7 @@ export function ProductForm({
       currentProduct.id,
       currentProduct.baseUnit,
       currentProduct.costPrice,
+      currentProduct.unitWeightGrams,
       currentProduct.brand,
       currentProduct.description,
       currentProduct.packingListName,

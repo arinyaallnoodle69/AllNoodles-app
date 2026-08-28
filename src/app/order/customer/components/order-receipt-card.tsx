@@ -36,7 +36,7 @@ export function OrderReceiptCard({
       hour12: false,
     }).format(new Date(iso));
 
-  const FONT = 'var(--font-sukhumvit), "Sukhumvit Set", sans-serif';
+  const FONT = 'var(--font-noto-sans-thai), "Noto Sans Thai", sans-serif';
   const COL = "1fr 60px 48px";
   const SIDE_PADDING = "20px";
   const RULE_MARGIN = "0 16px";

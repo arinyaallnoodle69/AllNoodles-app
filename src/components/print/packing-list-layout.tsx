@@ -824,7 +824,7 @@ function PackingListStyles() {
         overflow: hidden;
         background: #ffffff;
         border: 1px solid #cbd5e1;
-        font-family: var(--font-sukhumvit), "Sukhumvit Set", sans-serif;
+        font-family: var(--font-noto-sans-thai), "Noto Sans Thai", sans-serif;
         color: #0f172a;
         box-sizing: border-box;
       }
@@ -977,7 +977,7 @@ function PackingListStyles() {
         width: 100%;
         max-width: 100%;
         overflow: hidden;
-        font-family: Arial, sans-serif;
+        font-family: var(--font-noto-sans-thai), "Noto Sans Thai", sans-serif;
         font-size: 8pt;
         font-weight: 800;
         font-variant-numeric: tabular-nums;
@@ -1179,7 +1179,7 @@ function PackingListStyles() {
         position: absolute;
         right: 100%;
         margin-right: 0.5mm;
-        font-family: "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", var(--font-sukhumvit), "Sukhumvit Set", sans-serif;
+        font-family: "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", var(--font-noto-sans-thai), "Noto Sans Thai", sans-serif;
         font-size: 5.3pt;
         line-height: 1.15;
       }

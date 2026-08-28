@@ -5,6 +5,12 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
+  /* Compatibility aliases keep every existing screen and print template on
+     the same Noto Sans Thai family without changing component logic. */
+  /* Compatibility aliases for existing feature styles. */
+  --font-sukhumvit: var(--font-noto-sans-thai);
+  --font-sarabun: var(--font-noto-sans-thai);
+  --ui-muted-foreground: #475467;
   --surface: #ffffff;
   --surface-strong: #E1BEE7;
   --accent-50: #F3E5F5;
@@ -68,8 +74,8 @@
   --color-secondary-500: var(--secondary-500);
   --color-secondary-700: var(--secondary-700);
   --color-stone-650: var(--stone-650);
-  --font-sans: var(--font-sukhumvit), "Sukhumvit Set", sans-serif;
-  --font-mono: var(--font-sukhumvit);
+  --font-sans: var(--font-noto-sans-thai), "Noto Sans Thai", sans-serif;
+  --font-mono: var(--font-noto-sans-thai);
   --text-xs: 0.95rem;
   --text-sm: 1.08rem;
   --text-base: 1.22rem;
@@ -77,7 +83,7 @@
   --text-xl: 1.62rem;
   --text-2xl: 1.90rem;
   --text-3xl: 2.25rem;
-  --font-apple-ui: var(--font-sukhumvit), "Sukhumvit Set", sans-serif;
+  --font-apple-ui: var(--font-noto-sans-thai), "Noto Sans Thai", sans-serif;
   --font-heading: var(--font-sans);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
@@ -136,7 +142,7 @@
   overflow-x: hidden;
   overscroll-behavior-y: none;
   overscroll-behavior-x: none;
-  font-family: var(--font-sukhumvit), "Sukhumvit Set", sans-serif;
+  font-family: var(--font-noto-sans-thai), "Noto Sans Thai", sans-serif;
   font-weight: 600;
   font-size: var(--text-base);
   line-height: 1.35;
@@ -144,15 +150,23 @@
   background-color: var(--background);
   background-image: none;
   font-feature-settings: "tnum" 1, "lnum" 1;
+  font-kerning: normal;
   font-synthesis: none;
-  text-rendering: optimizeLegibility;
+  text-rendering: auto;
+  -webkit-font-smoothing: auto;
+  -moz-osx-font-smoothing: auto;
   }
 
   button,
   input,
   select,
   textarea {
-  font-family: var(--font-sukhumvit), "Sukhumvit Set", sans-serif;
+  font-family: var(--font-noto-sans-thai), "Noto Sans Thai", sans-serif;
+  font-kerning: normal;
+  font-synthesis: none;
+  text-rendering: auto;
+  -webkit-font-smoothing: auto;
+  -moz-osx-font-smoothing: auto;
   }
 
   :focus-visible {
@@ -174,10 +188,10 @@
   }
 
   .font-apple-ui {
-  font-family: var(--font-sukhumvit), "Sukhumvit Set", sans-serif;
+  font-family: var(--font-noto-sans-thai), "Noto Sans Thai", sans-serif;
   font-feature-settings: "tnum" 1, "lnum" 1;
   font-synthesis: none;
-  text-rendering: optimizeLegibility;
+  text-rendering: auto;
   }
 
 :where(
@@ -189,7 +203,7 @@
   .text-gray-600,
   .text-stone-650
 ) {
-  color: #667085 !important;
+  color: var(--ui-muted-foreground) !important;
 }
 
 @layer base {

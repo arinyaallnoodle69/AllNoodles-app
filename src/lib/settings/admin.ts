@@ -54,6 +54,7 @@ export type SettingsProduct = {
   stockQuantity: number;
   supplierId: string | null;
   supplierName: string | null;
+  unitWeightGrams: number | null;
 };
 
 export type SettingsProductCategory = {
@@ -180,6 +181,7 @@ type ProductRow = {
   stock_quantity: number | string;
   supplier_id?: string | null;
   unit: string;
+  unit_weight_grams?: number | string | null;
   display_order?: number;
 };
 
@@ -426,7 +428,7 @@ async function fetchSettingsData(organizationId: string): Promise<SettingsData> 
     await Promise.all([
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (productsTable as any)
-        .select("id, organization_id, sku, name, cost_price, stock_quantity, unit, is_active, metadata, display_order, product_kind, supplier_id")
+        .select("id, organization_id, sku, name, cost_price, stock_quantity, unit, unit_weight_grams, is_active, metadata, display_order, product_kind, supplier_id")
         .eq("organization_id", organizationId)
         .order("display_order", { ascending: true })
         .order("sku", { ascending: true }),
@@ -733,6 +735,9 @@ async function fetchSettingsData(organizationId: string): Promise<SettingsData> 
         stockQuantity: Number(product.stock_quantity),
         supplierId: product.supplier_id ?? null,
         supplierName: product.supplier_id ? (supplierMap.get(product.supplier_id) ?? null) : null,
+        unitWeightGrams: product.unit_weight_grams === null || product.unit_weight_grams === undefined
+          ? null
+          : Number(product.unit_weight_grams),
         baseUnit: product.unit,
       };
     }),
@@ -883,7 +888,7 @@ async function fetchSettingsProductsData(organizationId: string): Promise<Settin
     await Promise.all([
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (productsTable as any)
-        .select("id, organization_id, sku, name, cost_price, stock_quantity, unit, is_active, metadata, display_order, product_kind, supplier_id")
+        .select("id, organization_id, sku, name, cost_price, stock_quantity, unit, unit_weight_grams, is_active, metadata, display_order, product_kind, supplier_id")
         .eq("organization_id", organizationId)
         .order("display_order", { ascending: true })
         .order("sku", { ascending: true }),
@@ -1127,6 +1132,9 @@ async function fetchSettingsProductsData(organizationId: string): Promise<Settin
           stockQuantity: Number(product.stock_quantity),
           supplierId: product.supplier_id ?? null,
           supplierName: product.supplier_id ? (supplierMap.get(product.supplier_id) ?? null) : null,
+          unitWeightGrams: product.unit_weight_grams === null || product.unit_weight_grams === undefined
+            ? null
+            : Number(product.unit_weight_grams),
           display_order: product.display_order,
         };
       }),

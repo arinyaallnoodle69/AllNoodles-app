@@ -23,6 +23,10 @@ import {
   CATEGORY_PRINT_COLOR_PRESETS,
   normalizePrintColor,
 } from "@/lib/products/category-print-colors";
+import {
+  collectChangedProductColors,
+  rollbackProductColors,
+} from "@/lib/products/product-color-drafts";
 
 const DESKTOP_PREVIEW_PRODUCTS_PER_PAGE = 12;
 const MOBILE_PREVIEW_PRODUCTS_PER_PAGE = 6;
@@ -184,6 +188,11 @@ export function ProductPrintBackgroundColorSettings({
     setMessage("");
   }
 
+  function selectAndSetProductColor(product: ProductPrintColorProduct, color: string | null) {
+    setSelectedIds((current) => new Set(current).add(product.id));
+    setProductsColor([product.id], color);
+  }
+
   function applySelectedColor(color: string | null) {
     const ids = Array.from(selectedIds);
     if (ids.length === 0) return;
@@ -211,11 +220,13 @@ export function ProductPrintBackgroundColorSettings({
           setToast({ show: true, message: "บันทึกสีสินค้าสำเร็จแล้ว", type: "success" });
           router.refresh();
         } else {
+          setDraftColors((current) => rollbackProductColors(current, savedColors, [product.id]));
           setToast({ show: true, message: result.message || "บันทึกสีสินค้าไม่สำเร็จ", type: "error" });
         }
       })
       .catch((error) => {
         console.error("[applyAndSaveSingleProductColor]", error);
+        setDraftColors((current) => rollbackProductColors(current, savedColors, [product.id]));
         setMessage("เกิดข้อผิดพลาดในการบันทึก");
         setToast({ show: true, message: "เกิดข้อผิดพลาดในการบันทึก", type: "error" });
       })
@@ -225,12 +236,7 @@ export function ProductPrintBackgroundColorSettings({
   }
 
   function handleSave() {
-    const updates = Array.from(selectedIds)
-      .filter((productId) => (draftColors[productId] ?? null) !== (savedColors[productId] ?? null))
-      .map((productId) => ({
-        productId,
-        color: draftColors[productId] ?? null,
-      }));
+    const updates = collectChangedProductColors(draftColors, savedColors);
 
     if (updates.length === 0) {
       setMessage("ยังไม่มีรายการที่เปลี่ยนสี");
@@ -264,11 +270,13 @@ export function ProductPrintBackgroundColorSettings({
           setToast({ show: true, message: `บันทึกสีสินค้า ${updates.length.toLocaleString("th-TH")} รายการสำเร็จแล้ว`, type: "success" });
           router.refresh();
         } else {
+          setDraftColors((current) => rollbackProductColors(current, savedColors, updates.map((update) => update.productId)));
           setToast({ show: true, message: result.message || "บันทึกสีสินค้าไม่สำเร็จ", type: "error" });
         }
       })
       .catch((error) => {
         console.error("[handleSave]", error);
+        setDraftColors((current) => rollbackProductColors(current, savedColors, updates.map((update) => update.productId)));
         setMessage("เกิดข้อผิดพลาดในการบันทึก");
         setToast({ show: true, message: "เกิดข้อผิดพลาดในการบันทึก", type: "error" });
       })
@@ -292,7 +300,7 @@ export function ProductPrintBackgroundColorSettings({
       {/* Toast Notification */}
       {toast.show && (
         <div
-          className={`fixed top-6 right-6 z-[9999] animate-toast-in flex w-96 max-w-[calc(100vw-3rem)] items-start gap-3 rounded-2xl border p-4 shadow-lg font-[family:var(--font-sarabun)] ${
+          className={`fixed top-6 right-6 z-[9999] animate-toast-in flex w-96 max-w-[calc(100vw-3rem)] items-start gap-3 rounded-2xl border p-4 shadow-lg font-[family:var(--font-noto-sans-thai)] ${
             toast.type === "success"
               ? "border-emerald-100 bg-white shadow-[0_16px_48px_rgba(16,185,129,0.16)]"
               : "border-rose-100 bg-white shadow-[0_16px_48px_rgba(244,63,94,0.16)]"
@@ -355,10 +363,10 @@ export function ProductPrintBackgroundColorSettings({
               productsPerPage={previewProductsPerPage}
               selectedIds={selectedIds}
               totalCount={products.length}
-              onColorPick={(product, color) => setProductsColor([product.id], color)}
+              onColorPick={(product, color) => selectAndSetProductColor(product, color)}
               onMobileColorPick={applyAndSaveSingleProductColor}
               onJump={jumpToProduct}
-              onModePick={(product, mode) => setProductsColor([product.id], mode === "category" ? null : getEffectiveColor(product, draftColors[product.id]))}
+              onModePick={(product, mode) => selectAndSetProductColor(product, mode === "category" ? null : getEffectiveColor(product, draftColors[product.id]))}
               onToggle={toggleProduct}
               onToggleVisible={toggleVisibleProducts}
             />

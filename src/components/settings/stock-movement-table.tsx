@@ -259,7 +259,7 @@ export function StockMovementTable({ initialMovementRows, warehouses }: StockMov
       </div>
 
       {/* MOBILE VIEW: Cards */}
-      <div className="lg:hidden space-y-4 mb-8 font-[family-name:var(--font-sukhumvit)]">
+      <div className="lg:hidden space-y-4 mb-8 font-[family-name:var(--font-noto-sans-thai)]">
         {groupedMovements.length > 0 ? (
           groupedMovements.map(([date, items]) => (
             <div key={date} className="space-y-2">
@@ -341,7 +341,7 @@ export function StockMovementTable({ initialMovementRows, warehouses }: StockMov
       </div>
 
       {/* DESKTOP VIEW: Table */}
-      <div className="hidden lg:block overflow-hidden rounded border-2 border-slate-300 bg-white shadow-sm mb-6 font-[family-name:var(--font-sukhumvit)]">
+      <div className="hidden lg:block overflow-hidden rounded border-2 border-slate-300 bg-white shadow-sm mb-6 font-[family-name:var(--font-noto-sans-thai)]">
         <div className="w-full">
           <table className="w-full text-left border-collapse table-fixed">
             <thead>

@@ -132,11 +132,19 @@ export function ProductCategoryColorSettings({ categories }: ProductCategoryColo
           setToast({ show: true, message: "บันทึกสีหมวดหมู่สำเร็จแล้ว", type: "success" });
           router.refresh();
         } else {
+          setDraftColors((current) => ({
+            ...current,
+            [selectedCategory.id]: selectedOriginalColor,
+          }));
           setToast({ show: true, message: result.message || "บันทึกสีหมวดหมู่ไม่สำเร็จ", type: "error" });
         }
       })
       .catch((error) => {
         console.error("[handleSave]", error);
+        setDraftColors((current) => ({
+          ...current,
+          [selectedCategory.id]: selectedOriginalColor,
+        }));
         setMessage("เกิดข้อผิดพลาดในการบันทึก");
         setToast({ show: true, message: "เกิดข้อผิดพลาดในการบันทึก", type: "error" });
       })
@@ -160,7 +168,7 @@ export function ProductCategoryColorSettings({ categories }: ProductCategoryColo
       {/* Toast Notification */}
       {toast.show && (
         <div
-          className={`fixed top-6 right-6 z-[9999] animate-toast-in flex w-96 max-w-[calc(100vw-3rem)] items-start gap-3 rounded-2xl border p-4 shadow-lg font-[family:var(--font-sarabun)] ${
+          className={`fixed top-6 right-6 z-[9999] animate-toast-in flex w-96 max-w-[calc(100vw-3rem)] items-start gap-3 rounded-2xl border p-4 shadow-lg font-[family:var(--font-noto-sans-thai)] ${
             toast.type === "success"
               ? "border-emerald-100 bg-white shadow-[0_16px_48px_rgba(16,185,129,0.16)]"
               : "border-rose-100 bg-white shadow-[0_16px_48px_rgba(244,63,94,0.16)]"

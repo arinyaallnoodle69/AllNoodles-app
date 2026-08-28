@@ -168,7 +168,7 @@ export function PrintDocHeader({
         {docNumber ? (
           <p style={{ fontSize: docMetaFontSize, color: "black", lineHeight: 1.15 }}>
             <span style={{ color: "black", fontWeight: 800 }}>เลขที่ </span>
-            <span style={{ fontWeight: 850, fontFamily: 'var(--font-sukhumvit), "Sukhumvit Set", sans-serif' }}>{docNumber}</span>
+            <span style={{ fontWeight: 850, fontFamily: 'var(--font-noto-sans-thai), "Noto Sans Thai", sans-serif' }}>{docNumber}</span>
           </p>
         ) : null}
         {docDate ? (
@@ -221,7 +221,7 @@ export function PrintCustomerRow({
       <div style={{ display: "flex", gap: "8px", alignItems: "baseline", position: "relative" }}>
         <span style={{ fontSize: "13.5pt", color: "black", flexShrink: 0 }}>ลูกค้า</span>
         <span
-          style={{ fontFamily: 'var(--font-sukhumvit), "Sukhumvit Set", sans-serif', fontSize: "13.5pt", color: "black", fontWeight: 700 }}
+          style={{ fontFamily: 'var(--font-noto-sans-thai), "Noto Sans Thai", sans-serif', fontSize: "13.5pt", color: "black", fontWeight: 700 }}
         >
           {customer.code}
         </span>
@@ -256,7 +256,7 @@ export function PrintCustomerRow({
             {docNumber ? (
               <span style={{ lineHeight: 1.15 }}>
                 <strong style={{ fontWeight: 800 }}>เลขที่ </strong>
-                <span style={{ fontFamily: 'var(--font-sukhumvit), "Sukhumvit Set", sans-serif', fontWeight: 850 }}>{docNumber}</span>
+                <span style={{ fontFamily: 'var(--font-noto-sans-thai), "Noto Sans Thai", sans-serif', fontWeight: 850 }}>{docNumber}</span>
               </span>
             ) : null}
             {docDate ? (
@@ -315,7 +315,7 @@ export function PrintTotalRow({
       <p style={{ fontSize: "12.5pt", fontWeight: "bold", color: "black" }}>{bahtText(totalAmount)}</p>
       <div style={{ display: "flex", alignItems: "baseline", gap: "6mm" }}>
         <p style={{ fontSize: "12.5pt", fontWeight: 800, color: "black" }}>รวมทั้งสิ้น</p>
-        <p className="monospace-font" style={{ fontSize: "16.5pt", fontWeight: 900, color: "black", fontFamily: 'var(--font-sukhumvit), "Sukhumvit Set", sans-serif' }}>
+        <p className="monospace-font" style={{ fontSize: "16.5pt", fontWeight: 900, color: "black", fontFamily: 'var(--font-noto-sans-thai), "Noto Sans Thai", sans-serif' }}>
           {fmt(totalAmount)}
         </p>
       </div>

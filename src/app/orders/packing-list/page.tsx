@@ -548,7 +548,7 @@ async function PackingListPage({ searchParams }: Props) {
       <div
         className="no-print flex flex-col md:flex-row items-center gap-2 md:gap-3 bg-white py-2.5 px-4 rounded-[16px] shadow-lg fixed top-3 left-1/2 -translate-x-1/2 z-[100] border border-slate-100/80 w-max max-w-[calc(100vw-24px)]"
         style={{
-          fontFamily: 'var(--font-sukhumvit), "Sukhumvit Set", sans-serif',
+          fontFamily: 'var(--font-noto-sans-thai), "Noto Sans Thai", sans-serif',
         }}
       >
         <div className="flex items-center gap-2">
@@ -607,7 +607,7 @@ async function PackingListPage({ searchParams }: Props) {
             alignItems: "center",
             gap: "8px",
             paddingTop: "120px",
-            fontFamily: 'var(--font-sukhumvit), "Sukhumvit Set", sans-serif',
+            fontFamily: 'var(--font-noto-sans-thai), "Noto Sans Thai", sans-serif',
           }}
         >
           <p style={{ fontSize: "18px", fontWeight: 600, color: "#64748b" }}>

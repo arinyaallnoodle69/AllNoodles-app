@@ -465,7 +465,7 @@ export function SettingsMobileBottomNav() {
       {settingsModalOpen && (
         <div
           ref={settingsModalRef}
-          className="fixed inset-0 z-[200] w-screen max-w-[100dvw] touch-pan-y overflow-x-hidden overscroll-x-none bg-[#F3E5F5] animate-in fade-in duration-200 lg:hidden font-[family:var(--font-sarabun)]"
+          className="fixed inset-0 z-[200] w-screen max-w-[100dvw] touch-pan-y overflow-x-hidden overscroll-x-none bg-[#F3E5F5] animate-in fade-in duration-200 lg:hidden font-[family:var(--font-noto-sans-thai)]"
           style={{ touchAction: "pan-y", overscrollBehaviorX: "none" }}
         >
           <div className="flex h-[68px] w-full max-w-full min-w-0 items-center justify-between border-b border-[#EA80FC]/70 bg-[#4A148C] px-4 text-white">

@@ -138,7 +138,7 @@ export function SettingsShell({
 
   const inner = (
     <div
-      className="min-h-screen max-w-full touch-pan-y overflow-x-clip overscroll-x-none bg-background font-[family:var(--font-sarabun)] text-slate-900"
+      className="min-h-screen max-w-full touch-pan-y overflow-x-clip overscroll-x-none bg-background font-[family:var(--font-noto-sans-thai)] text-slate-900"
       style={{ touchAction: "pan-y", overscrollBehaviorX: "none" }}
     >
       {!hideHeader ? (

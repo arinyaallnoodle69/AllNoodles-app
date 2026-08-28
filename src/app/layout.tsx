@@ -7,26 +7,26 @@ import { getSiteUrl } from "@/lib/site-url";
 import { RootAppLayoutShell } from "@/components/root-layout-shell";
 import { PerformanceReporter } from "@/components/performance/performance-reporter";
 
-const sukhumvitSet = localFont({
+const notoSansThai = localFont({
   src: [
     {
-      path: "../../public/fonts/SukhumvitSet-Medium.ttf",
+      path: "../../public/fonts/NotoSansThai-Regular.ttf",
+      weight: "400",
+      style: "normal",
+    },
+    {
+      path: "../../public/fonts/NotoSansThai-Regular.ttf",
       weight: "500",
       style: "normal",
     },
     {
-      path: "../../public/fonts/SukhumvitSet-SemiBold.ttf",
-      weight: "600",
-      style: "normal",
-    },
-    {
-      path: "../../public/fonts/SukhumvitSet-Bold.ttf",
-      weight: "700",
+      path: "../../public/fonts/NotoSansThai-Bold.ttf",
+      weight: "600 900",
       style: "normal",
     },
   ],
   display: "swap",
-  variable: "--font-sukhumvit",
+  variable: "--font-noto-sans-thai",
 });
 
 const siteDescription =
@@ -102,7 +102,7 @@ export default function RootLayout({
         <link rel="preconnect" href="https://profile.line-scdn.net" crossOrigin="anonymous" />
       </head>
       <body
-        className={`${sukhumvitSet.variable} ${sukhumvitSet.className} bg-background text-foreground`}
+        className={`${notoSansThai.variable} ${notoSansThai.className} bg-background text-foreground`}
       >
         <PwaProvider />
         <Suspense fallback={null}>

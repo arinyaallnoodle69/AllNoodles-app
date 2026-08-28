@@ -56,6 +56,11 @@ export async function saveProductCategoryPrintColorAction(input: {
   }
 
   revalidatePath("/settings/products/category-colors");
+  revalidatePath("/settings/products/product-colors");
+  revalidatePath("/orders/packing-list");
+  revalidatePath("/orders/packing-list/mockup");
+  revalidatePath("/orders/factory-order-sheet");
+  revalidatePath("/orders/vehicle-product-summary");
 
   return { status: "success", message: "บันทึกสีหมวดหมู่แล้ว" };
 }

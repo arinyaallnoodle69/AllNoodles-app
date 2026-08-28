@@ -158,7 +158,7 @@ export default async function PackingListMockupPage({ searchParams }: Props) {
     <>
       <div
         className="no-print fixed left-1/2 top-3 z-[100] flex w-[min(980px,calc(100vw-24px))] -translate-x-1/2 items-center justify-between gap-3 rounded-2xl border border-[#EA80FC]/30 bg-white/95 px-4 py-3 shadow-xl shadow-slate-900/10 backdrop-blur"
-        style={{ fontFamily: 'var(--font-sukhumvit), "Sukhumvit Set", sans-serif' }}
+        style={{ fontFamily: 'var(--font-noto-sans-thai), "Noto Sans Thai", sans-serif' }}
       >
         <div className="min-w-0">
           <h1 className="truncate text-sm font-black text-[#4A148C]">
@@ -189,7 +189,7 @@ export default async function PackingListMockupPage({ searchParams }: Props) {
       {stores.length === 0 || products.length === 0 ? (
         <div
           className="flex min-h-screen flex-col items-center justify-center gap-3 bg-slate-100 px-6 text-center"
-          style={{ fontFamily: 'var(--font-sukhumvit), "Sukhumvit Set", sans-serif' }}
+          style={{ fontFamily: 'var(--font-noto-sans-thai), "Noto Sans Thai", sans-serif' }}
         >
           <h2 className="text-2xl font-black text-slate-900">ยังไม่มีข้อมูลพอสำหรับ mockup</h2>
           <p className="max-w-md text-sm font-bold text-slate-500">

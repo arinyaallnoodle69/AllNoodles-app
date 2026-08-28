@@ -228,7 +228,7 @@ function FactoryOrderStyles() {
         border: 1px solid #000000;
         color: #0f172a;
         box-sizing: border-box;
-        font-family: var(--font-sukhumvit), "Sukhumvit Set", sans-serif;
+        font-family: var(--font-noto-sans-thai), "Noto Sans Thai", sans-serif;
       }
 
       .vehicle-summary-sheet__inner {

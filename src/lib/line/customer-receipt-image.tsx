@@ -84,8 +84,8 @@ function toArrayBuffer(buffer: Buffer) {
 async function getReceiptAssets() {
   receiptAssetsPromise ??= Promise.all([
     readFile(join(process.cwd(), "public", "brand", "logo1.png")),
-    readFile(join(process.cwd(), "public", "fonts", "SukhumvitSet-Medium.ttf")),
-    readFile(join(process.cwd(), "public", "fonts", "SukhumvitSet-Medium.ttf")),
+    readFile(join(process.cwd(), "public", "fonts", "NotoSansThai-Regular.ttf")),
+    readFile(join(process.cwd(), "public", "fonts", "NotoSansThai-Bold.ttf")),
   ]).then(([logo, regularFont, boldFont]) => ({
     boldFont: toArrayBuffer(boldFont),
     logoDataUrl: `data:image/png;base64,${logo.toString("base64")}`,
@@ -112,7 +112,7 @@ function ReceiptImage({
         color: "#000000",
         display: "flex",
         flexDirection: "column",
-        fontFamily: "Sukhumvit Set, sans-serif",
+        fontFamily: "Noto Sans Thai, sans-serif",
         height: "100%",
         width: "100%",
       }}
@@ -243,13 +243,13 @@ export async function generateCustomerReceiptPng(input: GeneratedReceiptInput) {
       fonts: [
         {
           data: regularFont,
-          name: "Sukhumvit Set",
+          name: "Noto Sans Thai",
           style: "normal",
           weight: 400,
         },
         {
           data: boldFont,
-          name: "Sukhumvit Set",
+          name: "Noto Sans Thai",
           style: "normal",
           weight: 800,
         },

@@ -151,7 +151,7 @@ export function PrintButton({
         targetNode.style.width = `${CAPTURE_WIDTH_PX}px`;
         targetNode.style.height = `${CAPTURE_HEIGHT_PX}px`;
         targetNode.style.minHeight = `${CAPTURE_HEIGHT_PX}px`;
-        targetNode.style.fontFamily = 'var(--font-sukhumvit), "Sukhumvit Set", sans-serif';
+        targetNode.style.fontFamily = 'var(--font-noto-sans-thai), "Noto Sans Thai", sans-serif';
         targetNode.classList.add("capturing");
 
         // Give Safari significant time to layout this specific page

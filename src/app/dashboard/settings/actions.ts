@@ -37,6 +37,13 @@ function safeInteger(value: FormDataEntryValue | null) {
   return Number.isFinite(parsed) ? parsed : NaN;
 }
 
+function safeOptionalPositiveNumber(value: FormDataEntryValue | null) {
+  const normalized = String(value ?? "").replace(/,/g, "").trim();
+  if (!normalized) return null;
+  const parsed = Number(normalized);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : Number.NaN;
+}
+
 function safeProductKind(value: FormDataEntryValue | null): ProductKind {
   return safeText(value) === "made_to_order" ? "made_to_order" : "stock";
 }
@@ -488,6 +495,7 @@ export async function createProduct(formData: FormData): Promise<boolean> {
   const costPrice = safePrice(formData.get("costPrice"));
   const stockQuantity = safeInteger(formData.get("stockQuantity"));
   const baseUnit = safeText(formData.get("baseUnit"));
+  const unitWeightGrams = safeOptionalPositiveNumber(formData.get("unitWeightGrams"));
   const productKind = safeProductKind(formData.get("productKind"));
   const supplierId = safeText(formData.get("supplierId")) || null;
   const saleUnits = parseSaleUnits(formData, baseUnit);
@@ -506,6 +514,7 @@ export async function createProduct(formData: FormData): Promise<boolean> {
     Number.isNaN(costPrice) ||
     Number.isNaN(stockQuantity) ||
     !baseUnit ||
+    Number.isNaN(unitWeightGrams) ||
     saleUnits.length === 0 ||
     saleUnits.some(
       (saleUnit) =>
@@ -554,9 +563,11 @@ export async function createProduct(formData: FormData): Promise<boolean> {
     stock_quantity: stockQuantity,
     supplier_id: supplierId,
     unit: baseUnit,
+    unit_weight_grams: unitWeightGrams,
   } as Database["public"]["Tables"]["products"]["Insert"] & {
     product_kind: ProductKind;
     supplier_id: string | null;
+    unit_weight_grams: number | null;
   };
 
   const { data: product, error: productError } = await admin
@@ -670,6 +681,7 @@ export async function updateProduct(formData: FormData): Promise<boolean> {
   const costPrice = safePrice(formData.get("costPrice"));
   const stockQuantity = safeInteger(formData.get("stockQuantity"));
   const baseUnit = safeText(formData.get("baseUnit"));
+  const unitWeightGrams = safeOptionalPositiveNumber(formData.get("unitWeightGrams"));
   const productKind = safeProductKind(formData.get("productKind"));
   const supplierId = safeText(formData.get("supplierId")) || null;
   const saleUnits = parseSaleUnits(formData, baseUnit);
@@ -701,6 +713,7 @@ export async function updateProduct(formData: FormData): Promise<boolean> {
     Number.isNaN(costPrice) ||
     Number.isNaN(stockQuantity) ||
     !baseUnit ||
+    Number.isNaN(unitWeightGrams) ||
     saleUnits.length === 0 ||
     saleUnits.some(
       (saleUnit) =>
@@ -789,9 +802,11 @@ export async function updateProduct(formData: FormData): Promise<boolean> {
     stock_quantity: stockQuantity,
     supplier_id: supplierId,
     unit: baseUnit,
+    unit_weight_grams: unitWeightGrams,
   } as Database["public"]["Tables"]["products"]["Update"] & {
     product_kind: ProductKind;
     supplier_id: string | null;
+    unit_weight_grams: number | null;
   };
 
   const mutationResults = await Promise.all([

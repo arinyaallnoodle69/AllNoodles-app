@@ -49,7 +49,7 @@ export function StockReceiptDetailModal({ detail, onClose, onEdit }: Props) {
         {/* Content Wrapper with Scroll - This prevents clipping the close button */}
         <div className="max-h-[85vh] overflow-y-auto scrollbar-hide rounded-none">
           {/* MOBILE VIEW (Order Confirmation Style) */}
-          <div className="block lg:hidden bg-white text-black shadow-2xl font-[family-name:var(--font-sukhumvit)]">
+          <div className="block lg:hidden bg-white text-black shadow-2xl font-[family-name:var(--font-noto-sans-thai)]">
             <div className="px-6 py-6">
               <div className="flex justify-end mb-2">
                 <Image src="/api/brand/logo" alt="All Noodles" width={48} height={48} className="object-contain" />

@@ -88,7 +88,10 @@ export default async function ProductCategoryColorsPage() {
       hideHeader
       fullWidthMobile
     >
-      <ProductCategoryColorSettings categories={categories} />
+      <ProductCategoryColorSettings
+        key={categories.map((category) => `${category.id}:${category.printColor ?? "category"}`).join("|")}
+        categories={categories}
+      />
     </SettingsShell>
   );
 }

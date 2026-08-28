@@ -93,7 +93,7 @@ async function VehicleProductSummaryPage({ searchParams }: Props) {
           left: "50%",
           transform: "translateX(-50%)",
           zIndex: 100,
-          fontFamily: 'var(--font-sukhumvit), "Sukhumvit Set", sans-serif',
+          fontFamily: 'var(--font-noto-sans-thai), "Noto Sans Thai", sans-serif',
           width: "max-content",
           maxWidth: "calc(100vw - 24px)",
           border: "1px solid rgba(15,23,42,0.06)",
@@ -139,7 +139,7 @@ async function VehicleProductSummaryPage({ searchParams }: Props) {
             alignItems: "center",
             gap: "8px",
             paddingTop: "120px",
-            fontFamily: 'var(--font-sukhumvit), "Sukhumvit Set", sans-serif',
+            fontFamily: 'var(--font-noto-sans-thai), "Noto Sans Thai", sans-serif',
           }}
         >
           <p style={{ fontSize: "18px", fontWeight: 600, color: "#64748b" }}>ไม่มีข้อมูลสินค้าสำหรับการแสดงฟอร์มนี้</p>

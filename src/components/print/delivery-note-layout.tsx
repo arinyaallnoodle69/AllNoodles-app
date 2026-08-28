@@ -393,7 +393,7 @@ export function DeliveryNoteLayout({ dns, showAmount = true }: Props) {
           box-sizing: border-box;
           padding: ${PAGE_PADDING_MM}mm;
           color: #000000;
-          font-family: var(--font-sukhumvit), "Sukhumvit Set", sans-serif;
+          font-family: var(--font-noto-sans-thai), "Noto Sans Thai", sans-serif;
         }
 
         @media screen {

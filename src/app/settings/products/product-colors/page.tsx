@@ -168,7 +168,11 @@ export default async function ProductPrintBackgroundColorsPage() {
       hideHeader
       fullWidthMobile
     >
-      <ProductPrintBackgroundColorSettings categories={categories} products={products} />
+      <ProductPrintBackgroundColorSettings
+        key={products.map((product) => `${product.id}:${product.printBackgroundColor ?? "category"}`).join("|")}
+        categories={categories}
+        products={products}
+      />
     </SettingsShell>
   );
 }
