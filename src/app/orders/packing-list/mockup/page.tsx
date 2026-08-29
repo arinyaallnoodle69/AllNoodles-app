@@ -87,6 +87,8 @@ export default async function PackingListMockupPage({ searchParams }: Props) {
       name: customer.name,
       vehicleId,
       vehicleName,
+      missingWeightProductIds: [],
+      totalWeightGrams: 0,
     };
   });
 

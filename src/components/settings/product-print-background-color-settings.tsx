@@ -29,7 +29,7 @@ import {
 } from "@/lib/products/product-color-drafts";
 
 const DESKTOP_PREVIEW_PRODUCTS_PER_PAGE = 12;
-const MOBILE_PREVIEW_PRODUCTS_PER_PAGE = 6;
+const MOBILE_PREVIEW_PRODUCTS_PER_PAGE = 4;
 
 type ProductColorMode = "category" | "custom" | "unset";
 
@@ -156,6 +156,17 @@ export function ProductPrintBackgroundColorSettings({
     setMessage("");
   }
 
+  function openEditorForSelection(product: ProductPrintColorProduct) {
+    const index = products.findIndex((item) => item.id === product.id);
+    setSelectedIds((current) => {
+      if (current.has(product.id)) return current;
+      return new Set(current).add(product.id);
+    });
+    if (index >= 0) setPreviewPage(pageForIndex(index, previewProductsPerPage));
+    setMobileEditorOpen(true);
+    setMessage("");
+  }
+
   function toggleVisibleProducts() {
     setSelectedIds((current) => {
       const next = new Set(current);
@@ -199,42 +210,6 @@ export function ProductPrintBackgroundColorSettings({
     setProductsColor(ids, color);
   }
 
-  function applyAndSaveSingleProductColor(product: ProductPrintColorProduct, color: string) {
-    const normalizedColor = normalizePrintColor(color);
-    if (!normalizedColor) {
-      setMessage("รหัสสีต้องเป็นรูปแบบ #RRGGBB");
-      setToast({ show: true, message: "รหัสสีต้องเป็นรูปแบบ #RRGGBB", type: "error" });
-      return;
-    }
-
-    setSelectedIds(new Set([product.id]));
-    setProductsColor([product.id], normalizedColor);
-    setIsLoading(true);
-    saveProductPrintBackgroundColorsAction({
-      updates: [{ productId: product.id, color: normalizedColor }],
-    })
-      .then((result) => {
-        setMessage(result.message);
-        if (result.status === "success") {
-          setSavedColors((current) => ({ ...current, [product.id]: normalizedColor }));
-          setToast({ show: true, message: "บันทึกสีสินค้าสำเร็จแล้ว", type: "success" });
-          router.refresh();
-        } else {
-          setDraftColors((current) => rollbackProductColors(current, savedColors, [product.id]));
-          setToast({ show: true, message: result.message || "บันทึกสีสินค้าไม่สำเร็จ", type: "error" });
-        }
-      })
-      .catch((error) => {
-        console.error("[applyAndSaveSingleProductColor]", error);
-        setDraftColors((current) => rollbackProductColors(current, savedColors, [product.id]));
-        setMessage("เกิดข้อผิดพลาดในการบันทึก");
-        setToast({ show: true, message: "เกิดข้อผิดพลาดในการบันทึก", type: "error" });
-      })
-      .finally(() => {
-        setIsLoading(false);
-      });
-  }
-
   function handleSave() {
     const updates = collectChangedProductColors(draftColors, savedColors);
 
@@ -268,7 +243,6 @@ export function ProductPrintBackgroundColorSettings({
             return next;
           });
           setToast({ show: true, message: `บันทึกสีสินค้า ${updates.length.toLocaleString("th-TH")} รายการสำเร็จแล้ว`, type: "success" });
-          router.refresh();
         } else {
           setDraftColors((current) => rollbackProductColors(current, savedColors, updates.map((update) => update.productId)));
           setToast({ show: true, message: result.message || "บันทึกสีสินค้าไม่สำเร็จ", type: "error" });
@@ -355,7 +329,7 @@ export function ProductPrintBackgroundColorSettings({
             onProductSelect={(product) => selectProductForEditor(product, true)}
           />
 
-          <section className="rounded-lg border border-slate-200 bg-white">
+          <section className="hidden rounded-lg border border-slate-200 bg-white lg:block">
             <ProductTable
               allVisibleSelected={allVisibleSelected}
               draftColors={draftColors}
@@ -364,7 +338,7 @@ export function ProductPrintBackgroundColorSettings({
               selectedIds={selectedIds}
               totalCount={products.length}
               onColorPick={(product, color) => selectAndSetProductColor(product, color)}
-              onMobileColorPick={applyAndSaveSingleProductColor}
+              onEdit={openEditorForSelection}
               onJump={jumpToProduct}
               onModePick={(product, mode) => selectAndSetProductColor(product, mode === "category" ? null : getEffectiveColor(product, draftColors[product.id]))}
               onToggle={toggleProduct}
@@ -486,7 +460,7 @@ function PreviewPanel({
 
       <div className="overflow-hidden rounded-md border border-black bg-white">
         <div className="overflow-hidden lg:overflow-x-auto">
-          <table className="w-full table-fixed border-collapse text-center text-[4.75px] font-black leading-[1.15] lg:min-w-[700px] lg:text-[10px] lg:leading-tight">
+          <table className="w-full table-fixed border-collapse text-center text-[8px] font-bold leading-[1.3] lg:min-w-[700px] lg:text-[10px] lg:font-black lg:leading-tight">
             <thead>
               <tr>
                 {products.map((product) => {
@@ -494,13 +468,13 @@ function PreviewPanel({
                   return (
                     <th
                       key={product.id}
-                      className={`h-14 border border-black p-0 align-middle lg:h-12 ${activeProductId === product.id ? "outline outline-2 outline-[#4A148C] outline-offset-[-2px]" : ""}`}
+                      className={`h-[68px] border border-black p-0 align-middle lg:h-12 ${activeProductId === product.id ? "outline outline-2 outline-[#4A148C] outline-offset-[-2px]" : ""}`}
                       style={{ backgroundColor: color }}
                     >
                       <button
                         type="button"
                         onClick={() => onProductSelect(product)}
-                        className="relative flex h-full w-full items-center justify-center px-[2px] py-1.5 text-center text-[4.75px] leading-[1.2] transition hover:bg-white/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#4A148C] lg:px-0.5 lg:py-0 lg:text-[10px] lg:leading-tight"
+                        className="relative flex h-full w-full items-center justify-center px-1 py-1.5 text-center text-[8px] font-extrabold leading-[1.3] transition hover:bg-white/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#4A148C] lg:px-0.5 lg:py-0 lg:text-[10px] lg:font-black lg:leading-tight"
                         title={`${product.sku} ${product.displayName}`}
                       >
                         <span className="block max-w-full whitespace-normal break-words">{product.displayName}</span>
@@ -545,7 +519,7 @@ function ProductTable({
   allVisibleSelected,
   draftColors,
   onColorPick,
-  onMobileColorPick,
+  onEdit,
   onJump,
   onModePick,
   onToggle,
@@ -558,7 +532,7 @@ function ProductTable({
   allVisibleSelected: boolean;
   draftColors: Record<string, string | null>;
   onColorPick: (product: ProductPrintColorProduct, color: string) => void;
-  onMobileColorPick: (product: ProductPrintColorProduct, color: string) => void;
+  onEdit: (product: ProductPrintColorProduct) => void;
   onJump: (product: ProductPrintColorProduct) => void;
   onModePick: (product: ProductPrintColorProduct, mode: "category" | "custom") => void;
   onToggle: (product: ProductPrintColorProduct) => void;
@@ -594,8 +568,7 @@ function ProductTable({
           return (
             <div
               key={product.id}
-              onClick={() => onToggle(product)}
-              className={`grid cursor-pointer grid-cols-[30px_minmax(0,1fr)_40px] items-center gap-2 px-3 py-2 lg:grid-cols-[36px_82px_minmax(190px,1fr)_120px_58px_68px_118px_180px] lg:gap-0 lg:px-0 lg:py-0 ${
+              className={`grid grid-cols-[minmax(0,1fr)_40px] items-center gap-2 px-3 py-2 lg:grid-cols-[36px_82px_minmax(190px,1fr)_120px_58px_68px_118px_180px] lg:gap-0 lg:px-0 lg:py-0 ${
                 selected ? "bg-[#F3E5F5]/55" : "bg-white"
               }`}
             >
@@ -605,7 +578,7 @@ function ProductTable({
                   event.stopPropagation();
                   onToggle(product);
                 }}
-                className="grid place-items-center lg:py-2"
+                className="hidden place-items-center lg:grid lg:py-2"
               >
                 <span className={`grid h-[18px] w-[18px] place-items-center rounded border ${selected ? "border-[#4A148C] bg-[#4A148C]" : "border-slate-300 bg-white"}`}>
                   {selected ? <Check className="h-3 w-3 text-white" strokeWidth={3} /> : null}
@@ -640,22 +613,17 @@ function ProductTable({
                 <span className="rounded bg-[#F3E5F5] px-1.5 py-0.5 text-[11px] font-black text-[#4A148C]">หน้า {pageForIndex(product.sortOrder, productsPerPage)}</span>
               </div>
               <div className="flex items-center justify-end lg:justify-center">
-                <label
-                  onClick={(event) => event.stopPropagation()}
+                <button
+                  type="button"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onEdit(product);
+                  }}
                   className="grid h-8 w-8 cursor-pointer place-items-center rounded-md border border-slate-200 bg-white text-[#4A148C] shadow-sm lg:hidden"
                   aria-label={`เลือกสี ${product.displayName}`}
                 >
                   <Palette className="h-[18px] w-[18px]" strokeWidth={2.4} />
-                  <input
-                    type="color"
-                    value={effectiveColor}
-                    onChange={(event) => {
-                      event.stopPropagation();
-                      onMobileColorPick(product, event.target.value.toUpperCase());
-                    }}
-                    className="sr-only"
-                  />
-                </label>
+                </button>
                 <span className="hidden h-[22px] w-[22px] rounded-[4px] border border-slate-300 lg:block" style={{ backgroundColor: effectiveColor }} />
               </div>
               <div className="col-span-2 hidden items-center gap-1.5 lg:col-span-1 lg:flex lg:justify-center">
@@ -734,7 +702,11 @@ function ProductColorEditorPanel({
         <div className="min-w-0">
           <h2 className="text-base font-black text-slate-950">แก้สีสินค้า</h2>
           <p className="truncate text-xs font-bold text-slate-500">
-            {activeProduct ? `${activeProduct.sku} ${activeProduct.displayName}` : `เลือกแล้ว ${count.toLocaleString("th-TH")} รายการ`}
+            {count > 1
+              ? `เลือกแล้ว ${count.toLocaleString("th-TH")} รายการ`
+              : activeProduct
+                ? `${activeProduct.sku} ${activeProduct.displayName}`
+                : "ยังไม่ได้เลือกสินค้า"}
           </p>
         </div>
         {onClose ? (

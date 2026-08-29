@@ -169,7 +169,6 @@ export default async function ProductPrintBackgroundColorsPage() {
       fullWidthMobile
     >
       <ProductPrintBackgroundColorSettings
-        key={products.map((product) => `${product.id}:${product.printBackgroundColor ?? "category"}`).join("|")}
         categories={categories}
         products={products}
       />

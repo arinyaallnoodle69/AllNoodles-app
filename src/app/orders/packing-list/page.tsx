@@ -53,6 +53,7 @@ type DeliveryNoteRow = {
 type OrderItemRow = {
   product_id: string;
   quantity: number | string;
+  quantity_in_base_unit: number | string | null;
   sale_unit_label: string;
   products: {
     name: string;
@@ -75,6 +76,7 @@ type DbProduct = {
   display_order: number | null;
   metadata: unknown;
   print_background_color: string | null;
+  unit_weight_grams: number | string | null;
 };
 
 type DbCategory = {
@@ -103,7 +105,9 @@ type GroupedStore = {
   vehicleId: string | null;
   vehicleName: string | null;
   items: Map<string, number>;
+  missingWeightProductIds: Set<string>;
   specialSort: number;
+  totalWeightGrams: number;
 };
 
 type ProductDescriptor = {
@@ -193,6 +197,7 @@ async function PackingListPage({ searchParams }: Props) {
       order_items(
         product_id,
         quantity,
+        quantity_in_base_unit,
         sale_unit_label,
         products!inner(name, sku)
       )
@@ -217,7 +222,7 @@ async function PackingListPage({ searchParams }: Props) {
     }),
     admin
       .from("products")
-      .select("id, name, display_order, metadata, print_background_color")
+      .select("id, name, display_order, metadata, print_background_color, unit_weight_grams")
       .eq("organization_id", session.organizationId),
     productCategories
       .select("id, name, sort_order, print_color")
@@ -254,7 +259,7 @@ async function PackingListPage({ searchParams }: Props) {
     ]),
   );
 
-  const dbProductsList = (productsDb.data ?? []).filter((product: DbProduct) => {
+  const dbProductsList = ((productsDb.data ?? []) as unknown as DbProduct[]).filter((product) => {
     const metadata =
       product.metadata && typeof product.metadata === "object"
         ? (product.metadata as Record<string, unknown>)
@@ -263,6 +268,14 @@ async function PackingListPage({ searchParams }: Props) {
   });
   const productPrintBackgroundColorById = new Map(
     dbProductsList.map((product: DbProduct) => [product.id, product.print_background_color]),
+  );
+  const productUnitWeightGramsById = new Map(
+    dbProductsList.map((product: DbProduct) => [
+      product.id,
+      product.unit_weight_grams === null || product.unit_weight_grams === undefined
+        ? null
+        : Number(product.unit_weight_grams),
+    ]),
   );
 
   const packingListMetaByProductId = new Map(
@@ -383,7 +396,9 @@ async function PackingListPage({ searchParams }: Props) {
             vehicleId,
             vehicleName: resolvedVehicleName,
             items: new Map(),
+            missingWeightProductIds: new Set(),
             specialSort: 0,
+            totalWeightGrams: 0,
           };
           groupedStores.set(storeGroupKey, groupedStore);
         }
@@ -392,6 +407,16 @@ async function PackingListPage({ searchParams }: Props) {
           const key = getOrderKey(item);
           const quantity = Number(item.quantity ?? 0);
           groupedStore.items.set(key, (groupedStore.items.get(key) ?? 0) + quantity);
+
+          const quantityInBaseUnit = Number(item.quantity_in_base_unit ?? item.quantity ?? 0);
+          const unitWeightGrams = productUnitWeightGramsById.get(item.product_id) ?? null;
+          if (quantityInBaseUnit > 0) {
+            if (unitWeightGrams !== null && Number.isFinite(unitWeightGrams) && unitWeightGrams > 0) {
+              groupedStore.totalWeightGrams += quantityInBaseUnit * unitWeightGrams;
+            } else {
+              groupedStore.missingWeightProductIds.add(item.product_id);
+            }
+          }
 
           if (!productMap.has(key)) {
             productMap.set(key, {
@@ -425,12 +450,22 @@ async function PackingListPage({ searchParams }: Props) {
             vehicleId: special.vehicleId,
             vehicleName: special.vehicleName,
             items: new Map(),
+            missingWeightProductIds: new Set(),
             specialSort: special.type === "office" ? 1 : 2,
+            totalWeightGrams: 0,
           };
           groupedStores.set(storeGroupKey, groupedStore);
         }
 
         groupedStore.items.set(key, (groupedStore.items.get(key) ?? 0) + special.quantity);
+        const unitWeightGrams = productUnitWeightGramsById.get(special.productId) ?? null;
+        if (special.quantity > 0) {
+          if (unitWeightGrams !== null && Number.isFinite(unitWeightGrams) && unitWeightGrams > 0) {
+            groupedStore.totalWeightGrams += special.quantity * unitWeightGrams;
+          } else {
+            groupedStore.missingWeightProductIds.add(special.productId);
+          }
+        }
         if (!productMap.has(key)) {
           productMap.set(key, {
             productId: special.productId,
@@ -463,6 +498,8 @@ async function PackingListPage({ searchParams }: Props) {
             vehicleId: group.vehicleId,
             vehicleName: group.vehicleName,
             consolidatedItems: group.items,
+            missingWeightProductIds: Array.from(group.missingWeightProductIds),
+            totalWeightGrams: group.totalWeightGrams,
           }),
         );
 
@@ -511,6 +548,8 @@ async function PackingListPage({ searchParams }: Props) {
           name: store.name,
           vehicleId: store.vehicleId,
           vehicleName: store.vehicleName,
+          missingWeightProductIds: store.missingWeightProductIds,
+          totalWeightGrams: store.totalWeightGrams,
         })),
         products: products.map((product) => ({
           key: product.key,

@@ -92,6 +92,7 @@ type ProductRow = {
   sku: string;
   stock_quantity: number | string;
   unit: string;
+  unit_weight_grams?: number | string | null;
 };
 
 type ProductImageRow = {
@@ -429,11 +430,13 @@ export async function getOrderDetailById(
 type EmbeddedOrderItemRow = {
   product_id: string;
   quantity: number | string;
+  quantity_in_base_unit: number | string;
   sale_unit_label: string;
   products: {
     name: string;
     sku: string;
     display_order: number | null;
+    unit_weight_grams: number | string | null;
   } | null;
 };
 
@@ -447,11 +450,13 @@ export type IncomingOrderSummaryItemRow = {
   order_id: string;
   product_id: string;
   quantity: number | string;
+  quantity_in_base_unit: number | string;
   sale_unit_label: string;
   products: {
     name: string;
     sku: string;
     display_order: number | null;
+    unit_weight_grams: number | string | null;
   } | null;
 };
 
@@ -474,7 +479,7 @@ const INCOMING_ORDERS_SELECT = `
   id, customer_id, order_number, order_date, status, fulfillment_status, total_amount, metadata, created_at, notes, warehouse_id, assigned_vehicle_id,
   customers(id, customer_code, name, address, default_vehicle_id, sort_order),
   delivery_notes(id, delivery_number, order_id, customer_id, delivery_date, vehicle_id, status, created_at),
-  order_items(product_id, quantity, sale_unit_label, products(name, sku, display_order))
+  order_items(product_id, quantity, quantity_in_base_unit, sale_unit_label, products(name, sku, display_order, unit_weight_grams))
 `;
 
 export async function getIncomingOrdersBundle(
@@ -601,6 +606,7 @@ export async function getIncomingOrdersBundle(
         order_id: order.id,
         product_id: item.product_id,
         quantity: item.quantity,
+        quantity_in_base_unit: item.quantity_in_base_unit,
         sale_unit_label: item.sale_unit_label,
         products: item.products,
       });

@@ -9,6 +9,8 @@ export type PackingListStore = {
   name: string;
   vehicleId: string | null;
   vehicleName: string | null;
+  missingWeightProductIds: string[];
+  totalWeightGrams: number;
 };
 
 export type PackingListProduct = {
@@ -77,6 +79,8 @@ type BasePageDef = {
   productTotalChunks: number;
   dateLabel: string;
   organizationName: string;
+  vehicleMissingWeightProductCount: number;
+  vehicleTotalWeightGrams: number;
 };
 
 type StandardPageDef = BasePageDef & {
@@ -262,10 +266,36 @@ function buildVehicleGroups(data: PackingListData) {
   return Array.from(groups.values()).filter((group) => group.storeIndices.length > 0);
 }
 
+function getVehicleWeightSummary(data: PackingListData, storeIndices: number[]) {
+  const missingProductIds = new Set<string>();
+  let totalWeightGrams = 0;
+
+  for (const storeIndex of storeIndices) {
+    const store = data.stores[storeIndex];
+    if (!store) continue;
+
+    totalWeightGrams += store.totalWeightGrams;
+    store.missingWeightProductIds.forEach((productId) => missingProductIds.add(productId));
+  }
+
+  return {
+    missingWeightProductCount: missingProductIds.size,
+    totalWeightGrams,
+  };
+}
+
+function formatVehicleWeight(totalWeightGrams: number) {
+  return `${(totalWeightGrams / 1000).toLocaleString("th-TH", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })} กก.`;
+}
+
 function buildStandardPages(data: PackingListData): StandardPageDef[] {
   const rawDefs: Omit<StandardPageDef, "globalPage" | "totalPages">[] = [];
 
   for (const group of buildVehicleGroups(data)) {
+    const vehicleWeightSummary = getVehicleWeightSummary(data, group.storeIndices);
     const activeProductIndices = data.products
       .map((_, productIndex) => productIndex)
       .filter((productIndex) => group.storeIndices.some((storeIndex) => data.qty[productIndex]?.[storeIndex] > 0));
@@ -294,6 +324,8 @@ function buildStandardPages(data: PackingListData): StandardPageDef[] {
           productTotalChunks: productChunks.length,
           dateLabel: data.dateLabel,
           organizationName: data.organizationName,
+          vehicleMissingWeightProductCount: vehicleWeightSummary.missingWeightProductCount,
+          vehicleTotalWeightGrams: vehicleWeightSummary.totalWeightGrams,
         });
       }
     }
@@ -310,6 +342,7 @@ function buildTransposedPages(data: PackingListData): TransposedPageDef[] {
   const rawDefs: Omit<TransposedPageDef, "globalPage" | "totalPages">[] = [];
 
   for (const group of buildVehicleGroups(data)) {
+    const vehicleWeightSummary = getVehicleWeightSummary(data, group.storeIndices);
     const activeProductIndices = data.products
       .map((_, productIndex) => productIndex)
       .filter((productIndex) => group.storeIndices.some((storeIndex) => data.qty[productIndex]?.[storeIndex] > 0));
@@ -338,6 +371,8 @@ function buildTransposedPages(data: PackingListData): TransposedPageDef[] {
           productTotalChunks: productChunks.length,
           dateLabel: data.dateLabel,
           organizationName: data.organizationName,
+          vehicleMissingWeightProductCount: vehicleWeightSummary.missingWeightProductCount,
+          vehicleTotalWeightGrams: vehicleWeightSummary.totalWeightGrams,
         });
       }
     }
@@ -360,6 +395,8 @@ function StandardPackingHeader({
   totalPages,
   productChunk,
   productTotalChunks,
+  vehicleMissingWeightProductCount,
+  vehicleTotalWeightGrams,
 }: {
   accentColor: string;
   organizationName: string;
@@ -370,6 +407,8 @@ function StandardPackingHeader({
   totalPages: number;
   productChunk: number;
   productTotalChunks: number;
+  vehicleMissingWeightProductCount: number;
+  vehicleTotalWeightGrams: number;
 }) {
   return (
     <header className="packing-header packing-header--standard" style={{ borderColor: accentColor }}>
@@ -397,6 +436,15 @@ function StandardPackingHeader({
           <strong>
             {productChunk}/{productTotalChunks}
           </strong>
+        </div>
+        <div className="packing-header__meta-cell packing-header__meta-cell--weight">
+          <span>น้ำหนักรวม</span>
+          <strong>{formatVehicleWeight(vehicleTotalWeightGrams)}</strong>
+          {vehicleMissingWeightProductCount > 0 ? (
+            <small title={`มีสินค้าไม่ตั้งน้ำหนัก ${vehicleMissingWeightProductCount.toLocaleString("th-TH")} รายการ`}>
+              *ขาด {vehicleMissingWeightProductCount.toLocaleString("th-TH")}
+            </small>
+          ) : null}
         </div>
       </div>
     </header>
@@ -459,6 +507,8 @@ function StandardPackingListPage({ page, data }: { page: StandardPageDef; data: 
           totalPages={page.totalPages}
           productChunk={page.productChunk}
           productTotalChunks={page.productTotalChunks}
+          vehicleMissingWeightProductCount={page.vehicleMissingWeightProductCount}
+          vehicleTotalWeightGrams={page.vehicleTotalWeightGrams}
         />
 
         <div className="packing-table-wrap">
@@ -557,7 +607,10 @@ function StandardPackingListPage({ page, data }: { page: StandardPageDef; data: 
 
               {isLastStorePage && (
                 <tr className="packing-table__total-row">
-                  <td className="packing-cell packing-cell--total-label">รวมยอด</td>
+                  <td className="packing-cell packing-cell--total-label">
+                    <span>รวมยอด</span>
+                    <strong>{formatVehicleWeight(page.vehicleTotalWeightGrams)}</strong>
+                  </td>
                   {productTotals.map((total, index) => (
                     <td
                       key={`standard-total-${index}`}
@@ -601,6 +654,8 @@ function TransposedPackingListPage({ page, data }: { page: TransposedPageDef; da
           totalPages={page.totalPages}
           productChunk={page.productChunk}
           productTotalChunks={page.productTotalChunks}
+          vehicleMissingWeightProductCount={page.vehicleMissingWeightProductCount}
+          vehicleTotalWeightGrams={page.vehicleTotalWeightGrams}
         />
 
         <div className="packing-table-wrap">
@@ -931,7 +986,7 @@ function PackingListStyles() {
 
       .packing-header__meta {
         display: grid;
-        grid-template-columns: repeat(3, minmax(19mm, auto));
+        grid-template-columns: repeat(3, minmax(17mm, auto)) minmax(31mm, auto);
         gap: 1px;
         border: 1px solid #cbd5e1;
         background: #cbd5e1;
@@ -1012,6 +1067,31 @@ function PackingListStyles() {
         font-size: 7.9pt;
         font-weight: 800;
         color: #0f172a;
+      }
+
+      .packing-header__meta-cell--weight {
+        gap: 0.9mm;
+        background: #ffd400;
+        border-left: 1px solid #0f172a;
+      }
+
+      .packing-header__meta-cell--weight span {
+        color: #713f12;
+        font-weight: 800;
+      }
+
+      .packing-header__meta-cell--weight strong {
+        color: #111827;
+        font-size: 8.6pt;
+        font-weight: 900;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .packing-header__meta-cell--weight small {
+        color: #b91c1c;
+        font-size: 5.1pt;
+        font-weight: 900;
+        line-height: 1;
       }
 
       .packing-table-wrap {
@@ -1324,12 +1404,26 @@ function PackingListStyles() {
       }
 
       .packing-cell--total-label {
-        padding: 0 1.6mm;
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        justify-content: center;
+        gap: 0;
+        padding: 0 0.8mm;
         text-align: left;
-        font-size: 7.9pt;
+        font-size: 6.1pt;
         font-weight: 800;
+        line-height: 1;
         color: #111827;
         background: #ffd400;
+      }
+
+      .packing-cell--total-label strong {
+        font-size: 6.3pt;
+        font-weight: 900;
+        line-height: 1;
+        white-space: nowrap;
+        font-variant-numeric: tabular-nums;
       }
 
       .packing-cell--total {
@@ -1351,9 +1445,11 @@ function PackingListStyles() {
       .packing-sheet--standard .packing-header__vehicle-main,
       .packing-sheet--standard .packing-header__meta-cell span,
       .packing-sheet--standard .packing-header__meta-cell strong,
+      .packing-sheet--standard .packing-header__meta-cell small,
       .packing-sheet--standard .packing-col,
       .packing-sheet--standard .packing-cell--store,
-      .packing-sheet--standard .packing-cell--total-label {
+      .packing-sheet--standard .packing-cell--total-label,
+      .packing-sheet--standard .packing-cell--total-label strong {
         font-family: "Noto Sans Thai Packing", "Noto Sans Thai", sans-serif;
       }
 

@@ -33,7 +33,11 @@ import type {
   PackingListSummaryStore,
 } from "@/components/orders/packing-list-summary-button";
 import { DailySpecialOrderManager } from "@/components/orders/daily-special-order-manager";
-import { getDailySpecialCatalog, getDailySpecialItems } from "@/lib/orders/daily-special-items";
+import { getDailySpecialCatalog, getDailySpecialItems, getDailySpecialPrintItems } from "@/lib/orders/daily-special-items";
+import {
+  VehicleSalesSummary,
+  type VehicleSalesSummaryItem,
+} from "@/components/orders/vehicle-sales-summary";
 
 const LazyCreateOrderModal = dynamic(() =>
   import("@/components/orders/lazy-create-order-modal").then((mod) => mod.LazyCreateOrderModal),
@@ -186,6 +190,7 @@ export default async function IncomingOrdersPage({ searchParams }: IncomingOrder
     products,
     specialCatalog,
     specialItems,
+    specialWeightItems,
   ] = await Promise.all([
     getIncomingOrdersBundle(session.organizationId, { orderDate, endDate, searchTerm }),
     expandedOrderId ? getOrderDetailById(session.organizationId, expandedOrderId) : Promise.resolve(null),
@@ -200,6 +205,7 @@ export default async function IncomingOrdersPage({ searchParams }: IncomingOrder
     expandedOrderId ? getProductsForOrder(session.organizationId) : Promise.resolve([]),
     getDailySpecialCatalog(session.organizationId),
     getDailySpecialItems(session.organizationId, orderDate),
+    getDailySpecialPrintItems(session.organizationId, orderDate, endDate),
   ]);
 
   const orders = ordersBundle.orders;
@@ -228,6 +234,100 @@ export default async function IncomingOrdersPage({ searchParams }: IncomingOrder
     baseFilteredOrders = baseFilteredOrders.filter((order) => order.warehouseId === selectedWarehouseId);
   }
 
+  const itemsByOrderId = new Map<string, IncomingOrderSummaryItemRow[]>();
+  for (const row of summaryItems) {
+    const current = itemsByOrderId.get(row.order_id) ?? [];
+    current.push(row);
+    itemsByOrderId.set(row.order_id, current);
+  }
+
+  const vehicleNameById = new Map(vehicles.map((vehicle) => [vehicle.id, vehicle.name]));
+  const vehicleSortOrderMap = new Map(vehicles.map((vehicle, index) => [vehicle.id, index]));
+  const vehicleSalesMap = new Map<
+    string,
+    {
+      name: string;
+      orderCount: number;
+      salesAmount: number;
+      storeKeys: Set<string>;
+      weightGrams: number;
+    }
+  >();
+
+  for (const order of baseFilteredOrders) {
+    const vehicleKey = order.vehicleId ?? "__none__";
+    const current = vehicleSalesMap.get(vehicleKey) ?? {
+      name: order.vehicleName || (order.vehicleId ? vehicleNameById.get(order.vehicleId) : null) || "ยังไม่กำหนดรถ",
+      orderCount: 0,
+      salesAmount: 0,
+      storeKeys: new Set<string>(),
+      weightGrams: 0,
+    };
+    current.orderCount += 1;
+    current.salesAmount += Number(order.totalAmount ?? 0);
+    current.storeKeys.add(`${order.customerId}_${order.orderDate}`);
+    for (const item of itemsByOrderId.get(order.id) ?? []) {
+      const quantityInBaseUnit = Number(item.quantity_in_base_unit ?? item.quantity ?? 0);
+      const unitWeightGrams = Number(item.products?.unit_weight_grams ?? 0);
+      if (quantityInBaseUnit > 0 && Number.isFinite(unitWeightGrams) && unitWeightGrams > 0) {
+        current.weightGrams += quantityInBaseUnit * unitWeightGrams;
+      }
+    }
+    vehicleSalesMap.set(vehicleKey, current);
+  }
+
+  const specialProductWeightById = new Map(
+    specialCatalog.map((product) => [product.id, product.unitWeightGrams]),
+  );
+  for (const special of specialWeightItems) {
+    const unitWeightGrams = specialProductWeightById.get(special.productId) ?? null;
+    if (!unitWeightGrams || unitWeightGrams <= 0 || special.quantity <= 0) continue;
+    const current = vehicleSalesMap.get(special.vehicleId) ?? {
+      name: vehicleNameById.get(special.vehicleId) ?? "ยังไม่กำหนดรถ",
+      orderCount: 0,
+      salesAmount: 0,
+      storeKeys: new Set<string>(),
+      weightGrams: 0,
+    };
+    current.weightGrams += special.quantity * unitWeightGrams;
+    vehicleSalesMap.set(special.vehicleId, current);
+  }
+
+  const vehicleFilterParams = new URLSearchParams();
+  vehicleFilterParams.set("date", orderDate);
+  if (endDate !== orderDate) vehicleFilterParams.set("endDate", endDate);
+  if (searchTerm) vehicleFilterParams.set("q", searchTerm);
+  if (selectedWarehouseId) vehicleFilterParams.set("warehouse", selectedWarehouseId);
+  if (selectedCustomerIds.length > 0) vehicleFilterParams.set("customers", selectedCustomerIds.join(","));
+
+  function getVehicleFilterHref(vehicleId?: string) {
+    const nextParams = new URLSearchParams(vehicleFilterParams);
+    if (vehicleId) nextParams.set("vehicle", vehicleId);
+    return `/orders/incoming?${nextParams.toString()}`;
+  }
+
+  const vehicleSalesItems: VehicleSalesSummaryItem[] = Array.from(vehicleSalesMap.entries())
+    .map(([id, item]) => ({
+      href: getVehicleFilterHref(id),
+      id,
+      name: item.name,
+      orderCount: item.orderCount,
+      salesAmount: item.salesAmount,
+      storeCount: item.storeKeys.size,
+      weightGrams: item.weightGrams,
+    }))
+    .sort((left, right) => {
+      if (left.id === "__none__") return 1;
+      if (right.id === "__none__") return -1;
+      return (vehicleSortOrderMap.get(left.id) ?? Infinity) - (vehicleSortOrderMap.get(right.id) ?? Infinity);
+    });
+  const vehicleSalesTotalAmount = vehicleSalesItems.reduce((sum, item) => sum + item.salesAmount, 0);
+  const vehicleSalesTotalOrderCount = vehicleSalesItems.reduce((sum, item) => sum + item.orderCount, 0);
+  const vehicleSalesTotalWeightGrams = vehicleSalesItems.reduce((sum, item) => sum + item.weightGrams, 0);
+  const vehicleSalesDateLabel = orderDate === endDate
+    ? formatDisplayDate(orderDate)
+    : `${formatDisplayDate(orderDate)}–${formatDisplayDate(endDate)}`;
+
   let filteredOrders = baseFilteredOrders;
   if (selectedVehicleId !== "__all__") {
     if (selectedVehicleId === "__none__") {
@@ -245,17 +345,9 @@ export default async function IncomingOrdersPage({ searchParams }: IncomingOrder
       ? expandedDetail
       : null;
 
-  const itemsByOrderId = new Map<string, IncomingOrderSummaryItemRow[]>();
-  for (const row of summaryItems) {
-    const current = itemsByOrderId.get(row.order_id) ?? [];
-    current.push(row);
-    itemsByOrderId.set(row.order_id, current);
-  }
-
   const summaryProductMap = new Map<string, PackingListSummaryProduct>();
   const summaryStoreMap = new Map<string, PackingListSummaryStore>();
 
-  const vehicleSortOrderMap = new Map(vehicles.map((v, idx) => [v.id, idx]));
   const customerSortOrderMap = new Map(customers.map((c, idx) => [c.id, idx]));
 
   for (const order of filteredOrders) {
@@ -684,6 +776,17 @@ export default async function IncomingOrdersPage({ searchParams }: IncomingOrder
               />
             </div>
 
+            <VehicleSalesSummary
+              allVehiclesHref={getVehicleFilterHref()}
+              dateLabel={vehicleSalesDateLabel}
+              display="mobile"
+              items={vehicleSalesItems}
+              selectedVehicleId={selectedVehicleId}
+              totalAmount={vehicleSalesTotalAmount}
+              totalOrderCount={vehicleSalesTotalOrderCount}
+              totalWeightGrams={vehicleSalesTotalWeightGrams}
+            />
+
             {/* Desktop & Tablet View: 5 Equal Width Action Cards Grid */}
             <div className="hidden sm:block w-full">
               <div className="grid grid-cols-5 gap-3 w-full [&_button]:w-full [&_button]:h-full [&_button]:justify-center [&_button]:rounded-2xl [&_button]:border-[#EA80FC]/35 [&_button]:py-3.5 [&_button]:px-5">
@@ -724,6 +827,18 @@ export default async function IncomingOrdersPage({ searchParams }: IncomingOrder
                     initialExpandedOrderId={expandedOrderId}
                     orderDate={orderDate}
                     orders={baseFilteredOrders}
+                    salesSummary={
+                      <VehicleSalesSummary
+                        allVehiclesHref={getVehicleFilterHref()}
+                        dateLabel={vehicleSalesDateLabel}
+                        display="desktop"
+                        items={vehicleSalesItems}
+                        selectedVehicleId={selectedVehicleId}
+                        totalAmount={vehicleSalesTotalAmount}
+                        totalOrderCount={vehicleSalesTotalOrderCount}
+                        totalWeightGrams={vehicleSalesTotalWeightGrams}
+                      />
+                    }
                     searchTerm={searchTerm}
                     selectedCustomerIds={selectedCustomerIds}
                     vehicles={vehicles}

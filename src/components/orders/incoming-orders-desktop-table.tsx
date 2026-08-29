@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, memo, useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { Fragment, memo, useEffect, useMemo, useRef, useState, useTransition, type ReactNode } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Building2, Check, ChevronDown, ChevronUp, Loader2 } from "lucide-react";
 import { fetchIncomingOrderDetailAction } from "@/app/orders/incoming/actions";
@@ -22,6 +22,7 @@ type IncomingOrdersDesktopTableProps = {
   initialExpandedOrderId: string;
   orderDate: string;
   orders: IncomingOrderListItem[];
+  salesSummary?: ReactNode;
   searchTerm: string;
   selectedCustomerIds: string[];
   vehicles: OrderVehicleOption[];
@@ -246,6 +247,7 @@ export const IncomingOrdersDesktopTable = memo(function IncomingOrdersDesktopTab
   initialExpandedOrderId,
   orderDate,
   orders,
+  salesSummary,
   searchTerm,
   selectedCustomerIds,
   vehicles,
@@ -407,6 +409,7 @@ export const IncomingOrdersDesktopTable = memo(function IncomingOrdersDesktopTab
               </div>
             </div>
           </div>
+          {salesSummary ? <div className="mt-3">{salesSummary}</div> : null}
           <IncomingOrderVehicleFilter
             vehicles={vehicles}
             activeVehicleId={selectedVehicleId}
