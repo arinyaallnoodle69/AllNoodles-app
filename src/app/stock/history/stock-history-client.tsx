@@ -22,6 +22,7 @@ import { loadMoreStockHistoryAction } from "@/app/stock/pagination-actions";
 import { MobileSearchDrawer } from "@/components/mobile-search/mobile-search-drawer";
 import { useMobileSearch } from "@/components/mobile-search/mobile-search-context";
 import { StockTabs } from "@/components/settings/stock-tabs";
+import { useClientRole } from "@/lib/auth/client-role";
 
 type Props = {
   history: StockHistoryRow[];
@@ -40,6 +41,7 @@ export function StockHistoryClient({
   initialWarehouseId,
   onChangeTab,
 }: Props) {
+  const canViewAmounts = useClientRole() === "admin";
   const router = useRouter();
   const [allHistory, setAllHistory] = useState<StockHistoryRow[]>(initialHistory);
   const [hasMore, setHasMore] = useState(initialHistory.length === LIMIT);
@@ -324,14 +326,14 @@ export function StockHistoryClient({
       <StockTabs current="history" onChangeTab={onChangeTab} />
 
       <div className="max-w-4xl mx-auto w-full px-3 md:px-0">
-        <div className="mb-6 hidden justify-end sm:flex">
+        {canViewAmounts ? <div className="mb-6 hidden justify-end sm:flex">
           <div className="text-right">
             <p className="mb-1 text-[11px] font-black uppercase tracking-[0.05em] text-[#45464d]">ยอดรวมทั้งหมด (หน้าปัจจุบัน)</p>
             <p className="text-[20px] font-black text-[#4A148C]">
               {totalAmount.toLocaleString("th-TH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <span className="text-[12px]">THB</span>
             </p>
           </div>
-        </div>
+        </div> : null}
 
         <div className="mb-10 overflow-hidden rounded-lg border border-[#c6c6cd] bg-white shadow-[0_2px_4px_rgba(0,0,0,0.05)]">
           {groups.length > 0 ? (
@@ -373,10 +375,10 @@ export function StockHistoryClient({
 
                         <div className="mt-2.5 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                           <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
-                            <p className="whitespace-nowrap text-[20px] font-black text-[#4A148C]">
+                            {canViewAmounts ? <p className="whitespace-nowrap text-[20px] font-black text-[#4A148C]">
                               {row.totalAmount.toLocaleString("th-TH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                               <span className="ml-1 text-[12px] font-bold">THB</span>
-                            </p>
+                            </p> : null}
                             <p className="whitespace-nowrap rounded-md bg-slate-50 px-2 py-0.5 font-mono text-[14px] font-bold text-slate-500">
                               {row.receiptNumber}
                             </p>
@@ -433,6 +435,7 @@ export function StockHistoryClient({
       {selectedReceiptDetail && (
         <StockReceiptDetailModal
           detail={selectedReceiptDetail}
+          canViewAmounts={canViewAmounts}
           onClose={() => setSelectedReceiptDetail(null)}
           onEdit={() => {
             const id = selectedReceiptDetail.id;

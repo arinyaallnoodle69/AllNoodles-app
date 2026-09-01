@@ -5,6 +5,7 @@ import { X, Calendar, Building2, Package, Save, Loader2, ChevronRight, Factory, 
 import { updateStockReceiptAction, type UpdateStockReceiptActionState } from "@/app/settings/stock/actions";
 import type { StockReceiptDetail, StockSupplierOption } from "@/lib/stock/admin";
 import { ThaiDatePicker } from "@/components/ui/thai-date-picker";
+import { useClientRole } from "@/lib/auth/client-role";
 
 type EditableItem = {
   id: string;
@@ -26,6 +27,7 @@ type Props = {
 };
 
 export function StockReceiptEditModal({ receipt, suppliers, isOpen, onClose, onSuccess }: Props) {
+  const canViewAmounts = useClientRole() === "admin";
   const [state, formAction, isPending] = useActionState<UpdateStockReceiptActionState, FormData>(
     updateStockReceiptAction,
     { status: "idle", message: "", fieldErrors: {} }
@@ -176,9 +178,9 @@ export function StockReceiptEditModal({ receipt, suppliers, isOpen, onClose, onS
                   <Package className="w-3 h-3" />
                   รายการสินค้า
                 </label>
-                <span className="text-[12px] font-black text-[#4A148C]">
+                {canViewAmounts ? <span className="text-[12px] font-black text-[#4A148C]">
                   รวม {calculateTotal().toLocaleString("th-TH", { minimumFractionDigits: 2 })} ฿
-                </span>
+                </span> : null}
               </div>
 
               {editableItems.map((item) => (
@@ -191,14 +193,14 @@ export function StockReceiptEditModal({ receipt, suppliers, isOpen, onClose, onS
                       </h4>
                       <p className="text-[11px] text-slate-400 font-mono mt-0.5">{item.sku}</p>
                     </div>
-                    <div className="text-right shrink-0">
+                    {canViewAmounts ? <div className="text-right shrink-0">
                       <p className="text-[18px] font-black text-[#4A148C]">
                         {item.lineTotal.toLocaleString("th-TH", { maximumFractionDigits: 2 })} ฿
                       </p>
                       <p className="text-[11px] font-bold text-slate-500 uppercase tracking-widest mt-0.5">
                         {item.unitCost.toLocaleString()} / {item.unit}
                       </p>
-                    </div>
+                    </div> : null}
                   </div>
 
                   {/* Quantity Stepper Row */}

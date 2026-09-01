@@ -776,16 +776,18 @@ export default async function IncomingOrdersPage({ searchParams }: IncomingOrder
               />
             </div>
 
-            <VehicleSalesSummary
-              allVehiclesHref={getVehicleFilterHref()}
-              dateLabel={vehicleSalesDateLabel}
-              display="mobile"
-              items={vehicleSalesItems}
-              selectedVehicleId={selectedVehicleId}
-              totalAmount={vehicleSalesTotalAmount}
-              totalOrderCount={vehicleSalesTotalOrderCount}
-              totalWeightGrams={vehicleSalesTotalWeightGrams}
-            />
+            {session.role === "admin" ? (
+              <VehicleSalesSummary
+                allVehiclesHref={getVehicleFilterHref()}
+                dateLabel={vehicleSalesDateLabel}
+                display="mobile"
+                items={vehicleSalesItems}
+                selectedVehicleId={selectedVehicleId}
+                totalAmount={vehicleSalesTotalAmount}
+                totalOrderCount={vehicleSalesTotalOrderCount}
+                totalWeightGrams={vehicleSalesTotalWeightGrams}
+              />
+            ) : null}
 
             {/* Desktop & Tablet View: 5 Equal Width Action Cards Grid */}
             <div className="hidden sm:block w-full">
@@ -827,7 +829,7 @@ export default async function IncomingOrdersPage({ searchParams }: IncomingOrder
                     initialExpandedOrderId={expandedOrderId}
                     orderDate={orderDate}
                     orders={baseFilteredOrders}
-                    salesSummary={
+                    salesSummary={session.role === "admin" ? (
                       <VehicleSalesSummary
                         allVehiclesHref={getVehicleFilterHref()}
                         dateLabel={vehicleSalesDateLabel}
@@ -838,7 +840,7 @@ export default async function IncomingOrdersPage({ searchParams }: IncomingOrder
                         totalOrderCount={vehicleSalesTotalOrderCount}
                         totalWeightGrams={vehicleSalesTotalWeightGrams}
                       />
-                    }
+                    ) : null}
                     searchTerm={searchTerm}
                     selectedCustomerIds={selectedCustomerIds}
                     vehicles={vehicles}

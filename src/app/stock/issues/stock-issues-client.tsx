@@ -18,6 +18,7 @@ import { formatDisplayUnit } from "@/app/order/customer/unit-label";
 import { MobileSearchDrawer } from "@/components/mobile-search/mobile-search-drawer";
 import { useMobileSearch } from "@/components/mobile-search/mobile-search-context";
 import { StockTabs } from "@/components/settings/stock-tabs";
+import { useClientRole } from "@/lib/auth/client-role";
 
 type Props = {
   issues: StockIssueRow[];
@@ -54,9 +55,11 @@ function formatIssueTime(value: string) {
 function StockIssueDetailModal({
   issue,
   onClose,
+  canViewAmounts,
 }: {
   issue: StockIssueRow;
   onClose: () => void;
+  canViewAmounts: boolean;
 }) {
   return (
     <div
@@ -100,36 +103,36 @@ function StockIssueDetailModal({
                 <span className="text-[12px]"> {issue.customerName}</span>
               </div>
 
-              <div className="grid grid-cols-[1fr_75px_50px_65px] gap-2 py-2 border-b border-[#cccccc]">
+              <div className={`grid gap-2 border-b border-[#cccccc] py-2 ${canViewAmounts ? "grid-cols-[1fr_75px_50px_65px]" : "grid-cols-[1fr_100px]"}`}>
                 <span className="text-[12px] font-black text-left">สินค้า</span>
                 <span className="text-[12px] font-black text-center">จำนวน</span>
-                <span className="text-[12px] font-black text-center">หน่วย</span>
-                <span className="text-[12px] font-black text-right">รวม</span>
+                {canViewAmounts ? <span className="text-[12px] font-black text-center">หน่วยละ</span> : null}
+                {canViewAmounts ? <span className="text-[12px] font-black text-right">รวม</span> : null}
               </div>
 
               <div className="divide-y divide-[#cccccc]">
                 {issue.items.map((item) => (
-                  <div key={item.id} className="grid grid-cols-[1fr_75px_50px_65px] gap-2 py-3 items-center">
+                  <div key={item.id} className={`grid items-center gap-2 py-3 ${canViewAmounts ? "grid-cols-[1fr_75px_50px_65px]" : "grid-cols-[1fr_100px]"}`}>
                     <div className="text-[11px] leading-[1.4] line-clamp-2">{item.productName}</div>
                     <div className="text-[12px] text-center font-medium">
                       {formatQuantity(item.quantity)} {formatDisplayUnit(item.unit)}
                     </div>
-                    <div className="text-[12px] text-center text-slate-500">
+                    {canViewAmounts ? <div className="text-[12px] text-center text-slate-500">
                       {formatCurrency(item.quantity > 0 ? item.lineTotal / item.quantity : 0)}
-                    </div>
-                    <div className="text-[12px] text-right font-bold">{formatCurrency(item.lineTotal)}</div>
+                    </div> : null}
+                    {canViewAmounts ? <div className="text-[12px] text-right font-bold">{formatCurrency(item.lineTotal)}</div> : null}
                   </div>
                 ))}
               </div>
 
               <div className="h-[1px] bg-[#cccccc] mt-4 mb-4" />
 
-              <div className="flex items-center justify-between mb-6 px-1">
+              {canViewAmounts ? <div className="flex items-center justify-between mb-6 px-1">
                  <span className="text-[13px] font-black">ยอดรวมทั้งหมด:</span>
                  <span className="text-[16px] font-black text-[#4A148C] underline decoration-double decoration-slate-300 underline-offset-4">
                     {formatCurrency(issue.totalAmount)}
                  </span>
-              </div>
+              </div> : null}
             </div>
           </div>
 
@@ -180,7 +183,7 @@ function StockIssueDetailModal({
                     <th className="px-2 py-1.5 text-[10px] font-black">รายการ / Description</th>
                     <th className="w-16 px-2 py-1.5 text-right text-[10px] font-black">จำนวน</th>
                     <th className="w-12 px-2 py-1.5 text-center text-[10px] font-black">หน่วย</th>
-                    <th className="px-2 py-1.5 text-right text-[10px] font-black">จำนวนเงิน</th>
+                    {canViewAmounts ? <th className="px-2 py-1.5 text-right text-[10px] font-black">จำนวนเงิน</th> : null}
                   </tr>
                 </thead>
                 <tbody className="text-[13px] divide-y divide-[#c6c6cd]/50">
@@ -191,21 +194,21 @@ function StockIssueDetailModal({
                       <td className="px-2 py-2 font-bold">{item.productName}</td>
                       <td className="px-2 py-2 text-right">{formatQuantity(item.quantity)}</td>
                       <td className="px-2 py-2 text-center">{formatDisplayUnit(item.unit)}</td>
-                      <td className="px-2 py-2 text-right font-black">{formatCurrency(item.lineTotal)}</td>
+                      {canViewAmounts ? <td className="px-2 py-2 text-right font-black">{formatCurrency(item.lineTotal)}</td> : null}
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
 
-            <div className="relative z-10 mt-6 flex justify-end items-baseline pr-4">
+            {canViewAmounts ? <div className="relative z-10 mt-6 flex justify-end items-baseline pr-4">
               <div className="flex items-baseline gap-6">
                 <span className="text-[16px] font-black text-black">รวมทั้งสิ้น / Total:</span>
                 <p className="text-[32px] font-black text-[#4A148C] leading-none mb-1">
                   {formatCurrency(issue.totalAmount)}
                 </p>
               </div>
-            </div>
+            </div> : null}
           </div>
         </div>
       </div>
@@ -220,6 +223,7 @@ export function StockIssuesClient({
   initialWarehouseId,
   onChangeTab,
 }: Props) {
+  const canViewAmounts = useClientRole() === "admin";
   const [allIssues, setAllIssues] = useState<StockIssueRow[]>(initialIssues);
   const [hasMore, setHasMore] = useState(initialIssues.length === LIMIT);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
@@ -519,14 +523,14 @@ export function StockIssuesClient({
       <StockTabs current="issues" onChangeTab={onChangeTab} />
 
       <div className="max-w-4xl mx-auto w-full px-3 md:px-0">
-        <div className="mb-6 flex justify-end hidden sm:flex">
+        {canViewAmounts ? <div className="mb-6 flex justify-end hidden sm:flex">
            <div className="text-right">
               <p className="text-[11px] font-black uppercase tracking-[0.05em] text-[#45464d] mb-1">ยอดรวมทั้งหมด (หน้าปัจจุบัน)</p>
               <p className="text-[20px] font-black text-[#4A148C]">
                  {totalAmount.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <span className="text-[12px]">THB</span>
               </p>
            </div>
-        </div>
+        </div> : null}
 
         <div className="overflow-hidden rounded-lg border border-[#c6c6cd] bg-white shadow-[0_2px_4px_rgba(0,0,0,0.05)] mb-10">
           {groups.length > 0 ? (
@@ -561,9 +565,9 @@ export function StockIssuesClient({
                     <div className="flex shrink-0 items-center gap-5 md:gap-8">
                        <div className="text-right">
                           <p className="text-[12px] font-medium text-[#45464d]">{issue.itemCount} รายการ</p>
-                          <p className="mt-0.5 text-[18px] font-black text-black">
+                          {canViewAmounts ? <p className="mt-0.5 text-[18px] font-black text-black">
                              {formatCurrency(issue.totalAmount)} THB
-                          </p>
+                          </p> : null}
                        </div>
                        <ChevronRight className="hidden h-6 w-6 text-[#76777d] sm:block" strokeWidth={3} />
                     </div>
@@ -582,10 +586,10 @@ export function StockIssuesClient({
 
           <div className="border-t border-[#c6c6cd] bg-[#f2f4f6] p-5 md:p-10">
             <div className="flex flex-col gap-4 sm:flex-row sm:gap-12">
-              <div>
+              {canViewAmounts ? <div>
                 <p className="mb-1 text-[11px] font-black text-[#45464d]">จำนวนรายการสะสม</p>
                 <p className="text-[24px] font-semibold text-black">{totalItems.toLocaleString()} รายการ</p>
-              </div>
+              </div> : null}
               <div>
                 <p className="mb-1 text-[11px] font-black text-[#45464d]">มูลค่ารวมสะสม</p>
                 <p className="text-[24px] font-semibold text-rose-600">{formatCurrency(totalAmount)} THB</p>
@@ -609,7 +613,7 @@ export function StockIssuesClient({
       </div>
 
       {selectedIssue && (
-        <StockIssueDetailModal issue={selectedIssue} onClose={() => setSelectedIssue(null)} />
+        <StockIssueDetailModal issue={selectedIssue} canViewAmounts={canViewAmounts} onClose={() => setSelectedIssue(null)} />
       )}
     </>
   );

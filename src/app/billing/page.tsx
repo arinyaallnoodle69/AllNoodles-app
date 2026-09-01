@@ -51,6 +51,7 @@ async function BillingPageContent({ searchParams }: BillingPageProps) {
         allCustomers={allCustomers}
         initialFrom={from}
         initialTo={to}
+        canViewAmounts={session.role === "admin"}
       />
     </AppSidebarLayout>
   );

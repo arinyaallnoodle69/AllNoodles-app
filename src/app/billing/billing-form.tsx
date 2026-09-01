@@ -26,6 +26,7 @@ type BillingFormProps = {
   initialToDate: string;
   candidates: BillingCandidate[];
   allCustomers: BillingCustomerOption[];
+  canViewAmounts: boolean;
 };
 
 export function BillingForm({
@@ -34,6 +35,7 @@ export function BillingForm({
   initialToDate,
   candidates,
   allCustomers,
+  canViewAmounts,
 }: BillingFormProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -461,8 +463,12 @@ export function BillingForm({
                       <tr>
                         <th className="px-6 py-2.5 text-center text-[11px] font-black uppercase tracking-widest text-slate-500 border-r border-slate-200">เลขที่ใบจัดส่ง</th>
                         <th className="px-6 py-2.5 text-center text-[11px] font-black uppercase tracking-widest text-slate-500 border-r border-slate-200">วันที่จัดส่ง</th>
-                        <th className="px-6 py-2.5 text-center text-[11px] font-black uppercase tracking-widest text-slate-500 border-r border-slate-200">ยอดรวม</th>
-                        <th className="px-6 py-2.5 text-center text-[11px] font-black uppercase tracking-widest text-slate-500 border-r border-slate-200">ค้างชำระ</th>
+                        {canViewAmounts ? (
+                          <>
+                            <th className="px-6 py-2.5 text-center text-[11px] font-black uppercase tracking-widest text-slate-500 border-r border-slate-200">ยอดรวม</th>
+                            <th className="px-6 py-2.5 text-center text-[11px] font-black uppercase tracking-widest text-slate-500 border-r border-slate-200">ค้างชำระ</th>
+                          </>
+                        ) : null}
                         <th className="px-6 py-2.5 text-center text-[11px] font-black uppercase tracking-widest text-slate-500">สถานะ</th>
                       </tr>
                     </thead>
@@ -478,12 +484,16 @@ export function BillingForm({
                               {fmtDateTH(d.date)}
                             </div>
                           </td>
-                          <td className="px-6 py-2 text-right font-mono text-sm font-black text-slate-800">
-                            {d.amount.toLocaleString("th-TH", { minimumFractionDigits: 2 })}
-                          </td>
-                          <td className="px-6 py-2 text-right font-mono text-sm font-black text-slate-800">
-                            {d.amount.toLocaleString("th-TH", { minimumFractionDigits: 2 })}
-                          </td>
+                          {canViewAmounts ? (
+                            <>
+                              <td className="px-6 py-2 text-right font-mono text-sm font-black text-slate-800">
+                                {d.amount.toLocaleString("th-TH", { minimumFractionDigits: 2 })}
+                              </td>
+                              <td className="px-6 py-2 text-right font-mono text-sm font-black text-slate-800">
+                                {d.amount.toLocaleString("th-TH", { minimumFractionDigits: 2 })}
+                              </td>
+                            </>
+                          ) : null}
                           <td className="px-6 py-2">
                             <div className="flex justify-center">
                               {d.isAlreadyBilled ? (
@@ -526,7 +536,7 @@ export function BillingForm({
                         )}
                       </div>
 
-                      <div className="grid grid-cols-2 gap-3">
+                      <div className={`grid gap-3 ${canViewAmounts ? "grid-cols-2" : "grid-cols-1"}`}>
                         <div className="space-y-1">
                           <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">วันที่จัดส่ง</p>
                           <div className="flex items-center gap-1.5 text-xs font-bold text-slate-700">
@@ -534,12 +544,14 @@ export function BillingForm({
                             {fmtDateTH(d.date)}
                           </div>
                         </div>
-                        <div className="text-right space-y-1">
-                          <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">ยอดรวม</p>
-                          <p className="font-mono text-sm font-black text-slate-900">
-                            ฿{d.amount.toLocaleString("th-TH", { minimumFractionDigits: 2 })}
-                          </p>
-                        </div>
+                        {canViewAmounts ? (
+                          <div className="text-right space-y-1">
+                            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">ยอดรวม</p>
+                            <p className="font-mono text-sm font-black text-slate-900">
+                              ฿{d.amount.toLocaleString("th-TH", { minimumFractionDigits: 2 })}
+                            </p>
+                          </div>
+                        ) : null}
                       </div>
 
                         {d.isAlreadyBilled && (
@@ -554,15 +566,17 @@ export function BillingForm({
                 {/* Unified Customer Footer (Summary) */}
                 <div className="bg-slate-50/50 border-t border-slate-200 px-4 md:px-6 py-2.5 flex flex-col sm:flex-row items-center justify-between gap-1.5 md:gap-3">
                   <span className="text-[10px] md:text-xs font-black uppercase tracking-widest text-slate-400">
-                    รวมยอดร้านนี้ ({candidate.deliveries.length} ใบจัดส่ง)
+                    {canViewAmounts ? "รวมยอดร้านนี้" : "รวมรายการร้านนี้"} ({candidate.deliveries.length} ใบจัดส่ง)
                   </span>
                   <div className="flex items-center gap-4">
-                    <div className="flex items-baseline gap-1.5">
-                      <span className="font-mono text-lg md:text-xl font-black leading-none text-[#4A148C]">
-                        {candidate.deliveries.reduce((sum, d) => sum + d.amount, 0).toLocaleString("th-TH", { minimumFractionDigits: 2 })}
-                      </span>
-                      <span className="text-[11px] font-bold text-slate-400 uppercase tracking-tight">บาท</span>
-                    </div>
+                    {canViewAmounts ? (
+                      <div className="flex items-baseline gap-1.5">
+                        <span className="font-mono text-lg md:text-xl font-black leading-none text-[#4A148C]">
+                          {candidate.deliveries.reduce((sum, d) => sum + d.amount, 0).toLocaleString("th-TH", { minimumFractionDigits: 2 })}
+                        </span>
+                        <span className="text-[11px] font-bold text-slate-400 uppercase tracking-tight">บาท</span>
+                      </div>
+                    ) : null}
                     <BillingPreviewButton
                       customerName={candidate.customerName}
                       customerCode={candidate.customerCode}
@@ -590,16 +604,20 @@ export function BillingForm({
                 <span className="text-[10px] sm:text-[11px] font-bold text-slate-500 uppercase">ร้าน</span>
               </div>
             </div>
-            <div className="h-8 w-px bg-slate-200 sm:h-10" />
-            <div className="flex flex-col">
-              <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-[0.1em] text-slate-400">รวมเงิน</span>
-              <div className="flex items-baseline gap-1">
-                <span className="font-mono text-base sm:text-2xl font-black text-slate-900">
-                  {totalAmount.toLocaleString("th-TH", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
-                </span>
-                <span className="text-[10px] sm:text-[11px] font-bold text-slate-400 uppercase">บ.</span>
-              </div>
-            </div>
+            {canViewAmounts ? (
+              <>
+                <div className="h-8 w-px bg-slate-200 sm:h-10" />
+                <div className="flex flex-col">
+                  <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-[0.1em] text-slate-400">รวมเงิน</span>
+                  <div className="flex items-baseline gap-1">
+                    <span className="font-mono text-base sm:text-2xl font-black text-slate-900">
+                      {totalAmount.toLocaleString("th-TH", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
+                    </span>
+                    <span className="text-[10px] sm:text-[11px] font-bold text-slate-400 uppercase">บ.</span>
+                  </div>
+                </div>
+              </>
+            ) : null}
           </div>
 
           <BatchBillingPreviewButton

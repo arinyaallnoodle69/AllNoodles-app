@@ -10,6 +10,7 @@ type Props = {
   detail: StockReceiptDetail;
   onClose: () => void;
   onEdit: () => void;
+  canViewAmounts: boolean;
 };
 
 function formatCurrency(value: number) {
@@ -25,7 +26,7 @@ function formatQuantity(value: number) {
   });
 }
 
-export function StockReceiptDetailModal({ detail, onClose, onEdit }: Props) {
+export function StockReceiptDetailModal({ detail, onClose, onEdit, canViewAmounts }: Props) {
   const [showImage, setShowImage] = useState(false);
 
   return (
@@ -78,34 +79,34 @@ export function StockReceiptDetailModal({ detail, onClose, onEdit }: Props) {
                 <span className="text-[12px]"> {detail.supplierName}</span>
               </div>
 
-              <div className="grid grid-cols-[1fr_45px_40px_65px] gap-2 py-2 border-b border-[#cccccc]">
+              <div className={`grid gap-2 border-b border-[#cccccc] py-2 ${canViewAmounts ? "grid-cols-[1fr_45px_40px_65px]" : "grid-cols-[1fr_55px_50px]"}`}>
                 <span className="text-[12px] font-[800] text-left">สินค้า</span>
                 <span className="text-[12px] font-[800] text-center">จำนวน</span>
                 <span className="text-[12px] font-[800] text-center">หน่วย</span>
-                <span className="text-[12px] font-[800] text-right">รวม</span>
+                {canViewAmounts ? <span className="text-[12px] font-[800] text-right">รวม</span> : null}
               </div>
 
               <div className="divide-y divide-[#cccccc]">
                 {detail.items.map((item, index) => (
-                  <div key={index} className="grid grid-cols-[1fr_45px_40px_65px] gap-2 py-3 items-center">
+                  <div key={index} className={`grid items-center gap-2 py-3 ${canViewAmounts ? "grid-cols-[1fr_45px_40px_65px]" : "grid-cols-[1fr_55px_50px]"}`}>
                     <div className="text-[11px] leading-[1.4] line-clamp-2">{item.productName}</div>
                     <div className="text-[12px] text-center font-medium">{formatQuantity(item.quantityReceived)}</div>
                     <div className="text-[12px] text-center text-slate-500">{item.unit}</div>
-                    <div className="text-[12px] text-right font-bold">{formatCurrency(item.lineTotal)}</div>
+                    {canViewAmounts ? <div className="text-[12px] text-right font-bold">{formatCurrency(item.lineTotal)}</div> : null}
                   </div>
                 ))}
               </div>
 
               <div className="h-[1px] bg-[#cccccc] mt-4 mb-4" />
 
-              <div className="flex items-center justify-between mb-6 px-1">
+              {canViewAmounts ? <div className="flex items-center justify-between mb-6 px-1">
                  <span className="text-[13px] font-[800]">ยอดรวมทั้งหมด:</span>
                  <span className="text-[16px] font-[800] text-[#4A148C] underline decoration-double decoration-slate-300 underline-offset-4">
                     {formatCurrency(detail.totalAmount)}
                  </span>
-              </div>
+              </div> : null}
 
-              {detail.receiptUrl && (
+              {canViewAmounts && detail.receiptUrl && (
                 <div className="mt-6 border-t border-dashed border-slate-300 pt-5 flex flex-col items-center">
                    <div className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2.5 flex items-center gap-2">
                       <Camera className="h-3 w-3" /> รูปภาพบิลต้นฉบับ
@@ -201,8 +202,8 @@ export function StockReceiptDetailModal({ detail, onClose, onEdit }: Props) {
                     <th className="border-r border-white px-2 py-1.5 text-[10px] font-black uppercase tracking-wider text-[#45464d]">รายการ / Description</th>
                     <th className="w-16 border-r border-white px-2 py-1.5 text-right text-[10px] font-black uppercase tracking-wider text-[#45464d]">จำนวน</th>
                     <th className="w-12 border-r border-white px-2 py-1.5 text-center text-[10px] font-black uppercase tracking-wider text-[#45464d]">หน่วย</th>
-                    <th className="border-r border-white px-2 py-1.5 text-right text-[10px] font-black uppercase tracking-wider text-[#45464d]">หน่วยละ</th>
-                    <th className="px-2 py-1.5 text-right text-[10px] font-black uppercase tracking-wider text-[#45464d]">จำนวนเงิน</th>
+                    {canViewAmounts ? <th className="border-r border-white px-2 py-1.5 text-right text-[10px] font-black uppercase tracking-wider text-[#45464d]">หน่วยละ</th> : null}
+                    {canViewAmounts ? <th className="px-2 py-1.5 text-right text-[10px] font-black uppercase tracking-wider text-[#45464d]">จำนวนเงิน</th> : null}
                   </tr>
                 </thead>
                 <tbody className="text-[13px] divide-y divide-[#c6c6cd]/50">
@@ -213,8 +214,8 @@ export function StockReceiptDetailModal({ detail, onClose, onEdit }: Props) {
                       <td className="px-2 py-2 font-bold text-black">{item.productName}</td>
                       <td className="px-2 py-2 text-right font-medium">{formatQuantity(item.quantityReceived)}</td>
                       <td className="px-2 py-2 text-center">{item.unit}</td>
-                      <td className="px-2 py-2 text-right text-[#45464d]">{formatCurrency(item.unitCost)}</td>
-                      <td className="px-2 py-2 text-right font-black text-black">{formatCurrency(item.lineTotal)}</td>
+                      {canViewAmounts ? <td className="px-2 py-2 text-right text-[#45464d]">{formatCurrency(item.unitCost)}</td> : null}
+                      {canViewAmounts ? <td className="px-2 py-2 text-right font-black text-black">{formatCurrency(item.lineTotal)}</td> : null}
                     </tr>
                   ))}
                 </tbody>
@@ -230,7 +231,7 @@ export function StockReceiptDetailModal({ detail, onClose, onEdit }: Props) {
                     {detail.notes}
                   </div>
                 )}
-                {detail.receiptUrl && (
+                {canViewAmounts && detail.receiptUrl && (
                   <button 
                     onClick={() => setShowImage(true)}
                     className="mt-3 flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-100 text-slate-600 text-[11px] font-black hover:bg-slate-200 transition-all active:scale-95"
@@ -240,20 +241,20 @@ export function StockReceiptDetailModal({ detail, onClose, onEdit }: Props) {
                   </button>
                 )}
               </div>
-              <div className="flex items-baseline gap-6">
+              {canViewAmounts ? <div className="flex items-baseline gap-6">
                 <span className="text-[16px] font-black text-black">รวมทั้งสิ้น / Total:</span>
                 <div className="text-right">
                   <p className="text-[28px] font-black text-[#4A148C] leading-none mb-1">
                     {formatCurrency(detail.totalAmount)}
                   </p>
                 </div>
-              </div>
+              </div> : null}
             </div>
           </div>
         </div>
 
         {/* Inner Image Modal */}
-        {showImage && detail.receiptUrl && (
+        {canViewAmounts && showImage && detail.receiptUrl && (
           <div 
             className="absolute inset-0 z-[600] bg-black/90 p-4 flex flex-col animate-in fade-in duration-300 md:rounded-[2rem]"
             onClick={() => setShowImage(false)}

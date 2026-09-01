@@ -15,6 +15,7 @@ type Props = {
   allCustomers: BillingCustomerOption[];
   initialFrom: string;
   initialTo: string;
+  canViewAmounts: boolean;
 };
 
 function fmtBaht(amount: number) {
@@ -41,6 +42,7 @@ export function BillingDashboardClient({
   allCustomers,
   initialFrom,
   initialTo,
+  canViewAmounts,
 }: Props) {
   const [currentTab, setCurrentTab] = useState<"create" | "history">("create");
   const [isSearching, setIsSearching] = useState(false);
@@ -138,6 +140,7 @@ export function BillingDashboardClient({
                 initialToDate={initialTo}
                 candidates={candidates}
                 allCustomers={allCustomers}
+                canViewAmounts={canViewAmounts}
               />
             </div>
           </section>
@@ -150,7 +153,7 @@ export function BillingDashboardClient({
                   <h2 className="text-xl font-extrabold text-slate-900">ค้นหาประวัติ</h2>
                 </div>
               </div>
-              {isSearching && history.length > 0 && !isLoadingHistory && (
+              {canViewAmounts && isSearching && history.length > 0 && !isLoadingHistory && (
                 <div className="border border-emerald-100 bg-emerald-50/50 px-5 py-3 text-right">
                   <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-emerald-600">
                     รวมรายการที่ค้นพบ {history.length} ฉบับ
@@ -195,7 +198,7 @@ export function BillingDashboardClient({
               ) : history.length === 0 ? (
                 <EmptyHistory />
               ) : (
-                <HistoryTable history={history} />
+                <HistoryTable history={history} canViewAmounts={canViewAmounts} />
               )}
             </div>
           </section>

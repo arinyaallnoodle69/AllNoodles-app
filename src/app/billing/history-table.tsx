@@ -9,9 +9,10 @@ import { ReprintButton } from "./reprint-button";
 
 type Props = {
   history: BillingRecord[];
+  canViewAmounts: boolean;
 };
 
-export function HistoryTable({ history }: Props) {
+export function HistoryTable({ history, canViewAmounts }: Props) {
   const [selectedRecord, setSelectedRecord] = useState<BillingRecord | null>(null);
 
   const closeModal = () => setSelectedRecord(null);
@@ -46,7 +47,7 @@ export function HistoryTable({ history }: Props) {
               <th className="px-6 py-3 text-[11px] font-black uppercase tracking-widest text-white border-r border-white/10">เลขที่ใบวางบิล</th>
               <th className="px-6 py-3 text-[11px] font-black uppercase tracking-widest text-white border-r border-white/10">ร้านค้า</th>
               <th className="px-6 py-3 text-[11px] font-black uppercase tracking-widest text-white border-r border-white/10">วันที่วางบิล</th>
-              <th className="px-6 py-3 text-right text-[11px] font-black uppercase tracking-widest text-white border-r border-white/10">ยอดรวม</th>
+              {canViewAmounts ? <th className="px-6 py-3 text-right text-[11px] font-black uppercase tracking-widest text-white border-r border-white/10">ยอดรวม</th> : null}
               <th className="px-6 py-3 text-center text-[11px] font-black uppercase tracking-widest text-white">จัดการ</th>
             </tr>
           </thead>
@@ -80,12 +81,12 @@ export function HistoryTable({ history }: Props) {
                     ช่วงวันที่: {fmtDateTH(record.from_date)} - {fmtDateTH(record.to_date)}
                   </div>
                 </td>
-                <td className="px-6 py-4 text-right">
+                {canViewAmounts ? <td className="px-6 py-4 text-right">
                   <div className="flex flex-col items-end">
                     <p className="font-mono text-xl font-black text-slate-900">{fmt(record.total_amount)}</p>
                     <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">บาท</p>
                   </div>
-                </td>
+                </td> : null}
                 <td className="px-6 py-4">
                   <div className="flex items-center justify-center gap-2">
                     <div onClick={(e) => e.stopPropagation()}>
@@ -133,10 +134,10 @@ export function HistoryTable({ history }: Props) {
                     {fmtDateTH(record.from_date)} - {fmtDateTH(record.to_date)}
                   </p>
                 </div>
-                <div className="text-right">
+                {canViewAmounts ? <div className="text-right">
                   <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">ยอดรวม</p>
                   <p className="font-mono text-xl font-black text-slate-900">{fmt(record.total_amount)}</p>
-                </div>
+                </div> : null}
               </div>
             </div>
           </button>
@@ -181,10 +182,10 @@ export function HistoryTable({ history }: Props) {
                     url={buildReprintUrl(selectedRecord)} 
                     title="พิมพ์ใบวางบิลนี้อีกครั้ง"
                    />
-                   <div className="bg-slate-50 px-6 py-3 text-right border border-slate-100">
+                   {canViewAmounts ? <div className="bg-slate-50 px-6 py-3 text-right border border-slate-100">
                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">ยอดรวมทั้งสิ้น</p>
                      <p className="font-mono text-2xl font-black text-[#4A148C]">{fmt(selectedRecord.total_amount)} <span className="text-sm">บาท</span></p>
-                   </div>
+                   </div> : null}
                 </div>
               </div>
 
@@ -203,7 +204,7 @@ export function HistoryTable({ history }: Props) {
                         <th className="px-4 py-2 text-[10px] font-black uppercase tracking-widest text-slate-500">ลำดับ</th>
                         <th className="px-4 py-2 text-[10px] font-black uppercase tracking-widest text-slate-500">เลขใบจัดส่ง</th>
                         <th className="px-4 py-2 text-[10px] font-black uppercase tracking-widest text-slate-500">วันที่</th>
-                        <th className="px-4 py-2 text-right text-[10px] font-black uppercase tracking-widest text-slate-500">จำนวนเงิน</th>
+                        {canViewAmounts ? <th className="px-4 py-2 text-right text-[10px] font-black uppercase tracking-widest text-slate-500">จำนวนเงิน</th> : null}
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
@@ -212,7 +213,7 @@ export function HistoryTable({ history }: Props) {
                           <td className="px-4 py-2 font-mono text-xs text-slate-400">{row.lineNumber}</td>
                           <td className="px-4 py-2 font-mono font-bold text-[#4A148C]">{row.deliveryNumber}</td>
                           <td className="px-4 py-2 text-xs font-bold text-slate-600">{fmtDateTH(row.deliveryDate)}</td>
-                          <td className="px-4 py-2 text-right font-mono font-black text-slate-900">{fmt(row.totalAmount)}</td>
+                          {canViewAmounts ? <td className="px-4 py-2 text-right font-mono font-black text-slate-900">{fmt(row.totalAmount)}</td> : null}
                         </tr>
                       ))}
                     </tbody>
@@ -226,7 +227,7 @@ export function HistoryTable({ history }: Props) {
                           <span className="font-mono text-sm font-bold text-[#4A148C]">{row.deliveryNumber}</span>
                           <span className="text-[10px] font-bold text-slate-400">{fmtDateTH(row.deliveryDate)}</span>
                         </div>
-                        <span className="font-mono font-black text-slate-900">{fmt(row.totalAmount)}</span>
+                        {canViewAmounts ? <span className="font-mono font-black text-slate-900">{fmt(row.totalAmount)}</span> : null}
                       </div>
                     ))}
                   </div>
