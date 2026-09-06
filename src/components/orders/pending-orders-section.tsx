@@ -17,6 +17,7 @@ import {
   createDeliveryPdfPreviewFromUrl,
   type DeliveryPdfPreview,
 } from "@/components/print/share-delivery-pdf";
+import type { PriceDisplayMode } from "@/components/print/delivery-note-layout";
 
 // Helpers
 
@@ -1044,7 +1045,7 @@ function AllStoresDeliveryModal({
   const [isPrintingSelected, setIsPrintingSelected] = useState(false);
   const [isSharingSelected, setIsSharingSelected] = useState(false);
   const [previewSelectedPdf, setPreviewSelectedPdf] = useState<DeliveryPdfPreview | null>(null);
-  const [showAmount, setShowAmount] = useState(true);
+  const [priceMode, setPriceMode] = useState<PriceDisplayMode>("all");
   const printFallbackTimerRef = useRef<number | null>(null);
   const normalizedQuery = query.trim().toLocaleLowerCase("th");
 
@@ -1202,7 +1203,7 @@ function AllStoresDeliveryModal({
     if (deliveryNoteIds.length === 0) return;
     
     setIsPrintingSelected(true);
-    const printUrl = `/delivery/print?note_ids=${encodeURIComponent(deliveryNoteIds.join(","))}&date=${date}${endDate ? `&endDate=${endDate}` : ""}&autoprint=1&show_amount=${showAmount ? "1" : "0"}`;
+    const printUrl = `/delivery/print?note_ids=${encodeURIComponent(deliveryNoteIds.join(","))}&date=${date}${endDate ? `&endDate=${endDate}` : ""}&autoprint=1&price_mode=${priceMode}&show_amount=${priceMode === "all" ? "1" : priceMode === "total_only" ? "0" : "none"}`;
 
     const iframe = document.createElement("iframe");
     iframe.style.cssText = "position:fixed;top:-9999px;left:-9999px;width:1px;height:1px;";
@@ -1244,7 +1245,8 @@ function AllStoresDeliveryModal({
     params.set("date", date);
     if (endDate) params.set("endDate", endDate);
     if (autoprint) params.set("autoprint", "1");
-    params.set("show_amount", showAmount ? "1" : "0");
+    params.set("price_mode", priceMode);
+    params.set("show_amount", priceMode === "all" ? "1" : priceMode === "total_only" ? "0" : "none");
     return `/delivery/print?${params.toString()}`;
   }
 
@@ -1530,16 +1532,45 @@ function AllStoresDeliveryModal({
 
         <div className="border-t border-[#EA80FC]/30 bg-white px-4 py-4 sm:px-6">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
-              <label className="inline-flex items-center gap-2 cursor-pointer text-sm font-black text-[#4A148C]">
-                <input
-                  type="checkbox"
-                  checked={showAmount}
-                  onChange={(e) => setShowAmount(e.target.checked)}
-                  className="h-4 w-4 rounded border-[#EA80FC]/30 text-[#4A148C] focus:ring-[#4A148C]"
-                />
-                <span>แสดงจำนวนเงิน</span>
-              </label>
+            <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-4">
+              <span className="text-[11px] font-black uppercase tracking-wider text-[#4A148C]/70 sm:hidden">
+                การแสดงราคา:
+              </span>
+              <div className="flex flex-wrap items-center gap-x-3.5 gap-y-2 sm:gap-x-4">
+                <label className="inline-flex cursor-pointer items-center gap-1.5 text-xs font-black text-[#4A148C] sm:text-sm">
+                  <input
+                    type="radio"
+                    name="printPriceMode"
+                    value="all"
+                    checked={priceMode === "all"}
+                    onChange={() => setPriceMode("all")}
+                    className="h-4 w-4 border-[#EA80FC]/50 text-[#4A148C] focus:ring-[#4A148C]"
+                  />
+                  <span>แสดงครบ</span>
+                </label>
+                <label className="inline-flex cursor-pointer items-center gap-1.5 text-xs font-black text-[#4A148C] sm:text-sm">
+                  <input
+                    type="radio"
+                    name="printPriceMode"
+                    value="total_only"
+                    checked={priceMode === "total_only"}
+                    onChange={() => setPriceMode("total_only")}
+                    className="h-4 w-4 border-[#EA80FC]/50 text-[#4A148C] focus:ring-[#4A148C]"
+                  />
+                  <span>เฉพาะยอดรวม</span>
+                </label>
+                <label className="inline-flex cursor-pointer items-center gap-1.5 text-xs font-black text-[#4A148C] sm:text-sm">
+                  <input
+                    type="radio"
+                    name="printPriceMode"
+                    value="none"
+                    checked={priceMode === "none"}
+                    onChange={() => setPriceMode("none")}
+                    className="h-4 w-4 border-[#EA80FC]/50 text-[#4A148C] focus:ring-[#4A148C]"
+                  />
+                  <span>ไม่แสดงราคา/ยอดเงิน</span>
+                </label>
+              </div>
             </div>
             <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-row">
               <button

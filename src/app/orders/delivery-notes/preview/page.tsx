@@ -24,6 +24,7 @@ type Props = {
     customer_ids?: string;
     note_ids?: string;
     show_amount?: string;
+    price_mode?: string;
   }>;
 };
 
@@ -47,7 +48,15 @@ export default async function DeliveryNotePreviewPage({ searchParams }: Props) {
     .split(",")
     .map((id) => id.trim())
     .filter(Boolean);
-  const showAmount = params.show_amount !== "0";
+  const priceModeParam = params.price_mode;
+  let priceMode: "all" | "total_only" | "none" = "all";
+  if (priceModeParam === "all" || priceModeParam === "total_only" || priceModeParam === "none") {
+    priceMode = priceModeParam;
+  } else if (params.show_amount === "0") {
+    priceMode = "total_only";
+  } else if (params.show_amount === "none") {
+    priceMode = "none";
+  }
 
   if (noteIds.length === 0 && (!date || customerIds.length === 0)) {
     return (
@@ -115,7 +124,7 @@ export default async function DeliveryNotePreviewPage({ searchParams }: Props) {
       </div>
 
       <div className="min-h-screen bg-slate-50 py-10 print:bg-white print:py-0">
-        <DeliveryNoteLayout dns={validPrintData} showIntermediateFooter logoDataUrl={logoDataUrl} showAmount={showAmount} />
+        <DeliveryNoteLayout dns={validPrintData} showIntermediateFooter logoDataUrl={logoDataUrl} priceMode={priceMode} />
       </div>
     </>
   );

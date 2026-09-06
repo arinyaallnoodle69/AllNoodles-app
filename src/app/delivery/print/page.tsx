@@ -20,6 +20,7 @@ type Props = {
     note_ids?: string;
     autoprint?: string;
     show_amount?: string;
+    price_mode?: string;
   }>;
 };
 
@@ -262,7 +263,15 @@ export default async function DeliveryBatchPrintPage({ searchParams }: Props) {
     .map((id) => id.trim())
     .filter(Boolean);
   const autoprint = params.autoprint === "1";
-  const showAmount = params.show_amount !== "0";
+  const priceModeParam = params.price_mode;
+  let priceMode: "all" | "total_only" | "none" = "all";
+  if (priceModeParam === "all" || priceModeParam === "total_only" || priceModeParam === "none") {
+    priceMode = priceModeParam;
+  } else if (params.show_amount === "0") {
+    priceMode = "total_only";
+  } else if (params.show_amount === "none") {
+    priceMode = "none";
+  }
 
   const dateLabel =
     date === endDate
@@ -338,7 +347,7 @@ export default async function DeliveryBatchPrintPage({ searchParams }: Props) {
           <p className="text-sm text-slate-400">{dateLabel}</p>
         </div>
       ) : (
-        <DeliveryNoteLayout dns={dns} logoDataUrl={logoDataUrl} showAmount={showAmount} />
+        <DeliveryNoteLayout dns={dns} logoDataUrl={logoDataUrl} priceMode={priceMode} />
       )}
     </>
   );

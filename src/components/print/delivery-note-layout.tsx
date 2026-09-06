@@ -15,12 +15,21 @@ type DeliveryNotePage = {
   totalPages: number;
 };
 
+export type PriceDisplayMode = "all" | "total_only" | "none";
+
 type Props = {
   dns: DeliveryNotePrintData[];
   showIntermediateFooter?: boolean;
   logoDataUrl?: string;
   showAmount?: boolean;
+  priceMode?: PriceDisplayMode;
 };
+
+function resolvePriceMode(priceMode?: PriceDisplayMode, showAmount?: boolean): PriceDisplayMode {
+  if (priceMode) return priceMode;
+  if (showAmount === false) return "total_only";
+  return "all";
+}
 
 function buildNotePages(dns: DeliveryNotePrintData[]) {
   return dns.flatMap<DeliveryNotePage>((dn) => {
@@ -155,14 +164,17 @@ function DeliveryNoteHeader({ notePage }: { notePage: DeliveryNotePage }) {
 function DeliveryItemsTable({
   items,
   dn,
-  showAmount = true,
+  priceMode = "all",
   isLastPage = true,
 }: {
   items: DeliveryNotePrintData["items"];
   dn: DeliveryNotePrintData;
-  showAmount?: boolean;
+  priceMode?: PriceDisplayMode;
   isLastPage?: boolean;
 }) {
+  const showUnitPrice = priceMode === "all";
+  const showTotalAmount = priceMode === "all" || priceMode === "total_only";
+
   const hasOutstanding = dn.previousOutstanding > 0 || dn.installmentPaid > 0;
 
   // Calculate grand total
@@ -170,16 +182,18 @@ function DeliveryItemsTable({
     ? dn.totalAmount + dn.installmentPaid
     : dn.totalAmount + dn.previousOutstanding;
 
-  // The amount column and totals are part of the standard delivery note.
-  // The modal option controls the additional unit-price column only.
-  const summaryRowsCount = (isLastPage && hasOutstanding)
+  // In 'none' mode, summary rows and grand total are omitted completely.
+  const summaryRowsCount = (isLastPage && hasOutstanding && showTotalAmount)
     ? (dn.isInstallmentPlan ? 4 : 2)
     : 0;
 
-  const grandTotalRowHeight = 1;
+  const grandTotalRowHeight = showTotalAmount ? 1 : 0;
 
   // Calculate empty rows needed to pad table height to match ITEMS_PER_NOTE_PAGE
   const emptyRowCount = Math.max(0, ITEMS_PER_NOTE_PAGE - items.length - summaryRowsCount - grandTotalRowHeight);
+
+  const summaryColSpan = showUnitPrice ? 5 : 4;
+  const grandTotalColSpan = showUnitPrice ? 3 : 2;
 
   return (
     <table className="dn-table">
@@ -189,8 +203,8 @@ function DeliveryItemsTable({
           <th className="dn-col-name">รายการ</th>
           <th className="dn-col-qty">จำนวน</th>
           <th className="dn-col-unit">หน่วย</th>
-          {showAmount && <th className="dn-col-price">ราคา</th>}
-          <th className="dn-col-total">จำนวนเงิน</th>
+          {showUnitPrice && <th className="dn-col-price">ราคา</th>}
+          {showTotalAmount && <th className="dn-col-total">จำนวนเงิน</th>}
         </tr>
       </thead>
       <tbody>
@@ -203,10 +217,12 @@ function DeliveryItemsTable({
             </td>
             <td className="dn-col-qty">{formatQty2Dec(item.quantityDelivered)}</td>
             <td className="dn-col-unit">{item.saleUnitLabel}</td>
-            {showAmount && <td className="dn-col-price">{item.unitPrice > 0 ? fmt(item.unitPrice) : ""}</td>}
-            <td className="dn-col-total">
-              {item.lineTotal > 0 ? fmt(item.lineTotal) : ""}
-            </td>
+            {showUnitPrice && <td className="dn-col-price">{item.unitPrice > 0 ? fmt(item.unitPrice) : ""}</td>}
+            {showTotalAmount && (
+              <td className="dn-col-total">
+                {item.lineTotal > 0 ? fmt(item.lineTotal) : ""}
+              </td>
+            )}
           </tr>
         ))}
 
@@ -217,30 +233,30 @@ function DeliveryItemsTable({
             <td className="dn-col-name">&nbsp;</td>
             <td className="dn-col-qty">&nbsp;</td>
             <td className="dn-col-unit">&nbsp;</td>
-            {showAmount && <td className="dn-col-price">&nbsp;</td>}
-            <td className="dn-col-total">&nbsp;</td>
+            {showUnitPrice && <td className="dn-col-price">&nbsp;</td>}
+            {showTotalAmount && <td className="dn-col-total">&nbsp;</td>}
           </tr>
         ))}
 
-        {/* Outstanding balances (only on last page) */}
-        {isLastPage && hasOutstanding && (
+        {/* Outstanding balances (only on last page and when showTotalAmount is true) */}
+        {isLastPage && hasOutstanding && showTotalAmount && (
           <>
             <tr className="dn-row-summary dn-row-summary-first">
-              <td colSpan={showAmount ? 5 : 4} className="dn-col-summary-label">ยอดสินค้าวันนี้</td>
+              <td colSpan={summaryColSpan} className="dn-col-summary-label">ยอดสินค้าวันนี้</td>
               <td className="dn-col-total dn-mono" style={{ textAlign: "right" }}>{fmt(dn.totalAmount)}</td>
             </tr>
             <tr className="dn-row-summary">
-              <td colSpan={showAmount ? 5 : 4} className="dn-col-summary-label">ยอดค้างชำระเดิม</td>
+              <td colSpan={summaryColSpan} className="dn-col-summary-label">ยอดค้างชำระเดิม</td>
               <td className="dn-col-total dn-mono" style={{ textAlign: "right" }}>{fmt(dn.previousOutstanding)}</td>
             </tr>
             {dn.isInstallmentPlan && (
               <>
                 <tr className="dn-row-summary">
-                  <td colSpan={showAmount ? 5 : 4} className="dn-col-summary-label">หักผ่อนชำระวันนี้</td>
+                  <td colSpan={summaryColSpan} className="dn-col-summary-label">หักผ่อนชำระวันนี้</td>
                   <td className="dn-col-total dn-mono" style={{ textAlign: "right" }}>-{fmt(dn.installmentPaid)}</td>
                 </tr>
                 <tr className="dn-row-summary">
-                  <td colSpan={showAmount ? 5 : 4} className="dn-col-summary-label">คงเหลือยอดค้างเก่า</td>
+                  <td colSpan={summaryColSpan} className="dn-col-summary-label">คงเหลือยอดค้างเก่า</td>
                   <td className="dn-col-total dn-mono" style={{ textAlign: "right" }}>{fmt(dn.remainingOutstanding)}</td>
                 </tr>
               </>
@@ -248,14 +264,16 @@ function DeliveryItemsTable({
           </>
         )}
 
-        {/* Grand total summary row */}
-        <tr className="dn-summary-row">
-          <td colSpan={2} className="dn-summary-baht">
-            {grandTotal > 0 ? `(${bahtText(grandTotal)})` : ""}
-          </td>
-          <td colSpan={showAmount ? 3 : 2} className="dn-summary-label">ยอดเงินสุทธิ</td>
-          <td className="dn-summary-value">{fmt(grandTotal)}</td>
-        </tr>
+        {/* Grand total summary row (only when showTotalAmount is true) */}
+        {showTotalAmount && (
+          <tr className="dn-summary-row">
+            <td colSpan={2} className="dn-summary-baht">
+              {grandTotal > 0 ? `(${bahtText(grandTotal)})` : ""}
+            </td>
+            <td colSpan={grandTotalColSpan} className="dn-summary-label">ยอดเงินสุทธิ</td>
+            <td className="dn-summary-value">{fmt(grandTotal)}</td>
+          </tr>
+        )}
       </tbody>
     </table>
   );
@@ -307,7 +325,13 @@ function DeliveryNoteFooter({ dn }: { dn: DeliveryNotePrintData }) {
   );
 }
 
-function DeliveryNotePageView({ notePage, showAmount = true }: { notePage: DeliveryNotePage; showAmount?: boolean }) {
+function DeliveryNotePageView({
+  notePage,
+  priceMode = "all",
+}: {
+  notePage: DeliveryNotePage;
+  priceMode?: PriceDisplayMode;
+}) {
   const { dn, items, pageIndex, totalPages } = notePage;
 
   return (
@@ -316,7 +340,7 @@ function DeliveryNotePageView({ notePage, showAmount = true }: { notePage: Deliv
       <DeliveryItemsTable
         items={items}
         dn={dn}
-        showAmount={showAmount}
+        priceMode={priceMode}
         isLastPage={pageIndex === totalPages - 1}
       />
       <div className="dn-flex-spacer" />
@@ -325,7 +349,8 @@ function DeliveryNotePageView({ notePage, showAmount = true }: { notePage: Deliv
   );
 }
 
-export function DeliveryNoteLayout({ dns, showAmount = true }: Props) {
+export function DeliveryNoteLayout({ dns, showAmount, priceMode: propPriceMode }: Props) {
+  const resolvedPriceMode = resolvePriceMode(propPriceMode, showAmount);
   const notePages = buildNotePages(dns);
 
   return (
@@ -716,7 +741,7 @@ export function DeliveryNoteLayout({ dns, showAmount = true }: Props) {
 
       {notePages.map((notePage) => (
         <div key={notePage.key} className="note-page" data-delivery-note-page="true">
-          <DeliveryNotePageView notePage={notePage} showAmount={showAmount} />
+          <DeliveryNotePageView notePage={notePage} priceMode={resolvedPriceMode} />
         </div>
       ))}
     </>

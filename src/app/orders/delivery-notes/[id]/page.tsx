@@ -13,14 +13,22 @@ type Props = {
   searchParams: Promise<{ 
     autoprint?: string;
     show_amount?: string;
+    price_mode?: string;
   }>;
 };
 
 export default async function DeliveryNotePrintPage({ params, searchParams }: Props) {
   const { id } = await params;
-  const { autoprint: autoprintParam, show_amount: showAmountParam } = await searchParams;
+  const { autoprint: autoprintParam, show_amount: showAmountParam, price_mode: priceModeParam } = await searchParams;
   const autoprint = autoprintParam === "1";
-  const showAmount = showAmountParam !== "0";
+  let priceMode: "all" | "total_only" | "none" = "all";
+  if (priceModeParam === "all" || priceModeParam === "total_only" || priceModeParam === "none") {
+    priceMode = priceModeParam;
+  } else if (showAmountParam === "0") {
+    priceMode = "total_only";
+  } else if (showAmountParam === "none") {
+    priceMode = "none";
+  }
   const session = await requireAppRole("admin");
   const supabase = getSupabaseAdmin();
   const { data: deliveryNoteRow } = await supabase
@@ -56,7 +64,7 @@ export default async function DeliveryNotePrintPage({ params, searchParams }: Pr
       </div>
 
       <EditQuantitiesForm deliveryNoteId={id} items={dn.items} />
-      <DeliveryNoteLayout dns={[dn]} showAmount={showAmount} />
+      <DeliveryNoteLayout dns={[dn]} priceMode={priceMode} />
     </>
   );
 }
