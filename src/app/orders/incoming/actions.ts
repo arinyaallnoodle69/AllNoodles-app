@@ -137,7 +137,7 @@ function mergeOrderNotes(existingNotes: string | null, nextNotes: string | null)
 export async function fetchIncomingOrderDetailAction(
   orderId: string,
 ): Promise<{ detail: OrderDetailData | null; error?: string }> {
-  const session = await requireAppRole("admin");
+  const session = await requireAnyRole(["admin", "member"]);
   const id = orderId.trim();
 
   if (!id) return { detail: null, error: "ไม่พบรหัสออเดอร์" };
@@ -166,7 +166,7 @@ export async function fetchIncomingOrderModalDataAction(
   error?: string;
   products: OrderProductOption[];
 }> {
-  const session = await requireAppRole("admin");
+  const session = await requireAnyRole(["admin", "member"]);
   const id = orderId.trim();
 
   if (!id) {
@@ -287,7 +287,7 @@ async function applyProductWarehouseStockDelta(
 
 
 export async function cancelOrderAction(formData: FormData): Promise<ActionResult> {
-  const session = await requireAppRole("admin");
+  const session = await requireAnyRole(["admin", "member"]);
   const admin = getSupabaseAdmin() as unknown as ActionsAdmin;
   const orderId = String(formData.get("orderId") ?? "").trim();
 
@@ -345,7 +345,7 @@ export async function cancelOrderAction(formData: FormData): Promise<ActionResul
 
 
 export async function updateOrderItemQtyAction(formData: FormData): Promise<ActionResult> {
-  const session = await requireAppRole("admin");
+  const session = await requireAnyRole(["admin", "member"]);
   const admin = getSupabaseAdmin() as unknown as ActionsAdmin;
   const itemId = String(formData.get("itemId") ?? "").trim();
   const newQty = Number(formData.get("quantity"));
@@ -428,7 +428,7 @@ export async function updateOrderItemQtyAction(formData: FormData): Promise<Acti
 
 
 export async function removeOrderItemAction(formData: FormData): Promise<ActionResult> {
-  const session = await requireAppRole("admin");
+  const session = await requireAnyRole(["admin", "member"]);
   const admin = getSupabaseAdmin() as unknown as ActionsAdmin;
   const itemId = String(formData.get("itemId") ?? "").trim();
 
@@ -512,7 +512,7 @@ export async function removeOrderItemAction(formData: FormData): Promise<ActionR
 export async function updateCustomerVehicleFromIncomingOrderAction(
   formData: FormData,
 ): Promise<ActionResult> {
-  const session = await requireAppRole("admin");
+  const session = await requireAnyRole(["admin", "member"]);
   const admin = getSupabaseAdmin();
   const customerId = String(formData.get("customerId") ?? "").trim();
   const vehicleId = String(formData.get("vehicleId") ?? "").trim();
@@ -567,7 +567,7 @@ export async function updateCustomerVehicleFromIncomingOrderAction(
 export async function moveIncomingOrdersVehicleAction(
   input: VehicleTransferInput,
 ): Promise<{ success: true; movedOrderCount: number } | { error: string }> {
-  const session = await requireAppRole("admin");
+  const session = await requireAnyRole(["admin", "member"]);
 
   if (!isVehicleTransferInput(input)) {
     return { error: "ข้อมูลวันที่หรือรถที่เลือกไม่ถูกต้อง" };
@@ -622,7 +622,7 @@ export async function updateOrderItemsBatchAction(input: {
     unitPrice: number;
   }[];
 }): Promise<ActionResult> {
-  const session = await requireAppRole("admin");
+  const session = await requireAnyRole(["admin", "member"]);
   const admin = getSupabaseAdmin() as unknown as ActionsAdmin;
   const { orderId, notes, removedIds, updates, additions } = input;
 
@@ -887,7 +887,7 @@ export async function updateOrderItemsBatchAction(input: {
 }
 
 export async function addOrderItemAction(formData: FormData): Promise<ActionResult> {
-  const session = await requireAppRole("admin");
+  const session = await requireAnyRole(["admin", "member"]);
   const admin = getSupabaseAdmin() as unknown as ActionsAdmin;
 
   const orderId = String(formData.get("orderId") ?? "").trim();
@@ -1530,7 +1530,7 @@ export async function createManualOrderAction(formData: FormData): Promise<Actio
   });
 }
 export async function linkPendingLineOrderAction(formData: FormData): Promise<ActionResult> {
-  const session = await requireAppRole("admin");
+  const session = await requireAnyRole(["admin", "member"]);
   const pendingOrderId = String(formData.get("pendingOrderId") ?? "").trim();
   const customerId = String(formData.get("customerId") ?? "").trim();
   const warehouseId = String(formData.get("warehouseId") ?? "").trim();
@@ -1595,7 +1595,7 @@ export async function linkPendingLineOrderAction(formData: FormData): Promise<Ac
 }
 
 export async function updateIncomingOrderDateAction(formData: FormData): Promise<ActionResult> {
-  const session = await requireAppRole("admin");
+  const session = await requireAnyRole(["admin", "member"]);
   const admin = getSupabaseAdmin() as unknown as ActionsAdmin;
   const orderId = String(formData.get("orderId") ?? "").trim();
   const nextOrderDate = String(formData.get("orderDate") ?? "").trim();
@@ -1893,7 +1893,7 @@ export async function syncOrderDeliveryNoteAction(
     lossInBaseUnitByItemId?: Map<string, number>;
   },
 ): Promise<ActionResult> {
-  const session = await requireAppRole("admin");
+  const session = await requireAnyRole(["admin", "member"]);
   const admin = getSupabaseAdmin() as unknown as ActionsAdmin;
   const { data: orderBeforeSync } = await admin
     .from("orders")
@@ -1975,7 +1975,7 @@ export async function syncOrderDeliveryNoteAction(
 }
 
 export async function deleteOrderAction(formData: FormData): Promise<ActionResult> {
-  const session = await requireAppRole("admin");
+  const session = await requireAnyRole(["admin", "member"]);
   const admin = getSupabaseAdmin() as unknown as ActionsAdmin;
   const orderId = String(formData.get("orderId") ?? "").trim();
 
@@ -2183,7 +2183,7 @@ export async function deleteOrderAction(formData: FormData): Promise<ActionResul
 }
 
 export async function deleteOrderCascadeActionV2(formData: FormData): Promise<ActionResult> {
-  const session = await requireAppRole("admin");
+  const session = await requireAnyRole(["admin", "member"]);
   const admin = getSupabaseAdmin() as unknown as ActionsAdmin;
   const orderId = String(formData.get("orderId") ?? "").trim();
 
@@ -2393,7 +2393,7 @@ export async function deleteOrderCascadeActionV2(formData: FormData): Promise<Ac
 }
 
 export async function deleteOrderCascadeActionV3(formData: FormData): Promise<ActionResult> {
-  const session = await requireAppRole("admin");
+  const session = await requireAnyRole(["admin", "member"]);
   const admin = getSupabaseAdmin() as unknown as ActionsAdmin;
   const orderId = String(formData.get("orderId") ?? "").trim();
 

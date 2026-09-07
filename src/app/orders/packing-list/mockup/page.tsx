@@ -64,7 +64,7 @@ function getMinCategoryRank(categoryIds: string[], rankById: Map<string, number>
 }
 
 export default async function PackingListMockupPage({ searchParams }: Props) {
-  const session = await requireAnyRole(["admin", "warehouse"]);
+  const session = await requireAnyRole(["admin", "member", "warehouse"]);
   const params = await searchParams;
   const layout: PackingListLayoutMode = params.layout === "transposed" ? "transposed" : "standard";
   const data = await getSettingsDataFresh(session.organizationId);

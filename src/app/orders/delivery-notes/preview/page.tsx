@@ -29,7 +29,7 @@ type Props = {
 };
 
 export default async function DeliveryNotePreviewPage({ searchParams }: Props) {
-  const session = await requireAnyRole(["admin", "warehouse"]);
+  const session = await requireAnyRole(["admin", "member", "warehouse"]);
   
   let logoDataUrl = "";
   try {

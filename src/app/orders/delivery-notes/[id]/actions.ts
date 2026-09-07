@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireAppRole } from "@/lib/auth/authorization";
+import { requireAnyRole } from "@/lib/auth/authorization";
 import { adjustDeliveryNoteItemWithFallback } from "@/lib/delivery/adjust-delivery-note-item";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
@@ -10,7 +10,7 @@ export async function adjustDeliveryNoteItemAction(
   itemId: string,
   newQty: number,
 ): Promise<{ error?: string }> {
-  const session = await requireAppRole("admin");
+  const session = await requireAnyRole(["admin", "member"]);
   const supabase = getSupabaseAdmin();
 
   const rpcClient = supabase as unknown as {

@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidateTag, updateTag } from "next/cache";
-import { requireAppRole } from "@/lib/auth/authorization";
+import { requireAnyRole } from "@/lib/auth/authorization";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { getOrderItemsForDelivery, getStoreOrdersForDelivery } from "@/lib/delivery/admin";
 import { getOrderRequiredWarehouse } from "@/lib/warehouses";
@@ -232,7 +232,7 @@ function normalizeReviewGroups(value: unknown): BatchDeliveryReviewGroup[] | nul
 export async function getDeliveryFormDataAction(
   orderId: string,
 ): Promise<DeliveryFormData | null> {
-  const session = await requireAppRole("admin");
+  const session = await requireAnyRole(["admin", "member"]);
   return getOrderItemsForDelivery(session.organizationId, orderId);
 }
 
@@ -240,7 +240,7 @@ export async function getStoreDeliveryDataAction(
   customerId: string,
   orderDate: string,
 ): Promise<DeliveryFormData[]> {
-  const session = await requireAppRole("admin");
+  const session = await requireAnyRole(["admin", "member"]);
   return getStoreOrdersForDelivery(session.organizationId, customerId, orderDate);
 }
 
@@ -248,7 +248,7 @@ export async function getBatchStoreDeliveryDataAction(
   customerIds: string[],
   orderDate: string,
 ): Promise<Record<string, DeliveryFormData[]>> {
-  const session = await requireAppRole("admin");
+  const session = await requireAnyRole(["admin", "member"]);
   const uniqueCustomerIds = Array.from(
     new Set(customerIds.map((id) => id.trim()).filter(Boolean)),
   );
@@ -276,7 +276,7 @@ export async function getBatchStoreDeliveryDataAction(
 export async function getBatchOrderDeliveryDataAction(
   stores: { customerId: string; orderIds: string[] }[],
 ): Promise<Record<string, DeliveryFormData[]>> {
-  const session = await requireAppRole("admin");
+  const session = await requireAnyRole(["admin", "member"]);
   const normalizedStores = stores
     .map((store) => ({
       customerId: store.customerId.trim(),
@@ -311,7 +311,7 @@ export async function getBatchDeliveryReviewDataAction(
   orderDate: string,
   includeOrderItems = false,
 ): Promise<BatchDeliveryReviewGroup[]> {
-  const session = await requireAppRole("admin");
+  const session = await requireAnyRole(["admin", "member"]);
   const admin = getSupabaseAdmin();
   const normalizedStores = stores
     .map((store) => ({
@@ -573,7 +573,7 @@ export async function createDeliveryNoteAction(
   _prev: CreateDeliveryState | null,
   formData: FormData,
 ): Promise<CreateDeliveryState> {
-  const session = await requireAppRole("admin");
+  const session = await requireAnyRole(["admin", "member"]);
 
   const orderIdsJson = String(formData.get("orderIds") ?? "[]");
   const customerId = String(formData.get("customerId") ?? "").trim();
@@ -666,7 +666,7 @@ export async function createBatchDeliveryNotesAction(
   groups: BatchCreateDeliveryNoteInput[],
   deliveryDate: string,
 ): Promise<BatchCreateDeliveryNoteResult[]> {
-  const session = await requireAppRole("admin");
+  const session = await requireAnyRole(["admin", "member"]);
   const admin = getSupabaseAdmin() as unknown as RpcAdmin;
   const normalizedDate = normalizeDeliveryDate(deliveryDate);
   const results: BatchCreateDeliveryNoteResult[] = [];

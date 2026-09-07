@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { requireAppRole } from "@/lib/auth/authorization";
+import { requireAnyRole } from "@/lib/auth/authorization";
 import { getDeliveryNotePrintData } from "@/lib/delivery/print";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { DeliveryNoteLayout } from "@/components/print/delivery-note-layout";
@@ -29,7 +29,7 @@ export default async function DeliveryNotePrintPage({ params, searchParams }: Pr
   } else if (showAmountParam === "none") {
     priceMode = "none";
   }
-  const session = await requireAppRole("admin");
+  const session = await requireAnyRole(["admin", "member", "warehouse"]);
   const supabase = getSupabaseAdmin();
   const { data: deliveryNoteRow } = await supabase
     .from("delivery_notes")

@@ -1,4 +1,4 @@
-import { requireAppRole } from "@/lib/auth/authorization";
+import { requireAnyRole } from "@/lib/auth/authorization";
 import { type DeliveryNotePrintData, sortDeliveryItems } from "@/lib/delivery/print";
 import { sortDeliveryPrintRowsByCustomerOrder } from "@/lib/delivery/print-ordering";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
@@ -228,7 +228,7 @@ function buildPrintData(rows: RawDeliveryPrintRow[]): DeliveryNotePrintData[] {
 }
 
 export default async function DeliveryBatchPrintPage({ searchParams }: Props) {
-  const session = await requireAppRole("admin");
+  const session = await requireAnyRole(["admin", "member", "warehouse"]);
   const supabase = getSupabaseAdmin();
   
   // Load the current logo_url from organization metadata

@@ -173,7 +173,10 @@ function canAccessNavHref(role: AppRole | null, href: string) {
     return (
       href === "/orders/incoming" ||
       href === "/billing" ||
-      href === "/stock"
+      href === "/stock" ||
+      href === "/orders/packing-list" ||
+      href === "/orders/factory-order-sheet" ||
+      href === "/orders/vehicle-product-summary"
     );
   }
   if (role === "warehouse") {

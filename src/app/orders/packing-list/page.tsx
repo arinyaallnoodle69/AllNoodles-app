@@ -175,7 +175,7 @@ export default async function PackingListWrapper({ searchParams }: Props) {
 }
 
 async function PackingListPage({ searchParams }: Props) {
-  const session = await requireAnyRole(["admin", "warehouse"]);
+  const session = await requireAnyRole(["admin", "member", "warehouse"]);
   const params = await searchParams;
   const generatedAt = new Date();
   const autoprint = params.autoprint === "1";

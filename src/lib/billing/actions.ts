@@ -388,9 +388,9 @@ export async function confirmAndSaveBillingBatchAction(params: {
   customerIds: string[];
   billingDate: string;
 }) {
-  const { requireAppRole } = await import("@/lib/auth/authorization");
+  const { requireAnyRole } = await import("@/lib/auth/authorization");
   const { getBatchBillingData } = await import("@/lib/billing/billing-statement");
-  const session = await requireAppRole("admin");
+  const session = await requireAnyRole(["admin", "member"]);
 
   const dataList = await getBatchBillingData(
     session.organizationId,
@@ -427,9 +427,9 @@ export async function getBillingHistoryAction(options: {
   query?: string;
   customerIds?: string[];
 }) {
-  const { requireAppRole } = await import("@/lib/auth/authorization");
+  const { requireAnyRole } = await import("@/lib/auth/authorization");
   const { getBillingHistory } = await import("@/lib/billing/billing-statement");
-  const session = await requireAppRole("admin");
+  const session = await requireAnyRole(["admin", "member"]);
 
   try {
     const history = await getBillingHistory(session.organizationId, options);

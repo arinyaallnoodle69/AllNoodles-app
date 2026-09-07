@@ -221,9 +221,7 @@ export default async function IncomingOrdersPage({ searchParams }: IncomingOrder
   const productImageById = ordersBundle.productImageById;
 
   const activeOrders = orders.filter((order) => order.status !== "cancelled");
-  const vehicleTransferDates = session.role === "admin"
-    ? buildVehicleTransferDates(activeOrders, vehicles, orderDate, endDate)
-    : [];
+  const vehicleTransferDates = buildVehicleTransferDates(activeOrders, vehicles, orderDate, endDate);
 
   let baseFilteredOrders =
     selectedCustomerIds.length > 0

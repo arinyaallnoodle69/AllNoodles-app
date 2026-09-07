@@ -32,7 +32,7 @@ export default async function VehicleProductSummaryWrapper({ searchParams }: Pro
 }
 
 async function VehicleProductSummaryPage({ searchParams }: Props) {
-  const session = await requireAnyRole(["admin", "warehouse"]);
+  const session = await requireAnyRole(["admin", "member", "warehouse"]);
   const params = await searchParams;
   const date = params.date ?? new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Bangkok" });
   const endDate = params.endDate ?? date;
