@@ -26,6 +26,7 @@ type VehicleSalesSummaryProps = {
   totalAmount: number;
   totalOrderCount: number;
   totalWeightGrams: number;
+  showCombinedSummary?: boolean;
 };
 
 function formatAmount(value: number) {
@@ -91,6 +92,7 @@ export function VehicleSalesSummary({
   totalAmount,
   totalOrderCount,
   totalWeightGrams,
+  showCombinedSummary = true,
 }: VehicleSalesSummaryProps) {
   const [modalOpen, setModalOpen] = useState(false);
   const [activeVehicleIdForModal, setActiveVehicleIdForModal] = useState<string>("__all__");
@@ -133,7 +135,7 @@ export function VehicleSalesSummary({
         {display !== "mobile" ? (
           <div className="hidden h-[116px] overflow-hidden rounded-xl border border-[#4A148C]/40 bg-white shadow-[0_4px_14px_rgba(74,20,140,0.06)] lg:flex">
             {/* All Vehicles Card */}
-            <button
+            {showCombinedSummary ? <button
               type="button"
               onClick={() => handleOpenModal("__all__")}
               className={`group flex w-[290px] shrink-0 items-center gap-3.5 border-r border-slate-200 px-5 py-3 text-left transition-colors hover:bg-[#FFF7FC] ${
@@ -161,7 +163,7 @@ export function VehicleSalesSummary({
                   {totalOrderCount.toLocaleString("th-TH")} ออเดอร์
                 </span>
               </span>
-            </button>
+            </button> : null}
 
             {/* Individual Vehicle Cards */}
             <div className="flex min-w-0 flex-1 overflow-x-auto [scrollbar-width:thin]">
@@ -196,7 +198,7 @@ export function VehicleSalesSummary({
               })}
             </div>
 
-            <button
+            {showCombinedSummary ? <button
               type="button"
               onClick={() => handleOpenModal("__all__")}
               className="flex w-[135px] shrink-0 items-center justify-center gap-1 whitespace-nowrap px-3 text-sm font-black text-[#EC4899] hover:bg-[#FFF7FC] transition-colors"
@@ -204,7 +206,7 @@ export function VehicleSalesSummary({
               <FileText className="h-4 w-4" strokeWidth={2.5} />
               รายงาน A4
               <ChevronRight className="h-4 w-4" strokeWidth={2.5} />
-            </button>
+            </button> : null}
           </div>
         ) : null}
 
@@ -227,7 +229,7 @@ export function VehicleSalesSummary({
                   {totalOrderCount.toLocaleString("th-TH")} ออเดอร์
                 </span>
               </span>
-              <button
+              {showCombinedSummary ? <button
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation();
@@ -237,7 +239,7 @@ export function VehicleSalesSummary({
               >
                 <FileText className="h-3 w-3" />
                 รายงาน A4
-              </button>
+              </button> : null}
               <span className="inline-flex shrink-0 items-center gap-0.5 whitespace-nowrap text-[10px] font-black text-[#EC4899] ml-1">
                 <ChevronDown
                   className="h-4 w-4 transition-transform duration-200 group-open:rotate-180"
@@ -284,6 +286,7 @@ export function VehicleSalesSummary({
           initialVehicleId={activeVehicleIdForModal}
           allVehiclesData={allVehiclesData}
           vehicleDataList={vehicleDataList}
+          showAllVehicles={showCombinedSummary}
         />
       ) : null}
     </>

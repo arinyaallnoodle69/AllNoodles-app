@@ -3,6 +3,28 @@
   margin: 0 !important;
 }
 
+.responsiveTableViewport {
+  width: 100%;
+  min-width: 0;
+  overflow: visible;
+  container-type: inline-size;
+}
+
+.responsiveTable th,
+.responsiveTable td {
+  min-width: 0;
+  padding-left: clamp(1px, 0.8cqw, 8px) !important;
+  padding-right: clamp(1px, 0.8cqw, 8px) !important;
+  font-size: min(14px, 2.7cqw) !important;
+  line-height: 1.25 !important;
+  letter-spacing: -0.01em !important;
+  white-space: nowrap !important;
+}
+
+.responsiveTable th {
+  font-size: min(13px, 2.45cqw) !important;
+}
+
 .printArea {
   display: flex !important;
   flex-direction: column !important;

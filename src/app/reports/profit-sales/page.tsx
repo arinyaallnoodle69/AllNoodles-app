@@ -321,15 +321,15 @@ async function ProfitSalesContent({ searchParams }: PageProps) {
                   </p>
                 </div>
 
-                <div className="overflow-hidden flex-1">
-                  <table className="w-full table-fixed border-collapse">
+                <div className={`${styles.responsiveTableViewport} flex-1`}>
+                  <table className={`${styles.responsiveTable} w-full table-fixed border-collapse`}>
                     <colgroup>
                       <col style={{ width: "6%" }} />
+                      <col style={{ width: "19%" }} />
+                      <col style={{ width: "20%" }} />
+                      <col style={{ width: "18%" }} />
                       <col style={{ width: "22%" }} />
-                      <col style={{ width: "20%" }} />
-                      <col style={{ width: "20%" }} />
-                      <col style={{ width: "20%" }} />
-                      <col style={{ width: "12%" }} />
+                      <col style={{ width: "15%" }} />
                     </colgroup>
                     <thead>
                       <tr className="bg-[#4A148C]">

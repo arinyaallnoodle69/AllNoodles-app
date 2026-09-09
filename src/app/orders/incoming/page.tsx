@@ -69,6 +69,8 @@ const MobilePrintActions = dynamic(() =>
 
 export const metadata = { title: "รายการออเดอร์" };
 
+const MEMBER_REPORT_VEHICLES = new Set(["รถสุราษฎร์2 (ธง)", "รถระนอง2 (ธง)"]);
+
 type IncomingOrdersPageProps = {
   searchParams: Promise<{
     create?: string;
@@ -283,15 +285,17 @@ export default async function IncomingOrdersPage({ searchParams }: IncomingOrder
     vCust.orderCount += 1;
     current.customerMap.set(order.customerId, vCust);
 
-    const allCust = allCustomerSalesMap.get(order.customerId) ?? {
-      customerCode: order.customerCode || "-",
-      customerName: order.customerName || "-",
-      totalAmount: 0,
-      orderCount: 0,
-    };
-    allCust.totalAmount += orderTotal;
-    allCust.orderCount += 1;
-    allCustomerSalesMap.set(order.customerId, allCust);
+    if (session.role === "admin" || MEMBER_REPORT_VEHICLES.has(current.name.trim())) {
+      const allCust = allCustomerSalesMap.get(order.customerId) ?? {
+        customerCode: order.customerCode || "-",
+        customerName: order.customerName || "-",
+        totalAmount: 0,
+        orderCount: 0,
+      };
+      allCust.totalAmount += orderTotal;
+      allCust.orderCount += 1;
+      allCustomerSalesMap.set(order.customerId, allCust);
+    }
 
     for (const item of itemsByOrderId.get(order.id) ?? []) {
       const quantityInBaseUnit = Number(item.quantity_in_base_unit ?? item.quantity ?? 0);
@@ -356,9 +360,12 @@ export default async function IncomingOrdersPage({ searchParams }: IncomingOrder
       if (right.id === "__none__") return -1;
       return (vehicleSortOrderMap.get(left.id) ?? Infinity) - (vehicleSortOrderMap.get(right.id) ?? Infinity);
     });
-  const vehicleSalesTotalAmount = vehicleSalesItems.reduce((sum, item) => sum + item.salesAmount, 0);
-  const vehicleSalesTotalOrderCount = vehicleSalesItems.reduce((sum, item) => sum + item.orderCount, 0);
-  const vehicleSalesTotalWeightGrams = vehicleSalesItems.reduce((sum, item) => sum + item.weightGrams, 0);
+  const reportVehicleSalesItems = session.role === "member"
+    ? vehicleSalesItems.filter((item) => MEMBER_REPORT_VEHICLES.has(item.name.trim()))
+    : vehicleSalesItems;
+  const vehicleSalesTotalAmount = reportVehicleSalesItems.reduce((sum, item) => sum + item.salesAmount, 0);
+  const vehicleSalesTotalOrderCount = reportVehicleSalesItems.reduce((sum, item) => sum + item.orderCount, 0);
+  const vehicleSalesTotalWeightGrams = reportVehicleSalesItems.reduce((sum, item) => sum + item.weightGrams, 0);
   const vehicleSalesDateLabel = orderDate === endDate
     ? formatDisplayDate(orderDate)
     : `${formatDisplayDate(orderDate)}–${formatDisplayDate(endDate)}`;
@@ -813,17 +820,18 @@ export default async function IncomingOrdersPage({ searchParams }: IncomingOrder
               />
             </div>
 
-            {session.role === "admin" ? (
+            {reportVehicleSalesItems.length ? (
               <VehicleSalesSummary
                 allVehiclesHref={getVehicleFilterHref()}
                 dateLabel={vehicleSalesDateLabel}
                 display="mobile"
-                items={vehicleSalesItems}
+                items={reportVehicleSalesItems}
                 allStores={allCustomerStores}
                 selectedVehicleId={selectedVehicleId}
                 totalAmount={vehicleSalesTotalAmount}
                 totalOrderCount={vehicleSalesTotalOrderCount}
                 totalWeightGrams={vehicleSalesTotalWeightGrams}
+                showCombinedSummary={session.role === "admin"}
               />
             ) : null}
 
@@ -872,17 +880,18 @@ export default async function IncomingOrdersPage({ searchParams }: IncomingOrder
                     initialExpandedOrderId={expandedOrderId}
                     orderDate={orderDate}
                     orders={baseFilteredOrders}
-                    salesSummary={session.role === "admin" ? (
+                    salesSummary={reportVehicleSalesItems.length ? (
                       <VehicleSalesSummary
                         allVehiclesHref={getVehicleFilterHref()}
                         dateLabel={vehicleSalesDateLabel}
                         display="desktop"
-                        items={vehicleSalesItems}
+                        items={reportVehicleSalesItems}
                         allStores={allCustomerStores}
                         selectedVehicleId={selectedVehicleId}
                         totalAmount={vehicleSalesTotalAmount}
                         totalOrderCount={vehicleSalesTotalOrderCount}
                         totalWeightGrams={vehicleSalesTotalWeightGrams}
+                        showCombinedSummary={session.role === "admin"}
                       />
                     ) : null}
                     searchTerm={searchTerm}

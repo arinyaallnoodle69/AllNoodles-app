@@ -19,308 +19,98 @@ export type CustomerSalesSummaryData = {
   totalOrders?: number;
 };
 
-const A4_WIDTH_MM = 210;
-const A4_HEIGHT_MM = 297;
-const ROWS_PER_PAGE = 26;
-
-function formatCurrency(num: number): string {
-  return num.toLocaleString("th-TH", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
-}
-
-function chunkArray<T>(items: T[], size: number): T[][] {
-  const chunks: T[][] = [];
-  for (let i = 0; i < items.length; i += size) {
-    chunks.push(items.slice(i, i + size));
-  }
-  return chunks;
-}
+const money = (value: number) => value.toLocaleString("th-TH", {
+  minimumFractionDigits: 2, maximumFractionDigits: 2,
+});
 
 export function CustomerSalesSummaryLayout({
-  data,
-  pageScale = 1,
+  data, pageScale = 1,
 }: {
   data: CustomerSalesSummaryData;
   pageScale?: number;
 }) {
-  const storePages =
-    data.stores.length === 0
-      ? [[]]
-      : chunkArray(data.stores, ROWS_PER_PAGE);
-
-  const totalPages = storePages.length;
-
   return (
-    <div className="customer-sales-print-container w-full flex flex-col items-center">
+    <div className="customer-sales-print-container">
       <style>{`
-        @media print {
-          .no-print {
-            display: none !important;
-          }
-          @page {
-            size: A4 portrait;
-            margin: 0;
-          }
-          body {
-            background: white !important;
-            margin: 0 !important;
-            padding: 0 !important;
-          }
-          .customer-sales-page-wrapper {
-            width: 210mm !important;
-            height: 297mm !important;
-            overflow: visible !important;
-            box-shadow: none !important;
-            background: transparent !important;
-            margin: 0 !important;
-            padding: 0 !important;
-          }
-          .customer-sales-page-scaler {
-            transform: none !important;
-            width: 210mm !important;
-          }
-          .customer-sales-sheet {
-            page-break-after: always;
-            break-after: page;
-            box-shadow: none !important;
-            margin: 0 !important;
-            width: 210mm !important;
-            height: 297mm !important;
-            min-height: 297mm !important;
-            max-height: 297mm !important;
-            transform: none !important;
-          }
+        .customer-sales-print-container { width:fit-content; margin:0 auto; }
+        .customer-sales-sheet {
+          box-sizing:border-box; width:210mm; padding:10mm 12mm;
+          display:block; background:#fff; color:#000;
+          font-family:var(--font-sarabun,var(--font-noto-sans-thai,sans-serif)),sans-serif;
+          font-size:16px; line-height:1.55; text-align:left;
         }
-        @media screen {
-          .customer-sales-sheet {
-            width: 210mm;
-            height: 297mm;
-            min-height: 297mm;
-            background: #ffffff;
-            box-sizing: border-box;
-          }
+        .customer-sales-sheet * { box-sizing:border-box; color:#000 !important; font-weight:600 !important; letter-spacing:normal !important; }
+        .customer-sales-sheet strong, .customer-sales-sheet th { font-weight:700 !important; }
+        .cs-heading { text-align:center; }
+        .cs-brand { font-size:25px; font-weight:700 !important; margin-bottom:5px; }
+        .customer-sales-sheet h1 { font-size:20px; line-height:1.5; font-weight:700 !important; margin:0; }
+        .cs-meta { display:flex; justify-content:space-between; gap:12px; margin:18px 0 12px; padding-top:10px; border-top:1px solid #000; font-size:14px; }
+        .cs-meta span { overflow-wrap:anywhere; }
+        .cs-meta span:last-child { text-align:right; }
+        .cs-table { border-collapse:collapse; table-layout:fixed; width:100%; font-size:16px; line-height:1.55; }
+        .cs-table th { border-top:1px solid #000; border-bottom:1px solid #000; font-size:15px; padding:8px; text-align:left; }
+        .cs-table td { padding:4px 8px; border-bottom:1px solid #d5d5d5; overflow-wrap:anywhere; vertical-align:top; }
+        .cs-table th:first-child,.cs-table td:first-child { text-align:center; }
+        .cs-table th:last-child,.cs-table td:last-child { text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; }
+        .cs-table td:last-child { font-weight:700 !important; }
+        .cs-table .cs-empty { padding:30px 8px; text-align:center; }
+        .cs-footer { margin-top:16px; break-inside:avoid; }
+        .cs-summary { display:flex; justify-content:space-between; gap:20px; border-top:3px double #000; padding:12px 0; }
+        .cs-summary-detail { flex:1; min-width:0; font-size:14px; overflow-wrap:anywhere; }
+        .cs-summary-detail span { display:block; }
+        .cs-baht { font-size:14px; margin-top:4px; }
+        .cs-total { text-align:right; flex-shrink:0; }
+        .cs-total span { display:block; font-size:15px; }
+        .cs-total strong { display:block; font-size:25px; line-height:1.5; font-variant-numeric:tabular-nums; }
+        .cs-footnote { padding-top:10px; border-top:1px solid #aaa; font-size:13px; }
+        @media print {
+          @page { size:A4 portrait; margin:0; }
+          html,body { height:auto !important; overflow:visible !important; margin:0 !important; padding:0 !important; background:white !important; }
+          body:has(.customer-sales-modal)>:not(.customer-sales-modal) { display:none !important; }
+          .customer-sales-modal { position:static !important; display:block !important; height:auto !important; overflow:visible !important; background:white !important; animation:none !important; }
+          .customer-sales-modal .no-print,.customer-sales-source { display:none !important; }
+          .customer-sales-preview-body,.customer-sales-print-area,.customer-sales-print-container { display:block !important; padding:0 !important; margin:0 !important; width:100% !important; max-width:none !important; height:auto !important; overflow:visible !important; }
+          .customer-sales-sheet { width:210mm !important; height:297mm !important; padding:10mm 12mm !important; zoom:1 !important; break-after:page; print-color-adjust:exact; -webkit-print-color-adjust:exact; }
+          .customer-sales-sheet:last-child { break-after:auto; }
+          .cs-header { break-inside:avoid; break-after:avoid; }
+          .cs-table thead { display:table-header-group; }
+          .cs-table tr { break-inside:avoid; }
         }
       `}</style>
-
-      {storePages.map((pageStores, pageIndex) => {
-        const isLastPage = pageIndex === totalPages - 1;
-        const startIndex = pageIndex * ROWS_PER_PAGE;
-
-        return (
-          <div key={`page-wrapper-${pageIndex + 1}`} className="flex flex-col items-center mb-6 sm:mb-10 last:mb-0 w-full">
-            {totalPages > 1 ? (
-              <div className="no-print mb-2 text-xs font-bold text-slate-400">
-                หน้า {pageIndex + 1} จาก {totalPages}
-              </div>
-            ) : null}
-
-            <div
-              className="customer-sales-page-wrapper relative overflow-hidden rounded-sm bg-white shadow-[0_40px_100px_rgba(0,0,0,0.6)] ring-1 ring-white/5"
-              style={
-                pageScale < 1
-                  ? {
-                      width: `${A4_WIDTH_MM * pageScale}mm`,
-                      height: `${A4_HEIGHT_MM * pageScale}mm`,
-                      maxWidth: "100%",
-                    }
-                  : {
-                      width: `${A4_WIDTH_MM}mm`,
-                      maxWidth: "100%",
-                    }
-              }
-            >
-              <div
-                className="customer-sales-page-scaler"
-                style={{
-                  transform: pageScale < 1 ? `scale(${pageScale})` : undefined,
-                  transformOrigin: "top left",
-                  width: `${A4_WIDTH_MM}mm`,
-                }}
-              >
-                <div
-                  key={`page-${pageIndex + 1}`}
-                  data-customer-sales-page="true"
-                  data-capture-width="794"
-                  data-capture-height="1123"
-                  className="customer-sales-sheet flex flex-col justify-between bg-white box-border text-slate-900"
-                  style={{
-                    padding: "14mm 16mm 12mm 16mm",
-                    width: "210mm",
-                    height: "297mm",
-                    minHeight: "297mm",
-                    boxSizing: "border-box",
-                    fontFamily: 'var(--font-sarabun), "Sarabun", var(--font-noto-sans-thai), sans-serif',
-                  }}
-                >
-                  {/* Top Header Section */}
-                  <div>
-                    {/* Organization and Document Title */}
-                    <div className="border-b-2 border-slate-900 pb-3 mb-3">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <h1 className="text-xl font-extrabold tracking-tight text-[#4A148C]">
-                            {PRINT_ORGANIZATION_NAME}
-                          </h1>
-                          <p className="text-xs font-semibold text-slate-600 mt-0.5">
-                            ระบบบริหารจัดการออเดอร์และกระจายสินค้า
-                          </p>
-                        </div>
-                        <div className="text-right">
-                          <span className="inline-block rounded-md bg-[#4A148C]/10 px-2.5 py-1 text-xs font-bold text-[#4A148C] border border-[#4A148C]/20">
-                            สายรถ: {data.vehicleName}
-                          </span>
-                        </div>
-                      </div>
-
-                <div className="mt-3 text-center">
-                  <h2 className="text-lg font-black tracking-wide text-slate-900">
-                    รายงานแสดงข้อมูลสรุปยอดขายตามลูกค้า
-                  </h2>
-                </div>
-
-                <div className="mt-2 flex flex-wrap items-center justify-between text-[11px] font-semibold text-slate-600 border-t border-slate-200 pt-2">
-                  <div>
-                    <span>วันที่: </span>
-                    <strong className="text-slate-900 font-bold">{data.dateLabel}</strong>
-                  </div>
-                  <div>
-                    <span>พิมพ์เมื่อ: </span>
-                    <strong className="text-slate-900 font-bold">{data.printedAt}</strong>
-                  </div>
-                  <div>
-                    <span>หน้า: </span>
-                    <strong className="text-slate-900 font-bold">
-                      {pageIndex + 1} / {totalPages}
-                    </strong>
-                  </div>
-                </div>
-              </div>
-
-              {/* Table */}
-              <table className="w-full border-collapse text-left">
-                <thead>
-                  <tr className="bg-slate-100 border-y-2 border-slate-900 text-[12px] font-black text-slate-900">
-                    <th className="py-2 px-2 text-center w-[12%] border-r border-slate-300">
-                      ลำดับ
-                    </th>
-                    <th className="py-2 px-3 text-center w-[22%] border-r border-slate-300">
-                      รหัสลูกค้า
-                    </th>
-                    <th className="py-2 px-3 text-left w-[44%] border-r border-slate-300">
-                      ชื่อลูกค้า
-                    </th>
-                    <th className="py-2 px-3 text-right w-[22%]">
-                      จำนวนเงินรวม
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-200 text-[12px]">
-                  {pageStores.length === 0 ? (
-                    <tr>
-                      <td colSpan={4} className="py-12 text-center text-slate-400 font-semibold">
-                        ไม่มีข้อมูลร้านค้าในรายการที่เลือก
-                      </td>
-                    </tr>
-                  ) : (
-                    pageStores.map((store, idx) => {
-                      const rowNumber = startIndex + idx + 1;
-                      const isEven = idx % 2 === 1;
-
-                      return (
-                        <tr
-                          key={`${store.customerCode}-${rowNumber}`}
-                          className={isEven ? "bg-slate-50/70" : "bg-white"}
-                        >
-                          <td className="py-2 px-2 text-center font-medium text-slate-500 border-r border-slate-200 tabular-nums">
-                            {rowNumber}
-                          </td>
-                          <td className="py-2 px-3 text-center font-bold text-slate-700 border-r border-slate-200 tabular-nums">
-                            {store.customerCode}
-                          </td>
-                          <td className="py-2 px-3 font-semibold text-slate-900 border-r border-slate-200">
-                            {store.customerName}
-                          </td>
-                          <td className="py-2 px-3 text-right font-black text-slate-900 tabular-nums whitespace-nowrap">
-                            ฿{formatCurrency(store.totalAmount)}
-                          </td>
-                        </tr>
-                      );
-                    })
-                  )}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Bottom Footer / Summary Section */}
-            <div className="mt-4">
-              {isLastPage ? (
-                <div className="border-t-2 border-slate-900 pt-3">
-                  <div className="flex items-center justify-between bg-slate-50 border border-slate-200 rounded-lg p-3">
-                    <div className="space-y-0.5">
-                      <div className="text-xs font-semibold text-slate-600">
-                        รวมทั้งหมด:{" "}
-                        <strong className="text-slate-900 font-bold">
-                          {data.stores.length.toLocaleString("th-TH")}
-                        </strong>{" "}
-                        ร้านค้า
-                        {data.totalOrders ? (
-                          <>
-                            {" "}
-                            ·{" "}
-                            <strong className="text-slate-900 font-bold">
-                              {data.totalOrders.toLocaleString("th-TH")}
-                            </strong>{" "}
-                            ออเดอร์
-                          </>
-                        ) : null}
-                        {data.totalWeightGrams && data.totalWeightGrams > 0 ? (
-                          <>
-                            {" "}
-                            · น้ำหนักรวม{" "}
-                            <strong className="text-[#4A148C] font-black">
-                              {(data.totalWeightGrams / 1000).toLocaleString("th-TH", {
-                                minimumFractionDigits: 0,
-                                maximumFractionDigits: 2,
-                              })}
-                            </strong>{" "}
-                            กก.
-                          </>
-                        ) : null}
-                      </div>
-                      <div className="text-[11px] font-bold text-slate-500">
-                        ({bahtText(data.totalAmount)})
-                      </div>
-                    </div>
-
-                    <div className="text-right">
-                      <div className="text-xs font-black text-slate-700">ยอดเงินรวมทั้งสิ้น</div>
-                      <div className="text-xl font-black text-[#4A148C] tabular-nums">
-                        ฿{formatCurrency(data.totalAmount)}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="mt-3 flex items-center justify-between text-[10px] text-slate-400 font-medium">
-                    <span>เอกสารสรุปยอดขายภายในองค์กร</span>
-                    <span>
-                      หน้า {pageIndex + 1} จาก {totalPages}
-                    </span>
-                  </div>
-                </div>
-              ) : (
-                <div className="border-t border-slate-200 pt-2 flex items-center justify-between text-[10px] text-slate-400 font-medium">
-                  <span>(มีต่อหน้าถัดไป)</span>
-                </div>
-              )}
-            </div>
+      <section className="customer-sales-sheet" data-customer-sales-report style={{ zoom: pageScale }}>
+        <header className="cs-header">
+          <div className="cs-heading">
+            <div className="cs-brand">{PRINT_ORGANIZATION_NAME}</div>
+            <h1>รายงานสรุปยอดขายตามลูกค้า</h1>
           </div>
-        </div>
-      </div>
+          <div className="cs-meta">
+            <span>วันที่รายการ <strong>{data.dateLabel}</strong></span>
+            <span>สายรถ: <strong>{data.vehicleName}</strong> · หน่วย: บาท</span>
+          </div>
+        </header>
+        <table className="cs-table">
+          <colgroup><col style={{ width: "8%" }} /><col style={{ width: "18%" }} /><col style={{ width: "50%" }} /><col style={{ width: "24%" }} /></colgroup>
+          <thead><tr><th scope="col">ลำดับ</th><th scope="col">รหัสลูกค้า</th><th scope="col">ชื่อลูกค้า</th><th scope="col">ยอดขาย (บาท)</th></tr></thead>
+          <tbody>
+            {data.stores.length ? data.stores.map((store, index) => (
+              <tr key={index} data-store-row>
+                <td>{index + 1}</td><td>{store.customerCode}</td><td>{store.customerName}</td><td>{money(store.totalAmount)}</td>
+              </tr>
+            )) : <tr><td colSpan={4} className="cs-empty">ไม่มีข้อมูลร้านค้าในรายการที่เลือก</td></tr>}
+          </tbody>
+        </table>
+        <footer className="cs-footer">
+          <div className="cs-summary">
+            <div className="cs-summary-detail">
+              <strong>{data.stores.length.toLocaleString("th-TH")} ร้านค้า{data.totalOrders ? ` · ${data.totalOrders.toLocaleString("th-TH")} ออเดอร์` : ""}</strong>
+              {data.totalWeightGrams ? <span>น้ำหนักรวม {(data.totalWeightGrams / 1000).toLocaleString("th-TH", { maximumFractionDigits: 2 })} กก.</span> : null}
+              <span className="cs-baht">{bahtText(data.totalAmount)}</span>
+            </div>
+            <div className="cs-total"><span>ยอดขายรวมทั้งสิ้น</span><strong>{money(data.totalAmount)}</strong></div>
+          </div>
+          <div className="cs-footnote">พิมพ์เมื่อ {data.printedAt}</div>
+        </footer>
+      </section>
     </div>
   );
-})}
-</div>
-);
 }
