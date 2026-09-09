@@ -11,7 +11,7 @@ import { getProfitSalesReport } from "@/lib/reports/profit-sales";
 import { getActiveWarehouses } from "@/lib/warehouses";
 import { PrintButton } from "../product-sales/print-button";
 import { ProfitViewSwitcher } from "./profit-view-switcher";
-import styles from "../product-sales/print.module.css";
+import styles from "./print.module.css";
 
 export const metadata = {
   title: "รายงานกำไรขาย",

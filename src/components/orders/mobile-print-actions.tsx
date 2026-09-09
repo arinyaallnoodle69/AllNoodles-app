@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   BarChart3,
   FileSpreadsheet,
@@ -43,6 +43,8 @@ type MobilePrintActionsProps = {
   summaryProducts: PackingListSummaryProduct[];
   summaryStores: PackingListSummaryStore[];
   visibleOrderStores: VisibleOrderStore[];
+  vehicles?: { id: string; name: string }[];
+  selectedVehicleId?: string;
 };
 
 type ActionCardProps = {
@@ -72,14 +74,84 @@ export function MobilePrintActions({
   summaryProducts,
   summaryStores,
   visibleOrderStores,
+  vehicles = [],
+  selectedVehicleId,
 }: MobilePrintActionsProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const allOptionIds = useMemo(
+    () => [...vehicles.map((v) => v.id), "__none__"],
+    [vehicles],
+  );
+
+  const [selectedVehicles, setSelectedVehicles] = useState<string[]>(() => {
+    if (!selectedVehicleId || selectedVehicleId === "__all__") {
+      return ["__all__", ...allOptionIds];
+    }
+    return selectedVehicleId.split(",").map((s) => s.trim()).filter(Boolean);
+  });
+
+  const isAllSelected = useMemo(() => {
+    if (allOptionIds.length === 0) return true;
+    return (
+      selectedVehicles.includes("__all__") ||
+      allOptionIds.every((id) => selectedVehicles.includes(id))
+    );
+  }, [allOptionIds, selectedVehicles]);
+
+  const handleToggleAll = () => {
+    if (isAllSelected) {
+      setSelectedVehicles([]);
+    } else {
+      setSelectedVehicles(["__all__", ...allOptionIds]);
+    }
+  };
+
+  const handleToggleVehicle = (id: string) => {
+    setSelectedVehicles((prev) => {
+      const isCurrentlyChecked = prev.includes(id);
+      let next: string[];
+
+      if (isCurrentlyChecked) {
+        next = prev.filter((item) => item !== id && item !== "__all__");
+      } else {
+        const base = prev.filter((item) => item !== "__all__");
+        next = [...base, id];
+        if (allOptionIds.every((optId) => next.includes(optId))) {
+          next.push("__all__");
+        }
+      }
+      return next;
+    });
+  };
+
+  const activeVehicleParam = useMemo(() => {
+    if (isAllSelected || selectedVehicles.length === 0) return "__all__";
+    return selectedVehicles.filter((id) => id !== "__all__").join(",");
+  }, [isAllSelected, selectedVehicles]);
+
+  const selectedCountText = useMemo(() => {
+    if (isAllSelected) return "ทุกสายรถ";
+    const actualSelected = selectedVehicles.filter((id) => id !== "__all__");
+    if (actualSelected.length === 0) return "ยังไม่ได้เลือก";
+    if (actualSelected.length === 1) {
+      if (actualSelected[0] === "__none__") return "ไม่ระบุสายรถ";
+      return vehicles.find((v) => v.id === actualSelected[0])?.name ?? "1 สายรถ";
+    }
+    return `เลือก ${actualSelected.length} สายรถ`;
+  }, [isAllSelected, selectedVehicles, vehicles]);
 
   return (
     <>
       <button
         type="button"
-        onClick={() => setIsOpen(true)}
+        onClick={() => {
+          if (!selectedVehicleId || selectedVehicleId === "__all__") {
+            setSelectedVehicles(["__all__", ...allOptionIds]);
+          } else {
+            setSelectedVehicles(selectedVehicleId.split(",").map((s) => s.trim()).filter(Boolean));
+          }
+          setIsOpen(true);
+        }}
         className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-[#4A148C] px-5 py-4 text-base font-black text-white shadow-[0_12px_24px_rgba(4,53,106,0.2)] transition active:scale-[0.98] sm:hidden"
       >
         <Printer className="h-5 w-5" strokeWidth={2.5} />
@@ -93,7 +165,7 @@ export function MobilePrintActions({
               onClick={() => setIsOpen(false)}
             >
               <div
-                className="animate-in relative z-[510] flex max-h-[82vh] w-full flex-col rounded-t-[28px] bg-white shadow-2xl slide-in-from-bottom duration-300"
+                className="animate-in relative z-[510] flex max-h-[85vh] w-full flex-col rounded-t-[28px] bg-white shadow-2xl slide-in-from-bottom duration-300"
                 onClick={(event) => event.stopPropagation()}
               >
                 <div className="flex items-center justify-between border-b border-slate-100 px-6 py-5">
@@ -114,6 +186,84 @@ export function MobilePrintActions({
                 </div>
 
                 <div className="scrollbar-hide flex-1 space-y-3 overflow-y-auto bg-[#FBF7FC] px-5 py-5 pb-12">
+                  {/* Vehicle Checkbox Multi-Selector */}
+                  {vehicles.length > 0 && (
+                    <div className="rounded-2xl border border-[#E1BEE7]/60 bg-white p-3.5 shadow-sm">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="inline-flex items-center gap-1.5 text-xs font-bold text-[#4A148C]">
+                          <Truck className="h-4 w-4" strokeWidth={2.5} />
+                          เลือกรถ / สายรถ ({selectedCountText})
+                        </span>
+                        <button
+                          type="button"
+                          onClick={handleToggleAll}
+                          className="text-[11px] font-bold text-[#4A148C] hover:underline"
+                        >
+                          {isAllSelected ? "ล้างทั้งหมด" : "เลือกทั้งหมด"}
+                        </button>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2 max-h-36 overflow-y-auto pr-0.5 [scrollbar-width:thin]">
+                        {/* All option */}
+                        <label
+                          className={`col-span-2 flex items-center gap-2 rounded-xl border p-2 cursor-pointer transition ${
+                            isAllSelected
+                              ? "border-[#4A148C] bg-[#F3E5F5] font-bold text-[#4A148C]"
+                              : "border-slate-200 bg-[#FBF7FC] text-slate-700"
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isAllSelected}
+                            onChange={handleToggleAll}
+                            className="h-4 w-4 rounded border-slate-300 accent-[#4A148C]"
+                          />
+                          <span className="text-xs">ทุกสายรถ (พิมพ์รวมทั้งหมด)</span>
+                        </label>
+
+                        {/* Vehicles list */}
+                        {vehicles.map((v) => {
+                          const isChecked = isAllSelected || selectedVehicles.includes(v.id);
+                          return (
+                            <label
+                              key={v.id}
+                              className={`flex items-center gap-2 rounded-xl border p-2 cursor-pointer transition ${
+                                isChecked
+                                  ? "border-[#4A148C] bg-[#F3E5F5] font-bold text-[#4A148C]"
+                                  : "border-slate-200 bg-[#FBF7FC] text-slate-700"
+                              }`}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={isChecked}
+                                onChange={() => handleToggleVehicle(v.id)}
+                                className="h-4 w-4 rounded border-slate-300 accent-[#4A148C]"
+                              />
+                              <span className="text-xs truncate">{v.name}</span>
+                            </label>
+                          );
+                        })}
+
+                        {/* None vehicle */}
+                        <label
+                          className={`flex items-center gap-2 rounded-xl border p-2 cursor-pointer transition ${
+                            isAllSelected || selectedVehicles.includes("__none__")
+                              ? "border-[#4A148C] bg-[#F3E5F5] font-bold text-[#4A148C]"
+                              : "border-slate-200 bg-[#FBF7FC] text-slate-700"
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isAllSelected || selectedVehicles.includes("__none__")}
+                            onChange={() => handleToggleVehicle("__none__")}
+                            className="h-4 w-4 rounded border-slate-300 accent-[#4A148C]"
+                          />
+                          <span className="text-xs truncate">ไม่ระบุสายรถ</span>
+                        </label>
+                      </div>
+                    </div>
+                  )}
+
                   <ActionCard
                     icon={
                       <div className="flex shrink-0 items-center justify-center rounded-xl bg-[#F3E5F5] p-2.5 text-[#4A148C]">
@@ -139,7 +289,13 @@ export function MobilePrintActions({
                     }
                     title="พิมพ์ใบออเดอร์ (ตารางมาตรฐาน)"
                     description="พิมพ์ใบจัดชุดสินค้าตามออเดอร์ในรูปแบบตารางมาตรฐาน เหมาะสำหรับการบรรจุทั่วไป"
-                    action={<PrintPackingListButton date={date} endDate={endDate} />}
+                    action={
+                      <PrintPackingListButton
+                        date={date}
+                        endDate={endDate}
+                        vehicleId={activeVehicleParam}
+                      />
+                    }
                   />
 
                   <ActionCard
@@ -155,6 +311,7 @@ export function MobilePrintActions({
                         date={date}
                         endDate={endDate}
                         layout="transposed"
+                        vehicleId={activeVehicleParam}
                         label="พิมพ์ใบออเดอร์ (สลับตาราง)"
                       />
                     }

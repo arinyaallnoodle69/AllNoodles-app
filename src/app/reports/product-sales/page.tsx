@@ -1,7 +1,6 @@
 import { Suspense } from "react";
 import Link from "next/link";
-import Image from "next/image";
-import { Filter, Package, ChevronLeft, ChevronRight, ShoppingCart, Wallet, BadgeDollarSign } from "lucide-react";
+import { Filter, Package, ChevronLeft, ChevronRight } from "lucide-react";
 import { ThaiDatePicker } from "@/components/ui/thai-date-picker";
 import { AppSidebarLayout } from "@/components/app-sidebar";
 import { PageLoader } from "@/components/page-loader";
@@ -21,6 +20,7 @@ import { ProductFilter } from "./product-filter";
 import { PrintButton } from "./print-button";
 import { StoreFilter } from "./store-filter";
 import { MobileSearchDrawer } from "@/components/mobile-search/mobile-search-drawer";
+import { ProductSalesDesktopTable, ProductSalesMobileList } from "./product-sales-interactive-views";
 
 export const metadata = { title: "รายงานยอดขายตามอันดับสินค้า" };
 
@@ -65,216 +65,120 @@ function formatPrintedAt(date: Date) {
   return { datePart, timePart };
 }
 
-// Sub-components
-function RankBadge({ rank }: { rank: number }) {
-  const base = "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-xs font-black text-white shadow-md";
-  if (rank === 1)
-    return <span className={base} style={{ background: "linear-gradient(135deg,#FFD700 0%,#B8860B 100%)" }}>1</span>;
-  if (rank === 2)
-    return <span className={base} style={{ background: "linear-gradient(135deg,#C0C0C0 0%,#708090 100%)" }}>2</span>;
-  if (rank === 3)
-    return <span className={base} style={{ background: "linear-gradient(135deg,#CD7F32 0%,#8B4513 100%)" }}>3</span>;
-  return (
-    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-xs font-black text-slate-500">
-      {rank}
-    </span>
-  );
-}
-
-// ─── Screen View Components ──────────────────────────────────────────────────
-
-function ProductRowScreen({ row, globalRank }: { row: ProductSalesRow; globalRank: number }) {
-  const netProfit = row.totalRevenue - row.totalCost;
-  const profitColor = netProfit >= 0 ? "text-emerald-600" : "text-red-500";
-  const margin = row.totalRevenue > 0 ? (netProfit / row.totalRevenue) * 100 : 0;
-
-  return (
-    <tr className="transition-colors hover:bg-slate-50/60">
-      <td className="px-5 py-4 text-center">
-        <RankBadge rank={globalRank} />
-      </td>
-      <td className="px-4 py-4 text-center font-mono text-sm text-slate-400">{row.sku}</td>
-      <td className="px-4 py-4">
-        <div className="flex min-w-0 items-center gap-3">
-          {row.imageUrl ? (
-            <Image
-              src={row.imageUrl}
-              alt={row.name}
-              width={44}
-              height={44}
-              className="h-11 w-11 shrink-0 rounded-xl object-cover"
-            />
-          ) : (
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-slate-100">
-              <Package className="h-5 w-5 text-slate-400" strokeWidth={1.5} />
-            </div>
-          )}
-          <p className="truncate text-base font-black text-slate-800">{row.name}</p>
-        </div>
-      </td>
-      <td className="px-4 py-4 text-center text-base font-bold text-slate-800 tabular-nums whitespace-nowrap">
-        {fmt(row.totalQty)}
-      </td>
-      <td className="px-4 py-4 text-center text-base font-bold text-slate-500 whitespace-nowrap">{formatDisplayUnit(row.unit)}</td>
-      <td className="px-4 py-4 text-center text-base font-bold text-slate-500 tabular-nums whitespace-nowrap">
-        {fmtMoney(row.totalCost)}
-      </td>
-      <td className="px-4 py-4 text-center tabular-nums whitespace-nowrap" style={{ background: "rgba(212,163,115,0.03)" }}>
-        <span className="whitespace-nowrap text-base font-bold text-[#4A148C]">{fmtMoney(row.totalRevenue)}</span>
-      </td>
-      <td className="px-5 py-4 text-center tabular-nums whitespace-nowrap">
-        <span className={`inline-flex items-center justify-center whitespace-nowrap text-base font-bold ${profitColor}`}>{fmtMoney(netProfit)}</span>
-      </td>
-      <td className="px-5 py-4 text-center tabular-nums whitespace-nowrap">
-        <span className={`inline-flex items-center justify-center whitespace-nowrap text-base font-bold ${profitColor}`}>{fmtPercent(margin)}</span>
-      </td>
-    </tr>
-  );
-}
-
 // ─── Print View Components ───────────────────────────────────────────────────
+
+interface ProductPrintItem {
+  row: ProductSalesRow;
+  rank: number;
+}
+
+interface ProductPrintPage {
+  items: ProductPrintItem[];
+}
+
+function paginateProductReport(allRows: ProductSalesRow[], maxLinesPerPage = 34): ProductPrintPage[] {
+  const pages: ProductPrintPage[] = [];
+  let currentPageItems: ProductPrintItem[] = [];
+  let currentLines = 0;
+
+  for (let i = 0; i < allRows.length; i++) {
+    const row = allRows[i];
+    const rank = i + 1;
+    const storeCount = row.stores?.length || 0;
+    const lineCount = 1 + storeCount;
+
+    if (currentLines > 0 && currentLines + lineCount > maxLinesPerPage) {
+      pages.push({ items: currentPageItems });
+      currentPageItems = [];
+      currentLines = 0;
+    }
+
+    currentPageItems.push({ row, rank });
+    currentLines += lineCount;
+  }
+
+  if (currentPageItems.length > 0) {
+    pages.push({ items: currentPageItems });
+  }
+
+  return pages;
+}
 
 function ProductRowPrint({ row, globalRank }: { row: ProductSalesRow; globalRank: number }) {
   const netProfit = row.totalRevenue - row.totalCost;
   const margin = row.totalRevenue > 0 ? (netProfit / row.totalRevenue) * 100 : 0;
+  const hasStores = row.stores && row.stores.length > 0;
 
   return (
-    <tr>
-      <td className="text-center font-bold text-slate-900 border-b border-slate-100">
-        {globalRank}
-      </td>
-      <td className="text-center font-mono text-[9px] text-slate-400 border-b border-slate-100">{row.sku}</td>
-      <td className="border-b border-slate-100">
-        <div className={`flex min-w-0 items-center gap-2 ${styles.printProductCell}`}>
-          <p className={`${styles.printProductName} font-black text-slate-800`}>{row.name}</p>
-        </div>
-      </td>
-      <td className="text-center font-bold text-slate-800 tabular-nums whitespace-nowrap border-b border-slate-100">
-        {fmt(row.totalQty)}
-      </td>
-      <td className="text-center font-bold text-slate-500 whitespace-nowrap border-b border-slate-100">{formatDisplayUnit(row.unit)}</td>
-      <td className="text-center font-bold text-slate-500 tabular-nums whitespace-nowrap border-b border-slate-100">
-        {fmtMoney(row.totalCost)}
-      </td>
-      <td className="text-center tabular-nums whitespace-nowrap border-b border-slate-100" style={{ background: "rgba(212,163,115,0.03)" }}>
-        <span className="whitespace-nowrap font-bold text-[#4A148C]">{fmtMoney(row.totalRevenue)}</span>
-      </td>
-      <td className="text-center tabular-nums whitespace-nowrap border-b border-slate-100">
-        <span className={`inline-flex items-center justify-center whitespace-nowrap font-bold ${netProfit >= 0 ? "text-emerald-600" : "text-red-500"}`}>{fmtMoney(netProfit)}</span>
-      </td>
-      <td className="text-center tabular-nums whitespace-nowrap border-b border-slate-100">
-        <span className={`inline-flex items-center justify-center whitespace-nowrap font-bold ${netProfit >= 0 ? "text-emerald-600" : "text-red-500"}`}>{fmtPercent(margin)}</span>
-      </td>
-    </tr>
-  );
-}
-
-// ─── Mobile Card ──────────────────────────────────────────────────────────────
-
-function InfoBlockReport({
-  label,
-  value,
-  icon,
-  className = "",
-}: {
-  label: string;
-  value: React.ReactNode;
-  icon?: React.ReactNode;
-  className?: string;
-}) {
-  return (
-    <div className={`min-w-0 ${className}`}>
-      <p className="text-[11px] font-black uppercase tracking-[0.12em] text-slate-950">{label}</p>
-      <div className="mt-1.5 flex items-center gap-2 text-[15px] font-semibold text-slate-950">
-        {icon && <span className="shrink-0 text-slate-400">{icon}</span>}
-        <span className="truncate">{value}</span>
-      </div>
-    </div>
-  );
-}
-
-function ProductCard({ row, globalRank }: { row: ProductSalesRow; globalRank: number }) {
-  const netProfit = row.totalRevenue - row.totalCost;
-  const profitPositive = netProfit >= 0;
-  const margin = row.totalRevenue > 0 ? (netProfit / row.totalRevenue) * 100 : 0;
-  const rankBadgeStyle =
-    globalRank === 1
-      ? { background: "linear-gradient(135deg,#FFD700 0%,#B8860B 100%)" }
-      : globalRank === 2
-        ? { background: "linear-gradient(135deg,#C0C0C0 0%,#708090 100%)" }
-        : globalRank === 3
-          ? { background: "linear-gradient(135deg,#CD7F32 0%,#8B4513 100%)" }
-          : undefined;
-
-  return (
-    <article className="border-b border-slate-400 bg-white px-5 py-5 shadow-[0_10px_26px_rgba(15,23,42,0.1)] last:border-b-0">
-      <div className="flex items-start gap-3">
-        <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-slate-50 ring-1 ring-slate-200">
-          {row.imageUrl ? (
-            <Image src={row.imageUrl} alt={row.name} width={48} height={48} className="h-full w-full object-cover" />
-          ) : (
-            <Package className="h-5 w-5 text-slate-300" strokeWidth={2.2} />
-          )}
-        </div>
-        <div className="min-w-0 flex-1">
-          <p className="line-clamp-2 text-[1.1rem] font-bold leading-tight text-slate-950">
-            {row.name}
-          </p>
-          <div className="mt-1.5 flex items-center gap-2">
-            <p className="truncate font-mono text-[13px] font-semibold text-slate-500" translate="no">
-              {row.sku}
-            </p>
+    <>
+      <tr className="border-b border-slate-200">
+        <td className="text-center font-bold text-slate-900 border-b border-slate-200 py-1.5 text-[9.5pt]">
+          {globalRank}
+        </td>
+        <td className="text-center font-mono text-[8.5pt] text-slate-500 border-b border-slate-200 py-1.5">{row.sku || "-"}</td>
+        <td className="border-b border-slate-200 py-1.5">
+          <div className={styles.printProductCell}>
+            <p className={styles.printProductName}>{row.name}</p>
           </div>
-        </div>
-
-        <div className="shrink-0">
-          <span
-            className={`flex h-9 w-9 items-center justify-center rounded-xl text-xs font-black text-white shadow-md ${rankBadgeStyle ? "" : "bg-[#4A148C]"}`}
-            style={rankBadgeStyle}
-          >
-            {globalRank}
-          </span>
-        </div>
-      </div>
-
-      <div className="mt-5 grid grid-cols-2 gap-x-4 gap-y-5">
-        <InfoBlockReport
-          label="จำนวนที่ขาย"
-          icon={<ShoppingCart className="h-4 w-4" strokeWidth={2.2} />}
-          value={`${fmt(row.totalQty)} ${formatDisplayUnit(row.unit)}`}
-        />
-        <div className="min-w-0 border-l border-slate-300 pl-4">
-          <p className="text-[11px] font-black uppercase tracking-[0.12em] text-slate-950">ยอดขาย</p>
-          <p className="mt-1.5 text-[1.05rem] font-bold leading-none text-[#4A148C]">
-            {fmtMoney(row.totalRevenue)}
-          </p>
-        </div>
-
-        <InfoBlockReport
-          label="ต้นทุนรวม"
-          icon={<Wallet className="h-4 w-4" strokeWidth={2.2} />}
-          value={fmtMoney(row.totalCost)}
-        />
-        <div className="min-w-0 border-l border-slate-300 pl-4">
-          <p className="text-[11px] font-black uppercase tracking-[0.12em] text-slate-950">กำไรสุทธิ</p>
-          <p className={`mt-1.5 text-[1.05rem] font-bold leading-none ${profitPositive ? "text-emerald-600" : "text-red-500"}`}>
-            {fmtMoney(netProfit)}
-          </p>
-        </div>
-      </div>
-
-      <div className="mt-5 border-t border-slate-100 pt-4 flex items-center justify-between">
-        <div className="min-w-0">
-          <p className="text-[11px] font-black uppercase tracking-[0.12em] text-slate-950">กำไร (%)</p>
-          <div className="mt-1.5 flex items-center gap-2">
-            <BadgeDollarSign className={`h-4 w-4 shrink-0 ${profitPositive ? "text-emerald-500" : "text-red-400"}`} strokeWidth={2.2} />
-            <span className={`text-[15px] font-bold ${profitPositive ? "text-emerald-600" : "text-red-500"}`}>
-              {fmtPercent(margin)}
-            </span>
-          </div>
-        </div>
-      </div>
-    </article>
+        </td>
+        <td className="text-center font-bold text-slate-900 tabular-nums whitespace-nowrap border-b border-slate-200 py-1.5 text-[9.5pt]">
+          {fmt(row.totalQty)}
+        </td>
+        <td className="text-center font-medium text-slate-600 whitespace-nowrap border-b border-slate-200 py-1.5 text-[9pt]">{formatDisplayUnit(row.unit)}</td>
+        <td className="text-center font-medium text-slate-700 tabular-nums whitespace-nowrap border-b border-slate-200 py-1.5 text-[9.5pt]">
+          {fmtMoney(row.totalCost)}
+        </td>
+        <td className="text-center font-bold text-slate-900 tabular-nums whitespace-nowrap border-b border-slate-200 py-1.5 text-[9.5pt]">
+          {fmtMoney(row.totalRevenue)}
+        </td>
+        <td className="text-center tabular-nums whitespace-nowrap border-b border-slate-200 py-1.5">
+          <span className={`inline-flex items-center justify-center whitespace-nowrap font-bold text-[9.5pt] ${netProfit >= 0 ? "text-emerald-700" : "text-red-600"}`}>{fmtMoney(netProfit)}</span>
+        </td>
+        <td className="text-center tabular-nums whitespace-nowrap border-b border-slate-200 py-1.5">
+          <span className={`inline-flex items-center justify-center whitespace-nowrap font-bold text-[9.5pt] ${netProfit >= 0 ? "text-emerald-700" : "text-red-600"}`}>{fmtPercent(margin)}</span>
+        </td>
+      </tr>
+      {hasStores &&
+        row.stores.map((store, sIdx) => {
+          const sProfit = store.totalRevenue - store.totalCost;
+          const sMargin = store.totalRevenue > 0 ? (sProfit / store.totalRevenue) * 100 : 0;
+          return (
+            <tr key={`${row.productId}-${store.customerId}-${sIdx}`} className={styles.printStoreRow}>
+              <td className={`text-center font-medium text-slate-400 tabular-nums ${styles.printStoreCell}`}>
+                ↳ {sIdx + 1}
+              </td>
+              <td className={`text-center ${styles.printStoreCode} ${styles.printStoreCell}`}>
+                {store.customerCode || "-"}
+              </td>
+              <td className={`pl-3 ${styles.printStoreCell}`}>
+                <span className={styles.printStoreName}>{store.customerName}</span>
+              </td>
+              <td className={`text-center font-semibold text-slate-700 tabular-nums whitespace-nowrap ${styles.printStoreCell}`}>
+                {fmt(store.totalQty)}
+              </td>
+              <td className={`text-center text-slate-500 whitespace-nowrap ${styles.printStoreCell}`}>
+                {formatDisplayUnit(store.unit || row.unit)}
+              </td>
+              <td className={`text-center text-slate-600 tabular-nums whitespace-nowrap ${styles.printStoreCell}`}>
+                {fmtMoney(store.totalCost)}
+              </td>
+              <td className={`text-center font-bold text-slate-800 tabular-nums whitespace-nowrap ${styles.printStoreCell}`}>
+                {fmtMoney(store.totalRevenue)}
+              </td>
+              <td className={`text-center tabular-nums whitespace-nowrap ${styles.printStoreCell}`}>
+                <span className={`font-semibold ${sProfit >= 0 ? "text-emerald-700" : "text-red-600"}`}>
+                  {fmtMoney(sProfit)}
+                </span>
+              </td>
+              <td className={`text-center tabular-nums whitespace-nowrap ${styles.printStoreCell}`}>
+                <span className={`font-semibold ${sProfit >= 0 ? "text-emerald-700" : "text-red-600"}`}>
+                  {fmtPercent(sMargin)}
+                </span>
+              </td>
+            </tr>
+          );
+        })}
+    </>
   );
 }
 
@@ -490,47 +394,18 @@ async function ProductSalesReportContent({ searchParams }: PageProps) {
             ) : (
               <>
                 {/* ── Desktop View Table ── */}
-                <div className="hidden overflow-x-auto lg:block">
-                  <table className="w-full table-fixed border-collapse text-left">
-                    <colgroup>
-                      <col style={{ width: "6%" }} /><col style={{ width: "9%" }} /><col style={{ width: "28%" }} /><col style={{ width: "8%" }} /><col style={{ width: "6%" }} /><col style={{ width: "12%" }} /><col style={{ width: "12%" }} /><col style={{ width: "9%" }} /><col style={{ width: "8%" }} />
-                    </colgroup>
-                    <thead>
-                      <tr className="bg-slate-50/80">
-                        {[
-                          { label: "ลำดับ", align: "center" },
-                          { label: "รหัสสินค้า", align: "center" },
-                          { label: "สินค้า", align: "left" },
-                          { label: "จำนวน", align: "center" },
-                          { label: "หน่วย", align: "center" },
-                          { label: "ต้นทุน", align: "center" },
-                          { label: "จำนวนเงิน", align: "center", highlight: true },
-                          { label: "กำไรสุทธิ", align: "center" },
-                          { label: "กำไร (%)", align: "center" },
-                        ].map(({ label, align, highlight }) => (
-                          <th key={label} className={`whitespace-nowrap px-4 py-4 text-xs font-black uppercase tracking-widest text-slate-400 ${align === "center" ? "text-center" : ""} ${label === "ลำดับ" ? "pl-5" : ""} ${label === "กำไร (%)" ? "pr-5" : ""} ${highlight ? styles.printRevenueCell : ""}`} style={highlight ? { background: "rgba(212,163,115,0.03)" } : undefined}>{label}</th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-[#4A148C]/24">
-                      {rows.map((row, i) => <ProductRowScreen key={row.productId} row={row} globalRank={(page - 1) * pageSize + i + 1} />)}
-                      <tr className="bg-slate-50/90">
-                        <td colSpan={3} className="px-5 py-4 text-right text-base font-black tracking-[0.02em] text-slate-600 whitespace-nowrap">ยอดรวมทั้งหมด</td>
-                        <td className="px-4 py-4 text-center text-base font-black text-slate-800 tabular-nums whitespace-nowrap">{fmt(summary.totalQty)}</td>
-                        <td className="px-4 py-4 text-center text-base font-black text-slate-500 whitespace-nowrap">—</td>
-                        <td className="px-4 py-4 text-center text-base font-black text-slate-700 tabular-nums whitespace-nowrap">{fmtMoney(summary.totalCost)}</td>
-                        <td className="px-4 py-4 text-center tabular-nums whitespace-nowrap" style={{ background: "rgba(212,163,115,0.05)" }}><span className="whitespace-nowrap text-base font-black text-[#4A148C]">{fmtMoney(summary.totalRevenue)}</span></td>
-                        <td className={`px-5 py-4 text-center tabular-nums whitespace-nowrap ${summary.netProfit >= 0 ? "text-emerald-600" : "text-red-500"}`}><span className="inline-flex items-center justify-center whitespace-nowrap text-base font-black">{fmtMoney(summary.netProfit)}</span></td>
-                        <td className={`px-5 py-4 text-center tabular-nums whitespace-nowrap ${summary.netProfit >= 0 ? "text-emerald-600" : "text-red-500"}`}><span className="inline-flex items-center justify-center whitespace-nowrap text-base font-black">{fmtPercent(totalMarginPercent)}</span></td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
+                <ProductSalesDesktopTable
+                  rows={rows}
+                  startRank={(page - 1) * pageSize + 1}
+                  summary={summary}
+                  totalMarginPercent={totalMarginPercent}
+                />
 
-                {/* Mobile View Cards */}
-                <div className="divide-y divide-[#4A148C]/20 px-2 sm:px-4 lg:hidden">
-                  {rows.map((row, i) => <ProductCard key={row.productId} row={row} globalRank={(page - 1) * pageSize + i + 1} />)}
-                </div>
+                {/* ── Mobile View Cards ── */}
+                <ProductSalesMobileList
+                  rows={rows}
+                  startRank={(page - 1) * pageSize + 1}
+                />
               </>
             )}
 
@@ -544,33 +419,52 @@ async function ProductSalesReportContent({ searchParams }: PageProps) {
         {/* ─── Print View (Invisible on Screen, block on Print) ─── */}
         <div id="report-print-area" className="fixed -left-[9999px] top-0 opacity-0 pointer-events-none print:static print:opacity-100 print:pointer-events-auto print:block">
           {(() => {
-            const PRINT_PAGE_SIZE = 35;
-            const pages = [];
-            for (let i = 0; i < allRows.length; i += PRINT_PAGE_SIZE) { pages.push(allRows.slice(i, i + PRINT_PAGE_SIZE)); }
+            const pages = paginateProductReport(allRows, 34);
             if (pages.length === 0) return null;
-            return pages.map((pageRows, pageIdx) => (
+
+            return pages.map((pageData, pageIdx) => (
               <div key={pageIdx} data-print-page="true" className={`${styles.printArea} ${styles.printPage}`}>
                 <div className={styles.printHeader}>
                   <div className={styles.printHeaderTop}>
                     <div className={styles.printBrand}>
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src="/api/brand/logo" alt="All Noodles" width="64" height="64" className={styles.printLogo} />
-                      <div><p className={styles.printCompanyName}>All Noodles</p><p className={styles.printSubtitle}>สรุปยอดขาย ต้นทุน กำไร และอัตรากำไรของสินค้า</p></div>
+                      <img src="/api/brand/logo" alt="All Noodles" width="40" height="40" className={styles.printLogo} />
+                      <div>
+                        <p className={styles.printCompanyName}>All Noodles</p>
+                        <p className={styles.printSubtitle}>สรุปยอดขาย ต้นทุน กำไร และอัตรากำไรของสินค้า</p>
+                      </div>
                     </div>
-                    <div className={styles.printMeta}><p>วันที่พิมพ์: {printedAt.datePart}</p><p>เวลาพิมพ์: {printedAt.timePart} น.</p><p>หน้า: {pageIdx + 1} / {pages.length}</p></div>
+                    <div className={styles.printMeta}>
+                      <p>วันที่พิมพ์: {printedAt.datePart}</p>
+                      <p>เวลาพิมพ์: {printedAt.timePart} น.</p>
+                      <p>หน้า: {pageIdx + 1} / {pages.length}</p>
+                    </div>
                   </div>
                   <div className={styles.printFilters}>
-                    <div className={styles.printFilterItem}><span className={styles.printFilterLabel}>ช่วงวันที่:</span><span className={styles.printFilterValue}>{isoToDisplay(fromDate)} - {isoToDisplay(toDate)}</span></div>
+                    <div className={styles.printFilterItem}>
+                      <span className={styles.printFilterLabel}>ช่วงวันที่:</span>
+                      <span className={styles.printFilterValue}>{isoToDisplay(fromDate)} — {isoToDisplay(toDate)}</span>
+                    </div>
                   </div>
-                  <div className={styles.printReportTitleBlock}><h1 className={styles.printReportTitle}>รายงานยอดขายตามอันดับสินค้า</h1></div>
-                  <div className={styles.printDivider} />
+                  <div>
+                    <h1 className={styles.printReportTitle}>รายงานยอดขายตามอันดับสินค้า</h1>
+                  </div>
                 </div>
-                <table className="w-full table-fixed border-collapse text-left print:table-fixed">
+
+                <table className="w-full table-fixed border-collapse text-left">
                   <colgroup>
-                    <col style={{ width: "6%" }} /><col style={{ width: "9%" }} /><col style={{ width: "28%" }} /><col style={{ width: "8%" }} /><col style={{ width: "6%" }} /><col style={{ width: "12%" }} /><col style={{ width: "12%" }} /><col style={{ width: "9%" }} /><col style={{ width: "8%" }} />
+                    <col style={{ width: "6%" }} />
+                    <col style={{ width: "10%" }} />
+                    <col style={{ width: "27%" }} />
+                    <col style={{ width: "8%" }} />
+                    <col style={{ width: "6%" }} />
+                    <col style={{ width: "12%" }} />
+                    <col style={{ width: "12%" }} />
+                    <col style={{ width: "10%" }} />
+                    <col style={{ width: "9%" }} />
                   </colgroup>
                   <thead>
-                    <tr className="bg-slate-50/80">
+                    <tr className="bg-slate-50 border-b-2 border-slate-900">
                       {[
                         { label: "ลำดับ", align: "center" },
                         { label: "รหัสสินค้า", align: "center" },
@@ -578,30 +472,55 @@ async function ProductSalesReportContent({ searchParams }: PageProps) {
                         { label: "จำนวน", align: "center" },
                         { label: "หน่วย", align: "center" },
                         { label: "ต้นทุน", align: "center" },
-                        { label: "จำนวนเงิน", align: "center", highlight: true },
+                        { label: "จำนวนเงิน", align: "center" },
                         { label: "กำไรสุทธิ", align: "center" },
                         { label: "กำไร (%)", align: "center" },
-                      ].map(({ label, align, highlight }) => (
-                        <th key={label} className={`whitespace-nowrap px-3 py-2 text-[10px] font-black uppercase tracking-widest text-slate-500 ${align === "center" ? "text-center" : ""} ${highlight ? styles.printRevenueCell : ""}`} style={highlight ? { background: "rgba(212,163,115,0.03)" } : undefined}>{label}</th>
+                      ].map(({ label, align }) => (
+                        <th
+                          key={label}
+                          className={`whitespace-nowrap px-2 py-1.5 text-[9pt] font-black uppercase tracking-wider text-slate-900 ${
+                            align === "center" ? "text-center" : ""
+                          }`}
+                        >
+                          {label}
+                        </th>
                       ))}
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-[#4A148C]/24">
-                    {pageRows.map((row, i) => <ProductRowPrint key={row.productId} row={row} globalRank={pageIdx * PRINT_PAGE_SIZE + i + 1} />)}
+
+                  <tbody className="divide-y divide-slate-200">
+                    {pageData.items.map(({ row, rank }) => (
+                      <ProductRowPrint key={row.productId} row={row} globalRank={rank} />
+                    ))}
                     {pageIdx === pages.length - 1 && (
-                      <tr className="bg-slate-50/90">
-                        <td colSpan={3} className="px-3 py-3 text-right text-[11px] font-bold tracking-[0.02em] text-slate-600 whitespace-nowrap border-b border-slate-100">ยอดรวมทั้งหมด</td>
-                        <td className="px-2 py-3 text-center text-[11px] font-bold text-slate-700 tabular-nums whitespace-nowrap border-b border-slate-100">{fmt(summary.totalQty)}</td>
-                        <td className="px-2 py-3 text-center text-[11px] font-bold text-slate-500 whitespace-nowrap border-b border-slate-100">—</td>
-                        <td className="px-2 py-3 text-center text-[11px] font-bold text-slate-700 tabular-nums whitespace-nowrap border-b border-slate-100">{fmtMoney(summary.totalCost)}</td>
-                        <td className="px-2 py-3 text-center tabular-nums whitespace-nowrap border-b border-slate-100" style={{ background: "rgba(212,163,115,0.05)" }}><span className="whitespace-nowrap text-[11px] font-bold text-[#4A148C]">{fmtMoney(summary.totalRevenue)}</span></td>
-                        <td className={`px-3 py-3 text-center tabular-nums whitespace-nowrap border-b border-slate-100 ${summary.netProfit >= 0 ? "text-emerald-600" : "text-red-500"}`}><span className="inline-flex items-center justify-center whitespace-nowrap text-[11px] font-bold">{fmtMoney(summary.netProfit)}</span></td>
-                        <td className={`px-3 py-3 text-center tabular-nums whitespace-nowrap border-b border-slate-100 ${summary.netProfit >= 0 ? "text-emerald-600" : "text-red-500"}`}><span className="inline-flex items-center justify-center whitespace-nowrap text-[11px] font-bold">{fmtPercent(totalMarginPercent)}</span></td>
+                      <tr className="bg-slate-100 font-black border-t-2 border-b-2 border-slate-900">
+                        <td colSpan={3} className="px-3 py-2 text-right text-[10pt] font-black tracking-[0.02em] text-slate-900 whitespace-nowrap">
+                          ยอดรวมทั้งหมด
+                        </td>
+                        <td className="px-2 py-2 text-center text-[10pt] font-black text-slate-900 tabular-nums whitespace-nowrap">
+                          {fmt(summary.totalQty)}
+                        </td>
+                        <td className="px-2 py-2 text-center text-[10pt] font-black text-slate-500 whitespace-nowrap">—</td>
+                        <td className="px-2 py-2 text-center text-[10pt] font-black text-slate-900 tabular-nums whitespace-nowrap">
+                          {fmtMoney(summary.totalCost)}
+                        </td>
+                        <td className="px-2 py-2 text-center tabular-nums whitespace-nowrap">
+                          <span className="whitespace-nowrap text-[10pt] font-black text-slate-900">{fmtMoney(summary.totalRevenue)}</span>
+                        </td>
+                        <td className={`px-2 py-2 text-center tabular-nums whitespace-nowrap ${summary.netProfit >= 0 ? "text-emerald-700" : "text-red-600"}`}>
+                          <span className="inline-flex items-center justify-center whitespace-nowrap text-[10pt] font-black">{fmtMoney(summary.netProfit)}</span>
+                        </td>
+                        <td className={`px-2 py-2 text-center tabular-nums whitespace-nowrap ${summary.netProfit >= 0 ? "text-emerald-700" : "text-red-600"}`}>
+                          <span className="inline-flex items-center justify-center whitespace-nowrap text-[10pt] font-black">{fmtPercent(totalMarginPercent)}</span>
+                        </td>
                       </tr>
                     )}
                   </tbody>
                 </table>
-                <div className={styles.printFooter}>พิมพ์จากระบบรายงานอัตโนมัติ (All Noodles) - หน้า {pageIdx + 1} / {pages.length}</div>
+
+                <div className={styles.printFooter}>
+                  พิมพ์จากระบบรายงานอัตโนมัติ (All Noodles) · หน้า {pageIdx + 1} / {pages.length}
+                </div>
               </div>
             ));
           })()}

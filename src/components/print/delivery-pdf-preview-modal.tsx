@@ -12,12 +12,14 @@ import { uploadTempPdfAction } from "@/app/orders/pdf-actions";
 type DeliveryPdfPreviewModalProps = {
   file: File;
   previewImages?: string[];
+  title?: string;
   onClose: () => void;
 };
 
 export function DeliveryPdfPreviewModal({
   file,
   previewImages = [],
+  title = "ตัวอย่าง PDF บิลส่งของ",
   onClose,
 }: DeliveryPdfPreviewModalProps) {
   const [isSharing, setIsSharing] = useState(false);
@@ -222,7 +224,7 @@ export function DeliveryPdfPreviewModal({
                   ALL NOODLES PDF EXPORT
                 </p>
                 <h3 className="mt-1 truncate text-xl font-black leading-none tracking-[0.01em] text-[#4A148C] sm:text-2xl">
-                  ตัวอย่าง PDF บิลส่งของ
+                  {title}
                 </h3>
                 <p className="mt-1 truncate text-[11px] font-semibold text-[#4A148C]/60 sm:text-xs">
                   {file.name}

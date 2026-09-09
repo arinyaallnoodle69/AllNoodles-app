@@ -1,5 +1,9 @@
-import Link from "next/link";
-import { ChevronDown, ChevronRight } from "lucide-react";
+"use client";
+
+import { ChevronDown, ChevronRight, FileText } from "lucide-react";
+import { useState } from "react";
+import type { CustomerSalesSummaryStore } from "@/components/print/customer-sales-summary-layout";
+import { CustomerSalesSummaryModal } from "@/components/print/customer-sales-summary-modal";
 
 export type VehicleSalesSummaryItem = {
   href: string;
@@ -9,6 +13,7 @@ export type VehicleSalesSummaryItem = {
   salesAmount: number;
   storeCount: number;
   weightGrams: number;
+  stores: CustomerSalesSummaryStore[];
 };
 
 type VehicleSalesSummaryProps = {
@@ -16,6 +21,7 @@ type VehicleSalesSummaryProps = {
   dateLabel: string;
   display?: "all" | "desktop" | "mobile";
   items: VehicleSalesSummaryItem[];
+  allStores: CustomerSalesSummaryStore[];
   selectedVehicleId: string;
   totalAmount: number;
   totalOrderCount: number;
@@ -31,6 +37,23 @@ function formatWeight(value: number) {
     minimumFractionDigits: 0,
     maximumFractionDigits: 2,
   });
+}
+
+function getFormattedPrintedAt() {
+  const now = new Date();
+  const dateStr = now.toLocaleDateString("th-TH", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+    timeZone: "Asia/Bangkok",
+  });
+  const timeStr = now.toLocaleTimeString("th-TH", {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    timeZone: "Asia/Bangkok",
+  });
+  return `${dateStr} เวลา ${timeStr} น.`;
 }
 
 function SalesBagIcon({ mobile = false }: { mobile?: boolean }) {
@@ -60,100 +83,209 @@ function SalesBagIcon({ mobile = false }: { mobile?: boolean }) {
 }
 
 export function VehicleSalesSummary({
-  allVehiclesHref,
   display = "all",
   items,
+  allStores,
+  dateLabel,
   selectedVehicleId,
   totalAmount,
   totalOrderCount,
   totalWeightGrams,
 }: VehicleSalesSummaryProps) {
+  const [modalOpen, setModalOpen] = useState(false);
+  const [activeVehicleIdForModal, setActiveVehicleIdForModal] = useState<string>("__all__");
+
   if (items.length === 0) return null;
 
   const totalStoreCount = items.reduce((sum, item) => sum + item.storeCount, 0);
+  const printedAt = getFormattedPrintedAt();
+
+  const allVehiclesData = {
+    vehicleId: "__all__",
+    vehicleName: "ทุกสายรถ",
+    dateLabel,
+    printedAt,
+    stores: allStores,
+    totalAmount,
+    totalWeightGrams,
+    totalOrders: totalOrderCount,
+  };
+
+  const vehicleDataList = items.map((item) => ({
+    vehicleId: item.id,
+    vehicleName: item.name,
+    dateLabel,
+    printedAt,
+    stores: item.stores,
+    totalAmount: item.salesAmount,
+    totalWeightGrams: item.weightGrams,
+    totalOrders: item.orderCount,
+  }));
+
+  function handleOpenModal(vehicleId: string) {
+    setActiveVehicleIdForModal(vehicleId);
+    setModalOpen(true);
+  }
 
   return (
-    <section aria-label="สรุปยอดขายรายวันแยกตามรถ" className="-mx-1 lg:mx-0 lg:px-0">
-      {display !== "mobile" ? (
-      <div className="hidden h-[116px] overflow-hidden rounded-xl border border-[#4A148C]/40 bg-white shadow-[0_4px_14px_rgba(74,20,140,0.06)] lg:flex">
-        <Link
-          href={allVehiclesHref}
-          scroll={false}
-          className={`flex w-[290px] shrink-0 items-center gap-3.5 border-r border-slate-200 px-5 py-3 text-left transition-colors hover:bg-[#FFF7FC] ${selectedVehicleId === "__all__" ? "bg-[#FFF7FC]" : "bg-white"}`}
-        >
-          <SalesBagIcon />
-          <span className="min-w-0">
-            <span className="block text-[15px] font-bold leading-tight text-slate-700">ยอดขายวันนี้</span>
-            <strong className="mt-1.5 block whitespace-nowrap text-[26px] font-black leading-none tabular-nums text-[#EC4899]">฿{formatAmount(totalAmount)}</strong>
-            <span className="mt-2 block whitespace-nowrap text-[13px] font-black leading-none text-[#4A148C]">
-              น้ำหนัก {formatWeight(totalWeightGrams)} กก.
-            </span>
-            <span className="mt-2 block whitespace-nowrap text-xs font-semibold leading-none text-slate-500">
-              {totalStoreCount.toLocaleString("th-TH")} ร้าน · {totalOrderCount.toLocaleString("th-TH")} ออเดอร์
-            </span>
-          </span>
-        </Link>
-
-        <div className="flex min-w-0 flex-1 overflow-x-auto [scrollbar-width:thin]">
-          {items.map((item) => {
-            const active = selectedVehicleId === item.id;
-            return (
-              <Link
-                key={item.id}
-                href={item.href}
-                scroll={false}
-                className={`flex min-w-[165px] flex-1 flex-col items-center justify-center border-r border-slate-200 px-3.5 py-3 text-center transition-colors hover:bg-[#FFF7FC] ${active ? "bg-[#FFF1F8]" : "bg-white"}`}
-              >
-                <span className={`max-w-full truncate text-[15px] font-bold ${active ? "text-[#9D174D]" : "text-slate-600"}`}>{item.name}</span>
-                <strong className="mt-2.5 whitespace-nowrap text-[19px] font-black leading-none tabular-nums text-slate-900">฿{formatAmount(item.salesAmount)}</strong>
-                <span className="mt-2 whitespace-nowrap text-[19px] font-bold leading-none text-[#4A148C]">
-                  น้ำหนัก {formatWeight(item.weightGrams)} กก.
+    <>
+      <section aria-label="สรุปยอดขายรายวันแยกตามรถ" className="-mx-1 lg:mx-0 lg:px-0">
+        {display !== "mobile" ? (
+          <div className="hidden h-[116px] overflow-hidden rounded-xl border border-[#4A148C]/40 bg-white shadow-[0_4px_14px_rgba(74,20,140,0.06)] lg:flex">
+            {/* All Vehicles Card */}
+            <button
+              type="button"
+              onClick={() => handleOpenModal("__all__")}
+              className={`group flex w-[290px] shrink-0 items-center gap-3.5 border-r border-slate-200 px-5 py-3 text-left transition-colors hover:bg-[#FFF7FC] ${
+                selectedVehicleId === "__all__" ? "bg-[#FFF7FC]" : "bg-white"
+              }`}
+              title="คลิกเพื่อเปิดรายงานสรุปยอดขายตามลูกค้า (A4)"
+            >
+              <SalesBagIcon />
+              <span className="min-w-0 flex-1">
+                <span className="flex items-center justify-between text-[15px] font-bold leading-tight text-slate-700">
+                  <span>ยอดขายวันนี้</span>
+                  <span className="inline-flex items-center gap-1 rounded bg-[#4A148C]/10 px-1.5 py-0.5 text-[10px] font-bold text-[#4A148C] opacity-0 transition-opacity group-hover:opacity-100">
+                    <FileText className="h-3 w-3" />
+                    ดู A4
+                  </span>
                 </span>
-              </Link>
-            );
-          })}
-        </div>
-
-        <span className="flex w-[135px] shrink-0 items-center justify-center gap-1 whitespace-nowrap px-3 text-sm font-black text-[#EC4899]">
-          ดูแยกรถ
-          <ChevronRight className="h-4 w-4" strokeWidth={2.5} />
-        </span>
-      </div>
-      ) : null}
-
-      {display !== "desktop" ? (
-      <details className="group overflow-hidden rounded-lg border border-[#EC4899]/55 bg-white shadow-[0_2px_8px_rgba(74,20,140,0.04)] lg:hidden">
-        <summary className="flex h-[78px] cursor-pointer list-none items-center gap-2.5 px-3 py-2 text-left marker:hidden [&::-webkit-details-marker]:hidden">
-          <SalesBagIcon mobile />
-          <span className="min-w-0 flex-1">
-            <span className="block text-[10px] font-bold leading-tight text-slate-600">ยอดขายวันนี้</span>
-            <strong className="mt-0.5 block truncate text-base font-black leading-none tabular-nums text-[#EC4899]">฿{formatAmount(totalAmount)}</strong>
-            <span className="mt-1.5 block text-[10px] font-black leading-none text-[#4A148C]">
-              น้ำหนัก {formatWeight(totalWeightGrams)} กก.
-            </span>
-            <span className="mt-1.5 block text-[9px] font-medium leading-none text-slate-500">
-              {totalStoreCount.toLocaleString("th-TH")} ร้าน · {totalOrderCount.toLocaleString("th-TH")} ออเดอร์
-            </span>
-          </span>
-          <span className="inline-flex shrink-0 items-center gap-0.5 whitespace-nowrap text-[10px] font-black text-[#EC4899]">
-            ดูแยกรถ
-            <ChevronDown className="h-4 w-4 transition-transform duration-200 group-open:rotate-180" strokeWidth={2.5} />
-          </span>
-        </summary>
-
-        <div className="border-t border-[#EC4899]/25">
-          {items.map((item) => (
-            <Link key={item.id} href={item.href} scroll={false} className={`grid min-h-11 grid-cols-[minmax(0,1fr)_108px_82px] items-center border-b border-slate-100 px-4 py-2.5 last:border-b-0 ${selectedVehicleId === item.id ? "bg-[#FFF1F8]" : "bg-white"}`}>
-              <span className={`min-w-0 truncate pr-2 text-xs font-bold ${selectedVehicleId === item.id ? "text-[#9D174D]" : "text-slate-700"}`}>{item.name}</span>
-              <strong className="whitespace-nowrap text-right text-xs font-black tabular-nums text-slate-900">฿{formatAmount(item.salesAmount)}</strong>
-              <span className="ml-2 whitespace-nowrap border-l border-[#EA80FC]/30 pl-2 text-right text-xs font-bold tabular-nums text-[#4A148C]">
-                {formatWeight(item.weightGrams)} กก.
+                <strong className="mt-1.5 block whitespace-nowrap text-[26px] font-black leading-none tabular-nums text-[#EC4899]">
+                  ฿{formatAmount(totalAmount)}
+                </strong>
+                <span className="mt-2 block whitespace-nowrap text-[13px] font-black leading-none text-[#4A148C]">
+                  น้ำหนัก {formatWeight(totalWeightGrams)} กก.
+                </span>
+                <span className="mt-2 block whitespace-nowrap text-xs font-semibold leading-none text-slate-500">
+                  {totalStoreCount.toLocaleString("th-TH")} ร้าน ·{" "}
+                  {totalOrderCount.toLocaleString("th-TH")} ออเดอร์
+                </span>
               </span>
-            </Link>
-          ))}
-        </div>
-      </details>
+            </button>
+
+            {/* Individual Vehicle Cards */}
+            <div className="flex min-w-0 flex-1 overflow-x-auto [scrollbar-width:thin]">
+              {items.map((item) => {
+                const active = selectedVehicleId === item.id;
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => handleOpenModal(item.id)}
+                    className={`group flex min-w-[165px] flex-1 flex-col items-center justify-center border-r border-slate-200 px-3.5 py-3 text-center transition-colors hover:bg-[#FFF7FC] ${
+                      active ? "bg-[#FFF1F8]" : "bg-white"
+                    }`}
+                    title={`คลิกเพื่อเปิดรายงานสรุปยอดขาย ${item.name} (A4)`}
+                  >
+                    <span
+                      className={`flex items-center gap-1 max-w-full truncate text-[15px] font-bold ${
+                        active ? "text-[#9D174D]" : "text-slate-600"
+                      }`}
+                    >
+                      <span className="truncate">{item.name}</span>
+                      <FileText className="h-3 w-3 text-slate-400 opacity-0 transition-opacity group-hover:opacity-100" />
+                    </span>
+                    <strong className="mt-2.5 whitespace-nowrap text-[19px] font-black leading-none tabular-nums text-slate-900">
+                      ฿{formatAmount(item.salesAmount)}
+                    </strong>
+                    <span className="mt-2 whitespace-nowrap text-[13px] font-bold leading-none text-[#4A148C]">
+                      น้ำหนัก {formatWeight(item.weightGrams)} กก.
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+
+            <button
+              type="button"
+              onClick={() => handleOpenModal("__all__")}
+              className="flex w-[135px] shrink-0 items-center justify-center gap-1 whitespace-nowrap px-3 text-sm font-black text-[#EC4899] hover:bg-[#FFF7FC] transition-colors"
+            >
+              <FileText className="h-4 w-4" strokeWidth={2.5} />
+              รายงาน A4
+              <ChevronRight className="h-4 w-4" strokeWidth={2.5} />
+            </button>
+          </div>
+        ) : null}
+
+        {display !== "desktop" ? (
+          <details className="group overflow-hidden rounded-lg border border-[#EC4899]/55 bg-white shadow-[0_2px_8px_rgba(74,20,140,0.04)] lg:hidden">
+            <summary className="flex h-[78px] cursor-pointer list-none items-center gap-2.5 px-3 py-2 text-left marker:hidden [&::-webkit-details-marker]:hidden">
+              <SalesBagIcon mobile />
+              <span className="min-w-0 flex-1">
+                <span className="block text-[10px] font-bold leading-tight text-slate-600">
+                  ยอดขายวันนี้
+                </span>
+                <strong className="mt-0.5 block truncate text-base font-black leading-none tabular-nums text-[#EC4899]">
+                  ฿{formatAmount(totalAmount)}
+                </strong>
+                <span className="mt-1.5 block text-[10px] font-black leading-none text-[#4A148C]">
+                  น้ำหนัก {formatWeight(totalWeightGrams)} กก.
+                </span>
+                <span className="mt-1.5 block text-[9px] font-medium leading-none text-slate-500">
+                  {totalStoreCount.toLocaleString("th-TH")} ร้าน ·{" "}
+                  {totalOrderCount.toLocaleString("th-TH")} ออเดอร์
+                </span>
+              </span>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleOpenModal("__all__");
+                }}
+                className="inline-flex shrink-0 items-center gap-1 rounded-md bg-[#4A148C] px-2 py-1 text-[10px] font-bold text-white shadow-sm"
+              >
+                <FileText className="h-3 w-3" />
+                รายงาน A4
+              </button>
+              <span className="inline-flex shrink-0 items-center gap-0.5 whitespace-nowrap text-[10px] font-black text-[#EC4899] ml-1">
+                <ChevronDown
+                  className="h-4 w-4 transition-transform duration-200 group-open:rotate-180"
+                  strokeWidth={2.5}
+                />
+              </span>
+            </summary>
+
+            <div className="border-t border-[#EC4899]/25">
+              {items.map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => handleOpenModal(item.id)}
+                  className={`grid w-full min-h-11 grid-cols-[minmax(0,1fr)_108px_82px] items-center border-b border-slate-100 px-4 py-2.5 text-left transition-colors hover:bg-[#FFF7FC] last:border-b-0 ${
+                    selectedVehicleId === item.id ? "bg-[#FFF1F8]" : "bg-white"
+                  }`}
+                >
+                  <span
+                    className={`flex items-center gap-1 min-w-0 truncate pr-2 text-xs font-bold ${
+                      selectedVehicleId === item.id ? "text-[#9D174D]" : "text-slate-700"
+                    }`}
+                  >
+                    <span className="truncate">{item.name}</span>
+                    <FileText className="h-3 w-3 text-slate-400 shrink-0" />
+                  </span>
+                  <strong className="whitespace-nowrap text-right text-xs font-black tabular-nums text-slate-900">
+                    ฿{formatAmount(item.salesAmount)}
+                  </strong>
+                  <span className="ml-2 whitespace-nowrap border-l border-[#EA80FC]/30 pl-2 text-right text-xs font-bold tabular-nums text-[#4A148C]">
+                    {formatWeight(item.weightGrams)} กก.
+                  </span>
+                </button>
+              ))}
+            </div>
+          </details>
+        ) : null}
+      </section>
+
+      {modalOpen ? (
+        <CustomerSalesSummaryModal
+          isOpen={modalOpen}
+          onClose={() => setModalOpen(false)}
+          initialVehicleId={activeVehicleIdForModal}
+          allVehiclesData={allVehiclesData}
+          vehicleDataList={vehicleDataList}
+        />
       ) : null}
-    </section>
+    </>
   );
 }

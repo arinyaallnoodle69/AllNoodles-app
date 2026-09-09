@@ -5,6 +5,18 @@ import { normalizeSearch } from "@/lib/utils/search";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
+export type ProductSalesStoreBreakdown = {
+  customerId: string;
+  customerCode: string;
+  customerName: string;
+  totalQty: number;
+  unit: string;
+  totalCost: number;
+  totalRevenue: number;
+  netProfit: number;
+  margin: number;
+};
+
 export type ProductSalesRow = {
   productId: string;
   sku: string;
@@ -16,6 +28,7 @@ export type ProductSalesRow = {
   avgUnitPrice: number;
   totalRevenue: number;
   totalCost: number;
+  stores: ProductSalesStoreBreakdown[];
 };
 
 export type ProductSalesSummary = {
@@ -174,6 +187,7 @@ export async function getProductSalesRanking(params: {
     .from("delivery_notes")
     .select(`
       customer_id,
+      customers(id, name, customer_code),
       delivery_note_items(
         quantity_delivered,
         quantity_in_base_unit,
@@ -202,6 +216,7 @@ export async function getProductSalesRanking(params: {
 
   type RawDeliveryNote = {
     customer_id: string;
+    customers: { id: string; name: string; customer_code: string } | { id: string; name: string; customer_code: string }[] | null;
     delivery_note_items: Array<{
       quantity_delivered: unknown;
       quantity_in_base_unit: unknown;
@@ -223,23 +238,39 @@ export async function getProductSalesRanking(params: {
   const rawNotes = (data ?? []) as RawDeliveryNote[];
 
   // Aggregate by product_id
-  const productMap = new Map<
-    string,
-    {
-      sku: string;
-      name: string;
-      unit: string;
-      imageUrl: string | null;
-      costPerUnit: number;
-      totalQty: number;
-      totalRevenue: number;
-      totalCost: number;
-      unitPriceSum: number;
-      unitPriceCount: number;
-    }
-  >();
+  type ProductAggregate = {
+    sku: string;
+    name: string;
+    unit: string;
+    imageUrl: string | null;
+    costPerUnit: number;
+    totalQty: number;
+    totalRevenue: number;
+    totalCost: number;
+    unitPriceSum: number;
+    unitPriceCount: number;
+    customerMap: Map<
+      string,
+      {
+        customerId: string;
+        customerCode: string;
+        customerName: string;
+        totalQty: number;
+        totalCost: number;
+        totalRevenue: number;
+        unit: string;
+      }
+    >;
+  };
+
+  const productMap = new Map<string, ProductAggregate>();
 
   for (const note of rawNotes) {
+    const customerObj = Array.isArray(note.customers) ? note.customers[0] : note.customers;
+    const customerId = note.customer_id;
+    const customerCode = customerObj?.customer_code || "-";
+    const customerName = customerObj?.name || "ไม่ระบุชื่อร้าน";
+
     for (const item of note.delivery_note_items ?? []) {
       const product = item.products;
       if (!product) continue;
@@ -255,48 +286,87 @@ export async function getProductSalesRanking(params: {
         ? orderItemCost
         : toNum(product.cost_price);
       const cost = costPerUnit * toNum(item.quantity_delivered);
+      const revenue = toNum(item.line_total);
+      const unitPrice = toNum(item.unit_price);
 
-      const existing = productMap.get(product.id);
+      let existing = productMap.get(product.id);
       if (!existing) {
-        productMap.set(product.id, {
+        existing = {
           sku: product.sku,
           name: product.name,
           unit: product.unit,
           costPerUnit,
           imageUrl,
-          totalQty: qty,
-          totalRevenue: toNum(item.line_total),
-          totalCost: cost,
-          unitPriceSum: toNum(item.unit_price),
-          unitPriceCount: 1,
-        });
-      } else {
-        productMap.set(product.id, {
-          ...existing,
-          totalQty: existing.totalQty + qty,
-          totalRevenue: existing.totalRevenue + toNum(item.line_total),
-          totalCost: existing.totalCost + cost,
-          unitPriceSum: existing.unitPriceSum + toNum(item.unit_price),
-          unitPriceCount: existing.unitPriceCount + 1,
-        });
+          totalQty: 0,
+          totalRevenue: 0,
+          totalCost: 0,
+          unitPriceSum: 0,
+          unitPriceCount: 0,
+          customerMap: new Map(),
+        };
+        productMap.set(product.id, existing);
       }
+
+      existing.totalQty += qty;
+      existing.totalRevenue += revenue;
+      existing.totalCost += cost;
+      existing.unitPriceSum += unitPrice;
+      existing.unitPriceCount += 1;
+
+      let storeEntry = existing.customerMap.get(customerId);
+      if (!storeEntry) {
+        storeEntry = {
+          customerId,
+          customerCode,
+          customerName,
+          totalQty: 0,
+          totalCost: 0,
+          totalRevenue: 0,
+          unit: product.unit,
+        };
+        existing.customerMap.set(customerId, storeEntry);
+      }
+      storeEntry.totalQty += qty;
+      storeEntry.totalCost += cost;
+      storeEntry.totalRevenue += revenue;
     }
   }
 
   // Convert to sorted array
   let allRows: ProductSalesRow[] = [...productMap.entries()]
-    .map(([productId, v]) => ({
-      productId,
-      sku: v.sku,
-      name: v.name,
-      unit: v.unit,
-      imageUrl: v.imageUrl,
-      costPerUnit: v.costPerUnit,
-      totalQty: v.totalQty,
-      avgUnitPrice: v.unitPriceCount > 0 ? v.unitPriceSum / v.unitPriceCount : 0,
-      totalRevenue: v.totalRevenue,
-      totalCost: v.totalCost,
-    }))
+    .map(([productId, v]) => {
+      const stores: ProductSalesStoreBreakdown[] = Array.from(v.customerMap.values())
+        .map((s) => {
+          const netProfit = s.totalRevenue - s.totalCost;
+          const margin = s.totalRevenue > 0 ? (netProfit / s.totalRevenue) * 100 : 0;
+          return {
+            customerId: s.customerId,
+            customerCode: s.customerCode,
+            customerName: s.customerName,
+            totalQty: s.totalQty,
+            unit: s.unit,
+            totalCost: s.totalCost,
+            totalRevenue: s.totalRevenue,
+            netProfit,
+            margin,
+          };
+        })
+        .sort((a, b) => b.totalRevenue - a.totalRevenue || a.customerCode.localeCompare(b.customerCode, "th"));
+
+      return {
+        productId,
+        sku: v.sku,
+        name: v.name,
+        unit: v.unit,
+        imageUrl: v.imageUrl,
+        costPerUnit: v.costPerUnit,
+        totalQty: v.totalQty,
+        avgUnitPrice: v.unitPriceCount > 0 ? v.unitPriceSum / v.unitPriceCount : 0,
+        totalRevenue: v.totalRevenue,
+        totalCost: v.totalCost,
+        stores,
+      };
+    })
     .sort((a, b) => b.totalRevenue - a.totalRevenue);
 
   // Product name / SKU filter

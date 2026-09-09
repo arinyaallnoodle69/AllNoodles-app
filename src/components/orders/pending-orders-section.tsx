@@ -1451,7 +1451,7 @@ function AllStoresDeliveryModal({
           </div>
 
           <div className="mt-4 overflow-hidden border border-[#EA80FC]/30 bg-white">
-            <div className="hidden w-full grid-cols-[82px_88px_minmax(120px,1fr)_122px_108px_42px_116px_34px] gap-x-2 border-b border-[#EA80FC]/25 bg-[#4A148C] px-3 py-3 text-xs font-black uppercase tracking-[0.08em] text-white md:grid lg:grid-cols-[96px_104px_minmax(150px,1fr)_136px_124px_48px_132px_38px] lg:gap-x-3 lg:px-4 xl:grid-cols-[104px_112px_minmax(190px,1fr)_148px_136px_56px_144px_44px]">
+            <div className="hidden w-full grid-cols-[82px_88px_minmax(110px,1fr)_118px_104px_42px_128px_34px] gap-x-2 border-b border-[#EA80FC]/25 bg-[#4A148C] px-3 py-3 text-xs font-black uppercase tracking-[0.08em] text-white md:grid lg:grid-cols-[96px_104px_minmax(140px,1fr)_136px_120px_48px_140px_38px] lg:gap-x-3 lg:px-4 xl:grid-cols-[104px_112px_minmax(170px,1fr)_148px_130px_56px_155px_44px]">
               <span>วันที่</span>
               <span>รหัสร้านค้า</span>
               <span>ชื่อร้านค้า</span>
@@ -1468,7 +1468,7 @@ function AllStoresDeliveryModal({
                 return (
                   <label
                     key={compositeKey}
-                    className="grid cursor-pointer grid-cols-[minmax(0,1fr)_auto] gap-3 px-4 py-3 transition hover:bg-[#EA80FC]/10 md:grid-cols-[82px_88px_minmax(120px,1fr)_122px_108px_42px_116px_34px] md:items-center md:gap-x-2 md:px-3 lg:grid-cols-[96px_104px_minmax(150px,1fr)_136px_124px_48px_132px_38px] lg:gap-x-3 lg:px-4 xl:grid-cols-[104px_112px_minmax(190px,1fr)_148px_136px_56px_144px_44px]"
+                    className="grid cursor-pointer grid-cols-[minmax(0,1fr)_auto] gap-3 px-4 py-3 transition hover:bg-[#EA80FC]/10 md:grid-cols-[82px_88px_minmax(110px,1fr)_118px_104px_42px_128px_34px] md:items-center md:gap-x-2 md:px-3 lg:grid-cols-[96px_104px_minmax(140px,1fr)_136px_120px_48px_140px_38px] lg:gap-x-3 lg:px-4 xl:grid-cols-[104px_112px_minmax(170px,1fr)_148px_130px_56px_155px_44px]"
                   >
                     <span className="hidden text-sm font-black text-[#4A148C] md:block">
                       {formatDate(store.orderDate)}
@@ -1507,7 +1507,7 @@ function AllStoresDeliveryModal({
                     <span className="hidden text-center text-sm font-black text-[#4A148C] md:block">
                       {store.orderRounds}
                     </span>
-                    <span className="hidden text-right text-sm font-black text-[#4A148C] md:block">
+                    <span className="hidden text-right text-sm font-black text-[#4A148C] whitespace-nowrap md:block">
                       {formatMoney(store.totalAmount)} บาท
                     </span>
                     <span className="flex items-center justify-end md:justify-center">

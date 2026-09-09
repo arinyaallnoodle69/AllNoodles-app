@@ -8,6 +8,8 @@ type PrintPackingListButtonProps = {
   endDate?: string;
   layout?: "standard" | "transposed";
   label?: string;
+  vehicleId?: string;
+  vehicle?: string;
 };
 
 export function PrintPackingListButton({
@@ -15,15 +17,20 @@ export function PrintPackingListButton({
   endDate,
   layout = "standard",
   label = "พิมพ์ใบออเดอร์",
+  vehicleId,
+  vehicle,
 }: PrintPackingListButtonProps) {
   const [loading, setLoading] = useState(false);
-  const basePageUrl = useMemo(
-    () =>
-      `/orders/packing-list?date=${date}${endDate ? `&endDate=${endDate}` : ""}${
-        layout !== "standard" ? `&layout=${layout}` : ""
-      }`,
-    [date, endDate, layout],
-  );
+  const activeVehicle = (vehicleId ?? vehicle)?.trim();
+  const basePageUrl = useMemo(() => {
+    const vehicleParam =
+      activeVehicle && activeVehicle !== "__all__"
+        ? `&vehicle=${encodeURIComponent(activeVehicle)}`
+        : "";
+    return `/orders/packing-list?date=${date}${endDate ? `&endDate=${endDate}` : ""}${
+      layout !== "standard" ? `&layout=${layout}` : ""
+    }${vehicleParam}`;
+  }, [date, endDate, layout, activeVehicle]);
 
   useEffect(() => {
     const timer = setTimeout(() => {

@@ -1,4 +1,4 @@
-/* ─── Shared Print/Capture Design (HIGH DENSITY A4) ─── */
+/* ─── Shared Print/Capture Design (MODERN FORMAL CORPORATE A4) ─── */
 
 @page {
   size: A4 portrait;
@@ -11,12 +11,19 @@
   width: 210mm !important;
   height: 297mm !important; /* STRICT A4 HEIGHT */
   background: #ffffff !important;
-  padding: 4mm !important;
+  padding: 8mm !important;
   margin: 0 !important;
   box-sizing: border-box !important;
   overflow: hidden !important;
-  font-family: var(--font-noto-sans-thai), "Noto Sans Thai", sans-serif !important;
-  color: #000000 !important;
+  font-family: var(--font-noto-sans-thai), "Noto Sans Thai", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
+  color: #0f172a !important;
+  print-color-adjust: exact !important;
+  -webkit-print-color-adjust: exact !important;
+}
+
+.printArea * {
+  print-color-adjust: exact !important;
+  -webkit-print-color-adjust: exact !important;
 }
 
 .printPage {
@@ -24,18 +31,18 @@
   width: 210mm !important;
   height: 297mm !important;
   overflow: hidden !important;
-  background: white !important;
+  background: #ffffff !important;
   flex-shrink: 0 !important;
   display: flex !important;
   flex-direction: column !important;
 }
 
-.printRankNumber { display: inline !important; font-size: 9pt !important; font-weight: 700 !important; color: #000000 !important; }
+.printRankNumber { display: inline !important; font-size: 10pt !important; font-weight: 700 !important; color: #0f172a !important; }
 .printHeader {
   display: block !important;
-  margin-bottom: 1.5mm !important;
-  border-bottom: 1pt solid #000000 !important;
-  padding: 1mm 0 1.5mm 0 !important;
+  margin-bottom: 2mm !important;
+  border-bottom: 1.5pt solid #0f172a !important;
+  padding: 1mm 0 2mm 0 !important;
   background: #ffffff !important;
   flex-shrink: 0 !important;
 }
@@ -51,45 +58,90 @@
   gap: 3mm !important;
 }
 .printLogo {
-  width: 10mm !important; /* Shrunk for space */
+  width: 10mm !important;
   height: 10mm !important;
 }
-.printCompanyName { font-size: 13pt !important; font-weight: 900 !important; line-height: 1 !important; color: #000000 !important; margin: 0 !important; }
-.printSubtitle { font-size: 8pt !important; font-weight: 600 !important; color: #475569 !important; margin-top: 0.5mm !important; }
-.printMeta { font-size: 7.5pt !important; font-weight: 500 !important; color: #64748b !important; text-align: right !important; line-height: 1.2 !important; }
-.printReportTitle { font-size: 14pt !important; font-weight: 900 !important; color: #000000 !important; margin: 1mm 0 0 0 !important; }
+.printCompanyName { font-size: 14pt !important; font-weight: 900 !important; line-height: 1 !important; color: #0f172a !important; margin: 0 !important; }
+.printSubtitle { font-size: 9pt !important; font-weight: 600 !important; color: #475569 !important; margin-top: 0.5mm !important; }
+.printMeta { font-size: 8.5pt !important; font-weight: 500 !important; color: #475569 !important; text-align: right !important; line-height: 1.3 !important; }
+.printReportTitle { font-size: 15pt !important; font-weight: 900 !important; color: #0f172a !important; margin: 1mm 0 0 0 !important; }
 
 .printFilters { margin-top: 1.2mm !important; padding-top: 0.8mm !important; }
 .printFilterItem { display: inline-flex !important; align-items: center !important; gap: 1mm !important; }
-.printFilterLabel { font-size: 8pt !important; font-weight: 700 !important; color: #64748b !important; }
-.printFilterValue { font-size: 8pt !important; font-weight: 600 !important; color: #000000 !important; }
-
+.printFilterLabel { font-size: 9pt !important; font-weight: 700 !important; color: #475569 !important; }
+.printFilterValue { font-size: 9pt !important; font-weight: 700 !important; color: #0f172a !important; }
 
 .printArea table {
   width: 100% !important;
   table-layout: fixed !important;
   border-collapse: collapse !important;
-  margin-top: 1.2mm !important;
+  margin-top: 1.5mm !important;
   flex-shrink: 0 !important;
 }
-/* COMPACT ROWS FOR 35 ITEMS - PERFECT CALIBRATION */
-.printArea thead th { padding: 0.8mm 1mm !important; font-size: 8pt !important; font-weight: 900 !important; background: #F1F5F9 !important; border-bottom: 1.2pt solid #000000 !important; color: #000000 !important; text-transform: uppercase !important; }
-.printArea tbody td { padding: 1.05mm 1mm !important; font-size: 8.8pt !important; border-bottom: 0.5pt solid #e2e8f0 !important; color: #000000 !important; }
 
-.printProductCell { display: flex !important; align-items: center !important; gap: 1mm !important; min-width: 0 !important; }
-.printProductName { font-size: 9pt !important; font-weight: 800 !important; color: #000000 !important; white-space: normal !important; line-height: 1.15 !important; }
+.printArea thead th {
+  padding: 1.5mm 1mm !important;
+  font-size: 9pt !important;
+  font-weight: 900 !important;
+  background: #f8fafc !important;
+  border-bottom: 1.5pt solid #0f172a !important;
+  color: #0f172a !important;
+  text-transform: uppercase !important;
+}
+.printArea tbody td {
+  padding: 1.4mm 1mm !important;
+  font-size: 9.5pt !important;
+  border-bottom: 0.5pt solid #e2e8f0 !important;
+  color: #0f172a !important;
+}
+
+.printProductCell { display: flex !important; align-items: center !important; gap: 1.5mm !important; min-width: 0 !important; }
+.printProductName {
+  font-size: 10pt !important;
+  font-weight: 800 !important;
+  color: #0f172a !important;
+  white-space: normal !important;
+  word-break: break-word !important;
+  overflow-wrap: break-word !important;
+  line-height: 1.25 !important;
+}
+
+.printStoreRow {
+  background-color: #ffffff !important;
+}
+.printStoreCell {
+  padding: 1.1mm 1mm !important;
+  font-size: 8.5pt !important;
+  color: #334155 !important;
+  border-bottom: 0.3pt solid #f1f5f9 !important;
+}
+.printStoreCode {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, monospace !important;
+  font-size: 8pt !important;
+  color: #64748b !important;
+}
+.printStoreName {
+  font-size: 8.5pt !important;
+  font-weight: 600 !important;
+  color: #334155 !important;
+  white-space: normal !important;
+  word-break: break-word !important;
+  overflow-wrap: break-word !important;
+  line-height: 1.2 !important;
+}
 
 .printFooter {
   display: block !important;
   margin-top: auto !important;
   padding-top: 3mm !important;
   border-top: 0.8pt solid #e2e8f0 !important;
-  font-size: 8pt !important;
-  font-weight: 600 !important;
-  color: #94a3b8 !important;
+  font-size: 8.5pt !important;
+  font-weight: 500 !important;
+  color: #64748b !important;
   text-align: right !important;
   flex-shrink: 0 !important;
 }
+
 /* ─── Media Print Specifics ─── */
 @media print {
   :global(header), :global(aside), :global(nav), :global(footer),
@@ -110,11 +162,18 @@
     top: 0 !important;
     width: 100% !important;
     z-index: 9999 !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
   }
 
   .printPage {
     page-break-after: always !important;
     break-after: page !important;
+  }
+
+  .printPage:last-child {
+    page-break-after: auto !important;
+    break-after: auto !important;
   }
 }
 

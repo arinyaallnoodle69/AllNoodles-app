@@ -17,6 +17,7 @@ import { sortProductsByCategory } from "@/lib/products/sort-by-category";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { AutoPrint, PackingListPrintButton } from "./preview/print-button";
 import { getDailySpecialPrintItems } from "@/lib/orders/daily-special-items";
+import { SharePackingListPdfButton } from "@/components/print/share-packing-list-pdf-button";
 
 export const metadata = { title: "ใบจัดของ" };
 export const viewport: Viewport = {
@@ -32,6 +33,8 @@ type Props = {
     endDate?: string;
     autoprint?: string;
     layout?: string;
+    vehicle?: string;
+    vehicleId?: string;
   }>;
 };
 
@@ -180,6 +183,10 @@ async function PackingListPage({ searchParams }: Props) {
   const generatedAt = new Date();
   const autoprint = params.autoprint === "1";
   const layout: PackingListLayoutMode = params.layout === "transposed" ? "transposed" : "standard";
+  const rawVehicleParam = (params.vehicleId ?? params.vehicle)?.trim();
+  const selectedVehicleIds = rawVehicleParam
+    ? rawVehicleParam.split(",").map((s) => s.trim()).filter(Boolean)
+    : ["__all__"];
   const date =
     params.date ?? new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Bangkok" });
   const endDate = params.endDate || date;
@@ -242,6 +249,24 @@ async function PackingListPage({ searchParams }: Props) {
     }),
   );
   const vehicleSortIndexMap = new Map(vehicles.map((vehicle, index) => [vehicle.id, index]));
+
+  const isAllVehicles =
+    selectedVehicleIds.length === 0 ||
+    selectedVehicleIds.includes("__all__") ||
+    (vehicles.length > 0 &&
+      vehicles.every((v) => selectedVehicleIds.includes(v.id)) &&
+      selectedVehicleIds.includes("__none__"));
+
+  const includeUnassigned =
+    isAllVehicles ||
+    selectedVehicleIds.includes("__none__") ||
+    selectedVehicleIds.includes("none");
+
+  function matchesVehicle(vid: string | null | undefined) {
+    if (isAllVehicles) return true;
+    if (!vid) return includeUnassigned;
+    return selectedVehicleIds.includes(vid);
+  }
 
   const categoryIdsByProductId = new Map<string, string[]>();
   for (const item of categoryItemsDb.data ?? []) {
@@ -378,6 +403,12 @@ async function PackingListPage({ searchParams }: Props) {
           activeDeliveryNote?.vehicle_id ??
           order.assigned_vehicle_id ??
           customer.default_vehicle_id;
+
+        // Filter by selected vehicle if specified
+        if (!matchesVehicle(vehicleId)) {
+          continue;
+        }
+
         const vehicleName = activeDeliveryNote?.vehicle_id
           ? getVehicleName(activeDeliveryNote.vehicles)
           : order.assigned_vehicle_id
@@ -435,6 +466,11 @@ async function PackingListPage({ searchParams }: Props) {
       }
 
       for (const special of specialItems.filter((item) => item.date === currentDate)) {
+        // Filter by selected vehicle if specified
+        if (!matchesVehicle(special.vehicleId)) {
+          continue;
+        }
+
         const key = `${special.product.sku.trim().toLowerCase()}||${special.product.unit.trim().toLowerCase()}`;
         const storeGroupKey = `special_${special.type}_${special.vehicleId}`;
         let groupedStore = groupedStores.get(storeGroupKey);
@@ -565,7 +601,28 @@ async function PackingListPage({ searchParams }: Props) {
         qty,
         vehicles,
       };
-    });
+    })
+    .filter((packingData) => packingData.stores.length > 0 || packingData.products.length > 0);
+
+  let selectedVehicleName: string | null = null;
+  if (!isAllVehicles) {
+    const names = selectedVehicleIds
+      .map((id) => {
+        if (id === "__none__" || id === "none") return "ไม่ระบุสายรถ";
+        return vehicles.find((v) => v.id === id)?.name ?? null;
+      })
+      .filter(Boolean) as string[];
+
+    if (names.length === 1) {
+      selectedVehicleName = names[0];
+    } else if (names.length > 1 && names.length <= 3) {
+      selectedVehicleName = names.join(", ");
+    } else if (names.length > 3) {
+      selectedVehicleName = `${names.length} สายรถ`;
+    }
+  }
+
+  const activeVehicleQueryValue = isAllVehicles ? "__all__" : selectedVehicleIds.join(",");
 
   const totalStores = allPackingData.reduce((sum, packingData) => sum + packingData.stores.length, 0);
   const mainDateLabel =
@@ -594,6 +651,21 @@ async function PackingListPage({ searchParams }: Props) {
           <span style={{ fontSize: "14px", fontWeight: 800, color: "#4A148C" }}>
             {layout === "transposed" ? "ใบจัดของ (สลับตาราง)" : "ใบจัดของ"}
           </span>
+          {selectedVehicleName ? (
+            <span
+              style={{
+                fontSize: "12px",
+                fontWeight: 700,
+                background: "#F3E5F5",
+                color: "#4A148C",
+                padding: "2px 8px",
+                borderRadius: "6px",
+                border: "1px solid #E1BEE7",
+              }}
+            >
+              {selectedVehicleName}
+            </span>
+          ) : null}
           <span
             className="hidden sm:inline"
             style={{ fontSize: "12px", color: "#64748b", fontWeight: 600 }}
@@ -608,6 +680,7 @@ async function PackingListPage({ searchParams }: Props) {
               date={date}
               endDate={endDate}
               layout={layout === "standard" ? "transposed" : "standard"}
+              vehicleId={activeVehicleQueryValue}
               label={
                 layout === "standard"
                   ? "สลับตาราง"
@@ -620,8 +693,15 @@ async function PackingListPage({ searchParams }: Props) {
             dateLabel={mainDateLabel}
             hidePrintOnMobile
           />
+          <SharePackingListPdfButton
+            fileName={`packing-list-${date}${endDate ? `-to-${endDate}` : ""}${
+              !isAllVehicles && selectedVehicleName ? `-${selectedVehicleName}` : ""
+            }`}
+          />
           <Link
-            href={`/orders/incoming?date=${date}${endDate ? `&endDate=${endDate}` : ""}`}
+            href={`/orders/incoming?date=${date}${endDate ? `&endDate=${endDate}` : ""}${
+              activeVehicleQueryValue !== "__all__" ? `&vehicle=${encodeURIComponent(activeVehicleQueryValue)}` : ""
+            }`}
             scroll={false}
             style={{
               fontSize: "13px",
@@ -650,10 +730,12 @@ async function PackingListPage({ searchParams }: Props) {
           }}
         >
           <p style={{ fontSize: "18px", fontWeight: 600, color: "#64748b" }}>
-            ไม่มีออเดอร์ในช่วงที่เลือก
+            ไม่มีออเดอร์ในช่วงที่เลือก{selectedVehicleName ? ` (${selectedVehicleName})` : ""}
           </p>
           <Link
-            href="/orders/incoming"
+            href={`/orders/incoming?date=${date}${endDate ? `&endDate=${endDate}` : ""}${
+              activeVehicleQueryValue !== "__all__" ? `&vehicle=${encodeURIComponent(activeVehicleQueryValue)}` : ""
+            }`}
             scroll={false}
             style={{ marginTop: "8px", color: "#4A148C", fontSize: "14px" }}
           >

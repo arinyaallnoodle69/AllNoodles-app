@@ -249,7 +249,13 @@ export default async function IncomingOrdersPage({ searchParams }: IncomingOrder
       salesAmount: number;
       storeKeys: Set<string>;
       weightGrams: number;
+      customerMap: Map<string, { customerCode: string; customerName: string; totalAmount: number; orderCount: number }>;
     }
+  >();
+
+  const allCustomerSalesMap = new Map<
+    string,
+    { customerCode: string; customerName: string; totalAmount: number; orderCount: number }
   >();
 
   for (const order of baseFilteredOrders) {
@@ -260,10 +266,33 @@ export default async function IncomingOrdersPage({ searchParams }: IncomingOrder
       salesAmount: 0,
       storeKeys: new Set<string>(),
       weightGrams: 0,
+      customerMap: new Map<string, { customerCode: string; customerName: string; totalAmount: number; orderCount: number }>(),
     };
     current.orderCount += 1;
-    current.salesAmount += Number(order.totalAmount ?? 0);
+    const orderTotal = Number(order.totalAmount ?? 0);
+    current.salesAmount += orderTotal;
     current.storeKeys.add(`${order.customerId}_${order.orderDate}`);
+
+    const vCust = current.customerMap.get(order.customerId) ?? {
+      customerCode: order.customerCode || "-",
+      customerName: order.customerName || "-",
+      totalAmount: 0,
+      orderCount: 0,
+    };
+    vCust.totalAmount += orderTotal;
+    vCust.orderCount += 1;
+    current.customerMap.set(order.customerId, vCust);
+
+    const allCust = allCustomerSalesMap.get(order.customerId) ?? {
+      customerCode: order.customerCode || "-",
+      customerName: order.customerName || "-",
+      totalAmount: 0,
+      orderCount: 0,
+    };
+    allCust.totalAmount += orderTotal;
+    allCust.orderCount += 1;
+    allCustomerSalesMap.set(order.customerId, allCust);
+
     for (const item of itemsByOrderId.get(order.id) ?? []) {
       const quantityInBaseUnit = Number(item.quantity_in_base_unit ?? item.quantity ?? 0);
       const unitWeightGrams = Number(item.products?.unit_weight_grams ?? 0);
@@ -273,6 +302,10 @@ export default async function IncomingOrdersPage({ searchParams }: IncomingOrder
     }
     vehicleSalesMap.set(vehicleKey, current);
   }
+
+  const allCustomerStores = Array.from(allCustomerSalesMap.values()).sort((a, b) =>
+    a.customerCode.localeCompare(b.customerCode, "th") || a.customerName.localeCompare(b.customerName, "th")
+  );
 
   const specialProductWeightById = new Map(
     specialCatalog.map((product) => [product.id, product.unitWeightGrams]),
@@ -286,6 +319,7 @@ export default async function IncomingOrdersPage({ searchParams }: IncomingOrder
       salesAmount: 0,
       storeKeys: new Set<string>(),
       weightGrams: 0,
+      customerMap: new Map<string, { customerCode: string; customerName: string; totalAmount: number; orderCount: number }>(),
     };
     current.weightGrams += special.quantity * unitWeightGrams;
     vehicleSalesMap.set(special.vehicleId, current);
@@ -313,6 +347,9 @@ export default async function IncomingOrdersPage({ searchParams }: IncomingOrder
       salesAmount: item.salesAmount,
       storeCount: item.storeKeys.size,
       weightGrams: item.weightGrams,
+      stores: Array.from(item.customerMap.values()).sort((a, b) =>
+        a.customerCode.localeCompare(b.customerCode, "th") || a.customerName.localeCompare(b.customerName, "th")
+      ),
     }))
     .sort((left, right) => {
       if (left.id === "__none__") return 1;
@@ -771,6 +808,8 @@ export default async function IncomingOrdersPage({ searchParams }: IncomingOrder
                 summaryProducts={summaryProducts}
                 summaryStores={summaryStores}
                 visibleOrderStores={visibleOrderStores}
+                vehicles={vehicles}
+                selectedVehicleId={selectedVehicleId}
               />
             </div>
 
@@ -780,6 +819,7 @@ export default async function IncomingOrdersPage({ searchParams }: IncomingOrder
                 dateLabel={vehicleSalesDateLabel}
                 display="mobile"
                 items={vehicleSalesItems}
+                allStores={allCustomerStores}
                 selectedVehicleId={selectedVehicleId}
                 totalAmount={vehicleSalesTotalAmount}
                 totalOrderCount={vehicleSalesTotalOrderCount}
@@ -795,7 +835,12 @@ export default async function IncomingOrdersPage({ searchParams }: IncomingOrder
                   products={summaryProducts}
                   stores={summaryStores}
                 />
-                <PrintPackingListCombinedButton date={orderDate} endDate={endDate} />
+                <PrintPackingListCombinedButton
+                  date={orderDate}
+                  endDate={endDate}
+                  vehicles={vehicles}
+                  selectedVehicleId={selectedVehicleId}
+                />
                 <PrintVehicleProductSummaryButton date={orderDate} endDate={endDate} />
                 <PrintFactoryOrderSheetButton date={orderDate} endDate={endDate} />
                 <IncomingOrdersDeliveryActions date={orderDate} endDate={endDate} stores={visibleOrderStores} />
@@ -833,6 +878,7 @@ export default async function IncomingOrdersPage({ searchParams }: IncomingOrder
                         dateLabel={vehicleSalesDateLabel}
                         display="desktop"
                         items={vehicleSalesItems}
+                        allStores={allCustomerStores}
                         selectedVehicleId={selectedVehicleId}
                         totalAmount={vehicleSalesTotalAmount}
                         totalOrderCount={vehicleSalesTotalOrderCount}
