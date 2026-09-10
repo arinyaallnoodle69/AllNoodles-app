@@ -411,7 +411,7 @@ export function BillingForm({
       )}
 
       {/* Main Content Area */}
-      <div className="relative min-h-[400px]">
+      <div className={`relative min-h-[400px] ${selectedCustomerIds.length > 0 ? "pb-40 sm:pb-0" : ""}`}>
         {isPending && (
           <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-white/80 backdrop-blur-[2px]">
             <Loader2 className="h-10 w-10 animate-spin text-[#4A148C]" />
