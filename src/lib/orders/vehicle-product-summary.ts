@@ -3,6 +3,7 @@ import "server-only";
 import { sortProductsByCategory } from "@/lib/products/sort-by-category";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { getDailySpecialPrintItems } from "@/lib/orders/daily-special-items";
+import { getDailyFactoryOrderAdjustments } from "@/lib/orders/factory-order-adjustments";
 
 type ProductWarehouseFulfillmentMode = "disabled" | "fresh" | "stock";
 
@@ -344,6 +345,7 @@ export async function getFactoryOrderSheetData(
   organizationId: string,
   date: string,
   endDate: string,
+  options: { applyAdjustments?: boolean } = {},
 ): Promise<VehicleProductSummaryData[]> {
   const admin = getSupabaseAdmin();
   const productWarehouseModesTable = (admin as unknown as {
@@ -354,7 +356,7 @@ export async function getFactoryOrderSheetData(
     };
   }).from("product_warehouse_fulfillment_modes");
 
-  const [ordersResult, vehiclesResult, warehousesResult, modesResult, sortedProducts, specialItems] = await Promise.all([
+  const [ordersResult, vehiclesResult, warehousesResult, modesResult, sortedProducts, specialItems, adjustments] = await Promise.all([
     admin
       .from("orders")
       .select(`
@@ -385,6 +387,9 @@ export async function getFactoryOrderSheetData(
       .eq("organization_id", organizationId),
     loadSortedProducts(organizationId),
     getDailySpecialPrintItems(organizationId, date, endDate),
+    options.applyAdjustments === false || date !== endDate
+      ? Promise.resolve([])
+      : getDailyFactoryOrderAdjustments(organizationId, date),
   ]);
 
   if (ordersResult.error) throw new Error(ordersResult.error.message ?? "Failed to load orders for factory order sheet.");
@@ -499,9 +504,39 @@ export async function getFactoryOrderSheetData(
     group.vehicleNamesByKey.set(item.vehicleId, item.vehicleName);
   }
 
+  const adjustmentByProductId = new Map(adjustments.map((item) => [item.productId, item.adjustedQuantity]));
+  for (const [productId, adjustedQuantity] of adjustmentByProductId) {
+    if (adjustedQuantity <= 0 || Array.from(groups.values()).some((group) => group.productVehicleQty.has(productId))) continue;
+    const product = productById.get(productId);
+    const mode = ((modesResult.data ?? []) as ProductModeRow[]).find(
+      (candidate) => candidate.product_id === productId && candidate.mode === "fresh",
+    );
+    if (!product || !mode) continue;
+
+    const warehouseName = warehouseNameById.get(mode.warehouse_id) || "ไม่ระบุคลัง";
+    const supplierName = mode.suppliers?.name || product.supplierName || "โรงงานอนามัย";
+    const supplierKey = mode.supplier_id || product.supplierId || supplierName;
+    const groupKey = `${mode.warehouse_id}:${supplierKey}`;
+    let group = groups.get(groupKey);
+    if (!group) {
+      group = {
+        factoryName: supplierName,
+        warehouseName,
+        productVehicleQty: new Map(),
+        vehicleNamesByKey: new Map([["__adjusted__", "ยอดปรับ"]]),
+        vehicleKeys: new Set(["__adjusted__"]),
+      };
+      groups.set(groupKey, group);
+    }
+    group.productVehicleQty.set(productId, new Map([["__adjusted__", adjustedQuantity]]));
+    group.vehicleKeys.add("__adjusted__");
+    group.vehicleNamesByKey.set("__adjusted__", "ยอดปรับ");
+  }
+
   const dateLabel = formatDateLabel(date, endDate);
   const configuredVehicleKeys = configuredVehicles.map((vehicle) => vehicle.id ?? "__unassigned__");
 
+  const appliedAdjustments = new Set<string>();
   return Array.from(groups.values()).map((group) => {
     const vehicleKeys = [
       ...configuredVehicleKeys.filter((key) => group.vehicleKeys.has(key)),
@@ -510,6 +545,11 @@ export async function getFactoryOrderSheetData(
     const groupProducts = products.filter((product) => group.productVehicleQty.has(product.id));
     const qty = groupProducts.map((product) => {
       const productQty = group.productVehicleQty.get(product.id) ?? new Map<string, number>();
+      const adjustedQuantity = adjustmentByProductId.get(product.id);
+      if (adjustedQuantity !== undefined && !appliedAdjustments.has(product.id)) {
+        appliedAdjustments.add(product.id);
+        return [adjustedQuantity];
+      }
       return [vehicleKeys.reduce((total, key) => total + (productQty.get(key) ?? 0), 0)];
     });
 

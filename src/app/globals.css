@@ -1,6 +1,8 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
+@source "../components/orders/factory-order-adjustment-manager.tsx";
+@source "../components/orders/fresh-reserve-dashboard.tsx";
 
 @custom-variant dark (&:is(.dark *));
 

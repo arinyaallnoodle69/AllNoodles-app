@@ -13,6 +13,7 @@ import {
   Factory,
   KeyRound,
   LayoutDashboard,
+  Layers3,
   LoaderCircle,
   LogOut,
   MessageCircleMore,
@@ -38,6 +39,7 @@ const primaryNav = [
 ] as const;
 
 const moreItems = [
+  { href: "/orders/fresh-reserve", icon: Layers3, label: "สำรองผลิตสด" },
   { href: "/stock", icon: Boxes, label: "สต็อก" },
   { href: "/billing", icon: Receipt, label: "ใบวางบิล" },
   { href: "/settings", icon: Settings2, label: "ตั้งค่า" },
@@ -91,7 +93,8 @@ export function SettingsMobileBottomNav() {
   );
   const { open: openCreateOrder, isOpen: isCreateModalOpen } = useCreateOrder();
 
-  const moreActive = moreItems.some((item) => pathname.startsWith(item.href));
+  const visibleMoreItems = isMember ? moreItems.filter((item) => item.href === "/orders/fresh-reserve") : moreItems;
+  const moreActive = visibleMoreItems.some((item) => pathname.startsWith(item.href));
   const settingsModalOpen = settingsOpen && navigatingHref !== pathname;
 
   function resetNavigationState() {
@@ -225,8 +228,8 @@ export function SettingsMobileBottomNav() {
           </button>
         </div>
 
-        <div className="grid grid-cols-3 gap-3 p-5 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
-          {moreItems.map(({ href, icon: Icon, label }) => {
+        <div className={`grid gap-2 p-4 pb-[max(1.5rem,env(safe-area-inset-bottom))] min-[390px]:gap-3 min-[390px]:p-5 ${isMember ? "grid-cols-1" : "grid-cols-4"}`}>
+          {visibleMoreItems.map(({ href, icon: Icon, label }) => {
             const active = pathname.startsWith(href);
 
             return href === "/settings" ? (
@@ -237,28 +240,28 @@ export function SettingsMobileBottomNav() {
                   setNavigatingHref(null);
                   setSettingsOpen(true);
                 }}
-                className={`flex flex-col items-center gap-2.5 rounded-2xl border px-3 py-5 text-sm font-semibold transition active:scale-[0.98] ${
+                className={`flex min-w-0 flex-col items-center gap-2 rounded-2xl border px-1 py-4 font-black transition active:scale-[0.98] ${
                   active
                     ? "border-[#EA80FC]/45 bg-[#4A148C] text-white shadow-lg shadow-[#4A148C]/25"
                     : "border-slate-200 bg-white text-[#4A148C] shadow-sm"
                 }`}
               >
-                <Icon className="h-7 w-7" strokeWidth={1.8} />
-                <span>{label}</span>
+                <Icon className="h-6 w-6 shrink-0 min-[390px]:h-7 min-[390px]:w-7" strokeWidth={1.8} />
+                <span className="w-full whitespace-nowrap text-center text-[8px] leading-none tracking-[-0.03em] min-[360px]:text-[9px] min-[460px]:text-[10px]">{label}</span>
               </button>
             ) : (
               <Link
                 key={href}
                 href={href}
                 onClick={resetNavigationState}
-                className={`flex flex-col items-center gap-2.5 rounded-2xl border px-3 py-5 text-sm font-semibold transition active:scale-[0.98] ${
+                className={`flex min-w-0 flex-col items-center gap-2 rounded-2xl border px-1 py-4 font-black transition active:scale-[0.98] ${
                   active
                     ? "border-[#EA80FC]/45 bg-[#4A148C] text-white shadow-lg shadow-[#4A148C]/25"
                     : "border-slate-200 bg-white text-[#4A148C] shadow-sm"
                 }`}
               >
-                <Icon className="h-7 w-7" strokeWidth={1.8} />
-                <span>{label}</span>
+                <Icon className="h-6 w-6 shrink-0 min-[390px]:h-7 min-[390px]:w-7" strokeWidth={1.8} />
+                <span className="w-full whitespace-nowrap text-center text-[8px] leading-none tracking-[-0.03em] min-[360px]:text-[9px] min-[460px]:text-[10px]">{label}</span>
               </Link>
             );
           })}
@@ -361,16 +364,21 @@ export function SettingsMobileBottomNav() {
                     );
                   })()}
 
-                  {/* Column 5: Logout */}
-                  <form action={signOut} className="w-full flex items-center justify-center">
-                    <button
-                      type="submit"
-                      className="flex w-full flex-col items-center justify-center gap-1 rounded-2xl px-1 py-1.5 text-[9px] font-medium transition text-slate-500 hover:text-slate-900"
-                    >
-                      <LogOut className="h-[22px] w-[22px] text-slate-500" strokeWidth={2.2} />
-                      <span className="whitespace-nowrap">ออกระบบ</span>
-                    </button>
-                  </form>
+                  {/* Column 5: More */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSettingsOpen(false);
+                      setNavigatingHref(null);
+                      setMoreOpen(true);
+                    }}
+                    className={`flex flex-col items-center justify-center gap-1 rounded-2xl px-1 py-1.5 text-[9px] font-medium transition ${
+                      moreActive ? "text-[#4A148C]" : "text-slate-500 hover:text-slate-900"
+                    }`}
+                  >
+                    <MoreHorizontal className={`h-[22px] w-[22px] transition-colors ${moreActive ? "text-[#4A148C]" : "text-slate-500"}`} strokeWidth={2.4} />
+                    <span className={`whitespace-nowrap ${moreActive ? "font-bold" : ""}`}>เพิ่มเติม</span>
+                  </button>
                 </>
               ) : (
                 <>

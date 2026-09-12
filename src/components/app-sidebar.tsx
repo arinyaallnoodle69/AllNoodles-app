@@ -12,6 +12,7 @@ import {
   ChevronLeft,
   ChevronRight,
   LayoutDashboard,
+  Layers3,
   LogOut,
   Package2,
   Receipt,
@@ -45,6 +46,7 @@ type AppRole = "admin" | "member" | "warehouse";
 
 const PAGE_TITLES: [string, string][] = [
   ["/orders/incoming", "รายการออเดอร์"],
+  ["/orders/fresh-reserve", "สำรองผลิตสด"],
   ["/orders/packing-list", "ใบจัดสินค้า"],
   ["/delivery/print", "พิมพ์ใบจัดส่ง"],
   ["/billing/print", "พิมพ์ใบวางบิล"],
@@ -133,6 +135,7 @@ const mainNavItems = [
   { href: "/dashboard", icon: LayoutDashboard, label: "แดชบอร์ด" },
   { href: "/stock", icon: Boxes, label: "สต็อก" },
   { href: "/orders/incoming", icon: ReceiptText, label: "รายการออเดอร์" },
+  { href: "/orders/fresh-reserve", icon: Layers3, label: "สำรองผลิตสด" },
   { href: "/billing", icon: Receipt, label: "ใบวางบิล" },
 ] as const;
 
@@ -172,6 +175,7 @@ function canAccessNavHref(role: AppRole | null, href: string) {
   if (role === "member") {
     return (
       href === "/orders/incoming" ||
+      href === "/orders/fresh-reserve" ||
       href === "/billing" ||
       href === "/stock" ||
       href === "/orders/packing-list" ||

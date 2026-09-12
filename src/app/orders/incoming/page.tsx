@@ -1,5 +1,6 @@
 import { Suspense } from "react";
-import { ClipboardList, Search } from "lucide-react";
+import Link from "next/link";
+import { ChevronRight, ClipboardList, Layers3, Search } from "lucide-react";
 import dynamic from "next/dynamic";
 import { unstable_cache } from "next/cache";
 import { SettingsShell } from "@/components/settings/settings-shell";
@@ -34,6 +35,9 @@ import type {
 } from "@/components/orders/packing-list-summary-button";
 import { DailySpecialOrderManager } from "@/components/orders/daily-special-order-manager";
 import { getDailySpecialCatalog, getDailySpecialItems, getDailySpecialPrintItems } from "@/lib/orders/daily-special-items";
+import { FACTORY_ADJUSTMENT_SKUS, getDailyFactoryOrderAdjustments } from "@/lib/orders/factory-order-adjustments";
+import { getFactoryOrderSheetData } from "@/lib/orders/vehicle-product-summary";
+import { calculateFreshReserve } from "@/lib/orders/fresh-reserve-math";
 import {
   VehicleSalesSummary,
   type VehicleSalesSummaryItem,
@@ -65,6 +69,9 @@ const PrintFactoryOrderSheetButton = dynamic(() =>
 );
 const MobilePrintActions = dynamic(() =>
   import("@/components/orders/mobile-print-actions").then((mod) => mod.MobilePrintActions),
+);
+const FactoryOrderAdjustmentManager = dynamic(() =>
+  import("@/components/orders/factory-order-adjustment-manager").then((mod) => mod.FactoryOrderAdjustmentManager),
 );
 
 export const metadata = { title: "รายการออเดอร์" };
@@ -193,6 +200,8 @@ export default async function IncomingOrdersPage({ searchParams }: IncomingOrder
     specialCatalog,
     specialItems,
     specialWeightItems,
+    rawFactorySheets,
+    factoryAdjustments,
   ] = await Promise.all([
     getIncomingOrdersBundle(session.organizationId, { orderDate, endDate, searchTerm }),
     expandedOrderId ? getOrderDetailById(session.organizationId, expandedOrderId) : Promise.resolve(null),
@@ -208,11 +217,43 @@ export default async function IncomingOrdersPage({ searchParams }: IncomingOrder
     getDailySpecialCatalog(session.organizationId),
     getDailySpecialItems(session.organizationId, orderDate),
     getDailySpecialPrintItems(session.organizationId, orderDate, endDate),
+    getFactoryOrderSheetData(session.organizationId, orderDate, orderDate, { applyAdjustments: false }),
+    getDailyFactoryOrderAdjustments(session.organizationId, orderDate),
   ]);
 
   const orders = ordersBundle.orders;
   const summaryItems = ordersBundle.summaryItems;
   const billedDeliveryNumbers = new Set(billedDeliveryNumbersArray);
+  const factoryDemandByProductId = new Map<string, number>();
+  for (const sheet of rawFactorySheets) {
+    sheet.products.forEach((product, index) => {
+      const demand = (sheet.qty[index] ?? []).reduce((sum, quantity) => sum + Number(quantity ?? 0), 0);
+      factoryDemandByProductId.set(product.id, (factoryDemandByProductId.get(product.id) ?? 0) + demand);
+    });
+  }
+  const factoryAdjustmentByProductId = new Map(factoryAdjustments.map((item) => [item.productId, item]));
+  const factoryAdjustmentProducts = specialCatalog
+    .filter((product) => FACTORY_ADJUSTMENT_SKUS.includes(product.sku.trim().toUpperCase() as typeof FACTORY_ADJUSTMENT_SKUS[number]))
+    .sort((left, right) => FACTORY_ADJUSTMENT_SKUS.indexOf(left.sku.trim().toUpperCase() as typeof FACTORY_ADJUSTMENT_SKUS[number]) - FACTORY_ADJUSTMENT_SKUS.indexOf(right.sku.trim().toUpperCase() as typeof FACTORY_ADJUSTMENT_SKUS[number]))
+    .map((product) => {
+      const orderDemand = factoryDemandByProductId.get(product.id) ?? 0;
+      const saved = factoryAdjustmentByProductId.get(product.id);
+      const remainingQuantity = saved?.remainingQuantity ?? 0;
+      const reserveQuantity = saved?.reserveQuantity ?? 0;
+      return {
+        adjustedQuantity: Math.max(0, orderDemand + reserveQuantity - remainingQuantity),
+        name: product.name,
+        orderDemand,
+        productId: product.id,
+        remainingQuantity,
+        reserveQuantity,
+        sku: product.sku.trim().toUpperCase(),
+      };
+    });
+  const factoryReserveAvailable = factoryAdjustmentProducts.reduce((sum, product) => {
+    const saved = factoryAdjustmentByProductId.get(product.productId) ?? null;
+    return sum + calculateFreshReserve(saved, product.orderDemand).available;
+  }, 0);
 
   const customerOptions = customers.map((customer) => ({
     id: customer.id,
@@ -807,7 +848,7 @@ export default async function IncomingOrdersPage({ searchParams }: IncomingOrder
             </div>
 
             {/* Mobile View: Premium Actions Bottom Sheet */}
-            <div className="block sm:hidden w-full">
+            <div className="grid w-full grid-cols-2 gap-2 sm:hidden">
               <MobilePrintActions
                 date={orderDate}
                 endDate={endDate}
@@ -817,8 +858,23 @@ export default async function IncomingOrdersPage({ searchParams }: IncomingOrder
                 visibleOrderStores={visibleOrderStores}
                 vehicles={vehicles}
                 selectedVehicleId={selectedVehicleId}
+                triggerLabel="พิมพ์ใบสั่งของ"
+              />
+              <FactoryOrderAdjustmentManager
+                date={orderDate}
+                dateLabel={formatDisplayDate(orderDate)}
+                products={factoryAdjustmentProducts}
+                variant="mobile"
               />
             </div>
+
+            <Link href={`/orders/fresh-reserve?date=${orderDate}`} className="group flex w-full items-center justify-between rounded-xl border border-[#D8CCEE] bg-gradient-to-r from-[#F8F4FF] to-white px-4 py-3 shadow-sm transition hover:border-[#BDA7E4]">
+              <span className="flex min-w-0 items-center gap-3">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#EEE7FF] text-[#4A1DB3]"><Layers3 className="h-5 w-5" strokeWidth={2.4} /></span>
+                <span className="min-w-0"><span className="block text-sm font-black text-[#171454]">สำรองผลิตสดวันนี้</span><span className="block truncate text-xs font-semibold text-[#5E6280]">ANP180 · ANP181 · ANP182</span></span>
+              </span>
+              <span className="flex shrink-0 items-center gap-2 pl-3"><span className="text-right"><span className="block text-[11px] font-bold text-[#626681]">รับเพิ่มได้</span><span className="block text-base font-black tabular-nums text-[#4A20C7]">{factoryReserveAvailable.toLocaleString("th-TH", { maximumFractionDigits: 3 })} กก.</span></span><ChevronRight className="h-5 w-5 text-[#4A20C7] transition group-hover:translate-x-0.5" /></span>
+            </Link>
 
             {reportVehicleSalesItems.length ? (
               <VehicleSalesSummary
@@ -837,7 +893,7 @@ export default async function IncomingOrdersPage({ searchParams }: IncomingOrder
 
             {/* Desktop & Tablet View: 5 Equal Width Action Cards Grid */}
             <div className="hidden sm:block w-full">
-              <div className="grid grid-cols-5 gap-3 w-full [&_button]:w-full [&_button]:h-full [&_button]:justify-center [&_button]:rounded-2xl [&_button]:border-[#EA80FC]/35 [&_button]:py-3.5 [&_button]:px-5">
+              <div className="grid grid-cols-2 gap-3 w-full sm:grid-cols-3 xl:grid-cols-6 [&_button]:w-full [&_button]:h-full [&_button]:justify-center [&_button]:rounded-2xl [&_button]:border-[#EA80FC]/35 [&_button]:py-3.5 [&_button]:px-4">
                 <PackingListSummaryButton
                   dateLabel={orderDate === endDate ? formatDisplayDate(orderDate) : `${formatDisplayDate(orderDate)} - ${formatDisplayDate(endDate)}`}
                   products={summaryProducts}
@@ -851,6 +907,12 @@ export default async function IncomingOrdersPage({ searchParams }: IncomingOrder
                 />
                 <PrintVehicleProductSummaryButton date={orderDate} endDate={endDate} />
                 <PrintFactoryOrderSheetButton date={orderDate} endDate={endDate} />
+                <FactoryOrderAdjustmentManager
+                  date={orderDate}
+                  dateLabel={formatDisplayDate(orderDate)}
+                  products={factoryAdjustmentProducts}
+                  variant="desktop"
+                />
                 <IncomingOrdersDeliveryActions date={orderDate} endDate={endDate} stores={visibleOrderStores} />
               </div>
             </div>

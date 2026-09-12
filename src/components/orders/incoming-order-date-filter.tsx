@@ -9,9 +9,10 @@ type Props = {
   name: string;
   defaultValue: string;
   noAutoSubmit?: boolean;
+  targetPath?: string;
 };
 
-export function IncomingOrderDateFilter({ id, name, defaultValue, noAutoSubmit }: Props) {
+export function IncomingOrderDateFilter({ id, name, defaultValue, noAutoSubmit, targetPath = "/orders/incoming" }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -24,7 +25,7 @@ export function IncomingOrderDateFilter({ id, name, defaultValue, noAutoSubmit }
     params.set(name, nextDate);
     
     startTransition(() => {
-      router.push(`/orders/incoming?${params.toString()}`, { scroll: false });
+      router.push(`${targetPath}?${params.toString()}`, { scroll: false });
     });
   }
 

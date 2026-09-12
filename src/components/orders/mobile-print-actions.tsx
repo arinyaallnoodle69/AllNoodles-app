@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import {
   BarChart3,
+  ChevronDown,
   FileSpreadsheet,
   FileText,
   Layers,
@@ -45,6 +46,7 @@ type MobilePrintActionsProps = {
   visibleOrderStores: VisibleOrderStore[];
   vehicles?: { id: string; name: string }[];
   selectedVehicleId?: string;
+  triggerLabel?: string;
 };
 
 type ActionCardProps = {
@@ -76,8 +78,10 @@ export function MobilePrintActions({
   visibleOrderStores,
   vehicles = [],
   selectedVehicleId,
+  triggerLabel = "พิมพ์และจัดการเอกสารออเดอร์",
 }: MobilePrintActionsProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [isVehiclePickerOpen, setIsVehiclePickerOpen] = useState(false);
   const allOptionIds = useMemo(
     () => [...vehicles.map((v) => v.id), "__none__"],
     [vehicles],
@@ -150,12 +154,13 @@ export function MobilePrintActions({
           } else {
             setSelectedVehicles(selectedVehicleId.split(",").map((s) => s.trim()).filter(Boolean));
           }
+          setIsVehiclePickerOpen(false);
           setIsOpen(true);
         }}
-        className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-[#4A148C] px-5 py-4 text-base font-black text-white shadow-[0_12px_24px_rgba(4,53,106,0.2)] transition active:scale-[0.98] sm:hidden"
+        className="inline-flex h-14 w-full min-w-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-xl bg-[#4A148C] px-2 text-xs font-black leading-none text-white shadow-sm transition active:scale-[0.98] min-[360px]:gap-2 min-[360px]:px-3 min-[360px]:text-sm sm:hidden"
       >
-        <Printer className="h-5 w-5" strokeWidth={2.5} />
-        พิมพ์และจัดการเอกสารออเดอร์
+        <Printer className="h-4 w-4 shrink-0" strokeWidth={2.5} />
+        {triggerLabel}
       </button>
 
       {isOpen && typeof document !== "undefined"
@@ -188,22 +193,30 @@ export function MobilePrintActions({
                 <div className="scrollbar-hide flex-1 space-y-3 overflow-y-auto bg-[#FBF7FC] px-5 py-5 pb-12">
                   {/* Vehicle Checkbox Multi-Selector */}
                   {vehicles.length > 0 && (
-                    <div className="rounded-2xl border border-[#E1BEE7]/60 bg-white p-3.5 shadow-sm">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="inline-flex items-center gap-1.5 text-xs font-bold text-[#4A148C]">
+                    <div className="overflow-hidden rounded-2xl border border-[#E1BEE7]/60 bg-white shadow-sm">
+                      <button
+                        type="button"
+                        aria-expanded={isVehiclePickerOpen}
+                        onClick={() => setIsVehiclePickerOpen((current) => !current)}
+                        className="flex min-h-14 w-full items-center justify-between gap-3 px-4 py-3 text-left"
+                      >
+                        <span className="min-w-0">
+                          <span className="flex items-center gap-1.5 text-xs font-black text-[#4A148C]">
                           <Truck className="h-4 w-4" strokeWidth={2.5} />
-                          เลือกรถ / สายรถ ({selectedCountText})
+                            เลือกรถ / สายรถ
+                          </span>
+                          <span className="mt-0.5 block truncate text-xs font-semibold text-slate-600">{selectedCountText}</span>
                         </span>
-                        <button
-                          type="button"
-                          onClick={handleToggleAll}
-                          className="text-[11px] font-bold text-[#4A148C] hover:underline"
-                        >
-                          {isAllSelected ? "ล้างทั้งหมด" : "เลือกทั้งหมด"}
-                        </button>
-                      </div>
+                        <ChevronDown className={`h-5 w-5 shrink-0 text-[#4A148C] transition-transform ${isVehiclePickerOpen ? "rotate-180" : ""}`} strokeWidth={2.5} />
+                      </button>
 
-                      <div className="grid grid-cols-2 gap-2 max-h-36 overflow-y-auto pr-0.5 [scrollbar-width:thin]">
+                      {isVehiclePickerOpen ? <div className="border-t border-[#E1BEE7]/60 bg-[#FBF7FC] p-3">
+                        <div className="mb-2 flex justify-end">
+                          <button type="button" onClick={handleToggleAll} className="text-xs font-black text-[#4A148C]">
+                            {isAllSelected ? "ล้างทั้งหมด" : "เลือกทั้งหมด"}
+                          </button>
+                        </div>
+                        <div className="grid max-h-52 grid-cols-2 gap-2 overflow-y-auto pr-0.5 [scrollbar-width:thin]">
                         {/* All option */}
                         <label
                           className={`col-span-2 flex items-center gap-2 rounded-xl border p-2 cursor-pointer transition ${
@@ -260,7 +273,8 @@ export function MobilePrintActions({
                           />
                           <span className="text-xs truncate">ไม่ระบุสายรถ</span>
                         </label>
-                      </div>
+                        </div>
+                      </div> : null}
                     </div>
                   )}
 
