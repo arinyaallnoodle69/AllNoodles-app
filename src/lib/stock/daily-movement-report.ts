@@ -29,6 +29,11 @@ export type DailyMovementRow = {
   mismatch: boolean;
 };
 
+export type MovementRangeRow = Omit<DailyMovementRow, "date"> & {
+  from: string;
+  to: string;
+};
+
 const bangkokDate = new Intl.DateTimeFormat("en-CA", {
   day: "2-digit",
   month: "2-digit",
@@ -51,6 +56,24 @@ function datesBetween(from: string, to: string) {
     cursor.setUTCDate(cursor.getUTCDate() + 1);
   }
   return dates;
+}
+
+function orderSameTimestampEvents(events: DailyMovementEvent[], opening: number) {
+  const ordered: DailyMovementEvent[] = [];
+  let balance = opening;
+  for (let start = 0; start < events.length;) {
+    let end = start + 1;
+    while (end < events.length && events[end].occurredAt === events[start].occurredAt) end++;
+    const pending = events.slice(start, end);
+    while (pending.length > 0) {
+      const matchingIndex = pending.findIndex((event) => Math.abs(event.before - balance) <= 0.001);
+      const [event] = pending.splice(matchingIndex < 0 ? 0 : matchingIndex, 1);
+      ordered.push(event);
+      balance = event.after;
+    }
+    start = end;
+  }
+  return ordered;
 }
 
 export function buildDailyMovementRows(from: string, to: string, events: DailyMovementEvent[]) {
@@ -92,7 +115,7 @@ export function buildDailyMovementRows(from: string, to: string, events: DailyMo
         mismatch: false,
       };
       const sales = new Map<string, DailyMovementRow["sales"][number]>();
-      for (const event of eventsByDate.get(date) ?? []) {
+      for (const event of orderSameTimestampEvents(eventsByDate.get(date) ?? [], balance)) {
         row.movements.push(event);
         if (Math.abs(event.before - balance) > 0.001) {
           row.mismatch = true;
@@ -123,4 +146,36 @@ export function buildDailyMovementRows(from: string, to: string, events: DailyMo
     }
   }
   return rows;
+}
+
+export function aggregateDailyMovementRows(rows: DailyMovementRow[]): MovementRangeRow[] {
+  const groups = new Map<string, DailyMovementRow[]>();
+  for (const row of rows) {
+    const key = `${row.warehouseId}:${row.productId}`;
+    groups.set(key, [...(groups.get(key) ?? []), row]);
+  }
+
+  return Array.from(groups.values()).map((group) => {
+    const sorted = group.sort((a, b) => a.date.localeCompare(b.date));
+    const first = sorted[0];
+    const last = sorted[sorted.length - 1];
+    const sum = (field: "received" | "sold" | "returned" | "adjusted" | "other") =>
+      sorted.reduce((total, row) => total + row[field], 0);
+
+    return {
+      ...first,
+      from: first.date,
+      to: last.date,
+      received: sum("received"),
+      sold: sum("sold"),
+      returned: sum("returned"),
+      adjusted: sum("adjusted"),
+      other: sum("other"),
+      closing: last.closing,
+      net: last.closing - first.opening,
+      sales: sorted.flatMap((row) => row.sales),
+      movements: sorted.flatMap((row) => row.movements).sort((a, b) => a.occurredAt.localeCompare(b.occurredAt)),
+      mismatch: sorted.some((row) => row.mismatch),
+    };
+  });
 }

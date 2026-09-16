@@ -631,6 +631,7 @@ export async function updateOrderItemsBatchAction(input: {
   removedIds: string[];
   updates: { itemId: string; quantity: number; unitPrice?: number; reductionMode?: StockReductionMode }[];
   additions: {
+    isReplacement?: boolean;
     productId: string;
     productSaleUnitId: string | null;
     quantity: number;
@@ -642,6 +643,10 @@ export async function updateOrderItemsBatchAction(input: {
   const { orderId, notes, removedIds, updates, additions } = input;
 
   if (!orderId) return { error: "ไม่พบเลขออเดอร์" };
+
+  if (additions.some((item) => !Number.isFinite(item.quantity) || item.quantity <= 0 || !Number.isFinite(item.unitPrice) || item.unitPrice < 0 || (item.isReplacement !== undefined && typeof item.isReplacement !== "boolean"))) {
+    return { error: "จำนวนหรือราคาสินค้าไม่ถูกต้อง" };
+  }
 
   // 1. Verify order
   const { data: order } = await getWarehouseOrderAdmin(admin)
@@ -715,7 +720,8 @@ export async function updateOrderItemsBatchAction(input: {
   for (const update of updates) {
     const item = itemsMap.get(update.itemId);
     if (item) {
-      const nextUnitPrice = Number.isFinite(update.unitPrice)
+      const isReplacement = (item as typeof item & { is_replacement?: boolean }).is_replacement === true;
+      const nextUnitPrice = isReplacement ? 0 : Number.isFinite(update.unitPrice)
         ? Number(update.unitPrice)
         : Number(item.unit_price);
       const qtyChanged = Number(item.quantity) !== update.quantity;
@@ -730,6 +736,7 @@ export async function updateOrderItemsBatchAction(input: {
       const newLineTotal = update.quantity * nextUnitPrice;
 
       itemsToUpdate.push({
+        ...(isReplacement ? { is_replacement: true, notes: "ส่งชดเชย (ไม่คิดเงิน)" } : {}),
         id: item.id,
         order_id: item.order_id,
         organization_id: item.organization_id,
@@ -764,7 +771,8 @@ export async function updateOrderItemsBatchAction(input: {
     if (saleUnit) {
       const product = productsMap.get(add.productId);
       const ratio = Number(saleUnit.base_unit_quantity) || 1;
-      const lineTotal = add.quantity * add.unitPrice;
+      const unitPrice = add.isReplacement ? 0 : add.unitPrice;
+      const lineTotal = add.quantity * unitPrice;
       const qtyBase = add.quantity * ratio;
 
       const effectiveCost = getEffectiveSaleUnitCost({
@@ -778,13 +786,14 @@ export async function updateOrderItemsBatchAction(input: {
       });
 
       itemsToInsert.push({
+        ...(add.isReplacement ? { is_replacement: true, notes: "ส่งชดเชย (ไม่คิดเงิน)" } : {}),
         order_id: orderId,
         organization_id: session.organizationId,
         product_id: add.productId,
         product_sale_unit_id: saleUnit.id,
         quantity: add.quantity,
         quantity_in_base_unit: qtyBase,
-        unit_price: add.unitPrice,
+        unit_price: unitPrice,
         line_total: lineTotal,
         sale_unit_label: saleUnit.unit_label,
         sale_unit_ratio: ratio,
@@ -824,6 +833,7 @@ export async function updateOrderItemsBatchAction(input: {
   for (const update of updates) {
     const item = itemsMap.get(update.itemId);
     if (!item) continue;
+    if ((item as typeof item & { is_replacement?: boolean }).is_replacement) continue;
     const nextUnitPrice = Number.isFinite(update.unitPrice)
       ? Number(update.unitPrice)
       : Number(item.unit_price);
@@ -841,6 +851,7 @@ export async function updateOrderItemsBatchAction(input: {
   }
 
   for (const add of additions) {
+    if (add.isReplacement) continue;
     const saleUnit = add.productSaleUnitId
       ? saleUnitsMap.get(add.productSaleUnitId)
       : saleUnitsMap.get(`default-${add.productId}`);
@@ -1281,12 +1292,14 @@ export async function fetchCustomerLastOrderItemsAction(
 
   const { data: orderItems } = await admin
     .from("order_items")
-    .select("product_id, product_sale_unit_id, quantity, sale_unit_label, sale_unit_ratio, unit_price")
+    .select("product_id, product_sale_unit_id, quantity, sale_unit_label, sale_unit_ratio, unit_price, notes")
     .in("order_id", orderIds);
 
   const grouped = new Map<string, CustomerLastOrderItem>();
 
   for (const row of orderItems ?? []) {
+    // Replacements are one-off shipments, never repeat them via last-order import.
+    if (row.notes === "ส่งชดเชย (ไม่คิดเงิน)") continue;
     const saleUnitId = row.product_sale_unit_id;
     const key = `${row.product_id}__${saleUnitId ?? "__default__"}`;
     const quantity = Number(row.quantity);
@@ -1319,6 +1332,7 @@ export async function fetchCustomerLastOrderItemsAction(
 
 
 type ManualOrderItem = {
+  isReplacement?: boolean;
   productId: string;
   quantity: number;
   saleUnitBaseQty: number;
@@ -1331,6 +1345,7 @@ function mapManualItemsToMergeableInputs(
   items: ManualOrderItem[],
 ): MergeableOrderItemInput[] {
   return items.map((item) => ({
+    isReplacement: item.isReplacement === true,
     costPrice: 0,
     productId: item.productId,
     productSaleUnitId: item.saleUnitId,
@@ -1338,7 +1353,7 @@ function mapManualItemsToMergeableInputs(
     quantityInBaseUnit: item.quantity * item.saleUnitBaseQty,
     saleUnitLabel: item.saleUnitLabel,
     saleUnitRatio: item.saleUnitBaseQty,
-    unitPrice: item.unitPrice,
+    unitPrice: item.isReplacement ? 0 : item.unitPrice,
   }));
 }
 
@@ -1361,7 +1376,16 @@ export async function createManualOrderAction(formData: FormData): Promise<Actio
   }
 
   if (!customerId) return { error: "กรุณาเลือกลูกค้า" };
-  if (items.length === 0) return { error: "กรุณาเพิ่มสินค้าอย่างน้อย 1 รายการ" };
+  if (!Array.isArray(items) || items.length === 0) return { error: "กรุณาเพิ่มสินค้าอย่างน้อย 1 รายการ" };
+  if (items.some((item) => !item || typeof item.productId !== "string" || !Number.isFinite(item.quantity) || item.quantity <= 0 || !Number.isFinite(item.saleUnitBaseQty) || item.saleUnitBaseQty <= 0 || !Number.isFinite(item.unitPrice) || item.unitPrice < 0 || (item.isReplacement !== undefined && typeof item.isReplacement !== "boolean"))) {
+    return { error: "ข้อมูลสินค้าหรือจำนวนไม่ถูกต้อง" };
+  }
+  if (items.some((item) => item.isReplacement)) {
+    // Fail before creating or updating an order if the additive migration is absent.
+    const { error } = await admin.from("order_items").select("is_replacement").limit(0);
+    if (error) return { error: "ยังไม่ได้เปิดใช้ส่งชดเชย กรุณารัน SQL สำหรับส่งชดเชยก่อน" };
+    items = items.map((item) => ({ ...item, unitPrice: item.isReplacement ? 0 : item.unitPrice }));
+  }
 
   const customerWarehouse = await getCustomerRequiredWarehouse(session.organizationId, customerId);
   if (customerWarehouse.error) {
@@ -1657,6 +1681,7 @@ export async function updateIncomingOrderDateAction(formData: FormData): Promise
       .eq("order_id", orderId);
 
     const mergeableItems = (orderItems ?? []).map((item) => ({
+      isReplacement: (item as typeof item & { is_replacement?: boolean }).is_replacement === true,
       costPrice: Number(item.cost_price),
       productId: item.product_id,
       productSaleUnitId: item.product_sale_unit_id,

@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 // @ts-expect-error Node's strip-types test runner requires the explicit TypeScript extension.
-import { buildDailyMovementRows } from "./daily-movement-report.ts";
+import { aggregateDailyMovementRows, buildDailyMovementRows } from "./daily-movement-report.ts";
 
 test("carries closing stock into every following day and keeps store details out of totals", () => {
   const rows = buildDailyMovementRows("2026-09-14", "2026-09-16", [
@@ -51,4 +51,35 @@ test("uses the latest recorded stock_after when movement history has a gap", () 
   assert.equal(row.mismatch, true);
   assert.equal(row.net, -25);
   assert.equal(row.closing, 75);
+});
+
+test("orders movements with the same timestamp by their balance chain", () => {
+  const rows = buildDailyMovementRows("2026-09-15", "2026-09-16", [
+    { id: "previous", productId: "p", warehouseId: "w", occurredAt: "2026-09-15T06:42:43Z", type: "issue", delta: -30, before: 550, after: 520, document: "DN44", store: "ร้าน 1" },
+    { id: "a-issue-sorts-first", productId: "p", warehouseId: "w", occurredAt: "2026-09-16T07:12:49Z", type: "issue", delta: -5, before: 525, after: 520, document: "DN43", store: "ร้าน 2" },
+    { id: "z-return-sorts-last", productId: "p", warehouseId: "w", occurredAt: "2026-09-16T07:12:49Z", type: "return", delta: 5, before: 520, after: 525, document: "DN43", store: "ร้าน 2" },
+  ]);
+
+  assert.deepEqual(rows[1].movements.map((movement) => movement.id), ["z-return-sorts-last", "a-issue-sorts-first"]);
+  assert.equal(rows[1].opening, 520);
+  assert.equal(rows[1].returned, 5);
+  assert.equal(rows[1].sold, 5);
+  assert.equal(rows[1].net, 0);
+  assert.equal(rows[1].closing, 520);
+  assert.equal(rows[1].mismatch, false);
+});
+
+test("aggregates daily rows into one product and warehouse stock card", () => {
+  const rows = buildDailyMovementRows("2026-09-15", "2026-09-16", [
+    { id: "sale-15", productId: "p", warehouseId: "w", occurredAt: "2026-09-15T03:00:00.000Z", type: "issue", delta: -5, before: 525, after: 520, document: "DN1", store: "ร้าน 1" },
+    { id: "return-16", productId: "p", warehouseId: "w", occurredAt: "2026-09-16T07:00:00.000Z", type: "return", delta: 5, before: 520, after: 525, document: "DN1", store: "ร้าน 1" },
+  ]);
+  const [range] = aggregateDailyMovementRows(rows);
+
+  assert.equal(range.opening, 525);
+  assert.equal(range.sold, 5);
+  assert.equal(range.returned, 5);
+  assert.equal(range.net, 0);
+  assert.equal(range.closing, 525);
+  assert.deepEqual(range.movements.map((item) => item.id), ["sale-15", "return-16"]);
 });

@@ -35,9 +35,17 @@ export default async function StockMovementsPage({ searchParams }: { searchParam
   const to = validDate(params.to) ? params.to : defaultTo;
   const days = (new Date(`${to}T00:00:00Z`).getTime() - new Date(`${from}T00:00:00Z`).getTime()) / 86400000;
   const dateError = days < 0 ? "วันเริ่มต้นต้องไม่อยู่หลังวันสิ้นสุด" : days > 61 ? "เลือกช่วงเวลาได้สูงสุด 62 วัน" : null;
-  const [report, warehouses, receiveData] = await Promise.all([
-    dateError ? Promise.resolve(null) : getDailyMovementReport(session.organizationId, from, to, params.warehouse ?? null),
-    getActiveWarehouses(session.organizationId),
+  const activeWarehouses = await getActiveWarehouses(session.organizationId);
+  const warehouseName = (name: string) => name.replace(/\s+/g, "");
+  const warehouses = activeWarehouses
+    .filter((warehouse) => ["คลังกรุงเทพ", "คลังกรุงเทพฯ", "คลังต่างจังหวัด"].includes(warehouseName(warehouse.name))
+      || ["main", "bangkok", "provincial"].includes(warehouse.slug));
+  const defaultWarehouse = warehouses.find((warehouse) => warehouseName(warehouse.name).startsWith("คลังกรุงเทพ"))
+    ?? warehouses.find((warehouse) => warehouse.slug === "bangkok" || warehouse.slug === "main");
+  const warehouseId = warehouses.find((warehouse) => warehouse.id === params.warehouse)?.id
+    ?? defaultWarehouse?.id ?? warehouses[0]?.id;
+  const [report, receiveData] = await Promise.all([
+    dateError || !warehouseId ? Promise.resolve(null) : getDailyMovementReport(session.organizationId, from, to, warehouseId),
     params.receive === "1" ? getStockDashboardData(session.organizationId, 0) : Promise.resolve(null),
   ]);
 
@@ -64,8 +72,7 @@ export default async function StockMovementsPage({ searchParams }: { searchParam
             <input name="to" type="date" defaultValue={to} className="mt-1 block h-9 w-full rounded-md border border-white/20 bg-white/10 px-2 text-sm font-semibold text-white scheme-dark lg:mt-0" />
           </label>
           <label><span className="sr-only">คลังสินค้า</span>
-            <select name="warehouse" defaultValue={params.warehouse ?? ""} className="h-9 w-full rounded-md border border-white/20 bg-[#51308d] px-2 text-sm font-semibold text-white">
-              <option value="">ทุกคลัง</option>
+            <select name="warehouse" defaultValue={warehouseId} className="h-9 w-full rounded-md border border-white/20 bg-[#51308d] px-2 text-sm font-semibold text-white">
               {warehouses.map((warehouse) => <option key={warehouse.id} value={warehouse.id}>{warehouse.name}</option>)}
             </select>
           </label>
@@ -75,11 +82,12 @@ export default async function StockMovementsPage({ searchParams }: { searchParam
 
       <div className="m-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:m-5 sm:p-6">
         {dateError ? <p role="alert" className="rounded-lg bg-rose-50 p-4 text-rose-700">{dateError}</p> : null}
-        {report ? <DailyStockReportClient rows={report.rows} from={from} to={to} warehouseId={params.warehouse ?? ""} productId={params.product ?? ""} warehouses={warehouses} /> : null}
+        {!warehouseId ? <p role="alert" className="rounded-lg bg-amber-50 p-4 text-amber-800">ไม่พบคลังที่เปิดใช้งานสำหรับรายงานนี้</p> : null}
+        {report && warehouseId ? <DailyStockReportClient rows={report.rows} from={from} to={to} warehouseId={warehouseId} productId={params.product ?? ""} warehouses={warehouses} /> : null}
       </div>
 
       <StockMobileReceiveButton baseHref="/stock/movements" />
-      {receiveData ? <StockReceiveForm products={receiveData.products} warehouses={warehouses} returnHref="/stock/movements" /> : null}
+      {receiveData ? <StockReceiveForm products={receiveData.products} warehouses={activeWarehouses} returnHref="/stock/movements" /> : null}
       </div>
     </>
   );

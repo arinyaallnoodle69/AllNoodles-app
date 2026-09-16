@@ -235,6 +235,7 @@ export async function syncDeliveryNoteForOrder(
     p_items: payloadItems,
     p_warehouse_id: warehouseId,
     p_loss_by_order_item: Object.fromEntries(lossInBaseUnitByItemId),
+    p_installment_paid: 0,
   });
 
   if (deliveryError) {

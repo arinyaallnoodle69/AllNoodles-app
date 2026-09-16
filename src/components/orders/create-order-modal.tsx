@@ -39,6 +39,7 @@ import type { CustomerLastOrderSnapshot } from "@/app/orders/incoming/types";
 import { ThaiDatePicker } from "@/components/ui/thai-date-picker";
 
 type CartItem = {
+  isReplacement?: boolean;
   productId: string;
   productName: string;
   quantity: number;
@@ -70,6 +71,7 @@ type ProductSelection = {
 type ProductSelectionField = keyof ProductSelection;
 
 type ProductSelectModalProps = {
+  isReplacement?: boolean;
   cart: CartItem[];
   noCustomer: boolean;
   onClose: () => void;
@@ -281,6 +283,7 @@ function WarehouseModeBadge({ mode }: { mode: "disabled" | "fresh" | "stock" }) 
 }
 
 const ProductRow = React.memo(({
+  hidePrices = false,
   product,
   isSelected,
   onSelect,
@@ -291,6 +294,7 @@ const ProductRow = React.memo(({
   noCustomer,
   selectedWarehouseId,
 }: {
+  hidePrices?: boolean;
   product: OrderProductOption;
   isSelected: boolean;
   onSelect: (productId: string, selected: boolean) => void;
@@ -402,7 +406,7 @@ const ProductRow = React.memo(({
             </div>
 
             <div className="mt-2.5 flex flex-wrap items-center justify-center gap-2 md:justify-start md:gap-3">
-              {!noCustomer && (
+              {!hidePrices && !noCustomer && (
                 customerPrice > 0 ? (
                   <span className="inline-flex items-center rounded-lg bg-emerald-50 px-2 py-1 text-[11px] font-black text-emerald-700 ring-1 ring-inset ring-emerald-600/20 md:px-2.5 md:text-[13px]">
                     ราคา {formatTHB(customerPrice)} บ.
@@ -455,7 +459,7 @@ const ProductRow = React.memo(({
               </div>
             </div>
 
-            {role !== "member" && linkedPrice <= 0 ? (
+            {!hidePrices && role !== "member" && linkedPrice <= 0 ? (
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <label className={`text-[14px] font-black uppercase tracking-wider ${isBelowCost ? "text-[#FF0000]" : "text-slate-600"}`}>
@@ -485,7 +489,7 @@ const ProductRow = React.memo(({
               </div>
             ) : null}
 
-            {role === "member" && linkedPrice <= 0 ? (
+            {!hidePrices && role === "member" && linkedPrice <= 0 ? (
               <div className="flex items-center gap-2 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-black text-amber-800">
                 <AlertTriangle className="h-5 w-5 shrink-0" strokeWidth={2.2} />
                 <p>สินค้านี้ยังไม่มีราคา</p>
@@ -493,7 +497,7 @@ const ProductRow = React.memo(({
             ) : null}
           </div>
 
-          {isBelowCost && (
+            {!hidePrices && isBelowCost && (
             <div className="mt-3 flex items-center gap-3 rounded-2xl border border-white/20 bg-[#FF0000] px-4 py-3 text-[13px] font-black text-white shadow-xl shadow-rose-500/30 animate-in zoom-in-95 duration-200 md:mt-4 md:border-2 md:px-5 md:py-4 md:text-[16px] md:shadow-rose-500/40">
               <AlertTriangle className="h-6 w-6 shrink-0 text-yellow-300" strokeWidth={3} />
               <div className="min-w-0 flex-1">
@@ -512,6 +516,7 @@ const ProductRow = React.memo(({
 ProductRow.displayName = "ProductRow";
 
 const DesktopProductTableRow = React.memo(({
+  hidePrices = false,
   isSelected,
   noCustomer,
   onSelect,
@@ -521,6 +526,7 @@ const DesktopProductTableRow = React.memo(({
   selectedWarehouseId,
   selection,
 }: {
+  hidePrices?: boolean;
   isSelected: boolean;
   noCustomer: boolean;
   onSelect: (productId: string, selected: boolean) => void;
@@ -698,7 +704,7 @@ const DesktopProductTableRow = React.memo(({
           <p className="text-center text-sm font-bold text-slate-400">-</p>
         )}
       </td>
-      <td className="w-32 px-2 py-3 xl:w-40 xl:px-3" onClick={stopRowSelection}>
+      {!hidePrices && <td className="w-32 px-2 py-3 xl:w-40 xl:px-3" onClick={stopRowSelection}>
         {isSelected && selection && selectedUnit ? (
           role !== "member" && linkedPrice <= 0 ? (
             <div className="relative">
@@ -733,13 +739,14 @@ const DesktopProductTableRow = React.memo(({
         ) : (
           <p className="text-center text-xs font-black text-amber-700">ยังไม่มีราคา</p>
         )}
-      </td>
+      </td>}
     </tr>
   );
 });
 DesktopProductTableRow.displayName = "DesktopProductTableRow";
 
 function ProductSelectModal({
+  isReplacement = false,
   cart,
   noCustomer,
   onClose,
@@ -1057,7 +1064,7 @@ function ProductSelectModal({
 
       const quantity = Number(selection.quantity);
       const linkedPrice = getUnitPrice(productId, unit.id, priceMap);
-      const unitPrice = linkedPrice > 0 ? linkedPrice : Number(selection.unitPrice);
+      const unitPrice = isReplacement ? 0 : linkedPrice > 0 ? linkedPrice : Number(selection.unitPrice);
 
       if (!Number.isFinite(quantity) || quantity <= 0) {
         showPopup(`จำนวนของ ${product.name} ต้องมากกว่า 0`);
@@ -1067,7 +1074,7 @@ function ProductSelectModal({
         showPopup(`จำนวนของ ${product.name} ไม่ถูกต้องตามขั้นต่ำ/การเพิ่ม`);
         return;
       }
-      if (role !== "member" && linkedPrice <= 0 && (!Number.isFinite(unitPrice) || unitPrice <= 0)) {
+      if (!isReplacement && role !== "member" && linkedPrice <= 0 && (!Number.isFinite(unitPrice) || unitPrice <= 0)) {
         showPopup(`กรุณาระบุราคาของ ${product.name}`);
         return;
       }
@@ -1183,7 +1190,7 @@ function ProductSelectModal({
               {selectedCustomerLabel ?? "ยังไม่ได้เลือกร้านค้า"}
             </h3>
             <p className="mt-0.5 text-[10px] font-black uppercase tracking-[0.16em] text-white/70 sm:text-xs">
-              เลือกสินค้าเพิ่ม
+              {isReplacement ? "ส่งชดเชย (ไม่คิดเงิน) · เลือกสินค้าและจำนวน" : "เลือกสินค้าเพิ่ม"}
             </p>
           </div>
           <div className="flex shrink-0 items-center gap-2">
@@ -1543,12 +1550,13 @@ function ProductSelectModal({
                       <th className="w-16 px-1.5 py-3 text-center text-xs font-black xl:w-24 xl:px-3">โหมด</th>
                       <th className="w-24 px-1.5 py-3 text-center text-xs font-black xl:w-32 xl:px-3">สต็อก</th>
                       <th className="w-32 px-1.5 py-3 text-center text-xs font-black xl:w-40 xl:px-3">จำนวน</th>
-                      <th className="w-32 px-2 py-3 text-right text-xs font-black xl:w-40 xl:px-3">ราคาขาย</th>
+                      {!isReplacement && <th className="w-32 px-2 py-3 text-right text-xs font-black xl:w-40 xl:px-3">ราคาขาย</th>}
                     </tr>
                   </thead>
                   <tbody>
                     {filteredProducts.map((product) => (
                       <DesktopProductTableRow
+                        hidePrices={isReplacement}
                         key={product.id}
                         product={product}
                         isSelected={selectedIds.has(product.id)}
@@ -1589,6 +1597,7 @@ function ProductSelectModal({
               <div className="grid grid-cols-2 gap-3 md:grid-cols-2 md:gap-4 lg:grid-cols-3">
                 {filteredProducts.slice(0, displayLimit).map((p) => (
                   <ProductRow
+                    hidePrices={isReplacement}
                     key={p.id}
                     product={p}
                     isSelected={selectedIds.has(p.id)}
@@ -1861,6 +1870,7 @@ export function CreateOrderModal({
   const [isClosing, setIsClosing] = useState(false);
   const [activeTab, setActiveTab] = useState<ModalTab>("create");
   const [productModalOpen, setProductModalOpen] = useState(false);
+  const [replacementMode, setReplacementMode] = useState(false);
   const [pending, startTransition] = useTransition();
   const [successToast, setSuccessToast] = useState<string | null>(null);
   const [saveWarning, setSaveWarning] = useState<string | null>(null);
@@ -1926,6 +1936,7 @@ export function CreateOrderModal({
       return;
     }
     setProductModalOpen(true);
+    setReplacementMode(false);
   }, [customerId, showSubmitPopup]);
   const [pricesLoading, setPricesLoading] = useState(false);
   const [historyLoading, setHistoryLoading] = useState(false);
@@ -2126,7 +2137,7 @@ export function CreateOrderModal({
         prev.map((item) => ({
           ...item,
           unitPrice:
-            prices[item.saleUnitId ?? item.productId] ??
+            item.isReplacement ? 0 : prices[item.saleUnitId ?? item.productId] ??
             prices[item.productId] ??
             item.unitPrice,
         })),
@@ -2156,7 +2167,7 @@ export function CreateOrderModal({
       const nextCart = [...prev];
       for (const sel of selections) {
         const existingIndex = nextCart.findIndex(
-          (item) => item.productId === sel.product.id && (item.saleUnitId || null) === (sel.unitId || null),
+          (item) => item.productId === sel.product.id && (item.saleUnitId || null) === (sel.unitId || null) && Boolean(item.isReplacement) === replacementMode,
         );
         if (existingIndex >= 0) {
           nextCart[existingIndex] = {
@@ -2172,6 +2183,7 @@ export function CreateOrderModal({
           };
         } else {
           nextCart.push({
+            isReplacement: replacementMode,
             productId: sel.product.id,
             productName: sel.product.name,
             quantity: sel.quantity,
@@ -2187,7 +2199,7 @@ export function CreateOrderModal({
       return nextCart;
     });
 
-    if (!targetCustomerId) return;
+    if (!targetCustomerId || replacementMode) return;
 
     if (role === "admin") {
       const priceItems = selections
@@ -2313,7 +2325,7 @@ export function CreateOrderModal({
     }
     if (
       role !== "member" &&
-      cart.some((item) => !Number.isFinite(item.unitPrice) || item.unitPrice <= 0)
+      cart.some((item) => !item.isReplacement && (!Number.isFinite(item.unitPrice) || item.unitPrice <= 0))
     ) {
       showSubmitPopup("ยังมีสินค้าที่ยังไม่ตั้งราคา กรุณาใส่ราคามากกว่า 0 ก่อนบันทึกออเดอร์");
       return;
@@ -2365,7 +2377,7 @@ export function CreateOrderModal({
 
   const totalAmount = cart.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
   const hasUnpricedItems = cart.some(
-    (item) => !Number.isFinite(item.unitPrice) || item.unitPrice <= 0,
+    (item) => !item.isReplacement && (!Number.isFinite(item.unitPrice) || item.unitPrice <= 0),
   );
   const historyItems = lastOrderSnapshot?.items ?? [];
   const editingCartItem =
@@ -2614,6 +2626,16 @@ export function CreateOrderModal({
                           <p className="text-xs font-black uppercase tracking-widest text-[#4A148C]">
                             รายการสินค้า
                           </p>
+                          <div className="flex flex-wrap justify-end gap-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (!customerId) { showSubmitPopup("กรุณาเลือกร้านค้าก่อน"); return; }
+                              setReplacementMode(true);
+                              setProductModalOpen(true);
+                            }}
+                            className="action-touch-safe rounded-xl border border-[#EA80FC]/70 bg-white px-3 py-2 text-sm font-bold text-[#4A148C]"
+                          >ส่งชดเชย</button>
                           <button
                             type="button"
                             onClick={handleAddProductClick}
@@ -2622,6 +2644,7 @@ export function CreateOrderModal({
                             <Plus className="h-4 w-4" strokeWidth={2.5} />
                             เพิ่มสินค้า
                           </button>
+                          </div>
                         </div>
 
                         <div className="px-2 py-4 sm:px-3">
@@ -2643,7 +2666,7 @@ export function CreateOrderModal({
                                 const product = productsById.get(item.productId);
                                 return (
                                   <div
-                                    key={`${item.productId}-${item.saleUnitId}`}
+                                    key={`${item.productId}-${item.saleUnitId}-${Boolean(item.isReplacement)}`}
                                     className="flex items-center gap-2.5 px-2 py-3 sm:gap-3"
                                   >
                                     <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-xl bg-slate-100">
@@ -2666,6 +2689,7 @@ export function CreateOrderModal({
                                       <p className="max-h-[2.8rem] overflow-hidden whitespace-normal break-words text-sm font-semibold leading-snug text-slate-900">
                                         {item.productName}
                                       </p>
+                                      {item.isReplacement && <p className="mt-1 text-xs font-bold text-[#4A148C]">ส่งชดเชย (ไม่คิดเงิน)</p>}
                                     </div>
 
                                     <div className="shrink-0 text-right">
@@ -3092,6 +3116,8 @@ export function CreateOrderModal({
       ) : null}
 
       <ProductSelectModal
+        key={replacementMode ? "replacement" : "sale"}
+        isReplacement={replacementMode}
         cart={cart}
         noCustomer={!customerId}
         onClose={() => setProductModalOpen(false)}

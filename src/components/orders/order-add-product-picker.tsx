@@ -25,6 +25,7 @@ import { normalizeSearch } from "@/lib/utils/search";
 import { useClientRole } from "@/lib/auth/client-role";
 
 export type AddedOrderItemDraft = {
+  isReplacement?: boolean;
   imageUrl: string | null;
   key: string;
   productId: string;
@@ -166,6 +167,7 @@ export function OrderAddProductPicker({
   products,
 }: Props) {
   const [open, setOpen] = useState(false);
+  const [isReplacement, setIsReplacement] = useState(false);
   const role = useClientRole();
   const [query, setQuery] = useState("");
   const deferredQuery = useDeferredValue(query);
@@ -358,6 +360,7 @@ export function OrderAddProductPicker({
   function getSelectionIssue(product: OrderProductOption, draft: SelectionDraft) {
     const unit = getUnits(product).find((item) => item.id === draft.unitId) ?? getDefaultUnit(product);
     if (!unit) return "ไม่พบหน่วยขาย";
+    if (isReplacement) return null;
 
     const linkedPrice = getUnitPrice(product.id, unit.id, priceMap);
     if (role === "member") {
@@ -387,7 +390,7 @@ export function OrderAddProductPicker({
 
   function addSelectedProducts() {
     const selectedItems = Object.entries(selections)
-      .map(([productId, draft]) => {
+      .map(([productId, draft]): AddedOrderItemDraft | null => {
         const product = productsById.get(productId);
         if (!product) return null;
         const unit = getUnits(product).find((item) => item.id === draft.unitId) ?? getDefaultUnit(product);
@@ -399,9 +402,10 @@ export function OrderAddProductPicker({
         }
 
         const linkedPrice = getUnitPrice(product.id, unit.id, priceMap);
-        const unitPrice = linkedPrice > 0 ? linkedPrice : Number(draft.price) || 0;
+        const unitPrice = isReplacement ? 0 : linkedPrice > 0 ? linkedPrice : Number(draft.price) || 0;
 
         return {
+          isReplacement,
           imageUrl: product.imageUrl,
           key: `${product.id}:${unit.id ?? "base"}:${crypto.randomUUID()}`,
           productId: product.id,
@@ -444,7 +448,7 @@ export function OrderAddProductPicker({
       <div className="rounded-[1.35rem] border border-slate-200 bg-white p-3 shadow-sm">
         <button
           type="button"
-          onClick={() => setOpen(true)}
+          onClick={() => { setIsReplacement(false); setOpen(true); }}
           className="flex w-full items-center justify-between gap-3 rounded-2xl bg-slate-50 px-4 py-3 text-left transition hover:bg-slate-100 active:scale-[0.99]"
         >
           <span className="inline-flex min-w-0 items-center gap-3">
@@ -462,6 +466,13 @@ export function OrderAddProductPicker({
           </span>
           <Plus className="h-5 w-5 shrink-0 text-[#4A148C]" />
         </button>
+        <button
+          type="button"
+          onClick={() => { setIsReplacement(true); setOpen(true); }}
+          className="mt-2 flex w-full items-center justify-center gap-2 rounded-2xl border border-[#4A148C]/20 bg-[#F3E5F5] px-4 py-2.5 text-sm font-bold text-[#4A148C]"
+        >
+          <Package2 className="h-4 w-4" /> ส่งชดเชย (ไม่คิดเงิน)
+        </button>
       </div>
       {open && typeof document !== "undefined" ? createPortal((
         <div className="fixed inset-0 z-[10000] flex items-end justify-center bg-[#001D3F]/70 p-0 backdrop-blur-[2px] sm:items-center sm:p-4">
@@ -475,7 +486,7 @@ export function OrderAddProductPicker({
             <div className="flex shrink-0 items-center justify-between gap-4 border-b border-[#EA80FC]/70 bg-[#4A148C] px-4 py-2.5 text-white sm:px-8 sm:py-4">
               <div className="min-w-0 flex-1">
                 <h3 className="truncate text-2xl font-black leading-tight tracking-tight text-white sm:text-3xl">
-                  เพิ่มสินค้าใหม่
+                  {isReplacement ? "ส่งชดเชย (ไม่คิดเงิน)" : "เพิ่มสินค้าใหม่"}
                 </h3>
                 <p className="mt-0.5 text-[10px] font-black uppercase tracking-[0.16em] text-white/70 sm:text-xs">
                   เลือกสินค้าเพิ่ม
@@ -814,7 +825,7 @@ export function OrderAddProductPicker({
                           <th className="w-28 px-3 py-3 text-center text-xs font-black">โหมด</th>
                           <th className="w-32 px-3 py-3 text-center text-xs font-black">สต็อก</th>
                           <th className="w-44 px-3 py-3 text-center text-xs font-black">จำนวน</th>
-                          <th className="w-44 px-3 py-3 text-right text-xs font-black">ราคาขาย</th>
+                          {!isReplacement && <th className="w-44 px-3 py-3 text-right text-xs font-black">ราคาขาย</th>}
                         </tr>
                       </thead>
                       <tbody>
@@ -916,7 +927,7 @@ export function OrderAddProductPicker({
                                   <span className="block text-center text-xs font-bold text-slate-300">-</span>
                                 )}
                               </td>
-                              <td className="w-44 px-3 py-3 text-right" onClick={(event) => event.stopPropagation()}>
+                              {!isReplacement && <td className="w-44 px-3 py-3 text-right" onClick={(event) => event.stopPropagation()}>
                                 {draft && selectedUnit ? (
                                   role !== "member" ? (
                                     (() => {
@@ -952,7 +963,7 @@ export function OrderAddProductPicker({
                                 ) : (
                                   <span className="block text-center text-xs font-bold text-slate-300">-</span>
                                 )}
-                              </td>
+                              </td>}
                             </tr>
                           );
                         })}
@@ -997,7 +1008,7 @@ export function OrderAddProductPicker({
                     : draft?.price
                       ? Number.parseFloat(draft.price)
                       : 0;
-                  const isBelowCost = role !== "member" && linkedPrice <= 0 && draft && cost > 0 && currentPriceNum > 0 && currentPriceNum < (cost - 0.001);
+                  const isBelowCost = !isReplacement && role !== "member" && linkedPrice <= 0 && draft && cost > 0 && currentPriceNum > 0 && currentPriceNum < (cost - 0.001);
 
                   return (
                     <div
@@ -1150,7 +1161,7 @@ export function OrderAddProductPicker({
                               </div>
                             </div>
 
-                            {role === "member" && (() => {
+                            {!isReplacement && role === "member" && (() => {
                               const linkedPrice = getUnitPrice(product.id, selectedUnit.id, priceMap);
                               if (linkedPrice > 0) return null;
                               return (
@@ -1161,7 +1172,7 @@ export function OrderAddProductPicker({
                               );
                             })()}
 
-                            {role !== "member" && (() => {
+                            {!isReplacement && role !== "member" && (() => {
                               const linkedPrice = getUnitPrice(product.id, selectedUnit.id, priceMap);
                               const hasPricedLinked = linkedPrice > 0;
                               if (hasPricedLinked) {

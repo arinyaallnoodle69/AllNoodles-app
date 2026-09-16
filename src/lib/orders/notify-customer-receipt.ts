@@ -44,7 +44,7 @@ export async function notifyUpdatedCustomerReceiptForOrder(
 
   const { data: orderItems, error: orderItemsError } = await admin
     .from("order_items")
-    .select("product_id, quantity, sale_unit_label")
+    .select("product_id, quantity, sale_unit_label, notes")
     .eq("order_id", input.orderId)
     .eq("organization_id", input.organizationId);
 
@@ -69,7 +69,7 @@ export async function notifyUpdatedCustomerReceiptForOrder(
 
   const productNameById = new Map((products ?? []).map((product) => [product.id, product.name]));
   const receiptItems = orderItems.map((item) => ({
-    name: productNameById.get(item.product_id) ?? "-",
+    name: `${productNameById.get(item.product_id) ?? "-"}${item.notes === "ส่งชดเชย (ไม่คิดเงิน)" ? " (ส่งชดเชย)" : ""}`,
     quantity: Number(item.quantity ?? 0),
     saleUnitLabel: item.sale_unit_label ?? "",
   }));

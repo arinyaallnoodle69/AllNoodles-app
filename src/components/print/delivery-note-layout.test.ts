@@ -14,4 +14,7 @@ test("delivery note typography fits the fixed A4 header and table", async () => 
   assert.match(source, /\.dn-col-index\s*\{\s*width:\s*12mm;/s);
   assert.match(source, /\.dn-col-unit\s*\{\s*width:\s*14mm;/s);
   assert.doesNotMatch(source, /\.dn-col-name\s*\{[^}]*text-overflow:\s*ellipsis;/s);
+  assert.ok(source.includes('item.productSku}{"\\u00a0\\u00a0"}'));
+  assert.doesNotMatch(source, /\.dn-item-sku\s*\{[^}]*width:/s);
+  assert.match(source, /\.dn-notes span\s*\{[^}]*flex-shrink:\s*0;[^}]*white-space:\s*nowrap;/s);
 });

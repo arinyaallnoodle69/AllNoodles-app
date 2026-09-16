@@ -54,6 +54,7 @@ type DeliveryNoteRow = {
 };
 
 type OrderItemRow = {
+  notes: string | null;
   product_id: string;
   quantity: number | string;
   quantity_in_base_unit: number | string | null;
@@ -202,6 +203,7 @@ async function PackingListPage({ searchParams }: Props) {
       customers!inner(id, name, customer_code, default_vehicle_id, vehicles(id, name)),
       delivery_notes!order_id(vehicle_id, status, created_at, vehicles(id, name)),
       order_items(
+        notes,
         product_id,
         quantity,
         quantity_in_base_unit,
@@ -435,17 +437,34 @@ async function PackingListPage({ searchParams }: Props) {
         }
 
         for (const item of order.order_items ?? []) {
+          let targetStore: GroupedStore | undefined = groupedStore;
+          if (item.notes === "ส่งชดเชย (ไม่คิดเงิน)") {
+            const replacementKey = `${storeGroupKey}_replacement`;
+            targetStore = groupedStores.get(replacementKey);
+            if (!targetStore) {
+              targetStore = {
+                customer: { ...customer, customer_code: `${customer.customer_code}-R`, name: `${customer.name} (ส่งชดเชย)` },
+                vehicleId,
+                vehicleName: resolvedVehicleName,
+                items: new Map(),
+                missingWeightProductIds: new Set(),
+                specialSort: 0,
+                totalWeightGrams: 0,
+              };
+              groupedStores.set(replacementKey, targetStore);
+            }
+          }
           const key = getOrderKey(item);
           const quantity = Number(item.quantity ?? 0);
-          groupedStore.items.set(key, (groupedStore.items.get(key) ?? 0) + quantity);
+          targetStore.items.set(key, (targetStore.items.get(key) ?? 0) + quantity);
 
           const quantityInBaseUnit = Number(item.quantity_in_base_unit ?? item.quantity ?? 0);
           const unitWeightGrams = productUnitWeightGramsById.get(item.product_id) ?? null;
           if (quantityInBaseUnit > 0) {
             if (unitWeightGrams !== null && Number.isFinite(unitWeightGrams) && unitWeightGrams > 0) {
-              groupedStore.totalWeightGrams += quantityInBaseUnit * unitWeightGrams;
+              targetStore.totalWeightGrams += quantityInBaseUnit * unitWeightGrams;
             } else {
-              groupedStore.missingWeightProductIds.add(item.product_id);
+              targetStore.missingWeightProductIds.add(item.product_id);
             }
           }
 
@@ -518,6 +537,7 @@ async function PackingListPage({ searchParams }: Props) {
       }
 
       const stores = Array.from(groupedStores.values())
+        .filter((store) => store.items.size > 0)
         .sort((a, b) => {
           const indexA =
             a.vehicleId === null ? 999 : (vehicleSortIndexMap.get(a.vehicleId) ?? 998);

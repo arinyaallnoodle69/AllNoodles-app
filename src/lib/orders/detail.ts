@@ -393,7 +393,7 @@ export async function getOrderDetailById(
       notes: item.notes,
       productId: item.product_id,
       productSaleUnitId: item.product_sale_unit_id,
-      productName: product?.name ?? "สินค้าไม่ทราบชื่อ",
+      productName: `${product?.name ?? "สินค้าไม่ทราบชื่อ"}${item.notes === "ส่งชดเชย (ไม่คิดเงิน)" ? " (ส่งชดเชย)" : ""}`,
       quantity,
       fulfillmentMode,
       shortQuantity: fulfillmentMode === "fresh" ? 0 : Math.max(quantity - stockQuantity, 0),

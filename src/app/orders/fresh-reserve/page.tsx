@@ -1,3 +1,5 @@
+import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
 import { SettingsShell } from "@/components/settings/settings-shell";
 import { FreshReserveDashboard, type FreshReserveActivity, type FreshReserveRow } from "@/components/orders/fresh-reserve-dashboard";
 import { requireAnyRole } from "@/lib/auth/authorization";
@@ -93,6 +95,14 @@ export default async function FreshReservePage({ searchParams }: { searchParams:
   const lastUpdatedAt = updatedAtValues.sort().at(-1) ?? null;
   return (
     <SettingsShell title="สำรองผลิตสดวันนี้" floatingSubmit={false} fullWidthDesktop edgeToEdgeDesktop fullWidthMobile hideHeader>
+      <Link
+        href={`/orders/incoming?date=${date}`}
+        aria-label="กลับหน้ารายการออเดอร์"
+        className="sticky top-[68px] z-30 flex items-center gap-1.5 border-b border-[#E1E5EE] bg-white px-4 py-3 text-sm font-black text-[#4A148C] lg:hidden"
+      >
+        <ArrowLeft className="h-4 w-4" strokeWidth={2.7} />
+        กลับหน้ารายการออเดอร์
+      </Link>
       <FreshReserveDashboard
         activities={activities}
         date={date}

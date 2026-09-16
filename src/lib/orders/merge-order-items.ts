@@ -6,6 +6,7 @@ import type { Database } from "@/types/database";
 type Admin = SupabaseClient<Database>;
 
 export type MergeableOrderItemInput = {
+  isReplacement?: boolean;
   costPrice: number;
   productId: string;
   productSaleUnitId: string | null;
@@ -17,6 +18,7 @@ export type MergeableOrderItemInput = {
 };
 
 type ExistingOrderItemRow = {
+  is_replacement?: boolean;
   cost_price: number | null;
   created_at: string | null;
   id: string;
@@ -30,8 +32,8 @@ type ExistingOrderItemRow = {
   unit_price: number | string | null;
 };
 
-function getOrderItemKey(productId: string, productSaleUnitId: string | null) {
-  return `${productId}__${productSaleUnitId ?? "__default__"}`;
+function getOrderItemKey(productId: string, productSaleUnitId: string | null, isReplacement = false) {
+  return `${productId}__${productSaleUnitId ?? "__default__"}__${isReplacement ? "replacement" : "sale"}`;
 }
 
 function normalizeMergedUnitPrice(lineTotal: number, quantity: number, fallback: number) {
@@ -43,12 +45,14 @@ export function aggregateMergeableOrderItems(items: MergeableOrderItemInput[]) {
   const grouped = new Map<string, MergeableOrderItemInput>();
 
   for (const item of items) {
-    const key = getOrderItemKey(item.productId, item.productSaleUnitId);
+    const unitPrice = item.isReplacement ? 0 : Number(item.unitPrice) || 0;
+    const key = getOrderItemKey(item.productId, item.productSaleUnitId, item.isReplacement);
     const existing = grouped.get(key);
-    const lineTotal = Number(item.quantity) * Number(item.unitPrice);
+    const lineTotal = Number(item.quantity) * unitPrice;
 
     if (!existing) {
       grouped.set(key, {
+        isReplacement: item.isReplacement === true,
         costPrice: Number(item.costPrice) || 0,
         productId: item.productId,
         productSaleUnitId: item.productSaleUnitId,
@@ -56,7 +60,7 @@ export function aggregateMergeableOrderItems(items: MergeableOrderItemInput[]) {
         quantityInBaseUnit: Number(item.quantityInBaseUnit),
         saleUnitLabel: item.saleUnitLabel,
         saleUnitRatio: Number(item.saleUnitRatio) || 1,
-        unitPrice: Number(item.unitPrice) || 0,
+        unitPrice,
       });
       continue;
     }
@@ -71,7 +75,7 @@ export function aggregateMergeableOrderItems(items: MergeableOrderItemInput[]) {
     existing.unitPrice = normalizeMergedUnitPrice(
       mergedLineTotal,
       mergedQuantity,
-      Number(item.unitPrice) || Number(existing.unitPrice) || 0,
+      unitPrice || Number(existing.unitPrice) || 0,
     );
     existing.saleUnitLabel = item.saleUnitLabel;
     existing.saleUnitRatio = Number(item.saleUnitRatio) || Number(existing.saleUnitRatio) || 1;
@@ -96,9 +100,7 @@ export async function mergeItemsIntoOrder(
 
   const { data: existingRows, error: existingRowsError } = await admin
     .from("order_items")
-    .select(
-      "id, created_at, product_id, product_sale_unit_id, quantity, quantity_in_base_unit, line_total, sale_unit_label, sale_unit_ratio, unit_price, cost_price",
-    )
+    .select("*")
     .eq("order_id", input.orderId)
     .order("created_at", { ascending: true });
 
@@ -108,7 +110,7 @@ export async function mergeItemsIntoOrder(
 
   const groupedExisting = new Map<string, ExistingOrderItemRow[]>();
   for (const row of (existingRows ?? []) as ExistingOrderItemRow[]) {
-    const key = getOrderItemKey(row.product_id, row.product_sale_unit_id);
+    const key = getOrderItemKey(row.product_id, row.product_sale_unit_id, row.is_replacement);
     const bucket = groupedExisting.get(key);
     if (bucket) {
       bucket.push(row);
@@ -159,7 +161,7 @@ export async function mergeItemsIntoOrder(
   }
 
   for (const item of aggregatedIncomingItems) {
-    const key = getOrderItemKey(item.productId, item.productSaleUnitId);
+    const key = getOrderItemKey(item.productId, item.productSaleUnitId, item.isReplacement);
     const existingGroup = groupedExisting.get(key);
     const existing = existingGroup?.[0];
     const incomingLineTotal = Number(item.quantity) * Number(item.unitPrice);
@@ -197,7 +199,8 @@ export async function mergeItemsIntoOrder(
       continue;
     }
 
-    rowsToInsert.push({
+    const newRow = {
+      ...(item.isReplacement ? { is_replacement: true, notes: "ส่งชดเชย (ไม่คิดเงิน)" } : {}),
       cost_price: Number(item.costPrice) || 0,
       line_total: incomingLineTotal,
       order_id: input.orderId,
@@ -209,7 +212,8 @@ export async function mergeItemsIntoOrder(
       sale_unit_label: item.saleUnitLabel,
       sale_unit_ratio: Number(item.saleUnitRatio) || 1,
       unit_price: Number(item.unitPrice) || 0,
-    });
+    };
+    rowsToInsert.push(newRow);
   }
 
   if (rowsToDelete.length > 0) {

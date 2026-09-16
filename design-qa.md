@@ -1,12 +1,15 @@
-# Design QA — Stock movement report
+# Design QA — Stock Movement Report
 
-- Reference: `C:/Users/Riew/Downloads/download.png`
-- Route: `/stock/movements`
-- Desktop structure: passed — compact purple header, report card, search, bordered table, grouped product rows, pagination.
-- Interaction: passed by implementation check — the arrow is in the date cell and toggles a compact store/document table directly below its row; product search remains available.
-- Mobile structure: passed by responsive implementation check — table becomes product/date cards with the same inline sale breakdown.
-- Accessibility: passed — labelled filters/search, semantic table, keyboard buttons, `aria-expanded`, visible focus styles.
-- Build checks: passed — ESLint, report unit tests, and production build.
-- Live visual capture: blocked in both QA browser sessions because neither has an authenticated local session and both redirect to `/login`.
+- Source: approved All Noodles desktop/mobile mockup.
+- Implementation: `src/components/settings/daily-stock-report-client.tsx`.
+- Automated checks: lint, stock movement tests, production build.
+- Visual comparison: blocked because the Codex in-app browser runtime failed to initialize (`failed to write kernel assets: path not found`).
 
-Final result: blocked — implementation and build checks pass, but authenticated visual comparison is still required.
+## Implemented states
+
+- Desktop product summary with inline Stock Card directly below its product row.
+- Mobile product cards with inline statement-style Stock Card.
+- Date, warehouse, and product filters remain available.
+- Operator is not rendered; persistence is unchanged.
+
+final result: blocked

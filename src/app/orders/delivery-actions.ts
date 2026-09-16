@@ -715,6 +715,7 @@ export async function createBatchDeliveryNotesAction(
       p_notes: group.notes?.trim() || null,
       p_created_by: session.userId,
       p_items: items,
+      p_installment_paid: 0,
     });
 
     if (error) {

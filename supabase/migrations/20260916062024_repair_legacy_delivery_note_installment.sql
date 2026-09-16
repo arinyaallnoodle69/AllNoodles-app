@@ -9,7 +9,6 @@ begin
   where delivery_number = 'DN2026090069'
     and delivery_date = date '2026-09-16'
     and status = 'confirmed'
-    and total_amount = 4640
     and previous_outstanding = 17420
     and installment_paid = 17420
     and remaining_outstanding = 0

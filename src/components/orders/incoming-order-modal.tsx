@@ -311,7 +311,7 @@ const EditItemsPanel = memo(({
       const normalizedAddedItems = addedItems.map((item) => ({
         ...item,
         quantity: sanitizeManualQuantity(item.quantity, item.quantity),
-        unitPrice: sanitizeManualUnitPrice(item.unitPrice, item.unitPrice),
+        unitPrice: item.isReplacement ? 0 : sanitizeManualUnitPrice(item.unitPrice, item.unitPrice),
       }));
 
       if (
@@ -323,8 +323,8 @@ const EditItemsPanel = memo(({
         throw new Error("จำนวนสินค้าต้องมากกว่า 0 และราคาต้องไม่ติดลบ");
       }
 
-      const hasZeroPriceActive = Object.values(normalizedUnitPrices).some((price) => price <= 0);
-      const hasZeroPriceAdded = normalizedAddedItems.some((item) => item.unitPrice <= 0);
+      const hasZeroPriceActive = activeItems.some((item) => item.notes !== "ส่งชดเชย (ไม่คิดเงิน)" && normalizedUnitPrices[item.id] <= 0);
+      const hasZeroPriceAdded = normalizedAddedItems.some((item) => !item.isReplacement && item.unitPrice <= 0);
       if (hasZeroPriceActive || hasZeroPriceAdded) {
         alert("มีสินค้าบางรายการที่ยังไม่ได้ผูกราคา กรุณากรอกราคาก่อนบันทึก");
         throw new Error("มีสินค้าบางรายการที่ยังไม่ได้ผูกราคา กรุณากรอกราคาก่อนบันทึก");
@@ -352,6 +352,7 @@ const EditItemsPanel = memo(({
             return { itemId, quantity, unitPrice: Number(normalizedUnitPrices[itemId]), reductionMode };
           }),
         additions: normalizedAddedItems.map((item) => ({
+          isReplacement: item.isReplacement === true,
           productId: item.productId,
           productSaleUnitId: item.productSaleUnitId,
           quantity: item.quantity,
@@ -426,7 +427,7 @@ const EditItemsPanel = memo(({
 	              for (const newItem of newItems) {
                 const newUnitId = newItem.productSaleUnitId || null;
                 const existingIdx = detail.items.findIndex(
-                  (i) => i.productId === newItem.productId && (i.productSaleUnitId || null) === newUnitId
+                  (i) => i.productId === newItem.productId && (i.productSaleUnitId || null) === newUnitId && (i.notes === "ส่งชดเชย (ไม่คิดเงิน)") === Boolean(newItem.isReplacement)
                 );
 
 	                if (existingIdx >= 0) {
@@ -440,7 +441,7 @@ const EditItemsPanel = memo(({
 	                }
 
                 const addedIdx = nextAdded.findIndex(
-                  (i) => i.productId === newItem.productId && (i.productSaleUnitId || null) === newUnitId
+                  (i) => i.productId === newItem.productId && (i.productSaleUnitId || null) === newUnitId && Boolean(i.isReplacement) === Boolean(newItem.isReplacement)
                 );
 
 	                if (addedIdx >= 0) {
@@ -505,6 +506,7 @@ const EditItemsPanel = memo(({
                                 <span className="font-mono text-[10px] font-bold text-slate-950">{item.sku}</span>
                               </div>
                               <p className="text-sm font-black text-slate-950 truncate max-w-[180px]">{item.productName}</p>
+                              {item.isReplacement && <p className="text-xs font-bold text-[#4A148C]">ส่งชดเชย (ไม่คิดเงิน)</p>}
                             </div>
                           </div>
                         </td>
@@ -576,18 +578,19 @@ const EditItemsPanel = memo(({
                             <div className="min-w-0">
                               <span className="font-mono text-[10px] font-bold text-slate-950 block mb-0.5">{item.sku}</span>
                               <p className="text-sm font-black text-slate-950 truncate max-w-[180px]">{item.productName}</p>
+                              {item.notes === "ส่งชดเชย (ไม่คิดเงิน)" && <p className="text-xs font-bold text-[#4A148C]">{item.notes}</p>}
                             </div>
                           </div>
                         </td>
                         <td className="px-5 py-4 border-r border-slate-100">
                           <div className={`mx-auto flex h-9 w-28 items-center justify-center rounded-lg border px-2 text-center font-black ${
-                            unitPrice <= 0
+                            unitPrice <= 0 && item.notes !== "ส่งชดเชย (ไม่คิดเงิน)"
                               ? "border-red-500 bg-red-50 text-red-700"
                               : "border-slate-200 bg-slate-50 text-slate-950"
                           }`}>
-                            {unitPrice > 0 ? formatTHB(unitPrice) : "-"}
+                            {unitPrice > 0 || item.notes === "ส่งชดเชย (ไม่คิดเงิน)" ? formatTHB(unitPrice) : "-"}
                           </div>
-                          {unitPrice <= 0 ? (
+                          {unitPrice <= 0 && item.notes !== "ส่งชดเชย (ไม่คิดเงิน)" ? (
                             <span className="text-[10px] font-black text-red-600 flex items-center justify-center gap-1 mt-1 animate-pulse">
                               <AlertTriangle className="h-3 w-3 text-red-600 shrink-0" />
                               ยังไม่ผูกราคา
@@ -677,6 +680,7 @@ const EditItemsPanel = memo(({
                           <span className="font-mono text-[11px] font-black uppercase tracking-tighter text-slate-950">{item.sku}</span>
                         </div>
                         <h4 className="break-words text-[1.05rem] font-black leading-snug text-slate-950">{item.productName}</h4>
+                        {item.isReplacement && <p className="text-xs font-bold text-[#4A148C]">ส่งชดเชย (ไม่คิดเงิน)</p>}
                       </div>
                       <button onClick={() => setAddedItems((current) => current.filter((draft) => draft.key !== item.key))} className="shrink-0 rounded-lg p-1.5 text-slate-300 active:text-rose-500">
                         <Trash2 className="h-5 w-5" strokeWidth={2.3} />
@@ -788,13 +792,13 @@ const EditItemsPanel = memo(({
                           <div className="border-l border-slate-300 pl-4">
                             <p className="text-[10px] font-black uppercase tracking-[0.12em] text-slate-400">ราคาต่อหน่วย</p>
                             <p className={`mt-1 flex h-9 w-full items-center justify-end rounded-lg border px-2 text-right text-[15px] font-black ${
-                              unitPrice <= 0
+                              unitPrice <= 0 && item.notes !== "ส่งชดเชย (ไม่คิดเงิน)"
                                 ? "border-red-500 bg-red-50 text-red-700"
                                 : "border-slate-200 bg-slate-50 text-slate-950"
                             }`}>
-                              {unitPrice > 0 ? formatTHB(unitPrice) : "-"}
+                              {unitPrice > 0 || item.notes === "ส่งชดเชย (ไม่คิดเงิน)" ? formatTHB(unitPrice) : "-"}
                             </p>
-                            {unitPrice <= 0 ? (
+                            {unitPrice <= 0 && item.notes !== "ส่งชดเชย (ไม่คิดเงิน)" ? (
                               <span className="text-[10px] font-black text-red-600 flex items-center justify-end gap-1 mt-1 animate-pulse">
                                 <AlertTriangle className="h-3 w-3 text-red-600 shrink-0" />
                                 ยังไม่ผูกราคา
@@ -1103,7 +1107,7 @@ export function IncomingOrderModal({ allOrders, detail, expandedId, onAfterClose
     : null;
 
   const hasUnpricedItems = activeDetail
-    ? activeDetail.items.some((item) => item.unitPrice === null || item.unitPrice === undefined || Number(item.unitPrice) <= 0)
+    ? activeDetail.items.some((item) => item.notes !== "ส่งชดเชย (ไม่คิดเงิน)" && (item.unitPrice === null || item.unitPrice === undefined || Number(item.unitPrice) <= 0))
     : false;
 
   return (
