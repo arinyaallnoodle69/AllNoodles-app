@@ -475,21 +475,24 @@ export function DeliveryNoteLayout({ dns, showAmount, priceMode: propPriceMode }
           flex-direction: column;
           justify-content: space-between;
           width: 55%;
-          height: 44mm;
+          height: 34mm;
         }
 
         .dn-org-box {
           border: 1px solid #000000;
           padding: 2.5mm 4mm;
-          font-size: 27.9pt;
+          font-size: 20pt;
+          line-height: 1.2;
           font-weight: bold;
           text-align: center;
           width: fit-content;
           min-width: 60mm;
+          white-space: nowrap;
         }
 
         .dn-customer-line {
-          font-size: 22.48pt;
+          font-size: 15pt;
+          line-height: 1.25;
           font-weight: bold;
           margin-top: auto;
           margin-bottom: 1mm;
@@ -516,7 +519,8 @@ export function DeliveryNoteLayout({ dns, showAmount, priceMode: propPriceMode }
         .dn-title-box {
           border: 1px solid #000000;
           padding: 2mm 4mm;
-          font-size: 22.48pt;
+          font-size: 16pt;
+          line-height: 1.2;
           font-weight: bold;
           text-align: center;
           width: 100%;
@@ -529,7 +533,7 @@ export function DeliveryNoteLayout({ dns, showAmount, priceMode: propPriceMode }
           max-width: 65mm;
           display: flex;
           flex-direction: column;
-          gap: 1.5mm;
+          gap: 1mm;
         }
 
         .dn-meta-row-2 {
@@ -545,15 +549,20 @@ export function DeliveryNoteLayout({ dns, showAmount, priceMode: propPriceMode }
         }
 
         .dn-meta-label {
-          font-size: 17.82pt;
+          font-size: 11pt;
+          line-height: 1.2;
           font-weight: bold;
           color: #000000;
         }
 
         .dn-meta-value {
-          font-size: 19.38pt;
+          font-size: 12pt;
+          line-height: 1.2;
           font-weight: bold;
           margin-top: 0.2mm;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
         }
 
         /* Table styling */
@@ -563,17 +572,19 @@ export function DeliveryNoteLayout({ dns, showAmount, priceMode: propPriceMode }
           border-collapse: collapse;
           margin-top: 2mm;
           border: 1px solid #000000;
-          font-size: 20.15pt;
+          font-size: 14pt;
+          line-height: 1.25;
         }
 
         .dn-table th {
           height: 8mm;
           border: 1px solid #000000;
           background-color: #f1f5f9;
-          padding: 1mm 1.5mm;
-          font-size: 20.15pt;
+          padding: 1mm 0.6mm;
+          font-size: 12.5pt;
           font-weight: bold;
           text-align: center;
+          white-space: nowrap;
         }
 
         .dn-table td {
@@ -591,8 +602,8 @@ export function DeliveryNoteLayout({ dns, showAmount, priceMode: propPriceMode }
 
         .dn-item-sku {
           display: inline-block;
-          width: 16mm;
-          margin-right: 4mm;
+          width: 17mm;
+          margin-right: 1.5mm;
           font-weight: bold;
         }
 
@@ -600,12 +611,17 @@ export function DeliveryNoteLayout({ dns, showAmount, priceMode: propPriceMode }
           white-space: nowrap;
         }
 
-        .dn-col-index { width: 10mm; text-align: center; }
+        .dn-col-name {
+          white-space: nowrap;
+          overflow: visible;
+        }
+
+        .dn-col-index { width: 12mm; text-align: center; }
         .dn-col-name { width: auto; text-align: left; }
-        .dn-col-qty { width: 27mm; text-align: right; font-weight: bold; white-space: nowrap; font-variant-numeric: tabular-nums; }
+        .dn-col-qty { width: 21mm; text-align: right; font-weight: bold; white-space: nowrap; font-variant-numeric: tabular-nums; }
         .dn-col-unit { width: 14mm; text-align: center; }
-        .dn-col-price { width: 26mm; text-align: right; font-weight: bold; white-space: nowrap; font-variant-numeric: tabular-nums; }
-        .dn-col-total { width: 31mm; text-align: right; font-weight: bold; white-space: nowrap; font-variant-numeric: tabular-nums; }
+        .dn-col-price { width: 20mm; text-align: right; font-weight: bold; white-space: nowrap; font-variant-numeric: tabular-nums; }
+        .dn-col-total { width: 26mm; text-align: right; font-weight: bold; white-space: nowrap; font-variant-numeric: tabular-nums; }
 
         .dn-row-empty td {
           border-left: 1px solid #000000;
@@ -640,7 +656,7 @@ export function DeliveryNoteLayout({ dns, showAmount, priceMode: propPriceMode }
 
         .dn-summary-baht {
           text-align: center;
-          font-size: 20.15pt;
+          font-size: 13pt;
         }
 
         .dn-summary-label {
@@ -652,7 +668,7 @@ export function DeliveryNoteLayout({ dns, showAmount, priceMode: propPriceMode }
 
         .dn-summary-value {
           text-align: right;
-          font-size: 20.93pt;
+          font-size: 14pt;
           padding-right: 1.5mm !important;
           white-space: nowrap;
           font-variant-numeric: tabular-nums;
@@ -681,14 +697,14 @@ export function DeliveryNoteLayout({ dns, showAmount, priceMode: propPriceMode }
 
         .dn-notes span {
           color: #000000;
-          font-size: 26.35pt;
+          font-size: 16pt;
           font-weight: 900;
           margin-right: 2mm;
         }
 
         .dn-notes strong {
           color: #c00000;
-          font-size: 31pt;
+          font-size: 18pt;
           font-weight: 900;
           line-height: 1.25;
           overflow-wrap: anywhere;
@@ -731,7 +747,7 @@ export function DeliveryNoteLayout({ dns, showAmount, priceMode: propPriceMode }
           grid-template-columns: 1fr auto 1fr auto 1fr;
           align-items: center;
           column-gap: 1.5mm;
-          font-size: 20.15pt;
+          font-size: 13pt;
           line-height: 20px;
           flex-shrink: 0;
         }
@@ -751,7 +767,7 @@ export function DeliveryNoteLayout({ dns, showAmount, priceMode: propPriceMode }
         .dn-sig-label {
           flex: 1;
           text-align: center;
-          font-size: 17.82pt;
+          font-size: 12pt;
           font-weight: bold;
           white-space: nowrap;
         }
@@ -759,7 +775,7 @@ export function DeliveryNoteLayout({ dns, showAmount, priceMode: propPriceMode }
         .dn-date-label {
           width: 25mm;
           text-align: center;
-          font-size: 17.82pt;
+          font-size: 12pt;
           font-weight: bold;
           white-space: nowrap;
           flex-shrink: 0;

@@ -32,11 +32,25 @@ export function CustomerSalesSummaryLayout({
   return (
     <div className="customer-sales-print-container">
       <style>{`
+        @font-face {
+          font-family:"Angsana New Customer Sales";
+          src:url("/fonts/angsana-new/ANGSA.woff") format("woff");
+          font-weight:400;
+          font-style:normal;
+          font-display:swap;
+        }
+        @font-face {
+          font-family:"Angsana New Customer Sales";
+          src:url("/fonts/angsana-new/angsab.woff") format("woff");
+          font-weight:600 900;
+          font-style:normal;
+          font-display:swap;
+        }
         .customer-sales-print-container { width:fit-content; margin:0 auto; }
         .customer-sales-sheet {
           box-sizing:border-box; width:210mm; padding:10mm 12mm;
           display:block; background:#fff; color:#000;
-          font-family:var(--font-sarabun,var(--font-noto-sans-thai,sans-serif)),sans-serif;
+          font-family:"Angsana New Customer Sales","Sarabun","Noto Sans Thai",sans-serif;
           font-size:16px; line-height:1.55; text-align:left;
         }
         .customer-sales-sheet * { box-sizing:border-box; color:#000 !important; font-weight:600 !important; letter-spacing:normal !important; }
