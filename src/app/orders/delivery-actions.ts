@@ -3,6 +3,7 @@
 import { revalidateTag, updateTag } from "next/cache";
 import { requireAnyRole } from "@/lib/auth/authorization";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { parseInstallmentPaid } from "@/lib/delivery/installment";
 import { getOrderItemsForDelivery, getStoreOrdersForDelivery } from "@/lib/delivery/admin";
 import { getOrderRequiredWarehouse } from "@/lib/warehouses";
 import type { DeliveryFormData } from "@/lib/delivery/admin";
@@ -608,7 +609,7 @@ export async function createDeliveryNoteAction(
   const rawInstallmentPaid = formData.get("installmentPaid");
 
   const previousOutstanding = rawPreviousOutstanding !== null && rawPreviousOutstanding !== "" ? Number(rawPreviousOutstanding) : null;
-  const installmentPaid = rawInstallmentPaid !== null && rawInstallmentPaid !== "" ? Number(rawInstallmentPaid) : null;
+  const installmentPaid = parseInstallmentPaid(rawInstallmentPaid);
 
   const admin = getSupabaseAdmin() as unknown as RpcAdmin;
   const warehouseResult = await getOrderRequiredWarehouse(session.organizationId, orderIds[0]);

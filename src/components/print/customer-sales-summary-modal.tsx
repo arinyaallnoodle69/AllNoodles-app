@@ -9,8 +9,12 @@ import {
 } from "@/components/print/customer-sales-summary-layout";
 import {
   buildCustomerSalesPages,
+  createCustomerSalesPdfPreviewFromDocument,
   saveCustomerSalesImagesFromDocument,
 } from "@/components/print/share-customer-sales-summary";
+import { DeliveryPdfPreviewModal } from "@/components/print/delivery-pdf-preview-modal";
+import type { DeliveryPdfPreview } from "@/components/print/share-delivery-pdf";
+import { getCustomerSalesPreviewSize } from "@/components/print/customer-sales-preview-scale";
 
 const A4_WIDTH_MM = 210;
 
@@ -33,7 +37,9 @@ export function CustomerSalesSummaryModal({
 }: CustomerSalesSummaryModalProps) {
   const [selectedVehicleId, setSelectedVehicleId] = useState<string>(initialVehicleId);
   const [isPrinting, setIsPrinting] = useState(false);
+  const [isSavingPdf, setIsSavingPdf] = useState(false);
   const [isSavingImage, setIsSavingImage] = useState(false);
+  const [pdfPreview, setPdfPreview] = useState<DeliveryPdfPreview | null>(null);
 
   const [pageScale, setPageScale] = useState(1);
   const printAreaRef = useRef<HTMLDivElement | null>(null);
@@ -102,11 +108,33 @@ export function CustomerSalesSummaryModal({
       if (cancelled || !printAreaRef.current) return;
       const { host, pages } = buildCustomerSalesPages(source, document);
       pages.forEach((page) => {
-        page.style.zoom = String(pageScale);
-        printAreaRef.current?.appendChild(page);
+        const frame = document.createElement("div");
+        frame.dataset.customerSalesPreviewFrame = "true";
+        const size = getCustomerSalesPreviewSize(
+          page.offsetWidth * pageScale,
+          page.offsetWidth,
+          page.offsetHeight,
+        );
+        Object.assign(frame.style, {
+          width: `${size.width}px`,
+          height: `${size.height}px`,
+          flex: "0 0 auto",
+          overflow: "hidden",
+          position: "relative",
+        });
+        Object.assign(page.style, {
+          left: "0",
+          position: "absolute",
+          top: "0",
+          transform: `scale(${size.scale})`,
+          transformOrigin: "top left",
+          zoom: "1",
+        });
+        frame.appendChild(page);
+        printAreaRef.current?.appendChild(frame);
       });
       host.remove();
-      cleanup = () => pages.forEach((page) => page.remove());
+      cleanup = () => pages.forEach((page) => page.parentElement?.remove());
     });
 
     return () => {
@@ -118,7 +146,7 @@ export function CustomerSalesSummaryModal({
   if (!isOpen) return null;
 
   async function handleSaveImage() {
-    if (isPrinting || isSavingImage) return;
+    if (isPrinting || isSavingImage || isSavingPdf) return;
     setIsSavingImage(true);
 
     try {
@@ -137,7 +165,7 @@ export function CustomerSalesSummaryModal({
   }
 
   async function handlePrint() {
-    if (isPrinting || isSavingImage) return;
+    if (isPrinting || isSavingImage || isSavingPdf) return;
     setIsPrinting(true);
     const previousTitle = document.title;
     try {
@@ -149,8 +177,24 @@ export function CustomerSalesSummaryModal({
       setIsPrinting(false);
     }
   }
+  async function handleSavePdf() {
+    if (isPrinting || isSavingImage || isSavingPdf) return;
+    setIsSavingPdf(true);
+    try {
+      const preview = await createCustomerSalesPdfPreviewFromDocument(
+        document,
+        `customer-sales-summary-${activeData.vehicleName || "all"}`,
+      );
+      if (preview) setPdfPreview(preview);
+    } catch (error) {
+      console.error("[CustomerSales:SavePdf]", error);
+      window.alert("สร้างไฟล์ PDF ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง");
+    } finally {
+      setIsSavingPdf(false);
+    }
+  }
   return createPortal(
-    <div className="customer-sales-modal fixed inset-0 z-[500] flex flex-col bg-[#0a0c10] animate-in fade-in duration-200">
+    <><div className="customer-sales-modal fixed inset-0 z-[500] flex flex-col bg-[#0a0c10] animate-in fade-in duration-200">
       {/* Top Header Bar */}
       <div className="no-print sticky top-0 z-50 flex shrink-0 flex-col gap-3 border-b border-white/10 bg-[#12151c]/95 px-4 py-3 backdrop-blur-xl sm:px-6">
         <div className="flex items-center justify-between gap-3">
@@ -176,7 +220,7 @@ export function CustomerSalesSummaryModal({
             <button
               type="button"
               onClick={handlePrint}
-              disabled={isPrinting || isSavingImage}
+              disabled={isPrinting || isSavingImage || isSavingPdf}
               className="hidden items-center gap-1.5 rounded-xl bg-[#4A148C] px-4 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-[#4A148C]/90 active:scale-95 sm:flex"
             >
               <Printer className="h-4 w-4" />
@@ -186,7 +230,7 @@ export function CustomerSalesSummaryModal({
             <button
               type="button"
               onClick={handleSaveImage}
-              disabled={isPrinting || isSavingImage}
+              disabled={isPrinting || isSavingImage || isSavingPdf}
               className="hidden items-center gap-1.5 rounded-xl bg-emerald-600 px-3.5 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-emerald-500 active:scale-95 disabled:cursor-not-allowed disabled:opacity-70 sm:flex sm:text-sm"
             >
               {isSavingImage ? (
@@ -199,16 +243,16 @@ export function CustomerSalesSummaryModal({
 
             <button
               type="button"
-              onClick={handlePrint}
-              disabled={isPrinting || isSavingImage}
+              onClick={handleSavePdf}
+              disabled={isPrinting || isSavingImage || isSavingPdf}
               className="hidden items-center gap-1.5 rounded-xl border border-white/20 bg-white/10 px-3.5 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-white/20 active:scale-95 disabled:cursor-not-allowed disabled:opacity-70 sm:flex sm:text-sm"
             >
-              {isPrinting ? (
+              {isSavingPdf ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
                 <FileText className="h-4 w-4 text-rose-400" />
               )}
-              {isPrinting ? "กำลังเปิด..." : "บันทึก PDF"}
+              {isSavingPdf ? "กำลังสร้าง..." : "บันทึก PDF"}
             </button>
 
             <button
@@ -268,7 +312,7 @@ export function CustomerSalesSummaryModal({
         <button
           type="button"
           onClick={handleSaveImage}
-          disabled={isPrinting || isSavingImage}
+          disabled={isPrinting || isSavingImage || isSavingPdf}
           className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-emerald-600 py-3 text-sm font-black text-white shadow-sm transition active:scale-95 disabled:opacity-70"
         >
           {isSavingImage ? (
@@ -281,20 +325,27 @@ export function CustomerSalesSummaryModal({
 
         <button
           type="button"
-          onClick={handlePrint}
-          disabled={isPrinting || isSavingImage}
+          onClick={handleSavePdf}
+          disabled={isPrinting || isSavingImage || isSavingPdf}
           className="flex-1 flex items-center justify-center gap-2 rounded-xl border border-white/20 bg-white/10 py-3 text-sm font-black text-white shadow-sm transition active:scale-95 disabled:opacity-70"
         >
-          {isPrinting ? (
+          {isSavingPdf ? (
             <Loader2 className="h-4 w-4 animate-spin" />
           ) : (
             <FileText className="h-4 w-4 text-rose-400" />
           )}
-          {isPrinting ? "กำลังเปิด..." : "บันทึก PDF"}
+          {isSavingPdf ? "กำลังสร้าง..." : "บันทึก PDF"}
         </button>
       </div>
 
-    </div>,
+    </div>{pdfPreview ? (
+      <DeliveryPdfPreviewModal
+        file={pdfPreview.file}
+        previewImages={pdfPreview.previewImages}
+        title="ตัวอย่าง PDF รายงานสรุปยอดขาย"
+        onClose={() => setPdfPreview(null)}
+      />
+    ) : null}</>,
     document.body,
   );
 }

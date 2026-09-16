@@ -127,6 +127,30 @@ function buildFactoryOrderPages(data: VehicleProductSummaryData): Array<{ data: 
 function FactoryOrderStyles() {
   return (
     <style>{`
+      @font-face {
+        font-family: "Angsana New Factory";
+        src: url("/fonts/angsana-new/ANGSA.woff") format("woff");
+        font-weight: 400;
+        font-style: normal;
+        font-display: swap;
+      }
+
+      @font-face {
+        font-family: "Angsana New Factory";
+        src: url("/fonts/angsana-new/angsab.woff") format("woff");
+        font-weight: 700;
+        font-style: normal;
+        font-display: swap;
+      }
+
+      @font-face {
+        font-family: "Angsana New Factory";
+        src: url("/fonts/angsana-new/angsab.woff") format("woff");
+        font-weight: 800 900;
+        font-style: normal;
+        font-display: swap;
+      }
+
       @page { size: A4 portrait; margin: 0; }
 
       @media print {
@@ -228,7 +252,8 @@ function FactoryOrderStyles() {
         border: 1px solid #000000;
         color: #0f172a;
         box-sizing: border-box;
-        font-family: var(--font-noto-sans-thai), "Noto Sans Thai", sans-serif;
+        font-family: "Angsana New Factory", "Sarabun", "Noto Sans Thai", sans-serif;
+        font-synthesis: none;
       }
 
       .vehicle-summary-sheet__inner {
@@ -257,7 +282,7 @@ function FactoryOrderStyles() {
       }
 
       .vehicle-summary-header__brand {
-        font-size: 10pt;
+        font-size: 15.5pt;
         font-weight: 800;
         line-height: 1.25;
         letter-spacing: 0.04em;
@@ -274,7 +299,7 @@ function FactoryOrderStyles() {
 
       .vehicle-summary-header__title {
         margin: 0;
-        font-size: 18pt;
+        font-size: 27.9pt;
         line-height: 1.25;
         font-weight: 800;
         white-space: nowrap;
@@ -287,7 +312,7 @@ function FactoryOrderStyles() {
         gap: 1.6mm;
         flex-wrap: nowrap;
         white-space: nowrap;
-        font-size: 9.5pt;
+        font-size: 14.72pt;
         font-weight: 700;
         color: #334155;
       }
@@ -343,13 +368,13 @@ function FactoryOrderStyles() {
 
       .vehicle-summary-table__index-col {
         background: #ffffff;
-        font-size: 10pt;
+        font-size: 15.5pt;
         font-weight: 800;
       }
 
       .vehicle-summary-table__index-cell {
         background: #ffffff;
-        font-size: 10pt;
+        font-size: 15.5pt;
         font-weight: 700;
       }
 
@@ -359,7 +384,7 @@ function FactoryOrderStyles() {
         padding: 0.5mm 0.8mm 0.25mm;
         background: #ffffff;
         text-align: center;
-        font-size: 11pt;
+        font-size: 17.05pt;
         font-weight: 800;
         line-height: 1.25;
       }
@@ -372,21 +397,21 @@ function FactoryOrderStyles() {
 
       .vehicle-summary-table__unit-col {
         background: #ffffff;
-        font-size: 10pt;
+        font-size: 15.5pt;
         font-weight: 800;
         line-height: 1.25;
       }
 
       .vehicle-summary-table__unit-cell {
         background: #ffffff;
-        font-size: 11pt;
+        font-size: 17.05pt;
         font-weight: 700;
         line-height: 1.55;
         color: #0f172a;
       }
 
       .vehicle-summary-table__vehicle-col {
-        font-size: 11pt;
+        font-size: 17.05pt;
         font-weight: 800;
         border-bottom-width: 1px;
       }
@@ -425,14 +450,14 @@ function FactoryOrderStyles() {
         overflow: visible;
         text-overflow: clip;
         white-space: normal;
-        font-size: 13pt;
+        font-size: 20.15pt;
         font-weight: 700;
         line-height: 1.2;
         color: #0f172a;
       }
 
       .vehicle-summary-table__qty-cell {
-        font-size: 14pt;
+        font-size: 21.7pt;
         font-weight: 800;
         line-height: 1.3;
         color: #0f172a;

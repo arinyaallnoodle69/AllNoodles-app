@@ -1,6 +1,6 @@
 "use client";
 
-import React, { memo, useEffect, useState, useTransition } from "react";
+import React, { memo, useEffect, useRef, useState, useTransition } from "react";
 import dynamic from "next/dynamic";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
@@ -926,6 +926,7 @@ export function IncomingOrderModal({ allOrders, detail, expandedId, onAfterClose
   const [isPreparingEdit, setIsPreparingEdit] = useState(false);
   const [saveToast, setSaveToast] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const pageScrollYRef = useRef(0);
 
   const [slideAnim, setSlideAnim] = useState<"slide-left" | "slide-right" | null>(null);
   const [isClosing, setIsClosing] = useState(false);
@@ -956,6 +957,8 @@ export function IncomingOrderModal({ allOrders, detail, expandedId, onAfterClose
   useEffect(() => {
     if (typeof window === "undefined") return;
 
+    pageScrollYRef.current = window.scrollY;
+
     const mediaQuery = window.matchMedia("(min-width: 768px)");
     const updateViewport = () => setIsDesktopViewport(mediaQuery.matches);
 
@@ -963,6 +966,12 @@ export function IncomingOrderModal({ allOrders, detail, expandedId, onAfterClose
     mediaQuery.addEventListener("change", updateViewport);
     return () => mediaQuery.removeEventListener("change", updateViewport);
   }, []);
+
+  function restorePageScroll() {
+    const top = pageScrollYRef.current;
+    requestAnimationFrame(() => window.scrollTo({ top, behavior: "auto" }));
+    window.setTimeout(() => window.scrollTo({ top, behavior: "auto" }), 150);
+  }
 
   useEffect(() => {
     if (!activeDetail) return;
@@ -1033,6 +1042,7 @@ export function IncomingOrderModal({ allOrders, detail, expandedId, onAfterClose
       const p = new URLSearchParams(searchParams.toString());
       p.delete("expanded"); p.delete("edit"); p.delete("delete");
       router.replace(`${pathname}?${p.toString()}`, { scroll: false });
+      restorePageScroll();
       onAfterClose?.();
     }, 350);
   }
@@ -1333,9 +1343,11 @@ export function IncomingOrderModal({ allOrders, detail, expandedId, onAfterClose
                     return next;
                   });
                   router.refresh();
+                  restorePageScroll();
                   window.setTimeout(() => {
                     setSaveToast(null);
                     close();
+                    restorePageScroll();
                   }, 1200);
                 } else {
                   if (!isDesktopViewport) {

@@ -1,7 +1,7 @@
 "use client";
 
-import { Download, Loader2, Share2, X, AlertTriangle, ExternalLink } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { ArrowLeft, Download, Loader2, Share2, X, AlertTriangle, ExternalLink } from "lucide-react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
   downloadPreparedDeliveryPdf,
@@ -22,6 +22,8 @@ export function DeliveryPdfPreviewModal({
   title = "ตัวอย่าง PDF บิลส่งของ",
   onClose,
 }: DeliveryPdfPreviewModalProps) {
+  const historyId = useId();
+  const isClosingRef = useRef(false);
   const [isSharing, setIsSharing] = useState(false);
   const [isLineBrowser, setIsLineBrowser] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
@@ -34,6 +36,20 @@ export function DeliveryPdfPreviewModal({
   const [uploadError, setUploadError] = useState<string | null>(null);
 
   const previewUrl = useMemo(() => URL.createObjectURL(file), [file]);
+
+  useEffect(() => {
+    const marker = historyId;
+    const state = window.history.state as Record<string, unknown> | null;
+    if (state?.pdfPreviewId !== marker) {
+      window.history.pushState({ ...state, pdfPreviewId: marker }, "");
+    }
+
+    const handleBack = () => {
+      if (!isClosingRef.current) onClose();
+    };
+    window.addEventListener("popstate", handleBack);
+    return () => window.removeEventListener("popstate", handleBack);
+  }, [historyId, onClose]);
 
   useEffect(() => {
     const ua = navigator.userAgent.toLowerCase();
@@ -109,88 +125,22 @@ export function DeliveryPdfPreviewModal({
       });
   }
 
+  function handleClose() {
+    if (isClosingRef.current) return;
+    isClosingRef.current = true;
+    const state = window.history.state as Record<string, unknown> | null;
+    onClose();
+    if (state?.pdfPreviewId === historyId) {
+      window.history.back();
+    }
+  }
+
   function handleDownload() {
-    if (publicUrl) {
-      window.open(publicUrl, "_blank");
-      return;
-    }
-
-    if (isMobileStandalone) {
-      downloadPreparedDeliveryPdf(file);
-      return;
-    }
-
-    if (isMobileStandalone) {
-      window.alert(
-        isUploading
-          ? "ระบบกำลังจัดเตรียมไฟล์ PDF กรุณารอสักครู่..."
-          : "ไม่สามารถดาวน์โหลดไฟล์โดยตรงผ่านแอปหน้าจอหลัก (PWA) ได้\n\nกรุณากดปุ่ม 'คัดลอกลิงก์หน้าเว็บ' ด้านล่างเพื่อนำลิงก์ไปเปิดใน Safari/Chrome",
-      );
-      return;
-    }
-    if (isLineBrowser) {
-      window.alert(
-        "เบราว์เซอร์ LINE ไม่รองรับการดาวน์โหลดไฟล์โดยตรง\n\nกรุณากดปุ่มเมนูมุมขวาบน (...) แล้วเลือก 'เปิดในเบราว์เซอร์อื่น' หรือกดปุ่ม 'เปิดด้วย Safari / Chrome' ในหน้าจอ",
-      );
-      return;
-    }
     downloadPreparedDeliveryPdf(file);
   }
 
   async function handleShare() {
     if (isSharing) return;
-
-    if (publicUrl) {
-      setIsSharing(true);
-      try {
-        if (navigator.share) {
-          await navigator.share({
-            title: file.name,
-            url: publicUrl,
-          });
-        } else {
-          // Fallback if navigator.share is not supported: open in new window
-          window.open(publicUrl, "_blank");
-        }
-      } catch (error) {
-        if (error instanceof Error && error.name === "AbortError") return;
-        console.error("[delivery/share-pdf]", error);
-        window.alert("แชร์ PDF ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง");
-      } finally {
-        setIsSharing(false);
-      }
-      return;
-    }
-
-    if (isMobileStandalone) {
-      setIsSharing(true);
-      try {
-        await sharePreparedDeliveryPdf(file);
-      } catch (error) {
-        if (error instanceof Error && error.name === "AbortError") return;
-        console.error("[delivery/share-pdf]", error);
-        window.alert("แชร์ PDF ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง");
-      } finally {
-        setIsSharing(false);
-      }
-      return;
-    }
-
-    if (isMobileStandalone) {
-      window.alert(
-        isUploading
-          ? "ระบบกำลังจัดเตรียมไฟล์ PDF กรุณารอสักครู่..."
-          : "ไม่สามารถแชร์ไฟล์ผ่านแอปหน้าจอหลัก (PWA) ได้\n\nกรุณากดปุ่ม 'คัดลอกลิงก์หน้าเว็บ' ด้านล่างเพื่อนำลิงก์ไปเปิดใน Safari/Chrome",
-      );
-      return;
-    }
-
-    if (isLineBrowser) {
-      window.alert(
-        "เบราว์เซอร์ LINE ไม่รองรับการแชร์ไฟล์โดยตรง\n\nกรุณากดปุ่มเมนูมุมขวาบน (...) แล้วเลือก 'เปิดในเบราว์เซอร์อื่น' หรือกดปุ่ม 'เปิดด้วย Safari / Chrome' ในหน้าจอ",
-      );
-      return;
-    }
 
     setIsSharing(true);
     try {
@@ -206,6 +156,14 @@ export function DeliveryPdfPreviewModal({
 
   return createPortal(
     <div className="fixed inset-0 z-[900] bg-[#4A148C]/40 p-0 text-[#4A148C] backdrop-blur-sm sm:flex sm:items-center sm:justify-center sm:p-6">
+      <button
+        type="button"
+        onClick={handleClose}
+        className="fixed left-3 top-[calc(env(safe-area-inset-top)+0.75rem)] z-[1000] flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 bg-white/95 text-[#4A148C] shadow-lg backdrop-blur transition active:scale-95 sm:hidden"
+        aria-label="กลับจากตัวอย่าง PDF"
+      >
+        <ArrowLeft className="h-5 w-5" strokeWidth={2.5} />
+      </button>
       <div className="grid h-[100dvh] w-full grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden bg-white sm:h-[92vh] sm:max-w-[1280px] sm:border sm:border-[#EA80FC]/40">
         <div className="flex h-1 w-full">
           <div className="h-full flex-1 bg-[#4A148C]" />
@@ -232,14 +190,6 @@ export function DeliveryPdfPreviewModal({
               </div>
             </div>
 
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex h-11 w-11 items-center justify-center rounded-full border border-[#EA80FC]/45 bg-white text-[#4A148C] transition hover:border-[#EA80FC] hover:bg-[#EA80FC]/10 active:scale-95 sm:hidden"
-              aria-label="ปิดตัวอย่าง PDF"
-            >
-              <X className="h-5 w-5" strokeWidth={2.5} />
-            </button>
           </div>
 
           <div className="mt-4 hidden items-center justify-end gap-3 sm:flex">
@@ -270,7 +220,7 @@ export function DeliveryPdfPreviewModal({
             </button>
             <button
               type="button"
-              onClick={onClose}
+              onClick={handleClose}
               className="flex h-12 w-12 items-center justify-center rounded-full border border-[#EA80FC]/45 bg-white text-[#4A148C] transition hover:border-[#EA80FC] hover:bg-[#EA80FC]/10 active:scale-95"
               aria-label="ปิดตัวอย่าง PDF"
             >

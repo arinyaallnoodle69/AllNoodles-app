@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
-import { Building2, Check, ChevronDown, Minus, PackageCheck, Plus, Search, ShoppingBasket, Trash2, Truck, X } from "lucide-react";
+import { Building2, Check, ChevronDown, Minus, PackageCheck, PackageMinus, Plus, Search, ShoppingBasket, Trash2, Truck, X } from "lucide-react";
 import { createPortal } from "react-dom";
 import { saveDailySpecialItemsAction, type SaveDailySpecialItemInput } from "@/app/orders/incoming/special-order-actions";
 import type { DailySpecialCatalogProduct, DailySpecialItem, DailySpecialItemType } from "@/lib/orders/daily-special-items";
@@ -22,6 +22,7 @@ type CartItem = SaveDailySpecialItemInput;
 const typeMeta = {
   office: { label: "เข้าออฟฟิศ", icon: Building2, tone: "purple" },
   claim: { label: "เคลม", icon: PackageCheck, tone: "pink" },
+  remaining: { label: "ของเหลือ", icon: PackageMinus, tone: "amber" },
 } as const;
 
 function cartKey(item: Pick<CartItem, "type" | "vehicleId" | "productId">) {
@@ -83,9 +84,10 @@ export function DailySpecialOrderManager({ date, initialItems, products, variant
   const vehicleById = useMemo(() => new Map(vehicles.map((vehicle) => [vehicle.id, vehicle])), [vehicles]);
   const filteredProducts = useMemo(() => {
     const term = search.trim().toLocaleLowerCase("th");
-    if (!term) return products;
-    return products.filter((product) => `${product.sku} ${product.name}`.toLocaleLowerCase("th").includes(term));
-  }, [products, search]);
+    const available = type === "remaining" ? products.filter((product) => product.isFresh) : products;
+    if (!term) return available;
+    return available.filter((product) => `${product.sku} ${product.name}`.toLocaleLowerCase("th").includes(term));
+  }, [products, search, type]);
   const selectedCount = Object.values(draft).filter((quantity) => quantity > 0).length;
 
   const groups = useMemo(() => {
@@ -179,6 +181,15 @@ export function DailySpecialOrderManager({ date, initialItems, products, variant
           <button
             type="button"
             role="menuitem"
+            onClick={() => { setType("remaining"); setIsMenuOpen(false); setIsOpen(true); }}
+            className="group mt-1 flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left transition hover:bg-amber-50"
+          >
+            <span className="grid h-9 w-9 place-items-center rounded-xl bg-amber-50 text-amber-700 transition group-hover:bg-white"><PackageMinus className="h-4.5 w-4.5" /></span>
+            <span><strong className="block text-sm font-black text-amber-700">ของเหลือ</strong><small className="text-[10px] font-bold text-slate-500">หักยอดผลิตสดตามรถ</small></span>
+          </button>
+          <button
+            type="button"
+            role="menuitem"
             onClick={() => { setType("claim"); setIsMenuOpen(false); setIsOpen(true); }}
             className="group mt-1 flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left transition hover:bg-pink-50"
           >
@@ -216,10 +227,10 @@ export function DailySpecialOrderManager({ date, initialItems, products, variant
             <div className="grid min-h-0 min-w-0 flex-1 lg:grid-cols-[minmax(0,1fr)_360px]">
               <main className="flex min-h-0 min-w-0 flex-col overflow-hidden">
                 <div className="shrink-0 space-y-3 border-b border-[#E1BEE7]/70 bg-white px-4 py-3 sm:px-6">
-                  <div className="grid grid-cols-2 rounded-2xl bg-[#F3E5F5] p-1">
-                    {(["office", "claim"] as const).map((entryType) => {
+                  <div className="grid grid-cols-3 rounded-2xl bg-[#F3E5F5] p-1">
+                    {(["office", "claim", "remaining"] as const).map((entryType) => {
                       const meta = typeMeta[entryType]; const Icon = meta.icon; const selected = type === entryType;
-                      return <button key={entryType} type="button" onClick={() => { setType(entryType); setDraft({}); }} className={`flex h-11 items-center justify-center gap-2 rounded-xl text-sm font-black transition ${selected ? entryType === "office" ? "bg-[#4A148C] text-white shadow-md" : "bg-pink-500 text-white shadow-md" : "text-[#4A148C]"}`}><Icon className="h-4.5 w-4.5" />{meta.label}</button>;
+                      return <button key={entryType} type="button" onClick={() => { setType(entryType); setDraft({}); }} className={`flex h-11 items-center justify-center gap-1.5 rounded-xl text-sm font-black transition ${selected ? entryType === "office" ? "bg-[#4A148C] text-white shadow-md" : entryType === "claim" ? "bg-pink-500 text-white shadow-md" : "bg-amber-500 text-white shadow-md" : "text-[#4A148C]"}`}><Icon className="h-4.5 w-4.5" />{meta.label}</button>;
                     })}
                   </div>
                   <div className="mobile-special-filter-row grid grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] gap-2 sm:hidden">
@@ -250,7 +261,7 @@ export function DailySpecialOrderManager({ date, initialItems, products, variant
                   <div className="grid gap-2 xl:grid-cols-2">
                     {filteredProducts.map((product) => {
                       const quantity = draft[product.id] ?? 0; const selected = quantity > 0;
-                      return <article key={product.id} className={`grid min-w-0 grid-cols-[24px_52px_minmax(0,1fr)] items-start gap-x-2.5 gap-y-2 rounded-2xl border bg-white px-3 py-3 transition sm:grid-cols-[24px_52px_minmax(0,1fr)_112px] sm:items-center sm:gap-3 sm:p-2.5 ${selected ? type === "claim" ? "border-pink-400 shadow-[0_8px_20px_rgba(236,72,153,.10)]" : "border-[#9C27B0] shadow-[0_8px_20px_rgba(74,20,140,.10)]" : "border-slate-200"}`}>
+                      return <article key={product.id} className={`grid min-w-0 grid-cols-[24px_52px_minmax(0,1fr)] items-start gap-x-2.5 gap-y-2 rounded-2xl border bg-white px-3 py-3 transition sm:grid-cols-[24px_52px_minmax(0,1fr)_112px] sm:items-center sm:gap-3 sm:p-2.5 ${selected ? type === "claim" ? "border-pink-400 shadow-[0_8px_20px_rgba(236,72,153,.10)]" : type === "remaining" ? "border-amber-400 shadow-[0_8px_20px_rgba(245,158,11,.10)]" : "border-[#9C27B0] shadow-[0_8px_20px_rgba(74,20,140,.10)]" : "border-slate-200"}`}>
                         <button type="button" onClick={() => updateDraft(product.id, selected ? 0 : 1)} className={`mt-1 grid h-5 w-5 place-items-center rounded-md border text-white ${selected ? "border-[#4A148C] bg-[#4A148C]" : "border-slate-300 bg-white"}`} aria-label={selected ? `ยกเลิกเลือก ${product.name}` : `เลือก ${product.name}`}>{selected ? <Check className="h-3.5 w-3.5" strokeWidth={3} /> : null}</button>
                         <button type="button" onClick={() => updateDraft(product.id, selected ? 0 : 1)} className="relative h-12 w-12 overflow-hidden bg-transparent">
                           {product.imageUrl ? <Image src={product.imageUrl} alt={product.name} fill sizes="48px" className="object-contain" /> : <PackageCheck className="m-2.5 h-7 w-7 text-slate-300" />}

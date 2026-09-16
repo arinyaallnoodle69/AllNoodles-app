@@ -20,6 +20,8 @@ let cachedFontEmbedCSS: string | null = null;
 type RestorableImage = {
   image: HTMLImageElement;
   src: string;
+  srcSet: string | null;
+  sizes: string | null;
   crossOrigin: string | null;
 };
 
@@ -36,8 +38,9 @@ async function inlineCaptureImages(targets: HTMLElement[]): Promise<RestorableIm
   const images = Array.from(new Set(targets.flatMap((target) => Array.from(target.querySelectorAll("img")))));
   const restorable: RestorableImage[] = [];
 
-  await Promise.all(
-    images.map(async (image) => {
+  try {
+    await Promise.all(
+      images.map(async (image) => {
       const src = image.currentSrc || image.src;
       if (!src || src.startsWith("data:") || src.startsWith("blob:")) return;
 
@@ -46,22 +49,38 @@ async function inlineCaptureImages(targets: HTMLElement[]): Promise<RestorableIm
         if (!response.ok) throw new Error(`โหลดรูปไม่สำเร็จ (${response.status})`);
 
         const dataUrl = await blobToDataUrl(await response.blob());
-        restorable.push({ image, src: image.src, crossOrigin: image.getAttribute("crossorigin") });
+        restorable.push({
+          image,
+          src: image.src,
+          srcSet: image.getAttribute("srcset"),
+          sizes: image.getAttribute("sizes"),
+          crossOrigin: image.getAttribute("crossorigin"),
+        });
         image.removeAttribute("crossorigin");
+        image.removeAttribute("srcset");
+        image.removeAttribute("sizes");
         image.src = dataUrl;
-        await image.decode().catch(() => undefined);
+        await image.decode();
       } catch (error) {
-        console.warn("[DocumentCapture] Cannot inline product image:", src, error);
+        throw new Error(`เตรียมรูปสินค้าไม่สำเร็จ: ${src}`, { cause: error });
       }
-    }),
-  );
+      }),
+    );
+  } catch (error) {
+    restoreCaptureImages(restorable);
+    throw error;
+  }
 
   return restorable;
 }
 
 function restoreCaptureImages(images: RestorableImage[]) {
-  images.forEach(({ image, src, crossOrigin }) => {
+  images.forEach(({ image, src, srcSet, sizes, crossOrigin }) => {
     image.src = src;
+    if (srcSet === null) image.removeAttribute("srcset");
+    else image.setAttribute("srcset", srcSet);
+    if (sizes === null) image.removeAttribute("sizes");
+    else image.setAttribute("sizes", sizes);
     if (crossOrigin === null) image.removeAttribute("crossorigin");
     else image.setAttribute("crossorigin", crossOrigin);
   });

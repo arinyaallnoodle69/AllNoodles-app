@@ -504,6 +504,17 @@ export async function getFactoryOrderSheetData(
     group.vehicleNamesByKey.set(item.vehicleId, item.vehicleName);
   }
 
+  // Remaining fresh goods reduce the vehicle's factory demand. They are a
+  // planning adjustment only, not a sale or stock movement.
+  for (const item of specialItems.filter((special) => special.type === "remaining")) {
+    for (const group of groups.values()) {
+      const productQty = group.productVehicleQty.get(item.productId);
+      if (!productQty?.has(item.vehicleId)) continue;
+      productQty.set(item.vehicleId, Math.max(0, (productQty.get(item.vehicleId) ?? 0) - item.quantity));
+      break;
+    }
+  }
+
   const adjustmentByProductId = new Map(adjustments.map((item) => [item.productId, item.adjustedQuantity]));
   for (const [productId, adjustedQuantity] of adjustmentByProductId) {
     if (adjustedQuantity <= 0 || Array.from(groups.values()).some((group) => group.productVehicleQty.has(productId))) continue;

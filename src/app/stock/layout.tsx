@@ -13,9 +13,10 @@ export default function StockLayout({
   const searchParams = useSearchParams();
 
   // Determine current tab from searchParams or pathname
-  let current: "stock" | "history" | "issues" = "stock";
+  let current: "stock" | "history" | "issues" | "movements" = "stock";
   const tabParam = searchParams.get("tab");
-  if (tabParam === "history" || pathname.includes("/stock/history")) current = "history";
+  if (pathname.includes("/stock/movements")) current = "movements";
+  else if (tabParam === "history" || pathname.includes("/stock/history")) current = "history";
   else if (tabParam === "issues" || pathname.includes("/stock/issues")) current = "issues";
   else current = "stock";
 
@@ -23,7 +24,8 @@ export default function StockLayout({
   const descriptions = {
     stock: "ดูของคงเหลือ จองแล้ว และจัดการสต็อกพื้นฐาน",
     history: "ดูประวัติการรับเข้าสินค้าจากผู้ขาย",
-    issues: "ดูประวัติการเบิกสินค้าออกจากคลัง"
+    issues: "ดูประวัติการเบิกสินค้าออกจากคลัง",
+    movements: "ตรวจสอบยอดยกมา รับเข้า ขาย คืน ปรับ และคงเหลือรายวัน",
   };
 
   return (

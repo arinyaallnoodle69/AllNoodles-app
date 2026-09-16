@@ -478,8 +478,8 @@ async function PackingListPage({ searchParams }: Props) {
           groupedStore = {
             customer: {
               id: storeGroupKey,
-              name: special.type === "office" ? "เข้าออฟฟิศ" : "เคลม",
-              customer_code: special.type === "office" ? "SPECIAL-OFFICE" : "SPECIAL-CLAIM",
+              name: special.type === "office" ? "เข้าออฟฟิศ" : special.type === "claim" ? "เคลม" : "ของเหลือ",
+              customer_code: special.type === "office" ? "SPECIAL-OFFICE" : special.type === "claim" ? "SPECIAL-CLAIM" : "SPECIAL-REMAINING",
               default_vehicle_id: special.vehicleId,
               vehicles: null,
             },
@@ -487,15 +487,15 @@ async function PackingListPage({ searchParams }: Props) {
             vehicleName: special.vehicleName,
             items: new Map(),
             missingWeightProductIds: new Set(),
-            specialSort: special.type === "office" ? 1 : 2,
+            specialSort: special.type === "office" ? 1 : special.type === "claim" ? 2 : 3,
             totalWeightGrams: 0,
           };
           groupedStores.set(storeGroupKey, groupedStore);
         }
 
-        groupedStore.items.set(key, (groupedStore.items.get(key) ?? 0) + special.quantity);
+        groupedStore.items.set(key, (groupedStore.items.get(key) ?? 0) + (special.type === "remaining" ? -special.quantity : special.quantity));
         const unitWeightGrams = productUnitWeightGramsById.get(special.productId) ?? null;
-        if (special.quantity > 0) {
+        if (special.type === "claim" && special.quantity > 0) {
           if (unitWeightGrams !== null && Number.isFinite(unitWeightGrams) && unitWeightGrams > 0) {
             groupedStore.totalWeightGrams += special.quantity * unitWeightGrams;
           } else {
@@ -641,8 +641,52 @@ async function PackingListPage({ searchParams }: Props) {
     <>
       {autoprint ? <AutoPrint /> : null}
 
+      <style>{`
+        @media screen and (max-width: 767px) {
+          .packing-list-toolbar {
+            position: relative !important;
+            top: auto !important;
+            left: auto !important;
+            transform: none !important;
+            width: calc(100vw - 12px) !important;
+            max-width: calc(100vw - 12px) !important;
+            margin: 6px auto 10px !important;
+            box-sizing: border-box !important;
+            padding: 10px !important;
+          }
+
+          .packing-list-toolbar__toggle {
+            display: none !important;
+          }
+
+          .packing-list-toolbar__actions {
+            display: grid !important;
+            width: 100% !important;
+            grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto !important;
+          }
+
+          .packing-list-toolbar__actions > * {
+            min-width: 0 !important;
+          }
+
+          .packing-list-toolbar__actions > div:not(.packing-list-toolbar__toggle),
+          .packing-list-toolbar__actions > div:not(.packing-list-toolbar__toggle) > button,
+          .packing-list-toolbar__actions > button {
+            width: 100% !important;
+          }
+
+          .packing-list-toolbar__actions button,
+          .packing-list-toolbar__actions a {
+            justify-content: center !important;
+            padding-left: 8px !important;
+            padding-right: 8px !important;
+            white-space: nowrap !important;
+          }
+        }
+      `}</style>
+
       <div
-        className="no-print flex flex-col md:flex-row items-center gap-2 md:gap-3 bg-white py-2.5 px-4 rounded-[16px] shadow-lg fixed top-3 left-1/2 -translate-x-1/2 z-[100] border border-slate-100/80 w-max max-w-[calc(100vw-24px)]"
+        className="no-print packing-list-toolbar flex flex-col md:flex-row items-center gap-2 md:gap-3 bg-white py-2.5 px-4 rounded-[16px] shadow-lg fixed top-3 left-1/2 -translate-x-1/2 z-[100] border border-slate-100/80 w-max max-w-[calc(100vw-24px)]"
         style={{
           fontFamily: 'var(--font-noto-sans-thai), "Noto Sans Thai", sans-serif',
         }}
@@ -674,8 +718,8 @@ async function PackingListPage({ searchParams }: Props) {
           </span>
         </div>
 
-        <div className="flex items-center gap-2 flex-nowrap">
-          <div>
+        <div className="packing-list-toolbar__actions flex items-center gap-2 flex-nowrap">
+          <div className="packing-list-toolbar__toggle">
             <PrintPackingListButton
               date={date}
               endDate={endDate}

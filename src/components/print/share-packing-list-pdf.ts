@@ -1,5 +1,7 @@
 const PACKING_SHEET_WIDTH_MM = 297;
 const PACKING_SHEET_HEIGHT_MM = 210;
+const PORTRAIT_SHEET_WIDTH_MM = 210;
+const PORTRAIT_SHEET_HEIGHT_MM = 297;
 const FALLBACK_CAPTURE_WIDTH = 1123;
 const FALLBACK_CAPTURE_HEIGHT = 794;
 
@@ -65,6 +67,8 @@ export function buildPackingListPdfFileName(input: string | undefined) {
 type RestorableImage = {
   image: HTMLImageElement;
   src: string;
+  srcSet: string | null;
+  sizes: string | null;
   crossOrigin: string | null;
 };
 
@@ -83,8 +87,9 @@ async function inlineCaptureImages(targets: HTMLElement[]): Promise<RestorableIm
   );
   const restorable: RestorableImage[] = [];
 
-  await Promise.all(
-    images.map(async (image) => {
+  try {
+    await Promise.all(
+      images.map(async (image) => {
       const src = image.currentSrc || image.src;
       if (!src || src.startsWith("data:") || src.startsWith("blob:")) return;
 
@@ -93,22 +98,38 @@ async function inlineCaptureImages(targets: HTMLElement[]): Promise<RestorableIm
         if (!response.ok) throw new Error(`โหลดรูปไม่สำเร็จ (${response.status})`);
 
         const dataUrl = await blobToDataUrl(await response.blob());
-        restorable.push({ image, src: image.src, crossOrigin: image.getAttribute("crossorigin") });
+        restorable.push({
+          image,
+          src: image.src,
+          srcSet: image.getAttribute("srcset"),
+          sizes: image.getAttribute("sizes"),
+          crossOrigin: image.getAttribute("crossorigin"),
+        });
         image.removeAttribute("crossorigin");
+        image.removeAttribute("srcset");
+        image.removeAttribute("sizes");
         image.src = dataUrl;
-        await image.decode().catch(() => undefined);
+        await image.decode();
       } catch (error) {
-        console.warn("[PackingListPDF] Cannot inline image:", src, error);
+        throw new Error(`เตรียมรูปสินค้าไม่สำเร็จ: ${src}`, { cause: error });
       }
-    }),
-  );
+      }),
+    );
+  } catch (error) {
+    restoreCaptureImages(restorable);
+    throw error;
+  }
 
   return restorable;
 }
 
 function restoreCaptureImages(images: RestorableImage[]) {
-  images.forEach(({ image, src, crossOrigin }) => {
+  images.forEach(({ image, src, srcSet, sizes, crossOrigin }) => {
     image.src = src;
+    if (srcSet === null) image.removeAttribute("srcset");
+    else image.setAttribute("srcset", srcSet);
+    if (sizes === null) image.removeAttribute("sizes");
+    else image.setAttribute("sizes", sizes);
     if (crossOrigin === null) image.removeAttribute("crossorigin");
     else image.setAttribute("crossorigin", crossOrigin);
   });
@@ -161,10 +182,14 @@ export async function createPackingListPdfPreviewFromDocument(
   const inlinedImages = await inlineCaptureImages(pages);
 
   try {
+    const isPortrait = pages[0]?.classList.contains("vehicle-summary-sheet") ?? false;
+    const pageWidthMm = isPortrait ? PORTRAIT_SHEET_WIDTH_MM : PACKING_SHEET_WIDTH_MM;
+    const pageHeightMm = isPortrait ? PORTRAIT_SHEET_HEIGHT_MM : PACKING_SHEET_HEIGHT_MM;
+    const orientation = isPortrait ? "portrait" : "landscape";
     const pdf = new jsPDF({
-      orientation: "landscape",
+      orientation,
       unit: "mm",
-      format: [PACKING_SHEET_WIDTH_MM, PACKING_SHEET_HEIGHT_MM],
+      format: [pageWidthMm, pageHeightMm],
       compress: true,
     });
 
@@ -177,7 +202,7 @@ export async function createPackingListPdfPreviewFromDocument(
 
     for (const [index, page] of pages.entries()) {
       if (index > 0) {
-        pdf.addPage([PACKING_SHEET_WIDTH_MM, PACKING_SHEET_HEIGHT_MM], "landscape");
+        pdf.addPage([pageWidthMm, pageHeightMm], orientation);
       }
 
       const datasetWidth = Number(page.dataset.captureWidth ?? "");
@@ -244,8 +269,8 @@ export async function createPackingListPdfPreviewFromDocument(
         "JPEG",
         0,
         0,
-        PACKING_SHEET_WIDTH_MM,
-        PACKING_SHEET_HEIGHT_MM,
+        pageWidthMm,
+        pageHeightMm,
       );
 
       await new Promise((resolve) => window.setTimeout(resolve, 0));

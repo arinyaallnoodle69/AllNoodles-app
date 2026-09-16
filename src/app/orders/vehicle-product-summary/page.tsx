@@ -4,6 +4,7 @@ import type { Viewport } from "next";
 import { AutoPrint, PackingListPrintButton } from "@/app/orders/packing-list/preview/print-button";
 import { PageLoader } from "@/components/page-loader";
 import { VehicleProductSummaryLayout } from "@/components/print/vehicle-product-summary-layout";
+import { SharePackingListPdfButton } from "@/components/print/share-packing-list-pdf-button";
 import { requireAnyRole } from "@/lib/auth/authorization";
 import { getVehicleProductSummaryData } from "@/lib/orders/vehicle-product-summary";
 
@@ -110,6 +111,10 @@ async function VehicleProductSummaryPage({ searchParams }: Props) {
             hidePrintOnMobile={false}
             documentTitle="สรุปสินค้าตามรถ"
             printButtonText="พิมพ์ฟอร์มสรุปตามรถ"
+          />
+          <SharePackingListPdfButton
+            fileName={`vehicle-product-summary-${date}${endDate !== date ? `-to-${endDate}` : ""}`}
+            previewTitle="ตัวอย่าง PDF ใบขึ้นของ"
           />
         </div>
         <Link

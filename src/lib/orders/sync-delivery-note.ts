@@ -153,7 +153,7 @@ export async function syncDeliveryNoteForOrder(
   }, null);
 
   const itemIds = (orderItems ?? []).map((item) => item.id);
-  let existingDn: { id: string; total_amount: number; delivery_date: string } | null = null;
+  let existingDn: { id: string; total_amount: number; delivery_date: string; delivery_number: string } | null = null;
   let existingDnError = null;
 
   if (itemIds.length > 0) {
@@ -169,14 +169,14 @@ export async function syncDeliveryNoteForOrder(
     } else if (linkedDnItem?.delivery_note_id) {
       const { data: dn, error: dnError } = await admin
         .from("delivery_notes")
-        .select("id, total_amount, delivery_date")
+        .select("id, total_amount, delivery_date, delivery_number")
         .eq("id", linkedDnItem.delivery_note_id)
         .single();
       
       if (dnError) {
         existingDnError = dnError;
       } else {
-        existingDn = dn as unknown as { id: string; total_amount: number; delivery_date: string };
+        existingDn = dn as unknown as { id: string; total_amount: number; delivery_date: string; delivery_number: string };
       }
     }
   }
@@ -185,7 +185,7 @@ export async function syncDeliveryNoteForOrder(
   if (!existingDn && !existingDnError) {
     const { data: dn, error: dnError } = await admin
       .from("delivery_notes")
-      .select("id, total_amount, delivery_date")
+      .select("id, total_amount, delivery_date, delivery_number")
       .eq("organization_id", input.organizationId)
       .eq("customer_id", order.customer_id)
       .eq("delivery_date", order.order_date)
@@ -196,126 +196,11 @@ export async function syncDeliveryNoteForOrder(
       .maybeSingle();
     
     if (dnError) existingDnError = dnError;
-    else existingDn = dn as unknown as { id: string; total_amount: number; delivery_date: string };
+    else existingDn = dn as unknown as { id: string; total_amount: number; delivery_date: string; delivery_number: string };
   }
 
   if (existingDnError) {
     return { error: "โหลดข้อมูลบิลส่งของเดิมไม่สำเร็จ" };
-  }
-
-  if (existingDn) {
-    const { data: existingDnItems, error: existingDnItemsError } = await admin
-      .from("delivery_note_items")
-      .select("id, delivery_note_id, order_item_id, product_id, quantity_in_base_unit")
-      .eq("delivery_note_id", existingDn.id);
-
-    if (existingDnItemsError) {
-      return { error: "โหลดรายการสินค้าในบิลส่งของเดิมไม่สำเร็จ" };
-    }
-
-    const restoreByProduct = new Map<string, number>();
-
-    for (const item of existingDnItems ?? []) {
-      const lossQty = Math.min(
-        Number(lossInBaseUnitByItemId.get(String(item.order_item_id)) ?? 0),
-        Number(item.quantity_in_base_unit),
-      );
-      const qtyToRestore = Math.max(0, Number(item.quantity_in_base_unit) - lossQty);
-      restoreByProduct.set(
-        item.product_id,
-        (restoreByProduct.get(item.product_id) ?? 0) + qtyToRestore,
-      );
-    }
-
-    const productIdsToRestore = Array.from(restoreByProduct.keys());
-    if (productIdsToRestore.length > 0) {
-      const warehouseDb = admin as unknown as WarehouseMutationClient;
-      const { data: stocksToRestore } = await warehouseDb
-        .from("product_warehouse_stocks")
-        .select("product_id, stock_quantity")
-        .eq("organization_id", input.organizationId)
-        .eq("warehouse_id", warehouseId)
-        .in("product_id", productIdsToRestore);
-
-      const productMap = new Map(
-        ((stocksToRestore ?? []) as { product_id: string; stock_quantity: number | string }[]).map((stock) => [
-          stock.product_id,
-          Number(stock.stock_quantity),
-        ]),
-      );
-      const inventoryMovements: Database["public"]["Tables"]["inventory_movements"]["Insert"][] = [];
-
-      const updatePromises = productIdsToRestore.map(async (productId) => {
-        const qtyBase = restoreByProduct.get(productId) ?? 0;
-        if (qtyBase <= 0) return null;
-
-        const stockBefore = productMap.get(productId);
-        if (stockBefore === undefined) return null;
-
-        const stockAfter = stockBefore + qtyBase;
-
-        const { error: updateError } = await warehouseDb
-          .from("product_warehouse_stocks")
-          .update({ stock_quantity: stockAfter })
-          .eq("organization_id", input.organizationId)
-          .eq("warehouse_id", warehouseId)
-          .eq("product_id", productId);
-
-        if (updateError) {
-          console.error(`[syncDeliveryNoteForOrder:updateProduct:${productId}]`, updateError);
-          throw new Error("ปรับปรุงสต็อกสินค้าในคลังไม่สำเร็จ: " + updateError.message);
-        }
-
-        await warehouseDb.rpc("recalculate_product_stock_totals", {
-          p_organization_id: input.organizationId,
-          p_product_id: productId,
-        });
-
-        const movement: Database["public"]["Tables"]["inventory_movements"]["Insert"] = {
-          created_by: actorUserId,
-          metadata: { source: "order_management_rebuild" },
-          movement_type: "adjustment",
-          notes: `คืนสต็อกจากการซิงก์บิลส่งของใหม่สำหรับออเดอร์ ${input.orderId}`,
-          organization_id: input.organizationId,
-          product_id: productId,
-          quantity_delta: qtyBase,
-          stock_after: stockAfter,
-          stock_before: stockBefore,
-        };
-
-        return movement;
-      });
-
-      try {
-        const results = await Promise.all(updatePromises);
-        for (const m of results) {
-          if (m) {
-            inventoryMovements.push(m);
-          }
-        }
-      } catch (err) {
-        const errMsg = err instanceof Error ? err.message : "ปรับปรุงสต็อกสินค้าในคลังไม่สำเร็จ";
-        return { error: errMsg };
-      }
-
-      if (inventoryMovements.length > 0) {
-        await warehouseDb.from("inventory_movements").insert(
-          inventoryMovements.map((movement) => ({
-            ...movement,
-            warehouse_id: warehouseId,
-          })),
-        );
-      }
-    }
-
-    if ((existingDnItems ?? []).length > 0) {
-      await admin
-        .from("delivery_note_items")
-        .delete()
-        .in("id", existingDnItems.map((item: { id: string }) => item.id));
-    }
-
-    await admin.from("delivery_notes").update({ total_amount: 0 }).eq("id", existingDn.id);
   }
 
   const payloadItems = items.map(
@@ -338,7 +223,8 @@ export async function syncDeliveryNoteForOrder(
     }),
   );
 
-  const { data: deliveryNumber, error: deliveryError } = await admin.rpc("create_store_delivery_note", {
+  const warehouseDb = admin as unknown as WarehouseMutationClient;
+  const { data: deliveryNumber, error: deliveryError } = await warehouseDb.rpc("create_store_delivery_note", {
     p_organization_id: input.organizationId,
     p_order_ids: targetOrderIds,
     p_customer_id: order.customer_id,
@@ -348,6 +234,7 @@ export async function syncDeliveryNoteForOrder(
     p_created_by: actorUserId,
     p_items: payloadItems,
     p_warehouse_id: warehouseId,
+    p_loss_by_order_item: Object.fromEntries(lossInBaseUnitByItemId),
   });
 
   if (deliveryError) {

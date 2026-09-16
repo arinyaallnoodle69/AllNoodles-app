@@ -12,12 +12,14 @@ type SharePackingListPdfButtonProps = {
   fileName?: string;
   className?: string;
   buttonText?: string;
+  previewTitle?: string;
 };
 
 export function SharePackingListPdfButton({
   fileName,
   className,
   buttonText = "ส่งออก PDF",
+  previewTitle = "ตัวอย่าง PDF ใบจัดของ",
 }: SharePackingListPdfButtonProps) {
   const [isSharing, setIsSharing] = useState(false);
   const [previewPdf, setPreviewPdf] = useState<PackingListPdfPreview | null>(null);
@@ -67,7 +69,7 @@ export function SharePackingListPdfButton({
         <DeliveryPdfPreviewModal
           file={previewPdf.file}
           previewImages={previewPdf.previewImages}
-          title="ตัวอย่าง PDF ใบจัดของ"
+          title={previewTitle}
           onClose={() => setPreviewPdf(null)}
         />
       ) : null}

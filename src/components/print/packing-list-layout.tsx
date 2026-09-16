@@ -727,18 +727,26 @@ function PackingListStyles() {
   return (
     <style>{`
       @font-face {
-        font-family: "Noto Sans Thai Packing";
-        src: url("/fonts/NotoSansThai-Regular.ttf") format("truetype");
+        font-family: "Angsana New Order Print";
+        src: url("/fonts/angsana-new/ANGSA.woff") format("woff");
         font-style: normal;
         font-weight: 400;
         font-display: swap;
       }
 
       @font-face {
-        font-family: "Noto Sans Thai Packing";
-        src: url("/fonts/NotoSansThai-Bold.ttf") format("truetype");
+        font-family: "Angsana New Order Print";
+        src: url("/fonts/angsana-new/angsab.woff") format("woff");
         font-style: normal;
-        font-weight: 700 900;
+        font-weight: 700;
+        font-display: swap;
+      }
+
+      @font-face {
+        font-family: "Angsana New Order Print";
+        src: url("/fonts/angsana-new/angsab.woff") format("woff");
+        font-style: normal;
+        font-weight: 800 900;
         font-display: swap;
       }
 
@@ -879,7 +887,8 @@ function PackingListStyles() {
         overflow: hidden;
         background: #ffffff;
         border: 1px solid #cbd5e1;
-        font-family: var(--font-noto-sans-thai), "Noto Sans Thai", sans-serif;
+        font-family: "Angsana New Order Print", "Sarabun", "Noto Sans Thai", sans-serif;
+        font-synthesis: none;
         color: #0f172a;
         box-sizing: border-box;
       }
@@ -927,7 +936,7 @@ function PackingListStyles() {
       }
 
       .packing-header__org {
-        font-size: 7.2pt;
+        font-size: 11.16pt;
         font-weight: 800;
         line-height: 1.22;
         letter-spacing: 0.04em;
@@ -937,12 +946,12 @@ function PackingListStyles() {
       }
 
       .packing-header__org--inline {
-        font-size: 6.7pt;
+        font-size: 10.38pt;
       }
 
       .packing-header__title {
         margin: 0;
-        font-size: 12.8pt;
+        font-size: 19.84pt;
         line-height: 1.18;
         font-weight: 800;
         color: #0f172a;
@@ -950,11 +959,11 @@ function PackingListStyles() {
       }
 
       .packing-header__title--standard {
-        font-size: 9.3pt;
+        font-size: 14.42pt;
       }
 
       .packing-header__date {
-        font-size: 6.8pt;
+        font-size: 10.54pt;
         font-weight: 700;
         line-height: 1.24;
         color: #475569;
@@ -964,7 +973,7 @@ function PackingListStyles() {
       .packing-header__vehicle-main {
         min-width: 0;
         text-align: center;
-        font-size: 13.8pt;
+        font-size: 21.39pt;
         font-weight: 800;
         line-height: 1.18;
         color: #0f172a;
@@ -977,7 +986,7 @@ function PackingListStyles() {
         display: flex;
         gap: 5mm;
         align-items: center;
-        font-size: 7.5pt;
+        font-size: 11.63pt;
         font-weight: 700;
         line-height: 1.24;
         color: #475569;
@@ -1014,8 +1023,8 @@ function PackingListStyles() {
 
       .packing-table:not(.packing-table--transposed) .packing-cell--store {
         overflow: hidden;
-        font-size: 8pt;
-        line-height: 1.05;
+        font-size: 12.4pt;
+        line-height: 1.2;
         text-overflow: ellipsis;
       }
 
@@ -1023,7 +1032,7 @@ function PackingListStyles() {
       .packing-table:not(.packing-table--transposed) .packing-cell--total {
         overflow: hidden;
         padding: 0;
-        font-size: 6.1pt;
+        font-size: 9.46pt;
         white-space: nowrap;
       }
 
@@ -1032,8 +1041,8 @@ function PackingListStyles() {
         width: 100%;
         max-width: 100%;
         overflow: hidden;
-        font-family: var(--font-noto-sans-thai), "Noto Sans Thai", sans-serif;
-        font-size: 8pt;
+        font-family: "Angsana New Order Print", "Sarabun", "Noto Sans Thai", sans-serif;
+        font-size: 12.4pt;
         font-weight: 800;
         font-variant-numeric: tabular-nums;
         line-height: 1;
@@ -1043,28 +1052,28 @@ function PackingListStyles() {
       }
 
       .packing-number--md {
-        font-size: 7pt;
+        font-size: 10.85pt;
         letter-spacing: -0.05em;
       }
 
       .packing-number--sm {
-        font-size: 6pt;
+        font-size: 9.3pt;
         letter-spacing: -0.07em;
       }
 
       .packing-number--xs {
-        font-size: 5.2pt;
+        font-size: 8.06pt;
         letter-spacing: -0.09em;
       }
 
       .packing-header__meta-cell span {
-        font-size: 6.3pt;
+        font-size: 9.77pt;
         font-weight: 700;
         color: #64748b;
       }
 
       .packing-header__meta-cell strong {
-        font-size: 7.9pt;
+        font-size: 12.25pt;
         font-weight: 800;
         color: #0f172a;
       }
@@ -1082,14 +1091,14 @@ function PackingListStyles() {
 
       .packing-header__meta-cell--weight strong {
         color: #111827;
-        font-size: 8.6pt;
+        font-size: 13.33pt;
         font-weight: 900;
         font-variant-numeric: tabular-nums;
       }
 
       .packing-header__meta-cell--weight small {
         color: #b91c1c;
-        font-size: 5.1pt;
+        font-size: 7.9pt;
         font-weight: 900;
         line-height: 1;
       }
@@ -1133,7 +1142,7 @@ function PackingListStyles() {
         padding: 1mm 1mm 0.75mm;
         background: #ffffff;
         color: #0f172a;
-        font-size: 8.2pt;
+        font-size: 12.71pt;
         font-weight: 800;
         line-height: 1.2;
         text-align: left;
@@ -1145,7 +1154,7 @@ function PackingListStyles() {
         padding-bottom: 0.45mm;
         background: #f8fafc;
         color: #475569;
-        font-size: 6.4pt;
+        font-size: 9.92pt;
         text-align: center;
       }
 
@@ -1159,7 +1168,7 @@ function PackingListStyles() {
 
       .packing-col--category {
         height: 7mm;
-        font-size: 7pt;
+        font-size: 10.85pt;
         line-height: 1.15;
         font-weight: 900;
         color: #0f172a;
@@ -1190,7 +1199,7 @@ function PackingListStyles() {
         padding: 1.2mm 0.7mm;
         background: #ffffff;
         color: #0f172a;
-        font-size: 7.2pt;
+        font-size: 11.16pt;
         font-weight: 800;
         text-align: left;
         white-space: nowrap;
@@ -1202,7 +1211,7 @@ function PackingListStyles() {
         padding: 1.2mm 0.2mm;
         background: #ffd400;
         color: #0f172a;
-        font-size: 6.7pt;
+        font-size: 10.38pt;
         font-weight: 800;
         text-align: center;
         white-space: nowrap;
@@ -1224,15 +1233,15 @@ function PackingListStyles() {
         left: 50%;
         display: flex;
         width: 24.5mm;
-        height: 4.4mm;
+        height: 6mm;
         flex-direction: column;
         align-items: center;
         justify-content: center;
         gap: 0;
         transform: translate(-50%, -50%) rotate(-90deg);
         transform-origin: center;
-        font-size: 5.9pt;
-        line-height: 1;
+        font-size: 9.15pt;
+        line-height: 1.25;
         font-weight: 900;
         color: #0f172a;
         white-space: nowrap;
@@ -1248,11 +1257,11 @@ function PackingListStyles() {
       }
 
       .packing-product-header__name--compact {
-        font-size: 5.4pt;
+        font-size: 8.37pt;
       }
 
       .packing-product-header__name--dense {
-        font-size: 5pt;
+        font-size: 7.75pt;
       }
 
       .packing-product-header__icon {
@@ -1260,12 +1269,12 @@ function PackingListStyles() {
         right: 100%;
         margin-right: 0.5mm;
         font-family: "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", var(--font-noto-sans-thai), "Noto Sans Thai", sans-serif;
-        font-size: 5.3pt;
+        font-size: 8.21pt;
         line-height: 1.15;
       }
 
       .packing-product-header__unit {
-        font-size: 5.8pt;
+        font-size: 8.99pt;
         font-weight: 700;
         line-height: 1.15;
         color: #475569;
@@ -1292,7 +1301,7 @@ function PackingListStyles() {
         -webkit-line-clamp: 4;
         -webkit-box-orient: vertical;
         flex: 1;
-        font-size: 7.2pt;
+        font-size: 11.16pt;
         line-height: 1.2;
         font-weight: 800;
         color: #0f172a;
@@ -1315,7 +1324,7 @@ function PackingListStyles() {
 
       .packing-table--transposed .packing-cell--qty,
       .packing-table--transposed .packing-cell--empty {
-        font-size: 9.2pt;
+        font-size: 14.26pt;
       }
 
       .packing-cell {
@@ -1327,7 +1336,7 @@ function PackingListStyles() {
       .packing-cell--store {
         padding: 0 1mm;
         text-align: left;
-        font-size: 8.8pt;
+        font-size: 13.64pt;
         font-weight: 700;
         line-height: 1.16;
         color: #0f172a;
@@ -1352,7 +1361,7 @@ function PackingListStyles() {
       .packing-transpose-product__name {
         display: -webkit-box;
         overflow: hidden;
-        font-size: 8.4pt;
+        font-size: 13.02pt;
         font-weight: 700;
         line-height: 1.16;
         color: #0f172a;
@@ -1362,7 +1371,7 @@ function PackingListStyles() {
 
       .packing-transpose-product__unit {
         flex-shrink: 0;
-        font-size: 6.2pt;
+        font-size: 9.61pt;
         font-weight: 700;
         color: #475569;
         white-space: nowrap;
@@ -1371,26 +1380,26 @@ function PackingListStyles() {
 
       .packing-cell--qty,
       .packing-cell--total {
-        font-size: 10.4pt;
+        font-size: 16.12pt;
         font-weight: 800;
         color: #0f172a;
       }
 
       .packing-table:not(.packing-table--transposed) .packing-cell--qty {
-        font-size: 11.8pt;
+        font-size: 18.29pt;
         font-weight: 900;
         line-height: 1;
       }
 
       .packing-cell--transpose-total-value {
         background: #ffd400;
-        font-size: 8.9pt;
+        font-size: 13.8pt;
         font-weight: 800;
         color: #0f172a;
       }
 
       .packing-cell--empty {
-        font-size: 7pt;
+        font-size: 10.85pt;
         font-weight: 600;
         color: transparent;
       }
@@ -1411,7 +1420,7 @@ function PackingListStyles() {
         gap: 0;
         padding: 0 0.8mm;
         text-align: left;
-        font-size: 6.1pt;
+        font-size: 9.46pt;
         font-weight: 800;
         line-height: 1;
         color: #111827;
@@ -1419,7 +1428,7 @@ function PackingListStyles() {
       }
 
       .packing-cell--total-label strong {
-        font-size: 6.3pt;
+        font-size: 9.77pt;
         font-weight: 900;
         line-height: 1;
         white-space: nowrap;
@@ -1433,7 +1442,7 @@ function PackingListStyles() {
       /* The original 50-item layout uses its own highly legible print face.
          Keep the transposed layout and every other document unchanged. */
       .packing-sheet--standard {
-        font-family: "Noto Sans Thai Packing", "Noto Sans Thai", sans-serif;
+        font-family: "Angsana New Order Print", "Sarabun", "Noto Sans Thai", sans-serif;
         font-synthesis: none;
         text-rendering: geometricPrecision;
         -webkit-font-smoothing: antialiased;
@@ -1450,7 +1459,7 @@ function PackingListStyles() {
       .packing-sheet--standard .packing-cell--store,
       .packing-sheet--standard .packing-cell--total-label,
       .packing-sheet--standard .packing-cell--total-label strong {
-        font-family: "Noto Sans Thai Packing", "Noto Sans Thai", sans-serif;
+        font-family: "Angsana New Order Print", "Sarabun", "Noto Sans Thai", sans-serif;
       }
 
       .packing-sheet--standard .packing-cell--store {
@@ -1458,17 +1467,17 @@ function PackingListStyles() {
       }
 
       .packing-sheet--standard .packing-product-header__name {
-        font-family: "Noto Sans Thai Packing", "Noto Sans Thai", sans-serif;
-        font-size: 6.2pt;
+        font-family: "Angsana New Order Print", "Sarabun", "Noto Sans Thai", sans-serif;
+        font-size: 9.61pt;
         font-weight: 700;
       }
 
       .packing-sheet--standard .packing-product-header__name--compact {
-        font-size: 5.7pt;
+        font-size: 8.84pt;
       }
 
       .packing-sheet--standard .packing-product-header__name--dense {
-        font-size: 5.2pt;
+        font-size: 8.06pt;
       }
 
       .packing-sheet--standard .packing-product-header__icon {

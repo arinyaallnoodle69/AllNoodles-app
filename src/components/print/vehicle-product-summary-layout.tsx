@@ -170,18 +170,26 @@ function VehicleSummaryStyles() {
   return (
     <style>{`
       @font-face {
-        font-family: "Noto Sans Thai Vehicle Summary";
-        src: url("/fonts/NotoSansThai-Regular.ttf") format("truetype");
+        font-family: "Angsana New Vehicle Summary";
+        src: url("/fonts/angsana-new/ANGSA.woff") format("woff");
         font-style: normal;
         font-weight: 400;
         font-display: swap;
       }
 
       @font-face {
-        font-family: "Noto Sans Thai Vehicle Summary";
-        src: url("/fonts/NotoSansThai-Bold.ttf") format("truetype");
+        font-family: "Angsana New Vehicle Summary";
+        src: url("/fonts/angsana-new/angsab.woff") format("woff");
         font-style: normal;
-        font-weight: 700 900;
+        font-weight: 700;
+        font-display: swap;
+      }
+
+      @font-face {
+        font-family: "Angsana New Vehicle Summary";
+        src: url("/fonts/angsana-new/angsab.woff") format("woff");
+        font-style: normal;
+        font-weight: 800 900;
         font-display: swap;
       }
 
@@ -290,7 +298,7 @@ function VehicleSummaryStyles() {
         border: 0.75pt solid #000000;
         color: #0f172a;
         box-sizing: border-box;
-        font-family: "Noto Sans Thai Vehicle Summary", "Noto Sans Thai", sans-serif;
+        font-family: "Angsana New Vehicle Summary", "Sarabun", "Noto Sans Thai", sans-serif;
         font-synthesis: none;
         text-rendering: geometricPrecision;
         -webkit-font-smoothing: antialiased;
@@ -314,9 +322,9 @@ function VehicleSummaryStyles() {
       }
 
       .vehicle-summary-header__brand {
-        font-size: 8pt;
+        font-size: 12.4pt;
         font-weight: 800;
-        line-height: 1;
+        line-height: 1.2;
         letter-spacing: 0.04em;
         color: #4A148C;
       }
@@ -330,8 +338,8 @@ function VehicleSummaryStyles() {
 
       .vehicle-summary-header__title {
         margin: 0;
-        font-size: 17pt;
-        line-height: 1;
+        font-size: 26.35pt;
+        line-height: 1.2;
         font-weight: 800;
         white-space: nowrap;
       }
@@ -342,7 +350,7 @@ function VehicleSummaryStyles() {
         gap: 1.6mm;
         flex-wrap: nowrap;
         white-space: nowrap;
-        font-size: 8.4pt;
+        font-size: 13.02pt;
         font-weight: 700;
         color: #334155;
       }
@@ -396,13 +404,13 @@ function VehicleSummaryStyles() {
 
       .vehicle-summary-table__index-col {
         background: #ffffff;
-        font-size: 8.6pt;
+        font-size: 13.33pt;
         font-weight: 800;
       }
 
       .vehicle-summary-table__index-cell {
         background: #ffffff;
-        font-size: 8.8pt;
+        font-size: 13.64pt;
         font-weight: 800;
       }
 
@@ -412,7 +420,7 @@ function VehicleSummaryStyles() {
         padding: 0.5mm 0.8mm 0.25mm;
         background: #ffffff;
         text-align: center;
-        font-size: 9.8pt;
+        font-size: 15.19pt;
         font-weight: 800;
         line-height: 1.22;
       }
@@ -425,21 +433,21 @@ function VehicleSummaryStyles() {
 
       .vehicle-summary-table__unit-col {
         background: #ffffff;
-        font-size: 8.6pt;
+        font-size: 13.33pt;
         font-weight: 800;
         line-height: 1.22;
       }
 
       .vehicle-summary-table__unit-cell {
         background: #ffffff;
-        font-size: 8.4pt;
+        font-size: 13.02pt;
         font-weight: 800;
         line-height: 1.48;
         color: #0f172a;
       }
 
       .vehicle-summary-table__vehicle-col {
-        font-size: 9pt;
+        font-size: 13.95pt;
         font-weight: 800;
         border-bottom-width: 0.75pt;
       }
@@ -448,7 +456,7 @@ function VehicleSummaryStyles() {
         display: -webkit-box;
         overflow: hidden;
         padding: 0.3mm 0.25mm;
-        line-height: 1.02;
+        line-height: 1.2;
         -webkit-box-orient: vertical;
         -webkit-line-clamp: 2;
       }
@@ -510,14 +518,14 @@ function VehicleSummaryStyles() {
         overflow: visible;
         text-overflow: clip;
         white-space: nowrap;
-        font-size: 10.4pt;
+        font-size: 16.12pt;
         font-weight: 800;
         line-height: 1.48;
         color: #0f172a;
       }
 
       .vehicle-summary-table__qty-cell {
-        font-size: 11.4pt;
+        font-size: 17.67pt;
         font-weight: 800;
         line-height: 1;
         color: #0f172a;

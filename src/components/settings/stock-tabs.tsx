@@ -5,7 +5,7 @@ import { useState, useTransition } from "react";
 import { Loader2 } from "lucide-react";
 
 type StockTabsProps = {
-  current: "stock" | "history" | "issues";
+  current: "stock" | "history" | "issues" | "movements";
   onChangeTab?: (key: "stock" | "history" | "issues") => void;
 };
 
@@ -25,6 +25,11 @@ const tabs = [
     key: "issues",
     label: "เบิกออก",
   },
+  {
+    href: "/stock/movements",
+    key: "movements",
+    label: "Movement",
+  },
 ] as const;
 
 export function StockTabs({ current, onChangeTab }: StockTabsProps) {
@@ -32,8 +37,8 @@ export function StockTabs({ current, onChangeTab }: StockTabsProps) {
   const [isPending, startTransition] = useTransition();
   const [targetKey, setTargetKey] = useState<string | null>(null);
 
-  const handleTabClick = (href: string, key: "stock" | "history" | "issues") => {
-    if (onChangeTab) {
+  const handleTabClick = (href: string, key: "stock" | "history" | "issues" | "movements") => {
+    if (onChangeTab && key !== "movements") {
       onChangeTab(key);
     } else {
       setTargetKey(key);
@@ -45,7 +50,7 @@ export function StockTabs({ current, onChangeTab }: StockTabsProps) {
 
   return (
     <div className="mb-3 mt-0 w-full lg:mb-6 lg:mt-4">
-      <div className="flex border-b border-slate-200 bg-white lg:grid lg:grid-cols-3 lg:rounded-xl lg:border lg:border-slate-200/50 lg:bg-slate-100/80 lg:p-1 lg:shadow-sm lg:backdrop-blur-sm">
+      <div className="flex border-b border-slate-200 bg-white lg:grid lg:grid-cols-4 lg:rounded-xl lg:border lg:border-slate-200/50 lg:bg-slate-100/80 lg:p-1 lg:shadow-sm lg:backdrop-blur-sm">
         {tabs.map((tab) => {
           const isActive = current === tab.key;
           const isLoading = isPending && targetKey === tab.key;

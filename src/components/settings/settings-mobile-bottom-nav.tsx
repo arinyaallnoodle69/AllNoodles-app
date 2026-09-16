@@ -41,6 +41,7 @@ const primaryNav = [
 const moreItems = [
   { href: "/orders/fresh-reserve", icon: Layers3, label: "สำรองผลิตสด" },
   { href: "/stock", icon: Boxes, label: "สต็อก" },
+  { href: "/stock/movements", icon: BarChart2, label: "Movement" },
   { href: "/billing", icon: Receipt, label: "ใบวางบิล" },
   { href: "/settings", icon: Settings2, label: "ตั้งค่า" },
 ] as const;
@@ -93,7 +94,9 @@ export function SettingsMobileBottomNav() {
   );
   const { open: openCreateOrder, isOpen: isCreateModalOpen } = useCreateOrder();
 
-  const visibleMoreItems = isMember ? moreItems.filter((item) => item.href === "/orders/fresh-reserve") : moreItems;
+  const visibleMoreItems = isMember
+    ? moreItems.filter((item) => item.href === "/orders/fresh-reserve" || item.href === "/stock/movements")
+    : moreItems;
   const moreActive = visibleMoreItems.some((item) => pathname.startsWith(item.href));
   const settingsModalOpen = settingsOpen && navigatingHref !== pathname;
 
@@ -228,9 +231,11 @@ export function SettingsMobileBottomNav() {
           </button>
         </div>
 
-        <div className={`grid gap-2 p-4 pb-[max(1.5rem,env(safe-area-inset-bottom))] min-[390px]:gap-3 min-[390px]:p-5 ${isMember ? "grid-cols-1" : "grid-cols-4"}`}>
+        <div className={`grid gap-2 p-4 pb-[max(1.5rem,env(safe-area-inset-bottom))] min-[390px]:gap-3 min-[390px]:p-5 ${isMember ? "grid-cols-2" : "grid-cols-3"}`}>
           {visibleMoreItems.map(({ href, icon: Icon, label }) => {
-            const active = pathname.startsWith(href);
+            const active = href === "/stock"
+              ? pathname.startsWith("/stock") && !pathname.startsWith("/stock/movements")
+              : pathname.startsWith(href);
 
             return href === "/settings" ? (
               <button
@@ -329,7 +334,7 @@ export function SettingsMobileBottomNav() {
 
                   {/* Column 2: Stock */}
                   {(() => {
-                    const active = pathname.startsWith("/stock");
+                    const active = pathname.startsWith("/stock") && !pathname.startsWith("/stock/movements");
                     return (
                       <Link
                         href="/stock"

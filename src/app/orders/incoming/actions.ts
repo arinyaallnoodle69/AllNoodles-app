@@ -12,7 +12,6 @@ import { getIncomingOrders, getOrderDetailById, type IncomingOrderListItem, type
 import { syncBillingSnapshotsForDeliveryNumbers } from "@/lib/billing/actions";
 import { revalidateDashboardPages } from "@/lib/dashboard/revalidate-dashboard-pages";
 import { mergeItemsIntoOrder, type MergeableOrderItemInput } from "@/lib/orders/merge-order-items";
-import { persistManualOrderThenSchedule } from "@/lib/orders/manual-order-save-boundary";
 import { notifyUpdatedCustomerReceiptForOrder } from "@/lib/orders/notify-customer-receipt";
 import { syncDeliveryNoteForOrder } from "@/lib/orders/sync-delivery-note";
 import { isVehicleTransferInput, type VehicleTransferInput } from "@/lib/orders/vehicle-transfer";
@@ -88,6 +87,11 @@ type LineCustomerWarehouseAdmin = {
   // The generated Supabase types do not include warehouse tables/columns until gen:types runs after the migration.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   from(table: "customers" | "warehouses"): any;
+};
+type FulfillmentModeAdmin = {
+  // Generated types are older than the fulfillment-mode migration.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  from(table: "product_warehouse_fulfillment_modes"): any;
 };
 type WarehouseStockRpcAdmin = {
   rpc: (
@@ -266,6 +270,17 @@ async function applyProductWarehouseStockDelta(
   if (!Number.isFinite(input.quantityDelta) || input.quantityDelta === 0) {
     return null;
   }
+
+  const { data: fulfillmentMode, error: fulfillmentModeError } = await (admin as unknown as FulfillmentModeAdmin)
+    .from("product_warehouse_fulfillment_modes")
+    .select("mode")
+    .eq("organization_id", input.organizationId)
+    .eq("product_id", input.productId)
+    .eq("warehouse_id", input.warehouseId)
+    .maybeSingle();
+
+  if (fulfillmentModeError) return fulfillmentModeError.message;
+  if (fulfillmentMode && fulfillmentMode.mode !== "stock") return null;
 
   const { error } = await (admin as unknown as WarehouseStockRpcAdmin).rpc(
     "apply_product_warehouse_stock_delta",
@@ -1454,80 +1469,70 @@ export async function createManualOrderAction(formData: FormData): Promise<Actio
     return { error: mergeResult.error ?? "ไม่สามารถรวมรายการสินค้าในออเดอร์ได้" };
   }
 
-  const foregroundResult = {
-    success: true,
-    orderNumber: String(effectiveOrderNumber),
-  } satisfies ActionResult;
-
-  console.info("[createManualOrderAction] Foreground save complete", {
-    durationMs: Date.now() - saveStartedAt,
+  const syncResult = await syncDeliveryNoteForOrder(admin, {
     orderId,
-  });
+    organizationId: session.organizationId,
+    skipBillingSync: true,
+    skipRevalidate: true,
+    userId: session.userId,
+  }).catch((error: unknown) => ({
+    error: error instanceof Error ? error.message : "เกิดข้อผิดพลาดที่ไม่ทราบสาเหตุ",
+  }));
 
-  return persistManualOrderThenSchedule({
-    persist: async () => foregroundResult,
-    schedule: (task) => after(task),
-    reconcile: async () => {
-      const reconciliationStartedAt = Date.now();
-      const syncResult = await syncDeliveryNoteForOrder(admin, {
+  if ("error" in syncResult) {
+    console.error("[createManualOrderAction] Delivery-note sync failed", { error: syncResult.error, orderId });
+    revalidateIncomingOrderCachesEventually(session.organizationId);
+    return {
+      success: true,
+      orderNumber: String(effectiveOrderNumber),
+      receiptWarning: `ออเดอร์บันทึกแล้ว (${effectiveOrderNumber}) แต่สร้างใบจัดส่งไม่สำเร็จ: ${syncResult.error} กรุณาอย่ากรอกซ้ำ`,
+    };
+  }
+
+  const syncedDeliveryNumber = String(syncResult.deliveryNumber);
+  const { error: orderNumberError } = await admin
+    .from("orders")
+    .update({ order_number: syncedDeliveryNumber })
+    .eq("id", orderId);
+
+  if (orderNumberError) {
+    console.error("[createManualOrderAction] Order-number sync failed", { error: orderNumberError.message, orderId });
+  }
+
+  revalidateIncomingOrderCachesEventually(session.organizationId);
+  after(async () => {
+    const backgroundResults = await Promise.allSettled([
+      syncBillingSnapshotsForDeliveryNumbers({
+        organizationId: session.organizationId,
+        customerId,
+        deliveryNumbers: [syncedDeliveryNumber],
+      }),
+      notifyUpdatedCustomerReceiptForOrder(admin, {
         orderId,
         organizationId: session.organizationId,
-        skipBillingSync: true,
-        skipRevalidate: true,
-        userId: session.userId,
-      });
+      }),
+    ]);
 
-      if ("error" in syncResult) {
-        console.error("[createManualOrderAction] Deferred delivery-note sync failed", {
-          durationMs: Date.now() - reconciliationStartedAt,
-          error: syncResult.error,
-          orderId,
-        });
-        revalidateIncomingOrderCachesEventually(session.organizationId);
-        return;
+    for (const [index, result] of backgroundResults.entries()) {
+      if (result.status === "rejected") {
+        console.error(
+          index === 0 ? "Background billing sync error:" : "Background notify error:",
+          result.reason,
+        );
       }
+    }
 
-      const syncedDeliveryNumber = String(syncResult.deliveryNumber);
-      const { error: orderNumberError } = await admin
-        .from("orders")
-        .update({ order_number: syncedDeliveryNumber })
-        .eq("id", orderId);
-
-      if (orderNumberError) {
-        console.error("[createManualOrderAction] Deferred order-number sync failed", {
-          error: orderNumberError.message,
-          orderId,
-        });
-      }
-
-      const backgroundResults = await Promise.allSettled([
-        syncBillingSnapshotsForDeliveryNumbers({
-          organizationId: session.organizationId,
-          customerId,
-          deliveryNumbers: [syncedDeliveryNumber],
-        }),
-        notifyUpdatedCustomerReceiptForOrder(admin, {
-          orderId,
-          organizationId: session.organizationId,
-        }),
-      ]);
-
-      for (const [index, result] of backgroundResults.entries()) {
-        if (result.status === "rejected") {
-          console.error(
-            index === 0 ? "Background billing sync error:" : "Background notify error:",
-            result.reason,
-          );
-        }
-      }
-
-      revalidateIncomingOrderCachesEventually(session.organizationId);
-      console.info("[createManualOrderAction] Deferred reconciliation complete", {
-        durationMs: Date.now() - reconciliationStartedAt,
-        orderId,
-      });
-    },
+    console.info("[createManualOrderAction] Background reconciliation complete", {
+      durationMs: Date.now() - saveStartedAt,
+      orderId,
+    });
   });
+  return {
+    success: true,
+    orderNumber: syncedDeliveryNumber,
+    deliveryNumber: syncedDeliveryNumber,
+    ...(orderNumberError ? { receiptWarning: `สร้างใบจัดส่ง ${syncedDeliveryNumber} แล้ว แต่ปรับเลขในออเดอร์ไม่สำเร็จ กรุณาแจ้งผู้ดูแล` } : {}),
+  };
 }
 export async function linkPendingLineOrderAction(formData: FormData): Promise<ActionResult> {
   const session = await requireAnyRole(["admin", "member"]);

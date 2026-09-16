@@ -355,7 +355,7 @@ export default async function IncomingOrdersPage({ searchParams }: IncomingOrder
   const specialProductWeightById = new Map(
     specialCatalog.map((product) => [product.id, product.unitWeightGrams]),
   );
-  for (const special of specialWeightItems) {
+  for (const special of specialWeightItems.filter((item) => item.type !== "office")) {
     const unitWeightGrams = specialProductWeightById.get(special.productId) ?? null;
     if (!unitWeightGrams || unitWeightGrams <= 0 || special.quantity <= 0) continue;
     const current = vehicleSalesMap.get(special.vehicleId) ?? {

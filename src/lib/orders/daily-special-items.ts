@@ -3,7 +3,7 @@ import "server-only";
 import { cacheLife, cacheTag } from "next/cache";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
-export type DailySpecialItemType = "office" | "claim";
+export type DailySpecialItemType = "office" | "claim" | "remaining";
 
 export type DailySpecialCatalogProduct = {
   id: string;
@@ -12,6 +12,7 @@ export type DailySpecialCatalogProduct = {
   sku: string;
   unit: string;
   unitWeightGrams: number | null;
+  isFresh: boolean;
 };
 
 export type DailySpecialItem = {
@@ -36,6 +37,10 @@ type SpecialCatalogAdmin = {
   from(table: "products"): any; // eslint-disable-line @typescript-eslint/no-explicit-any
 };
 
+type SpecialModesAdmin = {
+  from(table: "product_warehouse_fulfillment_modes"): any; // eslint-disable-line @typescript-eslint/no-explicit-any
+};
+
 type SpecialCatalogProductRow = {
   id: string;
   metadata: unknown;
@@ -55,7 +60,8 @@ export async function getDailySpecialCatalog(organizationId: string): Promise<Da
   cacheTag(`settings-${organizationId}`);
   const admin = getSupabaseAdmin();
   const productsTable = (admin as unknown as SpecialCatalogAdmin).from("products");
-  const [productsResult, imagesResult] = await Promise.all([
+  const modesTable = (admin as unknown as SpecialModesAdmin).from("product_warehouse_fulfillment_modes");
+  const [productsResult, imagesResult, modesResult] = await Promise.all([
     productsTable
       .select("id, sku, name, unit, unit_weight_grams, display_order, metadata")
       .eq("organization_id", organizationId)
@@ -67,10 +73,16 @@ export async function getDailySpecialCatalog(organizationId: string): Promise<Da
       .select("product_id, public_url, sort_order")
       .eq("organization_id", organizationId)
       .order("sort_order", { ascending: true }),
+    modesTable
+      .select("product_id")
+      .eq("organization_id", organizationId)
+      .eq("mode", "fresh"),
   ]);
 
   if (productsResult.error) throw new Error(productsResult.error.message);
   if (imagesResult.error) throw new Error(imagesResult.error.message);
+  if (modesResult.error) throw new Error(modesResult.error.message);
+  const freshProductIds = new Set((modesResult.data ?? []).map((row: { product_id: string }) => row.product_id));
 
   const firstImageByProductId = new Map<string, string>();
   for (const image of imagesResult.data ?? []) {
@@ -97,6 +109,7 @@ export async function getDailySpecialCatalog(organizationId: string): Promise<Da
       unitWeightGrams: product.unit_weight_grams === null || product.unit_weight_grams === undefined
         ? null
         : Number(product.unit_weight_grams),
+      isFresh: freshProductIds.has(product.id),
     }));
 }
 
@@ -120,7 +133,7 @@ export async function getDailySpecialItems(
     id: row.id,
     productId: row.product_id,
     quantity: Number(row.quantity ?? 0),
-    type: row.entry_type === "claim" ? "claim" : "office",
+    type: row.entry_type === "claim" ? "claim" : row.entry_type === "remaining" ? "remaining" : "office",
     vehicleId: row.vehicle_id,
   }));
 }
@@ -153,7 +166,7 @@ export async function getDailySpecialPrintItems(
       id: row.id,
       productId: row.product_id,
       quantity: Number(row.quantity ?? 0),
-      type: row.entry_type === "claim" ? "claim" : "office",
+      type: row.entry_type === "claim" ? "claim" : row.entry_type === "remaining" ? "remaining" : "office",
       vehicleId: row.vehicle_id,
       vehicleName: row.vehicles?.name ?? "ยังไม่กำหนดรถ",
       product: {
@@ -165,6 +178,7 @@ export async function getDailySpecialPrintItems(
         unitWeightGrams: row.products?.unit_weight_grams === null || row.products?.unit_weight_grams === undefined
           ? null
           : Number(row.products.unit_weight_grams),
+        isFresh: true,
       },
     } satisfies DailySpecialPrintItem;
   });

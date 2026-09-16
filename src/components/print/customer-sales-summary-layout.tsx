@@ -70,6 +70,8 @@ export function CustomerSalesSummaryLayout({
           .customer-sales-modal { position:static !important; display:block !important; height:auto !important; overflow:visible !important; background:white !important; animation:none !important; }
           .customer-sales-modal .no-print,.customer-sales-source { display:none !important; }
           .customer-sales-preview-body,.customer-sales-print-area,.customer-sales-print-container { display:block !important; padding:0 !important; margin:0 !important; width:100% !important; max-width:none !important; height:auto !important; overflow:visible !important; }
+          [data-customer-sales-preview-frame='true'] { width:100% !important; height:auto !important; overflow:visible !important; position:static !important; }
+          [data-customer-sales-preview-frame='true'] .customer-sales-sheet { position:static !important; transform:none !important; }
           .customer-sales-sheet { width:210mm !important; height:297mm !important; padding:10mm 12mm !important; zoom:1 !important; break-after:page; print-color-adjust:exact; -webkit-print-color-adjust:exact; }
           .customer-sales-sheet:last-child { break-after:auto; }
           .cs-header { break-inside:avoid; break-after:avoid; }

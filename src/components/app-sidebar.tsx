@@ -134,6 +134,7 @@ function MobileTopBar() {
 const mainNavItems = [
   { href: "/dashboard", icon: LayoutDashboard, label: "แดชบอร์ด" },
   { href: "/stock", icon: Boxes, label: "สต็อก" },
+  { href: "/stock/movements", icon: BarChart2, label: "ความเคลื่อนไหวสต็อก" },
   { href: "/orders/incoming", icon: ReceiptText, label: "รายการออเดอร์" },
   { href: "/orders/fresh-reserve", icon: Layers3, label: "สำรองผลิตสด" },
   { href: "/billing", icon: Receipt, label: "ใบวางบิล" },
@@ -160,6 +161,7 @@ const settingsNavItems = [
 
 function isActive(href: string, pathname: string): boolean {
   if (href === "/dashboard") return pathname === "/dashboard";
+  if (href === "/stock") return pathname.startsWith("/stock") && !pathname.startsWith("/stock/movements");
   return pathname === href || pathname.startsWith(href + "/");
 }
 
@@ -178,6 +180,7 @@ function canAccessNavHref(role: AppRole | null, href: string) {
       href === "/orders/fresh-reserve" ||
       href === "/billing" ||
       href === "/stock" ||
+      href === "/stock/movements" ||
       href === "/orders/packing-list" ||
       href === "/orders/factory-order-sheet" ||
       href === "/orders/vehicle-product-summary"

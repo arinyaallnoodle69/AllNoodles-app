@@ -1863,6 +1863,7 @@ export function CreateOrderModal({
   const [productModalOpen, setProductModalOpen] = useState(false);
   const [pending, startTransition] = useTransition();
   const [successToast, setSuccessToast] = useState<string | null>(null);
+  const [saveWarning, setSaveWarning] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [historyNotice, setHistoryNotice] = useState<string | null>(null);
   const [customerId, setCustomerId] = useState("");
@@ -2345,15 +2346,18 @@ export function CreateOrderModal({
       if (successToastTimerRef.current) {
         clearTimeout(successToastTimerRef.current);
       }
+      setSaveWarning(result.receiptWarning ?? null);
       setSuccessToast(
-        resolvedDeliveryNumber
+        result.receiptWarning
+          ? result.receiptWarning
+          : resolvedDeliveryNumber
           ? `บันทึกสำเร็จ • ${resolvedDeliveryNumber}`
           : "บันทึกออเดอร์สำเร็จ",
       );
       successToastTimerRef.current = setTimeout(() => {
         setSuccessToast(null);
         successToastTimerRef.current = null;
-      }, 1400);
+      }, result.receiptWarning ? 12000 : 1400);
 
       resetForm({ keepOrderDate: true, openCustomerPicker: true });
     });
@@ -2832,15 +2836,13 @@ export function CreateOrderModal({
 
       {open && successToast ? (
         <div
-          className="pointer-events-none fixed inset-x-3 top-[max(0.75rem,env(safe-area-inset-top))] z-[10020] flex justify-center sm:inset-x-6 sm:top-5"
-          role="status"
-          aria-live="polite"
+          className="fixed inset-x-3 top-[max(0.75rem,env(safe-area-inset-top))] z-[10020] flex justify-center sm:inset-x-6 sm:top-5"
+          role={saveWarning ? "alert" : "status"}
+          aria-live={saveWarning ? "assertive" : "polite"}
         >
-          <div className="flex max-w-full animate-in items-center gap-2 rounded-2xl border border-emerald-200 bg-white/95 px-4 py-3 text-sm font-black text-emerald-800 shadow-[0_14px_36px_rgba(16,185,129,0.22)] backdrop-blur-sm fade-in slide-in-from-top-2 duration-200 sm:text-base">
-            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-white">
-              <Check className="h-4 w-4" strokeWidth={3.5} />
-            </span>
-            <span className="min-w-0 truncate">{successToast}</span>
+          <div className={`flex max-w-full animate-in items-center gap-2 rounded-2xl border bg-white/95 px-4 py-3 text-sm font-black shadow-[0_14px_36px_rgba(16,185,129,0.22)] backdrop-blur-sm fade-in slide-in-from-top-2 duration-200 sm:text-base ${saveWarning ? "border-amber-300 text-amber-900" : "border-emerald-200 text-emerald-800"}`}>
+            {!saveWarning ? <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-white"><Check className="h-4 w-4" strokeWidth={3.5} /></span> : null}
+            <span className="min-w-0">{successToast}</span>
           </div>
         </div>
       ) : null}

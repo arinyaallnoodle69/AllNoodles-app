@@ -79,9 +79,10 @@ async function waitForDocumentImages(sourceDocument: Document) {
 export async function createDeliveryPdfPreviewFromDocument(
   sourceDocument: Document,
   fileName?: string,
+  pageSelector = "[data-delivery-note-page='true']",
 ): Promise<DeliveryPdfPreview | null> {
   const pages = Array.from(
-    sourceDocument.querySelectorAll<HTMLElement>("[data-delivery-note-page='true']"),
+    sourceDocument.querySelectorAll<HTMLElement>(pageSelector),
   );
 
   if (pages.length === 0) {

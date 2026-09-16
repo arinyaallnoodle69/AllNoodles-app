@@ -138,3 +138,26 @@ export async function saveCustomerSalesImagesFromDocument(
     host.remove();
   }
 }
+
+export async function createCustomerSalesPdfPreviewFromDocument(
+  sourceDocument: Document,
+  fileNameBase = "customer-sales-summary",
+) {
+  await sourceDocument.fonts.ready;
+  const report = sourceDocument.querySelector<HTMLElement>("[data-customer-sales-report]");
+  if (!report) throw new Error("ไม่พบรายงานสำหรับสร้าง PDF");
+
+  const { host, pages } = buildCustomerSalesPages(report, sourceDocument);
+  try {
+    host.dataset.customerSalesPdfHost = "true";
+    const { createDeliveryPdfPreviewFromDocument } = await import("./share-delivery-pdf");
+    return await createDeliveryPdfPreviewFromDocument(
+      sourceDocument,
+      fileNameBase,
+      "[data-customer-sales-pdf-host='true'] [data-customer-sales-capture-page='true']",
+    );
+  } finally {
+    pages.forEach((page) => page.remove());
+    host.remove();
+  }
+}

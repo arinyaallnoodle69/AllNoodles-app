@@ -366,7 +366,7 @@ function DeliveryModal({
                     min="0"
                     value={installmentPaid}
                     onChange={(e) => setInstallmentPaid(e.target.value)}
-                    placeholder="เว้นว่างเพื่อจ่ายหมด"
+                    placeholder="เว้นว่างเพื่อรวมยอดค้างทั้งหมด"
                     className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-[#4A148C] outline-none transition focus:border-[#4A148C] focus:ring-2 focus:ring-[#4A148C]/10"
                   />
                 </div>
@@ -911,7 +911,7 @@ export function StoreDeliveryModal({
                 min="0"
                 value={installmentPaid}
                 onChange={(e) => setInstallmentPaid(e.target.value)}
-                placeholder="เว้นว่างเพื่อจ่ายหมด"
+                placeholder="เว้นว่างเพื่อรวมยอดค้างทั้งหมด"
                 className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-[#4A148C] outline-none transition focus:border-[#4A148C] focus:ring-2 focus:ring-[#4A148C]/10"
               />
             </div>
