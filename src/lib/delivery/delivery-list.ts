@@ -8,6 +8,10 @@ export type DeliveryNoteSummaryRow = {
   deliveryNumber: string;
   deliveryDate: string;
   customerId: string;
+  totalAmount: number;
+  previousOutstanding: number;
+  isInstallmentPlan: boolean;
+  installmentPaid: number;
 };
 
 type RawDeliveryNoteSummaryRow = {
@@ -15,6 +19,10 @@ type RawDeliveryNoteSummaryRow = {
   delivery_number: string;
   delivery_date: string;
   customer_id: string;
+  total_amount?: number | string | null;
+  previous_outstanding?: number | string | null;
+  is_installment_plan?: boolean | null;
+  installment_paid?: number | string | null;
   customers: {
     id: string;
     name: string;
@@ -39,6 +47,7 @@ export async function getDeliveryNoteSummariesForRange(
     .from("delivery_notes")
     .select(`
       id, delivery_number, delivery_date, customer_id,
+      total_amount, previous_outstanding, is_installment_plan, installment_paid,
       customers!inner(id, name, customer_code)
     `)
     .eq("organization_id", organizationId)
@@ -78,5 +87,9 @@ export async function getDeliveryNoteSummariesForRange(
       deliveryNumber: row.delivery_number,
       deliveryDate: row.delivery_date,
       customerId: row.customer_id,
+      totalAmount: Number(row.total_amount ?? 0),
+      previousOutstanding: Number(row.previous_outstanding ?? 0),
+      isInstallmentPlan: Boolean(row.is_installment_plan),
+      installmentPaid: Number(row.installment_paid ?? 0),
     }));
 }

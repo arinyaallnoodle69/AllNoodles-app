@@ -118,6 +118,10 @@ type DeliveryNoteRow = {
   order_id?: string | null;
   status?: string;
   vehicle_id?: string | null;
+  total_amount?: number | string | null;
+  previous_outstanding?: number | string | null;
+  is_installment_plan?: boolean | null;
+  installment_paid?: number | string | null;
 };
 
 export type OrderDetailItem = {
@@ -471,6 +475,10 @@ export type IncomingOrderDeliveryRow = {
   id: string;
   order_id: string;
   delivery_number: string;
+  total_amount?: number;
+  previous_outstanding?: number;
+  is_installment_plan?: boolean;
+  installment_paid?: number;
 };
 
 // Single-round-trip select: orders + customer + delivery notes + items (+ product)
@@ -478,7 +486,7 @@ export type IncomingOrderDeliveryRow = {
 const INCOMING_ORDERS_SELECT = `
   id, customer_id, order_number, order_date, status, fulfillment_status, total_amount, metadata, created_at, notes, warehouse_id, assigned_vehicle_id,
   customers(id, customer_code, name, address, default_vehicle_id, sort_order),
-  delivery_notes(id, delivery_number, order_id, customer_id, delivery_date, vehicle_id, status, created_at),
+  delivery_notes(id, delivery_number, order_id, customer_id, delivery_date, vehicle_id, status, created_at, total_amount, previous_outstanding, is_installment_plan, installment_paid),
   order_items(product_id, quantity, quantity_in_base_unit, sale_unit_label, products(name, sku, display_order, unit_weight_grams))
 `;
 
@@ -593,6 +601,10 @@ export async function getIncomingOrdersBundle(
           id: note.id,
           order_id: note.order_id,
           delivery_number: note.delivery_number,
+          total_amount: Number(note.total_amount ?? 0),
+          previous_outstanding: Number(note.previous_outstanding ?? 0),
+          is_installment_plan: Boolean(note.is_installment_plan),
+          installment_paid: Number(note.installment_paid ?? 0),
         });
       }
     }

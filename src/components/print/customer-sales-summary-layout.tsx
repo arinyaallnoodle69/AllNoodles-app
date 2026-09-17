@@ -51,32 +51,36 @@ export function CustomerSalesSummaryLayout({
           box-sizing:border-box; width:210mm; padding:10mm 12mm;
           display:block; background:#fff; color:#000;
           font-family:"Angsana New Customer Sales","Sarabun","Noto Sans Thai",sans-serif;
-          font-size:16px; line-height:1.55; text-align:left;
+          font-size:17.5px; line-height:1.55; text-align:left;
+          font-synthesis:none;
+          -webkit-font-smoothing:antialiased;
+          -moz-osx-font-smoothing:grayscale;
+          text-rendering:geometricPrecision;
         }
         .customer-sales-sheet * { box-sizing:border-box; color:#000 !important; font-weight:600 !important; letter-spacing:normal !important; }
         .customer-sales-sheet strong, .customer-sales-sheet th { font-weight:700 !important; }
         .cs-heading { text-align:center; }
-        .cs-brand { font-size:25px; font-weight:700 !important; margin-bottom:5px; }
-        .customer-sales-sheet h1 { font-size:20px; line-height:1.5; font-weight:700 !important; margin:0; }
-        .cs-meta { display:flex; justify-content:space-between; gap:12px; margin:18px 0 12px; padding-top:10px; border-top:1px solid #000; font-size:14px; }
+        .cs-brand { font-size:27px; font-weight:700 !important; margin-bottom:5px; }
+        .customer-sales-sheet h1 { font-size:22px; line-height:1.5; font-weight:700 !important; margin:0; }
+        .cs-meta { display:flex; justify-content:space-between; gap:12px; margin:18px 0 12px; padding-top:10px; border-top:1px solid #000; font-size:15.5px; }
         .cs-meta span { overflow-wrap:anywhere; }
         .cs-meta span:last-child { text-align:right; }
-        .cs-table { border-collapse:collapse; table-layout:fixed; width:100%; font-size:16px; line-height:1.55; }
-        .cs-table th { border-top:1px solid #000; border-bottom:1px solid #000; font-size:15px; padding:8px; text-align:left; }
-        .cs-table td { padding:4px 8px; border-bottom:1px solid #d5d5d5; overflow-wrap:anywhere; vertical-align:top; }
+        .cs-table { border-collapse:collapse; table-layout:fixed; width:100%; font-size:17.5px; line-height:1.5; }
+        .cs-table th { border-top:1px solid #000; border-bottom:1px solid #000; font-size:16.5px; padding:8px 6px; text-align:left; }
+        .cs-table td { padding:5px 6px; border-bottom:1px solid #d5d5d5; overflow-wrap:anywhere; vertical-align:top; }
         .cs-table th:first-child,.cs-table td:first-child { text-align:center; }
         .cs-table th:last-child,.cs-table td:last-child { text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; }
         .cs-table td:last-child { font-weight:700 !important; }
         .cs-table .cs-empty { padding:30px 8px; text-align:center; }
         .cs-footer { margin-top:16px; break-inside:avoid; }
-        .cs-summary { display:flex; justify-content:space-between; gap:20px; border-top:3px double #000; padding:12px 0; }
-        .cs-summary-detail { flex:1; min-width:0; font-size:14px; overflow-wrap:anywhere; }
+        .cs-summary { display:flex; justify-content:space-between; align-items:flex-start; gap:20px; border-top:3px double #000; padding:12px 0 8px; }
+        .cs-summary-detail { flex:1; min-width:0; font-size:15.5px; line-height:1.5; overflow-wrap:anywhere; }
         .cs-summary-detail span { display:block; }
-        .cs-baht { font-size:14px; margin-top:4px; }
-        .cs-total { text-align:right; flex-shrink:0; }
-        .cs-total span { display:block; font-size:15px; }
-        .cs-total strong { display:block; font-size:25px; line-height:1.5; font-variant-numeric:tabular-nums; }
-        .cs-footnote { padding-top:10px; border-top:1px solid #aaa; font-size:13px; }
+        .cs-baht { font-size:15.5px; margin-top:4px; }
+        .cs-total { text-align:right; flex-shrink:0; display:flex; flex-direction:column; align-items:flex-end; justify-content:flex-start; }
+        .cs-total span { display:block; font-size:16.5px; line-height:1.3; margin-bottom:4px; white-space:nowrap; }
+        .cs-total strong { display:block; font-size:26px; line-height:1.2; font-variant-numeric:tabular-nums; white-space:nowrap; }
+        .cs-footnote { padding-top:10px; border-top:1px solid #aaa; font-size:14px; }
         @media print {
           @page { size:A4 portrait; margin:0; }
           html,body { height:auto !important; overflow:visible !important; margin:0 !important; padding:0 !important; background:white !important; }

@@ -176,15 +176,16 @@ function DeliveryItemsTable({
   const showTotalAmount = priceMode === "all" || priceMode === "total_only";
 
   const hasOutstanding = dn.previousOutstanding > 0 || dn.installmentPaid > 0;
+  const isInstallment = Boolean(dn.isInstallmentPlan && dn.installmentPaid > 0);
 
   // Calculate grand total
-  const grandTotal = dn.isInstallmentPlan
+  const grandTotal = isInstallment
     ? dn.totalAmount + dn.installmentPaid
     : dn.totalAmount + dn.previousOutstanding;
 
   // In 'none' mode, summary rows and grand total are omitted completely.
   const summaryRowsCount = (isLastPage && hasOutstanding && showTotalAmount)
-    ? (dn.isInstallmentPlan ? 4 : 2)
+    ? (isInstallment ? 4 : 2)
     : 0;
 
   const grandTotalRowHeight = showTotalAmount ? 1 : 0;
@@ -251,7 +252,7 @@ function DeliveryItemsTable({
               <td colSpan={summaryColSpan} className="dn-col-summary-label">ยอดค้างชำระเดิม</td>
               <td className="dn-col-total dn-mono" style={{ textAlign: "right" }}>{fmt(dn.previousOutstanding)}</td>
             </tr>
-            {dn.isInstallmentPlan && (
+            {isInstallment && (
               <>
                 <tr className="dn-row-summary">
                   <td colSpan={summaryColSpan} className="dn-col-summary-label">หักผ่อนชำระวันนี้</td>
@@ -446,6 +447,9 @@ export function DeliveryNoteLayout({ dns, showAmount, priceMode: propPriceMode }
           color: #000000;
           font-family: "Angsana New Delivery Note", "Sarabun", "Noto Sans Thai", sans-serif;
           font-synthesis: none;
+          -webkit-font-smoothing: antialiased;
+          -moz-osx-font-smoothing: grayscale;
+          text-rendering: geometricPrecision;
         }
 
         @media screen {
@@ -481,19 +485,20 @@ export function DeliveryNoteLayout({ dns, showAmount, priceMode: propPriceMode }
         }
 
         .dn-org-box {
-          border: 1px solid #000000;
+          border: 1.5px solid #000000;
           padding: 2.5mm 4mm;
-          font-size: 20pt;
+          font-size: 21pt;
           line-height: 1.2;
           font-weight: bold;
           text-align: center;
           width: fit-content;
           min-width: 60mm;
           white-space: nowrap;
+          color: #000000;
         }
 
         .dn-customer-line {
-          font-size: 15pt;
+          font-size: 16pt;
           line-height: 1.25;
           font-weight: bold;
           margin-top: auto;
@@ -501,6 +506,7 @@ export function DeliveryNoteLayout({ dns, showAmount, priceMode: propPriceMode }
           white-space: nowrap;
           overflow: hidden;
           text-overflow: ellipsis;
+          color: #000000;
         }
 
         .dn-customer-line .dn-label {
@@ -519,15 +525,16 @@ export function DeliveryNoteLayout({ dns, showAmount, priceMode: propPriceMode }
         }
 
         .dn-title-box {
-          border: 1px solid #000000;
+          border: 1.5px solid #000000;
           padding: 2mm 4mm;
-          font-size: 16pt;
+          font-size: 17pt;
           line-height: 1.2;
           font-weight: bold;
           text-align: center;
           width: 100%;
           max-width: 65mm;
           margin-bottom: 2mm;
+          color: #000000;
         }
 
         .dn-meta-block {
@@ -551,16 +558,17 @@ export function DeliveryNoteLayout({ dns, showAmount, priceMode: propPriceMode }
         }
 
         .dn-meta-label {
-          font-size: 11pt;
+          font-size: 11.5pt;
           line-height: 1.2;
           font-weight: bold;
           color: #000000;
         }
 
         .dn-meta-value {
-          font-size: 12pt;
+          font-size: 13pt;
           line-height: 1.2;
           font-weight: bold;
+          color: #000000;
           margin-top: 0.2mm;
           overflow: hidden;
           text-overflow: ellipsis;
@@ -573,29 +581,32 @@ export function DeliveryNoteLayout({ dns, showAmount, priceMode: propPriceMode }
           table-layout: fixed;
           border-collapse: collapse;
           margin-top: 2mm;
-          border: 1px solid #000000;
-          font-size: 14pt;
+          border: 1.5px solid #000000;
+          font-size: 15pt;
           line-height: 1.25;
+          color: #000000;
         }
 
         .dn-table th {
           height: 8mm;
-          border: 1px solid #000000;
+          border: 1.2px solid #000000;
           background-color: #f1f5f9;
           padding: 1mm 0.6mm;
-          font-size: 12.5pt;
-          font-weight: bold;
+          font-size: 13.5pt;
+          font-weight: 800;
           text-align: center;
           white-space: nowrap;
+          color: #000000;
         }
 
         .dn-table td {
           height: 7.6mm;
-          border-left: 1px solid #000000;
-          border-right: 1px solid #000000;
+          border-left: 1.2px solid #000000;
+          border-right: 1.2px solid #000000;
           padding: 0.5mm 1.5mm;
           vertical-align: middle;
-          font-weight: normal;
+          font-weight: bold;
+          color: #000000;
         }
 
         .dn-row-item td {
@@ -623,21 +634,23 @@ export function DeliveryNoteLayout({ dns, showAmount, priceMode: propPriceMode }
         .dn-col-total { width: 26mm; text-align: right; font-weight: bold; white-space: nowrap; font-variant-numeric: tabular-nums; }
 
         .dn-row-empty td {
-          border-left: 1px solid #000000;
-          border-right: 1px solid #000000;
+          border-left: 1.2px solid #000000;
+          border-right: 1.2px solid #000000;
         }
 
         /* Outstanding and summary styling */
         .dn-row-summary td {
-          border-top: 1px solid #000000;
-          border-bottom: 1px solid #000000;
+          border-top: 1.2px solid #000000;
+          border-bottom: 1.2px solid #000000;
           height: 7.6mm;
           font-weight: bold;
+          color: #000000;
         }
 
         .dn-col-summary-label {
           text-align: right;
           padding-right: 4mm !important;
+          font-size: 15pt;
         }
 
         .dn-row-summary-first td {
@@ -646,28 +659,33 @@ export function DeliveryNoteLayout({ dns, showAmount, priceMode: propPriceMode }
 
         /* Net total summary row */
         .dn-summary-row td {
-          border-top: 1px solid #000000;
-          border-bottom: 1px solid #000000;
+          border-top: 1.5px solid #000000;
+          border-bottom: 1.5px solid #000000;
           height: 9mm;
           font-weight: bold;
           vertical-align: middle;
+          color: #000000;
         }
 
         .dn-summary-baht {
           text-align: center;
-          font-size: 13pt;
+          font-size: 14pt;
+          font-weight: bold;
         }
 
         .dn-summary-label {
           text-align: center;
           background-color: #f1f5f9;
-          border-left: 1px solid #000000 !important;
-          border-right: 1px solid #000000 !important;
+          border-left: 1.2px solid #000000 !important;
+          border-right: 1.2px solid #000000 !important;
+          font-size: 15pt;
+          font-weight: bold;
         }
 
         .dn-summary-value {
           text-align: right;
-          font-size: 14pt;
+          font-size: 15.5pt;
+          font-weight: bold;
           padding-right: 1.5mm !important;
           white-space: nowrap;
           font-variant-numeric: tabular-nums;
@@ -685,7 +703,7 @@ export function DeliveryNoteLayout({ dns, showAmount, priceMode: propPriceMode }
         }
 
         .dn-notes {
-          border: 1px solid #000000;
+          border: 1.5px solid #000000;
           min-height: 22mm;
           padding: 1mm 3mm 2mm;
           box-sizing: border-box;
@@ -698,14 +716,14 @@ export function DeliveryNoteLayout({ dns, showAmount, priceMode: propPriceMode }
           flex-shrink: 0;
           white-space: nowrap;
           color: #000000;
-          font-size: 16pt;
+          font-size: 17pt;
           font-weight: 900;
           margin-right: 2mm;
         }
 
         .dn-notes strong {
           color: #c00000;
-          font-size: 18pt;
+          font-size: 19pt;
           font-weight: 900;
           line-height: 1.25;
           overflow-wrap: anywhere;
@@ -737,24 +755,24 @@ export function DeliveryNoteLayout({ dns, showAmount, priceMode: propPriceMode }
         .dn-sig-underline {
           flex: 1;
           height: 20px;
-          border-bottom: 1px solid #000000;
+          border-bottom: 1.5px solid #000000;
         }
 
         .dn-date-underline {
           width: 30mm;
           height: 20px;
-          border-bottom: 1px solid #000000;
+          border-bottom: 1.5px solid #000000;
           display: grid;
           grid-template-columns: 1fr auto 1fr auto 1fr;
           align-items: center;
           column-gap: 1.5mm;
-          font-size: 13pt;
+          font-size: 13.5pt;
           line-height: 20px;
           flex-shrink: 0;
         }
 
         .dn-date-underline b {
-          font-weight: 700;
+          font-weight: 800;
           line-height: 1;
         }
 
@@ -768,18 +786,20 @@ export function DeliveryNoteLayout({ dns, showAmount, priceMode: propPriceMode }
         .dn-sig-label {
           flex: 1;
           text-align: center;
-          font-size: 12pt;
+          font-size: 13pt;
           font-weight: bold;
           white-space: nowrap;
+          color: #000000;
         }
 
         .dn-date-label {
           width: 25mm;
           text-align: center;
-          font-size: 12pt;
+          font-size: 13pt;
           font-weight: bold;
           white-space: nowrap;
           flex-shrink: 0;
+          color: #000000;
         }
       `}</style>
 

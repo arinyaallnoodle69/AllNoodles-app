@@ -4,7 +4,7 @@ import { Loader2, Share2 } from "lucide-react";
 import { useState } from "react";
 import { DeliveryPdfPreviewModal } from "@/components/print/delivery-pdf-preview-modal";
 import {
-  createDeliveryPdfPreviewFromDocument,
+  createDeliveryPdfPreviewFromUrl,
   type DeliveryPdfPreview,
 } from "@/components/print/share-delivery-pdf";
 
@@ -24,7 +24,7 @@ export function ShareDeliveryPdfButton({
     setIsSharing(true);
 
     try {
-      const pdf = await createDeliveryPdfPreviewFromDocument(document, fileName);
+      const pdf = await createDeliveryPdfPreviewFromUrl(window.location.href, fileName);
       setPreviewPdf(pdf);
     } catch (error) {
       if (error instanceof Error && error.name === "AbortError") {

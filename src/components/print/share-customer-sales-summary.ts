@@ -1,3 +1,5 @@
+import type { DeliveryPdfPreview } from "./share-delivery-pdf";
+
 function createCapturePage(report: HTMLElement, sourceDocument: Document) {
   const page = report.cloneNode(true) as HTMLElement;
   page.removeAttribute("data-customer-sales-report");
@@ -142,20 +144,50 @@ export async function saveCustomerSalesImagesFromDocument(
 export async function createCustomerSalesPdfPreviewFromDocument(
   sourceDocument: Document,
   fileNameBase = "customer-sales-summary",
-) {
+): Promise<DeliveryPdfPreview | null> {
   await sourceDocument.fonts.ready;
   const report = sourceDocument.querySelector<HTMLElement>("[data-customer-sales-report]");
   if (!report) throw new Error("ไม่พบรายงานสำหรับสร้าง PDF");
 
   const { host, pages } = buildCustomerSalesPages(report, sourceDocument);
   try {
-    host.dataset.customerSalesPdfHost = "true";
-    const { createDeliveryPdfPreviewFromDocument } = await import("./share-delivery-pdf");
-    return await createDeliveryPdfPreviewFromDocument(
-      sourceDocument,
-      fileNameBase,
-      "[data-customer-sales-pdf-host='true'] [data-customer-sales-capture-page='true']",
-    );
+    await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+    const [{ toPng }, { jsPDF }] = await Promise.all([
+      import("html-to-image"),
+      import("jspdf"),
+    ]);
+
+    const pdf = new jsPDF({
+      orientation: "portrait",
+      unit: "mm",
+      format: [210, 297],
+      compress: true,
+    });
+
+    const previewImages: string[] = [];
+
+    for (const [index, page] of pages.entries()) {
+      if (index > 0) {
+        pdf.addPage([210, 297], "portrait");
+      }
+
+      const dataUrl = await toPng(page, {
+        backgroundColor: "#ffffff",
+        pixelRatio: 2,
+        width: page.offsetWidth,
+        height: page.offsetHeight,
+      });
+
+      previewImages.push(dataUrl);
+      pdf.addImage(dataUrl, "PNG", 0, 0, 210, 297, undefined, "FAST");
+    }
+
+    const pdfBlob = pdf.output("blob");
+    const date = new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Bangkok" });
+    const pdfFileName = `${fileNameBase}-${date}.pdf`;
+    const file = new File([pdfBlob], pdfFileName, { type: "application/pdf" });
+
+    return { file, previewImages };
   } finally {
     pages.forEach((page) => page.remove());
     host.remove();

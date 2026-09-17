@@ -15,6 +15,7 @@ type IncomingOrdersDeliveryActionsProps = {
     deliveryNoteIds?: string[];
     orderRounds: number;
     totalAmount: number;
+    grandTotal?: number;
     vehicleId?: string | null;
     vehicleName?: string | null;
   }[];

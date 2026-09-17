@@ -233,60 +233,23 @@ export async function shareDeliveryPdfFromDocument(sourceDocument: Document, fil
   await sharePreparedDeliveryPdf(pdfFile);
 }
 
-function waitForIframeLoad(iframe: HTMLIFrameElement) {
-  return new Promise<Document>((resolve, reject) => {
-    const timeout = window.setTimeout(() => {
-      reject(new Error("Timed out while loading delivery PDF preview."));
-    }, 45000);
-
-    iframe.onload = () => {
-      window.clearTimeout(timeout);
-      const frameDocument = iframe.contentDocument;
-      if (!frameDocument) {
-        reject(new Error("Cannot access delivery PDF preview."));
-        return;
-      }
-      resolve(frameDocument);
-    };
-
-    iframe.onerror = () => {
-      window.clearTimeout(timeout);
-      reject(new Error("Failed to load delivery PDF preview."));
-    };
-  });
-}
-
 export async function createDeliveryPdfPreviewFromUrl(
   url: string,
   fileName?: string,
 ): Promise<DeliveryPdfPreview | null> {
-  const iframe = document.createElement("iframe");
-  iframe.style.cssText = [
-    "position:fixed",
-    "top:0",
-    "left:0",
-    "width:1200px",
-    "height:1700px",
-    "border:0",
-    "opacity:0.01",
-    "pointer-events:none",
-    "z-index:-999",
-  ].join(";");
+  const response = await fetch("/api/delivery-pdf", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ url }),
+  });
 
-  document.body.appendChild(iframe);
-
-  try {
-    const loadedDocumentPromise = waitForIframeLoad(iframe);
-    iframe.src = url;
-    const frameDocument = await loadedDocumentPromise;
-    
-    // Add a 1000ms delay to give iOS WebKit time to paint the styles/fonts of the iframe content before capture
-    await new Promise((resolve) => window.setTimeout(resolve, 1000));
-    
-    return await createDeliveryPdfPreviewFromDocument(frameDocument, fileName);
-  } finally {
-    iframe.remove();
+  if (!response.ok) {
+    throw new Error((await response.json().catch(() => null))?.error ?? "Failed to create delivery PDF.");
   }
+
+  const blob = await response.blob();
+  const file = new File([blob], buildDeliveryPdfFileName(fileName), { type: "application/pdf" });
+  return { file, previewImages: [] };
 }
 
 export async function createDeliveryPdfFileFromUrl(url: string, fileName?: string) {

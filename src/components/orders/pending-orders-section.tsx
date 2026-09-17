@@ -51,6 +51,7 @@ type StoreSummaryForBatch = {
   deliveryNumbers?: string[];
   orderRounds: number;
   totalAmount: number;
+  grandTotal?: number;
   hasDelivery?: boolean;
   vehicleId?: string | null;
   vehicleName?: string | null;
@@ -185,6 +186,20 @@ function DeliveryModal({
   const unpricedActiveItems = deliveryItems.filter(
     (item) => item.unitPrice === 0 && parseFloat(qtys[item.orderItemId] ?? "0") > 0,
   );
+
+  const itemsTotal = useMemo(() => {
+    return deliveryItems.reduce(
+      (sum, item) => sum + (parseFloat(qtys[item.orderItemId] ?? "0") || 0) * item.unitPrice,
+      0
+    );
+  }, [deliveryItems, qtys]);
+
+  const prevOutNum = parseFloat(previousOutstanding) || 0;
+  const installPaidNum = parseFloat(installmentPaid) || 0;
+  const isInstallment = installmentPaid.trim() !== "" && installPaidNum > 0;
+  const grandTotal = isInstallment
+    ? itemsTotal + installPaidNum
+    : itemsTotal + prevOutNum;
 
   async function handleSubmit() {
     if (!formData || !hasAnyQty || isPending) return;
@@ -385,6 +400,40 @@ function DeliveryModal({
                   className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 outline-none transition focus:border-[#4A148C] focus:ring-2 focus:ring-[#4A148C]/10"
                 />
               </div>
+
+              {/* Total Summary Box */}
+              <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50/80 p-4 space-y-2">
+                <div className="flex items-center justify-between text-sm text-slate-600">
+                  <span>ยอดสินค้าวันนี้</span>
+                  <span className="font-semibold text-slate-900">{formatMoney(itemsTotal)} บาท</span>
+                </div>
+                {(prevOutNum > 0 || installPaidNum > 0) && (
+                  <>
+                    <div className="flex items-center justify-between text-sm text-slate-600">
+                      <span>ยอดค้างชำระเดิม</span>
+                      <span className="font-semibold text-slate-900">{formatMoney(prevOutNum)} บาท</span>
+                    </div>
+                    {isInstallment && (
+                      <>
+                        <div className="flex items-center justify-between text-sm text-[#4A148C]">
+                          <span>หักผ่อนชำระวันนี้</span>
+                          <span className="font-semibold">-{formatMoney(installPaidNum)} บาท</span>
+                        </div>
+                        <div className="flex items-center justify-between text-xs text-slate-500">
+                          <span>คงเหลือยอดค้างเก่า</span>
+                          <span>{formatMoney(Math.max(0, prevOutNum - installPaidNum))} บาท</span>
+                        </div>
+                      </>
+                    )}
+                  </>
+                )}
+                <div className="border-t border-slate-200 pt-2 flex items-center justify-between">
+                  <span className="text-sm font-bold text-slate-900">ยอดเงินสุทธิ</span>
+                  <span className="text-lg font-black text-[#4A148C]">
+                    {formatMoney(grandTotal)} บาท
+                  </span>
+                </div>
+              </div>
             </div>
           )}
 
@@ -498,6 +547,20 @@ export function StoreDeliveryModal({
   const unpricedActiveGroups = groupedItems.filter(
     (g) => g.unitPrice === 0 && parseFloat(qtys[g.groupKey] ?? "0") > 0,
   );
+
+  const itemsTotal = useMemo(() => {
+    return groupedItems.reduce(
+      (sum, item) => sum + (parseFloat(qtys[item.groupKey] ?? "0") || 0) * item.unitPrice,
+      0
+    );
+  }, [groupedItems, qtys]);
+
+  const prevOutNum = parseFloat(previousOutstanding) || 0;
+  const installPaidNum = parseFloat(installmentPaid) || 0;
+  const isInstallment = installmentPaid.trim() !== "" && installPaidNum > 0;
+  const grandTotal = isInstallment
+    ? itemsTotal + installPaidNum
+    : itemsTotal + prevOutNum;
 
   const anySuccess = results.some((r) => r.status === "success");
   const anyError = results.filter((r) => r.status === "error");
@@ -760,11 +823,11 @@ export function StoreDeliveryModal({
 
           {/* Mobile total */}
           <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-4 py-2.5">
-            <span className="text-sm font-semibold text-slate-600">รวมทั้งหมด</span>
+            <span className="text-sm font-semibold text-slate-600">
+              {prevOutNum > 0 || installPaidNum > 0 ? "ยอดสินค้าวันนี้" : "รวมทั้งหมด"}
+            </span>
             <span className="text-base font-bold text-slate-950">
-              {formatMoney(
-                groupedItems.reduce((sum, item) => sum + (parseFloat(qtys[item.groupKey] ?? "0") || 0) * item.unitPrice, 0)
-              )} บาท
+              {formatMoney(itemsTotal)} บาท
             </span>
           </div>
         </div>
@@ -781,19 +844,19 @@ export function StoreDeliveryModal({
                   สินค้า
                 </th>
                 <th className="border-b border-r border-slate-200 px-3 py-2.5 text-center text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">
-                  จำนวน
+                  จำนวนส่ง
                 </th>
                 <th className="border-b border-r border-slate-200 px-3 py-2.5 text-center text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">
                   หน่วย
                 </th>
                 <th className="border-b border-r border-slate-200 px-3 py-2.5 text-right text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">
-                  สต็อก
+                  สต็อกคงเหลือ
                 </th>
                 <th className="border-b border-r border-slate-200 px-3 py-2.5 text-right text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">
                   ราคา/หน่วย
                 </th>
                 <th className="border-b border-slate-200 px-3 py-2.5 text-right text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">
-                  รวมยอดเงิน
+                  รวมเงิน
                 </th>
               </tr>
             </thead>
@@ -802,7 +865,8 @@ export function StoreDeliveryModal({
                 const qty = qtys[item.groupKey] ?? "";
                 const qtyNum = parseFloat(qty) || 0;
                 const lineTotal = qtyNum * item.unitPrice;
-                const rowBorder = idx < groupedItems.length - 1 ? "border-b border-slate-200" : "";
+                const isLast = idx === groupedItems.length - 1;
+                const rowBorder = isLast ? "" : "border-b border-slate-100";
 
                 return (
                   <tr
@@ -873,12 +937,10 @@ export function StoreDeliveryModal({
             <tfoot>
               <tr className="border-t-2 border-slate-300 bg-slate-50">
                 <td colSpan={6} className="px-3 py-3 text-right text-sm font-semibold text-slate-600">
-                  รวมทั้งหมด
+                  {prevOutNum > 0 || installPaidNum > 0 ? "ยอดสินค้าวันนี้" : "รวมทั้งหมด"}
                 </td>
                 <td className="px-3 py-3 text-right text-base font-bold text-slate-950">
-                  {formatMoney(
-                    groupedItems.reduce((sum, item) => sum + (parseFloat(qtys[item.groupKey] ?? "0") || 0) * item.unitPrice, 0)
-                  )} บาท
+                  {formatMoney(itemsTotal)} บาท
                 </td>
               </tr>
             </tfoot>
@@ -929,6 +991,40 @@ export function StoreDeliveryModal({
               placeholder="เช่น ส่งรอบเช้า"
               className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 outline-none transition focus:border-[#4A148C] focus:ring-2 focus:ring-[#4A148C]/10"
             />
+          </div>
+
+          {/* Grand Total Summary Box */}
+          <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50/80 p-4 space-y-2">
+            <div className="flex items-center justify-between text-sm text-slate-600">
+              <span>ยอดสินค้าวันนี้</span>
+              <span className="font-semibold text-slate-900">{formatMoney(itemsTotal)} บาท</span>
+            </div>
+            {(prevOutNum > 0 || installPaidNum > 0) && (
+              <>
+                <div className="flex items-center justify-between text-sm text-slate-600">
+                  <span>ยอดค้างชำระเดิม</span>
+                  <span className="font-semibold text-slate-900">{formatMoney(prevOutNum)} บาท</span>
+                </div>
+                {isInstallment && (
+                  <>
+                    <div className="flex items-center justify-between text-sm text-[#4A148C]">
+                      <span>หักผ่อนชำระวันนี้</span>
+                      <span className="font-semibold">-{formatMoney(installPaidNum)} บาท</span>
+                    </div>
+                    <div className="flex items-center justify-between text-xs text-slate-500">
+                      <span>คงเหลือยอดค้างเก่า</span>
+                      <span>{formatMoney(Math.max(0, prevOutNum - installPaidNum))} บาท</span>
+                    </div>
+                  </>
+                )}
+              </>
+            )}
+            <div className="border-t border-slate-200 pt-2 flex items-center justify-between">
+              <span className="text-sm font-bold text-slate-900">ยอดเงินสุทธิ</span>
+              <span className="text-lg font-black text-[#4A148C]">
+                {formatMoney(grandTotal)} บาท
+              </span>
+            </div>
           </div>
 
           {/* Results */}
@@ -1161,7 +1257,7 @@ function AllStoresDeliveryModal({
   }, [stores, printSelectedIds, activeTab]);
 
   const selectedRounds = selectedStores.reduce((sum, store) => sum + store.orderRounds, 0);
-  const selectedTotal = selectedStores.reduce((sum, store) => sum + store.totalAmount, 0);
+  const selectedTotal = selectedStores.reduce((sum, store) => sum + (store.grandTotal ?? store.totalAmount), 0);
 
   const currentTabTotalCount = tabFilteredStores.length;
   const currentTabSelectedCount = selectedStores.length;
@@ -1495,7 +1591,7 @@ function AllStoresDeliveryModal({
                         ) : null}
                       </span>
                       <span className="mt-1 block text-xs font-black text-[#4A148C] md:hidden">
-                        {store.orderRounds} รอบ · {formatMoney(store.totalAmount)} บาท
+                        {store.orderRounds} รอบ · {formatMoney(store.grandTotal ?? store.totalAmount)} บาท
                       </span>
                     </span>
                     <span className="hidden min-w-0 pr-3 font-mono text-xs font-black text-[#4A148C] md:block lg:text-sm">
@@ -1508,7 +1604,7 @@ function AllStoresDeliveryModal({
                       {store.orderRounds}
                     </span>
                     <span className="hidden text-right text-sm font-black text-[#4A148C] whitespace-nowrap md:block">
-                      {formatMoney(store.totalAmount)} บาท
+                      {formatMoney(store.grandTotal ?? store.totalAmount)} บาท
                     </span>
                     <span className="flex items-center justify-end md:justify-center">
                       <input

@@ -535,6 +535,10 @@ export default async function IncomingOrdersPage({ searchParams }: IncomingOrder
     id: string;
     order_id: string | null;
     delivery_number: string;
+    total_amount?: number;
+    previous_outstanding?: number;
+    is_installment_plan?: boolean;
+    installment_paid?: number;
   };
 
   // Confirmed delivery notes linked to the visible orders now arrive embedded
@@ -544,6 +548,15 @@ export default async function IncomingOrdersPage({ searchParams }: IncomingOrder
 
   const deliveryMap = new Map<string, string[]>();
   const deliveryIdMap = new Map<string, string[]>();
+
+  type DeliveryFinancialItem = {
+    id: string;
+    totalAmount: number;
+    previousOutstanding: number;
+    isInstallmentPlan: boolean;
+    installmentPaid: number;
+  };
+  const deliveryFinancialMap = new Map<string, Map<string, DeliveryFinancialItem>>();
 
   for (const note of deliveryNoteSummaries) {
     const key = `${note.customerId}_${note.deliveryDate}`;
@@ -555,6 +568,16 @@ export default async function IncomingOrdersPage({ searchParams }: IncomingOrder
     const existingIds = deliveryIdMap.get(key) ?? [];
     existingIds.push(note.id);
     deliveryIdMap.set(key, existingIds);
+
+    const finMap = deliveryFinancialMap.get(key) ?? new Map<string, DeliveryFinancialItem>();
+    finMap.set(note.id, {
+      id: note.id,
+      totalAmount: note.totalAmount,
+      previousOutstanding: note.previousOutstanding,
+      isInstallmentPlan: note.isInstallmentPlan,
+      installmentPaid: note.installmentPaid,
+    });
+    deliveryFinancialMap.set(key, finMap);
   }
 
   // Enrich with direct deliveries using orderDate!
@@ -577,6 +600,18 @@ export default async function IncomingOrdersPage({ searchParams }: IncomingOrder
           existingIds.push(note.id);
         }
         deliveryIdMap.set(key, existingIds);
+
+        const finMap = deliveryFinancialMap.get(key) ?? new Map<string, DeliveryFinancialItem>();
+        if (!finMap.has(note.id)) {
+          finMap.set(note.id, {
+            id: note.id,
+            totalAmount: Number(note.total_amount ?? 0),
+            previousOutstanding: Number(note.previous_outstanding ?? 0),
+            isInstallmentPlan: Boolean(note.is_installment_plan),
+            installmentPaid: Number(note.installment_paid ?? 0),
+          });
+          deliveryFinancialMap.set(key, finMap);
+        }
       }
     }
   }
@@ -593,6 +628,7 @@ export default async function IncomingOrdersPage({ searchParams }: IncomingOrder
     deliveryNumbers: string[];
     orderRounds: number;
     totalAmount: number;
+    grandTotal: number;
     vehicleId?: string | null;
     vehicleName?: string | null;
   };
@@ -614,6 +650,7 @@ export default async function IncomingOrdersPage({ searchParams }: IncomingOrder
           deliveryNumbers: [] as string[],
           orderRounds: 0,
           totalAmount: 0,
+          grandTotal: 0,
           vehicleId: order.vehicleId,
           vehicleName: order.vehicleName,
         };
@@ -626,12 +663,29 @@ export default async function IncomingOrdersPage({ searchParams }: IncomingOrder
         return storeMap;
       }, new Map<string, GroupedOrderStore>())
       .values(),
-  ).map((store) => ({
-    ...store,
-    hasDelivery: Boolean(deliveryMap.get(`${store.customerId}_${store.orderDate}`)?.length),
-    deliveryNoteIds: deliveryIdMap.get(`${store.customerId}_${store.orderDate}`) ?? [],
-    deliveryNumbers: deliveryMap.get(`${store.customerId}_${store.orderDate}`) ?? [],
-  }));
+  ).map((store) => {
+    const key = `${store.customerId}_${store.orderDate}`;
+    const finNotes = Array.from(deliveryFinancialMap.get(key)?.values() ?? []);
+
+    let storeGrandTotal = store.totalAmount;
+    if (finNotes.length > 0) {
+      storeGrandTotal = finNotes.reduce((sum, n) => {
+        const isInstallment = Boolean(n.isInstallmentPlan && n.installmentPaid > 0);
+        const noteGrandTotal = isInstallment
+          ? n.totalAmount + n.installmentPaid
+          : n.totalAmount + n.previousOutstanding;
+        return sum + noteGrandTotal;
+      }, 0);
+    }
+
+    return {
+      ...store,
+      grandTotal: storeGrandTotal,
+      hasDelivery: Boolean(deliveryMap.get(key)?.length),
+      deliveryNoteIds: deliveryIdMap.get(key) ?? [],
+      deliveryNumbers: deliveryMap.get(key) ?? [],
+    };
+  });
 
   const deliveryByCustomerId = Object.fromEntries(deliveryMap.entries());
   const billedDeliveryByCustomerDate = Object.fromEntries(
