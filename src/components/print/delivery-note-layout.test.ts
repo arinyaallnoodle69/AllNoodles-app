@@ -26,6 +26,8 @@ test("delivery note export uses Chromium PDF instead of a raster screenshot", as
 
   assert.match(route, /page\.pdf\(\{/);
   assert.match(route, /document\.fonts\.ready/);
+  assert.match(route, /headless:\s*localExecutablePath\s*\?\s*true\s*:\s*"shell"/);
+  assert.match(route, /const args = await puppeteer\.defaultArgs/);
   assert.match(client, /fetch\("\/api\/delivery-pdf"/);
 });
 

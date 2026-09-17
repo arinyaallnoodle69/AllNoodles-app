@@ -37,11 +37,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Invalid delivery-note URL." }, { status: 400 });
     }
 
-    const executablePath = localChromePath() ?? await chromium.executablePath();
+    const localExecutablePath = localChromePath();
+    const executablePath = localExecutablePath ?? await chromium.executablePath();
+    const headless = localExecutablePath ? true : "shell";
+    const args = await puppeteer.defaultArgs({
+      args: localExecutablePath ? [] : chromium.args,
+      headless,
+    });
     browser = await puppeteer.launch({
-      args: chromium.args,
+      args,
       executablePath,
-      headless: true,
+      headless: localExecutablePath ? true : "shell",
     });
 
     const page = await browser.newPage();

@@ -3,6 +3,10 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   cacheComponents: true,
   reactCompiler: true,
+  serverExternalPackages: ["@sparticuz/chromium"],
+  outputFileTracingIncludes: {
+    "/api/delivery-pdf": ["./node_modules/@sparticuz/chromium/bin/**/*"],
+  },
   experimental: {
     serverActions: {
       bodySizeLimit: "50mb",
