@@ -212,9 +212,10 @@ function DeliveryItemsTable({
           <tr key={item.id} className="dn-row-item">
             <td className="dn-col-index">{item.lineNumber}</td>
             <td className="dn-col-name">
-              <span className="dn-item-sku">{item.productSku}{"\u00a0\u00a0"}</span>
-              <span className="dn-item-name">{item.productName}</span>
-              {item.isReplacement && <span className="dn-replacement-label"> (ส่งชดเชย)</span>}
+              <span className="dn-item-line">
+                <span className="dn-item-name">{`${item.productSku} ${item.productName}`}</span>
+                {item.isReplacement && <span className="dn-replacement-label">(ส่งชดเชย)</span>}
+              </span>
             </td>
             <td className="dn-col-qty">{formatQty2Dec(item.quantityDelivered)}</td>
             <td className="dn-col-unit">{item.saleUnitLabel}</td>
@@ -601,10 +602,8 @@ export function DeliveryNoteLayout({ dns, showAmount, priceMode: propPriceMode }
           font-weight: bold;
         }
 
-        .dn-item-sku {
-          display: inline-block;
+        .dn-item-line {
           white-space: nowrap;
-          font-weight: bold;
         }
 
         .dn-item-name {
