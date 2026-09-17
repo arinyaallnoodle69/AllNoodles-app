@@ -33,6 +33,8 @@ type VehicleSummarySheetDef = {
   totalRows: number;
   pageNumber: number;
   pageCount: number;
+  groupType: "fresh" | "stock";
+  sheetTitle: string;
 };
 
 function buildVehicleSheets(data: VehicleProductSummaryData): VehicleSummarySheetDef[] {
@@ -47,26 +49,55 @@ function buildVehicleSheets(data: VehicleProductSummaryData): VehicleSummaryShee
 
       if (rows.length === 0) return null;
 
-      const pageCount = Math.ceil(rows.length / ITEMS_PER_SHEET);
+      const freshRows = rows.filter((row) => row.product.isFresh === true);
+      const stockRows = rows.filter((row) => row.product.isFresh !== true);
 
-      return Array.from({ length: pageCount }, (_, pageIndex) => {
-        const rowOffset = pageIndex * ITEMS_PER_SHEET;
-        const pageRows = rows.slice(rowOffset, rowOffset + ITEMS_PER_SHEET);
+      const groups: Array<{
+        type: "fresh" | "stock";
+        title: string;
+        rows: typeof rows;
+      }> = [];
 
-        return {
-          key: `${vehicle.id ?? "__unassigned__"}-${pageIndex + 1}`,
-          vehicleIndex,
-          rowOffset,
-          totalRows: rows.length,
-          pageNumber: pageIndex + 1,
-          pageCount,
-          data: {
-            ...data,
-            products: pageRows.map((row) => row.product),
-            vehicles: [vehicle],
-            qty: pageRows.map((row) => [row.qty]),
-          },
-        };
+      if (freshRows.length > 0) {
+        groups.push({
+          type: "fresh",
+          title: "สรุปตามสินค้าผลิตสด",
+          rows: freshRows,
+        });
+      }
+
+      if (stockRows.length > 0) {
+        groups.push({
+          type: "stock",
+          title: "สรุปตามสินค้าสต็อก",
+          rows: stockRows,
+        });
+      }
+
+      return groups.flatMap((group) => {
+        const pageCount = Math.ceil(group.rows.length / ITEMS_PER_SHEET);
+
+        return Array.from({ length: pageCount }, (_, pageIndex) => {
+          const rowOffset = pageIndex * ITEMS_PER_SHEET;
+          const pageRows = group.rows.slice(rowOffset, rowOffset + ITEMS_PER_SHEET);
+
+          return {
+            key: `${vehicle.id ?? "__unassigned__"}-${group.type}-${pageIndex + 1}`,
+            vehicleIndex,
+            rowOffset,
+            totalRows: group.rows.length,
+            pageNumber: pageIndex + 1,
+            pageCount,
+            groupType: group.type,
+            sheetTitle: group.title,
+            data: {
+              ...data,
+              products: pageRows.map((row) => row.product),
+              vehicles: [vehicle],
+              qty: pageRows.map((row) => [row.qty]),
+            },
+          };
+        });
       });
     })
     .filter((sheets): sheets is VehicleSummarySheetDef[] => sheets !== null)
@@ -74,7 +105,7 @@ function buildVehicleSheets(data: VehicleProductSummaryData): VehicleSummaryShee
 }
 
 function VehicleSummarySheet({ sheet }: { sheet: VehicleSummarySheetDef }) {
-  const { data, vehicleIndex, rowOffset, totalRows, pageNumber, pageCount } = sheet;
+  const { data, vehicleIndex, rowOffset, totalRows, pageNumber, pageCount, sheetTitle, groupType } = sheet;
   const thumbSizeMm = ROW_HEIGHT_MM - 1;
 
   return (
@@ -83,10 +114,17 @@ function VehicleSummarySheet({ sheet }: { sheet: VehicleSummarySheetDef }) {
         <header className="vehicle-summary-header">
           <div className="vehicle-summary-header__brand">All Noodles</div>
           <div className="vehicle-summary-header__line">
-            <h1 className="vehicle-summary-header__title">สรุปสินค้าตามรถ</h1>
+            <div style={{ display: "flex", alignItems: "baseline", gap: "2.5mm" }}>
+              <h1 className={`vehicle-summary-header__title vehicle-summary-header__title--${groupType}`}>
+                {sheetTitle}
+              </h1>
+              <span className={`vehicle-summary-header__tag vehicle-summary-header__tag--${groupType}`}>
+                {groupType === "fresh" ? "ผลิตสด" : "สต็อก"}
+              </span>
+            </div>
             <div className="vehicle-summary-header__meta-inline">
               <span>{data.dateLabel}</span>
-              <span>{data.vehicles[0]?.name ?? "ยังไม่ได้กำหนดรถ"}</span>
+              <span className="vehicle-summary-header__vehicle-badge">{data.vehicles[0]?.name ?? "ยังไม่ได้กำหนดรถ"}</span>
               <span>{totalRows.toLocaleString("th-TH")} รายการ</span>
               {pageCount > 1 ? <span>หน้า {pageNumber}/{pageCount}</span> : null}
             </div>
@@ -342,6 +380,44 @@ function VehicleSummaryStyles() {
         line-height: 1.2;
         font-weight: 800;
         white-space: nowrap;
+      }
+
+      .vehicle-summary-header__title--fresh {
+        color: #1b5e20;
+      }
+
+      .vehicle-summary-header__title--stock {
+        color: #0f172a;
+      }
+
+      .vehicle-summary-header__tag {
+        font-size: 13pt;
+        font-weight: 800;
+        padding: 0.5mm 2.5mm;
+        border-radius: 4px;
+        line-height: 1.2;
+        white-space: nowrap;
+      }
+
+      .vehicle-summary-header__tag--fresh {
+        background-color: #e8f5e9;
+        color: #1b5e20;
+        border: 1px solid #a5d6a7;
+      }
+
+      .vehicle-summary-header__tag--stock {
+        background-color: #f1f5f9;
+        color: #334155;
+        border: 1px solid #cbd5e1;
+      }
+
+      .vehicle-summary-header__vehicle-badge {
+        font-weight: 800;
+        color: #0f172a;
+        background: #f8fafc;
+        border: 1px solid #cbd5e1;
+        padding: 0.5mm 2.5mm;
+        border-radius: 4px;
       }
 
       .vehicle-summary-header__meta-inline {

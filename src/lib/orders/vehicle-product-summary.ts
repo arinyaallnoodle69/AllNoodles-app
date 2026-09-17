@@ -16,6 +16,7 @@ export type VehicleSummaryProduct = {
   productKind?: string;
   supplierId?: string | null;
   supplierName?: string | null;
+  isFresh?: boolean;
 };
 
 export type VehicleSummaryVehicle = {
@@ -224,7 +225,15 @@ export async function getVehicleProductSummaryData(
 ): Promise<VehicleProductSummaryData> {
   const admin = getSupabaseAdmin();
 
-  const [ordersResult, vehiclesResult, sortedProducts, specialItems] = await Promise.all([
+  const productWarehouseModesTable = (admin as unknown as {
+    from(table: "product_warehouse_fulfillment_modes"): {
+      select(columns: string): {
+        eq(column: string, value: string): Promise<{ data: unknown[] | null; error: { message?: string } | null }>;
+      };
+    };
+  }).from("product_warehouse_fulfillment_modes");
+
+  const [ordersResult, vehiclesResult, modesResult, sortedProducts, specialItems] = await Promise.all([
     admin
       .from("orders")
       .select(`
@@ -245,12 +254,22 @@ export async function getVehicleProductSummaryData(
       .eq("organization_id", organizationId)
       .order("sort_order", { ascending: true })
       .order("created_at", { ascending: true }),
+    productWarehouseModesTable
+      .select("product_id, warehouse_id, mode")
+      .eq("organization_id", organizationId),
     loadSortedProducts(organizationId),
     getDailySpecialPrintItems(organizationId, date, endDate),
   ]);
 
   if (ordersResult.error) throw new Error(ordersResult.error.message ?? "Failed to load orders for vehicle summary.");
   if (vehiclesResult.error) throw new Error(vehiclesResult.error.message ?? "Failed to load vehicles.");
+  if (modesResult.error) throw new Error(modesResult.error.message ?? "Failed to load warehouse product modes.");
+
+  const freshProductIds = new Set(
+    ((modesResult.data ?? []) as Array<{ product_id: string; mode: string }>)
+      .filter((row) => row.mode === "fresh")
+      .map((row) => row.product_id),
+  );
 
   const products: VehicleSummaryProduct[] = sortedProducts.map((product) => ({
     id: product.id,
@@ -261,6 +280,7 @@ export async function getVehicleProductSummaryData(
     productKind: product.productKind,
     supplierId: product.supplierId,
     supplierName: product.supplierName,
+    isFresh: freshProductIds.has(product.id) || product.productKind === "made_to_order",
   }));
 
   const configuredVehicles: VehicleSummaryVehicle[] = ((vehiclesResult.data ?? []) as Array<{ id: string; name: string }>).map((vehicle) => ({

@@ -303,7 +303,7 @@ export async function getOrderItemsForDelivery(
   // 1.5 Fetch existing delivery note if any to load saved outstanding/installment values
   const { data: dnRow } = await supabase
     .from("delivery_notes")
-    .select("previous_outstanding, installment_paid")
+    .select("previous_outstanding, installment_paid, is_installment_plan")
     .eq("order_id", orderId)
     .eq("status", "confirmed")
     .maybeSingle();
@@ -396,7 +396,13 @@ export async function getOrderItemsForDelivery(
     customerName: order.customers.name,
     customerCode: order.customers.customer_code,
     outstandingBalance: dnRow ? toNum(dnRow.previous_outstanding) : toNum(order.customers.outstanding_balance),
-    installmentLimit: dnRow ? (dnRow.installment_paid !== null ? toNum(dnRow.installment_paid) : null) : (order.customers.installment_limit !== null && order.customers.installment_limit !== undefined ? toNum(order.customers.installment_limit) : null),
+    installmentLimit: dnRow
+      ? (dnRow.is_installment_plan && dnRow.installment_paid !== null && toNum(dnRow.installment_paid) > 0 ? toNum(dnRow.installment_paid) : null)
+      : (order.customers.installment_limit !== null && order.customers.installment_limit !== undefined && toNum(order.customers.installment_limit) > 0
+          ? (toNum(order.customers.outstanding_balance) > 0
+              ? Math.min(toNum(order.customers.outstanding_balance), toNum(order.customers.installment_limit))
+              : null)
+          : null),
     items,
   };
 }

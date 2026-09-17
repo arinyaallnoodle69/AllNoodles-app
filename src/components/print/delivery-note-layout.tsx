@@ -5,7 +5,7 @@ import { chunkItems, fmt } from "@/components/print/print-shared";
 const A4_WIDTH_MM = 210;
 const A4_HEIGHT_MM = 297;
 const ITEMS_PER_NOTE_PAGE = 20;
-const PAGE_PADDING_MM = 7;
+const PAGE_PADDING_MM = 5;
 
 type DeliveryNotePage = {
   key: string;
@@ -463,7 +463,7 @@ export function DeliveryNoteLayout({ dns, showAmount, priceMode: propPriceMode }
           height: 100%;
           display: flex;
           flex-direction: column;
-          padding: 2mm;
+          padding: 1mm;
           box-sizing: border-box;
         }
 
@@ -473,21 +473,21 @@ export function DeliveryNoteLayout({ dns, showAmount, priceMode: propPriceMode }
           justify-content: space-between;
           align-items: flex-start;
           width: 100%;
-          margin-bottom: 4mm;
+          margin-bottom: 2mm;
         }
 
         .dn-header-left {
           display: flex;
           flex-direction: column;
           justify-content: space-between;
-          width: 55%;
-          height: 34mm;
+          width: 53%;
+          height: 42mm;
         }
 
         .dn-org-box {
           border: 1.5px solid #000000;
-          padding: 2.5mm 4mm;
-          font-size: 21pt;
+          padding: 2mm 4mm;
+          font-size: 25pt;
           line-height: 1.2;
           font-weight: bold;
           text-align: center;
@@ -498,11 +498,11 @@ export function DeliveryNoteLayout({ dns, showAmount, priceMode: propPriceMode }
         }
 
         .dn-customer-line {
-          font-size: 16pt;
-          line-height: 1.25;
+          font-size: 20pt;
+          line-height: 1.2;
           font-weight: bold;
           margin-top: auto;
-          margin-bottom: 1mm;
+          margin-bottom: 0.5mm;
           white-space: nowrap;
           overflow: hidden;
           text-overflow: ellipsis;
@@ -521,25 +521,25 @@ export function DeliveryNoteLayout({ dns, showAmount, priceMode: propPriceMode }
           display: flex;
           flex-direction: column;
           align-items: flex-end;
-          width: 42%;
+          width: 45%;
         }
 
         .dn-title-box {
           border: 1.5px solid #000000;
-          padding: 2mm 4mm;
-          font-size: 17pt;
+          padding: 1.5mm 3mm;
+          font-size: 21pt;
           line-height: 1.2;
           font-weight: bold;
           text-align: center;
           width: 100%;
-          max-width: 65mm;
-          margin-bottom: 2mm;
+          max-width: 84mm;
+          margin-bottom: 1.5mm;
           color: #000000;
         }
 
         .dn-meta-block {
           width: 100%;
-          max-width: 65mm;
+          max-width: 84mm;
           display: flex;
           flex-direction: column;
           gap: 1mm;
@@ -553,19 +553,20 @@ export function DeliveryNoteLayout({ dns, showAmount, priceMode: propPriceMode }
 
         .dn-meta-row-3 {
           display: grid;
-          grid-template-columns: 1fr 1fr 1fr;
+          grid-template-columns: 1.45fr 1fr 0.8fr;
           column-gap: 2mm;
         }
 
         .dn-meta-label {
-          font-size: 11.5pt;
+          font-size: 16pt;
           line-height: 1.2;
           font-weight: bold;
           color: #000000;
+          white-space: nowrap;
         }
 
         .dn-meta-value {
-          font-size: 13pt;
+          font-size: 17.5pt;
           line-height: 1.2;
           font-weight: bold;
           color: #000000;
@@ -580,10 +581,10 @@ export function DeliveryNoteLayout({ dns, showAmount, priceMode: propPriceMode }
           width: 100%;
           table-layout: fixed;
           border-collapse: collapse;
-          margin-top: 2mm;
+          margin-top: 1.5mm;
           border: 1.5px solid #000000;
-          font-size: 15pt;
-          line-height: 1.25;
+          font-size: 18pt;
+          line-height: 1.12;
           color: #000000;
         }
 
@@ -591,8 +592,8 @@ export function DeliveryNoteLayout({ dns, showAmount, priceMode: propPriceMode }
           height: 8mm;
           border: 1.2px solid #000000;
           background-color: #f1f5f9;
-          padding: 1mm 0.6mm;
-          font-size: 13.5pt;
+          padding: 0.6mm 0.5mm;
+          font-size: 15.5pt;
           font-weight: 800;
           text-align: center;
           white-space: nowrap;
@@ -600,10 +601,10 @@ export function DeliveryNoteLayout({ dns, showAmount, priceMode: propPriceMode }
         }
 
         .dn-table td {
-          height: 7.6mm;
+          height: 8.0mm;
           border-left: 1.2px solid #000000;
           border-right: 1.2px solid #000000;
-          padding: 0.5mm 1.5mm;
+          padding: 0.2mm 1.5mm;
           vertical-align: middle;
           font-weight: bold;
           color: #000000;
@@ -642,7 +643,7 @@ export function DeliveryNoteLayout({ dns, showAmount, priceMode: propPriceMode }
         .dn-row-summary td {
           border-top: 1.2px solid #000000;
           border-bottom: 1.2px solid #000000;
-          height: 7.6mm;
+          height: 8.0mm;
           font-weight: bold;
           color: #000000;
         }
@@ -650,7 +651,7 @@ export function DeliveryNoteLayout({ dns, showAmount, priceMode: propPriceMode }
         .dn-col-summary-label {
           text-align: right;
           padding-right: 4mm !important;
-          font-size: 15pt;
+          font-size: 18pt;
         }
 
         .dn-row-summary-first td {
@@ -661,7 +662,7 @@ export function DeliveryNoteLayout({ dns, showAmount, priceMode: propPriceMode }
         .dn-summary-row td {
           border-top: 1.5px solid #000000;
           border-bottom: 1.5px solid #000000;
-          height: 9mm;
+          height: 9.2mm;
           font-weight: bold;
           vertical-align: middle;
           color: #000000;
@@ -669,7 +670,7 @@ export function DeliveryNoteLayout({ dns, showAmount, priceMode: propPriceMode }
 
         .dn-summary-baht {
           text-align: center;
-          font-size: 14pt;
+          font-size: 16pt;
           font-weight: bold;
         }
 
@@ -678,13 +679,13 @@ export function DeliveryNoteLayout({ dns, showAmount, priceMode: propPriceMode }
           background-color: #f1f5f9;
           border-left: 1.2px solid #000000 !important;
           border-right: 1.2px solid #000000 !important;
-          font-size: 15pt;
+          font-size: 18pt;
           font-weight: bold;
         }
 
         .dn-summary-value {
           text-align: right;
-          font-size: 15.5pt;
+          font-size: 20pt;
           font-weight: bold;
           padding-right: 1.5mm !important;
           white-space: nowrap;
@@ -698,14 +699,14 @@ export function DeliveryNoteLayout({ dns, showAmount, priceMode: propPriceMode }
 
         /* Footer & Notes */
         .dn-footer {
-          margin-top: 2mm;
+          margin-top: 1.5mm;
           flex: 0 0 auto;
         }
 
         .dn-notes {
           border: 1.5px solid #000000;
-          min-height: 22mm;
-          padding: 1mm 3mm 2mm;
+          min-height: 16mm;
+          padding: 1mm 2.5mm;
           box-sizing: border-box;
           display: flex;
           align-items: flex-start;
@@ -716,14 +717,14 @@ export function DeliveryNoteLayout({ dns, showAmount, priceMode: propPriceMode }
           flex-shrink: 0;
           white-space: nowrap;
           color: #000000;
-          font-size: 17pt;
+          font-size: 18pt;
           font-weight: 900;
           margin-right: 2mm;
         }
 
         .dn-notes strong {
           color: #c00000;
-          font-size: 19pt;
+          font-size: 20pt;
           font-weight: 900;
           line-height: 1.25;
           overflow-wrap: anywhere;
@@ -735,7 +736,7 @@ export function DeliveryNoteLayout({ dns, showAmount, priceMode: propPriceMode }
           display: grid;
           grid-template-columns: 1fr 1fr 1fr;
           column-gap: 8mm;
-          margin-top: 6mm;
+          margin-top: 3.5mm;
           padding: 0 2mm;
         }
 
@@ -754,20 +755,20 @@ export function DeliveryNoteLayout({ dns, showAmount, priceMode: propPriceMode }
 
         .dn-sig-underline {
           flex: 1;
-          height: 20px;
+          height: 16px;
           border-bottom: 1.5px solid #000000;
         }
 
         .dn-date-underline {
           width: 30mm;
-          height: 20px;
+          height: 16px;
           border-bottom: 1.5px solid #000000;
           display: grid;
           grid-template-columns: 1fr auto 1fr auto 1fr;
           align-items: center;
           column-gap: 1.5mm;
-          font-size: 13.5pt;
-          line-height: 20px;
+          font-size: 14pt;
+          line-height: 16px;
           flex-shrink: 0;
         }
 
@@ -786,7 +787,7 @@ export function DeliveryNoteLayout({ dns, showAmount, priceMode: propPriceMode }
         .dn-sig-label {
           flex: 1;
           text-align: center;
-          font-size: 13pt;
+          font-size: 14pt;
           font-weight: bold;
           white-space: nowrap;
           color: #000000;
@@ -795,7 +796,7 @@ export function DeliveryNoteLayout({ dns, showAmount, priceMode: propPriceMode }
         .dn-date-label {
           width: 25mm;
           text-align: center;
-          font-size: 13pt;
+          font-size: 14pt;
           font-weight: bold;
           white-space: nowrap;
           flex-shrink: 0;

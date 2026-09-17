@@ -75,14 +75,13 @@ export function IncomingOrdersMobileList({
   }, [orders, selectedVehicleId]);
 
   const [visibleCount, setVisibleCount] = useState(15);
-  const [prevOrders, setPrevOrders] = useState(filteredOrders);
-  const sensorRef = useRef<HTMLDivElement | null>(null);
-
-  // Reset pagination count when filtered orders list changes
-  if (filteredOrders !== prevOrders) {
-    setPrevOrders(filteredOrders);
+  const filterKey = `${selectedVehicleId ?? "all"}_${currentListDate ?? "all"}_${searchTerm?.trim() ?? ""}`;
+  const [prevFilterKey, setPrevFilterKey] = useState(filterKey);
+  if (filterKey !== prevFilterKey) {
+    setPrevFilterKey(filterKey);
     setVisibleCount(15);
   }
+  const sensorRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     const sensor = sensorRef.current;

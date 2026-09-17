@@ -56,10 +56,12 @@ async function VehicleProductSummaryPage({ searchParams }: Props) {
             top: 8px !important;
             left: auto !important;
             transform: none !important;
+            translate: none !important;
             z-index: 80 !important;
             width: calc(100vw - 12px) !important;
             max-width: calc(100vw - 12px) !important;
             margin: 8px 6px 0 !important;
+            box-sizing: border-box !important;
             padding: 8px 10px !important;
             gap: 8px !important;
             justify-content: space-between !important;
@@ -108,7 +110,6 @@ async function VehicleProductSummaryPage({ searchParams }: Props) {
           <PackingListPrintButton
             unassignedStores={[]}
             dateLabel={summaryData.dateLabel}
-            hidePrintOnMobile={false}
             documentTitle="สรุปสินค้าตามรถ"
             printButtonText="พิมพ์ฟอร์มสรุปตามรถ"
           />

@@ -110,7 +110,8 @@ export function PackingListPrintButton({
   hidePrintOnMobile = false,
   hideSaveOnDesktop = false,
   documentTitle = "ใบจัดของ",
-  printButtonText = "พิมพ์ใบจัดของ",
+  printButtonText = "ดูตัวอย่าง / พิมพ์",
+  buttonText,
 }: {
   unassignedStores?: string[];
   dateLabel?: string;
@@ -118,6 +119,7 @@ export function PackingListPrintButton({
   hideSaveOnDesktop?: boolean;
   documentTitle?: string;
   printButtonText?: string;
+  buttonText?: string;
 }) {
   const [isPrinting, setIsPrinting] = useState(false);
   const [isCapturing, setIsCapturing] = useState(false);
@@ -348,6 +350,8 @@ export function PackingListPrintButton({
     setShowPreview(false);
   }
 
+  const label = buttonText ?? printButtonText;
+
   return (
     <div className="flex items-center gap-2">
       {errorMessage ? (
@@ -361,22 +365,11 @@ export function PackingListPrintButton({
         type="button"
         onClick={() => handleOpenPreview("print")}
         disabled={isPrinting || isCapturing}
-        className={`${hidePrintOnMobile ? "hidden md:flex" : "flex"} items-center gap-1.5 rounded-lg bg-[#4A148C] px-3.5 py-1.5 text-[13px] font-bold text-white shadow-sm transition hover:bg-[#4A148C] disabled:cursor-not-allowed disabled:opacity-70`}
+        className={`${hidePrintOnMobile ? "hidden md:flex" : "flex"} items-center justify-center gap-1.5 rounded-lg bg-[#4A148C] px-3.5 py-1.5 text-[13px] font-bold text-white shadow-sm transition hover:bg-[#4A148C]/90 active:scale-95 disabled:cursor-not-allowed disabled:opacity-70`}
         style={{ fontFamily: 'var(--font-noto-sans-thai), "Noto Sans Thai", sans-serif' }}
       >
         {isCapturing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Printer className="h-4 w-4" />}
-        {isCapturing ? "กำลังสร้างตัวอย่าง..." : printButtonText}
-      </button>
-
-      <button
-        type="button"
-        onClick={() => handleOpenPreview("save")}
-        disabled={isPrinting || isCapturing}
-        className={`${hideSaveOnDesktop ? "flex md:hidden" : "flex"} items-center gap-1.5 rounded-lg bg-emerald-600 px-3.5 py-1.5 text-[13px] font-bold text-white shadow-sm transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-70`}
-        style={{ fontFamily: 'var(--font-noto-sans-thai), "Noto Sans Thai", sans-serif' }}
-      >
-        {isCapturing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-        {isCapturing ? "กำลังสร้างภาพ..." : "บันทึกรูป"}
+        {isCapturing ? "กำลังสร้างตัวอย่าง..." : label}
       </button>
 
       {showPreview &&

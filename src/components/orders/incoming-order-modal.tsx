@@ -961,7 +961,10 @@ export function IncomingOrderModal({ allOrders, detail, expandedId, onAfterClose
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    pageScrollYRef.current = window.scrollY;
+    const saved = window.sessionStorage.getItem("last_order_scroll_y");
+    const scrollY = saved !== null && !isNaN(Number(saved)) ? Number(saved) : window.scrollY;
+    pageScrollYRef.current = scrollY;
+    window.sessionStorage.removeItem("last_order_scroll_y");
 
     const mediaQuery = window.matchMedia("(min-width: 768px)");
     const updateViewport = () => setIsDesktopViewport(mediaQuery.matches);
@@ -973,8 +976,21 @@ export function IncomingOrderModal({ allOrders, detail, expandedId, onAfterClose
 
   function restorePageScroll() {
     const top = pageScrollYRef.current;
-    requestAnimationFrame(() => window.scrollTo({ top, behavior: "auto" }));
-    window.setTimeout(() => window.scrollTo({ top, behavior: "auto" }), 150);
+    if (typeof document === "undefined") return;
+
+    const html = document.documentElement;
+    const prevBehavior = html.style.scrollBehavior;
+    html.style.scrollBehavior = "auto";
+
+    window.scrollTo({ top, behavior: "instant" as ScrollBehavior });
+
+    requestAnimationFrame(() => {
+      window.scrollTo({ top, behavior: "instant" as ScrollBehavior });
+      window.setTimeout(() => {
+        window.scrollTo({ top, behavior: "instant" as ScrollBehavior });
+        html.style.scrollBehavior = prevBehavior;
+      }, 50);
+    });
   }
 
   useEffect(() => {

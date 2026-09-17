@@ -2,7 +2,6 @@ import { Suspense } from "react";
 import type { Viewport } from "next";
 import Link from "next/link";
 import { PageLoader } from "@/components/page-loader";
-import { PrintPackingListButton } from "@/components/orders/print-packing-list-button";
 import {
   PackingListLayout,
   type PackingListData,
@@ -664,33 +663,33 @@ async function PackingListPage({ searchParams }: Props) {
       <style>{`
         @media screen and (max-width: 767px) {
           .packing-list-toolbar {
-            position: relative !important;
-            top: auto !important;
-            left: auto !important;
+            position: fixed !important;
+            top: 8px !important;
+            left: 8px !important;
+            right: 8px !important;
             transform: none !important;
-            width: calc(100vw - 12px) !important;
-            max-width: calc(100vw - 12px) !important;
-            margin: 6px auto 10px !important;
+            translate: none !important;
+            width: auto !important;
+            max-width: calc(100vw - 16px) !important;
+            margin: 0 auto !important;
             box-sizing: border-box !important;
-            padding: 10px !important;
-          }
-
-          .packing-list-toolbar__toggle {
-            display: none !important;
+            padding: 8px 10px !important;
+            z-index: 100 !important;
           }
 
           .packing-list-toolbar__actions {
             display: grid !important;
             width: 100% !important;
             grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto !important;
+            gap: 6px !important;
           }
 
           .packing-list-toolbar__actions > * {
             min-width: 0 !important;
           }
 
-          .packing-list-toolbar__actions > div:not(.packing-list-toolbar__toggle),
-          .packing-list-toolbar__actions > div:not(.packing-list-toolbar__toggle) > button,
+          .packing-list-toolbar__actions > div,
+          .packing-list-toolbar__actions > div > button,
           .packing-list-toolbar__actions > button {
             width: 100% !important;
           }
@@ -698,15 +697,16 @@ async function PackingListPage({ searchParams }: Props) {
           .packing-list-toolbar__actions button,
           .packing-list-toolbar__actions a {
             justify-content: center !important;
-            padding-left: 8px !important;
-            padding-right: 8px !important;
+            padding-left: 6px !important;
+            padding-right: 6px !important;
             white-space: nowrap !important;
+            font-size: 12px !important;
           }
         }
       `}</style>
 
       <div
-        className="no-print packing-list-toolbar flex flex-col md:flex-row items-center gap-2 md:gap-3 bg-white py-2.5 px-4 rounded-[16px] shadow-lg fixed top-3 left-1/2 -translate-x-1/2 z-[100] border border-slate-100/80 w-max max-w-[calc(100vw-24px)]"
+        className="no-print packing-list-toolbar fixed top-2 inset-x-2 z-[100] mx-auto flex w-auto max-w-[calc(100vw-16px)] flex-col items-center gap-2 rounded-[16px] border border-slate-100/80 bg-white p-2.5 shadow-lg md:top-3 md:left-1/2 md:right-auto md:w-max md:max-w-[calc(100vw-24px)] md:-translate-x-1/2 md:flex-row md:gap-3 md:py-2.5 md:px-4"
         style={{
           fontFamily: 'var(--font-noto-sans-thai), "Noto Sans Thai", sans-serif',
         }}
@@ -739,23 +739,10 @@ async function PackingListPage({ searchParams }: Props) {
         </div>
 
         <div className="packing-list-toolbar__actions flex items-center gap-2 flex-nowrap">
-          <div className="packing-list-toolbar__toggle">
-            <PrintPackingListButton
-              date={date}
-              endDate={endDate}
-              layout={layout === "standard" ? "transposed" : "standard"}
-              vehicleId={activeVehicleQueryValue}
-              label={
-                layout === "standard"
-                  ? "สลับตาราง"
-                  : "ตารางเดิม"
-              }
-            />
-          </div>
           <PackingListPrintButton
             unassignedStores={unassignedStores}
             dateLabel={mainDateLabel}
-            hidePrintOnMobile
+            printButtonText="ดูตัวอย่าง / พิมพ์"
           />
           <SharePackingListPdfButton
             fileName={`packing-list-${date}${endDate ? `-to-${endDate}` : ""}${

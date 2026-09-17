@@ -95,6 +95,9 @@ export const IncomingOrderOpenCard = memo(function IncomingOrderOpenCard({
 
   function openDetail() {
     if (isPending) return;
+    if (typeof window !== "undefined") {
+      window.sessionStorage.setItem("last_order_scroll_y", String(window.scrollY));
+    }
     startTransition(() => {
       router.push(href, { scroll: false });
     });
