@@ -47,7 +47,7 @@ type AppRole = "admin" | "member" | "warehouse";
 const PAGE_TITLES: [string, string][] = [
   ["/orders/incoming", "รายการออเดอร์"],
   ["/orders/fresh-reserve", "สำรองผลิตสด"],
-  ["/orders/packing-list", "ใบจัดสินค้า"],
+  ["/orders/packing-list", "ใบออเดอร์"],
   ["/delivery/print", "พิมพ์ใบจัดส่ง"],
   ["/billing/print", "พิมพ์ใบวางบิล"],
   ["/billing", "ใบวางบิล"],

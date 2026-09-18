@@ -142,7 +142,7 @@ export async function createPackingListPdfPreviewFromDocument(
   const pages = Array.from(sourceDocument.querySelectorAll<HTMLElement>(".packing-sheet"));
 
   if (pages.length === 0) {
-    window.alert("ไม่พบใบจัดของสำหรับสร้าง PDF");
+    window.alert("ไม่พบใบออเดอร์สำหรับสร้าง PDF");
     return null;
   }
 

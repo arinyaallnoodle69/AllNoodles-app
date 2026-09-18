@@ -1153,7 +1153,7 @@ export async function importProductsFromExcelAction(
     const categoryName = readImportCell(row, headers, ["หมวดหมู่", "category"]);
     const supplierText = readImportCell(row, headers, ["ผู้ขาย", "โรงงาน", "supplier"]);
     const brand = readImportCell(row, headers, ["แบรนด์", "brand"]);
-    const packingListName = readImportCell(row, headers, ["ชื่อในใบจัดของ", "ชื่อใบจัดของ", "packing list name"]);
+    const packingListName = readImportCell(row, headers, ["ชื่อย่อสำหรับใบออเดอร์", "ชื่อในใบออเดอร์", "ชื่อในใบจัดของ", "ชื่อใบจัดของ", "packing list name"]);
     const description = readImportCell(row, headers, ["คำอธิบาย", "รายละเอียด", "description"]);
     const productKind = parseImportProductKind(readImportCell(row, headers, ["ประเภทสินค้า", "ประเภท", "product kind"]));
     const isActive = parseImportStatus(readImportCell(row, headers, ["สถานะ", "status"]));

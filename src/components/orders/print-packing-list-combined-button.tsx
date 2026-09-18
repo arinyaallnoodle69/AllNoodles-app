@@ -148,7 +148,7 @@ export function PrintPackingListCombinedButton({
                 {/* Title */}
                 <div className="flex items-start justify-between mb-4">
                   <div>
-                    <h3 className="text-lg font-black text-slate-900">เลือกรูปแบบใบจัดของ</h3>
+                    <h3 className="text-lg font-black text-slate-900">เลือกรูปแบบใบออเดอร์</h3>
                     <p className="text-xs font-semibold text-slate-400 mt-0.5">
                       เลือกสายรถ (ติ๊กเลือกได้หลายคัน) และรูปแบบตาราง
                     </p>

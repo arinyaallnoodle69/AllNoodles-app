@@ -11,7 +11,7 @@ import { PRINT_ORGANIZATION_NAME } from "@/components/print/print-shared";
 import { requireAnyRole } from "@/lib/auth/authorization";
 import { getSettingsDataFresh } from "@/lib/settings/admin";
 
-export const metadata = { title: "Mockup ใบจัดของ A4" };
+export const metadata = { title: "Mockup ใบออเดอร์ A4" };
 
 type Props = {
   searchParams: Promise<{
@@ -164,7 +164,7 @@ export default async function PackingListMockupPage({ searchParams }: Props) {
       >
         <div className="min-w-0">
           <h1 className="truncate text-sm font-black text-[#4A148C]">
-            Mockup ใบจัดของ A4 แนวนอน
+            Mockup ใบออเดอร์ A4 แนวนอน
           </h1>
           <p className="truncate text-xs font-bold text-slate-500">
             {products.length} สินค้า · {stores.length} ลูกค้า · ข้อมูลจริงจากระบบ
@@ -195,7 +195,7 @@ export default async function PackingListMockupPage({ searchParams }: Props) {
         >
           <h2 className="text-2xl font-black text-slate-900">ยังไม่มีข้อมูลพอสำหรับ mockup</h2>
           <p className="max-w-md text-sm font-bold text-slate-500">
-            ต้องมีข้อมูลลูกค้าและสินค้าอย่างน้อยอย่างละ 1 รายการก่อน ระบบถึงจะสร้างใบจัดของตัวอย่างได้
+            ต้องมีข้อมูลลูกค้าและสินค้าอย่างน้อยอย่างละ 1 รายการก่อน ระบบถึงจะสร้างใบออเดอร์ตัวอย่างได้
           </p>
         </div>
       ) : (

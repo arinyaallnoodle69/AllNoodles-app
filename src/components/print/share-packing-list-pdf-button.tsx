@@ -19,7 +19,7 @@ export function SharePackingListPdfButton({
   fileName,
   className,
   buttonText = "ส่งออก PDF",
-  previewTitle = "ตัวอย่าง PDF ใบจัดของ",
+  previewTitle = "ตัวอย่าง PDF ใบออเดอร์",
 }: SharePackingListPdfButtonProps) {
   const [isSharing, setIsSharing] = useState(false);
   const [previewPdf, setPreviewPdf] = useState<PackingListPdfPreview | null>(null);

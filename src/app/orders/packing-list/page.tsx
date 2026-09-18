@@ -18,7 +18,7 @@ import { AutoPrint, PackingListPrintButton } from "./preview/print-button";
 import { getDailySpecialPrintItems } from "@/lib/orders/daily-special-items";
 import { SharePackingListPdfButton } from "@/components/print/share-packing-list-pdf-button";
 
-export const metadata = { title: "ใบจัดของ" };
+export const metadata = { title: "ใบออเดอร์" };
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
@@ -713,7 +713,7 @@ async function PackingListPage({ searchParams }: Props) {
       >
         <div className="flex items-center gap-2">
           <span style={{ fontSize: "14px", fontWeight: 800, color: "#4A148C" }}>
-            {layout === "transposed" ? "ใบจัดของ (สลับตาราง)" : "ใบจัดของ"}
+            {layout === "transposed" ? "ใบออเดอร์ (สลับตาราง)" : "ใบออเดอร์"}
           </span>
           {selectedVehicleName ? (
             <span

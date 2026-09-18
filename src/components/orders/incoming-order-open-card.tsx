@@ -31,6 +31,7 @@ type IncomingOrderOpenCardProps = {
   selectedCustomerIds?: string[];
   isBilled: boolean;
   warehouseName?: string | null;
+  onOpen?: (orderId: string) => void;
 };
 
 function InfoBlock({
@@ -80,6 +81,7 @@ export const IncomingOrderOpenCard = memo(function IncomingOrderOpenCard({
   selectedCustomerIds = [],
   isBilled,
   warehouseName,
+  onOpen,
 }: IncomingOrderOpenCardProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -94,6 +96,13 @@ export const IncomingOrderOpenCard = memo(function IncomingOrderOpenCard({
   const hasDisplayDelivery = displayDeliveryNumbers.length > 0;
 
   function openDetail() {
+    if (typeof window !== "undefined") {
+      window.sessionStorage.setItem("last_order_scroll_y", String(window.scrollY));
+    }
+    if (onOpen) {
+      onOpen(orderId);
+      return;
+    }
     if (isPending) return;
     if (typeof window !== "undefined") {
       window.sessionStorage.setItem("last_order_scroll_y", String(window.scrollY));
@@ -243,11 +252,11 @@ export const IncomingOrderOpenCard = memo(function IncomingOrderOpenCard({
         <button
           type="button"
           onClick={openDetail}
-          disabled={isPending}
+          disabled={!onOpen && isPending}
           className="inline-flex min-h-11 flex-1 items-center justify-between rounded-2xl border border-[#EA80FC]/55 bg-[#4A148C] px-4 py-3 text-sm font-bold text-white shadow-[0_12px_26px_rgba(142, 36, 170,0.22)] transition hover:bg-[#4A148C] active:scale-[0.99] disabled:opacity-60"
         >
-          <span>{isPending ? "กำลังเปิดรายละเอียด..." : "เปิดรายละเอียดออเดอร์"}</span>
-          {isPending ? (
+          <span>{!onOpen && isPending ? "กำลังเปิดรายละเอียด..." : "เปิดรายละเอียดออเดอร์"}</span>
+          {!onOpen && isPending ? (
             <Loader2 className="h-4 w-4 animate-spin text-[#4A148C]" strokeWidth={2.5} />
           ) : (
             <ChevronRight className="h-4 w-4 text-white" strokeWidth={2.6} />

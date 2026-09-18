@@ -910,7 +910,7 @@ function ProductFormBody({
 
               <div className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
                 <div className="space-y-1">
-                  <label className={productFieldLabelClass} htmlFor="product-packing-list-name">ชื่อย่อสำหรับใบจัดของ</label>
+                  <label className={productFieldLabelClass} htmlFor="product-packing-list-name">ชื่อย่อสำหรับใบออเดอร์</label>
                   <input
                     id="product-packing-list-name"
                     value={packingListName}
@@ -919,11 +919,11 @@ function ProductFormBody({
                     placeholder="เช่น หมี่มังกรขาว"
                   />
                   <p className="text-xs font-bold text-slate-800">
-                    ใช้เฉพาะตอนพิมพ์ใบจัดของ หากไม่กรอก ระบบจะใช้ชื่อสินค้าหลักแทน
+                    ใช้เฉพาะตอนพิมพ์ใบออเดอร์ หากไม่กรอก ระบบจะใช้ชื่อสินค้าหลักแทน
                   </p>
                 </div>
                 <div className="rounded-xl border border-dashed border-slate-300 bg-white px-4 py-3">
-                  <p className="text-[11px] font-black uppercase tracking-[0.14em] text-slate-800">ตัวอย่างในใบจัดของ</p>
+                  <p className="text-[11px] font-black uppercase tracking-[0.14em] text-slate-800">ตัวอย่างในใบออเดอร์</p>
                   <p className="mt-2 text-sm font-black leading-snug text-slate-950">
                     {(packingListName || basicFormValues.name || editingProduct?.name || "ชื่อสินค้าจะแสดงตรงนี้").trim()}
                   </p>

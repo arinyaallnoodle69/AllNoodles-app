@@ -109,7 +109,7 @@ export function PackingListPrintButton({
   dateLabel = "",
   hidePrintOnMobile = false,
   hideSaveOnDesktop = false,
-  documentTitle = "ใบจัดของ",
+  documentTitle = "ใบออเดอร์",
   printButtonText = "ดูตัวอย่าง / พิมพ์",
   buttonText,
 }: {

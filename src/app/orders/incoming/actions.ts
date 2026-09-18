@@ -157,8 +157,18 @@ export async function fetchIncomingOrderDetailAction(
   if (error) return { detail: null, error: error.message ?? "โหลดรายละเอียดออเดอร์ไม่สำเร็จ" };
   if (!data) return { detail: null, error: "ไม่พบออเดอร์นี้ในองค์กรของคุณ" };
 
-  const detail = await getOrderDetailById(session.organizationId, id);
-  return { detail };
+  try {
+    const detail = await getOrderDetailById(session.organizationId, id);
+    return { detail };
+  } catch (err) {
+    console.error("[fetchIncomingOrderDetailAction] Error:", err);
+    return { detail: null, error: err instanceof Error ? err.message : "โหลดรายละเอียดออเดอร์ไม่สำเร็จ" };
+  }
+}
+
+export async function fetchIncomingOrderProductOptionsAction(): Promise<OrderProductOption[]> {
+  const session = await requireAnyRole(["admin", "member"]);
+  return getProductsForOrder(session.organizationId);
 }
 
 export async function fetchIncomingOrderModalDataAction(

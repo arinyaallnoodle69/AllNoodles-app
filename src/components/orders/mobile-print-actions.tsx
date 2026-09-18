@@ -285,7 +285,7 @@ export function MobilePrintActions({
                         <BarChart3 className="h-5 w-5" strokeWidth={2.5} />
                       </div>
                     }
-                    title="สรุปยอดรวมสินค้า (ใบจัดของ)"
+                    title="สรุปยอดรวมสินค้า (ใบออเดอร์)"
                     description="ดูรายงานสรุปยอดรวมจำนวนสินค้าและข้อมูลร้านค้าทั้งหมด เพื่อความสะดวกในการตรวจนับก่อนส่ง"
                     action={
                       <PackingListSummaryButton
@@ -303,7 +303,7 @@ export function MobilePrintActions({
                       </div>
                     }
                     title="พิมพ์ใบออเดอร์ (ตารางมาตรฐาน)"
-                    description="พิมพ์ใบจัดชุดสินค้าตามออเดอร์ในรูปแบบตารางมาตรฐาน เหมาะสำหรับการบรรจุทั่วไป"
+                    description="พิมพ์ใบออเดอร์สำหรับจัดชุดสินค้าในรูปแบบตารางมาตรฐาน เหมาะสำหรับการบรรจุทั่วไป"
                     action={
                       <PrintPackingListButton
                         date={date}
@@ -320,7 +320,7 @@ export function MobilePrintActions({
                       </div>
                     }
                     title="พิมพ์ใบออเดอร์ (สลับตาราง)"
-                    description="พิมพ์ตารางใบจัดสินค้าแบบสลับแกนข้อมูล ช่วยประหยัดหน้ากระดาษและเช็กของง่ายขึ้นในกรณีที่ออเดอร์จำนวนมาก"
+                    description="พิมพ์ตารางใบออเดอร์แบบสลับแกนข้อมูล ช่วยประหยัดหน้ากระดาษและเช็กของง่ายขึ้นในกรณีที่ออเดอร์จำนวนมาก"
                     action={
                       <PrintPackingListButton
                         date={date}

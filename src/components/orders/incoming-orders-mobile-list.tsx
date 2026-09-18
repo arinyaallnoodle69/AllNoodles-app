@@ -1,15 +1,23 @@
 "use client";
 
-import { Fragment, useEffect, useMemo, useRef, useState, useTransition } from "react";
+import dynamic from "next/dynamic";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { IncomingOrderOpenCard } from "./incoming-order-open-card";
 import { IncomingOrderVehicleFilter } from "./incoming-order-vehicle-filter";
 import { IncomingOrdersVehicleTransfer } from "./incoming-orders-vehicle-transfer";
 import { DailySpecialOrderManager } from "./daily-special-order-manager";
+import { fetchIncomingOrderDetailAction } from "@/app/orders/incoming/actions";
 import type { OrderVehicleOption } from "@/lib/orders/manage";
 import type { DailySpecialCatalogProduct, DailySpecialItem } from "@/lib/orders/daily-special-items";
 import type { VehicleTransferDateOption } from "@/lib/orders/vehicle-transfer";
+import type { IncomingOrderListItem, OrderDetailData } from "@/lib/orders/detail";
+import type { OrderProductOption } from "@/lib/orders/manage";
+
+const IncomingOrderModal = dynamic(() =>
+  import("./incoming-order-modal").then((mod) => mod.IncomingOrderModal),
+);
 
 type MobileListOrder = {
   id: string;
@@ -82,6 +90,85 @@ export function IncomingOrdersMobileList({
     setVisibleCount(15);
   }
   const sensorRef = useRef<HTMLDivElement | null>(null);
+
+  const [activeModalOrderId, setActiveModalOrderId] = useState<string | null>(null);
+  const [modalData, setModalData] = useState<{
+    detail: OrderDetailData | null;
+    products: OrderProductOption[];
+    orderId: string;
+  } | null>(null);
+  const modalCacheRef = useRef<Record<string, { detail: OrderDetailData; products: OrderProductOption[] }>>({});
+
+  const handleOpenModal = useCallback((orderId: string) => {
+    if (typeof window !== "undefined") {
+      window.sessionStorage.setItem("last_order_scroll_y", String(window.scrollY));
+      const p = new URLSearchParams(window.location.search);
+      p.set("expanded", orderId);
+      window.history.pushState(null, "", `${window.location.pathname}?${p.toString()}`);
+    }
+
+    setActiveModalOrderId(orderId);
+
+    const cached = modalCacheRef.current[orderId];
+    if (cached) {
+      setModalData({
+        detail: cached.detail,
+        products: cached.products,
+        orderId,
+      });
+      return;
+    }
+
+    setModalData({
+      detail: null,
+      products: [],
+      orderId,
+    });
+
+    void (async () => {
+      try {
+        const result = await fetchIncomingOrderDetailAction(orderId);
+        if (result && result.detail) {
+          modalCacheRef.current[orderId] = {
+            detail: result.detail,
+            products: [],
+          };
+          setModalData((prev) => {
+            if (prev?.orderId === orderId) {
+              return {
+                detail: result.detail,
+                products: [],
+                orderId,
+              };
+            }
+            return prev;
+          });
+        }
+      } catch (err) {
+        console.error("Failed to load order details:", err);
+      }
+    })();
+  }, []);
+
+  const handleCloseModal = useCallback(() => {
+    setActiveModalOrderId(null);
+    setModalData(null);
+  }, []);
+
+  useEffect(() => {
+    const handlePopState = () => {
+      const params = new URLSearchParams(window.location.search);
+      const expanded = params.get("expanded");
+      if (!expanded) {
+        setActiveModalOrderId(null);
+        setModalData(null);
+      } else if (expanded !== activeModalOrderId) {
+        handleOpenModal(expanded);
+      }
+    };
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, [activeModalOrderId, handleOpenModal]);
 
   useEffect(() => {
     const sensor = sensorRef.current;
@@ -187,6 +274,7 @@ export function IncomingOrdersMobileList({
                     vehicleName={order.vehicleName}
                     vehicles={vehicles}
                     warehouseName={order.warehouseName}
+                    onOpen={handleOpenModal}
                   />
                 </Fragment>
               );
@@ -202,6 +290,19 @@ export function IncomingOrdersMobileList({
           </div>
         </>
       )}
+
+      {activeModalOrderId ? (
+        <IncomingOrderModal
+          key={`mobile-order-${activeModalOrderId}`}
+          allOrders={filteredOrders as unknown as IncomingOrderListItem[]}
+          date={currentListDate}
+          detail={modalData?.orderId === activeModalOrderId ? modalData.detail : null}
+          expandedId={activeModalOrderId}
+          onAfterClose={handleCloseModal}
+          products={modalData?.orderId === activeModalOrderId ? modalData.products : []}
+          searchTerm={searchTerm ?? ""}
+        />
+      ) : null}
     </div>
   );
 }

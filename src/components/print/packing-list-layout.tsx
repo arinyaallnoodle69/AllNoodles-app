@@ -152,43 +152,131 @@ function insertZeroWidthSpaces(text: string): string {
   }
 }
 
-function splitProductNameForStandardHeader(name: string): string[] {
+const THAI_COMBINING_MARKS = /[\u0E31\u0E34-\u0E3A\u0E47-\u0E4E]/g;
+
+function getThaiVisualLength(text: string): number {
+  return text.replace(THAI_COMBINING_MARKS, "").length;
+}
+
+function splitProductNameForStandardHeader(name: string, maxLineChars = 4): string[] {
   const trimmed = name.trim();
   if (!trimmed) return [""];
-  if (Array.from(trimmed).length <= 16) return [trimmed];
 
-  let segments: string[] = [];
+  // Split on spaces, slashes, dashes, or brackets
+  const rawParts = trimmed.split(/[\s/\\()[\]{}]+/).filter(Boolean);
+
+  let words: string[] = [];
   if (typeof Intl !== "undefined" && Intl.Segmenter) {
     try {
-      const segmenter = new Intl.Segmenter("th", { granularity: "word" });
-      segments = Array.from(segmenter.segment(trimmed), (segment) => segment.segment);
+      const wordSeg = new Intl.Segmenter("th", { granularity: "word" });
+      for (const part of rawParts) {
+        const segs = Array.from(wordSeg.segment(part), (s) => s.segment.trim()).filter(Boolean);
+        for (const seg of segs) {
+          // 1. Split on leading vowels [เแโใไ] preceded by a consonant or vowel
+          // e.g. กระทุ่มแบน -> กระทุ่ม + แบน, ก๋วยเตี๋ยว -> ก๋วย + เตี๋ยว
+          if (getThaiVisualLength(seg) > 3) {
+            const sub = seg.split(/(?<=[ก-ฮะ-์])(?=[เแโใไ])/).filter(Boolean);
+            words.push(...sub);
+          } else {
+            words.push(seg);
+          }
+        }
+      }
     } catch {
-      segments = [];
+      words = rawParts;
+    }
+  } else {
+    words = rawParts;
+  }
+
+  if (words.length === 0) return [trimmed];
+
+  // 2. Further split syllables ending with 'ะ' if token is longer than maxLineChars
+  // e.g. 'กระทุ่ม' (5 chars) -> 'กระ' + 'ทุ่ม'
+  const refinedWords: string[] = [];
+  for (const w of words) {
+    if (getThaiVisualLength(w) > maxLineChars && /(?:กระ|กะ|มะ|บะ|สะ|ประ)/.test(w)) {
+      const sub = w.split(/(?<=[ะ])(?=[ก-ฮ])/).filter(Boolean);
+      refinedWords.push(...sub);
+    } else {
+      refinedWords.push(w);
     }
   }
 
-  if (segments.length < 2) {
-    const characters = Array.from(trimmed);
-    const midpoint = Math.ceil(characters.length / 2);
-    return [characters.slice(0, midpoint).join(""), characters.slice(midpoint).join("")];
+  // 3. Merge short fragments ONLY IF the combined length does not exceed maxLineChars
+  // e.g. 'ไว'+'ไว' -> 'ไวไว' (4 chars), 'มา'+'ม่า' -> 'มาม่า' (4 chars)
+  const merged: string[] = [];
+  for (const w of refinedWords) {
+    if (merged.length > 0) {
+      const prev = merged[merged.length - 1];
+      const pair = prev + w;
+      if (
+        (prev === w && getThaiVisualLength(pair) <= maxLineChars) ||
+        (prev === "มา" && w === "ม่า" && getThaiVisualLength(pair) <= maxLineChars) ||
+        (prev === "ไว" && w === "ไว" && getThaiVisualLength(pair) <= maxLineChars) ||
+        (getThaiVisualLength(prev) === 1 && getThaiVisualLength(pair) <= maxLineChars)
+      ) {
+        merged[merged.length - 1] = pair;
+        continue;
+      }
+    }
+    merged.push(w);
   }
 
-  let splitIndex = 1;
-  let smallestDifference = Number.POSITIVE_INFINITY;
-  for (let index = 1; index < segments.length; index += 1) {
-    const firstLength = Array.from(segments.slice(0, index).join("").trim()).length;
-    const secondLength = Array.from(segments.slice(index).join("").trim()).length;
-    const difference = Math.abs(firstLength - secondLength);
-    if (difference < smallestDifference) {
-      smallestDifference = difference;
-      splitIndex = index;
+  // 4. Fallback for any remaining long token (>maxLineChars):
+  // Split using Thai grapheme clusters with orphan consonant protection
+  const result: string[] = [];
+  const graphemeSeg =
+    typeof Intl !== "undefined" && Intl.Segmenter
+      ? new Intl.Segmenter("th", { granularity: "grapheme" })
+      : null;
+
+  for (const w of merged) {
+    if (getThaiVisualLength(w) > maxLineChars && graphemeSeg) {
+      const graphemes = Array.from(graphemeSeg.segment(w), (s) => s.segment);
+      const lines: string[] = [];
+      let cur = "";
+
+      for (const g of graphemes) {
+        if (cur && getThaiVisualLength(cur + g) > maxLineChars) {
+          // If current ends with a leading vowel, move it to the next line so it stays with its consonant
+          if (/[เแโใไ]$/.test(cur)) {
+            const lead = cur.slice(-1);
+            lines.push(cur.slice(0, -1));
+            cur = lead + g;
+          } else {
+            lines.push(cur);
+            cur = g;
+          }
+        } else {
+          cur += g;
+        }
+      }
+      if (cur) lines.push(cur);
+
+      // Orphan consonant protection:
+      // If a line is a lone consonant (vLen === 1) and previous line has >= 2 chars,
+      // borrow the preceding consonant so it forms a natural syllable!
+      // e.g. ['มังก', 'ร'] -> ['มัง', 'กร']
+      // e.g. ['โบตั๋', 'น'] -> ['โบ', 'ตั๋น']
+      for (let i = lines.length - 1; i > 0; i--) {
+        if (getThaiVisualLength(lines[i]) === 1 && getThaiVisualLength(lines[i - 1]) >= 2) {
+          const prevG = Array.from(graphemeSeg.segment(lines[i - 1]), (s) => s.segment);
+          if (prevG.length >= 2) {
+            const borrowed = prevG.pop();
+            lines[i - 1] = prevG.join("");
+            lines[i] = borrowed + lines[i];
+          }
+        }
+      }
+
+      result.push(...lines.filter(Boolean));
+    } else {
+      result.push(w);
     }
   }
 
-  return [
-    segments.slice(0, splitIndex).join("").trim(),
-    segments.slice(splitIndex).join("").trim(),
-  ].filter(Boolean);
+  return result.length > 0 ? result : [trimmed];
 }
 
 function buildHeaderGroups(products: PackingListProduct[], field: "brand" | "category") {
@@ -538,8 +626,19 @@ function StandardPackingListPage({ page, data }: { page: StandardPageDef; data: 
                   return page.pageProducts.map((product) => {
                     const categoryPalette = getCategoryPalette(product);
                     const productPalette = getProductPalette(product, categoryPalette);
-                    const productNameLines = splitProductNameForStandardHeader(product.name);
-                    const longestLineLength = Math.max(...productNameLines.map((line) => Array.from(line).length));
+                    const colMm = parseFloat(columnWidth) || 12;
+                    const maxCharsPerLine = colMm < 8 ? 3 : 4;
+                    const productNameLines = splitProductNameForStandardHeader(product.name, maxCharsPerLine);
+                    const longestLineLength = Math.max(...productNameLines.map((line) => getThaiVisualLength(line)));
+                    const isDense =
+                      colMm < 8 ||
+                      productNameLines.length >= 6 ||
+                      (colMm <= 10 && longestLineLength >= 5);
+                    const isCompact =
+                      !isDense &&
+                      (colMm <= 9 ||
+                        productNameLines.length >= 5 ||
+                        (colMm <= 11 && longestLineLength >= 4));
                     return (
                       <th
                         key={product.key}
@@ -549,9 +648,9 @@ function StandardPackingListPage({ page, data }: { page: StandardPageDef; data: 
                         <div className="packing-product-header">
                           <div
                             className={`packing-product-header__name${
-                              longestLineLength > 28
+                              isDense
                                 ? " packing-product-header__name--dense"
-                                : longestLineLength > 22
+                                : isCompact
                                   ? " packing-product-header__name--compact"
                                   : ""
                             }`}
@@ -728,7 +827,7 @@ function PackingListStyles() {
     <style>{`
       @font-face {
         font-family: "Angsana New Order Print";
-        src: url("/fonts/angsana-new/ANGSA.woff") format("woff");
+        src: url("/fonts/angsana-new/angsab.woff") format("woff");
         font-style: normal;
         font-weight: 400;
         font-display: swap;
@@ -1221,32 +1320,36 @@ function PackingListStyles() {
         position: relative;
         height: 26mm;
         min-height: 26mm;
-        padding: 0;
+        max-height: 26mm;
+        padding: 1.2mm 0.4mm 0.8mm;
         width: 100%;
+        max-width: 100%;
         min-width: 0;
-        overflow: hidden;
-      }
-
-      .packing-product-header__name {
-        position: absolute;
-        top: 50%;
-        left: 50%;
+        overflow: visible;
         display: flex;
-        width: 24.5mm;
-        height: 6mm;
         flex-direction: column;
         align-items: center;
         justify-content: center;
+        box-sizing: border-box;
+      }
+
+      .packing-product-header__name {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        max-width: 100%;
+        max-height: 100%;
         gap: 0;
-        transform: translate(-50%, -50%) rotate(-90deg);
-        transform-origin: center;
-        font-size: 9.15pt;
-        line-height: 1.25;
-        font-weight: 900;
+        font-size: 9pt;
+        line-height: 1.38;
+        font-weight: 800;
         color: #0f172a;
         white-space: nowrap;
         text-align: center;
         padding: 0;
+        overflow: visible;
         box-sizing: border-box;
       }
 
@@ -1254,23 +1357,26 @@ function PackingListStyles() {
         display: block;
         max-width: 100%;
         white-space: nowrap;
+        overflow: visible;
+        box-sizing: border-box;
       }
 
       .packing-product-header__name--compact {
-        font-size: 8.37pt;
+        font-size: 8pt;
+        line-height: 1.32;
       }
 
       .packing-product-header__name--dense {
-        font-size: 7.75pt;
+        font-size: 7.2pt;
+        line-height: 1.26;
       }
 
       .packing-product-header__icon {
-        position: absolute;
-        right: 100%;
-        margin-right: 0.5mm;
+        display: block;
+        font-size: 7pt;
+        line-height: 1;
+        margin-bottom: 0.3mm;
         font-family: "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", var(--font-noto-sans-thai), "Noto Sans Thai", sans-serif;
-        font-size: 8.21pt;
-        line-height: 1.15;
       }
 
       .packing-product-header__unit {
@@ -1468,16 +1574,19 @@ function PackingListStyles() {
 
       .packing-sheet--standard .packing-product-header__name {
         font-family: "Angsana New Order Print", "Sarabun", "Noto Sans Thai", sans-serif;
-        font-size: 9.61pt;
+        font-size: 9pt;
+        line-height: 1.38;
         font-weight: 700;
       }
 
       .packing-sheet--standard .packing-product-header__name--compact {
-        font-size: 8.84pt;
+        font-size: 8pt;
+        line-height: 1.32;
       }
 
       .packing-sheet--standard .packing-product-header__name--dense {
-        font-size: 8.06pt;
+        font-size: 7.2pt;
+        line-height: 1.26;
       }
 
       .packing-sheet--standard .packing-product-header__icon {

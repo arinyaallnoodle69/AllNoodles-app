@@ -1,6 +1,7 @@
 "use client";
 
 import React, { memo, useEffect, useRef, useState, useTransition } from "react";
+import { createPortal } from "react-dom";
 import dynamic from "next/dynamic";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
@@ -26,6 +27,7 @@ import type { AddedOrderItemDraft } from "@/components/orders/order-add-product-
 import {
   deleteOrderCascadeActionV3,
   fetchIncomingOrderDetailAction,
+  fetchIncomingOrderProductOptionsAction,
   updateOrderItemsBatchAction,
 } from "@/app/orders/incoming/actions";
 
@@ -921,6 +923,7 @@ export function IncomingOrderModal({ allOrders, detail, expandedId, onAfterClose
   const startInDeleteMode = searchParams.get("delete") === "1";
 
   const [isOpen, setIsOpen] = useState(true);
+  const [mounted, setMounted] = useState(false);
   const [editMode, setEditMode] = useState(startInEditMode);
   const [confirmCancel, setConfirmCancel] = useState(startInDeleteMode);
   const [navPending, startNavTransition] = useTransition();
@@ -930,6 +933,8 @@ export function IncomingOrderModal({ allOrders, detail, expandedId, onAfterClose
   const [isPreparingEdit, setIsPreparingEdit] = useState(false);
   const [saveToast, setSaveToast] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [fetchError, setFetchError] = useState<string | null>(null);
+  const [activeProducts, setActiveProducts] = useState<OrderProductOption[]>(products);
   const pageScrollYRef = useRef(0);
 
   const [slideAnim, setSlideAnim] = useState<"slide-left" | "slide-right" | null>(null);
@@ -941,6 +946,14 @@ export function IncomingOrderModal({ allOrders, detail, expandedId, onAfterClose
   const [cachedDetails, setCachedDetails] = useState<Record<string, OrderDetailData>>(() =>
     detail ? { [expandedId]: detail } : {}
   );
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    setActiveProducts(products);
+  }, [products]);
 
   useEffect(() => {
     setEditMode(startInEditMode);
@@ -959,38 +972,57 @@ export function IncomingOrderModal({ allOrders, detail, expandedId, onAfterClose
   }, [expandedId, detail, startInDeleteMode, startInEditMode]);
 
   useEffect(() => {
+    if (!activeDetail && activeOrderId) {
+      if (cachedDetails[activeOrderId]) {
+        setActiveDetail(cachedDetails[activeOrderId]);
+        return;
+      }
+      let cancelled = false;
+      setFetchError(null);
+      fetchIncomingOrderDetailAction(activeOrderId)
+        .then((res) => {
+          if (cancelled) return;
+          if (res.error || !res.detail) {
+            setFetchError(res.error ?? "ไม่สามารถโหลดรายละเอียดออเดอร์นี้ได้");
+          } else {
+            setActiveDetail(res.detail);
+            setCachedDetails((prev) => ({ ...prev, [activeOrderId]: res.detail! }));
+          }
+        })
+        .catch((err) => {
+          if (cancelled) return;
+          setFetchError(err instanceof Error ? err.message : "เกิดข้อผิดพลาดในการโหลด");
+        });
+
+      return () => {
+        cancelled = true;
+      };
+    }
+  }, [activeDetail, activeOrderId, cachedDetails]);
+
+  useEffect(() => {
     if (typeof window === "undefined") return;
 
     const saved = window.sessionStorage.getItem("last_order_scroll_y");
     const scrollY = saved !== null && !isNaN(Number(saved)) ? Number(saved) : window.scrollY;
     pageScrollYRef.current = scrollY;
-    window.sessionStorage.removeItem("last_order_scroll_y");
 
     const mediaQuery = window.matchMedia("(min-width: 768px)");
     const updateViewport = () => setIsDesktopViewport(mediaQuery.matches);
 
     updateViewport();
     mediaQuery.addEventListener("change", updateViewport);
-    return () => mediaQuery.removeEventListener("change", updateViewport);
+    return () => {
+      mediaQuery.removeEventListener("change", updateViewport);
+    };
   }, []);
 
   function restorePageScroll() {
     const top = pageScrollYRef.current;
-    if (typeof document === "undefined") return;
-
-    const html = document.documentElement;
-    const prevBehavior = html.style.scrollBehavior;
-    html.style.scrollBehavior = "auto";
-
-    window.scrollTo({ top, behavior: "instant" as ScrollBehavior });
-
-    requestAnimationFrame(() => {
+    if (typeof window === "undefined") return;
+    if (Math.abs(window.scrollY - top) > 4) {
       window.scrollTo({ top, behavior: "instant" as ScrollBehavior });
-      window.setTimeout(() => {
-        window.scrollTo({ top, behavior: "instant" as ScrollBehavior });
-        html.style.scrollBehavior = prevBehavior;
-      }, 50);
-    });
+    }
   }
 
   useEffect(() => {
@@ -1026,10 +1058,8 @@ export function IncomingOrderModal({ allOrders, detail, expandedId, onAfterClose
       
       // Update URL in the background
       const href = buildNavHref(targetId);
-      if (href) {
-        startNavTransition(() => {
-          router.replace(href, { scroll: false });
-        });
+      if (href && typeof window !== "undefined") {
+        window.history.replaceState(null, "", href);
       }
       return;
     }
@@ -1048,8 +1078,8 @@ export function IncomingOrderModal({ allOrders, detail, expandedId, onAfterClose
       }
       
       const href = buildNavHref(targetId);
-      if (href) {
-        router.replace(href, { scroll: false });
+      if (href && typeof window !== "undefined") {
+        window.history.replaceState(null, "", href);
       }
     });
   }
@@ -1059,9 +1089,13 @@ export function IncomingOrderModal({ allOrders, detail, expandedId, onAfterClose
     setIsClosing(true);
     setTimeout(() => {
       setIsOpen(false);
-      const p = new URLSearchParams(searchParams.toString());
-      p.delete("expanded"); p.delete("edit"); p.delete("delete");
-      router.replace(`${pathname}?${p.toString()}`, { scroll: false });
+      if (typeof window !== "undefined") {
+        const p = new URLSearchParams(window.location.search);
+        p.delete("expanded"); p.delete("edit"); p.delete("delete");
+        const qs = p.toString();
+        const nextUrl = qs ? `${window.location.pathname}?${qs}` : window.location.pathname;
+        window.history.replaceState(null, "", nextUrl);
+      }
       restorePageScroll();
       onAfterClose?.();
     }, 350);
@@ -1070,10 +1104,12 @@ export function IncomingOrderModal({ allOrders, detail, expandedId, onAfterClose
   function closeDeletePrompt() {
     setConfirmCancel(false);
     setDeleteError(null);
-    if (searchParams.get("delete") === "1") {
-      const params = new URLSearchParams(searchParams.toString());
+    if (searchParams.get("delete") === "1" && typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
       params.delete("delete");
-      router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+      const qs = params.toString();
+      const nextUrl = qs ? `${window.location.pathname}?${qs}` : window.location.pathname;
+      window.history.replaceState(null, "", nextUrl);
     }
   }
 
@@ -1098,6 +1134,7 @@ export function IncomingOrderModal({ allOrders, detail, expandedId, onAfterClose
       setDeleteError(result.error);
       return;
     }
+    router.refresh();
     close();
   }
 
@@ -1107,7 +1144,16 @@ export function IncomingOrderModal({ allOrders, detail, expandedId, onAfterClose
     setIsPreparingEdit(true);
 
     try {
-      await loadOrderAddProductPicker();
+      const pickerPromise = loadOrderAddProductPicker();
+      const productsPromise =
+        activeProducts.length === 0
+          ? fetchIncomingOrderProductOptionsAction().catch(() => [])
+          : Promise.resolve(null);
+
+      const [, fetchedProducts] = await Promise.all([pickerPromise, productsPromise]);
+      if (fetchedProducts && fetchedProducts.length > 0) {
+        setActiveProducts(fetchedProducts);
+      }
     } finally {
       startEditModeTransition(() => {
         setEditMode(true);
@@ -1116,7 +1162,7 @@ export function IncomingOrderModal({ allOrders, detail, expandedId, onAfterClose
     }
   }
 
-  if (!isOpen) return null;
+  if (!isOpen || !mounted || typeof document === "undefined") return null;
 
   const deliveryNumber = activeDetail
     ? activeDetail.deliveryNumber || (activeDetail.orderNumber.startsWith("DN") ? activeDetail.orderNumber : null)
@@ -1126,8 +1172,8 @@ export function IncomingOrderModal({ allOrders, detail, expandedId, onAfterClose
     ? activeDetail.items.some((item) => item.notes !== "ส่งชดเชย (ไม่คิดเงิน)" && (item.unitPrice === null || item.unitPrice === undefined || Number(item.unitPrice) <= 0))
     : false;
 
-  return (
-    <div className={`fixed inset-0 z-[250] flex flex-col items-center justify-end overflow-x-hidden overflow-y-hidden lg:justify-center`}>
+  return createPortal(
+    <div className={`fixed inset-0 z-[250] flex flex-col items-center justify-end overflow-x-hidden overflow-y-hidden overscroll-none lg:justify-center`}>
       <style>{`
         @keyframes slideInL { from { transform: translateX(20px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
         @keyframes slideInR { from { transform: translateX(-20px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
@@ -1293,7 +1339,42 @@ export function IncomingOrderModal({ allOrders, detail, expandedId, onAfterClose
 
         {/* Content Body */}
         <div className={`relative flex-1 min-w-0 overflow-x-hidden overflow-y-hidden bg-white ${slideAnim ? (slideAnim === "slide-left" ? "c-slide-l" : "c-slide-r") : ""}`}>
-          {!activeDetail ? (
+          {fetchError ? (
+            <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-white p-6 text-center">
+              <AlertTriangle className="mb-3 h-10 w-10 text-rose-500" />
+              <p className="max-w-xs text-sm font-bold text-slate-800">{fetchError}</p>
+              <div className="mt-5 flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={close}
+                  className="rounded-xl border border-slate-200 px-4 py-2 text-xs font-bold text-slate-600 active:scale-95"
+                >
+                  ปิดหน้าต่าง
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setFetchError(null);
+                    fetchIncomingOrderDetailAction(activeOrderId)
+                      .then((res) => {
+                        if (res.detail) {
+                          setActiveDetail(res.detail);
+                          setCachedDetails((prev) => ({ ...prev, [activeOrderId]: res.detail! }));
+                        } else {
+                          setFetchError(res.error ?? "ไม่สามารถโหลดรายละเอียดได้");
+                        }
+                      })
+                      .catch((err) => {
+                        setFetchError(err instanceof Error ? err.message : "เกิดข้อผิดพลาดในการโหลด");
+                      });
+                  }}
+                  className="rounded-xl bg-[#4A148C] px-4 py-2 text-xs font-bold text-white shadow active:scale-95"
+                >
+                  ลองใหม่อีกครั้ง
+                </button>
+              </div>
+            </div>
+          ) : !activeDetail ? (
             <div className="absolute inset-0 flex flex-col items-center justify-center bg-white z-50">
               <div className="relative flex items-center justify-center">
                 <div className="absolute h-14 w-14 rounded-full border-4 border-[#4A148C]/10" />
@@ -1439,6 +1520,7 @@ export function IncomingOrderModal({ allOrders, detail, expandedId, onAfterClose
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

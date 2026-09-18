@@ -99,17 +99,6 @@ function getRelationName(value: unknown) {
   return (value as { name?: string }).name ?? null;
 }
 
-function getPackingListProductName(name: string, metadata: unknown) {
-  if (metadata && typeof metadata === "object" && !Array.isArray(metadata)) {
-    const packingListName = (metadata as Record<string, unknown>).packing_list_name;
-    if (typeof packingListName === "string" && packingListName.trim()) {
-      return packingListName.trim();
-    }
-  }
-
-  return name;
-}
-
 function isActiveProduct(product: DbProduct) {
   const metadata = product.metadata && typeof product.metadata === "object" ? (product.metadata as Record<string, unknown>) : null;
   return !metadata?.deleted;
@@ -200,7 +189,7 @@ async function loadSortedProducts(organizationId: string) {
 
       return {
         id: product.id,
-        name: getPackingListProductName(product.name, product.metadata),
+        name: product.name,
         display_order: product.display_order !== null && product.display_order !== undefined ? Number(product.display_order) : undefined,
         categoryIds: categoryIdsByProductId.get(product.id) ?? [],
         sku: product.sku,

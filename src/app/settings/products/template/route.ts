@@ -34,7 +34,7 @@ export async function GET() {
       { value: "ผู้ขาย", fontWeight: "bold" },
       { value: "หมวดหมู่", fontWeight: "bold" },
       { value: "แบรนด์", fontWeight: "bold" },
-      { value: "ชื่อในใบจัดของ", fontWeight: "bold" },
+      { value: "ชื่อย่อสำหรับใบออเดอร์", fontWeight: "bold" },
       { value: "คำอธิบาย", fontWeight: "bold" },
       { value: "สถานะ", fontWeight: "bold" },
       { value: "หน่วยขาย", fontWeight: "bold" },
