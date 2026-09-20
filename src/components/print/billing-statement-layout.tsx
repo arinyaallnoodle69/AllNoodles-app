@@ -253,6 +253,55 @@ export function BillingInvoicePage({
   );
 }
 
+let cachedFontEmbedCSS: string | null = null;
+
+export async function getBillingFontEmbedCSS(): Promise<string> {
+  if (typeof window === "undefined") return "";
+  if (cachedFontEmbedCSS) return cachedFontEmbedCSS;
+
+  try {
+    const fetchFontAsBase64 = async (url: string): Promise<string> => {
+      const res = await fetch(url);
+      const blob = await res.blob();
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+    };
+
+    const [regularBase64, boldBase64] = await Promise.race([
+      Promise.all([
+        fetchFontAsBase64("/fonts/angsana-new/ANGSA.woff"),
+        fetchFontAsBase64("/fonts/angsana-new/angsab.woff"),
+      ]),
+      new Promise<never>((_, reject) =>
+        window.setTimeout(() => reject(new Error("Font load timeout")), 2500),
+      ),
+    ]);
+
+    cachedFontEmbedCSS = `
+      @font-face {
+        font-family: "Angsana New Delivery Note";
+        src: url("${regularBase64}") format("woff");
+        font-weight: 400;
+        font-style: normal;
+      }
+      @font-face {
+        font-family: "Angsana New Delivery Note";
+        src: url("${boldBase64}") format("woff");
+        font-weight: 700 900;
+        font-style: normal;
+      }
+    `;
+    return cachedFontEmbedCSS;
+  } catch (err) {
+    console.warn("getBillingFontEmbedCSS failed, skipping font embed:", err);
+    return "";
+  }
+}
+
 export const BILLING_INVOICE_STYLES = `
   @page { size: A4 portrait; margin: 0; }
 

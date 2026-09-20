@@ -14,9 +14,10 @@ import {
   BILLING_INVOICE_STYLES,
   BillingInvoicePage,
   buildBillingInvoicePages,
+  getBillingFontEmbedCSS,
 } from "@/components/print/billing-statement-layout";
 
-const CAPTURE_TIMEOUT_MS = 30000;
+const CAPTURE_TIMEOUT_MS = 6000;
 
 function isMobileLikeDevice() {
   if (typeof window === "undefined") return false;
@@ -285,19 +286,14 @@ export function BatchBillingPreviewButton({
         await new Promise((resolve) => setTimeout(resolve, 100));
       }
 
-      // 2. Load and verify fonts
+      // 2. Prepare font CSS
       setSavingStatus("กำลังเตรียมตัวอักษร...");
-      await Promise.all([
-        document.fonts.load('400 18pt "Angsana New Delivery Note"'),
-        document.fonts.load('700 18pt "Angsana New Delivery Note"'),
-      ]);
-      await document.fonts.ready;
+      const fontEmbedCSS = await getBillingFontEmbedCSS();
 
       const targets = document.querySelectorAll(".batch-billing-preview-card-element");
       if (targets.length === 0) {
         throw new Error("ไม่พบพื้นที่ใบวางบิลสำหรับแปลงรูปภาพ");
       }
-      const fontEmbedCSS = await htmlToImage.getFontEmbedCSS(targets[0] as HTMLElement);
 
       // 3. Pipeline: Sequential Capture of each page
       const captured: { blob: Blob; name: string }[] = [];

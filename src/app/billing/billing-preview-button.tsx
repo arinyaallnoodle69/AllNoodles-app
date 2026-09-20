@@ -12,9 +12,10 @@ import {
   BILLING_INVOICE_STYLES,
   BillingInvoicePage,
   buildBillingInvoicePages,
+  getBillingFontEmbedCSS,
 } from "@/components/print/billing-statement-layout";
 
-const CAPTURE_TIMEOUT_MS = 30000;
+const CAPTURE_TIMEOUT_MS = 6000;
 
 function isMobileLikeDevice() {
   if (typeof window === "undefined") return false;
@@ -209,13 +210,7 @@ export function BillingPreviewButton({
     setErrorMessage(null);
     setSavingStatus("กำลังเตรียมตัวอักษร...");
     try {
-      const firstTarget = targets[0] as HTMLElement;
-      await Promise.all([
-        document.fonts.load('400 18pt "Angsana New Delivery Note"'),
-        document.fonts.load('700 18pt "Angsana New Delivery Note"'),
-      ]);
-      await document.fonts.ready;
-      const fontEmbedCSS = await htmlToImage.getFontEmbedCSS(firstTarget);
+      const fontEmbedCSS = await getBillingFontEmbedCSS();
 
       const captured: { blob: Blob; name: string }[] = [];
 
