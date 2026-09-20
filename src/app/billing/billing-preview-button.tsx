@@ -19,7 +19,11 @@ const CAPTURE_TIMEOUT_MS = 6000;
 
 function isMobileLikeDevice() {
   if (typeof window === "undefined") return false;
-  return window.matchMedia("(max-width: 768px), (pointer: coarse)").matches;
+  const ua = navigator.userAgent || "";
+  const isMobileUA =
+    /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua) ||
+    (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  return isMobileUA || window.matchMedia("(max-width: 768px), (pointer: coarse)").matches;
 }
 
 function withTimeout<T>(promise: Promise<T>, timeoutMs: number, message: string): Promise<T> {
@@ -42,6 +46,7 @@ function downloadBlob(blob: Blob, fileName: string) {
   const link = document.createElement("a");
   link.href = url;
   link.download = fileName;
+  link.target = "_blank";
   link.rel = "noopener";
   document.body.appendChild(link);
   link.click();

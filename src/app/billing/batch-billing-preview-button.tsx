@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Download, FolderDown, Image as ImageIcon, Loader2, X } from "lucide-react";
+import { CheckCircle2, Download, FolderDown, Image as ImageIcon, Loader2, Share2, X } from "lucide-react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import * as htmlToImage from "html-to-image";
@@ -21,7 +21,11 @@ const CAPTURE_TIMEOUT_MS = 6000;
 
 function isMobileLikeDevice() {
   if (typeof window === "undefined") return false;
-  return window.matchMedia("(max-width: 768px), (pointer: coarse)").matches;
+  const ua = navigator.userAgent || "";
+  const isMobileUA =
+    /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua) ||
+    (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  return isMobileUA || window.matchMedia("(max-width: 768px), (pointer: coarse)").matches;
 }
 
 function withTimeout<T>(promise: Promise<T>, timeoutMs: number, message: string): Promise<T> {
@@ -39,11 +43,12 @@ function withTimeout<T>(promise: Promise<T>, timeoutMs: number, message: string)
   });
 }
 
-function downloadBlob(blob: Blob, fileName: string) {
+function safeDownloadBlob(blob: Blob, fileName: string) {
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
   link.download = fileName;
+  link.target = "_blank";
   link.rel = "noopener";
   document.body.appendChild(link);
   link.click();
@@ -136,6 +141,7 @@ export function BatchBillingPreviewButton({
   const [pageScale, setPageScale] = useState(1);
   const [savingStatus, setSavingStatus] = useState<string | null>(null);
   const [savingProgress, setSavingProgress] = useState<{ current: number; total: number; percent: number } | null>(null);
+  const [readyCaptured, setReadyCaptured] = useState<{ blob: Blob; name: string }[] | null>(null);
 
   const previewBodyRef = useRef<HTMLDivElement | null>(null);
   const today = useMemo(() => new Date().toISOString().split("T")[0], []);
@@ -206,6 +212,7 @@ export function BatchBillingPreviewButton({
       setErrorMessage(null);
       setSavingStatus(null);
       setSavingProgress(null);
+      setReadyCaptured(null);
     }
   }, [isOpen]);
 
@@ -320,28 +327,11 @@ export function BatchBillingPreviewButton({
       // 4. Save to device
       const isMobile = isMobileLikeDevice();
 
-      // Mobile flow: Web Share API (Level 2)
-      if (isMobile && typeof navigator !== "undefined" && navigator.share && navigator.canShare) {
-        const files = captured.map((item) => new File([item.blob], item.name, { type: "image/png" }));
-        if (navigator.canShare({ files })) {
-          try {
-            setSavingStatus("กำลังเปิดหน้าต่างบันทึกภาพ...");
-            await navigator.share({
-              files,
-              title: "ใบวางบิลทั้งหมด",
-            });
-            setIsOpen(false);
-            router.refresh();
-            return;
-          } catch (shareErr: unknown) {
-            console.error("[WebShare:BatchBilling]", shareErr);
-            if (shareErr instanceof Error && shareErr.name === "AbortError") {
-              // User closed the share sheet
-              return;
-            }
-            // Fallback to sequential download below
-          }
-        }
+      if (isMobile) {
+        // Transition to completion screen with direct tap trigger for Web Share API
+        setReadyCaptured(captured);
+        setSavingStatus(null);
+        return;
       }
 
       // Desktop Folder flow (File System Access API)
@@ -380,12 +370,12 @@ export function BatchBillingPreviewButton({
         }
       }
 
-      // Default or fallback: Sequential download to Downloads folder
+      // Default or fallback for desktop: Sequential download to Downloads folder
       for (let i = 0; i < captured.length; i += 1) {
         const percent = Math.round(((i + 1) / captured.length) * 100);
         setSavingProgress({ current: i + 1, total: captured.length, percent });
         setSavingStatus(`กำลังดาวน์โหลดรูปที่ ${i + 1}/${captured.length} (${percent}%)...`);
-        downloadBlob(captured[i].blob, captured[i].name);
+        safeDownloadBlob(captured[i].blob, captured[i].name);
         await new Promise((resolve) => setTimeout(resolve, 200));
       }
 
@@ -397,9 +387,53 @@ export function BatchBillingPreviewButton({
       console.error("Save all images error:", error);
       setErrorMessage("เกิดข้อผิดพลาดในการบันทึกรูปภาพ กรุณาลองใหม่อีกครั้ง");
     } finally {
+      if (!isMobileLikeDevice()) {
+        setIsSaving(false);
+        setSavingStatus(null);
+        setSavingProgress(null);
+      }
+    }
+  };
+
+  const handleMobileSaveTrigger = async () => {
+    if (!readyCaptured || readyCaptured.length === 0) return;
+
+    try {
+      const files = readyCaptured.map((item) => new File([item.blob], item.name, { type: "image/png" }));
+
+      if (typeof navigator !== "undefined" && navigator.share && navigator.canShare && navigator.canShare({ files })) {
+        try {
+          await navigator.share({
+            files,
+            title: "ใบวางบิลทั้งหมด",
+          });
+          setReadyCaptured(null);
+          setIsSaving(false);
+          setIsOpen(false);
+          router.refresh();
+          return;
+        } catch (shareErr: unknown) {
+          if (shareErr instanceof Error && shareErr.name === "AbortError") {
+            // User cancelled share sheet, keep readyCaptured so they can tap again
+            return;
+          }
+          console.warn("[WebShare] share error, falling back to safe download:", shareErr);
+        }
+      }
+
+      // Safe fallback download without navigating the page
+      for (let i = 0; i < readyCaptured.length; i += 1) {
+        safeDownloadBlob(readyCaptured[i].blob, readyCaptured[i].name);
+        await new Promise((resolve) => setTimeout(resolve, 300));
+      }
+
+      setReadyCaptured(null);
       setIsSaving(false);
-      setSavingStatus(null);
-      setSavingProgress(null);
+      setIsOpen(false);
+      router.refresh();
+    } catch (err) {
+      console.error("Mobile save trigger error:", err);
+      setErrorMessage("เกิดข้อผิดพลาดในการบันทึกรูปภาพ กรุณาลองใหม่อีกครั้ง");
     }
   };
 
@@ -473,37 +507,76 @@ export function BatchBillingPreviewButton({
               {/* Progress Modal Overlay during saving */}
               {isSaving && (
                 <div className="fixed inset-0 z-[700] flex flex-col items-center justify-center bg-[#0a0c10]/90 backdrop-blur-md animate-in fade-in duration-300 px-4">
-                  <div className="flex flex-col items-center bg-[#12151c] p-8 sm:p-10 rounded-3xl border border-white/10 shadow-2xl w-full max-w-md">
-                    <div className="relative mb-6 flex items-center justify-center">
-                      <div className="h-16 w-16 rounded-full border-4 border-[#4A148C]/20" />
-                      <Loader2 className="absolute h-16 w-16 animate-spin text-[#BA68C8]" strokeWidth={2.5} />
-                      <span className="absolute text-xs font-black text-white">
-                        {savingProgress ? `${savingProgress.percent}%` : ""}
-                      </span>
-                    </div>
-
-                    <h3 className="text-lg sm:text-xl font-black text-white text-center">
-                      {savingStatus ?? "กำลังบันทึกรูปภาพ..."}
-                    </h3>
-
-                    {savingProgress && (
-                      <div className="w-full mt-5">
-                        <div className="flex justify-between text-xs font-bold text-slate-400 mb-2">
-                          <span>ความคืบหน้า</span>
-                          <span className="text-emerald-400 font-black">{savingProgress.current} จาก {savingProgress.total} ใบ</span>
+                  <div className="flex flex-col items-center bg-[#12151c] p-8 sm:p-10 rounded-3xl border border-white/10 shadow-2xl w-full max-w-md text-center">
+                    {readyCaptured ? (
+                      <div className="flex w-full flex-col items-center animate-in zoom-in-95 duration-300">
+                        <div className="relative mb-5 flex h-20 w-20 items-center justify-center rounded-3xl bg-emerald-500/20 text-emerald-400 ring-8 ring-emerald-500/10 animate-bounce">
+                          <CheckCircle2 className="h-10 w-10 text-emerald-400" strokeWidth={2.5} />
                         </div>
-                        <div className="w-full h-3 bg-white/10 rounded-full overflow-hidden p-0.5">
-                          <div
-                            className="h-full bg-gradient-to-r from-emerald-500 to-teal-400 rounded-full transition-all duration-300"
-                            style={{ width: `${savingProgress.percent}%` }}
-                          />
-                        </div>
+
+                        <h3 className="text-xl sm:text-2xl font-black text-white">
+                          สร้างรูปภาพครบ {readyCaptured.length} ใบแล้ว!
+                        </h3>
+                        <p className="text-xs font-bold text-slate-400 mt-2 mb-6 leading-relaxed">
+                          รูปภาพความคมชัดสูงพร้อมบันทึก แตะปุ่มด้านล่างเพื่อบันทึกรูปลงคลังภาพ/เครื่อง
+                        </p>
+
+                        <button
+                          type="button"
+                          onClick={handleMobileSaveTrigger}
+                          className="flex w-full items-center justify-center gap-3 rounded-2xl bg-emerald-600 py-4 px-6 text-lg font-black text-white shadow-[0_15px_30px_rgba(16,185,129,0.3)] transition hover:bg-emerald-500 active:scale-95"
+                        >
+                          <Share2 className="h-6 w-6" strokeWidth={2.5} />
+                          <span>แตะเพื่อบันทึกรูปภาพ ({readyCaptured.length} ใบ)</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setReadyCaptured(null);
+                            setIsSaving(false);
+                          }}
+                          className="mt-4 text-xs font-bold text-slate-500 hover:text-slate-300 transition-colors"
+                        >
+                          ปิดหน้าต่าง
+                        </button>
                       </div>
-                    )}
+                    ) : (
+                      <>
+                        <div className="relative mb-6 flex items-center justify-center">
+                          <div className="h-16 w-16 rounded-full border-4 border-[#4A148C]/20" />
+                          <Loader2 className="absolute h-16 w-16 animate-spin text-[#BA68C8]" strokeWidth={2.5} />
+                          <span className="absolute text-xs font-black text-white">
+                            {savingProgress ? `${savingProgress.percent}%` : ""}
+                          </span>
+                        </div>
 
-                    <p className="text-xs text-slate-400 mt-5 text-center leading-relaxed">
-                      ระบบกำลังเรนเดอร์ภาพความคมชัดสูงทีละใบ กรุณารอสักครู่ครับ
-                    </p>
+                        <h3 className="text-lg sm:text-xl font-black text-white text-center">
+                          {savingStatus ?? "กำลังบันทึกรูปภาพ..."}
+                        </h3>
+
+                        {savingProgress && (
+                          <div className="w-full mt-5">
+                            <div className="flex justify-between text-xs font-bold text-slate-400 mb-2">
+                              <span>ความคืบหน้า</span>
+                              <span className="text-emerald-400 font-black">
+                                {savingProgress.current} จาก {savingProgress.total} ใบ
+                              </span>
+                            </div>
+                            <div className="w-full h-3 bg-white/10 rounded-full overflow-hidden p-0.5">
+                              <div
+                                className="h-full bg-gradient-to-r from-emerald-500 to-teal-400 rounded-full transition-all duration-300"
+                                style={{ width: `${savingProgress.percent}%` }}
+                              />
+                            </div>
+                          </div>
+                        )}
+
+                        <p className="text-xs text-slate-400 mt-5 text-center leading-relaxed">
+                          ระบบกำลังเรนเดอร์ภาพความคมชัดสูงทีละใบ กรุณารอสักครู่ครับ
+                        </p>
+                      </>
+                    )}
                   </div>
                 </div>
               )}
