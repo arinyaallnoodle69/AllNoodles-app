@@ -113,6 +113,10 @@ type BillingPreviewButtonProps = {
   toDate: string;
   deliveries: DeliveryItem[];
   totalAmount: number;
+  billingNumber?: string | null;
+  billingDate?: string;
+  className?: string;
+  children?: React.ReactNode;
 };
 
 export function BillingPreviewButton({
@@ -122,6 +126,10 @@ export function BillingPreviewButton({
   toDate,
   deliveries,
   totalAmount,
+  billingNumber,
+  billingDate,
+  className,
+  children,
 }: BillingPreviewButtonProps) {
   const [mounted, setMounted] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
@@ -134,6 +142,10 @@ export function BillingPreviewButton({
 
   const today = new Date().toISOString().split("T")[0];
 
+  const existingBillingNumber = useMemo(() => {
+    return billingNumber ?? (deliveries.find((d) => d.billingNumber)?.billingNumber || null);
+  }, [billingNumber, deliveries]);
+
   const pages = useMemo(() => {
     const rows = deliveries.map((item, index) => ({
       lineNumber: index + 1,
@@ -142,8 +154,6 @@ export function BillingPreviewButton({
       totalAmount: item.amount,
       notes: null,
     }));
-
-    const existingBillingNumber = deliveries.find((d) => d.billingNumber)?.billingNumber || null;
 
     return buildBillingInvoicePages({
       customer: {
@@ -158,7 +168,7 @@ export function BillingPreviewButton({
         address: "-",
         phone: "-",
       },
-      billingDate: today,
+      billingDate: billingDate ?? today,
       fromDate,
       toDate,
       grandTotal: totalAmount,
@@ -166,7 +176,7 @@ export function BillingPreviewButton({
       isLocked: existingBillingNumber !== null,
       rows,
     });
-  }, [customerCode, customerName, deliveries, fromDate, toDate, today, totalAmount]);
+  }, [customerCode, customerName, deliveries, fromDate, toDate, today, totalAmount, billingDate, existingBillingNumber]);
 
   useEffect(() => {
     setMounted(true);
@@ -221,10 +231,13 @@ export function BillingPreviewButton({
         const target = targets[i] as HTMLElement;
         const blob = await captureElementToBlob(target, fontEmbedCSS);
 
+        const namePrefix = existingBillingNumber
+          ? `billing-${existingBillingNumber}`
+          : `billing-${customerCode}-${fromDate}-to-${toDate}`;
         const fileName =
           targets.length > 1
-            ? `billing-${customerCode}-${fromDate}-to-${toDate}-page-${i + 1}.png`
-            : `billing-${customerCode}-${fromDate}-to-${toDate}.png`;
+            ? `${namePrefix}-page-${i + 1}.png`
+            : `${namePrefix}.png`;
 
         captured.push({ blob, name: fileName });
       }
@@ -300,10 +313,17 @@ export function BillingPreviewButton({
       <button
         type="button"
         onClick={() => setIsOpen(true)}
-        className="inline-flex items-center gap-1.5 rounded-full bg-[#4A148C] px-4 py-2 text-xs font-black text-white transition hover:bg-[#4A148C] active:scale-95"
+        className={
+          className ||
+          "inline-flex items-center gap-1.5 rounded-full bg-[#4A148C] px-4 py-2 text-xs font-black text-white transition hover:bg-[#4A148C]/90 active:scale-95"
+        }
       >
-        <FileText className="h-3.5 w-3.5" />
-        ดูใบวางบิล
+        {children || (
+          <>
+            <FileText className="h-3.5 w-3.5" />
+            <span>ดูใบวางบิล</span>
+          </>
+        )}
       </button>
 
       {mounted && isOpen

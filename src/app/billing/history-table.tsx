@@ -1,11 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { FileText, X, Calendar, Receipt, ChevronRight, History } from "lucide-react";
+import { FileText, X, Calendar, Receipt, ChevronRight, History, Image as ImageIcon } from "lucide-react";
 import type { BillingRecord } from "@/lib/billing/billing-statement";
 import { fmtDateTH } from "@/lib/utils/date";
 import { fmt } from "@/components/print/print-shared";
-import { ReprintButton } from "./reprint-button";
+import { BillingPreviewButton } from "./billing-preview-button";
 
 type Props = {
   history: BillingRecord[];
@@ -16,26 +16,6 @@ export function HistoryTable({ history, canViewAmounts }: Props) {
   const [selectedRecord, setSelectedRecord] = useState<BillingRecord | null>(null);
 
   const closeModal = () => setSelectedRecord(null);
-
-  function buildReprintUrl(record: BillingRecord) {
-    const params = new URLSearchParams({
-      customers: record.customer_id,
-      from: record.from_date,
-      to: record.to_date,
-      save: "false",
-    });
-
-    const deliveries = record.snapshot_rows
-      .map((row) => row.deliveryNumber)
-      .filter(Boolean)
-      .join(",");
-
-    if (deliveries) {
-      params.set("deliveries", deliveries);
-    }
-
-    return `/billing/print?${params.toString()}`;
-  }
 
   return (
     <>
@@ -90,10 +70,26 @@ export function HistoryTable({ history, canViewAmounts }: Props) {
                 <td className="px-6 py-4">
                   <div className="flex items-center justify-center gap-2">
                     <div onClick={(e) => e.stopPropagation()}>
-                      <ReprintButton 
-                        url={buildReprintUrl(record)} 
-                        title="พิมพ์ใบวางบิลนี้อีกครั้ง"
-                      />
+                      <BillingPreviewButton
+                        customerName={record.customer_name}
+                        customerCode={record.customer_code}
+                        fromDate={record.from_date}
+                        toDate={record.to_date}
+                        deliveries={record.snapshot_rows.map((r) => ({
+                          number: r.deliveryNumber,
+                          date: r.deliveryDate,
+                          amount: r.totalAmount,
+                          billingNumber: record.billing_number,
+                          isAlreadyBilled: true,
+                        }))}
+                        totalAmount={record.total_amount}
+                        billingNumber={record.billing_number}
+                        billingDate={record.billing_date}
+                        className="flex items-center gap-1.5 rounded-xl bg-purple-50 hover:bg-[#4A148C] text-[#4A148C] hover:text-white px-3 py-1.5 text-xs font-black transition-all active:scale-95 border border-purple-200 hover:border-[#4A148C]"
+                      >
+                        <ImageIcon className="h-3.5 w-3.5" />
+                        <span>บันทึกรูป</span>
+                      </BillingPreviewButton>
                     </div>
                     <ChevronRight className="h-5 w-5 text-slate-300 transition-transform group-hover:translate-x-1" />
                   </div>
@@ -107,17 +103,39 @@ export function HistoryTable({ history, canViewAmounts }: Props) {
       {/* Mobile View */}
       <div className="grid grid-cols-1 gap-4 md:hidden">
         {history.map((record) => (
-          <button
+          <div
             key={record.id}
             onClick={() => setSelectedRecord(record)}
-            className="flex flex-col overflow-hidden border border-slate-200 bg-white text-left transition-all active:scale-[0.98]"
+            className="flex flex-col overflow-hidden border border-slate-200 bg-white text-left transition-all active:scale-[0.98] cursor-pointer"
           >
-            <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50 px-4 py-3">
+            <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50 px-4 py-2.5">
               <div className="flex items-center gap-2">
                 <FileText className="h-4 w-4 text-[#4A148C]" />
                 <span className="font-mono text-sm font-black text-[#4A148C]">{record.billing_number}</span>
               </div>
-              <ChevronRight className="h-4 w-4 text-slate-300" />
+              <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                <BillingPreviewButton
+                  customerName={record.customer_name}
+                  customerCode={record.customer_code}
+                  fromDate={record.from_date}
+                  toDate={record.to_date}
+                  deliveries={record.snapshot_rows.map((r) => ({
+                    number: r.deliveryNumber,
+                    date: r.deliveryDate,
+                    amount: r.totalAmount,
+                    billingNumber: record.billing_number,
+                    isAlreadyBilled: true,
+                  }))}
+                  totalAmount={record.total_amount}
+                  billingNumber={record.billing_number}
+                  billingDate={record.billing_date}
+                  className="flex items-center gap-1 rounded-lg bg-purple-100/90 px-2.5 py-1 text-xs font-black text-[#4A148C] transition active:scale-95 hover:bg-[#4A148C] hover:text-white"
+                >
+                  <ImageIcon className="h-3.5 w-3.5" />
+                  <span>บันทึกรูป</span>
+                </BillingPreviewButton>
+                <ChevronRight className="h-4 w-4 text-slate-300" />
+              </div>
             </div>
             <div className="p-4">
               <div className="mb-4">
@@ -140,7 +158,7 @@ export function HistoryTable({ history, canViewAmounts }: Props) {
                 </div> : null}
               </div>
             </div>
-          </button>
+          </div>
         ))}
       </div>
 
@@ -178,10 +196,26 @@ export function HistoryTable({ history, canViewAmounts }: Props) {
                   <p className="font-mono text-base font-bold text-slate-400">{selectedRecord.customer_code}</p>
                 </div>
                 <div className="flex items-center gap-3">
-                   <ReprintButton 
-                    url={buildReprintUrl(selectedRecord)} 
-                    title="พิมพ์ใบวางบิลนี้อีกครั้ง"
-                   />
+                   <BillingPreviewButton
+                     customerName={selectedRecord.customer_name}
+                     customerCode={selectedRecord.customer_code}
+                     fromDate={selectedRecord.from_date}
+                     toDate={selectedRecord.to_date}
+                     deliveries={selectedRecord.snapshot_rows.map((r) => ({
+                       number: r.deliveryNumber,
+                       date: r.deliveryDate,
+                       amount: r.totalAmount,
+                       billingNumber: selectedRecord.billing_number,
+                       isAlreadyBilled: true,
+                     }))}
+                     totalAmount={selectedRecord.total_amount}
+                     billingNumber={selectedRecord.billing_number}
+                     billingDate={selectedRecord.billing_date}
+                     className="flex items-center gap-2 rounded-xl bg-[#4A148C] text-white px-4 py-2.5 text-sm font-black transition-all hover:bg-[#4A148C]/90 active:scale-95 shadow-md shadow-[#4A148C]/20"
+                   >
+                     <ImageIcon className="h-4 w-4" />
+                     <span>บันทึกรูปใบวางบิล</span>
+                   </BillingPreviewButton>
                    {canViewAmounts ? <div className="bg-slate-50 px-6 py-3 text-right border border-slate-100">
                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">ยอดรวมทั้งสิ้น</p>
                      <p className="font-mono text-2xl font-black text-[#4A148C]">{fmt(selectedRecord.total_amount)} <span className="text-sm">บาท</span></p>
