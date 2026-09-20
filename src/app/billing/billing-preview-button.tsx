@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Download, FileText, Image as ImageIcon, Loader2, X } from "lucide-react";
+import { Download, FileText, FolderDown, Image as ImageIcon, Loader2, X } from "lucide-react";
 import { createPortal } from "react-dom";
 import * as htmlToImage from "html-to-image";
+import html2canvas from "html2canvas";
 import { PRINT_ORGANIZATION_NAME } from "@/components/print/print-shared";
 import {
   BILLING_A4_HEIGHT_MM,
@@ -17,7 +18,7 @@ const CAPTURE_TIMEOUT_MS = 30000;
 
 function isMobileLikeDevice() {
   if (typeof window === "undefined") return false;
-  return window.matchMedia("(max-width: 640px), (pointer: coarse)").matches;
+  return window.matchMedia("(max-width: 768px), (pointer: coarse)").matches;
 }
 
 function withTimeout<T>(promise: Promise<T>, timeoutMs: number, message: string): Promise<T> {
@@ -47,17 +48,53 @@ function downloadBlob(blob: Blob, fileName: string) {
   window.setTimeout(() => URL.revokeObjectURL(url), 30000);
 }
 
-function dataUrlToBlob(dataUrl: string): Blob {
-  const parts = dataUrl.split(",");
-  const mime = parts[0]?.match(/:(.*?);/)?.[1] ?? "image/png";
-  const binary = atob(parts[1] ?? "");
-  const bytes = new Uint8Array(binary.length);
+async function captureElementToBlob(element: HTMLElement, fontEmbedCSS?: string): Promise<Blob> {
+  const captureWidth = element.offsetWidth;
+  const captureHeight = element.offsetHeight;
 
-  for (let i = 0; i < binary.length; i += 1) {
-    bytes[i] = binary.charCodeAt(i);
+  try {
+    const blob = await withTimeout(
+      htmlToImage.toBlob(element, {
+        backgroundColor: "#ffffff",
+        cacheBust: true,
+        fontEmbedCSS,
+        pixelRatio: 2, // 2x for sharp print quality on all screens
+        width: captureWidth,
+        height: captureHeight,
+        style: {
+          width: `${captureWidth}px`,
+          height: `${captureHeight}px`,
+          maxWidth: "none",
+          maxHeight: "none",
+          margin: "0",
+          boxShadow: "none",
+          transform: "none",
+          transformOrigin: "top left",
+        },
+      }),
+      CAPTURE_TIMEOUT_MS,
+      "Billing image capture timeout",
+    );
+
+    if (blob) return blob;
+    throw new Error("toBlob returned null");
+  } catch (captureErr) {
+    console.warn("html-to-image failed, falling back to html2canvas:", captureErr);
+    const canvas = await html2canvas(element, {
+      width: captureWidth,
+      height: captureHeight,
+      scale: 2,
+      backgroundColor: "#ffffff",
+      useCORS: true,
+      logging: false,
+    });
+    return new Promise<Blob>((resolve, reject) => {
+      canvas.toBlob((b) => {
+        if (b) resolve(b);
+        else reject(new Error("html2canvas toBlob failed"));
+      }, "image/png");
+    });
   }
-
-  return new Blob([bytes], { type: mime });
 }
 
 type DeliveryItem = {
@@ -162,13 +199,15 @@ export function BillingPreviewButton({
     };
   }, [isOpen, pages.length]);
 
-  const saveAsImage = async () => {
+  const hasFSPicker = typeof window !== "undefined" && "showDirectoryPicker" in window;
+
+  const saveAsImage = async (mode: "folder" | "download" | "auto" = "auto") => {
     const targets = document.querySelectorAll(".billing-preview-card-element");
     if (targets.length === 0 || isSaving) return;
 
     setIsSaving(true);
     setErrorMessage(null);
-    setSavingStatus(null);
+    setSavingStatus("กำลังเตรียมตัวอักษร...");
     try {
       const firstTarget = targets[0] as HTMLElement;
       await Promise.all([
@@ -178,53 +217,30 @@ export function BillingPreviewButton({
       await document.fonts.ready;
       const fontEmbedCSS = await htmlToImage.getFontEmbedCSS(firstTarget);
 
-      const captured: { dataUrl: string; blob: Blob; name: string }[] = [];
-      const mobileLike = isMobileLikeDevice();
+      const captured: { blob: Blob; name: string }[] = [];
 
       for (let i = 0; i < targets.length; i += 1) {
-        setSavingStatus(`กำลังแปลงหน้า ${i + 1}/${targets.length}`);
+        setSavingStatus(`กำลังแปลงหน้า ${i + 1}/${targets.length}...`);
+        await new Promise((resolve) => setTimeout(resolve, 25));
+
         const target = targets[i] as HTMLElement;
-        const captureWidth = target.offsetWidth;
-        const captureHeight = target.offsetHeight;
+        const blob = await captureElementToBlob(target, fontEmbedCSS);
 
-        const dataUrl = await withTimeout(
-          htmlToImage.toPng(target, {
-            backgroundColor: "#ffffff",
-            cacheBust: true,
-            fontEmbedCSS,
-            pixelRatio: mobileLike ? 1 : 2,
-            width: captureWidth,
-            height: captureHeight,
-            style: {
-              width: `${captureWidth}px`,
-              height: `${captureHeight}px`,
-              maxWidth: "none",
-              maxHeight: "none",
-              margin: "0",
-              boxShadow: "none",
-              transform: "none",
-              transformOrigin: "top left",
-            },
-          }),
-          CAPTURE_TIMEOUT_MS,
-          "Billing image capture timeout",
-        );
-
-        const blob = dataUrlToBlob(dataUrl);
         const fileName =
           targets.length > 1
             ? `billing-${customerCode}-${fromDate}-to-${toDate}-page-${i + 1}.png`
             : `billing-${customerCode}-${fromDate}-to-${toDate}.png`;
 
-        captured.push({ dataUrl, blob, name: fileName });
+        captured.push({ blob, name: fileName });
       }
 
-      setSavingStatus("กำลังเปิดเมนูแชร์");
+      const isMobile = isMobileLikeDevice();
 
-      if (navigator.share && navigator.canShare) {
+      if (isMobile && typeof navigator !== "undefined" && navigator.share && navigator.canShare) {
         const files = captured.map((item) => new File([item.blob], item.name, { type: "image/png" }));
         if (navigator.canShare({ files })) {
           try {
+            setSavingStatus("กำลังเปิดเมนูแชร์...");
             await navigator.share({
               files,
               title: "ใบวางบิล",
@@ -238,11 +254,43 @@ export function BillingPreviewButton({
         }
       }
 
-      captured.forEach((item, index) => {
-        setTimeout(() => {
-          downloadBlob(item.blob, item.name);
-        }, index * 600);
-      });
+      if (mode === "folder" && typeof window !== "undefined" && "showDirectoryPicker" in window) {
+        try {
+          const dirHandle = await (window as unknown as {
+            showDirectoryPicker: (options?: { id?: string; mode?: string; startIn?: string }) => Promise<FileSystemDirectoryHandle>;
+          }).showDirectoryPicker({
+            id: "allnoodles-billing",
+            mode: "readwrite",
+            startIn: "downloads",
+          });
+
+          for (let i = 0; i < captured.length; i += 1) {
+            setSavingStatus(`กำลังบันทึกลงโฟลเดอร์ ${i + 1}/${captured.length}...`);
+            const fileHandle = await dirHandle.getFileHandle(captured[i].name, { create: true });
+            const writable = await (fileHandle as unknown as { createWritable: () => Promise<FileSystemWritableFileStream> }).createWritable();
+            await writable.write(captured[i].blob);
+            await writable.close();
+          }
+
+          setSavingStatus("บันทึกเรียบร้อยแล้ว!");
+          await new Promise((r) => setTimeout(r, 600));
+          setIsOpen(false);
+          return;
+        } catch (dirErr) {
+          if (dirErr instanceof Error && dirErr.name === "AbortError") return;
+          console.warn("Folder picker error, falling back to download:", dirErr);
+        }
+      }
+
+      for (let i = 0; i < captured.length; i += 1) {
+        setSavingStatus(`กำลังดาวน์โหลด ${i + 1}/${captured.length}...`);
+        downloadBlob(captured[i].blob, captured[i].name);
+        await new Promise((resolve) => setTimeout(resolve, 200));
+      }
+
+      setSavingStatus("ดาวน์โหลดเรียบร้อยแล้ว!");
+      await new Promise((r) => setTimeout(r, 600));
+      setIsOpen(false);
     } catch (error) {
       console.error("Save image error:", error);
       setErrorMessage("ไม่สามารถบันทึกรูปภาพได้ กรุณาลองใหม่อีกครั้ง");
@@ -280,20 +328,34 @@ export function BillingPreviewButton({
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2 sm:gap-4">
+                <div className="flex items-center gap-2 sm:gap-3">
+                  {hasFSPicker && pages.length > 1 ? (
+                    <button
+                      type="button"
+                      onClick={() => saveAsImage("folder")}
+                      disabled={isSaving}
+                      className="hidden items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-black text-white shadow-lg shadow-emerald-600/20 transition hover:bg-emerald-500 active:scale-95 disabled:opacity-50 sm:flex"
+                      title="เลือกโฟลเดอร์ในเครื่องเพื่อบันทึกไฟล์ทั้งหมด"
+                    >
+                      <FolderDown className="h-4.5 w-4.5" strokeWidth={2.5} />
+                      <span>บันทึกลงโฟลเดอร์</span>
+                    </button>
+                  ) : null}
+
                   <button
                     type="button"
-                    onClick={saveAsImage}
+                    onClick={() => saveAsImage("download")}
                     disabled={isSaving}
                     className="hidden items-center gap-2.5 rounded-xl bg-white px-5 py-2.5 text-sm font-black text-[#0a0c10] shadow-[0_8px_20px_rgba(255,255,255,0.15)] transition hover:bg-slate-100 active:scale-95 disabled:opacity-60 sm:flex"
                   >
                     {isSaving ? <Loader2 className="h-4.5 w-4.5 animate-spin" /> : <Download className="h-4.5 w-4.5" strokeWidth={3} />}
-                    {isSaving ? "กำลังบันทึก..." : pages.length > 1 ? "บันทึกทั้งหมด" : "บันทึกรูป"}
+                    <span>{isSaving ? (savingStatus ?? "กำลังบันทึก...") : pages.length > 1 ? (hasFSPicker ? "ดาวน์โหลดทีละรูป" : "บันทึกทั้งหมด") : "บันทึกรูป"}</span>
                   </button>
                   <button
                     type="button"
-                    onClick={() => setIsOpen(false)}
-                    className="group flex h-10 w-10 items-center justify-center rounded-xl bg-white/5 text-white/50 transition hover:bg-rose-500/10 hover:text-rose-500 active:scale-95 sm:h-12 sm:w-12"
+                    onClick={() => !isSaving && setIsOpen(false)}
+                    disabled={isSaving}
+                    className="group flex h-10 w-10 items-center justify-center rounded-xl bg-white/5 text-white/50 transition hover:bg-rose-500/10 hover:text-rose-500 active:scale-95 disabled:opacity-30 sm:h-12 sm:w-12"
                     aria-label="ปิด"
                   >
                     <X className="h-6 w-6 transition group-hover:rotate-90" strokeWidth={2.5} />
@@ -353,7 +415,7 @@ export function BillingPreviewButton({
               <div className="border-t border-white/5 bg-[#12151c]/90 p-4 pb-safe-offset-4 backdrop-blur-xl sm:hidden">
                 <button
                   type="button"
-                  onClick={saveAsImage}
+                  onClick={() => saveAsImage("auto")}
                   disabled={isSaving}
                   className="flex w-full items-center justify-center gap-3 rounded-2xl bg-emerald-600 py-4 text-lg font-black text-white shadow-[0_15px_30px_rgba(16,185,129,0.25)] transition active:scale-95 disabled:opacity-60"
                 >

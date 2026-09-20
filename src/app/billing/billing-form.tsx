@@ -130,6 +130,10 @@ export function BillingForm({
     }, 0);
   }, [visibleCandidates]);
 
+  const totalDeliveriesCount = useMemo(() => {
+    return visibleCandidates.reduce((sum, c) => sum + c.deliveries.length, 0);
+  }, [visibleCandidates]);
+
 
 
 
@@ -595,25 +599,73 @@ export function BillingForm({
 
       {/* Sticky Bottom Summary Bar */}
       {selectedCustomerIds.length > 0 && (
-        <div className="fixed bottom-[calc(4.5rem+env(safe-area-inset-bottom)+12px)] left-3 right-3 z-40 sm:sticky sm:bottom-4 sm:left-0 sm:right-0 flex flex-row items-center justify-between gap-3 border border-slate-200 bg-white/95 p-2.5 px-4 sm:py-3 sm:px-6 shadow-[0_-8px_30px_rgb(0,0,0,0.12)] sm:shadow-2xl backdrop-blur-xl animate-in slide-in-from-bottom-full sm:slide-in-from-bottom-8 duration-500 rounded-2xl sm:rounded-none">
-          <div className="flex items-center gap-4 sm:gap-8">
+        <div className="fixed bottom-[calc(4.5rem+env(safe-area-inset-bottom)+12px)] left-3 right-3 z-40 sm:sticky sm:bottom-4 sm:left-0 sm:right-0 flex flex-row items-center justify-between gap-3 border border-slate-200 bg-white/95 p-2.5 px-3.5 sm:py-3.5 sm:px-6 shadow-[0_-8px_30px_rgb(0,0,0,0.12)] sm:shadow-2xl backdrop-blur-xl animate-in slide-in-from-bottom-full sm:slide-in-from-bottom-8 duration-500 rounded-2xl">
+          {/* Mobile Info View */}
+          <div className="flex min-w-0 flex-1 flex-col justify-center gap-0.5 sm:hidden">
+            <div className="flex items-center gap-1.5 text-xs">
+              <span className="font-black text-[#4A148C]">
+                {visibleCandidates.length}
+                <span className="font-bold text-slate-400">/{selectedCustomerIds.length} ร้าน</span>
+              </span>
+              <span className="text-slate-300">•</span>
+              <span className="font-black text-slate-700">
+                {totalDeliveriesCount} <span className="font-bold text-slate-400">บิล</span>
+              </span>
+            </div>
+
+            {canViewAmounts ? (
+              <div className="flex items-baseline gap-1">
+                <span className="text-[10px] font-bold text-slate-400">รวม</span>
+                <span className="font-mono text-base font-black text-slate-900 leading-tight">
+                  {totalAmount.toLocaleString("th-TH", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
+                </span>
+                <span className="text-[10px] font-bold text-slate-400">บ.</span>
+              </div>
+            ) : null}
+          </div>
+
+          {/* Desktop Info View */}
+          <div className="hidden sm:flex sm:items-center sm:gap-6 lg:gap-8">
             <div className="flex flex-col">
-              <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-[0.1em] text-slate-400">เลือกแล้ว</span>
-              <div className="flex items-baseline gap-0.5">
-                <span className="text-lg sm:text-2xl font-black text-[#4A148C]">{selectedCustomerIds.length}</span>
-                <span className="text-[10px] sm:text-[11px] font-bold text-slate-500 uppercase">ร้าน</span>
+              <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">
+                ร้านที่มีบิล
+              </span>
+              <div className="flex items-baseline gap-1">
+                <span className="text-2xl font-black text-[#4A148C]">
+                  {visibleCandidates.length}
+                </span>
+                <span className="text-xs font-bold text-slate-400">
+                  / {selectedCustomerIds.length} ร้าน
+                </span>
               </div>
             </div>
+
+            <div className="h-8 w-px bg-slate-200" />
+
+            <div className="flex flex-col">
+              <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">
+                บิลทั้งหมด
+              </span>
+              <div className="flex items-baseline gap-1">
+                <span className="font-mono text-2xl font-black text-slate-800">
+                  {totalDeliveriesCount}
+                </span>
+                <span className="text-xs font-bold text-slate-500">ใบ</span>
+              </div>
+            </div>
+
             {canViewAmounts ? (
               <>
-                <div className="h-8 w-px bg-slate-200 sm:h-10" />
+                <div className="h-8 w-px bg-slate-200" />
                 <div className="flex flex-col">
-                  <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-[0.1em] text-slate-400">รวมเงิน</span>
+                  <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">
+                    ยอดรวม
+                  </span>
                   <div className="flex items-baseline gap-1">
-                    <span className="font-mono text-base sm:text-2xl font-black text-slate-900">
+                    <span className="font-mono text-2xl font-black text-slate-900">
                       {totalAmount.toLocaleString("th-TH", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
                     </span>
-                    <span className="text-[10px] sm:text-[11px] font-bold text-slate-400 uppercase">บ.</span>
+                    <span className="text-xs font-bold text-slate-400">บ.</span>
                   </div>
                 </div>
               </>
