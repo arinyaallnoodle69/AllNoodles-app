@@ -18,7 +18,10 @@ import {
   X,
   Boxes,
 } from "lucide-react";
-import { fetchCustomerPricesAction } from "@/app/orders/incoming/actions";
+import {
+  fetchCustomerPricesAction,
+  fetchIncomingOrderProductOptionsAction,
+} from "@/app/orders/incoming/actions";
 import { getEffectiveSaleUnitCost } from "@/lib/products/sale-unit-cost";
 import type { OrderProductOption } from "@/lib/orders/manage";
 import { normalizeSearch } from "@/lib/utils/search";
@@ -54,10 +57,16 @@ type SelectionDraft = {
   unitId: string | null;
 };
 
+export type ExistingOrderItem = {
+  productId: string;
+  isReplacement?: boolean;
+};
+
 type Props = {
   addedItems: AddedOrderItemDraft[];
   customerId: string;
   customerWarehouseId: string | null;
+  existingOrderItems?: ExistingOrderItem[];
   onAddMany: (items: AddedOrderItemDraft[]) => void;
   products: OrderProductOption[];
 };
@@ -163,11 +172,22 @@ export function OrderAddProductPicker({
   addedItems,
   customerId,
   customerWarehouseId,
+  existingOrderItems,
   onAddMany,
   products,
 }: Props) {
   const [open, setOpen] = useState(false);
   const [isReplacement, setIsReplacement] = useState(false);
+
+  const existingProductIds = useMemo(() => {
+    const set = new Set<string>();
+    for (const item of existingOrderItems ?? []) {
+      if (Boolean(item.isReplacement) === isReplacement) {
+        set.add(item.productId);
+      }
+    }
+    return set;
+  }, [existingOrderItems, isReplacement]);
   const role = useClientRole();
   const [query, setQuery] = useState("");
   const deferredQuery = useDeferredValue(query);
@@ -176,6 +196,27 @@ export function OrderAddProductPicker({
   const [selections, setSelections] = useState<Record<string, SelectionDraft>>({});
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+
+  const [fallbackProducts, setFallbackProducts] = useState<OrderProductOption[]>([]);
+  const [productsLoading, setProductsLoading] = useState(false);
+  const effectiveProducts = products.length > 0 ? products : fallbackProducts;
+
+  const handleOpenPicker = (replacement: boolean) => {
+    setIsReplacement(replacement);
+    setOpen(true);
+    if (products.length === 0 && fallbackProducts.length === 0) {
+      setProductsLoading(true);
+      void fetchIncomingOrderProductOptionsAction()
+        .then((data) => {
+          if (data && data.length > 0) {
+            setFallbackProducts(data);
+          }
+        })
+        .finally(() => {
+          setProductsLoading(false);
+        });
+    }
+  };
 
   const [selectedCategoryId, setSelectedCategoryId] = useState("__all__");
   const [selectedBrand, setSelectedBrand] = useState("__all__");
@@ -190,7 +231,7 @@ export function OrderAddProductPicker({
       setSelectedBrand("__all__");
     } else {
       const availableBrands = new Set<string>();
-      for (const product of products) {
+      for (const product of effectiveProducts) {
         if (!product.categoryIds.includes(id)) continue;
         const brand = product.brand.trim();
         if (brand) availableBrands.add(brand);
@@ -219,19 +260,28 @@ export function OrderAddProductPicker({
     if (!open) return;
 
     startTransition(async () => {
-      const prices = await fetchCustomerPricesAction(customerId);
+      const pricesPromise = fetchCustomerPricesAction(customerId);
+      const productsPromise =
+        products.length === 0 && fallbackProducts.length === 0
+          ? fetchIncomingOrderProductOptionsAction()
+          : Promise.resolve(null);
+
+      const [prices, fetchedProducts] = await Promise.all([pricesPromise, productsPromise]);
       setPriceMap(prices);
+      if (fetchedProducts && fetchedProducts.length > 0) {
+        setFallbackProducts(fetchedProducts);
+      }
     });
-  }, [customerId, open]);
+  }, [customerId, open, products.length, fallbackProducts.length]);
 
   const productsById = useMemo(
-    () => new Map(products.map((product) => [product.id, product] as const)),
-    [products],
+    () => new Map(effectiveProducts.map((product) => [product.id, product] as const)),
+    [effectiveProducts],
   );
 
   const categoryOptions = useMemo(() => {
     const seen = new Map<string, string>();
-    for (const product of products) {
+    for (const product of effectiveProducts) {
       for (let i = 0; i < product.categoryIds.length; i++) {
         const id = product.categoryIds[i];
         const name = product.categoryNames[i];
@@ -239,14 +289,14 @@ export function OrderAddProductPicker({
       }
     }
     return Array.from(seen.entries()).map(([id, name]) => ({ id, name }));
-  }, [products]);
+  }, [effectiveProducts]);
 
   const brandsByCategory = useMemo(() => {
     const result = new Map<string, string[]>();
 
     for (const category of categoryOptions) {
       const brands = new Set<string>();
-      for (const product of products) {
+      for (const product of effectiveProducts) {
         if (!product.categoryIds.includes(category.id)) continue;
         const brand = product.brand.trim();
         if (brand) brands.add(brand);
@@ -255,23 +305,23 @@ export function OrderAddProductPicker({
     }
 
     return result;
-  }, [categoryOptions, products]);
+  }, [categoryOptions, effectiveProducts]);
 
   const brandOptions = useMemo(() => {
     if (selectedCategoryId === "__all__") {
       const brands = new Set<string>();
-      for (const product of products) {
+      for (const product of effectiveProducts) {
         const brand = product.brand.trim();
         if (brand) brands.add(brand);
       }
       return [...brands].sort((left, right) => left.localeCompare(right, "th"));
     }
     return brandsByCategory.get(selectedCategoryId) ?? [];
-  }, [brandsByCategory, products, selectedCategoryId]);
+  }, [brandsByCategory, effectiveProducts, selectedCategoryId]);
 
   const filteredProducts = useMemo(() => {
     const normalized = normalizeSearch(deferredQuery);
-    const source = products.filter((product) => {
+    const source = effectiveProducts.filter((product) => {
       const matchesCategory = selectedCategoryId === "__all__" || product.categoryIds.includes(selectedCategoryId);
       if (!matchesCategory) return false;
       const matchesBrand = selectedBrand === "__all__" || product.brand === selectedBrand;
@@ -291,11 +341,14 @@ export function OrderAddProductPicker({
     });
 
     return source;
-  }, [products, deferredQuery, selectedCategoryId, selectedBrand, priceFilter, priceMap]);
+  }, [effectiveProducts, deferredQuery, selectedCategoryId, selectedBrand, priceFilter, priceMap]);
 
   const selectedCount = Object.keys(selections).length;
 
   function toggleProduct(product: OrderProductOption) {
+    if (existingProductIds.has(product.id)) {
+      return;
+    }
     setError(null);
     setSelections((current) => {
       if (current[product.id]) {
@@ -448,7 +501,7 @@ export function OrderAddProductPicker({
       <div className="rounded-[1.35rem] border border-slate-200 bg-white p-3 shadow-sm">
         <button
           type="button"
-          onClick={() => { setIsReplacement(false); setOpen(true); }}
+          onClick={() => handleOpenPicker(false)}
           className="flex w-full items-center justify-between gap-3 rounded-2xl bg-slate-50 px-4 py-3 text-left transition hover:bg-slate-100 active:scale-[0.99]"
         >
           <span className="inline-flex min-w-0 items-center gap-3">
@@ -468,7 +521,7 @@ export function OrderAddProductPicker({
         </button>
         <button
           type="button"
-          onClick={() => { setIsReplacement(true); setOpen(true); }}
+          onClick={() => handleOpenPicker(true)}
           className="mt-2 flex w-full items-center justify-center gap-2 rounded-2xl border border-[#4A148C]/20 bg-[#F3E5F5] px-4 py-2.5 text-sm font-bold text-[#4A148C]"
         >
           <Package2 className="h-4 w-4" /> ส่งชดเชย (ไม่คิดเงิน)
@@ -709,14 +762,14 @@ export function OrderAddProductPicker({
                     }`}
                   >
                     สินค้าทั้งหมด
-                    <span className="text-xs tabular-nums">{products.length}</span>
+                    <span className="text-xs tabular-nums">{effectiveProducts.length}</span>
                   </button>
 
                   {categoryOptions.map((category) => {
                     const brands = brandsByCategory.get(category.id) ?? [];
                     const isExpanded = expandedCategoryId === category.id;
                     const isSelected = selectedCategoryId === category.id;
-                    const productCount = products.filter((product) =>
+                    const productCount = effectiveProducts.filter((product) =>
                       product.categoryIds.includes(category.id),
                     ).length;
 
@@ -805,7 +858,7 @@ export function OrderAddProductPicker({
                 </div>
 
                 <div className="min-h-0 flex-1 overflow-auto">
-                  {pending ? (
+                  {pending || productsLoading ? (
                     <div className="flex h-full min-h-64 flex-col items-center justify-center gap-3 text-slate-500">
                       <Loader2 className="h-8 w-8 animate-spin text-[#4A148C]" />
                       <p className="text-sm font-black">กำลังโหลดสินค้า...</p>
@@ -813,7 +866,11 @@ export function OrderAddProductPicker({
                   ) : filteredProducts.length === 0 ? (
                     <div className="flex h-full min-h-64 flex-col items-center justify-center gap-3 text-slate-400">
                       <Search className="h-10 w-10" strokeWidth={1.7} />
-                      <p className="text-sm font-black">ไม่พบสินค้าที่ตรงกับตัวกรอง</p>
+                      <p className="text-sm font-black">
+                        {priceFilter === "priced"
+                          ? "ยังไม่มีสินค้าที่ผูกราคากับลูกค้ารายนี้"
+                          : "ไม่พบสินค้าที่ตรงกับตัวกรอง"}
+                      </p>
                     </div>
                   ) : (
                     <table className="w-full min-w-[62rem] table-fixed border-collapse">
@@ -830,6 +887,7 @@ export function OrderAddProductPicker({
                       </thead>
                       <tbody>
                         {filteredProducts.map((product) => {
+                          const isExisting = existingProductIds.has(product.id);
                           const draft = selections[product.id];
                           const units = getUnits(product);
                           const selectedUnit =
@@ -848,17 +906,31 @@ export function OrderAddProductPicker({
                           return (
                             <tr
                               key={product.id}
-                              onClick={() => toggleProduct(product)}
-                              className={`cursor-pointer border-b border-slate-200 transition-colors ${
-                                draft ? "bg-[#F3E5F5]/75" : "bg-white hover:bg-[#F3E5F5]/25"
+                              onClick={() => {
+                                if (!isExisting) {
+                                  toggleProduct(product);
+                                }
+                              }}
+                              className={`border-b border-slate-200 transition-colors ${
+                                isExisting
+                                  ? "cursor-not-allowed bg-slate-50/70 opacity-60"
+                                  : draft
+                                    ? "cursor-pointer bg-[#F3E5F5]/75"
+                                    : "cursor-pointer bg-white hover:bg-[#F3E5F5]/25"
                               }`}
                             >
                               <td className="w-12 px-3 py-3 text-center">
-                                <span className={`inline-flex h-5 w-5 items-center justify-center border-2 ${
-                                  draft ? "border-[#4A148C] bg-[#4A148C]" : "border-slate-300 bg-white"
-                                }`}>
-                                  {draft ? <Check className="h-3.5 w-3.5 text-white" strokeWidth={4} /> : null}
-                                </span>
+                                {isExisting ? (
+                                  <span className="inline-flex h-5 w-5 items-center justify-center border border-slate-200 bg-slate-100 text-[11px] font-black text-slate-400">
+                                    -
+                                  </span>
+                                ) : (
+                                  <span className={`inline-flex h-5 w-5 items-center justify-center border-2 ${
+                                    draft ? "border-[#4A148C] bg-[#4A148C]" : "border-slate-300 bg-white"
+                                  }`}>
+                                    {draft ? <Check className="h-3.5 w-3.5 text-white" strokeWidth={4} /> : null}
+                                  </span>
+                                )}
                               </td>
                               <td className="w-28 px-3 py-3 font-mono text-sm font-black text-[#4A148C]">
                                 {product.sku}
@@ -875,7 +947,14 @@ export function OrderAddProductPicker({
                                     )}
                                   </div>
                                   <div className="min-w-0 flex-1">
-                                    <p className="truncate text-sm font-black text-slate-950">{product.name}</p>
+                                    <div className="flex items-center gap-2">
+                                      <p className="truncate text-sm font-black text-slate-950">{product.name}</p>
+                                      {isExisting ? (
+                                        <span className="inline-flex shrink-0 items-center rounded-md bg-amber-50 px-2 py-0.5 text-[11px] font-black text-amber-800 ring-1 ring-inset ring-amber-600/20">
+                                          มีในออเดอร์แล้ว
+                                        </span>
+                                      ) : null}
+                                    </div>
                                     <div className="mt-1 flex items-center gap-2 text-xs font-bold text-slate-500">
                                       {product.brand ? <span>{product.brand}</span> : null}
                                       <span>{selectedUnit?.label ?? product.unit}</span>
@@ -956,12 +1035,26 @@ export function OrderAddProductPicker({
                                       );
                                     })()
                                   ) : (
-                                    <span className={`font-black ${currentPrice <= 0 ? "text-amber-700" : "text-slate-950"}`}>
-                                      {currentPrice > 0 ? formatTHB(currentPrice) : "ยังไม่มีราคา"}
-                                    </span>
-                                  )
-                                ) : (
-                                  <span className="block text-center text-xs font-bold text-slate-300">-</span>
+                                      <span className={`font-black ${currentPrice <= 0 ? "text-amber-700" : "text-slate-950"}`}>
+                                        {currentPrice > 0 ? `${formatTHB(currentPrice)} บาท` : "ยังไม่มีราคา"}
+                                      </span>
+                                    )
+                                  ) : (
+                                    (() => {
+                                    const defaultUnit = getDefaultUnit(product);
+                                    const linkedPrice = defaultUnit
+                                      ? getUnitPrice(product.id, defaultUnit.id, priceMap)
+                                      : 0;
+                                    return linkedPrice > 0 ? (
+                                      <span className="font-bold text-slate-700">
+                                        {formatTHB(linkedPrice)} บาท
+                                      </span>
+                                    ) : (
+                                      <span className="font-bold text-amber-700 text-xs">
+                                        ยังไม่มีราคา
+                                      </span>
+                                    );
+                                  })()
                                 )}
                               </td>}
                             </tr>
@@ -982,9 +1075,34 @@ export function OrderAddProductPicker({
                 </div>
               ) : null}
 
-              <div className="space-y-4 p-3 md:space-y-0 md:p-5">
-                <div className="grid grid-cols-2 gap-3 md:grid-cols-2 md:gap-4 lg:grid-cols-3">
-                {filteredProducts.slice(0, displayLimit).map((product) => {
+              {pending || productsLoading ? (
+                <div className="flex min-h-[280px] flex-col items-center justify-center gap-3 py-16 text-slate-500">
+                  <Loader2 className="h-8 w-8 animate-spin text-[#4A148C]" strokeWidth={2.4} />
+                  <p className="text-sm font-black text-[#4A148C]">กำลังโหลดสินค้า...</p>
+                </div>
+              ) : filteredProducts.length === 0 ? (
+                <div className="flex min-h-[280px] flex-col items-center justify-center gap-3 px-6 py-16 text-center text-slate-400">
+                  <Search className="h-10 w-10 text-slate-300" strokeWidth={1.7} />
+                  <p className="text-sm font-black text-slate-600">
+                    {priceFilter === "priced"
+                      ? "ยังไม่มีสินค้าที่ผูกราคากับลูกค้ารายนี้"
+                      : "ไม่พบสินค้าที่ตรงกับตัวกรอง"}
+                  </p>
+                  {priceFilter === "priced" && (
+                    <button
+                      type="button"
+                      onClick={() => setPriceFilter("all")}
+                      className="mt-2 rounded-xl bg-[#F3E5F5] px-4 py-2 text-xs font-black text-[#4A148C]"
+                    >
+                      ดูสินค้าทั้งหมด
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <div className="space-y-4 p-3 md:space-y-0 md:p-5">
+                  <div className="grid grid-cols-2 gap-3 md:grid-cols-2 md:gap-4 lg:grid-cols-3">
+                  {filteredProducts.slice(0, displayLimit).map((product) => {
+                  const isExisting = existingProductIds.has(product.id);
                   const draft = selections[product.id];
                   const units = getUnits(product);
                   const selectedUnit =
@@ -1014,32 +1132,47 @@ export function OrderAddProductPicker({
                     <div
                       key={product.id}
                       className={`relative min-w-0 overflow-hidden rounded-[1.4rem] border transition-all md:rounded-[1.8rem] md:border-2 md:shadow-sm ${
-                        draft
-                          ? isBelowCost
-                            ? "border-[#FF0000]/60 bg-rose-50 ring-1 ring-[#FF0000]/10"
-                            : "border-[#4A148C]/40 bg-[#4A148C]/15 ring-1 ring-[#4A148C]/5"
-                          : "border-slate-200 bg-white hover:border-slate-300"
+                        isExisting
+                          ? "cursor-not-allowed border-slate-200 bg-slate-50 opacity-60"
+                          : draft
+                            ? isBelowCost
+                              ? "border-[#FF0000]/60 bg-rose-50 ring-1 ring-[#FF0000]/10"
+                              : "border-[#4A148C]/40 bg-[#4A148C]/15 ring-1 ring-[#4A148C]/5"
+                            : "border-slate-200 bg-white hover:border-slate-300"
                       }`}
                     >
                       <button
                         type="button"
-                        onClick={() => toggleProduct(product)}
-                        className="relative flex w-full min-w-0 flex-col items-center gap-2.5 px-3 py-3 text-left md:flex-row md:items-center md:gap-3 md:px-4 md:py-4"
+                        disabled={isExisting}
+                        onClick={() => {
+                          if (!isExisting) {
+                            toggleProduct(product);
+                          }
+                        }}
+                        className={`relative flex w-full min-w-0 flex-col items-center gap-2.5 px-3 py-3 text-left md:flex-row md:items-center md:gap-3 md:px-4 md:py-4 ${
+                          isExisting ? "cursor-not-allowed" : ""
+                        }`}
                       >
                         <span
                           className="absolute right-3 top-3 flex h-6 w-6 shrink-0 items-center justify-center md:right-4 md:top-4"
                           aria-hidden="true"
                         >
-                          <span
-                            className={`flex h-5 w-5 items-center justify-center rounded border-2 transition-all ${
-                              draft ? "border-[#4A148C] bg-[#4A148C]" : "border-slate-300 bg-white"
-                            }`}
-                          >
-                            <Check
-                              className={`h-3.5 w-3.5 text-white transition-transform ${draft ? "scale-100" : "scale-0"}`}
-                              strokeWidth={5}
-                            />
-                          </span>
+                          {isExisting ? (
+                            <span className="flex h-5 w-5 items-center justify-center rounded border border-slate-200 bg-slate-100 text-[11px] font-black text-slate-400">
+                              -
+                            </span>
+                          ) : (
+                            <span
+                              className={`flex h-5 w-5 items-center justify-center rounded border-2 transition-all ${
+                                draft ? "border-[#4A148C] bg-[#4A148C]" : "border-slate-300 bg-white"
+                              }`}
+                            >
+                              <Check
+                                className={`h-3.5 w-3.5 text-white transition-transform ${draft ? "scale-100" : "scale-0"}`}
+                                strokeWidth={5}
+                              />
+                            </span>
+                          )}
                         </span>
                         <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-xl md:h-24 md:w-24">
                           {product.imageUrl ? (
@@ -1089,7 +1222,27 @@ export function OrderAddProductPicker({
                                 ต่ำกว่าทุน!
                               </div>
                             )}
+
+                            {isExisting ? (
+                              <span className="inline-flex items-center rounded-lg bg-amber-50 px-2.5 py-1 text-[11px] font-black text-amber-800 ring-1 ring-inset ring-amber-600/20 md:text-[13px]">
+                                มีในออเดอร์แล้ว
+                              </span>
+                            ) : null}
                           </div>
+
+                          {!isReplacement && (
+                            <div className="mt-2 flex flex-wrap items-center justify-center gap-2 md:justify-start">
+                              {linkedPrice > 0 ? (
+                                <span className="inline-flex items-center rounded-lg bg-emerald-50 px-2.5 py-1 text-[11px] font-black text-emerald-700 ring-1 ring-inset ring-emerald-600/20 md:text-[13px]">
+                                  ราคา {formatTHB(linkedPrice)} บ.
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center rounded-lg bg-[#FF0000] px-2 py-1 text-[11px] font-black text-white shadow-sm md:text-[12px]">
+                                  ยังไม่มีราคา
+                                </span>
+                              )}
+                            </div>
+                          )}
                         </div>
                       </button>
 
@@ -1161,23 +1314,30 @@ export function OrderAddProductPicker({
                               </div>
                             </div>
 
-                            {!isReplacement && role === "member" && (() => {
+                            {!isReplacement && (() => {
                               const linkedPrice = getUnitPrice(product.id, selectedUnit.id, priceMap);
-                              if (linkedPrice > 0) return null;
-                              return (
-                                <div className="flex items-center gap-2 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-black text-amber-800">
-                                  <AlertTriangle className="h-5 w-5 shrink-0" strokeWidth={2.2} />
-                                  <p>สินค้านี้ยังไม่มีราคา</p>
-                                </div>
-                              );
-                            })()}
-
-                            {!isReplacement && role !== "member" && (() => {
-                              const linkedPrice = getUnitPrice(product.id, selectedUnit.id, priceMap);
-                              const hasPricedLinked = linkedPrice > 0;
-                              if (hasPricedLinked) {
-                                return null;
+                              if (linkedPrice > 0) {
+                                return (
+                                  <div className="flex items-center justify-between rounded-xl border border-[#EA80FC]/30 bg-white px-3 py-2 shadow-sm">
+                                    <span className="text-xs font-black text-slate-600 md:text-sm">
+                                      ราคาต่อ{selectedUnit.label}
+                                    </span>
+                                    <span className="text-sm font-black text-[#4A148C] md:text-base">
+                                      {formatTHB(linkedPrice)} บาท
+                                    </span>
+                                  </div>
+                                );
                               }
+
+                              if (role === "member") {
+                                return (
+                                  <div className="flex items-center gap-2 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-black text-amber-800">
+                                    <AlertTriangle className="h-5 w-5 shrink-0" strokeWidth={2.2} />
+                                    <p>สินค้านี้ยังไม่มีราคา</p>
+                                  </div>
+                                );
+                              }
+
                               return (
                                 <div className="space-y-1.5 md:space-y-2">
                                   <div className="flex items-center justify-between">
@@ -1269,6 +1429,7 @@ export function OrderAddProductPicker({
                   </div>
                 )}
               </div>
+              )}
             </div>
 
             <div className="shrink-0 border-t border-[#EA80FC]/35 bg-white px-5 py-4 pb-safe-or-4 shadow-[0_-10px_40px_rgba(142,36,170,0.10)] sm:px-8">

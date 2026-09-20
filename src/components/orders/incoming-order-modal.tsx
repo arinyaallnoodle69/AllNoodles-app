@@ -1,6 +1,6 @@
 "use client";
 
-import React, { memo, useEffect, useRef, useState, useTransition } from "react";
+import React, { memo, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
 import dynamic from "next/dynamic";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
@@ -190,6 +190,23 @@ const EditItemsPanel = memo(({
   const [isSaving, setIsSaving] = useState(false);
 
   const activeItems = detail.items.filter((i) => !removed.has(i.id));
+
+  const existingOrderItems = useMemo(() => {
+    const list: Array<{ productId: string; isReplacement: boolean }> = [];
+    for (const item of activeItems) {
+      list.push({
+        productId: item.productId,
+        isReplacement: item.notes === "ส่งชดเชย (ไม่คิดเงิน)",
+      });
+    }
+    for (const item of addedItems) {
+      list.push({
+        productId: item.productId,
+        isReplacement: Boolean(item.isReplacement),
+      });
+    }
+    return list;
+  }, [activeItems, addedItems]);
 
   useEffect(() => {
     setNotes(detail.notes ?? "");
@@ -418,6 +435,7 @@ const EditItemsPanel = memo(({
             addedItems={addedItems}
             customerId={detail.customer.id}
             customerWarehouseId={detail.warehouseId}
+            existingOrderItems={existingOrderItems}
 	            onAddMany={(newItems: AddedOrderItemDraft[]) => {
 	              setError(null);
 	              const nextRemoved = new Set(removed);
@@ -952,8 +970,22 @@ export function IncomingOrderModal({ allOrders, detail, expandedId, onAfterClose
   }, []);
 
   useEffect(() => {
-    setActiveProducts(products);
+    if (products && products.length > 0) {
+      setActiveProducts(products);
+    }
   }, [products]);
+
+  useEffect(() => {
+    if (editMode && activeProducts.length === 0) {
+      void fetchIncomingOrderProductOptionsAction()
+        .then((fetched) => {
+          if (fetched && fetched.length > 0) {
+            setActiveProducts(fetched);
+          }
+        })
+        .catch(() => {});
+    }
+  }, [editMode, activeProducts.length]);
 
   useEffect(() => {
     setEditMode(startInEditMode);
@@ -1458,7 +1490,7 @@ export function IncomingOrderModal({ allOrders, detail, expandedId, onAfterClose
                   }
                 }
               }}
-              products={products}
+              products={activeProducts}
             />
           ) : (
             <div className="flex flex-col h-full">
