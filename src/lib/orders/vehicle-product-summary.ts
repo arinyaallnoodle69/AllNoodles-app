@@ -4,6 +4,7 @@ import { sortProductsByCategory } from "@/lib/products/sort-by-category";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { getDailySpecialPrintItems } from "@/lib/orders/daily-special-items";
 import { getDailyFactoryOrderAdjustments } from "@/lib/orders/factory-order-adjustments";
+import { resolveVehicleSummaryProductMode } from "@/lib/orders/vehicle-summary-mode";
 
 type ProductWarehouseFulfillmentMode = "disabled" | "fresh" | "stock";
 
@@ -229,8 +230,9 @@ export async function getVehicleProductSummaryData(
         id,
         assigned_vehicle_id,
         customer_id,
-        customers!inner(default_vehicle_id, vehicles(id, name)),
-        delivery_notes!order_id(vehicle_id, status, created_at, vehicles(id, name)),
+        warehouse_id,
+        customers!inner(default_vehicle_id, default_warehouse_id, vehicles(id, name)),
+        delivery_notes!order_id(vehicle_id, warehouse_id, status, created_at, vehicles(id, name)),
         order_items(product_id, quantity_in_base_unit)
       `)
       .eq("organization_id", organizationId)
@@ -254,10 +256,11 @@ export async function getVehicleProductSummaryData(
   if (vehiclesResult.error) throw new Error(vehiclesResult.error.message ?? "Failed to load vehicles.");
   if (modesResult.error) throw new Error(modesResult.error.message ?? "Failed to load warehouse product modes.");
 
-  const freshProductIds = new Set(
-    ((modesResult.data ?? []) as Array<{ product_id: string; mode: string }>)
-      .filter((row) => row.mode === "fresh")
-      .map((row) => row.product_id),
+  const fulfillmentModeByProductWarehouse = new Map(
+    ((modesResult.data ?? []) as ProductModeRow[]).map((row) => [
+      modeKey(row.product_id, row.warehouse_id),
+      row.mode,
+    ]),
   );
 
   const products: VehicleSummaryProduct[] = sortedProducts.map((product) => ({
@@ -269,8 +272,9 @@ export async function getVehicleProductSummaryData(
     productKind: product.productKind,
     supplierId: product.supplierId,
     supplierName: product.supplierName,
-    isFresh: freshProductIds.has(product.id) || product.productKind === "made_to_order",
   }));
+  const productById = new Map(products.map((product) => [product.id, product]));
+  const productSortIndexById = new Map(products.map((product, index) => [product.id, index]));
 
   const configuredVehicles: VehicleSummaryVehicle[] = ((vehiclesResult.data ?? []) as Array<{ id: string; name: string }>).map((vehicle) => ({
     id: vehicle.id,
@@ -288,13 +292,25 @@ export async function getVehicleProductSummaryData(
     ? [...configuredVehicles, { id: null, name: "ยังไม่กำหนดรถ" }]
     : configuredVehicles;
 
-  const productIndexById = new Map(products.map((product, index) => [product.id, index]));
   const vehicleIndexById = new Map(vehicles.map((vehicle, index) => [vehicle.id ?? "__unassigned__", index]));
-  const qty = products.map(() => vehicles.map(() => 0));
+  const summaryRows = new Map<string, { product: VehicleSummaryProduct; qty: number[] }>();
+
+  function getSummaryRow(productId: string, isFresh: boolean) {
+    const key = `${productId}:${isFresh ? "fresh" : "stock"}`;
+    let row = summaryRows.get(key);
+    if (!row) {
+      const product = productById.get(productId);
+      if (!product) return null;
+      row = { product: { ...product, isFresh }, qty: vehicles.map(() => 0) };
+      summaryRows.set(key, row);
+    }
+    return row;
+  }
 
   for (const order of orders) {
     const activeDeliveryNote = getActiveDeliveryNote(order);
     const vehicleId = activeDeliveryNote?.vehicle_id ?? order.assigned_vehicle_id ?? order.customers.default_vehicle_id;
+    const warehouseId = activeDeliveryNote?.warehouse_id ?? order.warehouse_id ?? order.customers.default_warehouse_id ?? null;
     const resolvedVehicleId = vehicleId ?? "__unassigned__";
     let vehicleIndex = vehicleIndexById.get(resolvedVehicleId);
 
@@ -308,13 +324,18 @@ export async function getVehicleProductSummaryData(
       });
       vehicleIndex = vehicles.length - 1;
       vehicleIndexById.set(resolvedVehicleId, vehicleIndex);
-      qty.forEach((row) => row.push(0));
+      summaryRows.forEach((row) => row.qty.push(0));
     }
 
     for (const item of order.order_items ?? []) {
-      const productIndex = productIndexById.get(item.product_id);
-      if (productIndex === undefined) continue;
-      qty[productIndex][vehicleIndex] = (qty[productIndex][vehicleIndex] ?? 0) + Number(item.quantity_in_base_unit ?? 0);
+      const isFresh = resolveVehicleSummaryProductMode(
+        item.product_id,
+        warehouseId,
+        fulfillmentModeByProductWarehouse,
+      ) === "fresh";
+      const row = getSummaryRow(item.product_id, isFresh);
+      if (!row) continue;
+      row.qty[vehicleIndex] = (row.qty[vehicleIndex] ?? 0) + Number(item.quantity_in_base_unit ?? 0);
     }
   }
 
@@ -322,31 +343,32 @@ export async function getVehicleProductSummaryData(
   // packing order row and this vehicle-loading summary; they never touch stock
   // or delivery notes.
   for (const item of specialItems.filter((special) => special.type === "claim")) {
-    const productIndex = productIndexById.get(item.productId);
-    if (productIndex === undefined) continue;
+    const row = getSummaryRow(item.productId, true);
+    if (!row) continue;
     let vehicleIndex = vehicleIndexById.get(item.vehicleId);
     if (vehicleIndex === undefined) {
       vehicles.push({ id: item.vehicleId, name: item.vehicleName });
       vehicleIndex = vehicles.length - 1;
       vehicleIndexById.set(item.vehicleId, vehicleIndex);
-      qty.forEach((row) => row.push(0));
+      summaryRows.forEach((summaryRow) => summaryRow.qty.push(0));
     }
-    qty[productIndex][vehicleIndex] = (qty[productIndex][vehicleIndex] ?? 0) + item.quantity;
+    row.qty[vehicleIndex] = (row.qty[vehicleIndex] ?? 0) + item.quantity;
   }
 
-  const activeRowIndices = qty.reduce<number[]>((indices, row, index) => {
-    if (row.some((value) => value > 0)) {
-      indices.push(index);
-    }
-    return indices;
-  }, []);
+  const activeRows = Array.from(summaryRows.values())
+    .filter((row) => row.qty.some((value) => value > 0))
+    .sort(
+      (a, b) =>
+        (productSortIndexById.get(a.product.id) ?? Number.MAX_SAFE_INTEGER) -
+        (productSortIndexById.get(b.product.id) ?? Number.MAX_SAFE_INTEGER),
+    );
 
   return {
     organizationName: "All Noodles",
     dateLabel: formatDateLabel(date, endDate),
-    products: activeRowIndices.map((index) => products[index]),
+    products: activeRows.map((row) => row.product),
     vehicles,
-    qty: activeRowIndices.map((index) => qty[index]),
+    qty: activeRows.map((row) => row.qty),
   };
 }
 

@@ -26,7 +26,7 @@ function getVehiclePalette(columnIndex: number) {
 
 function FactoryOrderSheet({ data, startIndex }: { data: VehicleProductSummaryData; startIndex: number }) {
   return (
-    <section className="packing-sheet vehicle-summary-sheet">
+    <section className="packing-sheet factory-order-sheet vehicle-summary-sheet">
       <div className="vehicle-summary-sheet__inner">
         <header className="vehicle-summary-header">
           <div className="vehicle-summary-header__title-container">
@@ -176,7 +176,7 @@ function FactoryOrderStyles() {
           padding: 0 !important;
         }
 
-        .packing-sheet {
+        .packing-sheet.factory-order-sheet {
           width: 210mm !important;
           height: 297mm !important;
           margin: 0 !important;
@@ -201,7 +201,7 @@ function FactoryOrderStyles() {
           overflow-x: hidden;
         }
 
-        .packing-sheet-shell {
+        .factory-order-sheet-shell {
           width: ${SCREEN_SHEET_W};
           height: ${SCREEN_SHEET_H};
           display: flex;
@@ -209,7 +209,7 @@ function FactoryOrderStyles() {
           align-items: flex-start;
         }
 
-        .packing-sheet {
+        .packing-sheet.factory-order-sheet {
           width: ${SCREEN_SHEET_W};
           height: ${SCREEN_SHEET_H};
           box-shadow: 0 16px 34px rgba(15, 23, 42, 0.16);
@@ -223,7 +223,7 @@ function FactoryOrderStyles() {
           padding: 66px 0 20px;
         }
 
-        .packing-sheet-shell {
+        .factory-order-sheet-shell {
           --summary-mobile-available: calc(100vw - 8px);
           --summary-mobile-scale: min(1, calc(var(--summary-mobile-available) / ${SCREEN_SHEET_W}));
           width: var(--summary-mobile-available);
@@ -232,7 +232,7 @@ function FactoryOrderStyles() {
           overflow: hidden;
         }
 
-        .packing-sheet {
+        .packing-sheet.factory-order-sheet {
           width: ${SCREEN_SHEET_W} !important;
           height: ${SCREEN_SHEET_H} !important;
           max-width: none !important;
@@ -243,8 +243,7 @@ function FactoryOrderStyles() {
         }
       }
 
-
-      .packing-sheet {
+      .packing-sheet.factory-order-sheet {
         width: ${SHEET_W};
         height: ${SHEET_H};
         overflow: hidden;
@@ -256,7 +255,7 @@ function FactoryOrderStyles() {
         font-synthesis: none;
       }
 
-      .vehicle-summary-sheet__inner {
+      .factory-order-sheet .vehicle-summary-sheet__inner {
         display: flex;
         flex-direction: column;
         height: 100%;
@@ -265,7 +264,7 @@ function FactoryOrderStyles() {
         box-sizing: border-box;
       }
 
-      .vehicle-summary-header {
+      .factory-order-sheet .vehicle-summary-header {
         display: flex;
         flex-direction: column;
         gap: 0.15mm;
@@ -273,7 +272,7 @@ function FactoryOrderStyles() {
         border-bottom: 1px solid #000000;
       }
 
-      .vehicle-summary-header__title-container {
+      .factory-order-sheet .vehicle-summary-header__title-container {
         display: flex;
         justify-content: center;
         width: 100%;
@@ -281,7 +280,7 @@ function FactoryOrderStyles() {
         margin-bottom: 0.4mm;
       }
 
-      .vehicle-summary-header__brand {
+      .factory-order-sheet .vehicle-summary-header__brand {
         font-size: 15.5pt;
         font-weight: 800;
         line-height: 1.25;
@@ -289,7 +288,7 @@ function FactoryOrderStyles() {
         color: #4A148C;
       }
 
-      .vehicle-summary-header__line {
+      .factory-order-sheet .vehicle-summary-header__line {
         display: flex;
         align-items: flex-end;
         justify-content: space-between;
@@ -297,7 +296,7 @@ function FactoryOrderStyles() {
         width: 100%;
       }
 
-      .vehicle-summary-header__title {
+      .factory-order-sheet .vehicle-summary-header__title {
         margin: 0;
         font-size: 27.9pt;
         line-height: 1.25;
@@ -306,7 +305,7 @@ function FactoryOrderStyles() {
         text-align: center;
       }
 
-      .vehicle-summary-header__meta-inline {
+      .factory-order-sheet .vehicle-summary-header__meta-inline {
         display: flex;
         align-items: center;
         gap: 1.6mm;
@@ -317,7 +316,7 @@ function FactoryOrderStyles() {
         color: #334155;
       }
 
-      .vehicle-summary-table-wrap {
+      .factory-order-sheet .vehicle-summary-table-wrap {
         flex: 0 0 auto;
         min-height: 0;
         border: 1px solid #000000;
@@ -326,24 +325,24 @@ function FactoryOrderStyles() {
         overflow: hidden;
       }
 
-      .vehicle-summary-table {
+      .factory-order-sheet .vehicle-summary-table {
         width: 100%;
         height: auto;
         border-collapse: collapse;
         table-layout: fixed;
       }
 
-      .vehicle-summary-table thead tr {
+      .factory-order-sheet .vehicle-summary-table thead tr {
         height: 10mm;
       }
 
-      .vehicle-summary-table tbody tr,
-      .vehicle-summary-table tbody td {
+      .factory-order-sheet .vehicle-summary-table tbody tr,
+      .factory-order-sheet .vehicle-summary-table tbody td {
         height: var(--summary-row-height);
       }
 
-      .vehicle-summary-table th,
-      .vehicle-summary-table td {
+      .factory-order-sheet .vehicle-summary-table th,
+      .factory-order-sheet .vehicle-summary-table td {
         border-right: 1px solid #000000;
         border-bottom: 1px solid #000000;
         padding: 0;
@@ -352,33 +351,33 @@ function FactoryOrderStyles() {
         box-sizing: border-box;
       }
 
-      .vehicle-summary-table tr > *:last-child {
+      .factory-order-sheet .vehicle-summary-table tr > *:last-child {
         border-right: none;
       }
 
-      .vehicle-summary-table tbody tr:last-child > * {
+      .factory-order-sheet .vehicle-summary-table tbody tr:last-child > * {
         border-bottom: none;
       }
 
-      .vehicle-summary-table__index-col,
-      .vehicle-summary-table__index-cell {
+      .factory-order-sheet .vehicle-summary-table__index-col,
+      .factory-order-sheet .vehicle-summary-table__index-cell {
         width: 10mm;
         min-width: 10mm;
       }
 
-      .vehicle-summary-table__index-col {
+      .factory-order-sheet .vehicle-summary-table__index-col {
         background: #ffffff;
         font-size: 15.5pt;
         font-weight: 800;
       }
 
-      .vehicle-summary-table__index-cell {
+      .factory-order-sheet .vehicle-summary-table__index-cell {
         background: #ffffff;
         font-size: 15.5pt;
         font-weight: 700;
       }
 
-      .vehicle-summary-table__product-col {
+      .factory-order-sheet .vehicle-summary-table__product-col {
         width: 130mm;
         min-width: 130mm;
         padding: 0.5mm 0.8mm 0.25mm;
@@ -389,20 +388,20 @@ function FactoryOrderStyles() {
         line-height: 1.25;
       }
 
-      .vehicle-summary-table__unit-col,
-      .vehicle-summary-table__unit-cell {
+      .factory-order-sheet .vehicle-summary-table__unit-col,
+      .factory-order-sheet .vehicle-summary-table__unit-cell {
         width: 18mm;
         min-width: 18mm;
       }
 
-      .vehicle-summary-table__unit-col {
+      .factory-order-sheet .vehicle-summary-table__unit-col {
         background: #ffffff;
         font-size: 15.5pt;
         font-weight: 800;
         line-height: 1.25;
       }
 
-      .vehicle-summary-table__unit-cell {
+      .factory-order-sheet .vehicle-summary-table__unit-cell {
         background: #ffffff;
         font-size: 17.05pt;
         font-weight: 700;
@@ -410,13 +409,13 @@ function FactoryOrderStyles() {
         color: #0f172a;
       }
 
-      .vehicle-summary-table__vehicle-col {
+      .factory-order-sheet .vehicle-summary-table__vehicle-col {
         font-size: 17.05pt;
         font-weight: 800;
         border-bottom-width: 1px;
       }
 
-      .vehicle-summary-table__vehicle-name {
+      .factory-order-sheet .vehicle-summary-table__vehicle-name {
         display: -webkit-box;
         overflow: hidden;
         padding: 0.3mm 0.25mm;
@@ -425,13 +424,13 @@ function FactoryOrderStyles() {
         -webkit-line-clamp: 2;
       }
 
-      .vehicle-summary-table__product-cell {
+      .factory-order-sheet .vehicle-summary-table__product-cell {
         padding: 0.6mm 3mm;
         text-align: center;
         background: #ffffff;
       }
 
-      .vehicle-summary-table__product-line {
+      .factory-order-sheet .vehicle-summary-table__product-line {
         display: flex;
         align-items: center;
         justify-content: flex-start;
@@ -442,7 +441,7 @@ function FactoryOrderStyles() {
         box-sizing: border-box;
       }
 
-      .vehicle-summary-table__product-name {
+      .factory-order-sheet .vehicle-summary-table__product-name {
         display: block;
         min-width: 0;
         flex: 0 1 auto;
@@ -456,7 +455,7 @@ function FactoryOrderStyles() {
         color: #0f172a;
       }
 
-      .vehicle-summary-table__qty-cell {
+      .factory-order-sheet .vehicle-summary-table__qty-cell {
         font-size: 21.7pt;
         font-weight: 800;
         line-height: 1.3;
@@ -475,7 +474,7 @@ export function FactoryOrderSheetLayout({ data }: { data: VehicleProductSummaryD
       {pages.map((page) => (
         <div
           key={`${page.data.factoryName ?? "factory"}-${page.startIndex}`}
-          className="packing-sheet-shell"
+          className="packing-sheet-shell factory-order-sheet-shell"
           data-capture-width="794"
           data-capture-height="1123"
         >

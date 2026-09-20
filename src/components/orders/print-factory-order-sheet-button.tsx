@@ -1,7 +1,6 @@
 "use client";
 
 import { FileText } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
 type PrintFactoryOrderSheetButtonProps = {
@@ -15,16 +14,11 @@ export function PrintFactoryOrderSheetButton({
   endDate,
   label = "พิมพ์ใบสั่งของ",
 }: PrintFactoryOrderSheetButtonProps) {
-  const router = useRouter();
   const [loading, setLoading] = useState(false);
   const url = useMemo(
     () => `/orders/factory-order-sheet?date=${date}${endDate ? `&endDate=${endDate}` : ""}`,
     [date, endDate],
   );
-
-  useEffect(() => {
-    router.prefetch(url);
-  }, [router, url]);
 
   useEffect(() => {
     const resetLoading = () => {
@@ -49,7 +43,7 @@ export function PrintFactoryOrderSheetButton({
   function handleOpen() {
     if (loading) return;
     setLoading(true);
-    router.push(url);
+    window.location.assign(url);
     window.setTimeout(() => setLoading(false), 1000);
   }
 

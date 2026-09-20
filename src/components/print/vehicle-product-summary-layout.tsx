@@ -109,7 +109,7 @@ function VehicleSummarySheet({ sheet }: { sheet: VehicleSummarySheetDef }) {
   const thumbSizeMm = ROW_HEIGHT_MM - 1;
 
   return (
-    <section className="packing-sheet vehicle-summary-sheet" data-capture-width="794" data-capture-height="1123">
+    <section className="packing-sheet vehicle-product-summary-sheet vehicle-summary-sheet" data-capture-width="794" data-capture-height="1123">
       <div className="vehicle-summary-sheet__inner">
         <header className="vehicle-summary-header">
           <div className="vehicle-summary-header__brand">All Noodles</div>
@@ -256,7 +256,7 @@ function VehicleSummaryStyles() {
           padding: 0 !important;
         }
 
-        .packing-sheet {
+        .packing-sheet.vehicle-product-summary-sheet {
           width: 210mm !important;
           height: 297mm !important;
           margin: 0 !important;
@@ -266,7 +266,7 @@ function VehicleSummaryStyles() {
           page-break-after: always;
         }
 
-        .packing-sheet:last-child {
+        .packing-sheet.vehicle-product-summary-sheet:last-child {
           break-after: auto;
           page-break-after: auto;
         }
@@ -286,7 +286,7 @@ function VehicleSummaryStyles() {
           overflow-x: hidden;
         }
 
-        .packing-sheet-shell {
+        .vehicle-product-summary-sheet-shell {
           width: ${SCREEN_SHEET_W};
           height: ${SCREEN_SHEET_H};
           display: flex;
@@ -294,7 +294,7 @@ function VehicleSummaryStyles() {
           align-items: flex-start;
         }
 
-        .packing-sheet {
+        .packing-sheet.vehicle-product-summary-sheet {
           width: ${SCREEN_SHEET_W};
           height: ${SCREEN_SHEET_H};
           box-shadow: 0 16px 34px rgba(15, 23, 42, 0.16);
@@ -308,7 +308,7 @@ function VehicleSummaryStyles() {
           padding: 66px 0 20px;
         }
 
-        .packing-sheet-shell {
+        .vehicle-product-summary-sheet-shell {
           --summary-mobile-available: calc(100vw - 8px);
           --summary-mobile-scale: min(1, calc(var(--summary-mobile-available) / 794px));
           width: var(--summary-mobile-available);
@@ -317,7 +317,7 @@ function VehicleSummaryStyles() {
           overflow: hidden;
         }
 
-        .packing-sheet {
+        .packing-sheet.vehicle-product-summary-sheet {
           width: 794px !important;
           height: 1123px !important;
           max-width: none !important;
@@ -328,7 +328,7 @@ function VehicleSummaryStyles() {
         }
       }
 
-      .packing-sheet {
+      .packing-sheet.vehicle-product-summary-sheet {
         width: ${SHEET_W};
         height: ${SHEET_H};
         overflow: hidden;
@@ -342,7 +342,7 @@ function VehicleSummaryStyles() {
         -webkit-font-smoothing: antialiased;
       }
 
-      .vehicle-summary-sheet__inner {
+      .vehicle-product-summary-sheet .vehicle-summary-sheet__inner {
         display: flex;
         flex-direction: column;
         height: 100%;
@@ -351,7 +351,7 @@ function VehicleSummaryStyles() {
         box-sizing: border-box;
       }
 
-      .vehicle-summary-header {
+      .vehicle-product-summary-sheet .vehicle-summary-header {
         display: flex;
         flex-direction: column;
         gap: 0.15mm;
@@ -359,7 +359,7 @@ function VehicleSummaryStyles() {
         border-bottom: 0.75pt solid #000000;
       }
 
-      .vehicle-summary-header__brand {
+      .vehicle-product-summary-sheet .vehicle-summary-header__brand {
         font-size: 12.4pt;
         font-weight: 800;
         line-height: 1.2;
@@ -367,14 +367,14 @@ function VehicleSummaryStyles() {
         color: #4A148C;
       }
 
-      .vehicle-summary-header__line {
+      .vehicle-product-summary-sheet .vehicle-summary-header__line {
         display: flex;
         align-items: flex-end;
         justify-content: space-between;
         gap: 2.4mm;
       }
 
-      .vehicle-summary-header__title {
+      .vehicle-product-summary-sheet .vehicle-summary-header__title {
         margin: 0;
         font-size: 26.35pt;
         line-height: 1.2;
@@ -382,15 +382,15 @@ function VehicleSummaryStyles() {
         white-space: nowrap;
       }
 
-      .vehicle-summary-header__title--fresh {
+      .vehicle-product-summary-sheet .vehicle-summary-header__title--fresh {
         color: #1b5e20;
       }
 
-      .vehicle-summary-header__title--stock {
+      .vehicle-product-summary-sheet .vehicle-summary-header__title--stock {
         color: #0f172a;
       }
 
-      .vehicle-summary-header__tag {
+      .vehicle-product-summary-sheet .vehicle-summary-header__tag {
         font-size: 13pt;
         font-weight: 800;
         padding: 0.5mm 2.5mm;
@@ -399,19 +399,19 @@ function VehicleSummaryStyles() {
         white-space: nowrap;
       }
 
-      .vehicle-summary-header__tag--fresh {
+      .vehicle-product-summary-sheet .vehicle-summary-header__tag--fresh {
         background-color: #e8f5e9;
         color: #1b5e20;
         border: 1px solid #a5d6a7;
       }
 
-      .vehicle-summary-header__tag--stock {
+      .vehicle-product-summary-sheet .vehicle-summary-header__tag--stock {
         background-color: #f1f5f9;
         color: #334155;
         border: 1px solid #cbd5e1;
       }
 
-      .vehicle-summary-header__vehicle-badge {
+      .vehicle-product-summary-sheet .vehicle-summary-header__vehicle-badge {
         font-weight: 800;
         color: #0f172a;
         background: #f8fafc;
@@ -420,7 +420,7 @@ function VehicleSummaryStyles() {
         border-radius: 4px;
       }
 
-      .vehicle-summary-header__meta-inline {
+      .vehicle-product-summary-sheet .vehicle-summary-header__meta-inline {
         display: flex;
         align-items: center;
         gap: 1.6mm;
@@ -431,31 +431,31 @@ function VehicleSummaryStyles() {
         color: #334155;
       }
 
-      .vehicle-summary-table-wrap {
+      .vehicle-product-summary-sheet .vehicle-summary-table-wrap {
         flex: 0 0 auto;
         border: 0.75pt solid #000000;
         display: block;
         overflow: hidden;
       }
 
-      .vehicle-summary-table {
+      .vehicle-product-summary-sheet .vehicle-summary-table {
         width: 100%;
         height: auto;
         border-collapse: collapse;
         table-layout: fixed;
       }
 
-      .vehicle-summary-table thead tr {
+      .vehicle-product-summary-sheet .vehicle-summary-table thead tr {
         height: 9mm;
       }
 
-      .vehicle-summary-table tbody tr,
-      .vehicle-summary-table tbody td {
+      .vehicle-product-summary-sheet .vehicle-summary-table tbody tr,
+      .vehicle-product-summary-sheet .vehicle-summary-table tbody td {
         height: var(--summary-row-height);
       }
 
-      .vehicle-summary-table th,
-      .vehicle-summary-table td {
+      .vehicle-product-summary-sheet .vehicle-summary-table th,
+      .vehicle-product-summary-sheet .vehicle-summary-table td {
         border-right: 0.75pt solid #000000;
         border-bottom: 0.75pt solid #000000;
         padding: 0;
@@ -464,33 +464,33 @@ function VehicleSummaryStyles() {
         box-sizing: border-box;
       }
 
-      .vehicle-summary-table tr > *:last-child {
+      .vehicle-product-summary-sheet .vehicle-summary-table tr > *:last-child {
         border-right: none;
       }
 
-      .vehicle-summary-table tbody tr:last-child > * {
+      .vehicle-product-summary-sheet .vehicle-summary-table tbody tr:last-child > * {
         border-bottom: none;
       }
 
-      .vehicle-summary-table__index-col,
-      .vehicle-summary-table__index-cell {
+      .vehicle-product-summary-sheet .vehicle-summary-table__index-col,
+      .vehicle-product-summary-sheet .vehicle-summary-table__index-cell {
         width: 9mm;
         min-width: 9mm;
       }
 
-      .vehicle-summary-table__index-col {
+      .vehicle-product-summary-sheet .vehicle-summary-table__index-col {
         background: #ffffff;
         font-size: 13.33pt;
         font-weight: 800;
       }
 
-      .vehicle-summary-table__index-cell {
+      .vehicle-product-summary-sheet .vehicle-summary-table__index-cell {
         background: #ffffff;
         font-size: 13.64pt;
         font-weight: 800;
       }
 
-      .vehicle-summary-table__product-col {
+      .vehicle-product-summary-sheet .vehicle-summary-table__product-col {
         width: 118mm;
         min-width: 118mm;
         padding: 0.5mm 0.8mm 0.25mm;
@@ -501,20 +501,20 @@ function VehicleSummaryStyles() {
         line-height: 1.22;
       }
 
-      .vehicle-summary-table__unit-col,
-      .vehicle-summary-table__unit-cell {
+      .vehicle-product-summary-sheet .vehicle-summary-table__unit-col,
+      .vehicle-product-summary-sheet .vehicle-summary-table__unit-cell {
         width: 13mm;
         min-width: 13mm;
       }
 
-      .vehicle-summary-table__unit-col {
+      .vehicle-product-summary-sheet .vehicle-summary-table__unit-col {
         background: #ffffff;
         font-size: 13.33pt;
         font-weight: 800;
         line-height: 1.22;
       }
 
-      .vehicle-summary-table__unit-cell {
+      .vehicle-product-summary-sheet .vehicle-summary-table__unit-cell {
         background: #ffffff;
         font-size: 13.02pt;
         font-weight: 800;
@@ -522,13 +522,13 @@ function VehicleSummaryStyles() {
         color: #0f172a;
       }
 
-      .vehicle-summary-table__vehicle-col {
+      .vehicle-product-summary-sheet .vehicle-summary-table__vehicle-col {
         font-size: 13.95pt;
         font-weight: 800;
         border-bottom-width: 0.75pt;
       }
 
-      .vehicle-summary-table__vehicle-name {
+      .vehicle-product-summary-sheet .vehicle-summary-table__vehicle-name {
         display: -webkit-box;
         overflow: hidden;
         padding: 0.3mm 0.25mm;
@@ -537,13 +537,13 @@ function VehicleSummaryStyles() {
         -webkit-line-clamp: 2;
       }
 
-      .vehicle-summary-table__product-cell {
+      .vehicle-product-summary-sheet .vehicle-summary-table__product-cell {
         padding: 0.35mm 0.9mm 0.1mm;
         text-align: left;
         background: #ffffff;
       }
 
-      .vehicle-summary-table__product-line {
+      .vehicle-product-summary-sheet .vehicle-summary-table__product-line {
         display: flex;
         align-items: center;
         justify-content: flex-start;
@@ -551,7 +551,7 @@ function VehicleSummaryStyles() {
         min-height: 100%;
       }
 
-      .vehicle-summary-table__product-image {
+      .vehicle-product-summary-sheet .vehicle-summary-table__product-image {
         display: flex;
         width: var(--summary-thumb-size);
         height: var(--summary-thumb-size);
@@ -562,14 +562,14 @@ function VehicleSummaryStyles() {
         background: #ffffff;
       }
 
-      .vehicle-summary-table__product-image img {
+      .vehicle-product-summary-sheet .vehicle-summary-table__product-image img {
         display: block;
         max-width: 100%;
         max-height: 100%;
         object-fit: contain;
       }
 
-      .vehicle-summary-table__product-image-placeholder {
+      .vehicle-product-summary-sheet .vehicle-summary-table__product-image-placeholder {
         display: block;
         width: 5.2mm;
         height: 5.2mm;
@@ -577,7 +577,7 @@ function VehicleSummaryStyles() {
         background: #f8fafc;
       }
 
-      .vehicle-summary-table__product-text {
+      .vehicle-product-summary-sheet .vehicle-summary-table__product-text {
         display: flex;
         min-width: 0;
         flex: 1;
@@ -586,7 +586,7 @@ function VehicleSummaryStyles() {
         gap: 0.5mm;
       }
 
-      .vehicle-summary-table__product-name {
+      .vehicle-product-summary-sheet .vehicle-summary-table__product-name {
         display: block;
         min-width: 0;
         flex: 0 1 auto;
@@ -600,7 +600,7 @@ function VehicleSummaryStyles() {
         color: #0f172a;
       }
 
-      .vehicle-summary-table__qty-cell {
+      .vehicle-product-summary-sheet .vehicle-summary-table__qty-cell {
         font-size: 17.67pt;
         font-weight: 800;
         line-height: 1;
@@ -617,7 +617,7 @@ export function VehicleProductSummaryLayout({ data }: { data: VehicleProductSumm
     <>
       <VehicleSummaryStyles />
       {sheets.map((sheet) => (
-        <div key={sheet.key} className="packing-sheet-shell" data-capture-width="794" data-capture-height="1123">
+        <div key={sheet.key} className="packing-sheet-shell vehicle-product-summary-sheet-shell" data-capture-width="794" data-capture-height="1123">
           <VehicleSummarySheet sheet={sheet} />
         </div>
       ))}

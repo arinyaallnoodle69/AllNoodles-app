@@ -1,9 +1,8 @@
 "use client";
 
 import { Truck } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-
+ 
 type PrintVehicleProductSummaryButtonProps = {
   date: string;
   endDate?: string;
@@ -15,16 +14,11 @@ export function PrintVehicleProductSummaryButton({
   endDate,
   label = "ใบขึ้นของ",
 }: PrintVehicleProductSummaryButtonProps) {
-  const router = useRouter();
   const [loading, setLoading] = useState(false);
   const url = useMemo(
     () => `/orders/vehicle-product-summary?date=${date}${endDate ? `&endDate=${endDate}` : ""}`,
     [date, endDate],
   );
-
-  useEffect(() => {
-    router.prefetch(url);
-  }, [router, url]);
 
   useEffect(() => {
     const resetLoading = () => {
@@ -49,11 +43,7 @@ export function PrintVehicleProductSummaryButton({
   function handleOpen() {
     if (loading) return;
     setLoading(true);
-    router.push(url);
-
-    // Next.js can keep this page instance in its client cache. In that case
-    // returning from the document page does not always emit pageshow/focus,
-    // so make sure the button can never remain disabled indefinitely.
+    window.location.assign(url);
     window.setTimeout(() => setLoading(false), 1000);
   }
 
