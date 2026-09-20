@@ -341,7 +341,8 @@ export const BILLING_INVOICE_STYLES = `
   }
 
   .billing-invoice-meta-left {
-    width: 65%;
+    width: 58%;
+    box-sizing: border-box;
     padding: 2mm 3.5mm;
     border-right: 1.5px solid #000000;
     display: flex;
@@ -356,12 +357,13 @@ export const BILLING_INVOICE_STYLES = `
   }
 
   .billing-customer-name {
-    font-size: 18pt !important;
+    font-size: 20pt !important;
     font-weight: bold;
   }
 
   .billing-invoice-meta-right {
-    width: 35%;
+    width: 42%;
+    box-sizing: border-box;
     padding: 2mm 3.5mm;
     display: flex;
     flex-direction: column;
@@ -370,12 +372,18 @@ export const BILLING_INVOICE_STYLES = `
   }
 
   .billing-invoice-meta-row {
-    display: flex;
-    justify-content: space-between;
+    display: grid;
+    grid-template-columns: max-content minmax(0, 1fr);
     gap: 2mm;
     font-size: 17.5pt;
     font-weight: bold;
     line-height: 1.2;
+  }
+
+  .billing-invoice-meta-row > span:last-child {
+    min-width: 0;
+    text-align: right;
+    white-space: nowrap;
   }
 
   .billing-invoice-meta-label {
@@ -394,8 +402,8 @@ export const BILLING_INVOICE_STYLES = `
   .billing-invoice-table {
     width: 100%;
     border-collapse: collapse;
-    font-size: 17.5pt;
-    line-height: 1.15;
+    font-size: 18pt;
+    line-height: 1.12;
     border: 1.5px solid #000000;
     table-layout: fixed;
     color: #000000;
@@ -414,7 +422,7 @@ export const BILLING_INVOICE_STYLES = `
   }
 
   .billing-invoice-table td {
-    height: 7.8mm;
+    height: 8mm;
     border-left: 1.2px solid #000000;
     border-right: 1.2px solid #000000;
     padding: 0.2mm 2.5mm;

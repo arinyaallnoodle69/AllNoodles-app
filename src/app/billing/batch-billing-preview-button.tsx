@@ -16,7 +16,6 @@ import {
   buildBillingInvoicePages,
 } from "@/components/print/billing-statement-layout";
 
-let cachedFontEmbedCSS: string | null = null;
 const CAPTURE_TIMEOUT_MS = 30000;
 
 function isMobileLikeDevice() {
@@ -160,23 +159,6 @@ export function BatchBillingPreviewButton({
 
   useEffect(() => {
     setMounted(true);
-
-    if (typeof window !== "undefined" && !cachedFontEmbedCSS) {
-      const preloadFonts = async () => {
-        try {
-          await document.fonts.ready;
-          const css = await htmlToImage.getFontEmbedCSS(document.body);
-          cachedFontEmbedCSS = css;
-        } catch (error) {
-          console.warn("[FontPreloader:BatchBilling] Failed to preload fonts:", error);
-        }
-      };
-      // Delay slightly to prioritize page load
-      const timer = setTimeout(preloadFonts, 500);
-      return () => clearTimeout(timer);
-    }
-
-    return undefined;
   }, []);
 
   // Pre-prepare images immediately when the modal is opened
@@ -263,27 +245,6 @@ export function BatchBillingPreviewButton({
         await new Promise((resolve) => setTimeout(resolve, 100));
       }
 
-      // 2. Load Fonts Embed CSS
-      let fontEmbedCSS: string | undefined;
-      if (cachedFontEmbedCSS) {
-        fontEmbedCSS = cachedFontEmbedCSS;
-      } else {
-        setPreparingStatus("กำลังเตรียมตัวอักษร...");
-        try {
-          await Promise.race([
-            document.fonts.ready,
-            new Promise((_, reject) => setTimeout(() => reject(new Error("Font load timeout")), 2000)),
-          ]);
-          fontEmbedCSS = await Promise.race([
-            htmlToImage.getFontEmbedCSS(document.body),
-            new Promise<string>((_, reject) => setTimeout(() => reject(new Error("Font CSS embed timeout")), 2000)),
-          ]);
-          cachedFontEmbedCSS = fontEmbedCSS;
-        } catch (error) {
-          console.warn("Failed to embed fonts, proceeding without embedded fonts:", error);
-        }
-      }
-
       // Wait a moment for layout to stabilize
       setPreparingStatus("กำลังเตรียมเอกสารใบวางบิล...");
       await new Promise((resolve) => setTimeout(resolve, 100));
@@ -292,6 +253,14 @@ export function BatchBillingPreviewButton({
       if (targets.length === 0) {
         throw new Error("ไม่พบพื้นที่ใบวางบิลสำหรับแปลงรูปภาพ");
       }
+
+      setPreparingStatus("กำลังเตรียมตัวอักษร...");
+      await Promise.all([
+        document.fonts.load('400 18pt "Angsana New Delivery Note"'),
+        document.fonts.load('700 18pt "Angsana New Delivery Note"'),
+      ]);
+      await document.fonts.ready;
+      const fontEmbedCSS = await htmlToImage.getFontEmbedCSS(targets[0] as HTMLElement);
 
       const mobileLike = isMobileLikeDevice();
 

@@ -13,7 +13,6 @@ import {
   buildBillingInvoicePages,
 } from "@/components/print/billing-statement-layout";
 
-let cachedFontEmbedCSS: string | null = null;
 const CAPTURE_TIMEOUT_MS = 30000;
 
 function isMobileLikeDevice() {
@@ -133,22 +132,6 @@ export function BillingPreviewButton({
 
   useEffect(() => {
     setMounted(true);
-
-    if (typeof window !== "undefined" && !cachedFontEmbedCSS) {
-      const preloadFonts = async () => {
-        try {
-          await document.fonts.ready;
-          const css = await htmlToImage.getFontEmbedCSS(document.body);
-          cachedFontEmbedCSS = css;
-        } catch (error) {
-          console.warn("[FontPreloader:Billing] Failed to preload fonts:", error);
-        }
-      };
-      const timer = setTimeout(preloadFonts, 1000);
-      return () => clearTimeout(timer);
-    }
-
-    return undefined;
   }, []);
 
   useEffect(() => {
@@ -187,24 +170,13 @@ export function BillingPreviewButton({
     setErrorMessage(null);
     setSavingStatus(null);
     try {
-      let fontEmbedCSS: string | undefined;
-      if (cachedFontEmbedCSS) {
-        fontEmbedCSS = cachedFontEmbedCSS;
-      } else {
-        try {
-          await Promise.race([
-            document.fonts.ready,
-            new Promise((_, reject) => setTimeout(() => reject(new Error("Font load timeout")), 2000)),
-          ]);
-          fontEmbedCSS = await Promise.race([
-            htmlToImage.getFontEmbedCSS(document.body),
-            new Promise<string>((_, reject) => setTimeout(() => reject(new Error("Font CSS embed timeout")), 2000)),
-          ]);
-          cachedFontEmbedCSS = fontEmbedCSS;
-        } catch (error) {
-          console.warn("Failed to embed fonts, proceeding without embedded fonts:", error);
-        }
-      }
+      const firstTarget = targets[0] as HTMLElement;
+      await Promise.all([
+        document.fonts.load('400 18pt "Angsana New Delivery Note"'),
+        document.fonts.load('700 18pt "Angsana New Delivery Note"'),
+      ]);
+      await document.fonts.ready;
+      const fontEmbedCSS = await htmlToImage.getFontEmbedCSS(firstTarget);
 
       const captured: { dataUrl: string; blob: Blob; name: string }[] = [];
       const mobileLike = isMobileLikeDevice();
