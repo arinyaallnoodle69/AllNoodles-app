@@ -303,6 +303,14 @@ async function PackingListPage({ searchParams }: Props) {
         : Number(product.unit_weight_grams),
     ]),
   );
+  const productDisplayOrderById = new Map(
+    dbProductsList.map((product: DbProduct) => [
+      product.id,
+      product.display_order !== null && product.display_order !== undefined
+        ? Number(product.display_order)
+        : Infinity,
+    ]),
+  );
 
   const packingListMetaByProductId = new Map(
     dbProductsList.map((product: DbProduct) => [
@@ -580,8 +588,9 @@ async function PackingListPage({ searchParams }: Props) {
           const categoryCompare = a.category.localeCompare(b.category, "th");
           if (categoryCompare !== 0) return categoryCompare;
 
-          const brandCompare = a.brand.localeCompare(b.brand, "th");
-          if (brandCompare !== 0) return brandCompare;
+          const orderA = productDisplayOrderById.get(a.productId) ?? Infinity;
+          const orderB = productDisplayOrderById.get(b.productId) ?? Infinity;
+          if (orderA !== orderB) return orderA - orderB;
 
           const indexA = productSortIndexMap.get(a.productId) ?? 999999;
           const indexB = productSortIndexMap.get(b.productId) ?? 999999;

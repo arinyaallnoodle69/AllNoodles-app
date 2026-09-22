@@ -36,21 +36,46 @@ export function buildCustomerSalesPages(report: HTMLElement, sourceDocument: Doc
   sourceDocument.body.appendChild(host);
 
   const pages: HTMLElement[] = [];
-  const makePage = () => {
+  const makePage = (includeFooter = true) => {
     const page = createCapturePage(report, sourceDocument);
+    if (!includeFooter) {
+      page.querySelector(".cs-footer")?.remove();
+    }
     host.appendChild(page);
     return page;
   };
 
   if (sourceRows.length === 0) {
-    const page = makePage();
+    const page = makePage(true);
     if (emptyRow) page.querySelector("tbody")?.appendChild(emptyRow.cloneNode(true));
     return { host, pages: [page] };
   }
 
   let start = 0;
   while (start < sourceRows.length) {
-    const page = makePage();
+    // 1. Check if all remaining rows can fit on this page WITH the footer
+    const testPage = makePage(true);
+    const testBody = testPage.querySelector("tbody")!;
+    let canFitAllWithFooter = true;
+
+    for (let i = start; i < sourceRows.length; i++) {
+      testBody.appendChild(sourceRows[i].cloneNode(true));
+      if (testPage.scrollHeight > testPage.clientHeight + 1) {
+        canFitAllWithFooter = false;
+        break;
+      }
+    }
+
+    if (canFitAllWithFooter) {
+      pages.push(testPage);
+      break;
+    }
+
+    // Since they cannot all fit with the footer, discard testPage
+    testPage.remove();
+
+    // 2. Build a page WITHOUT footer so we can fill it up with rows
+    const page = makePage(false);
     const body = page.querySelector("tbody")!;
     let end = start;
 
@@ -63,22 +88,18 @@ export function buildCustomerSalesPages(report: HTMLElement, sourceDocument: Doc
       end += 1;
     }
 
-    if (end < sourceRows.length) {
-      page.querySelector(".cs-footer")?.remove();
-      while (end < sourceRows.length) {
-        body.appendChild(sourceRows[end].cloneNode(true));
-        if (page.scrollHeight > page.clientHeight + 1) {
-          body.lastElementChild?.remove();
-          break;
-        }
-        end += 1;
-      }
-    }
-
     if (end === start) {
       body.appendChild(sourceRows[end].cloneNode(true));
       end += 1;
     }
+
+    // If all remaining rows fit without footer, leave at least 1 row for the next page
+    // so the final page has rows alongside the summary footer
+    if (end === sourceRows.length && end > start + 1) {
+      body.lastElementChild?.remove();
+      end -= 1;
+    }
+
     pages.push(page);
     start = end;
   }

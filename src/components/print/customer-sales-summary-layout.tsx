@@ -48,7 +48,7 @@ export function CustomerSalesSummaryLayout({
         }
         .customer-sales-print-container { width:fit-content; margin:0 auto; }
         .customer-sales-sheet {
-          box-sizing:border-box; width:210mm; padding:10mm 12mm;
+          box-sizing:border-box; width:210mm; padding:8mm 12mm;
           display:block; background:#fff; color:#000;
           font-family:"Angsana New Customer Sales","Sarabun","Noto Sans Thai",sans-serif;
           font-size:17.5px; line-height:1.55; text-align:left;
@@ -62,25 +62,25 @@ export function CustomerSalesSummaryLayout({
         .cs-heading { text-align:center; }
         .cs-brand { font-size:27px; font-weight:700 !important; margin-bottom:5px; }
         .customer-sales-sheet h1 { font-size:22px; line-height:1.5; font-weight:700 !important; margin:0; }
-        .cs-meta { display:flex; justify-content:space-between; gap:12px; margin:18px 0 12px; padding-top:10px; border-top:1px solid #000; font-size:15.5px; }
+        .cs-meta { display:flex; justify-content:space-between; gap:12px; margin:14px 0 10px; padding-top:8px; border-top:1px solid #000; font-size:15.5px; }
         .cs-meta span { overflow-wrap:anywhere; }
         .cs-meta span:last-child { text-align:right; }
         .cs-table { border-collapse:collapse; table-layout:fixed; width:100%; font-size:17.5px; line-height:1.5; }
-        .cs-table th { border-top:1px solid #000; border-bottom:1px solid #000; font-size:16.5px; padding:8px 6px; text-align:left; }
-        .cs-table td { padding:5px 6px; border-bottom:1px solid #d5d5d5; overflow-wrap:anywhere; vertical-align:top; }
+        .cs-table th { border-top:1px solid #000; border-bottom:1px solid #000; font-size:16.5px; padding:7px 6px; text-align:left; }
+        .cs-table td { padding:4.5px 6px; border-bottom:1px solid #d5d5d5; overflow-wrap:anywhere; vertical-align:top; }
         .cs-table th:first-child,.cs-table td:first-child { text-align:center; }
         .cs-table th:last-child,.cs-table td:last-child { text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; }
         .cs-table td:last-child { font-weight:700 !important; }
         .cs-table .cs-empty { padding:30px 8px; text-align:center; }
-        .cs-footer { margin-top:16px; break-inside:avoid; }
-        .cs-summary { display:flex; justify-content:space-between; align-items:flex-start; gap:20px; border-top:3px double #000; padding:12px 0 8px; }
+        .cs-footer { margin-top:12px; break-inside:avoid; }
+        .cs-summary { display:flex; justify-content:space-between; align-items:flex-start; gap:20px; border-top:3px double #000; padding:10px 0 6px; }
         .cs-summary-detail { flex:1; min-width:0; font-size:15.5px; line-height:1.5; overflow-wrap:anywhere; }
         .cs-summary-detail span { display:block; }
         .cs-baht { font-size:15.5px; margin-top:4px; }
         .cs-total { text-align:right; flex-shrink:0; display:flex; flex-direction:column; align-items:flex-end; justify-content:flex-start; }
         .cs-total span { display:block; font-size:16.5px; line-height:1.3; margin-bottom:4px; white-space:nowrap; }
         .cs-total strong { display:block; font-size:26px; line-height:1.2; font-variant-numeric:tabular-nums; white-space:nowrap; }
-        .cs-footnote { padding-top:10px; border-top:1px solid #aaa; font-size:14px; }
+        .cs-footnote { padding-top:8px; border-top:1px solid #aaa; font-size:14px; }
         @media print {
           @page { size:A4 portrait; margin:0; }
           html,body { height:auto !important; overflow:visible !important; margin:0 !important; padding:0 !important; background:white !important; }
@@ -90,7 +90,7 @@ export function CustomerSalesSummaryLayout({
           .customer-sales-preview-body,.customer-sales-print-area,.customer-sales-print-container { display:block !important; padding:0 !important; margin:0 !important; width:100% !important; max-width:none !important; height:auto !important; overflow:visible !important; }
           [data-customer-sales-preview-frame='true'] { width:100% !important; height:auto !important; overflow:visible !important; position:static !important; }
           [data-customer-sales-preview-frame='true'] .customer-sales-sheet { position:static !important; transform:none !important; }
-          .customer-sales-sheet { width:210mm !important; height:297mm !important; padding:10mm 12mm !important; zoom:1 !important; break-after:page; print-color-adjust:exact; -webkit-print-color-adjust:exact; }
+          .customer-sales-sheet { width:210mm !important; height:297mm !important; padding:8mm 12mm !important; zoom:1 !important; break-after:page; print-color-adjust:exact; -webkit-print-color-adjust:exact; }
           .customer-sales-sheet:last-child { break-after:auto; }
           .cs-header { break-inside:avoid; break-after:avoid; }
           .cs-table thead { display:table-header-group; }

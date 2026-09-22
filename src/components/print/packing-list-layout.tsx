@@ -386,7 +386,7 @@ function buildStandardPages(data: PackingListData): StandardPageDef[] {
     const vehicleWeightSummary = getVehicleWeightSummary(data, group.storeIndices);
     const activeProductIndices = data.products
       .map((_, productIndex) => productIndex)
-      .filter((productIndex) => group.storeIndices.some((storeIndex) => data.qty[productIndex]?.[storeIndex] > 0));
+      .filter((productIndex) => group.storeIndices.some((storeIndex) => (data.qty[productIndex]?.[storeIndex] ?? 0) !== 0));
 
     const storeChunks = chunk(group.storeIndices, STANDARD_STORES_PER_PAGE);
     const productChunks = chunk(activeProductIndices, STANDARD_PRODUCTS_PER_PAGE);
@@ -433,7 +433,7 @@ function buildTransposedPages(data: PackingListData): TransposedPageDef[] {
     const vehicleWeightSummary = getVehicleWeightSummary(data, group.storeIndices);
     const activeProductIndices = data.products
       .map((_, productIndex) => productIndex)
-      .filter((productIndex) => group.storeIndices.some((storeIndex) => data.qty[productIndex]?.[storeIndex] > 0));
+      .filter((productIndex) => group.storeIndices.some((storeIndex) => (data.qty[productIndex]?.[storeIndex] ?? 0) !== 0));
 
     const storeChunks = chunk(group.storeIndices, TRANSPOSED_STORES_PER_PAGE);
     const productChunks = chunk(activeProductIndices, TRANSPOSED_PRODUCTS_PER_PAGE);
@@ -678,7 +678,8 @@ function StandardPackingListPage({ page, data }: { page: StandardPageDef; data: 
                   <tr key={store.id} className="packing-table__row">
                     <td className="packing-cell packing-cell--store">{store.name}</td>
                     {page.pageProductIndices.map((productIndex, cellIndex) => {
-                      const value = data.qty[productIndex]?.[storeIndex] ?? 0;
+                      const rawValue = data.qty[productIndex]?.[storeIndex] ?? 0;
+                      const value = Math.abs(rawValue);
                       const product = page.pageProducts[cellIndex];
                       const categoryPalette = product ? getCategoryPalette(product) : COLUMN_COLOR_GROUPS[0];
                       const productPalette = product ? getProductPalette(product, categoryPalette) : COLUMN_COLOR_GROUPS[0];
@@ -797,7 +798,8 @@ function TransposedPackingListPage({ page, data }: { page: TransposedPageDef; da
                     </div>
                   </td>
                   {page.pageStoreIndices.map((storeIndex, cellIndex) => {
-                    const value = data.qty[page.pageProductIndices[rowIndex]]?.[storeIndex] ?? 0;
+                    const rawValue = data.qty[page.pageProductIndices[rowIndex]]?.[storeIndex] ?? 0;
+                    const value = Math.abs(rawValue);
                     const palette = getColumnPalette(cellIndex);
                     return (
                       <td

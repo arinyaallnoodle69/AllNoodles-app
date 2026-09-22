@@ -105,11 +105,6 @@ export default async function PackingListMockupPage({ searchParams }: Props) {
     const categoryCompare = leftCategory.localeCompare(rightCategory, "th");
     if (categoryCompare !== 0) return categoryCompare;
 
-    const leftBrand = normalizePackingBrand(left.packingListBrand || left.brand);
-    const rightBrand = normalizePackingBrand(right.packingListBrand || right.brand);
-    const brandCompare = leftBrand.localeCompare(rightBrand, "th");
-    if (brandCompare !== 0) return brandCompare;
-
     return (originalProductIndex.get(left.id) ?? 999999) - (originalProductIndex.get(right.id) ?? 999999);
   });
 
