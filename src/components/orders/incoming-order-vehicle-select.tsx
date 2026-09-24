@@ -25,19 +25,24 @@ export function IncomingOrderVehicleSelect({
 }: Props) {
   const router = useRouter();
   const selectId = useId();
-  const [selectedVehicleId, setSelectedVehicleId] = useState(currentVehicleId ?? "");
+  const [optimisticVehicleId, setOptimisticVehicleId] = useState<string | null>(currentVehicleId);
+  const effectiveVehicleId = optimisticVehicleId ?? currentVehicleId;
+  const effectiveVehicleName = effectiveVehicleId
+    ? vehicles.find((v) => v.id === effectiveVehicleId)?.name ?? currentVehicleName
+    : null;
+  const [selectedVehicleId, setSelectedVehicleId] = useState(effectiveVehicleId ?? "");
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
-  if (currentVehicleId) {
-    const rawName = currentVehicleName ?? "รถส่งของ";
+  if (effectiveVehicleId) {
+    const rawName = effectiveVehicleName ?? "รถส่งของ";
     const match = rawName.match(/^(.*?)\s*\((.*)\)\s*$/);
     const vehicleMainName = match ? match[1].trim() : rawName;
     const vehicleDetail = match ? match[2] : "";
 
     if (variant === "card") {
       return (
-        <span className="block min-w-0">
+        <span className="block min-w-0 animate-in fade-in duration-150">
           <span className="block truncate pt-0.5 text-base font-bold leading-6 text-slate-950">
             {vehicleMainName}
           </span>
@@ -52,10 +57,10 @@ export function IncomingOrderVehicleSelect({
 
     return (
       <span
-        className="block min-w-0 max-w-full truncate text-sm font-bold text-slate-950 xl:text-base"
-        title={currentVehicleName ?? "รถส่งของ"}
+        className="block min-w-0 max-w-full truncate text-sm font-bold text-slate-950 xl:text-base animate-in fade-in duration-150"
+        title={effectiveVehicleName ?? "รถส่งของ"}
       >
-        {currentVehicleName ?? "รถส่งของ"}
+        {effectiveVehicleName ?? "รถส่งของ"}
       </span>
     );
   }
@@ -70,11 +75,11 @@ export function IncomingOrderVehicleSelect({
   }
 
   function handleChange(nextVehicleId: string) {
+    if (!nextVehicleId) return;
+
     setSelectedVehicleId(nextVehicleId);
+    setOptimisticVehicleId(nextVehicleId);
     setError(null);
-    if (!nextVehicleId) {
-      return;
-    }
 
     startTransition(async () => {
       const fd = new FormData();
@@ -84,6 +89,7 @@ export function IncomingOrderVehicleSelect({
       const result = await updateCustomerVehicleFromIncomingOrderAction(fd);
       if ("error" in result) {
         setError(result.error);
+        setOptimisticVehicleId(null);
         setSelectedVehicleId("");
         return;
       }

@@ -1,7 +1,6 @@
 import { Suspense } from "react";
 import { Filter, ChevronLeft, ChevronRight } from "lucide-react";
 import Link from "next/link";
-import { AppSidebarLayout } from "@/components/app-sidebar";
 import { MobileSearchDrawer } from "@/components/mobile-search/mobile-search-drawer";
 import { PageLoader } from "@/components/page-loader";
 import { ThaiDatePicker } from "@/components/ui/thai-date-picker";
@@ -185,7 +184,7 @@ async function ProfitSalesContent({ searchParams }: PageProps) {
   const printedAt = formatPrintedAt(new Date());
 
   return (
-    <AppSidebarLayout>
+    <>
       <div className="min-h-screen bg-background print:min-h-0 print:bg-white">
         <div className="mx-auto max-w-[1500px] px-0 py-0 sm:px-4 sm:py-8 no-print">
           <header className="mb-6 hidden sm:block">
@@ -488,12 +487,12 @@ async function ProfitSalesContent({ searchParams }: PageProps) {
                 ) : null}
               </table>
               <div className={styles.printFooter}>
-                พิมพ์จากระบบรายงานอัตโนมัติ (All Noodles) - หน้า {pageIndex + 1} / {pages.length}
+                หน้า {pageIndex + 1} / {pages.length}
               </div>
             </div>
           ))}
         </div>
       </div>
-    </AppSidebarLayout>
+    </>
   );
 }

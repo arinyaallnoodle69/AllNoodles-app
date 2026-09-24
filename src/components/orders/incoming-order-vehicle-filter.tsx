@@ -41,8 +41,9 @@ export function IncomingOrderVehicleFilter({ vehicles, activeVehicleId, onVehicl
       const nextLeft = activeBtn.offsetLeft;
       const nextWidth = activeBtn.offsetWidth;
 
-      // Scroll active tab into view instantly on mount/props load to avoid scrolling jitter
-      activeBtn.scrollIntoView({ behavior: "auto", block: "nearest", inline: "center" });
+      // Scroll active tab horizontally within container only (never scroll the window)
+      const scrollTarget = activeBtn.offsetLeft - (container.offsetWidth - activeBtn.offsetWidth) / 2;
+      container.scrollTo({ left: scrollTarget, behavior: "auto" });
 
       // Disable animation for server sync
       setShouldAnimate(false);
@@ -60,9 +61,13 @@ export function IncomingOrderVehicleFilter({ vehicles, activeVehicleId, onVehicl
 
   const handleVehicleSelect = (id: string, e: React.MouseEvent<HTMLButtonElement>) => {
     const activeBtn = e.currentTarget;
+    const container = vehicleTabsContainerRef.current;
     
-    // Immediately scroll selected tab into center view smoothly on user click
-    activeBtn.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+    // Scroll selected tab horizontally within container
+    if (container) {
+      const scrollTarget = activeBtn.offsetLeft - (container.offsetWidth - activeBtn.offsetWidth) / 2;
+      container.scrollTo({ left: scrollTarget, behavior: "smooth" });
+    }
     
     setShouldAnimate(true); // Enable animation for immediate sliding transition
     setLocalActiveId(id);

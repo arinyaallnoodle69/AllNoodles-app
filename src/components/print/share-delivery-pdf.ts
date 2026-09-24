@@ -90,7 +90,7 @@ export async function createDeliveryPdfPreviewFromDocument(
     return null;
   }
 
-  const [{ toJpeg, getFontEmbedCSS }, { jsPDF }, html2canvas] = await Promise.all([
+  const [{ toPng, getFontEmbedCSS }, { jsPDF }, html2canvas] = await Promise.all([
     import("html-to-image"),
     import("jspdf"),
     import("html2canvas").then((mod) => mod.default),
@@ -136,7 +136,7 @@ export async function createDeliveryPdfPreviewFromDocument(
     console.warn("Images load timed out, continuing anyway:", e);
   }
 
-  // Give iOS WebKit a tiny moment to settle and paint fonts/images
+  // Give iOS WebKit a moment to settle and paint fonts/images
   await new Promise((resolve) => window.setTimeout(resolve, 300));
 
   const pdf = new jsPDF({
@@ -148,7 +148,9 @@ export async function createDeliveryPdfPreviewFromDocument(
 
   const isWebKit = isWebKitOrSafari();
   const isMobileDevice = typeof window !== "undefined" && /iphone|ipad|ipod|android/i.test(window.navigator.userAgent.toLowerCase());
-  const selectedPixelRatio = isMobileDevice ? 1.25 : 1.7;
+  // Mobile: 2.5x (safe from iOS Safari memory limits while producing 240+ DPI crisp text)
+  // Desktop: 3.0x (300 DPI vector-sharp quality)
+  const selectedPixelRatio = isMobileDevice ? 2.5 : 3.0;
   const previewImages: string[] = [];
 
   for (const [index, page] of pages.entries()) {
@@ -159,46 +161,43 @@ export async function createDeliveryPdfPreviewFromDocument(
     // Warm-up call to force WebKit/Safari to decode and cache cloned image elements
     if (isWebKit) {
       try {
-        await toJpeg(page, {
+        await toPng(page, {
           backgroundColor: "#ffffff",
           height: page.offsetHeight,
           pixelRatio: selectedPixelRatio,
           width: page.offsetWidth,
           fontEmbedCSS: cachedFontEmbedCSS || undefined,
-          quality: 0.8,
         });
-        // Small pause to let Safari process the decoded image caching
-        await new Promise((resolve) => window.setTimeout(resolve, 100));
+        await new Promise((resolve) => window.setTimeout(resolve, 80));
       } catch (e) {
-        console.warn("Warm-up toJpeg failed:", e);
+        console.warn("Warm-up toPng failed:", e);
       }
     }
 
     let imageDataUrl: string;
     try {
-      imageDataUrl = await toJpeg(page, {
+      imageDataUrl = await toPng(page, {
         backgroundColor: "#ffffff",
         height: page.offsetHeight,
         pixelRatio: selectedPixelRatio,
         width: page.offsetWidth,
         fontEmbedCSS: cachedFontEmbedCSS || undefined,
-        quality: 0.8,
       });
     } catch (captureErr) {
       console.warn("html-to-image failed, falling back to html2canvas:", captureErr);
       const canvas = await html2canvas(page, {
         width: page.offsetWidth,
         height: page.offsetHeight,
-        scale: isMobileDevice ? 1.25 : 1.7,
+        scale: selectedPixelRatio,
         backgroundColor: "#ffffff",
         useCORS: true,
         logging: false,
       });
-      imageDataUrl = canvas.toDataURL("image/jpeg", 0.8);
+      imageDataUrl = canvas.toDataURL("image/png");
     }
 
     previewImages.push(imageDataUrl);
-    pdf.addImage(imageDataUrl, "JPEG", 0, 0, DELIVERY_SHEET_WIDTH_MM, DELIVERY_SHEET_HEIGHT_MM);
+    pdf.addImage(imageDataUrl, "PNG", 0, 0, DELIVERY_SHEET_WIDTH_MM, DELIVERY_SHEET_HEIGHT_MM, undefined, "FAST");
 
     // Yield control to the main thread to keep UI responsive between rendering pages
     await new Promise((resolve) => window.setTimeout(resolve, 0));
@@ -236,20 +235,44 @@ export async function shareDeliveryPdfFromDocument(sourceDocument: Document, fil
 export async function createDeliveryPdfPreviewFromUrl(
   url: string,
   fileName?: string,
+  sourceDocument?: Document,
 ): Promise<DeliveryPdfPreview | null> {
-  const response = await fetch("/api/delivery-pdf", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ url }),
-  });
+  const doc = sourceDocument || (typeof document !== "undefined" ? document : null);
 
-  if (!response.ok) {
-    throw new Error((await response.json().catch(() => null))?.error ?? "Failed to create delivery PDF.");
+  try {
+    const response = await fetch("/api/delivery-pdf", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url }),
+    });
+
+    if (response.ok) {
+      const blob = await response.blob();
+      const file = new File([blob], buildDeliveryPdfFileName(fileName), { type: "application/pdf" });
+
+      // If document is available, supply preview images for mobile modal display
+      let previewImages: string[] = [];
+      if (doc && doc.querySelectorAll("[data-delivery-note-page='true']").length > 0) {
+        try {
+          const clientPreview = await createDeliveryPdfPreviewFromDocument(doc, fileName);
+          if (clientPreview?.previewImages) {
+            previewImages = clientPreview.previewImages;
+          }
+        } catch {
+          // Non-blocking: modal handles empty previewImages with native viewer / Docs viewer
+        }
+      }
+      return { file, previewImages };
+    }
+  } catch (err) {
+    console.warn("[share-delivery-pdf] Server vector PDF request failed, falling back to client:", err);
   }
 
-  const blob = await response.blob();
-  const file = new File([blob], buildDeliveryPdfFileName(fileName), { type: "application/pdf" });
-  return { file, previewImages: [] };
+  if (doc) {
+    return createDeliveryPdfPreviewFromDocument(doc, fileName);
+  }
+
+  throw new Error("Failed to create delivery PDF.");
 }
 
 export async function createDeliveryPdfFileFromUrl(url: string, fileName?: string) {

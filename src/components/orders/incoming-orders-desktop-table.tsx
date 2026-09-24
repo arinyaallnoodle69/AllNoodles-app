@@ -269,6 +269,35 @@ export const IncomingOrdersDesktopTable = memo(function IncomingOrdersDesktopTab
     return orders.filter((o) => o.vehicleId === selectedVehicleId);
   }, [orders, selectedVehicleId]);
 
+  const [visibleCount, setVisibleCount] = useState(35);
+  const sensorRef = useRef<HTMLTableRowElement | null>(null);
+
+  useEffect(() => {
+    setVisibleCount(35);
+  }, [searchTerm, selectedCustomerIds, selectedVehicleId]);
+
+  useEffect(() => {
+    const sensor = sensorRef.current;
+    if (!sensor || visibleCount >= filteredOrders.length) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          setVisibleCount((prev) => Math.min(prev + 30, filteredOrders.length));
+        }
+      },
+      { rootMargin: "300px" },
+    );
+
+    observer.observe(sensor);
+    return () => observer.disconnect();
+  }, [visibleCount, filteredOrders.length]);
+
+  const visibleOrders = useMemo(() => {
+    if (filteredOrders.length <= 35) return filteredOrders;
+    return filteredOrders.slice(0, visibleCount);
+  }, [filteredOrders, visibleCount]);
+
   const [expandedOrderId, setExpandedOrderId] = useState(initialExpandedOrderId);
   const [detailByOrderId, setDetailByOrderId] = useState<Record<string, OrderDetailData>>(() =>
     initialExpandedOrderId && initialExpandedDetail
@@ -464,34 +493,43 @@ export const IncomingOrdersDesktopTable = memo(function IncomingOrdersDesktopTab
                   </td>
                 </tr>
               ) : (
-                filteredOrders.map((order, index) => {
-                  const orderKey = `${order.customerId}_${order.orderDate}`;
-                  const isExpanded = expandedOrderId === order.id && visibleOrderIds.has(order.id);
-                  const detail = detailByOrderId[order.id] ?? null;
-                  const deliveryNumbers = deliveryByCustomerId[orderKey];
-                  const isBilled = billedByCustomerDate[orderKey] ?? false;
-                  const isLoading = loadingOrderId === order.id || (isPending && isExpanded && !detail);
+                <>
+                  {visibleOrders.map((order, index) => {
+                    const orderKey = `${order.customerId}_${order.orderDate}`;
+                    const isExpanded = expandedOrderId === order.id && visibleOrderIds.has(order.id);
+                    const detail = detailByOrderId[order.id] ?? null;
+                    const deliveryNumbers = deliveryByCustomerId[orderKey];
+                    const isBilled = billedByCustomerDate[orderKey] ?? false;
+                    const isLoading = loadingOrderId === order.id || (isPending && isExpanded && !detail);
 
-                  return (
-                    <IncomingOrderRow
-                      key={order.id}
-                      order={order}
-                      index={index}
-                      orders={filteredOrders}
-                      isExpanded={isExpanded}
-                      isLoading={isLoading}
-                      detail={detail}
-                      detailError={detailError}
-                      deliveryNumbers={deliveryNumbers}
-                      isBilled={isBilled}
-                      vehicles={vehicles}
-                      orderDate={orderDate}
-                      searchTerm={searchTerm}
-                      selectedCustomerIds={selectedCustomerIds}
-                      toggleOrder={toggleOrder}
-                    />
-                  );
-                })
+                    return (
+                      <IncomingOrderRow
+                        key={order.id}
+                        order={order}
+                        index={index}
+                        orders={filteredOrders}
+                        isExpanded={isExpanded}
+                        isLoading={isLoading}
+                        detail={detail}
+                        detailError={detailError}
+                        deliveryNumbers={deliveryNumbers}
+                        isBilled={isBilled}
+                        vehicles={vehicles}
+                        orderDate={orderDate}
+                        searchTerm={searchTerm}
+                        selectedCustomerIds={selectedCustomerIds}
+                        toggleOrder={toggleOrder}
+                      />
+                    );
+                  })}
+                  {visibleCount < filteredOrders.length ? (
+                    <tr ref={sensorRef}>
+                      <td colSpan={7} className="py-4 text-center text-xs font-semibold text-slate-400 bg-slate-50/40">
+                        กำลังแสดง {visibleCount} จาก {filteredOrders.length} รายการ (เลื่อนลงเพื่อดูเพิ่มเติม)
+                      </td>
+                    </tr>
+                  ) : null}
+                </>
               )}
             </tbody>
             </table>

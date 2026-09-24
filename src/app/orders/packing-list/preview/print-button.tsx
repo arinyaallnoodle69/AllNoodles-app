@@ -252,7 +252,7 @@ export function PackingListPrintButton({
       const captured: PreviewImage[] = [];
 
       const isMobileDevice = typeof window !== "undefined" && /iphone|ipad|ipod|android/i.test(window.navigator.userAgent.toLowerCase());
-      const selectedPixelRatio = isMobileDevice ? 2.25 : 3;
+      const selectedPixelRatio = isMobileDevice ? 2.5 : 3.0;
 
       for (let i = 0; i < targets.length; i += 1) {
         const target = targets[i];

@@ -2,7 +2,6 @@ import "server-only";
 
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
-import { AppSidebarLayout } from "@/components/app-sidebar";
 import { DashboardClient } from "@/components/dashboard/dashboard-client";
 import { PageLoader } from "@/components/page-loader";
 import { requireAppSession, roleHomePage } from "@/lib/auth/authorization";
@@ -119,7 +118,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   const suspenseKey = `${session.organizationId}:${orderDate}:${expandedOrderId}`;
 
   return (
-    <AppSidebarLayout>
+    <>
       <Suspense key={suspenseKey} fallback={<PageLoader />}>
         <DashboardDataContent
           expandedOrderId={expandedOrderId}
@@ -128,6 +127,6 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
           today={today}
         />
       </Suspense>
-    </AppSidebarLayout>
+    </>
   );
 }

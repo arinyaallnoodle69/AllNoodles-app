@@ -1,7 +1,6 @@
 import { Suspense } from "react";
 import { ChevronLeft, ChevronRight, FileText, Filter } from "lucide-react";
 import Link from "next/link";
-import { AppSidebarLayout } from "@/components/app-sidebar";
 import { MobileSearchDrawer } from "@/components/mobile-search/mobile-search-drawer";
 import { PageLoader } from "@/components/page-loader";
 import { ThaiDatePicker } from "@/components/ui/thai-date-picker";
@@ -102,7 +101,7 @@ async function BillingContent({ searchParams }: PageProps) {
   const pages = splitPages(report.rows, BILLING_REPORT_ROWS_PER_PAGE);
 
   return (
-    <AppSidebarLayout>
+    <>
       <div className="flex h-full flex-col bg-slate-50/50">
         <div className="flex-1 space-y-4 p-4 print:hidden sm:p-6 md:space-y-6 md:p-8">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -376,12 +375,12 @@ async function BillingContent({ searchParams }: PageProps) {
                 ) : null}
               </table>
               <div className={styles.printFooter}>
-                พิมพ์จากระบบรายงานอัตโนมัติ (All Noodles) - หน้า {pageIndex + 1} / {pages.length}
+                หน้า {pageIndex + 1} / {pages.length}
               </div>
             </div>
           ))}
         </div>
       </div>
-    </AppSidebarLayout>
+    </>
   );
 }

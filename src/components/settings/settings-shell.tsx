@@ -5,7 +5,6 @@ import Link from "next/link";
 import type { LucideIcon } from "lucide-react";
 import { ArrowLeft, ArrowUpRight, ChevronRight, Gauge, KeyRound, Save, Search, X, Clock, Factory, Package2, Store, Truck, Warehouse, Image as ImageIcon } from "lucide-react";
 import { LineAppIcon } from "@/components/icons/line-app-icon";
-import { AppSidebarLayout } from "@/components/app-sidebar";
 
 type SettingsSection = "customerData" | "customers" | "loginPin" | "performance" | "products" | "vehicles" | "suppliers" | "orderWindow" | "stock" | "warehouses" | "logo";
 
@@ -263,5 +262,5 @@ export function SettingsShell({
     </div>
   );
 
-  return <AppSidebarLayout>{inner}</AppSidebarLayout>;
+  return inner;
 }

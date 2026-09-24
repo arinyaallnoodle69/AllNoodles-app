@@ -3,6 +3,10 @@ import {
   buildCategoryPrintPalette,
   type CategoryPrintPalette,
 } from "@/lib/products/category-print-colors";
+import {
+  fitPackingProductHeaderFont,
+  getPackingPageFontScale,
+} from "@/components/print/packing-list-font-fit";
 
 export type PackingListStore = {
   id: string;
@@ -213,8 +217,7 @@ function splitProductNameForStandardHeader(name: string, maxLineChars = 4): stri
       if (
         (prev === w && getThaiVisualLength(pair) <= maxLineChars) ||
         (prev === "มา" && w === "ม่า" && getThaiVisualLength(pair) <= maxLineChars) ||
-        (prev === "ไว" && w === "ไว" && getThaiVisualLength(pair) <= maxLineChars) ||
-        (getThaiVisualLength(prev) === 1 && getThaiVisualLength(pair) <= maxLineChars)
+        (prev === "ไว" && w === "ไว" && getThaiVisualLength(pair) <= maxLineChars)
       ) {
         merged[merged.length - 1] = pair;
         continue;
@@ -557,7 +560,8 @@ function formatStandardQuantity(value: number) {
 }
 
 function StandardPackingListPage({ page, data }: { page: StandardPageDef; data: PackingListData }) {
-  const columnWidth = calcDataColWidth(Math.max(page.pageProducts.length, 1), 261, 5);
+  const columnWidth = calcDataColWidth(Math.max(page.pageProducts.length, 1), 267, 5);
+  const pageFontScale = getPackingPageFontScale(page.pageProducts.length);
   const categoryGroups = buildHeaderGroups(page.pageProducts, "category");
   const categoryPaletteByKey = new Map(
     categoryGroups.map((group, index) => {
@@ -600,7 +604,16 @@ function StandardPackingListPage({ page, data }: { page: StandardPageDef; data: 
         />
 
         <div className="packing-table-wrap">
-          <table className="packing-table" style={{ "--standard-row-height": `${rowHeightMm}mm` } as CSSProperties}>
+          <table
+            className="packing-table"
+            style={
+              {
+                "--standard-row-height": `${rowHeightMm}mm`,
+                "--packing-number-font-size": `${12.4 * Math.min(pageFontScale, 1.15)}pt`,
+                "--packing-store-font-size": `${12.4 * Math.min(pageFontScale, 1.08)}pt`,
+              } as CSSProperties
+            }
+          >
             <thead>
               <tr>
                 <th className="packing-col packing-col--store packing-col--group-label">หมวดหมู่</th>
@@ -627,9 +640,16 @@ function StandardPackingListPage({ page, data }: { page: StandardPageDef; data: 
                     const categoryPalette = getCategoryPalette(product);
                     const productPalette = getProductPalette(product, categoryPalette);
                     const colMm = parseFloat(columnWidth) || 12;
-                    const maxCharsPerLine = colMm < 8 ? 3 : 4;
+                    const maxCharsPerLine = Math.max(3, Math.min(6, Math.floor((colMm - 1) / 2.4)));
                     const productNameLines = splitProductNameForStandardHeader(product.name, maxCharsPerLine);
                     const longestLineLength = Math.max(...productNameLines.map((line) => getThaiVisualLength(line)));
+                    const fittedFontSize = fitPackingProductHeaderFont({
+                      columnWidthMm: colMm,
+                      hasIcon: Boolean(product.icon),
+                      lineCount: productNameLines.length,
+                      longestLineLength,
+                      productCount: page.pageProducts.length,
+                    });
                     const isDense =
                       colMm < 8 ||
                       productNameLines.length >= 6 ||
@@ -654,6 +674,7 @@ function StandardPackingListPage({ page, data }: { page: StandardPageDef; data: 
                                   ? " packing-product-header__name--compact"
                                   : ""
                             }`}
+                            style={{ fontSize: `${fittedFontSize}pt` }}
                           >
                             {product.icon ? (
                               <span className="packing-product-header__icon" aria-hidden="true">{product.icon}</span>
@@ -906,7 +927,7 @@ function PackingListStyles() {
           margin: 0 !important;
           border: none !important;
           box-shadow: none !important;
-          transform: none !important;
+          transform: scale(0.98) !important;
           transform-origin: top left !important;
           page-break-after: always;
           break-after: page;
@@ -1124,7 +1145,7 @@ function PackingListStyles() {
 
       .packing-table:not(.packing-table--transposed) .packing-cell--store {
         overflow: hidden;
-        font-size: 12.4pt;
+        font-size: var(--packing-store-font-size, 12.4pt);
         line-height: 1.2;
         text-overflow: ellipsis;
       }
@@ -1143,7 +1164,7 @@ function PackingListStyles() {
         max-width: 100%;
         overflow: hidden;
         font-family: "Angsana New Order Print", "Sarabun", "Noto Sans Thai", sans-serif;
-        font-size: 12.4pt;
+        font-size: var(--packing-number-font-size, 12.4pt);
         font-weight: 800;
         font-variant-numeric: tabular-nums;
         line-height: 1;
@@ -1238,9 +1259,9 @@ function PackingListStyles() {
       }
 
       .packing-col--store {
-        width: 24mm;
-        min-width: 24mm;
-        padding: 1mm 1mm 0.75mm;
+        width: 18mm;
+        min-width: 18mm;
+        padding: 1mm 0.6mm 0.75mm;
         background: #ffffff;
         color: #0f172a;
         font-size: 12.71pt;
@@ -1323,11 +1344,11 @@ function PackingListStyles() {
         height: 26mm;
         min-height: 26mm;
         max-height: 26mm;
-        padding: 1.2mm 0.4mm 0.8mm;
+        padding: 0.7mm 0.1mm 0.4mm;
         width: 100%;
         max-width: 100%;
         min-width: 0;
-        overflow: visible;
+        overflow: hidden;
         display: flex;
         flex-direction: column;
         align-items: center;
@@ -1344,8 +1365,8 @@ function PackingListStyles() {
         max-width: 100%;
         max-height: 100%;
         gap: 0;
-        font-size: 9pt;
-        line-height: 1.38;
+        font-size: 15pt;
+        line-height: 1.25;
         font-weight: 800;
         color: #0f172a;
         white-space: nowrap;
@@ -1364,13 +1385,13 @@ function PackingListStyles() {
       }
 
       .packing-product-header__name--compact {
-        font-size: 8pt;
-        line-height: 1.32;
+        font-size: 12.5pt;
+        line-height: 1.23;
       }
 
       .packing-product-header__name--dense {
-        font-size: 7.2pt;
-        line-height: 1.26;
+        font-size: 10pt;
+        line-height: 1.2;
       }
 
       .packing-product-header__icon {
@@ -1442,7 +1463,7 @@ function PackingListStyles() {
       }
 
       .packing-cell--store {
-        padding: 0 1mm;
+        padding: 0 0.6mm;
         text-align: left;
         font-size: 13.64pt;
         font-weight: 700;
@@ -1576,19 +1597,19 @@ function PackingListStyles() {
 
       .packing-sheet--standard .packing-product-header__name {
         font-family: "Angsana New Order Print", "Sarabun", "Noto Sans Thai", sans-serif;
-        font-size: 9pt;
-        line-height: 1.38;
+        font-size: 15pt;
+        line-height: 1.25;
         font-weight: 700;
       }
 
       .packing-sheet--standard .packing-product-header__name--compact {
-        font-size: 8pt;
-        line-height: 1.32;
+        font-size: 12.5pt;
+        line-height: 1.23;
       }
 
       .packing-sheet--standard .packing-product-header__name--dense {
-        font-size: 7.2pt;
-        line-height: 1.26;
+        font-size: 10pt;
+        line-height: 1.2;
       }
 
       .packing-sheet--standard .packing-product-header__icon {

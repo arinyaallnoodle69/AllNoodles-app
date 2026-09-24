@@ -146,7 +146,7 @@ export async function createPackingListPdfPreviewFromDocument(
     return null;
   }
 
-  const [{ toJpeg, getFontEmbedCSS }, { jsPDF }, html2canvas] = await Promise.all([
+  const [{ toPng, getFontEmbedCSS }, { jsPDF }, html2canvas] = await Promise.all([
     import("html-to-image"),
     import("jspdf"),
     import("html2canvas").then((mod) => mod.default),
@@ -197,7 +197,8 @@ export async function createPackingListPdfPreviewFromDocument(
     const isMobileDevice =
       typeof window !== "undefined" &&
       /iphone|ipad|ipod|android/i.test(window.navigator.userAgent.toLowerCase());
-    const selectedPixelRatio = isMobileDevice ? 1.5 : 2.0;
+    // Safe High-DPI: Mobile 2.5x, Desktop 3.0x
+    const selectedPixelRatio = isMobileDevice ? 2.5 : 3.0;
     const previewImages: string[] = [];
 
     for (const [index, page] of pages.entries()) {
@@ -224,30 +225,28 @@ export async function createPackingListPdfPreviewFromDocument(
 
       if (isWebKit) {
         try {
-          await toJpeg(page, {
+          await toPng(page, {
             backgroundColor: "#ffffff",
             height: captureHeight,
             pixelRatio: selectedPixelRatio,
             width: captureWidth,
             fontEmbedCSS: cachedFontEmbedCSS || undefined,
-            quality: 0.85,
             style: captureStyle,
           });
           await new Promise((resolve) => window.setTimeout(resolve, 80));
         } catch (e) {
-          console.warn("Warm-up toJpeg failed:", e);
+          console.warn("Warm-up toPng failed:", e);
         }
       }
 
       let imageDataUrl: string;
       try {
-        imageDataUrl = await toJpeg(page, {
+        imageDataUrl = await toPng(page, {
           backgroundColor: "#ffffff",
           height: captureHeight,
           pixelRatio: selectedPixelRatio,
           width: captureWidth,
           fontEmbedCSS: cachedFontEmbedCSS || undefined,
-          quality: 0.85,
           style: captureStyle,
         });
       } catch (captureErr) {
@@ -255,22 +254,24 @@ export async function createPackingListPdfPreviewFromDocument(
         const canvas = await html2canvas(page, {
           width: captureWidth,
           height: captureHeight,
-          scale: isMobileDevice ? 1.5 : 2.0,
+          scale: selectedPixelRatio,
           backgroundColor: "#ffffff",
           useCORS: true,
           logging: false,
         });
-        imageDataUrl = canvas.toDataURL("image/jpeg", 0.85);
+        imageDataUrl = canvas.toDataURL("image/png");
       }
 
       previewImages.push(imageDataUrl);
       pdf.addImage(
         imageDataUrl,
-        "JPEG",
+        "PNG",
         0,
         0,
         pageWidthMm,
         pageHeightMm,
+        undefined,
+        "FAST",
       );
 
       await new Promise((resolve) => window.setTimeout(resolve, 0));
@@ -283,6 +284,48 @@ export async function createPackingListPdfPreviewFromDocument(
   } finally {
     restoreCaptureImages(inlinedImages);
   }
+}
+
+export async function createPackingListPdfPreviewFromUrl(
+  url: string,
+  fileName?: string,
+  sourceDocument?: Document,
+): Promise<PackingListPdfPreview | null> {
+  const doc = sourceDocument || (typeof document !== "undefined" ? document : null);
+
+  try {
+    const response = await fetch("/api/delivery-pdf", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url }),
+    });
+
+    if (response.ok) {
+      const blob = await response.blob();
+      const file = new File([blob], buildPackingListPdfFileName(fileName), { type: "application/pdf" });
+
+      let previewImages: string[] = [];
+      if (doc && doc.querySelectorAll(".packing-sheet").length > 0) {
+        try {
+          const clientPreview = await createPackingListPdfPreviewFromDocument(doc, fileName);
+          if (clientPreview?.previewImages) {
+            previewImages = clientPreview.previewImages;
+          }
+        } catch {
+          // ignore
+        }
+      }
+      return { file, previewImages };
+    }
+  } catch (err) {
+    console.warn("[share-packing-list-pdf] Server vector PDF failed, falling back to client:", err);
+  }
+
+  if (doc) {
+    return createPackingListPdfPreviewFromDocument(doc, fileName);
+  }
+
+  throw new Error("Failed to create packing list PDF.");
 }
 
 if (typeof window !== "undefined") {

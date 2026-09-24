@@ -10,7 +10,6 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { ThaiDatePicker } from "@/components/ui/thai-date-picker";
-import { AppSidebarLayout } from "@/components/app-sidebar";
 import { PageLoader } from "@/components/page-loader";
 import { requireAppSession } from "@/lib/auth/authorization";
 import { getTodayInBangkok } from "@/lib/orders/date";
@@ -399,7 +398,7 @@ async function StoreSalesReportContent({ searchParams }: PageProps) {
   const profitPositive = summary.totalRevenue - summary.totalCost >= 0;
 
   return (
-    <AppSidebarLayout>
+    <>
       <div className="min-h-screen bg-background">
         {/* ─── Screen View (Hidden on Print) ─── */}
         <div className="mx-auto max-w-[1440px] px-4 py-6 sm:px-6 sm:py-8 no-print">
@@ -574,12 +573,12 @@ async function StoreSalesReportContent({ searchParams }: PageProps) {
                     )}
                   </tbody>
                 </table>
-                <div className={styles.printFooter}>พิมพ์จากระบบรายงานอัตโนมัติ (All Noodles) - หน้า {pageIdx + 1} / {pages.length}</div>
+                <div className={styles.printFooter}>หน้า {pageIdx + 1} / {pages.length}</div>
               </div>
             ));
           })()}
         </div>
       </div>
-    </AppSidebarLayout>
+    </>
   );
 }

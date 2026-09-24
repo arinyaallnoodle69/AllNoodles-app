@@ -119,13 +119,16 @@ export async function saveCustomerSalesImagesFromDocument(
   const { host, pages } = buildCustomerSalesPages(report, sourceDocument);
   try {
     await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+    const isMobile = /iPad|iPhone|iPod|Android/i.test(navigator.userAgent)
+      || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+    const pixelRatio = isMobile ? 2.5 : 3.0;
     const { toBlob } = await import("html-to-image");
     const files: File[] = [];
 
     for (const [index, page] of pages.entries()) {
       const blob = await toBlob(page, {
         backgroundColor: "#ffffff",
-        pixelRatio: 2,
+        pixelRatio,
         width: page.offsetWidth,
         height: page.offsetHeight,
       });
@@ -133,8 +136,6 @@ export async function saveCustomerSalesImagesFromDocument(
       files.push(new File([blob], `${fileNameBase}-หน้า${index + 1}.png`, { type: "image/png" }));
     }
 
-    const isMobile = /iPad|iPhone|iPod|Android/i.test(navigator.userAgent)
-      || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
     if (isMobile && navigator.canShare?.({ files }) && navigator.share) {
       try {
         await navigator.share({ files, title });
@@ -187,6 +188,10 @@ export async function createCustomerSalesPdfPreviewFromDocument(
 
     const previewImages: string[] = [];
 
+    const isMobile = /iPad|iPhone|iPod|Android/i.test(navigator.userAgent)
+      || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+    const pixelRatio = isMobile ? 2.5 : 3.0;
+
     for (const [index, page] of pages.entries()) {
       if (index > 0) {
         pdf.addPage([210, 297], "portrait");
@@ -194,7 +199,7 @@ export async function createCustomerSalesPdfPreviewFromDocument(
 
       const dataUrl = await toPng(page, {
         backgroundColor: "#ffffff",
-        pixelRatio: 2,
+        pixelRatio,
         width: page.offsetWidth,
         height: page.offsetHeight,
       });

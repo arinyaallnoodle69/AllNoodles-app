@@ -14,7 +14,6 @@ import {
   Landmark,
   BadgeDollarSign,
 } from "lucide-react";
-import { AppSidebarLayout } from "@/components/app-sidebar";
 import { ThaiDatePicker } from "@/components/ui/thai-date-picker";
 import { PageLoader } from "@/components/page-loader";
 import { requireAppSession } from "@/lib/auth/authorization";
@@ -415,7 +414,7 @@ async function DeliveryNotesReportContent({ searchParams }: PageProps) {
   const groupedAllRows = groupRowsByDate(allRows);
 
   return (
-    <AppSidebarLayout>
+    <>
       <div className="min-h-screen bg-background">
         <div className="mx-auto max-w-[1440px] px-4 py-6 sm:px-6 sm:py-8">
           <header className="mb-6 sm:mb-8">
@@ -793,7 +792,7 @@ async function DeliveryNotesReportContent({ searchParams }: PageProps) {
                         )}
 
                         <div className={styles.printFooter}>
-                          พิมพ์จากระบบรายงานอัตโนมัติ (All Noodles) - หน้า {pageIdx + 1} / {pages.length}
+                          หน้า {pageIdx + 1} / {pages.length}
                         </div>
                       </div>
                     ));
@@ -811,7 +810,7 @@ async function DeliveryNotesReportContent({ searchParams }: PageProps) {
           </div>
         </div>
       </div>
-    </AppSidebarLayout>
+    </>
   );
 }
 

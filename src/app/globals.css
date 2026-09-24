@@ -131,7 +131,6 @@
 
   html {
   font-size: clamp(16px, 0.22vw + 15.5px, 17px);
-  scroll-behavior: smooth;
   /* Prevent iOS rubber-band bounce from pulling sticky headers off-screen */
   overscroll-behavior-y: none;
   /* Prevent horizontal rubber-band overscroll on mobile */

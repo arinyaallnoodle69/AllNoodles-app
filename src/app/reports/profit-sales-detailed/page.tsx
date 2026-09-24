@@ -2,7 +2,6 @@ import { Suspense } from "react";
 import { Filter, Store, ChevronLeft, ChevronRight } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { AppSidebarLayout } from "@/components/app-sidebar";
 import { MobileSearchDrawer } from "@/components/mobile-search/mobile-search-drawer";
 import { PageLoader } from "@/components/page-loader";
 import { ThaiDatePicker } from "@/components/ui/thai-date-picker";
@@ -226,7 +225,7 @@ async function DetailedProfitContent({ searchParams }: PageProps) {
   const pages = report.stores.length > 0 ? paginateDetailedReport(report.stores, 38) : [];
 
   return (
-    <AppSidebarLayout>
+    <>
       <div className="min-h-screen bg-background text-[#0b1c30] print:bg-white print:text-black detailed-report-container">
         <style>{`
           .detailed-report-container,
@@ -587,7 +586,7 @@ async function DetailedProfitContent({ searchParams }: PageProps) {
                 </div>
               </div>
               <div className={styles.printFooter}>
-                พิมพ์จากระบบรายงานวิเคราะห์อัตรากำไรอัตโนมัติ (T&Y Noodle Corporate HQ) - หน้า 1 / 1
+                หน้า 1 / 1
               </div>
             </div>
           ) : (
@@ -638,16 +637,14 @@ async function DetailedProfitContent({ searchParams }: PageProps) {
                       {page.groups.map((group, gIdx) => (
                         <Suspense key={`${group.store.deliveryNumber}-${gIdx}`}>
                           {group.isFirstPageOfStore && (
-                            <tr className="bg-neutral-50 border-y border-neutral-200">
-                              <td colSpan={9} className="px-2.5 py-2 font-black text-black text-[10.5px]">
-                                <div className="flex justify-between items-center">
-                                  <div>
-                                    วันที่: {formatDateThai(group.store.deliveryDate)}
-                                    <span className="mx-2 text-slate-400 font-normal">|</span>
-                                    เลขที่ใบจัดส่ง: {group.store.deliveryNumber}
-                                    <span className="mx-2 text-slate-400 font-normal">|</span>
-                                    ร้านค้า: {group.store.customerCode} - {group.store.customerName}
-                                  </div>
+                            <tr className={`${styles.printStoreHeaderRow} bg-neutral-50 border-y border-neutral-200`}>
+                              <td colSpan={9} className={`${styles.printStoreHeaderCell} px-2 py-1.5 font-bold text-black text-[10px]`}>
+                                <div className={`${styles.printStoreHeaderContent} flex items-center gap-2 w-full whitespace-nowrap overflow-hidden`}>
+                                  <span className="shrink-0 font-bold">วันที่: {formatDateThai(group.store.deliveryDate)}</span>
+                                  <span className="text-slate-400 font-normal shrink-0">|</span>
+                                  <span className="shrink-0 font-bold">เลขที่ใบจัดส่ง: {group.store.deliveryNumber}</span>
+                                  <span className="text-slate-400 font-normal shrink-0">|</span>
+                                  <span className="font-bold truncate">ร้านค้า: {group.store.customerCode} - {group.store.customerName}</span>
                                 </div>
                               </td>
                             </tr>
@@ -730,13 +727,13 @@ async function DetailedProfitContent({ searchParams }: PageProps) {
                 </div>
 
                 <div className={styles.printFooter}>
-                  พิมพ์จากระบบรายงานวิเคราะห์อัตรากำไรอัตโนมัติ (T&Y Noodle Corporate HQ) - หน้า {pageIndex + 1} / {pages.length}
+                  หน้า {pageIndex + 1} / {pages.length}
                 </div>
               </div>
             ))
           )}
         </div>
       </div>
-    </AppSidebarLayout>
+    </>
   );
 }

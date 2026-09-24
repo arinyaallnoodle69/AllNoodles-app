@@ -5,6 +5,7 @@ import { useState } from "react";
 import { DeliveryPdfPreviewModal } from "@/components/print/delivery-pdf-preview-modal";
 import {
   createPackingListPdfPreviewFromDocument,
+  createPackingListPdfPreviewFromUrl,
   type PackingListPdfPreview,
 } from "@/components/print/share-packing-list-pdf";
 
@@ -30,7 +31,12 @@ export function SharePackingListPdfButton({
     setIsSharing(true);
 
     try {
-      const pdf = await createPackingListPdfPreviewFromDocument(document, fileName);
+      const isPreviewUrl =
+        typeof window !== "undefined" &&
+        window.location.pathname.startsWith("/orders/packing-list/preview");
+      const pdf = isPreviewUrl
+        ? await createPackingListPdfPreviewFromUrl(window.location.href, fileName, document)
+        : await createPackingListPdfPreviewFromDocument(document, fileName);
       if (pdf) {
         setPreviewPdf(pdf);
       }

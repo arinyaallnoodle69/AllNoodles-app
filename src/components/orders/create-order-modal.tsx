@@ -1949,6 +1949,13 @@ export function CreateOrderModal({
   const submitPopupTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const successToastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const savedScrollYRef = useRef<number>(0);
+
+  useEffect(() => {
+    if (open && typeof window !== "undefined") {
+      savedScrollYRef.current = window.scrollY || window.pageYOffset || 0;
+    }
+  }, [open]);
   const productsById = useMemo(
     () => new Map(products.map((product) => [product.id, product])),
     [products],
@@ -2298,10 +2305,19 @@ export function CreateOrderModal({
     if (closeTimerRef.current) {
       clearTimeout(closeTimerRef.current);
     }
+    const targetScrollY = savedScrollYRef.current;
+    if (typeof document !== "undefined" && document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
     closeTimerRef.current = setTimeout(() => {
       setOpen(false);
       setIsClosing(false);
       resetForm();
+      if (typeof window !== "undefined") {
+        requestAnimationFrame(() => {
+          window.scrollTo({ top: targetScrollY, behavior: "instant" as ScrollBehavior });
+        });
+      }
     }, 380);
   }
 

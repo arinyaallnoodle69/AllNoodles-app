@@ -39,6 +39,13 @@ type MobileListOrder = {
   warehouseName?: string | null;
 };
 
+function formatCurrency(value: number) {
+  return value.toLocaleString("th-TH", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+}
+
 function formatDisplayDate(value: string) {
   const [y, m, d] = value.split("-");
   if (!y || !m || !d) return value;
@@ -69,6 +76,12 @@ export function IncomingOrdersMobileList({
   const router = useRouter();
   const searchParams = useSearchParams();
   const [, startTransition] = useTransition();
+  const [localOrders, setLocalOrders] = useState(orders);
+
+  useEffect(() => {
+    setLocalOrders(orders);
+  }, [orders]);
+
   const [selectedVehicleId, setSelectedVehicleId] = useState(() => {
     if (typeof window !== "undefined") {
       return new URLSearchParams(window.location.search).get("vehicle") || "__all__";
@@ -76,11 +89,33 @@ export function IncomingOrdersMobileList({
     return searchParams.get("vehicle") || "__all__";
   });
 
+  const handleOrderUpdated = useCallback((updated: {
+    orderId: string;
+    notes?: string | null;
+    totalAmount?: number;
+    productCount?: number;
+  }) => {
+    delete modalCacheRef.current[updated.orderId];
+    setLocalOrders((prev) =>
+      prev.map((o) => {
+        if (o.id !== updated.orderId) return o;
+        const nextTotal = updated.totalAmount !== undefined ? updated.totalAmount : o.totalAmount;
+        return {
+          ...o,
+          notes: updated.notes !== undefined ? updated.notes : o.notes,
+          totalAmount: nextTotal,
+          totalAmountText: `${formatCurrency(nextTotal)} บาท`,
+          productCount: updated.productCount !== undefined ? updated.productCount : o.productCount,
+        };
+      })
+    );
+  }, []);
+
   const filteredOrders = useMemo(() => {
-    if (selectedVehicleId === "__all__") return orders;
-    if (selectedVehicleId === "__none__") return orders.filter((o) => !o.vehicleId);
-    return orders.filter((o) => o.vehicleId === selectedVehicleId);
-  }, [orders, selectedVehicleId]);
+    if (selectedVehicleId === "__all__") return localOrders;
+    if (selectedVehicleId === "__none__") return localOrders.filter((o) => !o.vehicleId);
+    return localOrders.filter((o) => o.vehicleId === selectedVehicleId);
+  }, [localOrders, selectedVehicleId]);
 
   const [visibleCount, setVisibleCount] = useState(15);
   const filterKey = `${selectedVehicleId ?? "all"}_${currentListDate ?? "all"}_${searchTerm?.trim() ?? ""}`;
@@ -89,6 +124,7 @@ export function IncomingOrdersMobileList({
     setPrevFilterKey(filterKey);
     setVisibleCount(15);
   }
+  const lastScrollYRef = useRef<number>(0);
   const sensorRef = useRef<HTMLDivElement | null>(null);
 
   const [activeModalOrderId, setActiveModalOrderId] = useState<string | null>(null);
@@ -101,10 +137,15 @@ export function IncomingOrdersMobileList({
 
   const handleOpenModal = useCallback((orderId: string) => {
     if (typeof window !== "undefined") {
-      window.sessionStorage.setItem("last_order_scroll_y", String(window.scrollY));
-      const p = new URLSearchParams(window.location.search);
-      p.set("expanded", orderId);
-      window.history.pushState(null, "", `${window.location.pathname}?${p.toString()}`);
+      const currentY = window.scrollY;
+      lastScrollYRef.current = currentY;
+      window.sessionStorage.setItem("last_order_scroll_y", String(currentY));
+    }
+
+    // Ensure visibleCount covers this order so list height never collapses
+    const orderIndex = filteredOrders.findIndex((o) => o.id === orderId);
+    if (orderIndex >= 0) {
+      setVisibleCount((prev) => Math.max(prev, Math.ceil((orderIndex + 5) / 15) * 15));
     }
 
     setActiveModalOrderId(orderId);
@@ -148,11 +189,29 @@ export function IncomingOrdersMobileList({
         console.error("Failed to load order details:", err);
       }
     })();
-  }, []);
+  }, [filteredOrders]);
 
   const handleCloseModal = useCallback(() => {
+    const targetY = lastScrollYRef.current || (typeof window !== "undefined" ? Number(window.sessionStorage.getItem("last_order_scroll_y") || "0") : 0);
+
+    if (typeof document !== "undefined" && document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
+
     setActiveModalOrderId(null);
     setModalData(null);
+
+    if (typeof window !== "undefined") {
+      if ("scrollRestoration" in window.history) {
+        window.history.scrollRestoration = "manual";
+      }
+      if (targetY > 0) {
+        window.scrollTo({ top: targetY, behavior: "instant" });
+        requestAnimationFrame(() => {
+          window.scrollTo({ top: targetY, behavior: "instant" });
+        });
+      }
+    }
   }, []);
 
   useEffect(() => {
@@ -160,15 +219,14 @@ export function IncomingOrdersMobileList({
       const params = new URLSearchParams(window.location.search);
       const expanded = params.get("expanded");
       if (!expanded) {
-        setActiveModalOrderId(null);
-        setModalData(null);
+        handleCloseModal();
       } else if (expanded !== activeModalOrderId) {
         handleOpenModal(expanded);
       }
     };
     window.addEventListener("popstate", handlePopState);
     return () => window.removeEventListener("popstate", handlePopState);
-  }, [activeModalOrderId, handleOpenModal]);
+  }, [activeModalOrderId, handleOpenModal, handleCloseModal]);
 
   useEffect(() => {
     const sensor = sensorRef.current;
@@ -299,6 +357,7 @@ export function IncomingOrdersMobileList({
           detail={modalData?.orderId === activeModalOrderId ? modalData.detail : null}
           expandedId={activeModalOrderId}
           onAfterClose={handleCloseModal}
+          onOrderUpdated={handleOrderUpdated}
           products={modalData?.orderId === activeModalOrderId ? modalData.products : []}
           searchTerm={searchTerm ?? ""}
         />

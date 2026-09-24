@@ -157,10 +157,14 @@ export function PrintButton({
         // Give browser time to layout
         await new Promise(r => setTimeout(r, 600));
 
+        const isMobile = /iPad|iPhone|iPod|Android/i.test(navigator.userAgent) || 
+          (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+        const selectedPixelRatio = isMobile ? 2.5 : 3.0;
+
         const options = {
           quality: 1,
           backgroundColor: "#ffffff",
-          pixelRatio: 2,
+          pixelRatio: selectedPixelRatio,
           fontEmbedCSS,
           width: CAPTURE_WIDTH_PX,
           height: CAPTURE_HEIGHT_PX,
@@ -176,7 +180,7 @@ export function PrintButton({
           const canvas = await html2canvas(targetNode, {
             width: CAPTURE_WIDTH_PX,
             height: CAPTURE_HEIGHT_PX,
-            scale: 2,
+            scale: selectedPixelRatio,
             backgroundColor: "#ffffff",
             useCORS: true,
             logging: false,

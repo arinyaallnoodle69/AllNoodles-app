@@ -9,6 +9,12 @@ const ALLOWED_PATHS = [
   "/delivery/print",
   "/orders/delivery-notes/preview",
   "/orders/delivery-notes/",
+  "/orders/packing-list/preview",
+  "/reports/product-sales",
+  "/reports/store-sales",
+  "/reports/profit-sales",
+  "/reports/profit-sales-detailed",
+  "/reports/delivery-notes",
 ];
 
 function localChromePath() {
@@ -34,7 +40,7 @@ export async function POST(request: NextRequest) {
       ALLOWED_PATHS.some((path) => targetUrl.pathname === path || targetUrl.pathname.startsWith(path));
 
     if (!allowed) {
-      return NextResponse.json({ error: "Invalid delivery-note URL." }, { status: 400 });
+      return NextResponse.json({ error: "Invalid document URL." }, { status: 400 });
     }
 
     const localExecutablePath = localChromePath();
@@ -55,7 +61,10 @@ export async function POST(request: NextRequest) {
     if (cookie) await page.setExtraHTTPHeaders({ cookie });
 
     await page.goto(targetUrl.toString(), { waitUntil: "domcontentloaded", timeout: 45_000 });
-    await page.waitForSelector("[data-delivery-note-page='true']", { timeout: 30_000 });
+    await page.waitForSelector(
+      "[data-delivery-note-page='true'], .packing-sheet, [data-print-page='true'], [data-customer-sales-report], #report-print-area",
+      { timeout: 30_000 },
+    );
     await page.emulateMediaType("print");
     await page.evaluate(() => document.fonts.ready);
 

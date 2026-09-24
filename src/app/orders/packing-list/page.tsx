@@ -11,7 +11,10 @@ import {
 } from "@/components/print/packing-list-layout";
 import { requireAnyRole } from "@/lib/auth/authorization";
 import { PRINT_ORGANIZATION_NAME } from "@/components/print/print-shared";
-import { getPackingListProductMeta } from "@/lib/orders/packing-list-product-meta";
+import {
+  getPackingListProductMeta,
+  sortPackingListProducts,
+} from "@/lib/orders/packing-list-product-meta";
 import { sortProductsByCategory } from "@/lib/products/sort-by-category";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { AutoPrint, PackingListPrintButton } from "./preview/print-button";
@@ -118,6 +121,7 @@ type ProductDescriptor = {
   category: string;
   icon: string;
   productId: string;
+  sortBrand: string;
   sku: string;
   name: string;
   unit: string;
@@ -218,7 +222,7 @@ async function PackingListPage({ searchParams }: Props) {
       ? ordersQueryBase.gte("order_date", date).lte("order_date", endDate)
       : ordersQueryBase.eq("order_date", date);
 
-  const [vehicleRows, ordersResult, productsDb, categoriesDb, categoryItemsDb, specialItems] = await Promise.all([
+  const [vehicleRows, ordersResult, productsDb, categoriesDb, categoryItemsDb, brandsDb, specialItems] = await Promise.all([
     admin
       .from("vehicles")
       .select("id, name")
@@ -240,6 +244,11 @@ async function PackingListPage({ searchParams }: Props) {
       .from("product_category_items")
       .select("product_category_id, product_id")
       .eq("organization_id", session.organizationId),
+    admin
+      .from("product_brands")
+      .select("name, sort_order")
+      .eq("organization_id", session.organizationId)
+      .order("sort_order", { ascending: true }),
     getDailySpecialPrintItems(session.organizationId, date, endDate),
   ]);
 
@@ -309,6 +318,21 @@ async function PackingListPage({ searchParams }: Props) {
       product.display_order !== null && product.display_order !== undefined
         ? Number(product.display_order)
         : Infinity,
+    ]),
+  );
+  const productManagementBrandById = new Map(
+    dbProductsList.map((product: DbProduct) => {
+      const metadata =
+        product.metadata && typeof product.metadata === "object" && !Array.isArray(product.metadata)
+          ? (product.metadata as Record<string, unknown>)
+          : {};
+      return [product.id, typeof metadata.brand === "string" ? metadata.brand.trim() : ""];
+    }),
+  );
+  const brandRankByName = new Map(
+    (brandsDb.data ?? []).map((brand) => [
+      String(brand.name).trim().toLocaleLowerCase("th"),
+      Number(brand.sort_order ?? 0),
     ]),
   );
 
@@ -478,6 +502,7 @@ async function PackingListPage({ searchParams }: Props) {
           if (!productMap.has(key)) {
             productMap.set(key, {
               productId: item.product_id,
+              sortBrand: productManagementBrandById.get(item.product_id) ?? "",
               sku: item.products.sku,
               name: packingListMetaByProductId.get(item.product_id)?.name ?? item.products.name,
               brand: normalizePackingBrand(packingListMetaByProductId.get(item.product_id)?.brand ?? ""),
@@ -531,6 +556,7 @@ async function PackingListPage({ searchParams }: Props) {
         if (!productMap.has(key)) {
           productMap.set(key, {
             productId: special.productId,
+            sortBrand: productManagementBrandById.get(special.productId) ?? "",
             sku: special.product.sku,
             name: packingListMetaByProductId.get(special.productId)?.name ?? special.product.name,
             brand: normalizePackingBrand(packingListMetaByProductId.get(special.productId)?.brand ?? ""),
@@ -566,7 +592,7 @@ async function PackingListPage({ searchParams }: Props) {
           }),
         );
 
-      const products = Array.from(productMap.entries())
+      const products = sortPackingListProducts(Array.from(productMap.entries())
         .map(([key, product]) => ({
           key,
           brand: product.brand,
@@ -575,28 +601,15 @@ async function PackingListPage({ searchParams }: Props) {
           printBackgroundColor: product.printBackgroundColor,
           icon: product.icon,
           productId: product.productId,
+          sortBrand: product.sortBrand,
           sku: product.sku,
           name: product.name,
           unit: product.unit,
-        }))
-        .sort((a, b) => {
-          const categoryRankA = categoryRankByProductId.get(a.productId) ?? Infinity;
-          const categoryRankB = categoryRankByProductId.get(b.productId) ?? Infinity;
-          if (categoryRankA < categoryRankB) return -1;
-          if (categoryRankA > categoryRankB) return 1;
-
-          const categoryCompare = a.category.localeCompare(b.category, "th");
-          if (categoryCompare !== 0) return categoryCompare;
-
-          const orderA = productDisplayOrderById.get(a.productId) ?? Infinity;
-          const orderB = productDisplayOrderById.get(b.productId) ?? Infinity;
-          if (orderA !== orderB) return orderA - orderB;
-
-          const indexA = productSortIndexMap.get(a.productId) ?? 999999;
-          const indexB = productSortIndexMap.get(b.productId) ?? 999999;
-          if (indexA !== indexB) return indexA - indexB;
-
-          return a.sku.localeCompare(b.sku) || a.name.localeCompare(b.name);
+        })), {
+          brandRankByName,
+          categoryRankByProductId,
+          displayOrderByProductId: productDisplayOrderById,
+          productIndexById: productSortIndexMap,
         });
 
       const qty = products.map((product) =>

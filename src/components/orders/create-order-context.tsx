@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useState, useTransition } from "react";
+import { createContext, useCallback, useContext, useEffect, useRef, useState, useTransition } from "react";
 import { fetchOrderModalDataAction } from "@/app/orders/incoming/actions";
 import type { OrderCustomerOption, OrderProductOption, OrderVehicleOption } from "@/lib/orders/manage";
 
@@ -27,15 +27,29 @@ export function CreateOrderProvider({ children }: { children: React.ReactNode })
   const [initialCustomerId, setInitialCustomerId] = useState<string | undefined>();
   const [data, setData] = useState<CreateOrderData | null>(null);
   const [isPending, startTransition] = useTransition();
+  const savedScrollYRef = useRef<number>(0);
 
   const open = useCallback((customerId?: string) => {
+    if (typeof window !== "undefined") {
+      savedScrollYRef.current = window.scrollY;
+    }
     setInitialCustomerId(customerId);
     setIsOpen(true);
   }, []);
 
   const close = useCallback(() => {
+    const targetY = savedScrollYRef.current;
+    if (typeof document !== "undefined" && document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
     setIsOpen(false);
     setInitialCustomerId(undefined);
+    if (typeof window !== "undefined" && targetY > 0) {
+      window.scrollTo({ top: targetY, behavior: "instant" });
+      requestAnimationFrame(() => {
+        window.scrollTo({ top: targetY, behavior: "instant" });
+      });
+    }
   }, []);
 
   // Pre-fetch data on mount for instant access

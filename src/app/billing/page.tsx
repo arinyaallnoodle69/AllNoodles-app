@@ -1,5 +1,4 @@
 import { Suspense } from "react";
-import { AppSidebarLayout } from "@/components/app-sidebar";
 import { PageLoader } from "@/components/page-loader";
 import { requireAnyRole } from "@/lib/auth/authorization";
 import {
@@ -44,7 +43,7 @@ async function BillingPageContent({ searchParams }: BillingPageProps) {
   ]);
 
   return (
-    <AppSidebarLayout>
+    <>
       <BillingDashboardClient
         organizationId={session.organizationId}
         candidates={candidates}
@@ -53,7 +52,7 @@ async function BillingPageContent({ searchParams }: BillingPageProps) {
         initialTo={to}
         canViewAmounts={session.role === "admin"}
       />
-    </AppSidebarLayout>
+    </>
   );
 }
 

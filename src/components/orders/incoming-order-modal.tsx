@@ -170,7 +170,10 @@ const EditItemsPanel = memo(({
   products,
 }: {
   detail: OrderDetailData;
-  onDone: (message?: string) => void;
+  onDone: (
+    message?: string,
+    updatedStats?: { notes: string | null; totalAmount: number; productCount: number },
+  ) => void;
   products: OrderProductOption[];
 }) => {
   const [notes, setNotes] = useState(detail.notes ?? "");
@@ -380,7 +383,16 @@ const EditItemsPanel = memo(({
       });
 
       if ("error" in result) throw new Error(result.error);
-      onDone("บันทึกรายการสำเร็จแล้ว");
+      const computedTotal =
+        activeItems.reduce((s, i) => s + (quantities[i.id] ?? i.quantity) * (normalizedUnitPrices[i.id] ?? i.unitPrice), 0) +
+        normalizedAddedItems.reduce((s, i) => s + i.quantity * i.unitPrice, 0);
+      const computedCount =
+        activeItems.filter((i) => (quantities[i.id] ?? i.quantity) > 0).length + normalizedAddedItems.length;
+      onDone("บันทึกรายการสำเร็จแล้ว", {
+        notes: notes.trim() || null,
+        totalAmount: computedTotal,
+        productCount: computedCount,
+      });
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "เกิดข้อผิดพลาดในการบันทึกข้อมูล");
     } finally {
@@ -929,11 +941,17 @@ type Props = {
   detail: OrderDetailData | null;
   expandedId: string;
   onAfterClose?: () => void;
+  onOrderUpdated?: (data: {
+    orderId: string;
+    notes?: string | null;
+    totalAmount?: number;
+    productCount?: number;
+  }) => void;
   products: OrderProductOption[];
   searchTerm: string;
 };
 
-export function IncomingOrderModal({ allOrders, detail, expandedId, onAfterClose, products }: Props) {
+export function IncomingOrderModal({ allOrders, detail, expandedId, onAfterClose, onOrderUpdated, products }: Props) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -1050,10 +1068,21 @@ export function IncomingOrderModal({ allOrders, detail, expandedId, onAfterClose
   }, []);
 
   function restorePageScroll() {
-    const top = pageScrollYRef.current;
     if (typeof window === "undefined") return;
-    if (Math.abs(window.scrollY - top) > 4) {
+    if ("scrollRestoration" in window.history) {
+      window.history.scrollRestoration = "manual";
+    }
+    const saved = window.sessionStorage.getItem("last_order_scroll_y");
+    const top = saved !== null && !isNaN(Number(saved)) && Number(saved) > 0 ? Number(saved) : pageScrollYRef.current;
+    if (top > 0) {
       window.scrollTo({ top, behavior: "instant" as ScrollBehavior });
+      requestAnimationFrame(() => {
+        window.scrollTo({ top, behavior: "instant" as ScrollBehavior });
+      });
+      setTimeout(() => window.scrollTo({ top, behavior: "instant" as ScrollBehavior }), 50);
+      setTimeout(() => window.scrollTo({ top, behavior: "instant" as ScrollBehavior }), 150);
+      setTimeout(() => window.scrollTo({ top, behavior: "instant" as ScrollBehavior }), 300);
+      setTimeout(() => window.scrollTo({ top, behavior: "instant" as ScrollBehavior }), 500);
     }
   }
 
@@ -1119,14 +1148,19 @@ export function IncomingOrderModal({ allOrders, detail, expandedId, onAfterClose
   function close() {
     if (isClosing) return;
     setIsClosing(true);
+    if (typeof document !== "undefined" && document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
     setTimeout(() => {
       setIsOpen(false);
       if (typeof window !== "undefined") {
         const p = new URLSearchParams(window.location.search);
-        p.delete("expanded"); p.delete("edit"); p.delete("delete");
-        const qs = p.toString();
-        const nextUrl = qs ? `${window.location.pathname}?${qs}` : window.location.pathname;
-        window.history.replaceState(null, "", nextUrl);
+        if (p.has("expanded") || p.has("edit") || p.has("delete")) {
+          p.delete("expanded"); p.delete("edit"); p.delete("delete");
+          const qs = p.toString();
+          const nextUrl = qs ? `${window.location.pathname}?${qs}` : window.location.pathname;
+          window.history.replaceState(null, "", nextUrl);
+        }
       }
       restorePageScroll();
       onAfterClose?.();
@@ -1467,21 +1501,22 @@ export function IncomingOrderModal({ allOrders, detail, expandedId, onAfterClose
           ) : editMode ? (
             <EditItemsPanel
               detail={activeDetail}
-              onDone={(message) => {
+              onDone={(message, updatedStats) => {
                 if (message) {
-                  setSaveToast(message);
+                  if (updatedStats) {
+                    onOrderUpdated?.({
+                      orderId: activeOrderId,
+                      notes: updatedStats.notes,
+                      totalAmount: updatedStats.totalAmount,
+                      productCount: updatedStats.productCount,
+                    });
+                  }
                   setCachedDetails((prev) => {
                     const next = { ...prev };
                     delete next[activeOrderId];
                     return next;
                   });
-                  router.refresh();
-                  restorePageScroll();
-                  window.setTimeout(() => {
-                    setSaveToast(null);
-                    close();
-                    restorePageScroll();
-                  }, 1200);
+                  close();
                 } else {
                   if (!isDesktopViewport) {
                     setEditMode(false);

@@ -91,6 +91,27 @@
 .printProductCell { display: flex !important; align-items: center !important; gap: 1mm !important; min-width: 0 !important; }
 .printProductName { font-size: 9pt !important; font-weight: 800 !important; color: #000000 !important; white-space: normal !important; line-height: 1.15 !important; }
 
+.printStoreHeaderRow {
+  background: #f8fafc !important;
+}
+
+.printStoreHeaderCell {
+  padding: 1.2mm 2mm !important;
+  font-size: 8.5pt !important;
+  font-weight: 700 !important;
+  color: #000000 !important;
+  white-space: nowrap !important;
+}
+
+.printStoreHeaderContent {
+  display: flex !important;
+  align-items: center !important;
+  width: 100% !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  gap: 2mm !important;
+}
+
 .printFooter {
   display: block !important;
   margin-top: auto !important;

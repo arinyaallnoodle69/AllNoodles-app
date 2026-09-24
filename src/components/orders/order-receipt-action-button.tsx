@@ -118,19 +118,20 @@ export function OrderReceiptActionButton({
         }
       }
 
-      // Capture DIRECTLY from the visible element!
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
+                    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+      const isMobile = isIOS || /Android/i.test(navigator.userAgent);
+      const selectedPixelRatio = isMobile ? 2.5 : 3.0;
+
+      // Capture DIRECTLY from the visible element with high-DPI crisp rendering
       const dataUrl = await htmlToImage.toPng(receiptCardRef.current, {
         backgroundColor: "#ffffff",
         cacheBust: true,
         fontEmbedCSS,
-        pixelRatio: 2,
+        pixelRatio: selectedPixelRatio,
       });
 
       const fileName = `All Noodles-${detail?.orderNumber ?? "order"}.png`;
-
-      // Check if iOS
-      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
-                    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
       if (isIOS && navigator.share && navigator.canShare) {
         try {

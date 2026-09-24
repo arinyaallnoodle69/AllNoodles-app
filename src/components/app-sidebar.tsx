@@ -253,6 +253,7 @@ function SidebarLink({
   return (
     <Link
       href={item.href}
+      prefetch
       title={collapsed ? item.label : undefined}
       className={`flex items-center gap-3 rounded-xl px-2.5 py-2.5 text-sm font-black transition-colors ${active ? "bg-[#4A148C] text-white shadow-sm shadow-[#4A148C]/20" : "text-[#4A148C] hover:bg-[#F3E5F5] hover:text-[#4A148C]"
         } ${collapsed ? "justify-center" : ""} ${indent && !collapsed ? "pl-9" : ""}`}

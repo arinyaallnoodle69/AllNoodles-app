@@ -113,7 +113,7 @@ export const IncomingOrderOpenCard = memo(function IncomingOrderOpenCard({
   }
 
   return (
-    <article className="relative overflow-hidden rounded-[1.35rem] border border-[#EA80FC]/35 bg-white px-5 py-4 shadow-[0_14px_34px_rgba(142, 36, 170,0.08)] incoming-order-card">
+    <article id={`order-card-${orderId}`} className="relative overflow-hidden rounded-[1.35rem] border border-[#EA80FC]/35 bg-white px-5 py-4 shadow-[0_14px_34px_rgba(142, 36, 170,0.08)] incoming-order-card">
       <div className="pointer-events-none absolute inset-x-5 top-0 h-px bg-gradient-to-r from-transparent via-[#EA80FC]/70 to-transparent" />
       <div className="pointer-events-none absolute bottom-0 left-0 top-0 w-1 bg-[#4A148C]" />
       <div className="flex items-start gap-3">
