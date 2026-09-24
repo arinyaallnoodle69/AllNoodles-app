@@ -28,6 +28,7 @@ export function DeliveryPdfPreviewModal({
   const [isLineBrowser, setIsLineBrowser] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [isMobileStandalone, setIsMobileStandalone] = useState(false);
+  const [isIOS, setIsIOS] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
 
   // Supabase temp upload states
@@ -55,8 +56,10 @@ export function DeliveryPdfPreviewModal({
     const ua = navigator.userAgent.toLowerCase();
     const isLine = ua.indexOf("line") > -1;
     const isMob = /iphone|ipad|ipod|android/i.test(ua);
+    const isApple = /iphone|ipad|ipod/i.test(ua);
     setIsLineBrowser(isLine);
     setIsMobile(isMob);
+    setIsIOS(isApple);
 
     // Check for standalone mode (PWA installed on home screen)
     interface NavigatorWithStandalone extends Navigator {
@@ -135,15 +138,47 @@ export function DeliveryPdfPreviewModal({
     }
   }
 
+  const isFileValid = Boolean(file && file.size > 500);
+  const isReady = isFileValid && !isUploading;
+
   function handleDownload() {
+    if (!isReady || !isFileValid) {
+      window.alert("ไฟล์ PDF กำลังเตรียมความพร้อม กรุณารอสักครู่");
+      return;
+    }
+    if (publicUrl && isMobile) {
+      window.open(publicUrl, "_blank");
+      return;
+    }
     downloadPreparedDeliveryPdf(file);
   }
 
   async function handleShare() {
-    if (isSharing) return;
+    if (isSharing || !isReady || !isFileValid) return;
 
     setIsSharing(true);
     try {
+      if (typeof navigator !== "undefined" && navigator.share) {
+        if (navigator.canShare?.({ files: [file] })) {
+          await navigator.share({
+            files: [file],
+            title: title || "บิลส่งของ",
+            ...(publicUrl ? { url: publicUrl } : {}),
+          });
+          return;
+        }
+        if (publicUrl) {
+          await navigator.share({
+            title: title || "บิลส่งของ",
+            url: publicUrl,
+          });
+          return;
+        }
+      }
+      if (publicUrl && isMobile) {
+        window.open(publicUrl, "_blank");
+        return;
+      }
       await sharePreparedDeliveryPdf(file);
     } catch (error) {
       if (error instanceof Error && error.name === "AbortError") return;
@@ -196,27 +231,47 @@ export function DeliveryPdfPreviewModal({
             <button
               type="button"
               onClick={handleDownload}
-              className={`inline-flex h-12 items-center gap-2 bg-[#EA80FC] px-6 text-sm font-black uppercase tracking-[0.14em] text-[#4A148C] transition hover:bg-[#4A148C] active:scale-[0.98] ${
+              disabled={!isReady || isSharing}
+              className={`inline-flex h-12 items-center gap-2 bg-[#EA80FC] px-6 text-sm font-black uppercase tracking-[0.14em] text-[#4A148C] transition hover:bg-[#4A148C] hover:text-white active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 ${
                 isLineBrowser && isMobileStandalone && !publicUrl ? "opacity-50 cursor-not-allowed" : ""
               }`}
             >
-              <Download className="h-4 w-4" strokeWidth={2.6} />
-              ดาวน์โหลด
+              {isUploading ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" strokeWidth={2.4} />
+                  กำลังเตรียมไฟล์...
+                </>
+              ) : (
+                <>
+                  <Download className="h-4 w-4" strokeWidth={2.6} />
+                  ดาวน์โหลด
+                </>
+              )}
             </button>
             <button
               type="button"
               onClick={handleShare}
-              disabled={isSharing}
-              className={`inline-flex h-12 items-center gap-2 bg-[#4A148C] px-6 text-sm font-black uppercase tracking-[0.14em] text-white transition hover:bg-[#4A148C] active:scale-[0.98] disabled:opacity-60 ${
+              disabled={!isReady || isSharing}
+              className={`inline-flex h-12 items-center gap-2 bg-[#4A148C] px-6 text-sm font-black uppercase tracking-[0.14em] text-white transition hover:bg-[#3b0f70] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 ${
                 isLineBrowser && isMobileStandalone && !publicUrl ? "opacity-50 cursor-not-allowed" : ""
               }`}
             >
               {isSharing ? (
-                <Loader2 className="h-4 w-4 animate-spin" strokeWidth={2.4} />
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" strokeWidth={2.4} />
+                  กำลังแชร์...
+                </>
+              ) : isUploading ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" strokeWidth={2.4} />
+                  กำลังเตรียมไฟล์...
+                </>
               ) : (
-                <Share2 className="h-4 w-4" strokeWidth={2.4} />
+                <>
+                  <Share2 className="h-4 w-4" strokeWidth={2.4} />
+                  แชร์ / LINE
+                </>
               )}
-              แชร์ / LINE
             </button>
             <button
               type="button"
@@ -268,6 +323,12 @@ export function DeliveryPdfPreviewModal({
                     ))}
                   </div>
                 </div>
+              ) : isIOS && !isLineBrowser ? (
+                <iframe
+                  src={previewUrl}
+                  title="ตัวอย่าง PDF บิลส่งของ"
+                  className="flex-1 min-h-[60dvh] w-full bg-white border-0"
+                />
               ) : publicUrl ? (
                 <iframe
                   src={`https://docs.google.com/viewer?url=${encodeURIComponent(publicUrl)}&embedded=true`}
@@ -376,27 +437,47 @@ export function DeliveryPdfPreviewModal({
           <button
             type="button"
             onClick={handleDownload}
-            className={`inline-flex h-14 items-center justify-center gap-2 bg-[#EA80FC] text-sm font-black uppercase tracking-[0.12em] text-[#4A148C] transition active:scale-95 ${
-              isLineBrowser && isMobileStandalone && !publicUrl ? "opacity-50" : ""
+            disabled={!isReady || isSharing}
+            className={`inline-flex h-14 items-center justify-center gap-2 bg-[#EA80FC] text-sm font-black uppercase tracking-[0.12em] text-[#4A148C] transition active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 ${
+              isLineBrowser && isMobileStandalone && !publicUrl ? "opacity-50 cursor-not-allowed" : ""
             }`}
           >
-            <Download className="h-5 w-5" strokeWidth={2.8} />
-            ดาวน์โหลด
+            {isUploading ? (
+              <>
+                <Loader2 className="h-5 w-5 animate-spin" strokeWidth={2.6} />
+                กำลังเตรียม...
+              </>
+            ) : (
+              <>
+                <Download className="h-5 w-5" strokeWidth={2.8} />
+                ดาวน์โหลด
+              </>
+            )}
           </button>
           <button
             type="button"
             onClick={handleShare}
-            disabled={isSharing}
-            className={`inline-flex h-14 items-center justify-center gap-2 bg-[#4A148C] text-sm font-black uppercase tracking-[0.12em] text-white transition active:scale-95 disabled:opacity-60 ${
-              isLineBrowser && isMobileStandalone && !publicUrl ? "opacity-50" : ""
+            disabled={!isReady || isSharing}
+            className={`inline-flex h-14 items-center justify-center gap-2 bg-[#4A148C] text-sm font-black uppercase tracking-[0.12em] text-white transition active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 ${
+              isLineBrowser && isMobileStandalone && !publicUrl ? "opacity-50 cursor-not-allowed" : ""
             }`}
           >
             {isSharing ? (
-              <Loader2 className="h-5 w-5 animate-spin" strokeWidth={2.6} />
+              <>
+                <Loader2 className="h-5 w-5 animate-spin" strokeWidth={2.6} />
+                กำลังแชร์...
+              </>
+            ) : isUploading ? (
+              <>
+                <Loader2 className="h-5 w-5 animate-spin" strokeWidth={2.6} />
+                กำลังเตรียม...
+              </>
             ) : (
-              <Share2 className="h-5 w-5" strokeWidth={2.6} />
+              <>
+                <Share2 className="h-5 w-5" strokeWidth={2.6} />
+                แชร์ / LINE
+              </>
             )}
-            แชร์ / LINE
           </button>
         </div>
       </div>

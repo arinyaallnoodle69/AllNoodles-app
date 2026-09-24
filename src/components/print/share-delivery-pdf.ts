@@ -248,27 +248,29 @@ export async function createDeliveryPdfPreviewFromUrl(
 
     if (response.ok) {
       const blob = await response.blob();
-      const file = new File([blob], buildDeliveryPdfFileName(fileName), { type: "application/pdf" });
+      if (blob.size > 500) {
+        const file = new File([blob], buildDeliveryPdfFileName(fileName), { type: "application/pdf" });
 
-      // If document is available, supply preview images for mobile modal display
-      let previewImages: string[] = [];
-      if (doc && doc.querySelectorAll("[data-delivery-note-page='true']").length > 0) {
-        try {
-          const clientPreview = await createDeliveryPdfPreviewFromDocument(doc, fileName);
-          if (clientPreview?.previewImages) {
-            previewImages = clientPreview.previewImages;
+        // If document is available, supply preview images for mobile modal display
+        let previewImages: string[] = [];
+        if (doc && doc.querySelectorAll("[data-delivery-note-page='true']").length > 0) {
+          try {
+            const clientPreview = await createDeliveryPdfPreviewFromDocument(doc, fileName);
+            if (clientPreview?.previewImages) {
+              previewImages = clientPreview.previewImages;
+            }
+          } catch {
+            // Non-blocking: modal handles empty previewImages with native viewer / Docs viewer
           }
-        } catch {
-          // Non-blocking: modal handles empty previewImages with native viewer / Docs viewer
         }
+        return { file, previewImages };
       }
-      return { file, previewImages };
     }
   } catch (err) {
     console.warn("[share-delivery-pdf] Server vector PDF request failed, falling back to client:", err);
   }
 
-  if (doc) {
+  if (doc && doc.querySelectorAll("[data-delivery-note-page='true']").length > 0) {
     return createDeliveryPdfPreviewFromDocument(doc, fileName);
   }
 

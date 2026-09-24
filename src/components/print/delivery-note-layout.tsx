@@ -1,6 +1,7 @@
 import type { DeliveryNotePrintData } from "@/lib/delivery/print";
 import { bahtText } from "@/lib/format/baht-text";
 import { chunkItems, fmt } from "@/components/print/print-shared";
+import { DeliveryNoteScaler } from "./delivery-note-scaler";
 
 const A4_WIDTH_MM = 210;
 const A4_HEIGHT_MM = 297;
@@ -386,6 +387,19 @@ export function DeliveryNoteLayout({ dns, showAmount, priceMode: propPriceMode }
             page-break-after: avoid;
             break-after: auto;
           }
+
+          .dn-scaler-outer {
+            width: auto !important;
+            height: auto !important;
+            overflow: visible !important;
+            margin: 0 !important;
+            display: block !important;
+          }
+
+          .dn-scaler-inner {
+            transform: none !important;
+            width: auto !important;
+          }
         }
 
         @media screen {
@@ -395,8 +409,9 @@ export function DeliveryNoteLayout({ dns, showAmount, priceMode: propPriceMode }
             display: flex;
             flex-direction: column;
             align-items: center;
-            padding: 32px 16px;
-            gap: 24px;
+            padding: 24px 8px;
+            gap: 16px;
+            overflow-x: hidden;
           }
         }
 
@@ -805,9 +820,19 @@ export function DeliveryNoteLayout({ dns, showAmount, priceMode: propPriceMode }
       `}</style>
 
       {notePages.map((notePage) => (
-        <div key={notePage.key} className="note-page" data-delivery-note-page="true">
-          <DeliveryNotePageView notePage={notePage} priceMode={resolvedPriceMode} />
-        </div>
+        <DeliveryNoteScaler key={notePage.key}>
+          <div
+            className="note-page"
+            data-delivery-note-page="true"
+            data-customer-code={notePage.dn.customer.code}
+            data-customer-name={notePage.dn.customer.name}
+            data-delivery-number={notePage.dn.deliveryNumber}
+            data-page-index={notePage.pageIndex + 1}
+            data-total-pages={notePage.totalPages}
+          >
+            <DeliveryNotePageView notePage={notePage} priceMode={resolvedPriceMode} />
+          </div>
+        </DeliveryNoteScaler>
       ))}
     </>
   );

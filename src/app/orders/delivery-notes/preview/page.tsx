@@ -8,6 +8,7 @@ import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { DeliveryNoteLayout } from "@/components/print/delivery-note-layout";
 import { ShareDeliveryPdfButton } from "@/components/print/share-delivery-pdf-button";
+import { BatchDeliveryNotesImageButton } from "@/components/print/batch-delivery-notes-image-button";
 import { PrintButton } from "./print-button";
 
 export const metadata = { title: "พิมพ์บิลส่งของ" };
@@ -112,11 +113,12 @@ export default async function DeliveryNotePreviewPage({ searchParams }: Props) {
 
   return (
     <>
-      <div className="no-print sticky top-0 z-50 flex items-center gap-3 border-b bg-white p-4">
+      <div className="no-print sticky top-0 z-50 flex flex-wrap items-center gap-3 border-b bg-white p-4">
         <div className="rounded-xl bg-[#4A148C]/20 px-4 py-2 text-sm font-bold text-[#4A148C]">
           พิมพ์บิลส่งของ - {validPrintData.length} ร้านค้า
         </div>
         <PrintButton />
+        <BatchDeliveryNotesImageButton datePrefix={date} />
         <ShareDeliveryPdfButton fileName={`delivery-notes-${date ?? "selected"}`} />
         <Link href="/orders/incoming" className="rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-bold text-slate-700 hover:bg-slate-50 active:scale-95">
           กลับ

@@ -3,6 +3,8 @@ import { requireAnyRole } from "@/lib/auth/authorization";
 import { getDeliveryNotePrintData } from "@/lib/delivery/print";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { DeliveryNoteLayout } from "@/components/print/delivery-note-layout";
+import { ShareDeliveryPdfButton } from "@/components/print/share-delivery-pdf-button";
+import { BatchDeliveryNotesImageButton } from "@/components/print/batch-delivery-notes-image-button";
 import { AutoPrint, PrintButton } from "./print-button";
 import { EditQuantitiesForm } from "./edit-quantities-form";
 
@@ -47,6 +49,8 @@ export default async function DeliveryNotePrintPage({ params, searchParams }: Pr
       {autoprint && <AutoPrint />}
       <div className="no-print mb-4 flex flex-wrap items-center gap-3">
         <PrintButton />
+        <BatchDeliveryNotesImageButton buttonText="บันทึกรูป" datePrefix={deliveryNoteRow.delivery_date} />
+        <ShareDeliveryPdfButton fileName={`delivery-note-${dn.deliveryNumber}`} />
         <a
           href={mergedPrintHref}
           target="_blank"

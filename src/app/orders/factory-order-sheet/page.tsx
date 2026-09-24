@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import Link from "next/link";
 import type { Viewport } from "next";
 import { AutoPrint, PackingListPrintButton } from "@/app/orders/packing-list/preview/print-button";
+import { SharePackingListPdfButton } from "@/components/print/share-packing-list-pdf-button";
 import { PageLoader } from "@/components/page-loader";
 import { FactoryOrderSheetLayout } from "@/components/print/factory-order-sheet-layout";
 import { requireAnyRole } from "@/lib/auth/authorization";
@@ -109,6 +110,10 @@ async function FactoryOrderSheetPage({ searchParams }: Props) {
             dateLabel={dateLabel}
             documentTitle="ใบสั่งของ"
             printButtonText="พิมพ์ใบสั่งของ"
+          />
+          <SharePackingListPdfButton
+            fileName={`factory-order-sheet-${date}${endDate ? `-to-${endDate}` : ""}`}
+            previewTitle="ตัวอย่าง PDF ใบสั่งของ"
           />
         </div>
         <Link

@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { createPortal } from "react-dom";
-import { AlertTriangle, CheckCircle2, Loader2, Package2, Printer, Search, Share2, Truck, X } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Image as ImageIcon, Loader2, Package2, Printer, Search, Share2, Truck, X } from "lucide-react";
 import {
   createDeliveryNoteAction,
   getDeliveryFormDataAction,
@@ -1365,6 +1365,16 @@ function AllStoresDeliveryModal({
     triggerPrintJob(deliveryNoteIds);
   }
 
+  function handleSaveImagesSelected() {
+    if (selectedStores.length === 0 || isSharingSelected || isPrintingSelected) return;
+
+    const deliveryNoteIds = getSelectedDeliveryNoteIds();
+    if (deliveryNoteIds.length === 0) return;
+
+    const printUrl = buildSelectedDeliveryPrintUrl(deliveryNoteIds);
+    window.open(`${printUrl}&autosave=1`, "_blank");
+  }
+
   async function handleShareSelected() {
     if (selectedStores.length === 0 || isSharingSelected || isPrintingSelected) return;
 
@@ -1668,7 +1678,7 @@ function AllStoresDeliveryModal({
                 </label>
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-row">
+            <div className="grid grid-cols-3 gap-1.5 min-[390px]:gap-2 sm:flex sm:flex-row sm:gap-2">
               <button
                 type="button"
                 onClick={onClose}
@@ -1679,19 +1689,29 @@ function AllStoresDeliveryModal({
               </button>
               <button
                 type="button"
+                onClick={handleSaveImagesSelected}
+                disabled={currentTabSelectedCount === 0 || isPrintingSelected || isSharingSelected}
+                className="inline-flex min-w-0 items-center justify-center gap-1.5 whitespace-nowrap border border-emerald-600/40 bg-white px-2 py-3 text-[12px] font-black uppercase tracking-normal text-emerald-800 transition hover:bg-emerald-50 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40 min-[390px]:px-2.5 min-[390px]:text-[13px] sm:min-w-40 sm:gap-2 sm:px-5 sm:text-base sm:tracking-[0.08em]"
+                title="บันทึกภาพบิลส่งของทั้งหมดของร้านที่เลือก"
+              >
+                <ImageIcon className="h-4 w-4 text-emerald-600 shrink-0" strokeWidth={2.3} />
+                <span className="truncate">บันทึกรูป ({currentTabSelectedCount})</span>
+              </button>
+              <button
+                type="button"
                 onClick={handleShareSelected}
                 disabled={currentTabSelectedCount === 0 || isPrintingSelected || isSharingSelected}
-                className="inline-flex min-w-0 items-center justify-center gap-1.5 whitespace-nowrap border border-[#EA80FC]/55 bg-white px-2 py-3 text-[13px] font-black uppercase tracking-normal text-[#4A148C] transition hover:border-[#EA80FC] hover:bg-[#EA80FC]/10 disabled:cursor-not-allowed disabled:opacity-40 min-[390px]:px-3 min-[390px]:text-sm sm:min-w-44 sm:gap-2 sm:px-5 sm:text-base sm:tracking-[0.08em]"
+                className="inline-flex min-w-0 items-center justify-center gap-1.5 whitespace-nowrap border border-[#EA80FC]/55 bg-white px-2 py-3 text-[12px] font-black uppercase tracking-normal text-[#4A148C] transition hover:border-[#EA80FC] hover:bg-[#EA80FC]/10 disabled:cursor-not-allowed disabled:opacity-40 min-[390px]:px-2.5 min-[390px]:text-[13px] sm:min-w-40 sm:gap-2 sm:px-5 sm:text-base sm:tracking-[0.08em]"
               >
                 {isSharingSelected ? (
                   <>
-                    <Loader2 className="h-4 w-4 animate-spin" strokeWidth={2} />
-                    กำลังสร้าง PDF...
+                    <Loader2 className="h-4 w-4 animate-spin shrink-0" strokeWidth={2} />
+                    <span className="truncate">กำลังสร้าง...</span>
                   </>
                 ) : (
                   <>
-                    <Share2 className="h-4 w-4" strokeWidth={2.2} />
-                    ส่งออก PDF
+                    <Share2 className="h-4 w-4 shrink-0" strokeWidth={2.2} />
+                    <span className="truncate">ส่งออก PDF</span>
                   </>
                 )}
               </button>
@@ -1699,17 +1719,17 @@ function AllStoresDeliveryModal({
                 type="button"
                 onClick={handlePrintSelected}
                 disabled={currentTabSelectedCount === 0 || isPrintingSelected || isSharingSelected}
-                className="inline-flex min-w-0 items-center justify-center gap-1.5 whitespace-nowrap bg-[#4A148C] px-2 py-3 text-[13px] font-black uppercase tracking-normal text-white transition hover:bg-[#4A148C] disabled:cursor-not-allowed disabled:opacity-40 min-[390px]:px-3 min-[390px]:text-sm sm:min-w-44 sm:gap-2 sm:px-5 sm:text-base sm:tracking-[0.08em]"
+                className="inline-flex min-w-0 items-center justify-center gap-1.5 whitespace-nowrap bg-[#4A148C] px-2 py-3 text-[12px] font-black uppercase tracking-normal text-white transition hover:bg-[#4A148C] disabled:cursor-not-allowed disabled:opacity-40 min-[390px]:px-2.5 min-[390px]:text-[13px] sm:min-w-40 sm:gap-2 sm:px-5 sm:text-base sm:tracking-[0.08em]"
               >
                 {isPrintingSelected ? (
                   <>
-                    <Loader2 className="h-4 w-4 animate-spin" strokeWidth={2} />
-                    กำลังพิมพ์...
+                    <Loader2 className="h-4 w-4 animate-spin shrink-0" strokeWidth={2} />
+                    <span className="truncate">กำลังพิมพ์...</span>
                   </>
                 ) : (
                   <>
-                    <Printer className="h-4 w-4" strokeWidth={2.2} />
-                    พิมพ์ {currentTabSelectedCount} ร้าน
+                    <Printer className="h-4 w-4 shrink-0" strokeWidth={2.2} />
+                    <span className="truncate">พิมพ์ {currentTabSelectedCount} ร้าน</span>
                   </>
                 )}
               </button>

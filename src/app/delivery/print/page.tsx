@@ -7,6 +7,7 @@ import { join } from "node:path";
 import { DeliveryNoteLayout } from "@/components/print/delivery-note-layout";
 import { PRINT_ORGANIZATION_NAME } from "@/components/print/print-shared";
 import { ShareDeliveryPdfButton } from "@/components/print/share-delivery-pdf-button";
+import { BatchDeliveryNotesImageButton } from "@/components/print/batch-delivery-notes-image-button";
 import { AutoPrint, PrintButton } from "./print-button";
 
 export const metadata = { title: "ปริ้นบิลส่งของ" };
@@ -19,6 +20,7 @@ type Props = {
     customers?: string;
     note_ids?: string;
     autoprint?: string;
+    autosave?: string;
     show_amount?: string;
     price_mode?: string;
   }>;
@@ -263,6 +265,7 @@ export default async function DeliveryBatchPrintPage({ searchParams }: Props) {
     .map((id) => id.trim())
     .filter(Boolean);
   const autoprint = params.autoprint === "1";
+  const autosave = params.autosave === "1";
   const priceModeParam = params.price_mode;
   let priceMode: "all" | "total_only" | "none" = "all";
   if (priceModeParam === "all" || priceModeParam === "total_only" || priceModeParam === "none") {
@@ -327,8 +330,9 @@ export default async function DeliveryBatchPrintPage({ searchParams }: Props) {
 
       {autoprint && <AutoPrint />}
 
-      <div className="no-print mb-6 flex items-center gap-3 px-4 pt-4">
+      <div className="no-print mb-6 flex flex-wrap items-center gap-3 px-4 pt-4">
         <PrintButton />
+        <BatchDeliveryNotesImageButton autoStart={autosave} datePrefix={date} />
         <ShareDeliveryPdfButton fileName={`delivery-notes-${date}-to-${endDate}`} />
         <span className="text-sm font-semibold text-slate-700">
           {dns.length} {customerId || noteIds.length > 0 ? "ใบ" : "ร้าน"} · {dateLabel}
