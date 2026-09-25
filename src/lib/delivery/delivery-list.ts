@@ -53,12 +53,9 @@ export async function getDeliveryNoteSummariesForRange(
     .eq("organization_id", organizationId)
     .eq("status", "confirmed");
 
-  // If keyword is provided, search across all dates
-  if (!keyword) {
+  // Always respect date range when provided so deliveries within the selected dates are never omitted
+  if (from && to) {
     query = query.gte("delivery_date", from).lte("delivery_date", to);
-  } else {
-    // Limit global search results for performance
-    query = query.limit(100);
   }
 
   const { data: notesData, error: notesError } = await query
@@ -67,20 +64,25 @@ export async function getDeliveryNoteSummariesForRange(
 
   if (notesError || !notesData) return [];
 
-  const normalizedKeyword = normalizeSearch(keyword);
+  const tokens = (keyword ?? "")
+    .trim()
+    .split(/\s+/)
+    .map(normalizeSearch)
+    .filter(Boolean);
   const allNotes = notesData as unknown as RawDeliveryNoteSummaryRow[];
 
   return allNotes
     .filter((row) => {
-      if (!normalizedKeyword) return true;
-      const customerName = normalizeSearch(row.customers.name);
-      const customerCode = normalizeSearch(row.customers.customer_code);
-      const deliveryNumber = normalizeSearch(row.delivery_number);
-      return (
-        customerName.includes(normalizedKeyword) ||
-        customerCode.includes(normalizedKeyword) ||
-        deliveryNumber.includes(normalizedKeyword)
-      );
+      if (tokens.length === 0) return true;
+      const pool = [
+        row.customers.name,
+        row.customers.customer_code,
+        row.delivery_number,
+      ]
+        .map(normalizeSearch)
+        .join(" ");
+
+      return tokens.every((token) => pool.includes(token));
     })
     .map((row) => ({
       id: row.id,

@@ -409,16 +409,11 @@ export async function getPendingLineOrders(
     .eq("organization_id", organizationId)
     .eq("status", "pending_link");
 
-  // If searchTerm is provided, search across all dates (Global Search)
-  if (!opts.searchTerm) {
-    if (opts.endDate && opts.endDate !== opts.orderDate) {
-      query = query.gte("order_date", opts.orderDate).lte("order_date", opts.endDate);
-    } else {
-      query = query.eq("order_date", opts.orderDate);
-    }
-  } else {
-    // Limit global search for performance
-    query = query.limit(50);
+  // Always respect date range when provided so pending orders within the selected dates are never omitted
+  if (opts.endDate && opts.endDate !== opts.orderDate) {
+    query = query.gte("order_date", opts.orderDate).lte("order_date", opts.endDate);
+  } else if (opts.orderDate) {
+    query = query.eq("order_date", opts.orderDate);
   }
 
   const { data: pendingOrders, error } = await query.order("created_at", { ascending: false });

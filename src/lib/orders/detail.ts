@@ -514,16 +514,11 @@ export async function getIncomingOrdersBundle(
     .select(INCOMING_ORDERS_SELECT)
     .eq("organization_id", organizationId);
 
-  // If searchTerm is provided, we search across all dates (Global Search)
-  if (!searchTerm) {
-    if (endDate && endDate !== orderDate) {
-      query = query.gte("order_date", orderDate).lte("order_date", endDate);
-    } else {
-      query = query.eq("order_date", orderDate);
-    }
-  } else {
-    // Limit global search to latest 100 results for performance
-    query = query.limit(100);
+  // Always respect the requested date range so orders within the selected dates are never omitted
+  if (endDate && endDate !== orderDate) {
+    query = query.gte("order_date", orderDate).lte("order_date", endDate);
+  } else if (orderDate) {
+    query = query.eq("order_date", orderDate);
   }
 
   const ordersResult = await query
@@ -536,31 +531,44 @@ export async function getIncomingOrdersBundle(
 
   let orders = (ordersResult.data ?? []) as unknown as EmbeddedOrderRow[];
 
-  // If searchTerm is provided, also search for delivery notes by delivery_number
-  // because the orders table doesn't contain DN numbers directly.
+  // If searchTerm is provided, also search for delivery notes or specific orders
+  // so that directly queried identifiers can be found even if outside current date
   if (searchTerm && searchTerm.trim().length >= 2) {
     const cleanSearch = searchTerm.trim();
-    const { data: dnOrders } = await admin
-      .from("delivery_notes")
-      .select("order_id")
-      .eq("organization_id", organizationId)
-      .ilike("delivery_number", `%${cleanSearch}%`)
-      .limit(50);
+    const [dnOrdersResult, directOrdersResult] = await Promise.all([
+      admin
+        .from("delivery_notes")
+        .select("order_id")
+        .eq("organization_id", organizationId)
+        .ilike("delivery_number", `%${cleanSearch}%`)
+        .limit(50),
+      admin
+        .from("orders")
+        .select("id")
+        .eq("organization_id", organizationId)
+        .ilike("order_number", `%${cleanSearch}%`)
+        .limit(50),
+    ]);
 
-    if (dnOrders && dnOrders.length > 0) {
-      const dnOrderIds = Array.from(new Set(dnOrders.map((d) => d.order_id).filter(Boolean))) as string[];
-      // Only fetch orders that aren't already in our result set
-      const missingOrderIds = dnOrderIds.filter((id) => !orders.some((o) => o.id === id));
+    const dnOrders = dnOrdersResult.data;
+    const directOrders = directOrdersResult.data;
 
-      if (missingOrderIds.length > 0) {
-        const { data: additionalOrders } = await admin
-          .from("orders")
-          .select(INCOMING_ORDERS_SELECT)
-          .in("id", missingOrderIds);
+    const extraOrderIds = Array.from(
+      new Set([
+        ...(dnOrders ?? []).map((d) => d.order_id),
+        ...(directOrders ?? []).map((o) => o.id),
+      ].filter(Boolean) as string[]),
+    );
 
-        if (additionalOrders) {
-          orders = [...orders, ...(additionalOrders as unknown as EmbeddedOrderRow[])];
-        }
+    const missingOrderIds = extraOrderIds.filter((id) => !orders.some((o) => o.id === id));
+    if (missingOrderIds.length > 0) {
+      const { data: additionalOrders } = await admin
+        .from("orders")
+        .select(INCOMING_ORDERS_SELECT)
+        .in("id", missingOrderIds);
+
+      if (additionalOrders) {
+        orders = [...orders, ...(additionalOrders as unknown as EmbeddedOrderRow[])];
       }
     }
   }
@@ -672,6 +680,8 @@ export async function getIncomingOrdersBundle(
   const warehouses = await getActiveWarehouses(organizationId);
   const warehouseNameMap = new Map(warehouses.map((w) => [w.id, w.name]));
 
+  const searchPoolByOrderId = new Map<string, string>();
+
   const mappedOrders = orders
     .map((order) => {
       const customer = customerMap.get(order.customer_id);
@@ -681,6 +691,25 @@ export async function getIncomingOrdersBundle(
         order.assigned_vehicle_id ??
         customer?.default_vehicle_id ??
         null;
+
+      const rawOrder = orders.find((o) => o.id === order.id);
+      const deliveryNotes = rawOrder?.delivery_notes ?? [];
+      const orderItems = rawOrder?.order_items ?? [];
+
+      const pool = [
+        order.order_number,
+        customer?.customer_code ?? "",
+        customer?.name ?? "",
+        customer?.address ?? "",
+        order.notes ?? "",
+        getChannelLabel(order.metadata),
+        ...deliveryNotes.map((dn) => dn.delivery_number ?? ""),
+        ...orderItems.map((item) => `${item.products?.name ?? ""} ${item.products?.sku ?? ""} ${item.sale_unit_label ?? ""}`),
+      ]
+        .map(normalizeSearch)
+        .join(" ");
+
+      searchPoolByOrderId.set(order.id, pool);
 
       return {
         channelLabel: getChannelLabel(order.metadata),
@@ -707,12 +736,25 @@ export async function getIncomingOrdersBundle(
         return true;
       }
 
-      return (
-        normalizeSearch(order.orderNumber).includes(normalizedSearch) ||
-        normalizeSearch(order.customerCode).includes(normalizedSearch) ||
-        normalizeSearch(order.customerName).includes(normalizedSearch) ||
-        normalizeSearch(order.channelLabel).includes(normalizedSearch)
-      );
+      const pool = searchPoolByOrderId.get(order.id) ?? "";
+
+      // Check single string contains (fast path)
+      if (pool.includes(normalizedSearch)) {
+        return true;
+      }
+
+      // Check multi-word tokens (e.g. "ไพศาล เส้นเล็ก")
+      const tokens = (searchTerm ?? "")
+        .trim()
+        .split(/\s+/)
+        .map(normalizeSearch)
+        .filter(Boolean);
+
+      if (tokens.length > 1) {
+        return tokens.every((token) => pool.includes(token));
+      }
+
+      return false;
     });
 
   return {
