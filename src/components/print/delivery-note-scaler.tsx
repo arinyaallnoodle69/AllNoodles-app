@@ -21,10 +21,9 @@ export function DeliveryNoteScaler({ children }: { children: ReactNode }) {
       document.body.removeChild(dummy);
 
       // Available window or parent width minus padding for mobile
-      const parentWidth = containerRef.current?.parentElement?.clientWidth;
-      const availableWidth = parentWidth
-        ? parentWidth - 12
-        : Math.min(window.innerWidth - 16, document.documentElement.clientWidth - 16);
+      const viewportWidth = Math.min(window.innerWidth, document.documentElement.clientWidth);
+      const parentWidth = containerRef.current?.parentElement?.clientWidth ?? viewportWidth;
+      const availableWidth = Math.min(parentWidth - 12, viewportWidth - 16);
 
       if (availableWidth > 0 && sheetWidth > availableWidth) {
         setScale(availableWidth / sheetWidth);

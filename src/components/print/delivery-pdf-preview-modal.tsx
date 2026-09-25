@@ -199,7 +199,7 @@ export function DeliveryPdfPreviewModal({
       >
         <ArrowLeft className="h-5 w-5" strokeWidth={2.5} />
       </button>
-      <div className="grid h-[100dvh] w-full grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden bg-white sm:h-[92vh] sm:max-w-[1280px] sm:border sm:border-[#EA80FC]/40">
+      <div className="grid h-[100dvh] w-full grid-rows-[4px_auto_minmax(0,1fr)_auto] overflow-hidden bg-white sm:h-[92vh] sm:max-w-[1280px] sm:border sm:border-[#EA80FC]/40">
         <div className="flex h-1 w-full">
           <div className="h-full flex-1 bg-[#4A148C]" />
           <div className="h-full flex-1 bg-[#EA80FC]" />
@@ -317,7 +317,7 @@ export function DeliveryPdfPreviewModal({
                         <img
                           src={imageUrl}
                           alt={`หน้า ${index + 1}`}
-                          className="block h-auto w-full"
+                          className="block h-auto w-full max-w-full object-contain"
                         />
                       </div>
                     ))}

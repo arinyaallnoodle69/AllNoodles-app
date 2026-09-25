@@ -14,7 +14,6 @@ import {
   KeyRound,
   LayoutDashboard,
   Layers3,
-  LoaderCircle,
   LogOut,
   MessageCircleMore,
   MoreHorizontal,
@@ -83,7 +82,6 @@ export function SettingsMobileBottomNav() {
   const pathname = usePathname();
   const [moreOpen, setMoreOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [navigatingHref, setNavigatingHref] = useState<string | null>(null);
   const settingsModalRef = useRef<HTMLDivElement | null>(null);
   const bottomNavRef = useRef<HTMLElement | null>(null);
   const settingsTouchStartRef = useRef<{ x: number; y: number } | null>(null);
@@ -98,12 +96,11 @@ export function SettingsMobileBottomNav() {
     ? moreItems.filter((item) => item.href === "/orders/fresh-reserve" || item.href === "/stock/movements")
     : moreItems;
   const moreActive = visibleMoreItems.some((item) => pathname.startsWith(item.href));
-  const settingsModalOpen = settingsOpen && navigatingHref !== pathname;
+  const settingsModalOpen = settingsOpen;
 
   function resetNavigationState() {
     setMoreOpen(false);
     setSettingsOpen(false);
-    setNavigatingHref(null);
   }
 
   // รีเซ็ตสถานะการนำทางและปิด Modal เมื่อมีการเปลี่ยนเส้นทาง (ป้องกันค้างเมื่อปัดย้อนกลับหรือเปลี่ยนหน้าสำเร็จ)
@@ -117,7 +114,6 @@ export function SettingsMobileBottomNav() {
   useEffect(() => {
     function openSettingsMenu() {
       setMoreOpen(false);
-      setNavigatingHref(null);
       setSettingsOpen(true);
     }
 
@@ -242,7 +238,6 @@ export function SettingsMobileBottomNav() {
                 key={href}
                 onClick={() => {
                   setMoreOpen(false);
-                  setNavigatingHref(null);
                   setSettingsOpen(true);
                 }}
                 className={`flex min-w-0 flex-col items-center gap-2 rounded-2xl border px-1 py-4 font-black transition active:scale-[0.98] ${
@@ -258,6 +253,7 @@ export function SettingsMobileBottomNav() {
               <Link
                 key={href}
                 href={href}
+                prefetch={true}
                 onClick={resetNavigationState}
                 className={`flex min-w-0 flex-col items-center gap-2 rounded-2xl border px-1 py-4 font-black transition active:scale-[0.98] ${
                   active
@@ -358,6 +354,7 @@ export function SettingsMobileBottomNav() {
                     return (
                       <Link
                         href="/billing"
+                        prefetch={true}
                         onClick={resetNavigationState}
                         className={`flex flex-col items-center justify-center gap-1 rounded-2xl px-1 py-1.5 text-[9px] font-medium transition ${
                           active ? "text-[#4A148C]" : "text-slate-500 hover:text-slate-900"
@@ -374,7 +371,6 @@ export function SettingsMobileBottomNav() {
                     type="button"
                     onClick={() => {
                       setSettingsOpen(false);
-                      setNavigatingHref(null);
                       setMoreOpen(true);
                     }}
                     className={`flex flex-col items-center justify-center gap-1 rounded-2xl px-1 py-1.5 text-[9px] font-medium transition ${
@@ -396,6 +392,7 @@ export function SettingsMobileBottomNav() {
                       <Link
                         key={href}
                         href={href}
+                        prefetch={true}
                         onClick={resetNavigationState}
                         className={`flex flex-col items-center justify-center gap-1 rounded-2xl px-1 py-1.5 text-[9px] font-medium transition ${
                           active
@@ -420,6 +417,7 @@ export function SettingsMobileBottomNav() {
                       <Link
                         key={href}
                         href={href}
+                        prefetch={true}
                         onClick={resetNavigationState}
                         className={`flex flex-col items-center justify-center gap-1 rounded-2xl px-1 py-1.5 text-[9px] font-medium transition ${
                           active
@@ -437,7 +435,6 @@ export function SettingsMobileBottomNav() {
                     type="button"
                     onClick={() => {
                       setSettingsOpen(false);
-                      setNavigatingHref(null);
                       setMoreOpen(true);
                     }}
                     className={`flex flex-col items-center justify-center gap-1 rounded-2xl px-1 py-1.5 text-[9px] font-medium transition ${
@@ -554,23 +551,13 @@ export function SettingsMobileBottomNav() {
                 <Link
                   key={option.href}
                   href={option.href}
+                  prefetch={true}
                   draggable={false}
                   onDragStart={(event) => event.preventDefault()}
-                  onClick={(event) => {
-                    if (navigatingHref) {
-                      event.preventDefault();
-                      return;
-                    }
-                    if (option.href === pathname) {
-                      resetNavigationState();
-                      return;
-                    }
-                    setNavigatingHref(option.href);
+                  onClick={() => {
+                    resetNavigationState();
                   }}
-                  aria-busy={navigatingHref === option.href}
-                  className={`relative flex w-full min-w-0 max-w-full touch-pan-y select-none items-center gap-4 overflow-hidden overscroll-x-none rounded-[1.35rem] border border-[#EA80FC]/25 bg-white p-4 shadow-[0_12px_30px_rgba(142, 36, 170,0.04)] transition active:bg-slate-50 ${
-                    navigatingHref && navigatingHref !== option.href ? "opacity-55" : ""
-                  }`}
+                  className="relative flex w-full min-w-0 max-w-full touch-pan-y select-none items-center gap-4 overflow-hidden overscroll-x-none rounded-[1.35rem] border border-[#EA80FC]/25 bg-white p-4 shadow-[0_12px_30px_rgba(142, 36, 170,0.04)] transition active:bg-slate-50"
                   style={{ touchAction: "pan-y", overscrollBehaviorX: "none" }}
                 >
                   <SettingsLinkStatus />
@@ -581,11 +568,7 @@ export function SettingsMobileBottomNav() {
                     <h3 className="text-base font-bold text-slate-950 truncate">{option.label}</h3>
                     <p className="text-[11.5px] text-slate-500 mt-0.5 line-clamp-2 leading-relaxed">{option.description}</p>
                   </div>
-                  {navigatingHref === option.href ? (
-                    <LoaderCircle className="h-4.5 w-4.5 shrink-0 animate-spin text-[#EA80FC]" strokeWidth={2.5} />
-                  ) : (
-                    <ArrowRight className="h-4.5 w-4.5 text-[#EA80FC] shrink-0" />
-                  )}
+                  <ArrowRight className="h-4.5 w-4.5 text-[#EA80FC] shrink-0" />
                 </Link>
               ))}
             </div>

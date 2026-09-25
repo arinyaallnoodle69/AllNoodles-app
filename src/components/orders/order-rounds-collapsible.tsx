@@ -63,6 +63,7 @@ export function OrderRoundsCollapsible({ date, rounds }: Props) {
 
                 <Link
                   href={`/orders/incoming?date=${date}&expanded=${round.id}`}
+                  prefetch={false}
                   scroll={false}
                   className="min-w-0 flex-1 group"
                 >
@@ -85,6 +86,7 @@ export function OrderRoundsCollapsible({ date, rounds }: Props) {
                   <div className="flex shrink-0 items-center gap-2 print:hidden">
                     <Link
                       href={`/orders/incoming?date=${date}&expanded=${round.id}`}
+                      prefetch={false}
                       scroll={false}
                       className={`flex h-10 w-10 items-center justify-center rounded-xl transition active:scale-90 ${
                         canManage ? "bg-[#4A148C]/15 text-[#4A148C] hover:bg-[#4A148C]/20" : "cursor-not-allowed bg-slate-100 text-slate-400"
@@ -96,6 +98,7 @@ export function OrderRoundsCollapsible({ date, rounds }: Props) {
                     {canManage ? (
                       <Link
                         href={`/orders/incoming?date=${date}&expanded=${round.id}&delete=1`}
+                        prefetch={false}
                         scroll={false}
                         className="flex h-10 w-10 items-center justify-center rounded-xl bg-rose-50 text-rose-600 transition hover:bg-rose-100 active:scale-90"
                         title="ลบออเดอร์"

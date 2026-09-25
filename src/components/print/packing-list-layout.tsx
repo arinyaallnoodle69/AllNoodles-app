@@ -1,4 +1,5 @@
 import type { CSSProperties } from "react";
+import { paginateStandardStoreIndices } from "./packing-list-pagination";
 import {
   buildCategoryPrintPalette,
   type CategoryPrintPalette,
@@ -51,8 +52,8 @@ const SHEET_H = "210mm";
 const SCREEN_SHEET_W = "1123px";
 const SCREEN_SHEET_H = "794px";
 const STANDARD_PRODUCTS_PER_PAGE = 50;
-const STANDARD_STORES_PER_PAGE = 33;
 const STANDARD_BODY_HEIGHT_MM = 151;
+const STANDARD_MIN_ROW_HEIGHT_MM = 4.45;
 const TRANSPOSED_PRODUCTS_PER_PAGE = 25;
 const TRANSPOSED_STORES_PER_PAGE = 37;
 
@@ -391,7 +392,11 @@ function buildStandardPages(data: PackingListData): StandardPageDef[] {
       .map((_, productIndex) => productIndex)
       .filter((productIndex) => group.storeIndices.some((storeIndex) => (data.qty[productIndex]?.[storeIndex] ?? 0) !== 0));
 
-    const storeChunks = chunk(group.storeIndices, STANDARD_STORES_PER_PAGE);
+    const storeChunks = paginateStandardStoreIndices(
+      group.storeIndices,
+      STANDARD_BODY_HEIGHT_MM,
+      STANDARD_MIN_ROW_HEIGHT_MM,
+    );
     const productChunks = chunk(activeProductIndices, STANDARD_PRODUCTS_PER_PAGE);
 
     for (let storeChunkIndex = 0; storeChunkIndex < storeChunks.length; storeChunkIndex += 1) {
@@ -577,7 +582,7 @@ function StandardPackingListPage({ page, data }: { page: StandardPageDef; data: 
   const isLastStorePage = page.storeChunk === page.storeTotalChunks;
   const rowCount = page.pageStores.length + (isLastStorePage ? 1 : 0);
   const rowHeightMm = Math.max(
-    4.45,
+    STANDARD_MIN_ROW_HEIGHT_MM,
     Math.min(5.2, STANDARD_BODY_HEIGHT_MM / Math.max(rowCount, 1)),
   );
   const productTotals = isLastStorePage
@@ -1146,7 +1151,7 @@ function PackingListStyles() {
       .packing-table:not(.packing-table--transposed) .packing-cell--store {
         overflow: hidden;
         font-size: var(--packing-store-font-size, 12.4pt);
-        line-height: 1.2;
+        line-height: 1.05;
         text-overflow: ellipsis;
       }
 

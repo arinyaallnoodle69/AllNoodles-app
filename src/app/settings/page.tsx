@@ -92,6 +92,7 @@ export default async function SettingsIndexPage() {
             <Link
               key={option.href}
               href={option.href}
+              prefetch={true}
               draggable={false}
               className="group min-w-0 max-w-full touch-pan-y select-none overflow-hidden overscroll-x-none rounded-3xl border border-slate-200 bg-white p-5 shadow-[0_18px_55px_rgba(15,23,42,0.04)] transition lg:hover:-translate-y-0.5 lg:hover:border-[#4A148C]/30 lg:hover:shadow-[0_24px_60px_rgba(4,53,106,0.08)] sm:p-6"
               style={{ touchAction: "pan-y", overscrollBehaviorX: "none" }}

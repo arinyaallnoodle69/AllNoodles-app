@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import { PageLoader } from "@/components/page-loader";
+import BillingLoading from "./loading";
 import { requireAnyRole } from "@/lib/auth/authorization";
 import {
   getBillingCandidates,
@@ -58,7 +58,7 @@ async function BillingPageContent({ searchParams }: BillingPageProps) {
 
 export default function BillingPage(props: BillingPageProps) {
   return (
-    <Suspense fallback={<PageLoader />}>
+    <Suspense fallback={<BillingLoading />}>
       <BillingPageContent {...props} />
     </Suspense>
   );

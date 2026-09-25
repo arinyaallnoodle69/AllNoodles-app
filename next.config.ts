@@ -8,6 +8,7 @@ const nextConfig: NextConfig = {
     "/api/delivery-pdf": ["./node_modules/@sparticuz/chromium/bin/**/*"],
   },
   experimental: {
+    viewTransition: true,
     serverActions: {
       bodySizeLimit: "50mb",
     },

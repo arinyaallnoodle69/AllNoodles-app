@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { CheckCircle2, Image as ImageIcon, Loader2, Share2 } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Image as ImageIcon, Loader2, Share2, X } from "lucide-react";
 import { createPortal } from "react-dom";
 import * as htmlToImage from "html-to-image";
 import html2canvas from "html2canvas";
@@ -112,6 +112,15 @@ export function BatchDeliveryNotesImageButton({
   const [savingStatus, setSavingStatus] = useState<string | null>(null);
   const [savingProgress, setSavingProgress] = useState<{ current: number; total: number; percent: number } | null>(null);
   const [readyCaptured, setReadyCaptured] = useState<{ blob: Blob; name: string }[] | null>(null);
+  const previewUrls = useMemo(
+    () => readyCaptured?.map((item) => URL.createObjectURL(item.blob)) ?? [],
+    [readyCaptured],
+  );
+
+  useEffect(
+    () => () => previewUrls.forEach((url) => URL.revokeObjectURL(url)),
+    [previewUrls],
+  );
 
   const hasFSPicker = typeof window !== "undefined" && "showDirectoryPicker" in window;
 
@@ -313,40 +322,61 @@ export function BatchDeliveryNotesImageButton({
       {/* Progress / Completion Modal */}
       {isSaving && typeof document !== "undefined"
         ? createPortal(
-            <div className="fixed inset-0 z-[700] flex flex-col items-center justify-center bg-[#0a0c10]/90 px-4 backdrop-blur-md animate-in fade-in duration-300">
-              <div className="flex w-full max-w-md flex-col items-center rounded-3xl border border-white/10 bg-[#12151c] p-8 text-center shadow-2xl sm:p-10">
+            <div className="fixed inset-0 z-[700] flex flex-col items-center justify-center bg-[#0a0c10]/90 backdrop-blur-md animate-in fade-in duration-300">
+              <div className={`flex w-full flex-col items-center border border-white/10 bg-[#12151c] text-center shadow-2xl ${
+                readyCaptured
+                  ? "h-full max-w-3xl overflow-hidden sm:h-[calc(100dvh-2rem)] sm:rounded-3xl"
+                  : "max-w-md rounded-3xl p-8 sm:p-10"
+              }`}>
                 {readyCaptured ? (
-                  <div className="flex w-full flex-col items-center animate-in zoom-in-95 duration-300">
-                    <div className="relative mb-5 flex h-20 w-20 animate-bounce items-center justify-center rounded-3xl bg-emerald-500/20 text-emerald-400 ring-8 ring-emerald-500/10">
-                      <CheckCircle2 className="h-10 w-10 text-emerald-400" strokeWidth={2.5} />
+                  <div className="flex h-full min-h-0 w-full flex-col animate-in zoom-in-95 duration-300">
+                    <div className="flex shrink-0 items-center justify-between border-b border-white/10 px-4 py-3 text-left sm:px-5">
+                      <div className="min-w-0">
+                        <h3 className="truncate text-base font-black text-white sm:text-xl">
+                          ตรวจสอบรูปภาพ {readyCaptured.length} ใบ
+                        </h3>
+                        <p className="mt-0.5 text-[11px] font-bold text-slate-400 sm:text-xs">
+                          ตรวจสอบตัวอย่างก่อนบันทึกหรือแชร์
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setReadyCaptured(null);
+                          setIsSaving(false);
+                        }}
+                        className="ml-3 flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/15 text-slate-300 transition hover:bg-white/10 hover:text-white"
+                        aria-label="ปิดตัวอย่างรูปภาพ"
+                      >
+                        <X className="h-5 w-5" strokeWidth={2.5} />
+                      </button>
                     </div>
 
-                    <h3 className="text-xl font-black text-white sm:text-2xl">
-                      สร้างรูปภาพครบ {readyCaptured.length} ใบแล้ว!
-                    </h3>
-                    <p className="mb-6 mt-2 text-xs font-bold leading-relaxed text-slate-400">
-                      รูปภาพความคมชัดสูงพร้อมบันทึก แตะปุ่มด้านล่างเพื่อบันทึกรูปลงคลังภาพ/เครื่อง
-                    </p>
+                    <div className="min-h-0 flex-1 overflow-y-auto bg-slate-200 p-2 sm:p-4">
+                      <div className="mx-auto flex w-full max-w-[760px] flex-col gap-3">
+                        {previewUrls.map((url, index) => (
+                          <div key={readyCaptured[index].name} className="overflow-hidden border border-slate-300 bg-white shadow-sm">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={url}
+                              alt={`ตัวอย่างบิลส่งของ หน้า ${index + 1}`}
+                              className="block h-auto w-full object-contain"
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
 
-                    <button
-                      type="button"
-                      onClick={handleMobileSaveTrigger}
-                      className="flex w-full items-center justify-center gap-3 rounded-2xl bg-emerald-600 px-6 py-4 text-lg font-black text-white shadow-[0_15px_30px_rgba(16,185,129,0.3)] transition hover:bg-emerald-500 active:scale-95"
-                    >
-                      <Share2 className="h-6 w-6" strokeWidth={2.5} />
-                      <span>แตะเพื่อบันทึกรูปภาพ ({readyCaptured.length} ใบ)</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setReadyCaptured(null);
-                        setIsSaving(false);
-                      }}
-                      className="mt-4 text-xs font-bold text-slate-500 transition-colors hover:text-slate-300"
-                    >
-                      ปิดหน้าต่าง
-                    </button>
+                    <div className="shrink-0 border-t border-white/10 bg-[#12151c] p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] sm:p-4">
+                      <button
+                        type="button"
+                        onClick={handleMobileSaveTrigger}
+                        className="flex w-full items-center justify-center gap-3 rounded-2xl bg-emerald-600 px-5 py-3.5 text-base font-black text-white shadow-[0_12px_28px_rgba(16,185,129,0.28)] transition hover:bg-emerald-500 active:scale-[0.98] sm:text-lg"
+                      >
+                        <Share2 className="h-5 w-5" strokeWidth={2.5} />
+                        <span>บันทึก / แชร์รูปทั้งหมด ({readyCaptured.length} ใบ)</span>
+                      </button>
+                    </div>
                   </div>
                 ) : (
                   <>

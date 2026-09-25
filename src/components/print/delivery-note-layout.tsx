@@ -408,7 +408,7 @@ export function DeliveryNoteLayout({ dns, showAmount, priceMode: propPriceMode }
             min-height: 100vh;
             display: flex;
             flex-direction: column;
-            align-items: center;
+            align-items: stretch;
             padding: 24px 8px;
             gap: 16px;
             overflow-x: hidden;

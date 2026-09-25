@@ -480,6 +480,7 @@ export function OrderDailyTable({ data, date, expanded, q, deliveredToday }: Pro
                         <td className="px-4 py-4">
                           <Link
                             href={toggleHref}
+                            prefetch={false}
                             scroll={false}
                             className="flex h-6 w-6 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-600 print:hidden"
                             aria-label={isExpanded ? "ยุบ" : "ขยาย"}
@@ -497,7 +498,7 @@ export function OrderDailyTable({ data, date, expanded, q, deliveredToday }: Pro
                           </span>
                         </td>
                         <td className="px-4 py-4">
-                          <Link href={toggleHref} scroll={false} className="group block print:pointer-events-none">
+                          <Link href={toggleHref} prefetch={false} scroll={false} className="group block print:pointer-events-none">
                             <p className="font-semibold text-slate-900 transition group-hover:text-[#4A148C]">
                               {store.customerName}
                             </p>

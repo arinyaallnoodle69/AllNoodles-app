@@ -2,8 +2,9 @@ import "server-only";
 
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
+import { connection } from "next/server";
 import { DashboardClient } from "@/components/dashboard/dashboard-client";
-import { PageLoader } from "@/components/page-loader";
+import DashboardLoading from "./loading";
 import { requireAppSession, roleHomePage } from "@/lib/auth/authorization";
 import { getDashboardOverview } from "@/lib/dashboard/overview";
 import { getIncomingOrders, getOrderDetailById } from "@/lib/orders/detail";
@@ -37,6 +38,8 @@ async function DashboardDataContent({
   organizationId,
   today,
 }: DashboardDataContentProps) {
+  await connection();
+
   let overview: DashboardOverview | null = null;
   let storeStatusSummary: OrderStoreStatusSummary | null = null;
   let expandedDetail: OrderDetailData | null = null;
@@ -119,7 +122,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
 
   return (
     <>
-      <Suspense key={suspenseKey} fallback={<PageLoader />}>
+      <Suspense key={suspenseKey} fallback={<DashboardLoading />}>
         <DashboardDataContent
           expandedOrderId={expandedOrderId}
           orderDate={orderDate}
