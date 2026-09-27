@@ -50,7 +50,7 @@ export default async function DeliveryNotePrintPage({ params, searchParams }: Pr
       <div className="no-print mb-4 flex flex-wrap items-center gap-3">
         <PrintButton />
         <BatchDeliveryNotesImageButton buttonText="บันทึกรูป" datePrefix={deliveryNoteRow.delivery_date} />
-        <ShareDeliveryPdfButton fileName={`delivery-note-${dn.deliveryNumber}`} />
+        <ShareDeliveryPdfButton fileName={`บิลจัดส่ง_${dn.deliveryNumber}_${dn.customer.name}`} />
         <a
           href={mergedPrintHref}
           target="_blank"

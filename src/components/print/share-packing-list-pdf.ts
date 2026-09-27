@@ -56,12 +56,11 @@ export function downloadPreparedPackingListPdf(pdfFile: File) {
 }
 
 export function buildPackingListPdfFileName(input: string | undefined) {
-  const safe = (input?.trim() || "packing-list")
+  const safe = (input?.trim() || "ใบออเดอร์")
     .replace(/[^\w\u0E00-\u0E7F-]+/g, "-")
     .replace(/-+/g, "-")
     .replace(/^-|-$/g, "");
-  const date = new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Bangkok" });
-  return `${safe || "packing-list"}-${date}.pdf`;
+  return `${safe || "ใบออเดอร์"}.pdf`;
 }
 
 type RestorableImage = {

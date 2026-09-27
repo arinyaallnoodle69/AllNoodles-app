@@ -18,6 +18,7 @@ import {
   type DeliveryPdfPreview,
 } from "@/components/print/share-delivery-pdf";
 import type { PriceDisplayMode } from "@/components/print/delivery-note-layout";
+import { fmtDateRangeFileTH } from "@/lib/utils/date";
 
 // Helpers
 
@@ -673,7 +674,10 @@ export function StoreDeliveryModal({
         ? `/delivery/print?note_ids=${encodeURIComponent(result.deliveryId)}&date=${orders[0].orderDate}`
         : `/delivery/print?date=${orders[0].orderDate}&customer=${orders[0].customerId}`;
 
-      const pdf = await createDeliveryPdfPreviewFromUrl(printUrl, `delivery-note-${orders[0].orderDate}`);
+      const pdf = await createDeliveryPdfPreviewFromUrl(
+        printUrl,
+        `บิลจัดส่ง_${result.deliveryNumber ?? orders[0].orderDate}_${customerName}`,
+      );
       setPreviewPdf(pdf);
     } catch (error) {
       if (error instanceof Error && error.name === "AbortError") return;
@@ -1386,7 +1390,7 @@ function AllStoresDeliveryModal({
     try {
       const pdf = await createDeliveryPdfPreviewFromUrl(
         buildSelectedDeliveryPrintUrl(deliveryNoteIds),
-        `delivery-notes-${date}${endDate ? `-to-${endDate}` : ""}`,
+        `บิลจัดส่ง_${fmtDateRangeFileTH(date, endDate)}`,
       );
       setPreviewSelectedPdf(pdf);
     } catch (error) {

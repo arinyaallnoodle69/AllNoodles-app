@@ -69,9 +69,12 @@ export function PrintButton({
       return;
     }
 
-    setIsCapturing(true);
     setShowPreview(true);
+    setIsCapturing(true);
     setPreviewImages([]);
+
+    // Yield control to browser so modal UI renders and paints immediately (0ms instant feedback)
+    await new Promise((resolve) => setTimeout(resolve, 50));
 
     try {
       // Find original pages

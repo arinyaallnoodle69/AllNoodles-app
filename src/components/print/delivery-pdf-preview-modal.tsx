@@ -140,6 +140,7 @@ export function DeliveryPdfPreviewModal({
 
   const isFileValid = Boolean(file && file.size > 500);
   const isReady = isFileValid && !isUploading;
+  const shareTitle = title.replace(/^ตัวอย่าง PDF\s*/, "").trim() || "บิลส่งของ";
 
   function handleDownload() {
     if (!isReady || !isFileValid) {
@@ -162,14 +163,14 @@ export function DeliveryPdfPreviewModal({
         if (navigator.canShare?.({ files: [file] })) {
           await navigator.share({
             files: [file],
-            title: title || "บิลส่งของ",
+            title: shareTitle,
             ...(publicUrl ? { url: publicUrl } : {}),
           });
           return;
         }
         if (publicUrl) {
           await navigator.share({
-            title: title || "บิลส่งของ",
+            title: shareTitle,
             url: publicUrl,
           });
           return;
@@ -179,7 +180,7 @@ export function DeliveryPdfPreviewModal({
         window.open(publicUrl, "_blank");
         return;
       }
-      await sharePreparedDeliveryPdf(file);
+      await sharePreparedDeliveryPdf(file, shareTitle);
     } catch (error) {
       if (error instanceof Error && error.name === "AbortError") return;
       console.error("[delivery/share-pdf]", error);

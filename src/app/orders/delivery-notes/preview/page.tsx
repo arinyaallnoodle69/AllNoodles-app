@@ -10,6 +10,7 @@ import { DeliveryNoteLayout } from "@/components/print/delivery-note-layout";
 import { ShareDeliveryPdfButton } from "@/components/print/share-delivery-pdf-button";
 import { BatchDeliveryNotesImageButton } from "@/components/print/batch-delivery-notes-image-button";
 import { PrintButton } from "./print-button";
+import { fmtDateRangeFileTH } from "@/lib/utils/date";
 
 export const metadata = { title: "พิมพ์บิลส่งของ" };
 export const viewport: Viewport = {
@@ -102,6 +103,11 @@ export default async function DeliveryNotePreviewPage({ searchParams }: Props) {
     printDataResults.filter((data): data is DeliveryNotePrintData => data !== null),
   );
 
+  const deliveryDates = [...new Set(validPrintData.map((item) => item.deliveryDate))].sort();
+  const deliveryDateFileName = deliveryDates.length > 0
+    ? fmtDateRangeFileTH(deliveryDates[0], deliveryDates.at(-1))
+    : "ไม่ระบุวันที่";
+
   if (validPrintData.length === 0) {
     return (
       <div className="p-10 text-center">
@@ -119,7 +125,7 @@ export default async function DeliveryNotePreviewPage({ searchParams }: Props) {
         </div>
         <PrintButton />
         <BatchDeliveryNotesImageButton datePrefix={date} />
-        <ShareDeliveryPdfButton fileName={`delivery-notes-${date ?? "selected"}`} />
+        <ShareDeliveryPdfButton fileName={`บิลจัดส่ง_${deliveryDateFileName}`} />
         <Link href="/orders/incoming" className="rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-bold text-slate-700 hover:bg-slate-50 active:scale-95">
           กลับ
         </Link>

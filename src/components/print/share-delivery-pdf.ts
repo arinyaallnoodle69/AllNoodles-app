@@ -49,9 +49,10 @@ export function downloadPreparedDeliveryPdf(pdfFile: File) {
 }
 
 export function buildDeliveryPdfFileName(input: string | undefined) {
-  const baseName = input?.trim() || "delivery-notes";
-  const date = new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Bangkok" });
-  return `${baseName}-${date}.pdf`;
+  const baseName = (input?.trim() || "บิลจัดส่ง")
+    .replace(/[\\/:*?"<>|]+/g, "-")
+    .replace(/-+/g, "-");
+  return `${baseName}.pdf`;
 }
 
 async function waitForImage(image: HTMLImageElement) {
@@ -214,11 +215,11 @@ export async function createDeliveryPdfFileFromDocument(sourceDocument: Document
   return result?.file ?? null;
 }
 
-export async function sharePreparedDeliveryPdf(pdfFile: File) {
+export async function sharePreparedDeliveryPdf(pdfFile: File, title = "บิลส่งของ") {
   if (navigator.share && navigator.canShare?.({ files: [pdfFile] })) {
     await navigator.share({
       files: [pdfFile],
-      title: "บิลส่งของ",
+      title,
     });
     return;
   }

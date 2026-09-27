@@ -20,6 +20,7 @@ import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { AutoPrint, PackingListPrintButton } from "./preview/print-button";
 import { getDailySpecialPrintItems } from "@/lib/orders/daily-special-items";
 import { SharePackingListPdfButton } from "@/components/print/share-packing-list-pdf-button";
+import { fmtDateRangeFileTH } from "@/lib/utils/date";
 
 export const metadata = { title: "ใบออเดอร์" };
 export const viewport: Viewport = {
@@ -767,9 +768,7 @@ async function PackingListPage({ searchParams }: Props) {
             printButtonText="ดูตัวอย่าง / พิมพ์"
           />
           <SharePackingListPdfButton
-            fileName={`packing-list-${date}${endDate ? `-to-${endDate}` : ""}${
-              !isAllVehicles && selectedVehicleName ? `-${selectedVehicleName}` : ""
-            }`}
+            fileName={`ใบออเดอร์_${!isAllVehicles && selectedVehicleName ? selectedVehicleName : "ทุกคัน"}_${fmtDateRangeFileTH(date, endDate)}`}
           />
           <Link
             href={`/orders/incoming?date=${date}${endDate ? `&endDate=${endDate}` : ""}${

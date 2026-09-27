@@ -7,6 +7,7 @@ import { VehicleProductSummaryLayout } from "@/components/print/vehicle-product-
 import { SharePackingListPdfButton } from "@/components/print/share-packing-list-pdf-button";
 import { requireAnyRole } from "@/lib/auth/authorization";
 import { getVehicleProductSummaryData } from "@/lib/orders/vehicle-product-summary";
+import { fmtDateRangeFileTH } from "@/lib/utils/date";
 
 export const metadata = { title: "สรุปสินค้าตามรถ" };
 export const viewport: Viewport = {
@@ -114,7 +115,7 @@ async function VehicleProductSummaryPage({ searchParams }: Props) {
             printButtonText="พิมพ์ฟอร์มสรุปตามรถ"
           />
           <SharePackingListPdfButton
-            fileName={`vehicle-product-summary-${date}${endDate !== date ? `-to-${endDate}` : ""}`}
+            fileName={`ใบขึ้นของ_${fmtDateRangeFileTH(date, endDate)}`}
             previewTitle="ตัวอย่าง PDF ใบขึ้นของ"
           />
         </div>
