@@ -115,21 +115,27 @@ async function getDeliveryNoteActualTotals(
     return new Map<string, number>();
   }
 
-  const deliveryNoteItems: Array<{ delivery_note_id: string; order_item_id: string | null }> = [];
-  for (const noteIdChunk of chunkIds(noteIds, 100)) {
-    const { data, error } = await supabase
-      .from("delivery_note_items")
-      .select("delivery_note_id, order_item_id")
-      .in("delivery_note_id", noteIdChunk);
+  const noteChunks = chunkIds(noteIds, 200);
+  const noteResults = await Promise.all(
+    noteChunks.map((chunk) =>
+      supabase
+        .from("delivery_note_items")
+        .select("delivery_note_id, order_item_id")
+        .in("delivery_note_id", chunk),
+    ),
+  );
 
-    if (error) {
-      console.error("[billing] failed to load delivery note items", error);
+  const deliveryNoteItems: Array<{ delivery_note_id: string; order_item_id: string | null }> = [];
+  for (const res of noteResults) {
+    if (res.error) {
+      console.error("[billing] failed to load delivery note items", res.error);
       return new Map<string, number>();
     }
-
-    deliveryNoteItems.push(
-      ...((data ?? []) as Array<{ delivery_note_id: string; order_item_id: string | null }>),
-    );
+    if (res.data) {
+      deliveryNoteItems.push(
+        ...(res.data as Array<{ delivery_note_id: string; order_item_id: string | null }>),
+      );
+    }
   }
 
   const orderItemIds = Array.from(
@@ -137,18 +143,24 @@ async function getDeliveryNoteActualTotals(
   );
   const orderItems: Array<{ id: string; line_total: number | null }> = [];
   if (orderItemIds.length > 0) {
-    for (const orderItemIdChunk of chunkIds(orderItemIds, 100)) {
-      const { data, error } = await supabase
-        .from("order_items")
-        .select("id, line_total")
-        .in("id", orderItemIdChunk);
+    const itemChunks = chunkIds(orderItemIds, 200);
+    const itemResults = await Promise.all(
+      itemChunks.map((chunk) =>
+        supabase
+          .from("order_items")
+          .select("id, line_total")
+          .in("id", chunk),
+      ),
+    );
 
-      if (error) {
-        console.error("[billing] failed to load order item totals", error);
+    for (const res of itemResults) {
+      if (res.error) {
+        console.error("[billing] failed to load order item totals", res.error);
         return new Map<string, number>();
       }
-
-      orderItems.push(...((data ?? []) as Array<{ id: string; line_total: number | null }>));
+      if (res.data) {
+        orderItems.push(...(res.data as Array<{ id: string; line_total: number | null }>));
+      }
     }
   }
 

@@ -53,13 +53,18 @@ async function getDeliveryNumberActualTotals(
   }
 
   const noteIds = deliveryNotes.map((note) => note.id);
-  const noteIdChunks = chunkArray(noteIds, 100);
+  const noteIdChunks = chunkArray(noteIds, 200);
+  const noteResults = await Promise.all(
+    noteIdChunks.map((chunk) =>
+      supabase
+        .from("delivery_note_items")
+        .select("delivery_note_id, order_item_id")
+        .in("delivery_note_id", chunk),
+    ),
+  );
+
   const dnItems: { delivery_note_id: string; order_item_id: string | null }[] = [];
-  for (const chunk of noteIdChunks) {
-    const { data, error } = await supabase
-      .from("delivery_note_items")
-      .select("delivery_note_id, order_item_id")
-      .in("delivery_note_id", chunk);
+  for (const { data, error } of noteResults) {
     if (error) {
       console.error("Error fetching delivery_note_items chunk:", error.message);
       continue;
@@ -75,12 +80,17 @@ async function getDeliveryNumberActualTotals(
 
   const orderItems: { id: string; line_total: number | null }[] = [];
   if (orderItemIds.length > 0) {
-    const orderItemIdChunks = chunkArray(orderItemIds, 100);
-    for (const chunk of orderItemIdChunks) {
-      const { data, error } = await supabase
-        .from("order_items")
-        .select("id, line_total")
-        .in("id", chunk);
+    const orderItemIdChunks = chunkArray(orderItemIds, 200);
+    const itemResults = await Promise.all(
+      orderItemIdChunks.map((chunk) =>
+        supabase
+          .from("order_items")
+          .select("id, line_total")
+          .in("id", chunk),
+      ),
+    );
+
+    for (const { data, error } of itemResults) {
       if (error) {
         console.error("Error fetching order_items chunk:", error.message);
         continue;

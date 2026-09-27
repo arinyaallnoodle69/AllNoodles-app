@@ -16,14 +16,16 @@ type BillingPageProps = {
   }>;
 };
 
-function todayISO() {
-  return new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Bangkok" });
-}
-
-function daysAgoISO(days: number) {
-  const d = new Date();
-  d.setDate(d.getDate() - days);
-  return d.toLocaleDateString("sv-SE", { timeZone: "Asia/Bangkok" });
+function getCurrentMonthRangeBangkok() {
+  const now = new Date();
+  const bangkokDate = now.toLocaleDateString("sv-SE", { timeZone: "Asia/Bangkok" });
+  const [yearStr, monthStr] = bangkokDate.split("-");
+  const year = parseInt(yearStr, 10);
+  const month = parseInt(monthStr, 10);
+  const from = `${yearStr}-${monthStr}-01`;
+  const lastDay = new Date(year, month, 0).getDate();
+  const to = `${yearStr}-${monthStr}-${String(lastDay).padStart(2, "0")}`;
+  return { from, to };
 }
 
 function isValidDate(value: string | undefined): value is string {
@@ -34,8 +36,9 @@ async function BillingPageContent({ searchParams }: BillingPageProps) {
   const session = await requireAnyRole(["admin", "member"]);
   const params = await searchParams;
   
-  const from = isValidDate(params.from) ? params.from : daysAgoISO(30);
-  const to = isValidDate(params.to) ? params.to : todayISO();
+  const currentMonth = getCurrentMonthRangeBangkok();
+  const from = isValidDate(params.from) ? params.from : currentMonth.from;
+  const to = isValidDate(params.to) ? params.to : currentMonth.to;
 
   const [candidates, allCustomers] = await Promise.all([
     getBillingCandidates(session.organizationId, from, to),
