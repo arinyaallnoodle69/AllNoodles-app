@@ -1,7 +1,7 @@
 "use client";
 
 import Link, { useLinkStatus } from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import {
@@ -11,13 +11,16 @@ import {
   ClipboardList,
   Clock3,
   Factory,
+  Gauge,
   KeyRound,
   LayoutDashboard,
   Layers3,
+  Loader2,
   LogOut,
   MessageCircleMore,
   MoreHorizontal,
   Package2,
+  Palette,
   Plus,
   Receipt,
   Settings2,
@@ -80,8 +83,10 @@ export function SettingsMobileBottomNav() {
   const role = useClientRole();
   const isMember = role === "member";
   const pathname = usePathname();
+  const router = useRouter();
   const [moreOpen, setMoreOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [navigatingHref, setNavigatingHref] = useState<string | null>(null);
   const settingsModalRef = useRef<HTMLDivElement | null>(null);
   const bottomNavRef = useRef<HTMLElement | null>(null);
   const settingsTouchStartRef = useRef<{ x: number; y: number } | null>(null);
@@ -101,6 +106,7 @@ export function SettingsMobileBottomNav() {
   function resetNavigationState() {
     setMoreOpen(false);
     setSettingsOpen(false);
+    setNavigatingHref(null);
   }
 
   // รีเซ็ตสถานะการนำทางและปิด Modal เมื่อมีการเปลี่ยนเส้นทาง (ป้องกันค้างเมื่อปัดย้อนกลับหรือเปลี่ยนหน้าสำเร็จ)
@@ -111,9 +117,19 @@ export function SettingsMobileBottomNav() {
     return () => clearTimeout(timer);
   }, [pathname]);
 
+  // เคลียร์สถานะการนำทางเมื่อหมดเวลาเพื่อความปลอดภัย หากการเปลี่ยนเส้นทางถูกยกเลิก
+  useEffect(() => {
+    if (!navigatingHref) return;
+    const safetyTimer = setTimeout(() => {
+      setNavigatingHref(null);
+    }, 5000);
+    return () => clearTimeout(safetyTimer);
+  }, [navigatingHref]);
+
   useEffect(() => {
     function openSettingsMenu() {
       setMoreOpen(false);
+      setNavigatingHref(null);
       setSettingsOpen(true);
     }
 
@@ -238,6 +254,7 @@ export function SettingsMobileBottomNav() {
                 key={href}
                 onClick={() => {
                   setMoreOpen(false);
+                  setNavigatingHref(null);
                   setSettingsOpen(true);
                 }}
                 className={`flex min-w-0 flex-col items-center gap-2 rounded-2xl border px-1 py-4 font-black transition active:scale-[0.98] ${
@@ -435,6 +452,7 @@ export function SettingsMobileBottomNav() {
                     type="button"
                     onClick={() => {
                       setSettingsOpen(false);
+                      setNavigatingHref(null);
                       setMoreOpen(true);
                     }}
                     className={`flex flex-col items-center justify-center gap-1 rounded-2xl px-1 py-1.5 text-[9px] font-medium transition ${
@@ -500,16 +518,34 @@ export function SettingsMobileBottomNav() {
                   label: "จัดการสินค้า",
                 },
                 {
+                  description: "กำหนดสีหมวดหมู่ที่ใช้แยกคอลัมน์ในใบออเดอร์และตัวอย่างก่อนพิมพ์",
+                  href: "/settings/products/category-colors",
+                  icon: Palette,
+                  label: "สีหมวดหมู่ในใบออเดอร์",
+                },
+                {
                   description: "เพิ่มร้านค้า จัดการข้อมูลหน้าร้าน ที่อยู่ และเลือกรถประจำร้าน",
                   href: "/settings/customers",
                   icon: Store,
                   label: "จัดการร้านค้า",
                 },
                 {
+                  description: "อัปโหลดและเปลี่ยนรูปโลโก้ร้านค้า สำหรับพิมพ์หัวบิล หน้าจอหลัก และระบบ",
+                  href: "/settings/logo",
+                  icon: ImageIcon,
+                  label: "ตั้งค่าโลโก้ร้านค้า",
+                },
+                {
                   description: "เพิ่มรายชื่อผู้ขายหรือโรงงานที่คุณสั่งซื้อสินค้า เพื่อใช้บันทึกรับเข้าสต็อก",
                   href: "/settings/suppliers",
                   icon: Factory,
                   label: "จัดการผู้ขาย",
+                },
+                {
+                  description: "เพิ่มคลังสินค้า ตั้งค่าคลังหลักและคลังต่างจังหวัด",
+                  href: "/settings/warehouses",
+                  icon: Warehouse,
+                  label: "จัดการคลัง",
                 },
                 {
                   description: "ดูชื่อ LINE รูปโปรไฟล์ สถานะการใช้งาน และจัดการสิทธิ์ลูกค้าที่เข้ามาผ่าน LINE",
@@ -524,12 +560,6 @@ export function SettingsMobileBottomNav() {
                   label: "จัดการรถ",
                 },
                 {
-                  description: "เพิ่มคลังสินค้า ตั้งค่าคลังหลักและคลังต่างจังหวัด",
-                  href: "/settings/warehouses",
-                  icon: Warehouse,
-                  label: "จัดการคลัง",
-                },
-                {
                   description: "ตั้งเวลาเปิด-ปิดรับออเดอร์ และจัดการแจ้งเตือนออเดอร์ใหม่",
                   href: "/settings/order-window",
                   icon: Clock3,
@@ -542,35 +572,63 @@ export function SettingsMobileBottomNav() {
                   label: "ตั้งค่า PIN",
                 },
                 {
-                  description: "อัปโหลดและจัดการโลโก้ของร้านค้าที่จะแสดงในหัวบิลและระบบสั่งสินค้า",
-                  href: "/settings/logo",
-                  icon: ImageIcon,
-                  label: "ตั้งค่าโลโก้ร้านค้า",
+                  description: "ตรวจสอบสุขภาพระบบ ความเร็วในการตอบสนอง และสถิติการใช้งานตารางฐานข้อมูล",
+                  href: "/settings/performance",
+                  icon: Gauge,
+                  label: "ประสิทธิภาพระบบ",
                 },
-              ].map((option) => (
-                <Link
-                  key={option.href}
-                  href={option.href}
-                  prefetch={true}
-                  draggable={false}
-                  onDragStart={(event) => event.preventDefault()}
-                  onClick={() => {
-                    resetNavigationState();
-                  }}
-                  className="relative flex w-full min-w-0 max-w-full touch-pan-y select-none items-center gap-4 overflow-hidden overscroll-x-none rounded-[1.35rem] border border-[#EA80FC]/25 bg-white p-4 shadow-[0_12px_30px_rgba(142, 36, 170,0.04)] transition active:bg-slate-50"
-                  style={{ touchAction: "pan-y", overscrollBehaviorX: "none" }}
-                >
-                  <SettingsLinkStatus />
-                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#EA80FC]/25 text-[#4A148C]">
-                    <option.icon className="h-5 w-5" strokeWidth={2.2} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h3 className="text-base font-bold text-slate-950 truncate">{option.label}</h3>
-                    <p className="text-[11.5px] text-slate-500 mt-0.5 line-clamp-2 leading-relaxed">{option.description}</p>
-                  </div>
-                  <ArrowRight className="h-4.5 w-4.5 text-[#EA80FC] shrink-0" />
-                </Link>
-              ))}
+              ].map((option) => {
+                const isNavigatingThis = navigatingHref === option.href;
+                const isNavigatingOther = navigatingHref !== null && !isNavigatingThis;
+
+                return (
+                  <Link
+                    key={option.href}
+                    href={option.href}
+                    prefetch={true}
+                    draggable={false}
+                    onDragStart={(event) => event.preventDefault()}
+                    onMouseEnter={() => router.prefetch(option.href)}
+                    onTouchStart={() => router.prefetch(option.href)}
+                    onClick={(event) => {
+                      if (navigatingHref) {
+                        event.preventDefault();
+                        return;
+                      }
+                      if (option.href === pathname) {
+                        resetNavigationState();
+                        return;
+                      }
+                      setNavigatingHref(option.href);
+                    }}
+                    aria-busy={isNavigatingThis}
+                    className={`relative flex w-full min-w-0 max-w-full touch-pan-y select-none items-center gap-4 overflow-hidden overscroll-x-none rounded-[1.35rem] border bg-white p-4 shadow-[0_12px_30px_rgba(142, 36, 170,0.04)] transition active:bg-slate-50 ${
+                      isNavigatingThis
+                        ? "border-[#EA80FC] ring-2 ring-[#EA80FC]/35 bg-[#F3E5F5]/40"
+                        : isNavigatingOther
+                          ? "border-[#EA80FC]/15 opacity-40 pointer-events-none"
+                          : "border-[#EA80FC]/25"
+                    }`}
+                    style={{ touchAction: "pan-y", overscrollBehaviorX: "none" }}
+                  >
+                    <SettingsLinkStatus />
+                    <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl transition-colors ${
+                      isNavigatingThis ? "bg-[#4A148C] text-white" : "bg-[#EA80FC]/25 text-[#4A148C]"
+                    }`}>
+                      <option.icon className="h-5 w-5" strokeWidth={2.2} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-base font-bold text-slate-950 truncate">{option.label}</h3>
+                      <p className="text-[11.5px] text-slate-500 mt-0.5 line-clamp-2 leading-relaxed">{option.description}</p>
+                    </div>
+                    {isNavigatingThis ? (
+                      <Loader2 className="h-5 w-5 shrink-0 animate-spin text-[#4A148C]" strokeWidth={2.6} />
+                    ) : (
+                      <ArrowRight className="h-4.5 w-4.5 text-[#EA80FC] shrink-0" />
+                    )}
+                  </Link>
+                );
+              })}
             </div>
           </div>
         </div>

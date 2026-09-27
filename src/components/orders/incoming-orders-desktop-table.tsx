@@ -1,10 +1,11 @@
 "use client";
 
-import { Fragment, memo, useEffect, useMemo, useRef, useState, useTransition, type ReactNode } from "react";
+import { Fragment, memo, useCallback, useEffect, useMemo, useRef, useState, useTransition, type ReactNode } from "react";
+import dynamic from "next/dynamic";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Building2, Check, ChevronDown, ChevronUp, Loader2 } from "lucide-react";
-import { fetchIncomingOrderDetailAction } from "@/app/orders/incoming/actions";
 import { DesktopOrderDetail } from "@/components/orders/desktop-order-detail";
+import { fetchIncomingOrderDetailDeduped } from "@/components/orders/incoming-order-modal";
 import { IncomingOrderDateButton } from "@/components/orders/incoming-order-date-button";
 import { IncomingOrderVehicleSelect } from "@/components/orders/incoming-order-vehicle-select";
 import { IncomingOrderVehicleFilter } from "@/components/orders/incoming-order-vehicle-filter";
@@ -14,6 +15,10 @@ import { OrderReceiptActionButton } from "@/components/orders/order-receipt-acti
 import type { IncomingOrderListItem, OrderDetailData } from "@/lib/orders/detail";
 import type { OrderVehicleOption } from "@/lib/orders/manage";
 import type { VehicleTransferDateOption } from "@/lib/orders/vehicle-transfer";
+
+const IncomingOrderModal = dynamic(() =>
+  import("@/components/orders/incoming-order-modal").then((mod) => mod.IncomingOrderModal),
+);
 
 type IncomingOrdersDesktopTableProps = {
   billedByCustomerDate: Record<string, boolean>;
@@ -54,6 +59,9 @@ type IncomingOrderRowProps = {
   searchTerm: string;
   selectedCustomerIds: string[];
   toggleOrder: (orderId: string) => void;
+  onPrefetch?: (orderId: string) => void;
+  onEdit?: (detail: OrderDetailData) => void;
+  onDelete?: (detail: OrderDetailData) => void;
 };
 
 const IncomingOrderRow = memo(function IncomingOrderRow({
@@ -71,6 +79,9 @@ const IncomingOrderRow = memo(function IncomingOrderRow({
   searchTerm,
   selectedCustomerIds,
   toggleOrder,
+  onPrefetch,
+  onEdit,
+  onDelete,
 }: IncomingOrderRowProps) {
   const hasDelivery = Boolean(deliveryNumbers && deliveryNumbers.length > 0);
   const fallbackDeliveryNumber =
@@ -178,6 +189,7 @@ const IncomingOrderRow = memo(function IncomingOrderRow({
             <button
               type="button"
               onClick={() => void toggleOrder(order.id)}
+              onMouseEnter={() => onPrefetch?.(order.id)}
               disabled={isLoading}
               aria-busy={isLoading}
               aria-label={isExpanded ? "ซ่อนรายละเอียดออเดอร์" : "แสดงรายละเอียดออเดอร์"}
@@ -221,7 +233,12 @@ const IncomingOrderRow = memo(function IncomingOrderRow({
         <tr className="bg-white">
           <td colSpan={7} className="p-0">
             {detail ? (
-              <DesktopOrderDetail detail={detail} deliveryNumbers={deliveryNumbers} />
+              <DesktopOrderDetail
+                detail={detail}
+                deliveryNumbers={deliveryNumbers}
+                onEdit={onEdit}
+                onDelete={onDelete}
+              />
             ) : (
               <div className="flex items-center justify-center gap-3 border-y border-[#EA80FC]/25 bg-white px-6 py-8 text-base font-semibold text-[#4A148C]">
                 <Loader2 className="h-5 w-5 animate-spin text-[#4A148C]" strokeWidth={2.4} />
@@ -257,6 +274,16 @@ export const IncomingOrdersDesktopTable = memo(function IncomingOrdersDesktopTab
   const searchParams = useSearchParams();
   const urlVehicleId = searchParams.get("vehicle") || "__all__";
   const [selectedVehicleId, setSelectedVehicleId] = useState(urlVehicleId);
+  const [localOrders, setLocalOrders] = useState(orders);
+  const [desktopModalState, setDesktopModalState] = useState<{
+    detail: OrderDetailData;
+    isEdit?: boolean;
+    isDelete?: boolean;
+  } | null>(null);
+
+  useEffect(() => {
+    setLocalOrders(orders);
+  }, [orders]);
 
   // Sync state if URL changes from outside (e.g. back button)
   useEffect(() => {
@@ -264,10 +291,10 @@ export const IncomingOrdersDesktopTable = memo(function IncomingOrdersDesktopTab
   }, [urlVehicleId]);
 
   const filteredOrders = useMemo(() => {
-    if (selectedVehicleId === "__all__") return orders;
-    if (selectedVehicleId === "__none__") return orders.filter((o) => !o.vehicleId);
-    return orders.filter((o) => o.vehicleId === selectedVehicleId);
-  }, [orders, selectedVehicleId]);
+    if (selectedVehicleId === "__all__") return localOrders;
+    if (selectedVehicleId === "__none__") return localOrders.filter((o) => !o.vehicleId);
+    return localOrders.filter((o) => o.vehicleId === selectedVehicleId);
+  }, [localOrders, selectedVehicleId]);
 
   const [visibleCount, setVisibleCount] = useState(35);
   const sensorRef = useRef<HTMLTableRowElement | null>(null);
@@ -304,6 +331,15 @@ export const IncomingOrdersDesktopTable = memo(function IncomingOrdersDesktopTab
       ? { [initialExpandedOrderId]: initialExpandedDetail }
       : {},
   );
+
+  const prefetchOrder = useCallback((orderId: string) => {
+    if (detailByOrderId[orderId]) return;
+    void fetchIncomingOrderDetailDeduped(orderId).then((result) => {
+      if (result.detail) {
+        setDetailByOrderId((current) => ({ ...current, [orderId]: result.detail! }));
+      }
+    });
+  }, [detailByOrderId]);
   const [loadingOrderId, setLoadingOrderId] = useState<string | null>(null);
   const [detailError, setDetailError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -409,7 +445,7 @@ export const IncomingOrdersDesktopTable = memo(function IncomingOrdersDesktopTab
     setLoadingOrderId(orderId);
     startTransition(async () => {
       try {
-        const result = await fetchIncomingOrderDetailAction(orderId);
+        const result = await fetchIncomingOrderDetailDeduped(orderId);
         if (result.error || !result.detail) {
           setDetailError(result.error ?? "โหลดรายละเอียดออเดอร์ไม่สำเร็จ");
           return;
@@ -519,6 +555,9 @@ export const IncomingOrdersDesktopTable = memo(function IncomingOrdersDesktopTab
                         searchTerm={searchTerm}
                         selectedCustomerIds={selectedCustomerIds}
                         toggleOrder={toggleOrder}
+                        onPrefetch={prefetchOrder}
+                        onEdit={(d) => setDesktopModalState({ detail: d, isEdit: true })}
+                        onDelete={(d) => setDesktopModalState({ detail: d, isDelete: true })}
                       />
                     );
                   })}
@@ -551,6 +590,45 @@ export const IncomingOrdersDesktopTable = memo(function IncomingOrdersDesktopTab
           </div>
         </div>
       </div>
+
+      {desktopModalState ? (
+        <IncomingOrderModal
+          allOrders={localOrders}
+          date={orderDate}
+          detail={desktopModalState.detail}
+          expandedId={desktopModalState.detail.id}
+          initialEditMode={desktopModalState.isEdit}
+          initialDeleteMode={desktopModalState.isDelete}
+          onAfterClose={() => setDesktopModalState(null)}
+          onOrderUpdated={(updated) => {
+            setDetailByOrderId((prev) => {
+              const current = prev[updated.orderId];
+              if (!current) return prev;
+              return {
+                ...prev,
+                [updated.orderId]: {
+                  ...current,
+                  notes: updated.notes !== undefined ? updated.notes : current.notes,
+                  totalAmount: updated.totalAmount !== undefined ? updated.totalAmount : current.totalAmount,
+                },
+              };
+            });
+            setLocalOrders((prev) =>
+              prev.map((o) => {
+                if (o.id !== updated.orderId) return o;
+                return {
+                  ...o,
+                  notes: updated.notes !== undefined ? updated.notes : o.notes,
+                  totalAmount: updated.totalAmount !== undefined ? updated.totalAmount : o.totalAmount,
+                  productCount: updated.productCount !== undefined ? updated.productCount : o.productCount,
+                };
+              }),
+            );
+          }}
+          products={[]}
+          searchTerm={searchTerm}
+        />
+      ) : null}
     </div>
   );
 });

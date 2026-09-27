@@ -27,20 +27,32 @@ function invalidateIncomingOrderCaches(organizationId: string) {
   updateTag(`orders-${organizationId}`);
   updateTag(`settings-${organizationId}`);
   updateTag(`stock-${organizationId}`);
-  revalidatePath("/orders/incoming");
-  revalidatePath("/orders");
-  revalidatePath("/billing");
-  revalidateDashboardPages();
+  after(() => {
+    try {
+      revalidatePath("/orders/incoming");
+      revalidatePath("/orders");
+      revalidatePath("/billing");
+      revalidateDashboardPages();
+    } catch (err) {
+      console.error("[invalidateIncomingOrderCaches] Error during background revalidation:", err);
+    }
+  });
 }
 
 function revalidateIncomingOrderCachesEventually(organizationId: string) {
   revalidateTag(`orders-${organizationId}`, "max");
   revalidateTag(`settings-${organizationId}`, "max");
   revalidateTag(`stock-${organizationId}`, "max");
-  revalidatePath("/orders/incoming");
-  revalidatePath("/orders");
-  revalidatePath("/billing");
-  revalidateDashboardPages();
+  after(() => {
+    try {
+      revalidatePath("/orders/incoming");
+      revalidatePath("/orders");
+      revalidatePath("/billing");
+      revalidateDashboardPages();
+    } catch (err) {
+      console.error("[revalidateIncomingOrderCachesEventually] Error during background revalidation:", err);
+    }
+  });
 }
 
 
@@ -146,19 +158,11 @@ export async function fetchIncomingOrderDetailAction(
 
   if (!id) return { detail: null, error: "ไม่พบรหัสออเดอร์" };
 
-  const admin = getSupabaseAdmin() as ActionsAdmin;
-  const { data, error } = await admin
-    .from("orders")
-    .select("id")
-    .eq("id", id)
-    .eq("organization_id", session.organizationId)
-    .maybeSingle();
-
-  if (error) return { detail: null, error: error.message ?? "โหลดรายละเอียดออเดอร์ไม่สำเร็จ" };
-  if (!data) return { detail: null, error: "ไม่พบออเดอร์นี้ในองค์กรของคุณ" };
-
   try {
     const detail = await getOrderDetailById(session.organizationId, id);
+    if (!detail) {
+      return { detail: null, error: "ไม่พบออเดอร์นี้ในองค์กรของคุณ" };
+    }
     return { detail };
   } catch (err) {
     console.error("[fetchIncomingOrderDetailAction] Error:", err);

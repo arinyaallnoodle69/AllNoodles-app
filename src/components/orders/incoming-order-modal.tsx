@@ -1,6 +1,6 @@
 "use client";
 
-import React, { memo, useEffect, useMemo, useRef, useState, useTransition } from "react";
+import React, { memo, useEffect, useMemo, useRef, useState, useTransition, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import dynamic from "next/dynamic";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
@@ -33,6 +33,20 @@ import {
 
 const loadOrderAddProductPicker = () =>
   import("@/components/orders/order-add-product-picker").then((mod) => mod.OrderAddProductPicker);
+
+const inFlightOrderDetailPromises = new Map<string, Promise<{ detail: OrderDetailData | null; error?: string }>>();
+
+export function fetchIncomingOrderDetailDeduped(orderId: string) {
+  const existing = inFlightOrderDetailPromises.get(orderId);
+  if (existing) return existing;
+
+  const promise = fetchIncomingOrderDetailAction(orderId).finally(() => {
+    inFlightOrderDetailPromises.delete(orderId);
+  });
+
+  inFlightOrderDetailPromises.set(orderId, promise);
+  return promise;
+}
 
 const OrderAddProductPicker = dynamic(
   loadOrderAddProductPicker,
@@ -940,6 +954,8 @@ type Props = {
   date: string;
   detail: OrderDetailData | null;
   expandedId: string;
+  initialEditMode?: boolean;
+  initialDeleteMode?: boolean;
   onAfterClose?: () => void;
   onOrderUpdated?: (data: {
     orderId: string;
@@ -951,26 +967,46 @@ type Props = {
   searchTerm: string;
 };
 
-export function IncomingOrderModal({ allOrders, detail, expandedId, onAfterClose, onOrderUpdated, products }: Props) {
+function subscribeToClientMount() {
+  return () => {};
+}
+
+function getClientSnapshot() {
+  return true;
+}
+
+function getServerSnapshot() {
+  return false;
+}
+
+export function IncomingOrderModal({
+  allOrders,
+  detail,
+  expandedId,
+  initialEditMode,
+  initialDeleteMode,
+  onAfterClose,
+  onOrderUpdated,
+  products,
+}: Props) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const startInEditMode = searchParams.get("edit") === "1";
-  const startInDeleteMode = searchParams.get("delete") === "1";
+  const startInEditMode = initialEditMode ?? (searchParams.get("edit") === "1");
+  const startInDeleteMode = initialDeleteMode ?? (searchParams.get("delete") === "1");
 
   const [isOpen, setIsOpen] = useState(true);
-  const [mounted, setMounted] = useState(false);
+  const mounted = useSyncExternalStore(subscribeToClientMount, getClientSnapshot, getServerSnapshot);
   const [editMode, setEditMode] = useState(startInEditMode);
   const [confirmCancel, setConfirmCancel] = useState(startInDeleteMode);
   const [navPending, startNavTransition] = useTransition();
   const [actionPending, startActionTransition] = useTransition();
-  const [editModePending, startEditModeTransition] = useTransition();
   const [isDesktopViewport, setIsDesktopViewport] = useState(false);
-  const [isPreparingEdit, setIsPreparingEdit] = useState(false);
   const [saveToast, setSaveToast] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [fetchError, setFetchError] = useState<string | null>(null);
-  const [activeProducts, setActiveProducts] = useState<OrderProductOption[]>(products);
+  const [fetchedProducts, setFetchedProducts] = useState<OrderProductOption[]>([]);
+  const activeProducts = products && products.length > 0 ? products : fetchedProducts;
   const pageScrollYRef = useRef(0);
 
   const [slideAnim, setSlideAnim] = useState<"slide-left" | "slide-right" | null>(null);
@@ -983,22 +1019,44 @@ export function IncomingOrderModal({ allOrders, detail, expandedId, onAfterClose
     detail ? { [expandedId]: detail } : {}
   );
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  const [prevExpandedId, setPrevExpandedId] = useState(expandedId);
+  const [prevDetail, setPrevDetail] = useState(detail);
 
-  useEffect(() => {
-    if (products && products.length > 0) {
-      setActiveProducts(products);
+  if (expandedId !== prevExpandedId) {
+    setPrevExpandedId(expandedId);
+    setActiveOrderId(expandedId);
+    const initialDetailForOrder = detail ?? cachedDetails[expandedId] ?? null;
+    setActiveDetail(initialDetailForOrder);
+    setEditMode(startInEditMode);
+    setConfirmCancel(startInDeleteMode);
+    setSlideAnim(null);
+    setSaveToast(null);
+    setIsOpen(true);
+    setIsClosing(false);
+    if (detail) {
+      setCachedDetails((prev) => ({ ...prev, [expandedId]: detail }));
     }
-  }, [products]);
+  } else if (detail !== prevDetail) {
+    setPrevDetail(detail);
+    if (detail) {
+      if (activeOrderId === expandedId) {
+        setActiveDetail(detail);
+      }
+      setCachedDetails((prev) => ({ ...prev, [expandedId]: detail }));
+    }
+  }
+
+  const fallbackOrder = useMemo(
+    () => allOrders.find((o) => o.id === activeOrderId),
+    [allOrders, activeOrderId],
+  );
 
   useEffect(() => {
     if (editMode && activeProducts.length === 0) {
       void fetchIncomingOrderProductOptionsAction()
         .then((fetched) => {
           if (fetched && fetched.length > 0) {
-            setActiveProducts(fetched);
+            setFetchedProducts(fetched);
           }
         })
         .catch(() => {});
@@ -1006,48 +1064,29 @@ export function IncomingOrderModal({ allOrders, detail, expandedId, onAfterClose
   }, [editMode, activeProducts.length]);
 
   useEffect(() => {
-    setEditMode(startInEditMode);
-    setConfirmCancel(startInDeleteMode);
-    setSlideAnim(null);
-    setSaveToast(null);
-    setIsOpen(true);
-    setIsClosing(false);
-
-    // Sync external props with local states & cache
-    setActiveOrderId(expandedId);
-    setActiveDetail(detail);
-    if (detail) {
-      setCachedDetails((prev) => ({ ...prev, [expandedId]: detail }));
+    if (activeDetail || (activeOrderId && cachedDetails[activeOrderId]) || !activeOrderId) {
+      return;
     }
-  }, [expandedId, detail, startInDeleteMode, startInEditMode]);
+    let cancelled = false;
+    fetchIncomingOrderDetailDeduped(activeOrderId)
+      .then((res) => {
+        if (cancelled) return;
+        if (res.error || !res.detail) {
+          setFetchError(res.error ?? "ไม่สามารถโหลดรายละเอียดออเดอร์นี้ได้");
+        } else {
+          setFetchError(null);
+          setActiveDetail(res.detail);
+          setCachedDetails((prev) => ({ ...prev, [activeOrderId]: res.detail! }));
+        }
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        setFetchError(err instanceof Error ? err.message : "เกิดข้อผิดพลาดในการโหลด");
+      });
 
-  useEffect(() => {
-    if (!activeDetail && activeOrderId) {
-      if (cachedDetails[activeOrderId]) {
-        setActiveDetail(cachedDetails[activeOrderId]);
-        return;
-      }
-      let cancelled = false;
-      setFetchError(null);
-      fetchIncomingOrderDetailAction(activeOrderId)
-        .then((res) => {
-          if (cancelled) return;
-          if (res.error || !res.detail) {
-            setFetchError(res.error ?? "ไม่สามารถโหลดรายละเอียดออเดอร์นี้ได้");
-          } else {
-            setActiveDetail(res.detail);
-            setCachedDetails((prev) => ({ ...prev, [activeOrderId]: res.detail! }));
-          }
-        })
-        .catch((err) => {
-          if (cancelled) return;
-          setFetchError(err instanceof Error ? err.message : "เกิดข้อผิดพลาดในการโหลด");
-        });
-
-      return () => {
-        cancelled = true;
-      };
-    }
+    return () => {
+      cancelled = true;
+    };
   }, [activeDetail, activeOrderId, cachedDetails]);
 
   useEffect(() => {
@@ -1079,10 +1118,6 @@ export function IncomingOrderModal({ allOrders, detail, expandedId, onAfterClose
       requestAnimationFrame(() => {
         window.scrollTo({ top, behavior: "instant" as ScrollBehavior });
       });
-      setTimeout(() => window.scrollTo({ top, behavior: "instant" as ScrollBehavior }), 50);
-      setTimeout(() => window.scrollTo({ top, behavior: "instant" as ScrollBehavior }), 150);
-      setTimeout(() => window.scrollTo({ top, behavior: "instant" as ScrollBehavior }), 300);
-      setTimeout(() => window.scrollTo({ top, behavior: "instant" as ScrollBehavior }), 500);
     }
   }
 
@@ -1128,7 +1163,7 @@ export function IncomingOrderModal({ allOrders, detail, expandedId, onAfterClose
     setActiveDetail(null); // Show loading spinner inside modal body immediately
     startNavTransition(async () => {
       try {
-        const result = await fetchIncomingOrderDetailAction(targetId);
+        const result = await fetchIncomingOrderDetailDeduped(targetId);
         const newDetail = result.detail;
         if (newDetail) {
           setCachedDetails((prev) => ({ ...prev, [targetId]: newDetail }));
@@ -1164,7 +1199,7 @@ export function IncomingOrderModal({ allOrders, detail, expandedId, onAfterClose
       }
       restorePageScroll();
       onAfterClose?.();
-    }, 350);
+    }, 180);
   }
 
   function closeDeletePrompt() {
@@ -1204,28 +1239,20 @@ export function IncomingOrderModal({ allOrders, detail, expandedId, onAfterClose
     close();
   }
 
-  async function openEditMode() {
-    if (editMode || isPreparingEdit || editModePending) return;
+  function openEditMode() {
+    if (editMode) return;
+    setEditMode(true);
 
-    setIsPreparingEdit(true);
-
-    try {
-      const pickerPromise = loadOrderAddProductPicker();
-      const productsPromise =
-        activeProducts.length === 0
-          ? fetchIncomingOrderProductOptionsAction().catch(() => [])
-          : Promise.resolve(null);
-
-      const [, fetchedProducts] = await Promise.all([pickerPromise, productsPromise]);
-      if (fetchedProducts && fetchedProducts.length > 0) {
-        setActiveProducts(fetchedProducts);
-      }
-    } finally {
-      startEditModeTransition(() => {
-        setEditMode(true);
-      });
-      setIsPreparingEdit(false);
+    if (activeProducts.length === 0) {
+      void fetchIncomingOrderProductOptionsAction()
+        .then((fetched) => {
+          if (fetched && fetched.length > 0) {
+            setFetchedProducts(fetched);
+          }
+        })
+        .catch(() => {});
     }
+    void loadOrderAddProductPicker();
   }
 
   if (!isOpen || !mounted || typeof document === "undefined") return null;
@@ -1321,6 +1348,14 @@ export function IncomingOrderModal({ allOrders, detail, expandedId, onAfterClose
                     {" - "}
                     {activeDetail.customer.name}
                   </>
+                ) : fallbackOrder ? (
+                  <>
+                    <span className="font-mono text-[0.85em] font-bold opacity-75" translate="no">
+                      {fallbackOrder.customerCode}
+                    </span>
+                    {" - "}
+                    {fallbackOrder.customerName}
+                  </>
                 ) : (
                   "กำลังโหลดข้อมูล..."
                 )}
@@ -1332,7 +1367,9 @@ export function IncomingOrderModal({ allOrders, detail, expandedId, onAfterClose
                     <span className="h-2 w-px bg-white/20" />
                   </>
                 ) : null}
-                <span className="text-[11px] font-black tracking-tight text-white/80 md:text-[18px]">{activeDetail ? formatDisplayDate(activeDetail.orderDate) : "—"}</span>
+                <span className="text-[11px] font-black tracking-tight text-white/80 md:text-[18px]">
+                  {activeDetail ? formatDisplayDate(activeDetail.orderDate) : fallbackOrder ? formatDisplayDate(fallbackOrder.orderDate) : "—"}
+                </span>
               </div>
             </div>
             <button
@@ -1349,7 +1386,9 @@ export function IncomingOrderModal({ allOrders, detail, expandedId, onAfterClose
                 <Clock className="h-3.5 w-3.5 text-white/50" />
                 รับออเดอร์
               </span>
-              <span className="text-[10px] font-black text-white/40 uppercase tracking-[0.2em]">{activeDetail ? activeDetail.channelLabel : "—"}</span>
+              <span className="text-[10px] font-black text-white/40 uppercase tracking-[0.2em]">
+                {activeDetail ? activeDetail.channelLabel : fallbackOrder ? fallbackOrder.channelLabel : "—"}
+              </span>
             </div>
 
             <div className="flex items-center gap-2">
@@ -1361,18 +1400,12 @@ export function IncomingOrderModal({ allOrders, detail, expandedId, onAfterClose
                   ลบออเดอร์
                 </button>
                 <button
-                  onClick={() => void openEditMode()}
-                  disabled={isPreparingEdit || editModePending}
-                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-white/15 px-4 py-2 text-[12px] font-black uppercase tracking-[0.14em] text-white shadow-xl shadow-[#4A148C]/20 transition-all active:scale-95 disabled:opacity-75"
+                  onClick={openEditMode}
+                  disabled={!activeDetail}
+                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-white/15 px-4 py-2 text-[12px] font-black uppercase tracking-[0.14em] text-white shadow-xl shadow-[#4A148C]/20 transition-all active:scale-95 disabled:opacity-50"
                 >
-                  {isPreparingEdit || editModePending ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Edit3 className="h-4 w-4" />
-                  )}
-                  <span className="leading-none">
-                    {isPreparingEdit || editModePending ? "กำลังเปิด..." : "แก้ไขรายการ"}
-                  </span>
+                  <Edit3 className="h-4 w-4" />
+                  <span className="leading-none">แก้ไขรายการ</span>
                 </button>
               </div>
 
@@ -1441,14 +1474,33 @@ export function IncomingOrderModal({ allOrders, detail, expandedId, onAfterClose
               </div>
             </div>
           ) : !activeDetail ? (
-            <div className="absolute inset-0 flex flex-col items-center justify-center bg-white z-50">
-              <div className="relative flex items-center justify-center">
-                <div className="absolute h-14 w-14 rounded-full border-4 border-[#4A148C]/10" />
-                <Loader2 className="h-14 w-14 animate-spin text-[#4A148C]" strokeWidth={2} />
+            <div className="flex flex-col h-full bg-white">
+              <div className="flex-1 overflow-y-auto custom-scrollbar p-4 sm:p-6 space-y-4">
+                <div className="flex items-center gap-2.5 text-xs font-black uppercase tracking-wider text-[#4A148C]">
+                  <Loader2 className="h-4 w-4 animate-spin text-[#4A148C]" strokeWidth={2.4} />
+                  <span>กำลังโหลดรายการสินค้า...</span>
+                </div>
+                {[1, 2, 3].map((key) => (
+                  <div key={key} className="flex gap-4 border-b border-slate-100 pb-4 animate-pulse">
+                    <div className="h-20 w-20 rounded-2xl bg-slate-100 shrink-0" />
+                    <div className="flex-1 space-y-2.5 py-1">
+                      <div className="h-5 w-3/4 rounded-lg bg-slate-100" />
+                      <div className="h-4 w-1/3 rounded-lg bg-slate-100" />
+                      <div className="h-6 w-24 rounded-lg bg-slate-100 mt-2" />
+                    </div>
+                  </div>
+                ))}
               </div>
-              <p className="mt-4 text-[11px] font-black uppercase tracking-[0.25em] text-[#4A148C] animate-pulse">
-                กำลังโหลดข้อมูลออเดอร์...
-              </p>
+              {fallbackOrder ? (
+                <div className="border-t border-slate-100 bg-slate-50/70 px-6 py-4 shrink-0">
+                  <div className="flex items-center justify-between text-slate-600 text-sm font-bold">
+                    <span>{fallbackOrder.productCount} รายการ</span>
+                    <span className="text-base text-slate-950 font-mono font-black">
+                      ฿{formatTHB(fallbackOrder.totalAmount)}
+                    </span>
+                  </div>
+                </div>
+              ) : null}
             </div>
           ) : (
             <>
@@ -1463,20 +1515,6 @@ export function IncomingOrderModal({ allOrders, detail, expandedId, onAfterClose
               </div>
             </div>
           )}
-
-          {(isPreparingEdit || editModePending) && !navPending ? (
-            <div className="absolute inset-0 z-50 flex items-center justify-center bg-white/78 backdrop-blur-[1px]">
-              <div className="flex flex-col items-center gap-4">
-                <div className="relative flex items-center justify-center">
-                  <div className="absolute h-12 w-12 rounded-full border-2 border-[#4A148C]/10" />
-                  <Loader2 className="h-12 w-12 animate-spin text-[#4A148C]" strokeWidth={1.5} />
-                </div>
-                <p className="text-[10px] font-black uppercase tracking-[0.3em] text-[#4A148C] animate-pulse">
-                  กำลังเปิดโหมดแก้ไข
-                </p>
-              </div>
-            </div>
-          ) : null}
 
           {confirmCancel ? (
             <div className="flex h-full flex-col items-center justify-center text-center px-10 animate-in fade-in zoom-in-95 duration-200">
@@ -1566,18 +1604,12 @@ export function IncomingOrderModal({ allOrders, detail, expandedId, onAfterClose
                     ลบออเดอร์
                   </button>
                   <button
-                    onClick={() => void openEditMode()}
-                    disabled={isPreparingEdit || editModePending}
-                    className="flex-[2] flex items-center justify-center gap-2 rounded-2xl bg-[#4A148C] py-4 text-[14px] font-black text-white shadow-xl shadow-[#4A148C]/20 uppercase tracking-widest active:scale-95 transition-all disabled:opacity-75"
+                    onClick={openEditMode}
+                    disabled={!activeDetail}
+                    className="flex-[2] flex items-center justify-center gap-2 rounded-2xl bg-[#4A148C] py-4 text-[14px] font-black text-white shadow-xl shadow-[#4A148C]/20 uppercase tracking-widest active:scale-95 transition-all disabled:opacity-50"
                   >
-                    {isPreparingEdit || editModePending ? (
-                      <Loader2 className="h-5 w-5 animate-spin" />
-                    ) : (
-                      <Edit3 className="h-5 w-5" />
-                    )}
-                    <span className="leading-none text-white">
-                      {isPreparingEdit || editModePending ? "กำลังเปิด..." : "แก้ไขรายการ"}
-                    </span>
+                    <Edit3 className="h-5 w-5" />
+                    <span className="leading-none text-white">แก้ไขรายการ</span>
                   </button>
                 </div>
               </div>

@@ -8,7 +8,7 @@ import { IncomingOrderOpenCard } from "./incoming-order-open-card";
 import { IncomingOrderVehicleFilter } from "./incoming-order-vehicle-filter";
 import { IncomingOrdersVehicleTransfer } from "./incoming-orders-vehicle-transfer";
 import { DailySpecialOrderManager } from "./daily-special-order-manager";
-import { fetchIncomingOrderDetailAction } from "@/app/orders/incoming/actions";
+import { fetchIncomingOrderDetailDeduped } from "./incoming-order-modal";
 import type { OrderVehicleOption } from "@/lib/orders/manage";
 import type { DailySpecialCatalogProduct, DailySpecialItem } from "@/lib/orders/daily-special-items";
 import type { VehicleTransferDateOption } from "@/lib/orders/vehicle-transfer";
@@ -135,6 +135,18 @@ export function IncomingOrdersMobileList({
   } | null>(null);
   const modalCacheRef = useRef<Record<string, { detail: OrderDetailData; products: OrderProductOption[] }>>({});
 
+  const handlePrefetch = useCallback((orderId: string) => {
+    if (modalCacheRef.current[orderId]) return;
+    void fetchIncomingOrderDetailDeduped(orderId).then((result) => {
+      if (result?.detail) {
+        modalCacheRef.current[orderId] = {
+          detail: result.detail,
+          products: [],
+        };
+      }
+    });
+  }, []);
+
   const handleOpenModal = useCallback((orderId: string) => {
     if (typeof window !== "undefined") {
       const currentY = window.scrollY;
@@ -168,7 +180,7 @@ export function IncomingOrdersMobileList({
 
     void (async () => {
       try {
-        const result = await fetchIncomingOrderDetailAction(orderId);
+        const result = await fetchIncomingOrderDetailDeduped(orderId);
         if (result && result.detail) {
           modalCacheRef.current[orderId] = {
             detail: result.detail,
@@ -333,6 +345,7 @@ export function IncomingOrdersMobileList({
                     vehicles={vehicles}
                     warehouseName={order.warehouseName}
                     onOpen={handleOpenModal}
+                    onPrefetch={handlePrefetch}
                   />
                 </Fragment>
               );
