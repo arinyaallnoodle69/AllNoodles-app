@@ -169,7 +169,13 @@ function VehicleSummarySheet({ sheet }: { sheet: VehicleSummarySheetDef }) {
                       <span className="vehicle-summary-table__product-image" aria-hidden="true">
                         {product.imageUrl ? (
                           // eslint-disable-next-line @next/next/no-img-element
-                          <img src={product.imageUrl} alt="" crossOrigin="anonymous" />
+                          <img
+                            src={product.imageUrl}
+                            alt=""
+                            crossOrigin="anonymous"
+                            loading="eager"
+                            decoding="sync"
+                          />
                         ) : (
                           <span className="vehicle-summary-table__product-image-placeholder" />
                         )}

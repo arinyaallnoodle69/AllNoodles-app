@@ -60,16 +60,16 @@ export function SharePackingListPdfButton({
         disabled={isSharing}
         className={
           className ??
-          "inline-flex items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 py-1.5 text-[13px] font-bold text-slate-700 shadow-sm transition hover:bg-slate-50 active:scale-95 disabled:cursor-not-allowed disabled:opacity-70"
+          "inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-[12px] md:text-[13px] font-bold text-slate-700 shadow-sm transition hover:bg-slate-50 active:scale-95 disabled:cursor-not-allowed disabled:opacity-70"
         }
         style={{ fontFamily: 'var(--font-noto-sans-thai), "Noto Sans Thai", sans-serif' }}
       >
         {isSharing ? (
-          <Loader2 className="h-4 w-4 animate-spin" strokeWidth={2.3} />
+          <Loader2 className="h-4 w-4 shrink-0 animate-spin" strokeWidth={2.3} />
         ) : (
-          <FileText className="h-4 w-4 text-rose-600" strokeWidth={2.3} />
+          <FileText className="h-4 w-4 shrink-0 text-rose-600" strokeWidth={2.3} />
         )}
-        {isSharing ? "กำลังสร้าง PDF..." : buttonText}
+        <span className="whitespace-nowrap">{isSharing ? "กำลังสร้าง PDF..." : buttonText}</span>
       </button>
       {previewPdf ? (
         <DeliveryPdfPreviewModal

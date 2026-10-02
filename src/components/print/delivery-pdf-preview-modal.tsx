@@ -3,10 +3,7 @@
 import { ArrowLeft, Download, Loader2, Share2, X, AlertTriangle, ExternalLink } from "lucide-react";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import {
-  downloadPreparedDeliveryPdf,
-  sharePreparedDeliveryPdf,
-} from "@/components/print/share-delivery-pdf";
+import { sharePreparedDeliveryPdf } from "@/components/print/share-delivery-pdf";
 import { uploadTempPdfAction } from "@/app/orders/pdf-actions";
 
 type DeliveryPdfPreviewModalProps = {
@@ -142,16 +139,40 @@ export function DeliveryPdfPreviewModal({
   const isReady = isFileValid && !isUploading;
   const shareTitle = title.replace(/^ตัวอย่าง PDF\s*/, "").trim() || "บิลส่งของ";
 
-  function handleDownload() {
-    if (!isReady || !isFileValid) {
-      window.alert("ไฟล์ PDF กำลังเตรียมความพร้อม กรุณารอสักครู่");
+  async function handleDownload() {
+    if (!isFileValid) {
+      window.alert("ไฟล์ PDF ยังไม่พร้อมใช้งาน กรุณาลองใหม่อีกครั้ง");
       return;
     }
-    if (publicUrl && isMobile) {
-      window.open(publicUrl, "_blank");
-      return;
+
+    // On iOS Safari / Apple mobile, <a download> with blob: URLs is ignored by iOS.
+    // Use Web Share API if available so user can directly save to Files ("บันทึกไปยังไฟล์")
+    if (isIOS && typeof navigator !== "undefined" && navigator.share && navigator.canShare?.({ files: [file] })) {
+      try {
+        await navigator.share({
+          files: [file],
+          title: shareTitle,
+        });
+        return;
+      } catch (err) {
+        if (err instanceof Error && err.name === "AbortError") return;
+        console.warn("[handleDownload:WebShare]", err);
+      }
     }
-    downloadPreparedDeliveryPdf(file);
+
+    // Direct download via Blob Object URL with long lifecycle (60s)
+    const url = URL.createObjectURL(file);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = file.name || "export.pdf";
+    link.target = "_blank";
+    link.rel = "noopener";
+    document.body.appendChild(link);
+    link.click();
+    window.setTimeout(() => {
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    }, 60000);
   }
 
   async function handleShare() {
@@ -232,22 +253,11 @@ export function DeliveryPdfPreviewModal({
             <button
               type="button"
               onClick={handleDownload}
-              disabled={!isReady || isSharing}
-              className={`inline-flex h-12 items-center gap-2 bg-[#EA80FC] px-6 text-sm font-black uppercase tracking-[0.14em] text-[#4A148C] transition hover:bg-[#4A148C] hover:text-white active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 ${
-                isLineBrowser && isMobileStandalone && !publicUrl ? "opacity-50 cursor-not-allowed" : ""
-              }`}
+              disabled={!isFileValid}
+              className="inline-flex h-12 items-center gap-2 bg-[#EA80FC] px-6 text-sm font-black uppercase tracking-[0.14em] text-[#4A148C] transition hover:bg-[#4A148C] hover:text-white active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {isUploading ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" strokeWidth={2.4} />
-                  กำลังเตรียมไฟล์...
-                </>
-              ) : (
-                <>
-                  <Download className="h-4 w-4" strokeWidth={2.6} />
-                  ดาวน์โหลด
-                </>
-              )}
+              <Download className="h-4 w-4" strokeWidth={2.6} />
+              ดาวน์โหลด
             </button>
             <button
               type="button"
@@ -438,22 +448,11 @@ export function DeliveryPdfPreviewModal({
           <button
             type="button"
             onClick={handleDownload}
-            disabled={!isReady || isSharing}
-            className={`inline-flex h-14 items-center justify-center gap-2 bg-[#EA80FC] text-sm font-black uppercase tracking-[0.12em] text-[#4A148C] transition active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 ${
-              isLineBrowser && isMobileStandalone && !publicUrl ? "opacity-50 cursor-not-allowed" : ""
-            }`}
+            disabled={!isFileValid}
+            className="inline-flex h-14 items-center justify-center gap-2 bg-[#EA80FC] text-sm font-black uppercase tracking-[0.12em] text-[#4A148C] transition active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {isUploading ? (
-              <>
-                <Loader2 className="h-5 w-5 animate-spin" strokeWidth={2.6} />
-                กำลังเตรียม...
-              </>
-            ) : (
-              <>
-                <Download className="h-5 w-5" strokeWidth={2.8} />
-                ดาวน์โหลด
-              </>
-            )}
+            <Download className="h-5 w-5" strokeWidth={2.8} />
+            ดาวน์โหลด
           </button>
           <button
             type="button"

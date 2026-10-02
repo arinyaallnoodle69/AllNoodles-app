@@ -1,3 +1,5 @@
+import { inlineCaptureImages, restoreCaptureImages } from "@/components/print/print-image-cache";
+
 const PACKING_SHEET_WIDTH_MM = 297;
 const PACKING_SHEET_HEIGHT_MM = 210;
 const PORTRAIT_SHEET_WIDTH_MM = 210;
@@ -63,76 +65,6 @@ export function buildPackingListPdfFileName(input: string | undefined) {
   return `${safe || "ใบออเดอร์"}.pdf`;
 }
 
-type RestorableImage = {
-  image: HTMLImageElement;
-  src: string;
-  srcSet: string | null;
-  sizes: string | null;
-  crossOrigin: string | null;
-};
-
-async function blobToDataUrl(blob: Blob): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result));
-    reader.onerror = () => reject(reader.error ?? new Error("อ่านไฟล์รูปไม่สำเร็จ"));
-    reader.readAsDataURL(blob);
-  });
-}
-
-async function inlineCaptureImages(targets: HTMLElement[]): Promise<RestorableImage[]> {
-  const images = Array.from(
-    new Set(targets.flatMap((target) => Array.from(target.querySelectorAll("img")))),
-  );
-  const restorable: RestorableImage[] = [];
-
-  try {
-    await Promise.all(
-      images.map(async (image) => {
-      const src = image.currentSrc || image.src;
-      if (!src || src.startsWith("data:") || src.startsWith("blob:")) return;
-
-      try {
-        const response = await fetch(src, { cache: "force-cache", mode: "cors" });
-        if (!response.ok) throw new Error(`โหลดรูปไม่สำเร็จ (${response.status})`);
-
-        const dataUrl = await blobToDataUrl(await response.blob());
-        restorable.push({
-          image,
-          src: image.src,
-          srcSet: image.getAttribute("srcset"),
-          sizes: image.getAttribute("sizes"),
-          crossOrigin: image.getAttribute("crossorigin"),
-        });
-        image.removeAttribute("crossorigin");
-        image.removeAttribute("srcset");
-        image.removeAttribute("sizes");
-        image.src = dataUrl;
-        await image.decode();
-      } catch (error) {
-        throw new Error(`เตรียมรูปสินค้าไม่สำเร็จ: ${src}`, { cause: error });
-      }
-      }),
-    );
-  } catch (error) {
-    restoreCaptureImages(restorable);
-    throw error;
-  }
-
-  return restorable;
-}
-
-function restoreCaptureImages(images: RestorableImage[]) {
-  images.forEach(({ image, src, srcSet, sizes, crossOrigin }) => {
-    image.src = src;
-    if (srcSet === null) image.removeAttribute("srcset");
-    else image.setAttribute("srcset", srcSet);
-    if (sizes === null) image.removeAttribute("sizes");
-    else image.setAttribute("sizes", sizes);
-    if (crossOrigin === null) image.removeAttribute("crossorigin");
-    else image.setAttribute("crossorigin", crossOrigin);
-  });
-}
 
 export async function createPackingListPdfPreviewFromDocument(
   sourceDocument: Document,

@@ -4,6 +4,11 @@ import * as htmlToImage from "html-to-image";
 import { AlertTriangle, Download, Image as ImageIcon, Loader2, Printer, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import {
+  inlineCaptureImages,
+  restoreCaptureImages,
+  type RestorableImage,
+} from "@/components/print/print-image-cache";
 
 type PreviewImage = {
   dataUrl: string;
@@ -16,75 +21,6 @@ const FALLBACK_CAPTURE_WIDTH = 1123;
 const FALLBACK_CAPTURE_HEIGHT = 794;
 
 let cachedFontEmbedCSS: string | null = null;
-
-type RestorableImage = {
-  image: HTMLImageElement;
-  src: string;
-  srcSet: string | null;
-  sizes: string | null;
-  crossOrigin: string | null;
-};
-
-function blobToDataUrl(blob: Blob): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result));
-    reader.onerror = () => reject(reader.error ?? new Error("อ่านไฟล์รูปไม่สำเร็จ"));
-    reader.readAsDataURL(blob);
-  });
-}
-
-async function inlineCaptureImages(targets: HTMLElement[]): Promise<RestorableImage[]> {
-  const images = Array.from(new Set(targets.flatMap((target) => Array.from(target.querySelectorAll("img")))));
-  const restorable: RestorableImage[] = [];
-
-  try {
-    await Promise.all(
-      images.map(async (image) => {
-      const src = image.currentSrc || image.src;
-      if (!src || src.startsWith("data:") || src.startsWith("blob:")) return;
-
-      try {
-        const response = await fetch(src, { cache: "force-cache", mode: "cors" });
-        if (!response.ok) throw new Error(`โหลดรูปไม่สำเร็จ (${response.status})`);
-
-        const dataUrl = await blobToDataUrl(await response.blob());
-        restorable.push({
-          image,
-          src: image.src,
-          srcSet: image.getAttribute("srcset"),
-          sizes: image.getAttribute("sizes"),
-          crossOrigin: image.getAttribute("crossorigin"),
-        });
-        image.removeAttribute("crossorigin");
-        image.removeAttribute("srcset");
-        image.removeAttribute("sizes");
-        image.src = dataUrl;
-        await image.decode();
-      } catch (error) {
-        throw new Error(`เตรียมรูปสินค้าไม่สำเร็จ: ${src}`, { cause: error });
-      }
-      }),
-    );
-  } catch (error) {
-    restoreCaptureImages(restorable);
-    throw error;
-  }
-
-  return restorable;
-}
-
-function restoreCaptureImages(images: RestorableImage[]) {
-  images.forEach(({ image, src, srcSet, sizes, crossOrigin }) => {
-    image.src = src;
-    if (srcSet === null) image.removeAttribute("srcset");
-    else image.setAttribute("srcset", srcSet);
-    if (sizes === null) image.removeAttribute("sizes");
-    else image.setAttribute("sizes", sizes);
-    if (crossOrigin === null) image.removeAttribute("crossorigin");
-    else image.setAttribute("crossorigin", crossOrigin);
-  });
-}
 
 function dataUrlToBlob(dataUrl: string): Blob {
   const parts = dataUrl.split(",");
@@ -112,6 +48,7 @@ export function PackingListPrintButton({
   documentTitle = "ใบออเดอร์",
   printButtonText = "ดูตัวอย่าง / พิมพ์",
   buttonText,
+  className,
 }: {
   unassignedStores?: string[];
   dateLabel?: string;
@@ -120,6 +57,7 @@ export function PackingListPrintButton({
   documentTitle?: string;
   printButtonText?: string;
   buttonText?: string;
+  className?: string;
 }) {
   const [isPrinting, setIsPrinting] = useState(false);
   const [isCapturing, setIsCapturing] = useState(false);
@@ -187,23 +125,32 @@ export function PackingListPrintButton({
     setIsPrinting(false);
   }
 
-  function handlePrintFromPreview() {
+  async function handlePrintFromPreview() {
     if (isPrinting || isCapturing) return;
 
     setShowPreview(false);
     setIsPrinting(true);
 
+    let printInlined: RestorableImage[] = [];
+    try {
+      const targets = Array.from(document.querySelectorAll<HTMLElement>(".packing-sheet"));
+      printInlined = await inlineCaptureImages(targets);
+    } catch (e) {
+      console.warn("Print image inlining failed, continuing with direct print:", e);
+    }
+
     const done = () => {
+      restoreCaptureImages(printInlined);
       finishPrintState();
       window.removeEventListener("afterprint", done);
     };
 
     window.addEventListener("afterprint", done, { once: true });
-    fallbackTimerRef.current = window.setTimeout(done, 1500);
+    fallbackTimerRef.current = window.setTimeout(done, 10000);
 
     window.setTimeout(() => {
       window.print();
-    }, 180);
+    }, 150);
   }
 
   async function handleOpenPreview(mode: "print" | "save") {
@@ -279,7 +226,7 @@ export function PackingListPrintButton({
         // Render high-DPI PNG directly (eliminating blurry toSvg foreignObject and cutting render time by 50%)
         const dataUrl = await htmlToImage.toPng(target, {
           backgroundColor: "#ffffff",
-          cacheBust: true,
+          cacheBust: false,
           fontEmbedCSS,
           pixelRatio: selectedPixelRatio,
           width: captureWidth,
@@ -360,11 +307,14 @@ export function PackingListPrintButton({
         type="button"
         onClick={() => handleOpenPreview("print")}
         disabled={isPrinting || isCapturing}
-        className={`${hidePrintOnMobile ? "hidden md:flex" : "flex"} items-center justify-center gap-1.5 rounded-lg bg-[#4A148C] px-3.5 py-1.5 text-[13px] font-bold text-white shadow-sm transition hover:bg-[#4A148C]/90 active:scale-95 disabled:cursor-not-allowed disabled:opacity-70`}
+        className={
+          className ??
+          `${hidePrintOnMobile ? "hidden md:flex" : "flex"} items-center justify-center gap-1.5 whitespace-nowrap rounded-lg bg-[#4A148C] px-3 py-1.5 text-[12px] md:text-[13px] font-bold text-white shadow-sm transition hover:bg-[#4A148C]/90 active:scale-95 disabled:cursor-not-allowed disabled:opacity-70`
+        }
         style={{ fontFamily: 'var(--font-noto-sans-thai), "Noto Sans Thai", sans-serif' }}
       >
-        {isCapturing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Printer className="h-4 w-4" />}
-        {isCapturing ? "กำลังสร้างตัวอย่าง..." : label}
+        {isCapturing ? <Loader2 className="h-4 w-4 shrink-0 animate-spin" /> : <Printer className="h-4 w-4 shrink-0" />}
+        <span className="whitespace-nowrap">{isCapturing ? "กำลังสร้างตัวอย่าง..." : label}</span>
       </button>
 
       {showPreview &&

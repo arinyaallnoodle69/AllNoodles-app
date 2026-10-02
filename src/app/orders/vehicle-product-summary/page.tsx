@@ -1,13 +1,9 @@
 import { Suspense } from "react";
-import Link from "next/link";
 import type { Viewport } from "next";
-import { AutoPrint, PackingListPrintButton } from "@/app/orders/packing-list/preview/print-button";
 import { PageLoader } from "@/components/page-loader";
-import { VehicleProductSummaryLayout } from "@/components/print/vehicle-product-summary-layout";
-import { SharePackingListPdfButton } from "@/components/print/share-packing-list-pdf-button";
 import { requireAnyRole } from "@/lib/auth/authorization";
 import { getVehicleProductSummaryData } from "@/lib/orders/vehicle-product-summary";
-import { fmtDateRangeFileTH } from "@/lib/utils/date";
+import { VehicleProductSummaryClient } from "./vehicle-product-summary-client";
 
 export const metadata = { title: "สรุปสินค้าตามรถ" };
 export const viewport: Viewport = {
@@ -41,128 +37,13 @@ async function VehicleProductSummaryPage({ searchParams }: Props) {
   const autoprint = params.autoprint === "1";
 
   const summaryData = await getVehicleProductSummaryData(session.organizationId, date, endDate);
-  const hasData = summaryData.products.length > 0;
-  const activeVehicleCount = summaryData.vehicles.filter((_, vehicleIndex) =>
-    summaryData.qty.some((row) => (row[vehicleIndex] ?? 0) > 0),
-  ).length;
 
   return (
-    <>
-      {autoprint ? <AutoPrint /> : null}
-
-      <style>{`
-        @media screen and (max-width: 767px) {
-          .vehicle-summary-toolbar {
-            position: sticky !important;
-            top: 8px !important;
-            left: auto !important;
-            transform: none !important;
-            translate: none !important;
-            z-index: 80 !important;
-            width: calc(100vw - 12px) !important;
-            max-width: calc(100vw - 12px) !important;
-            margin: 8px 6px 0 !important;
-            box-sizing: border-box !important;
-            padding: 8px 10px !important;
-            gap: 8px !important;
-            justify-content: space-between !important;
-          }
-
-          .vehicle-summary-toolbar__meta {
-            display: none !important;
-          }
-
-          .vehicle-summary-toolbar__actions {
-            min-width: 0;
-          }
-
-          .vehicle-summary-page .packing-print-container {
-            padding-top: 8px !important;
-          }
-        }
-      `}</style>
-
-      <div
-        className="no-print vehicle-summary-toolbar"
-        style={{
-          display: "flex",
-          gap: "12px",
-          alignItems: "center",
-          background: "white",
-          padding: "10px 14px",
-          borderRadius: "14px",
-          boxShadow: "0 10px 26px rgba(0,0,0,0.12)",
-          position: "fixed",
-          top: "12px",
-          left: "50%",
-          transform: "translateX(-50%)",
-          zIndex: 100,
-          fontFamily: 'var(--font-noto-sans-thai), "Noto Sans Thai", sans-serif',
-          width: "max-content",
-          maxWidth: "calc(100vw - 24px)",
-          border: "1px solid rgba(15,23,42,0.06)",
-        }}
-      >
-        <span style={{ fontSize: "15px", fontWeight: 800, color: "#4A148C" }}>สรุปสินค้าตามรถ</span>
-        <span className="vehicle-summary-toolbar__meta" style={{ fontSize: "13px", color: "#64748b", fontWeight: 700 }}>
-          {summaryData.dateLabel} · {activeVehicleCount} รถ
-        </span>
-        <div className="vehicle-summary-toolbar__actions" style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "nowrap" }}>
-          <PackingListPrintButton
-            unassignedStores={[]}
-            dateLabel={summaryData.dateLabel}
-            documentTitle="สรุปสินค้าตามรถ"
-            printButtonText="พิมพ์ฟอร์มสรุปตามรถ"
-          />
-          <SharePackingListPdfButton
-            fileName={`ใบขึ้นของ_${fmtDateRangeFileTH(date, endDate)}`}
-            previewTitle="ตัวอย่าง PDF ใบขึ้นของ"
-          />
-        </div>
-        <Link
-          href={`/orders/incoming?date=${date}${endDate ? `&endDate=${endDate}` : ""}`}
-          scroll={false}
-          style={{
-            fontSize: "13px",
-            fontWeight: 700,
-            color: "#ef4444",
-            textDecoration: "none",
-            marginLeft: "4px",
-            padding: "6px 12px",
-            borderRadius: "8px",
-            background: "#fef2f2",
-          }}
-        >
-          กลับ
-        </Link>
-      </div>
-
-      {!hasData ? (
-        <div
-          className="vehicle-summary-page"
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            gap: "8px",
-            paddingTop: "120px",
-            fontFamily: 'var(--font-noto-sans-thai), "Noto Sans Thai", sans-serif',
-          }}
-        >
-          <p style={{ fontSize: "18px", fontWeight: 600, color: "#64748b" }}>ไม่มีข้อมูลสินค้าสำหรับการแสดงฟอร์มนี้</p>
-          <Link
-            href={`/orders/incoming?date=${date}${endDate ? `&endDate=${endDate}` : ""}`}
-            scroll={false}
-            style={{ marginTop: "8px", color: "#4A148C", fontSize: "14px" }}
-          >
-            กลับหน้ารายการออเดอร์
-          </Link>
-        </div>
-      ) : (
-        <div className="vehicle-summary-page packing-print-container">
-          <VehicleProductSummaryLayout data={summaryData} />
-        </div>
-      )}
-    </>
+    <VehicleProductSummaryClient
+      summaryData={summaryData}
+      date={date}
+      endDate={endDate}
+      autoprint={autoprint}
+    />
   );
 }
