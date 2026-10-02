@@ -1,4 +1,4 @@
-const CACHE_NAME = "All Noodles-v10";
+const CACHE_NAME = "All Noodles-v11";
 const NAVIGATION_TIMEOUT_MS = 4000;
 const APP_SHELL = [
   "/offline",

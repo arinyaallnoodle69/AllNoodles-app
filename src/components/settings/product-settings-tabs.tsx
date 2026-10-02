@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { FolderTree, Package2, Palette, Tag } from "lucide-react";
 import { ProductCategoryManager } from "@/components/settings/product-category-manager";
@@ -64,7 +63,6 @@ export function ProductSettingsTabs({
   const [activeTab, setActiveTab] = useState<ProductSettingsTab>(initialTab);
   const [contentTab, setContentTab] = useState<ProductSettingsTab>(initialTab);
   const switchFrameRef = useRef<number | null>(null);
-  const router = useRouter();
 
   // Sync state with prop changes from client-side router navigation
   useEffect(() => {
@@ -73,10 +71,6 @@ export function ProductSettingsTabs({
   }, [initialTab]);
 
   useEffect(() => {
-    // Prefetch category-colors and product-colors pages so navigation feels instant
-    router.prefetch("/settings/products/category-colors");
-    router.prefetch("/settings/products/product-colors");
-    
     function handlePopState() {
       const nextTab = getTabFromLocation();
       setActiveTab(nextTab);
@@ -90,7 +84,7 @@ export function ProductSettingsTabs({
         window.cancelAnimationFrame(switchFrameRef.current);
       }
     };
-  }, [router]);
+  }, []);
 
   function selectTab(nextTab: ProductSettingsTab) {
     if (nextTab === activeTab) return;

@@ -52,19 +52,19 @@ export function CreateOrderProvider({ children }: { children: React.ReactNode })
     }
   }, []);
 
-  // Pre-fetch data on mount for instant access
+  // Load the heavy order catalog only when the user opens the modal.
   useEffect(() => {
-    if (!data && !isPending) {
+    if (isOpen && !data && !isPending) {
       startTransition(async () => {
         try {
           const result = await fetchOrderModalDataAction();
           setData(result);
         } catch (error) {
-          console.error("Failed to pre-fetch order modal data:", error);
+          console.error("Failed to load order modal data:", error);
         }
       });
     }
-  }, [data, isPending]);
+  }, [data, isOpen, isPending]);
 
   return (
     <Ctx.Provider

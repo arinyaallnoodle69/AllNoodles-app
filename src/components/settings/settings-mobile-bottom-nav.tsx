@@ -1,7 +1,7 @@
 "use client";
 
 import Link, { useLinkStatus } from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import {
@@ -83,7 +83,6 @@ export function SettingsMobileBottomNav() {
   const role = useClientRole();
   const isMember = role === "member";
   const pathname = usePathname();
-  const router = useRouter();
   const [moreOpen, setMoreOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [navigatingHref, setNavigatingHref] = useState<string | null>(null);
@@ -270,7 +269,7 @@ export function SettingsMobileBottomNav() {
               <Link
                 key={href}
                 href={href}
-                prefetch={true}
+                prefetch={false}
                 onClick={resetNavigationState}
                 className={`flex min-w-0 flex-col items-center gap-2 rounded-2xl border px-1 py-4 font-black transition active:scale-[0.98] ${
                   active
@@ -334,6 +333,7 @@ export function SettingsMobileBottomNav() {
                     return (
                       <Link
                         href="/orders/incoming"
+                        prefetch={false}
                         onClick={resetNavigationState}
                         className={`flex flex-col items-center justify-center gap-1 rounded-2xl px-1 py-1.5 text-[9px] font-medium transition ${
                           active ? "text-[#4A148C]" : "text-slate-500 hover:text-slate-900"
@@ -351,6 +351,7 @@ export function SettingsMobileBottomNav() {
                     return (
                       <Link
                         href="/stock"
+                        prefetch={false}
                         onClick={resetNavigationState}
                         className={`flex flex-col items-center justify-center gap-1 rounded-2xl px-1 py-1.5 text-[9px] font-medium transition ${
                           active ? "text-[#4A148C]" : "text-slate-500 hover:text-slate-900"
@@ -371,7 +372,7 @@ export function SettingsMobileBottomNav() {
                     return (
                       <Link
                         href="/billing"
-                        prefetch={true}
+                        prefetch={false}
                         onClick={resetNavigationState}
                         className={`flex flex-col items-center justify-center gap-1 rounded-2xl px-1 py-1.5 text-[9px] font-medium transition ${
                           active ? "text-[#4A148C]" : "text-slate-500 hover:text-slate-900"
@@ -409,7 +410,7 @@ export function SettingsMobileBottomNav() {
                       <Link
                         key={href}
                         href={href}
-                        prefetch={true}
+                        prefetch={false}
                         onClick={resetNavigationState}
                         className={`flex flex-col items-center justify-center gap-1 rounded-2xl px-1 py-1.5 text-[9px] font-medium transition ${
                           active
@@ -434,7 +435,7 @@ export function SettingsMobileBottomNav() {
                       <Link
                         key={href}
                         href={href}
-                        prefetch={true}
+                        prefetch={false}
                         onClick={resetNavigationState}
                         className={`flex flex-col items-center justify-center gap-1 rounded-2xl px-1 py-1.5 text-[9px] font-medium transition ${
                           active
@@ -585,11 +586,9 @@ export function SettingsMobileBottomNav() {
                   <Link
                     key={option.href}
                     href={option.href}
-                    prefetch={true}
+                    prefetch={false}
                     draggable={false}
                     onDragStart={(event) => event.preventDefault()}
-                    onMouseEnter={() => router.prefetch(option.href)}
-                    onTouchStart={() => router.prefetch(option.href)}
                     onClick={(event) => {
                       if (navigatingHref) {
                         event.preventDefault();

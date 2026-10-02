@@ -1,5 +1,5 @@
 import { requireAppRole } from "@/lib/auth/authorization";
-import { getSettingsData } from "@/lib/settings/admin";
+import { getSettingsSuppliersData } from "@/lib/settings/admin";
 import { SettingsSuppliersPageClient } from "./settings-suppliers-client";
 
 export const metadata = {
@@ -17,7 +17,7 @@ export default async function SettingsSuppliersPage({
   searchParams,
 }: SettingsSuppliersPageProps) {
   const session = await requireAppRole("admin");
-  const data = await getSettingsData(session.organizationId);
+  const data = await getSettingsSuppliersData(session.organizationId);
   const params = await searchParams;
   const editingSupplier = data.suppliers.find((s) => s.id === params.edit) ?? null;
 

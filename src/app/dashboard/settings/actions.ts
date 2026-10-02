@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath, revalidateTag, updateTag } from "next/cache";
+import { updateTag } from "next/cache";
 import { readSheet } from "read-excel-file/node";
 import { requireAppRole } from "@/lib/auth/authorization";
 import { normalizeSaleUnitCostMode } from "@/lib/products/sale-unit-cost";
@@ -423,22 +423,7 @@ async function syncCategoryMetadataForProducts(
 }
 
 function revalidateSettingsSurfaces(organizationId: string) {
-  try {
-    // Nuclear option: revalidate all layouts to ensure no stale data remains in any shared components
-    revalidatePath("/", "layout");
-
-    // Standard cache tag invalidation
-    revalidateTag(`settings-${organizationId}`, "max");
-    revalidateTag(`orders-${organizationId}`, "max");
-    revalidateTag(`stock-${organizationId}`, "max");
-    
-    // Attempt immediate updateTag if supported
-    updateTag(`settings-${organizationId}`);
-    updateTag(`orders-${organizationId}`);
-    updateTag(`stock-${organizationId}`);
-  } catch (err) {
-    console.error("[revalidateSettingsSurfaces] Error invalidating cache:", err);
-  }
+  updateTag(`settings-${organizationId}`);
 }
 
 export async function createCustomer(formData: FormData) {
@@ -485,7 +470,7 @@ export async function createCustomer(formData: FormData) {
     },
   );
 
-  revalidateTag(`settings-${session.organizationId}`, "max");
+  updateTag(`settings-${session.organizationId}`);
 }
 
 export async function createProduct(formData: FormData): Promise<boolean> {
@@ -651,7 +636,7 @@ export async function upsertStoreProductPrice(formData: FormData) {
     },
   );
 
-  revalidateTag(`settings-${session.organizationId}`, "max");
+  updateTag(`settings-${session.organizationId}`);
 }
 
 export async function deleteCustomerPrice(formData: FormData) {
@@ -669,7 +654,7 @@ export async function deleteCustomerPrice(formData: FormData) {
     .eq("customer_id", customerId)
     .eq("product_sale_unit_id", productSaleUnitId);
 
-  revalidateTag(`settings-${session.organizationId}`, "max");
+  updateTag(`settings-${session.organizationId}`);
 }
 
 export async function updateProduct(formData: FormData): Promise<boolean> {

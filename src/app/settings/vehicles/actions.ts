@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath, revalidateTag, updateTag } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
 import { requireAppRole } from "@/lib/auth/authorization";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
@@ -48,13 +48,9 @@ function getValidationErrorState(fieldErrors: Partial<Record<VehicleField, strin
 }
 
 function revalidateVehiclePaths(organizationId: string) {
-  revalidatePath("/settings");
+  updateTag(`settings-${organizationId}`);
   revalidatePath("/settings/customers");
   revalidatePath("/settings/vehicles");
-  revalidateTag(`settings-${organizationId}`, "max");
-  revalidateTag(`orders-${organizationId}`, "max");
-  updateTag(`settings-${organizationId}`);
-  updateTag(`orders-${organizationId}`);
 }
 
 export async function createVehicleAction(

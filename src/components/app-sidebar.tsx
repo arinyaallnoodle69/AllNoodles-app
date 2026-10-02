@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
+import dynamic from "next/dynamic";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
@@ -35,10 +37,19 @@ import { SettingsMobileBottomNav } from "@/components/settings/settings-mobile-b
 import { OrdersMobileTabs } from "@/components/orders/orders-mobile-tabs";
 import { ReportsMobileTabs } from "@/components/reports/reports-mobile-tabs";
 import { MobileSearchProvider, useMobileSearch } from "@/components/mobile-search/mobile-search-context";
-import { CreateOrderProvider } from "@/components/orders/create-order-context";
-import { GlobalCreateOrderModal } from "@/components/orders/create-order-modal";
+import { CreateOrderProvider, useCreateOrder } from "@/components/orders/create-order-context";
 import { ScrollToTopButton } from "@/components/ui/scroll-to-top-button";
 import { useClientRole } from "@/lib/auth/client-role";
+
+const GlobalCreateOrderModal = dynamic(
+  () => import("@/components/orders/create-order-modal").then((module) => module.GlobalCreateOrderModal),
+  { ssr: false },
+);
+
+function DeferredGlobalCreateOrderModal() {
+  const { isOpen } = useCreateOrder();
+  return isOpen ? <GlobalCreateOrderModal /> : null;
+}
 
 type AppRole = "admin" | "member" | "warehouse";
 
@@ -88,13 +99,13 @@ function MobileTopBar() {
     <header className="fixed inset-x-0 top-0 z-[60] h-[68px] border-b border-slate-200 bg-white text-slate-950 lg:hidden">
       <div className="flex h-full items-center gap-3 px-4">
         {/* Logo */}
-        <Link href={homeHref} className="block shrink-0">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
+        <Link href={homeHref} prefetch={false} className="block shrink-0">
+          <Image
             src="/api/brand/logo"
             alt="All Noodles"
             width={176}
             height={64}
+            unoptimized
             className="h-10 w-auto object-contain"
           />
         </Link>
@@ -253,7 +264,7 @@ function SidebarLink({
   return (
     <Link
       href={item.href}
-      prefetch
+      prefetch={false}
       title={collapsed ? item.label : undefined}
       className={`flex items-center gap-3 rounded-xl px-2.5 py-2.5 text-sm font-black transition-colors ${active ? "bg-[#4A148C] text-white shadow-sm shadow-[#4A148C]/20" : "text-[#4A148C] hover:bg-[#F3E5F5] hover:text-[#4A148C]"
         } ${collapsed ? "justify-center" : ""} ${indent && !collapsed ? "pl-9" : ""}`}
@@ -363,7 +374,7 @@ export function AppSidebarLayout({
   return (
     <CreateOrderProvider>
       <LoginSuccessPushReporter />
-      <GlobalCreateOrderModal />
+      <DeferredGlobalCreateOrderModal />
       <MobileSearchProvider>
         {/* ── Desktop sidebar (fixed) ───────────────────────────────────────── */}
         <aside
@@ -376,13 +387,13 @@ export function AppSidebarLayout({
               }`}
           >
             {!collapsed && (
-              <Link href={homeHref} className="flex min-w-0 shrink items-center gap-2.5">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
+              <Link href={homeHref} prefetch={false} className="flex min-w-0 shrink items-center gap-2.5">
+                <Image
                   src="/api/brand/logo"
                   alt="All Noodles"
                   width={176}
                   height={64}
+                  unoptimized
                   className="h-12 w-auto object-contain"
                 />
                 <span className="truncate text-base font-bold tracking-tight text-[#4A148C]">
@@ -424,6 +435,7 @@ export function AppSidebarLayout({
               {collapsed ? (
                 <Link
                   href={visibleReportsNavItems[0].href}
+                  prefetch={false}
                   title="Reports"
                   className={`flex items-center justify-center rounded-xl px-2.5 py-2.5 text-sm font-black transition-colors ${anyReportsActive
                       ? "bg-[#4A148C] text-white shadow-sm shadow-[#4A148C]/20"
@@ -486,6 +498,7 @@ export function AppSidebarLayout({
                   {collapsed ? (
                     <Link
                       href={visibleSettingsNavItems[0].href}
+                      prefetch={false}
                       title="Settings"
                       className={`flex items-center justify-center rounded-xl px-2.5 py-2.5 text-sm font-black transition-colors ${anySettingsActive
                           ? "bg-[#4A148C] text-white shadow-sm shadow-[#4A148C]/20"

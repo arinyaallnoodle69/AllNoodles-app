@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
 import { requireAppRole } from "@/lib/auth/authorization";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
@@ -67,6 +67,7 @@ export async function createSupplierAction(
 
   if (error) return { status: "error", message: "บันทึกข้อมูลไม่สำเร็จ: " + error.message };
 
+  updateTag(`settings-${session.organizationId}`);
   revalidatePath("/settings/suppliers");
   return { status: "success", message: "เพิ่มผู้ขายเรียบร้อยแล้ว" };
 }
@@ -124,6 +125,7 @@ export async function updateSupplierAction(
 
   if (error) return { status: "error", message: "แก้ไขข้อมูลไม่สำเร็จ: " + error.message };
 
+  updateTag(`settings-${session.organizationId}`);
   revalidatePath("/settings/suppliers");
   return { status: "success", message: "แก้ไขข้อมูลผู้ขายเรียบร้อยแล้ว" };
 }
@@ -140,6 +142,7 @@ export async function deleteSupplierAction(supplierId: string): Promise<{ succes
 
   if (error) return { success: false, error: error.message };
 
+  updateTag(`settings-${session.organizationId}`);
   revalidatePath("/settings/suppliers");
   return { success: true };
 }

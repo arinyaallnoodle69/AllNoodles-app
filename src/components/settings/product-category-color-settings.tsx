@@ -53,13 +53,6 @@ export function ProductCategoryColorSettings({ categories }: ProductCategoryColo
   const router = useRouter();
 
   useEffect(() => {
-    router.prefetch("/settings/products");
-    router.prefetch("/settings/products?tab=categories");
-    router.prefetch("/settings/products?tab=brands");
-    router.prefetch("/settings/products/product-colors");
-  }, [router]);
-
-  useEffect(() => {
     if (toast.show) {
       const timer = setTimeout(() => {
         setToast((t) => ({ ...t, show: false }));

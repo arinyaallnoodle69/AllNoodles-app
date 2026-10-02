@@ -169,6 +169,10 @@ export type SettingsProductsData = Pick<
   "nextProductSku" | "productCategories" | "productBrands" | "products" | "setupHint" | "suppliers"
 >;
 
+export type SettingsVehiclesData = Pick<SettingsData, "vehicles">;
+
+export type SettingsSuppliersData = Pick<SettingsData, "nextSupplierCode" | "suppliers">;
+
 type ProductRow = {
   cost_price: number | string;
   id: string;
@@ -867,6 +871,90 @@ export async function getSettingsDataFresh(
   return fetchSettingsData(organizationId);
 }
 
+async function fetchSettingsVehiclesData(organizationId: string): Promise<SettingsVehiclesData> {
+  const admin = getSupabaseAdmin();
+  const [vehiclesResult, customersResult] = await Promise.all([
+    admin
+      .from("vehicles")
+      .select("id, name, is_active, sort_order, license_plate, driver_name")
+      .eq("organization_id", organizationId)
+      .order("sort_order", { ascending: true }),
+    admin
+      .from("customers")
+      .select("id, customer_code, name, default_vehicle_id")
+      .eq("organization_id", organizationId)
+      .eq("is_active", true)
+      .order("sort_order", { ascending: true }),
+  ]);
+
+  if (vehiclesResult.error || customersResult.error) {
+    throw new Error((vehiclesResult.error ?? customersResult.error)?.message ?? "ไม่สามารถโหลดข้อมูลรถได้");
+  }
+
+  const customersByVehicleId = new Map<string, { code: string; id: string; name: string }[]>();
+  for (const customer of customersResult.data ?? []) {
+    if (!customer.default_vehicle_id) continue;
+    const current = customersByVehicleId.get(customer.default_vehicle_id) ?? [];
+    current.push({
+      code: customer.customer_code,
+      id: customer.id,
+      name: customer.name,
+    });
+    customersByVehicleId.set(customer.default_vehicle_id, current);
+  }
+
+  return {
+    vehicles: (vehiclesResult.data ?? []).map((vehicle) => ({
+      customers: customersByVehicleId.get(vehicle.id) ?? [],
+      driverName: vehicle.driver_name,
+      id: vehicle.id,
+      isActive: vehicle.is_active,
+      licensePlate: vehicle.license_plate,
+      name: vehicle.name,
+      sortOrder: Number(vehicle.sort_order),
+    })),
+  };
+}
+
+export async function getSettingsVehiclesData(organizationId: string): Promise<SettingsVehiclesData> {
+  "use cache";
+  cacheTag(`settings-${organizationId}`);
+  cacheLife("max");
+  return fetchSettingsVehiclesData(organizationId);
+}
+
+async function fetchSettingsSuppliersData(organizationId: string): Promise<SettingsSuppliersData> {
+  const { data, error } = await getSupabaseAdmin()
+    .from("suppliers")
+    .select("id, supplier_code, name, address, province, district, subdistrict, postal_code, metadata")
+    .eq("organization_id", organizationId)
+    .eq("is_active", true)
+    .order("supplier_code", { ascending: true });
+
+  if (error) {
+    throw new Error(error.message ?? "ไม่สามารถโหลดข้อมูลซัพพลายเออร์ได้");
+  }
+
+  const suppliers = (data ?? []) as SupplierRow[];
+  return {
+    nextSupplierCode: getNextSupplierCode(suppliers.map((supplier) => supplier.supplier_code)),
+    suppliers: suppliers.map((supplier) => ({
+      address: supplier.address,
+      addressDraft: getSupplierAddressDraft(supplier),
+      code: supplier.supplier_code,
+      id: supplier.id,
+      name: supplier.name,
+    })),
+  };
+}
+
+export async function getSettingsSuppliersData(organizationId: string): Promise<SettingsSuppliersData> {
+  "use cache";
+  cacheTag(`settings-${organizationId}`);
+  cacheLife("max");
+  return fetchSettingsSuppliersData(organizationId);
+}
+
 async function fetchSettingsProductsData(organizationId: string): Promise<SettingsProductsData> {
   const admin = getSupabaseAdmin();
   const productsTable = admin.from("products") as unknown as SelectTable;
@@ -928,16 +1016,7 @@ async function fetchSettingsProductsData(organizationId: string): Promise<Settin
 
   if (errors.length > 0) {
     const firstError = errors[0];
-    return {
-      nextProductSku: getNextProductSku([]),
-      productCategories: [],
-      productBrands: [],
-      products: [],
-      suppliers: [],
-      setupHint: isMissingTableError(firstError?.message)
-        ? "ยังไม่ได้รัน migration สำหรับหน้าตั้งค่า"
-        : "ยังโหลดข้อมูลหน้าตั้งค่าไม่สำเร็จ",
-    };
+    throw new Error(firstError?.message ?? "ไม่สามารถโหลดข้อมูลสินค้าได้");
   }
 
   const products = ((productsResult.data ?? []) as ProductRow[]).filter(
@@ -1160,5 +1239,8 @@ async function fetchSettingsProductsData(organizationId: string): Promise<Settin
 export async function getSettingsProductsData(
   organizationId: string,
 ): Promise<SettingsProductsData> {
+  "use cache";
+  cacheTag(`settings-${organizationId}`);
+  cacheLife("max");
   return fetchSettingsProductsData(organizationId);
 }

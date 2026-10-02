@@ -7,7 +7,7 @@ import {
 import { VehicleListPanel } from "@/components/settings/vehicle-list-panel";
 import { SettingsShell } from "@/components/settings/settings-shell";
 import { requireAppRole } from "@/lib/auth/authorization";
-import { getSettingsData } from "@/lib/settings/admin";
+import { getSettingsVehiclesData } from "@/lib/settings/admin";
 
 export const metadata = {
   title: "จัดการรถ",
@@ -25,7 +25,7 @@ export default async function SettingsVehiclesPage({
   searchParams,
 }: SettingsVehiclesPageProps) {
   const session = await requireAppRole("admin");
-  const data = await getSettingsData(session.organizationId);
+  const data = await getSettingsVehiclesData(session.organizationId);
   const params = await searchParams;
   const searchTerm = params.q?.trim() ?? "";
   const normalizedSearch = searchTerm.toLocaleLowerCase("th");

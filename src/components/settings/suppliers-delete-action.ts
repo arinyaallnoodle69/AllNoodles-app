@@ -1,5 +1,6 @@
 "use server";
 
+import { updateTag } from "next/cache";
 import { requireAppRole } from "@/lib/auth/authorization";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
@@ -15,5 +16,6 @@ export async function deleteSupplierAction(supplierId: string): Promise<{ succes
 
   if (error) return { success: false, error: error.message };
 
+  updateTag(`settings-${session.organizationId}`);
   return { success: true };
 }

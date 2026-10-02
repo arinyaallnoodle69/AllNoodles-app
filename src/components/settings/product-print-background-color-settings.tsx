@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   Check,
@@ -92,7 +91,6 @@ export function ProductPrintBackgroundColorSettings({
     message: string;
     type: "success" | "error";
   }>({ show: false, message: "", type: "success" });
-  const router = useRouter();
 
   useEffect(() => {
     if (toast.show) {
@@ -102,13 +100,6 @@ export function ProductPrintBackgroundColorSettings({
       return () => clearTimeout(timer);
     }
   }, [toast.show]);
-
-  useEffect(() => {
-    router.prefetch("/settings/products");
-    router.prefetch("/settings/products?tab=categories");
-    router.prefetch("/settings/products?tab=brands");
-    router.prefetch("/settings/products/category-colors");
-  }, [router]);
 
   useEffect(() => {
     const media = window.matchMedia("(max-width: 1023px)");

@@ -1,6 +1,6 @@
 import "server-only";
 
-import { cache } from "react";
+import { cacheLife, cacheTag } from "next/cache";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
 export type WarehouseOption = {
@@ -58,7 +58,11 @@ function getWarehouseClient() {
   };
 }
 
-export const getActiveWarehouses = cache(async (organizationId: string): Promise<WarehouseOption[]> => {
+export async function getActiveWarehouses(organizationId: string): Promise<WarehouseOption[]> {
+  "use cache";
+  cacheLife("max");
+  cacheTag(`settings-${organizationId}`);
+
   const admin = getWarehouseClient();
   const { data, error } = await admin
     .from("warehouses")
@@ -73,7 +77,7 @@ export const getActiveWarehouses = cache(async (organizationId: string): Promise
   }
 
   return (data as WarehouseRow[]).map(mapWarehouse);
-});
+}
 
 export async function getCustomerRequiredWarehouse(
   organizationId: string,

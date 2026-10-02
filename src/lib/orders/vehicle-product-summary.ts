@@ -1,5 +1,6 @@
 import "server-only";
 
+import { cacheLife, cacheTag } from "next/cache";
 import { sortProductsByCategory } from "@/lib/products/sort-by-category";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { getDailySpecialPrintItems } from "@/lib/orders/daily-special-items";
@@ -378,6 +379,12 @@ export async function getFactoryOrderSheetData(
   endDate: string,
   options: { applyAdjustments?: boolean } = {},
 ): Promise<VehicleProductSummaryData[]> {
+  "use cache";
+  cacheLife({ revalidate: 30 });
+  cacheTag(`orders-${organizationId}`);
+  cacheTag(`settings-${organizationId}`);
+  cacheTag(`stock-${organizationId}`);
+
   const admin = getSupabaseAdmin();
   const productWarehouseModesTable = (admin as unknown as {
     from(table: "product_warehouse_fulfillment_modes"): {

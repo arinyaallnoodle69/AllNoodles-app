@@ -202,8 +202,8 @@ function getValidationErrorState(fieldErrors: Partial<Record<WarehouseField, str
   };
 }
 
-function revalidateWarehousePaths() {
-  revalidatePath("/settings");
+function revalidateWarehousePaths(organizationId: string) {
+  updateTag(`settings-${organizationId}`);
   revalidatePath("/settings/warehouses");
   revalidatePath("/settings/customers");
   revalidatePath("/orders/incoming");
@@ -311,7 +311,7 @@ export async function createWarehouseAction(
     };
   }
 
-  revalidateWarehousePaths();
+  revalidateWarehousePaths(session.organizationId);
 
   return {
     fieldErrors: {},
@@ -379,7 +379,7 @@ export async function updateWarehouseAction(
     };
   }
 
-  revalidateWarehousePaths();
+  revalidateWarehousePaths(session.organizationId);
 
   return {
     fieldErrors: {},
@@ -407,7 +407,7 @@ export async function toggleWarehouseAction(
     return { error: "เปลี่ยนสถานะคลังไม่สำเร็จ กรุณาลองอีกครั้ง" };
   }
 
-  revalidateWarehousePaths();
+  revalidateWarehousePaths(session.organizationId);
 }
 
 export async function deleteWarehouseAction(warehouseId: string): Promise<{ error?: string } | void> {
@@ -459,7 +459,7 @@ export async function deleteWarehouseAction(warehouseId: string): Promise<{ erro
     return { error: "เกิดข้อผิดพลาดในการลบคลังสินค้า กรุณาลองใหม่อีกครั้ง" };
   }
 
-  revalidateWarehousePaths();
+  revalidateWarehousePaths(session.organizationId);
 }
 
 async function updateWarehouseProductFulfillmentModes(
@@ -537,9 +537,8 @@ async function updateWarehouseProductFulfillmentModes(
     return { message: "บันทึกไม่สำเร็จ กรุณาลองใหม่", nonce: Date.now(), status: "error" };
   }
 
-  updateTag(`settings-${session.organizationId}`);
   updateTag(`stock-${session.organizationId}`);
-  revalidateWarehousePaths();
+  revalidateWarehousePaths(session.organizationId);
   return { message: "บันทึกสำเร็จ", nonce: Date.now(), status: "success" };
 }
 
@@ -762,7 +761,7 @@ export async function importWarehouseProductModesAction(
     };
   }
 
-  revalidateWarehousePaths();
+  revalidateWarehousePaths(session.organizationId);
 
   return {
     message: `นำเข้าโหมดสินค้าในคลังสำเร็จ ${upsertRows.length.toLocaleString("th-TH")} รายการ`,

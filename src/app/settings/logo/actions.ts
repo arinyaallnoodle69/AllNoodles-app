@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath, revalidateTag } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
 import { requireAppRole } from "@/lib/auth/authorization";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import type { Json } from "@/types/database";
@@ -54,7 +54,8 @@ export async function updateLogoSettingsAction(
     };
   }
 
-  revalidateTag(`settings-${session.organizationId}`, "max");
+  updateTag(`settings-${session.organizationId}`);
+  updateTag("brand-logo");
   revalidatePath("/settings");
   revalidatePath("/settings/logo");
   revalidatePath("/delivery/print");

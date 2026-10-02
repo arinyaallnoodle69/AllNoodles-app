@@ -51,11 +51,11 @@ export const metadata: Metadata = {
   manifest: "/manifest.webmanifest",
   icons: {
     icon: [
-      { url: "/api/brand/logo", sizes: "192x192", type: "image/png" },
-      { url: "/api/brand/logo", sizes: "512x512", type: "image/png" },
+      { url: "/brand/192x192.png", sizes: "192x192", type: "image/png" },
+      { url: "/brand/512x512.png", sizes: "512x512", type: "image/png" },
     ],
-    shortcut: [{ url: "/api/brand/logo", sizes: "192x192", type: "image/png" }],
-    apple: [{ url: "/api/brand/logo", sizes: "180x180", type: "image/png" }],
+    shortcut: [{ url: "/brand/192x192.png", sizes: "192x192", type: "image/png" }],
+    apple: [{ url: "/brand/180x182.png", sizes: "180x180", type: "image/png" }],
   },
   openGraph: {
     type: "website",
@@ -65,7 +65,7 @@ export const metadata: Metadata = {
     description: siteDescription,
     images: [
       {
-        url: "/api/brand/logo",
+        url: "/brand/512x512.png",
         width: 512,
         height: 512,
         alt: "All Noodles",
@@ -76,7 +76,7 @@ export const metadata: Metadata = {
     card: "summary",
     title: "All Noodles",
     description: siteDescription,
-    images: ["/api/brand/logo"],
+    images: ["/brand/512x512.png"],
   },
 };
 
