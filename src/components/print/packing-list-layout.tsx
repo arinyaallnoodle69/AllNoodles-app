@@ -52,10 +52,12 @@ const SHEET_H = "210mm";
 const SCREEN_SHEET_W = "1123px";
 const SCREEN_SHEET_H = "794px";
 const STANDARD_PRODUCTS_PER_PAGE = 50;
-const STANDARD_BODY_HEIGHT_MM = 151;
-const STANDARD_MIN_ROW_HEIGHT_MM = 4.45;
+const STANDARD_BODY_HEIGHT_MM = 146;
+const STANDARD_MIN_ROW_HEIGHT_MM = 5.0;
+const STANDARD_TOTAL_ROW_HEIGHT_MM = 7.8;
 const TRANSPOSED_PRODUCTS_PER_PAGE = 25;
 const TRANSPOSED_STORES_PER_PAGE = 37;
+
 
 const VEHICLE_COLORS = ["#4A148C", "#0f766e", "#9a3412", "#5b21b6", "#1d4ed8"];
 const UNASSIGNED_COLOR = "#64748b";
@@ -396,6 +398,7 @@ function buildStandardPages(data: PackingListData): StandardPageDef[] {
       group.storeIndices,
       STANDARD_BODY_HEIGHT_MM,
       STANDARD_MIN_ROW_HEIGHT_MM,
+      STANDARD_TOTAL_ROW_HEIGHT_MM,
     );
     const productChunks = chunk(activeProductIndices, STANDARD_PRODUCTS_PER_PAGE);
 
