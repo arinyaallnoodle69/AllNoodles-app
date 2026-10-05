@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Image as ImageIcon, Loader2, Share2, X } from "lucide-react";
 import { createPortal } from "react-dom";
 import * as htmlToImage from "html-to-image";
 import html2canvas from "html2canvas";
+import { createSaveRunGate } from "@/components/print/save-run-gate";
 
 const CAPTURE_TIMEOUT_MS = 8000;
 
@@ -112,6 +113,7 @@ export function BatchDeliveryNotesImageButton({
   const [savingStatus, setSavingStatus] = useState<string | null>(null);
   const [savingProgress, setSavingProgress] = useState<{ current: number; total: number; percent: number } | null>(null);
   const [readyCaptured, setReadyCaptured] = useState<{ blob: Blob; name: string }[] | null>(null);
+  const saveRunGateRef = useRef(createSaveRunGate());
   const previewUrls = useMemo(
     () => readyCaptured?.map((item) => URL.createObjectURL(item.blob)) ?? [],
     [readyCaptured],
@@ -126,6 +128,9 @@ export function BatchDeliveryNotesImageButton({
 
   const handleSave = async (mode: "folder" | "download" | "auto" = "auto") => {
     if (isSaving) return;
+
+    const runVersion = saveRunGateRef.current.start();
+    const isRunActive = () => saveRunGateRef.current.isActive(runVersion);
 
     setIsSaving(true);
     setErrorMessage(null);
@@ -153,12 +158,14 @@ export function BatchDeliveryNotesImageButton({
       } catch {
         // Continue even if fontEmbedCSS fails
       }
+      if (!isRunActive()) return;
 
       const total = targets.length;
       const captured: { blob: Blob; name: string }[] = [];
       const today = datePrefix || new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Bangkok" });
 
       for (let i = 0; i < total; i += 1) {
+        if (!isRunActive()) return;
         const element = targets[i];
         const percent = Math.round(((i + 1) / total) * 100);
         setSavingProgress({ current: i + 1, total, percent });
@@ -166,8 +173,10 @@ export function BatchDeliveryNotesImageButton({
 
         // Yield to browser event loop so UI updates smoothly
         await new Promise((resolve) => setTimeout(resolve, 25));
+        if (!isRunActive()) return;
 
         const blob = await captureElementToBlob(element, fontEmbedCSS);
+        if (!isRunActive()) return;
 
         const custCode = element.dataset.customerCode?.trim() || "";
         const custName = element.dataset.customerName?.trim() || "";
@@ -200,8 +209,10 @@ export function BatchDeliveryNotesImageButton({
             mode: "readwrite",
             startIn: "downloads",
           });
+          if (!isRunActive()) return;
 
           for (let i = 0; i < captured.length; i += 1) {
+            if (!isRunActive()) return;
             const percent = Math.round(((i + 1) / captured.length) * 100);
             setSavingProgress({ current: i + 1, total: captured.length, percent });
             setSavingStatus(`กำลังบันทึกลงโฟลเดอร์ ${i + 1}/${captured.length} (${percent}%)...`);
@@ -210,6 +221,7 @@ export function BatchDeliveryNotesImageButton({
             const writable = await (fileHandle as unknown as { createWritable: () => Promise<FileSystemWritableFileStream> }).createWritable();
             await writable.write(captured[i].blob);
             await writable.close();
+            if (!isRunActive()) return;
           }
 
           setSavingStatus("บันทึกครบทุกรูปเรียบร้อยแล้ว!");
@@ -232,6 +244,7 @@ export function BatchDeliveryNotesImageButton({
 
       // Default/fallback for desktop: Sequential download
       for (let i = 0; i < captured.length; i += 1) {
+        if (!isRunActive()) return;
         const percent = Math.round(((i + 1) / captured.length) * 100);
         setSavingProgress({ current: i + 1, total: captured.length, percent });
         setSavingStatus(`กำลังดาวน์โหลดรูปที่ ${i + 1}/${captured.length} (${percent}%)...`);
@@ -239,18 +252,29 @@ export function BatchDeliveryNotesImageButton({
         await new Promise((resolve) => setTimeout(resolve, 200));
       }
 
+      if (!isRunActive()) return;
+
       setSavingStatus("ดาวน์โหลดครบทุกรูปเรียบร้อยแล้ว!");
       await new Promise((resolve) => setTimeout(resolve, 1000));
       setIsSaving(false);
       setSavingStatus(null);
       setSavingProgress(null);
     } catch (error) {
+      if (!isRunActive()) return;
       console.error("Save all delivery notes images error:", error);
       setErrorMessage(
         error instanceof Error ? error.message : "เกิดข้อผิดพลาดในการบันทึกรูปภาพ กรุณาลองใหม่อีกครั้ง",
       );
       setIsSaving(false);
     }
+  };
+
+  const handleCancelSave = () => {
+    saveRunGateRef.current.cancel();
+    setReadyCaptured(null);
+    setIsSaving(false);
+    setSavingStatus(null);
+    setSavingProgress(null);
   };
 
   useEffect(() => {
@@ -415,8 +439,8 @@ export function BatchDeliveryNotesImageButton({
 
                     <button
                       type="button"
-                      onClick={() => setIsSaving(false)}
-                      className="mt-6 text-xs text-slate-500 hover:text-slate-300"
+                      onClick={handleCancelSave}
+                      className="mt-6 rounded-xl border border-white/15 px-6 py-2.5 text-sm font-bold text-slate-300 transition hover:border-rose-400/50 hover:bg-rose-500/10 hover:text-rose-300 active:scale-95"
                     >
                       ยกเลิก
                     </button>

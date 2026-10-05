@@ -1,6 +1,7 @@
 import type { BillingStatementData } from "@/lib/billing/billing-statement";
 import { bahtText } from "@/lib/format/baht-text";
 import { chunkItems, fmt } from "@/components/print/print-shared";
+import { fitBillingBahtText } from "@/components/print/billing-baht-text";
 
 export const BILLING_A4_WIDTH_MM = 210;
 export const BILLING_A4_HEIGHT_MM = 297;
@@ -48,6 +49,47 @@ export function formatBillingDocDate(iso: string) {
   return `${day}/${month}/${year + 543}`;
 }
 
+export function formatBillingDocDateTime(iso: string) {
+  if (!iso) return "";
+
+  if (iso.includes("T") || (iso.includes(" ") && iso.includes(":"))) {
+    try {
+      const d = new Date(iso);
+      if (!Number.isNaN(d.getTime())) {
+        const bangkokDateStr = d.toLocaleDateString("sv-SE", { timeZone: "Asia/Bangkok" });
+        const [y, m, day] = bangkokDateStr.split("-").map(Number);
+        const thaiYear = y + 543;
+
+        const timeStr = new Intl.DateTimeFormat("th-TH", {
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit",
+          hour12: false,
+          timeZone: "Asia/Bangkok",
+        }).format(d);
+
+        return `${day}/${m}/${thaiYear} ${timeStr}`;
+      }
+    } catch {
+      // fallback
+    }
+  }
+
+  const baseDate = formatBillingDocDate(iso);
+  try {
+    const timeStr = new Intl.DateTimeFormat("th-TH", {
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: false,
+      timeZone: "Asia/Bangkok",
+    }).format(new Date());
+    return `${baseDate} ${timeStr}`;
+  } catch {
+    return baseDate;
+  }
+}
+
 function buildPagesForStatement(data: BillingStatementData): BillingInvoicePageModel[] {
   const chunks = chunkItems(data.rows, ROWS_PER_BILL_PAGE);
   const pages = chunks.length > 0 ? chunks : [[]];
@@ -91,6 +133,7 @@ export function BillingInvoicePage({
   void logoDataUrl;
 
   const { rows, isLastPage, grandTotal } = page;
+  const fittedBahtText = fitBillingBahtText(`(${bahtText(grandTotal)})`);
   
   // Calculate summary row height and empty rows to keep uniform height
   const summaryRowHeight = isLastPage ? 1 : 0;
@@ -128,13 +171,13 @@ export function BillingInvoicePage({
           </p>
         </div>
         <div className="billing-invoice-meta-right">
-          <div className="billing-invoice-meta-row">
+          <div className="billing-invoice-meta-row billing-document-number-row">
             <span className="billing-invoice-meta-label">เลขที่เอกสาร :</span>
             <span>{page.billingNumber ?? "-"}</span>
           </div>
           <div className="billing-invoice-meta-row">
             <span className="billing-invoice-meta-label">วันที่ :</span>
-            <span>{formatBillingDocDate(page.billingDate)}</span>
+            <span suppressHydrationWarning>{formatBillingDocDateTime(page.billingDate)}</span>
           </div>
           {page.totalPages > 1 ? (
             <div className="billing-invoice-meta-row">
@@ -178,7 +221,15 @@ export function BillingInvoicePage({
             {/* Total / Summary row inside table body */}
             {isLastPage && (
               <tr className="billing-summary-row">
-                <td colSpan={2} className="billing-summary-baht">({bahtText(grandTotal)})</td>
+                <td
+                  colSpan={2}
+                  className="billing-summary-baht"
+                  style={{ fontSize: `${fittedBahtText.fontSizePt}pt` }}
+                >
+                  {fittedBahtText.lines.map((line, index) => (
+                    <span key={`${line}-${index}`}>{line}</span>
+                  ))}
+                </td>
                 <td className="billing-summary-label">
                   <div className="billing-summary-total-label">Total</div>
                   <div className="billing-summary-total-sub">รวมเงิน</div>
@@ -271,11 +322,8 @@ export async function getBillingFontEmbedCSS(): Promise<string> {
       });
     };
 
-    const [regularBase64, boldBase64] = await Promise.race([
-      Promise.all([
-        fetchFontAsBase64("/fonts/angsana-new/ANGSA.woff"),
-        fetchFontAsBase64("/fonts/angsana-new/angsab.woff"),
-      ]),
+    const regularBase64 = await Promise.race([
+      fetchFontAsBase64("/fonts/NotoSerifThai-Regular.ttf"),
       new Promise<never>((_, reject) =>
         window.setTimeout(() => reject(new Error("Font load timeout")), 2500),
       ),
@@ -283,15 +331,9 @@ export async function getBillingFontEmbedCSS(): Promise<string> {
 
     cachedFontEmbedCSS = `
       @font-face {
-        font-family: "Angsana New Delivery Note";
-        src: url("${regularBase64}") format("woff");
-        font-weight: 400;
-        font-style: normal;
-      }
-      @font-face {
-        font-family: "Angsana New Delivery Note";
-        src: url("${boldBase64}") format("woff");
-        font-weight: 700 900;
+        font-family: "Noto Serif Thai Billing";
+        src: url("${regularBase64}") format("truetype");
+        font-weight: 100 900;
         font-style: normal;
       }
     `;
@@ -306,25 +348,9 @@ export const BILLING_INVOICE_STYLES = `
   @page { size: A4 portrait; margin: 0; }
 
   @font-face {
-    font-family: "Angsana New Delivery Note";
-    src: url("/fonts/angsana-new/ANGSA.woff") format("woff");
-    font-weight: 400;
-    font-style: normal;
-    font-display: swap;
-  }
-
-  @font-face {
-    font-family: "Angsana New Delivery Note";
-    src: url("/fonts/angsana-new/angsab.woff") format("woff");
-    font-weight: 700;
-    font-style: normal;
-    font-display: swap;
-  }
-
-  @font-face {
-    font-family: "Angsana New Delivery Note";
-    src: url("/fonts/angsana-new/angsab.woff") format("woff");
-    font-weight: 800 900;
+    font-family: "Noto Serif Thai Billing";
+    src: url("/fonts/NotoSerifThai-Regular.ttf") format("truetype");
+    font-weight: 100 900;
     font-style: normal;
     font-display: swap;
   }
@@ -338,8 +364,8 @@ export const BILLING_INVOICE_STYLES = `
     background: #ffffff;
     padding: 7mm 8mm;
     color: #000000;
-    font-family: "Angsana New Delivery Note", "Sarabun", "Noto Sans Thai", sans-serif;
-    font-synthesis: none;
+    font-family: "Noto Serif Thai Billing", serif;
+    font-synthesis: weight;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: geometricPrecision;
@@ -357,7 +383,7 @@ export const BILLING_INVOICE_STYLES = `
   }
 
   .billing-new-brand-text {
-    font-size: 25pt;
+    font-size: 20pt;
     line-height: 1.2;
     font-weight: bold;
     white-space: nowrap;
@@ -374,7 +400,7 @@ export const BILLING_INVOICE_STYLES = `
 
   .billing-invoice-title {
     margin: 0;
-    font-size: 21pt;
+    font-size: 17pt;
     line-height: 1.2;
     font-weight: bold;
     color: #000000;
@@ -384,7 +410,7 @@ export const BILLING_INVOICE_STYLES = `
     display: flex;
     border: 1.5px solid #000000;
     margin-bottom: 2.5mm;
-    font-size: 16pt;
+    font-size: 12.5pt;
     line-height: 1.25;
     color: #000000;
   }
@@ -401,12 +427,12 @@ export const BILLING_INVOICE_STYLES = `
 
   .billing-invoice-meta-left p {
     margin: 0;
-    font-size: 16pt;
+    font-size: 12.5pt;
     line-height: 1.25;
   }
 
   .billing-customer-name {
-    font-size: 20pt !important;
+    font-size: 16pt !important;
     font-weight: bold;
   }
 
@@ -424,7 +450,7 @@ export const BILLING_INVOICE_STYLES = `
     display: grid;
     grid-template-columns: max-content minmax(0, 1fr);
     gap: 2mm;
-    font-size: 17.5pt;
+    font-size: 13.5pt;
     font-weight: bold;
     line-height: 1.2;
   }
@@ -435,8 +461,15 @@ export const BILLING_INVOICE_STYLES = `
     white-space: nowrap;
   }
 
+  .billing-document-number-row > span:last-child {
+    font-size: 12pt;
+    line-height: 1.15;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
   .billing-invoice-meta-label {
-    font-size: 16pt;
+    font-size: 12.5pt;
     font-weight: bold;
     white-space: nowrap;
     line-height: 1.2;
@@ -451,8 +484,8 @@ export const BILLING_INVOICE_STYLES = `
   .billing-invoice-table {
     width: 100%;
     border-collapse: collapse;
-    font-size: 18pt;
-    line-height: 1.12;
+    font-size: 14pt;
+    line-height: 1.15;
     border: 1.5px solid #000000;
     table-layout: fixed;
     color: #000000;
@@ -463,7 +496,7 @@ export const BILLING_INVOICE_STYLES = `
     border: 1.2px solid #000000;
     background-color: #f1f5f9;
     padding: 0.6mm 1mm;
-    font-size: 15.5pt;
+    font-size: 12.5pt;
     font-weight: 800;
     text-align: center;
     line-height: 1.2;
@@ -518,9 +551,15 @@ export const BILLING_INVOICE_STYLES = `
 
   .billing-summary-baht {
     text-align: center;
-    font-size: 16pt;
     font-weight: bold;
-    line-height: 1.2;
+    line-height: 1.05;
+    padding-top: 0.35mm !important;
+    padding-bottom: 0.35mm !important;
+    white-space: nowrap;
+  }
+
+  .billing-summary-baht > span {
+    display: block;
   }
 
   .billing-summary-label {
@@ -533,19 +572,19 @@ export const BILLING_INVOICE_STYLES = `
 
   .billing-summary-total-label {
     font-weight: bold;
-    font-size: 14pt;
+    font-size: 11.5pt;
     line-height: 1.1;
   }
 
   .billing-summary-total-sub {
     font-weight: bold;
-    font-size: 12pt;
+    font-size: 10pt;
     line-height: 1.1;
   }
 
   .billing-summary-value {
     text-align: right;
-    font-size: 19pt;
+    font-size: 15pt;
     font-weight: bold;
     padding-right: 2.5mm !important;
     white-space: nowrap;
@@ -561,7 +600,7 @@ export const BILLING_INVOICE_STYLES = `
   .billing-footer-box {
     display: flex;
     border: 1.5px solid #000000;
-    font-size: 15pt;
+    font-size: 12pt;
     color: #000000;
   }
 
@@ -589,7 +628,7 @@ export const BILLING_INVOICE_STYLES = `
     display: flex;
     align-items: flex-end;
     width: 100%;
-    font-size: 15pt;
+    font-size: 12pt;
     font-weight: bold;
     line-height: 1.2;
     white-space: nowrap;
@@ -617,7 +656,7 @@ export const BILLING_INVOICE_STYLES = `
   }
 
   .billing-signature-title {
-    font-size: 16pt;
+    font-size: 13pt;
     font-weight: bold;
     text-align: center;
     width: 100%;
@@ -635,7 +674,7 @@ export const BILLING_INVOICE_STYLES = `
     display: flex;
     align-items: flex-end;
     justify-content: space-between;
-    font-size: 15pt;
+    font-size: 12pt;
     font-weight: bold;
     line-height: 1.2;
     white-space: nowrap;
@@ -643,7 +682,7 @@ export const BILLING_INVOICE_STYLES = `
 
   .billing-powered-by {
     text-align: right;
-    font-size: 11pt;
+    font-size: 9.5pt;
     line-height: 1.2;
     color: #000000;
     margin-top: 1mm;

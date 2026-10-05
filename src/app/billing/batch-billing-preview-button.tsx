@@ -16,6 +16,7 @@ import {
   buildBillingInvoicePages,
   getBillingFontEmbedCSS,
 } from "@/components/print/billing-statement-layout";
+import { createSaveRunGate } from "@/components/print/save-run-gate";
 
 const CAPTURE_TIMEOUT_MS = 6000;
 
@@ -144,6 +145,7 @@ export function BatchBillingPreviewButton({
   const [readyCaptured, setReadyCaptured] = useState<{ blob: Blob; name: string }[] | null>(null);
 
   const previewBodyRef = useRef<HTMLDivElement | null>(null);
+  const saveRunGateRef = useRef(createSaveRunGate());
   const today = useMemo(() => new Date().toISOString().split("T")[0], []);
 
   // Track billing numbers in local state to update UI immediately on save
@@ -249,6 +251,9 @@ export function BatchBillingPreviewButton({
   const handleSave = async (mode: "folder" | "download" | "auto" = "auto") => {
     if (isSaving) return;
 
+    const runVersion = saveRunGateRef.current.start();
+    const isRunActive = () => saveRunGateRef.current.isActive(runVersion);
+
     setIsSaving(true);
     setErrorMessage(null);
     setSavingStatus("กำลังเตรียมข้อมูล...");
@@ -278,6 +283,7 @@ export function BatchBillingPreviewButton({
         }));
 
         const result = await recordBillingHistoryAction({ organizationId, items });
+        if (!isRunActive()) return;
         if (!result.success) {
           throw new Error("ไม่สามารถบันทึกประวัติการวางบิลได้");
         }
@@ -291,11 +297,13 @@ export function BatchBillingPreviewButton({
 
         // Wait a brief moment to allow UI render cycle to update the billing numbers before capture
         await new Promise((resolve) => setTimeout(resolve, 100));
+        if (!isRunActive()) return;
       }
 
       // 2. Prepare font CSS
       setSavingStatus("กำลังเตรียมตัวอักษร...");
       const fontEmbedCSS = await getBillingFontEmbedCSS();
+      if (!isRunActive()) return;
 
       const targets = document.querySelectorAll(".batch-billing-preview-card-element");
       if (targets.length === 0) {
@@ -314,8 +322,10 @@ export function BatchBillingPreviewButton({
 
         // Yield to browser event loop so UI updates smoothly
         await new Promise((resolve) => setTimeout(resolve, 25));
+        if (!isRunActive()) return;
 
         const blob = await captureElementToBlob(element, fontEmbedCSS);
+        if (!isRunActive()) return;
         const pageData = pages[i];
         const custCode = pageData?.customer.code ?? "unknown";
         const fileIdx = total > 1 ? `-page-${i + 1}` : "";
@@ -344,8 +354,10 @@ export function BatchBillingPreviewButton({
             mode: "readwrite",
             startIn: "downloads",
           });
+          if (!isRunActive()) return;
 
           for (let i = 0; i < captured.length; i += 1) {
+            if (!isRunActive()) return;
             const percent = Math.round(((i + 1) / captured.length) * 100);
             setSavingProgress({ current: i + 1, total: captured.length, percent });
             setSavingStatus(`กำลังบันทึกลงโฟลเดอร์ ${i + 1}/${captured.length} (${percent}%)...`);
@@ -354,6 +366,7 @@ export function BatchBillingPreviewButton({
             const writable = await (fileHandle as unknown as { createWritable: () => Promise<FileSystemWritableFileStream> }).createWritable();
             await writable.write(captured[i].blob);
             await writable.close();
+            if (!isRunActive()) return;
           }
 
           setSavingStatus("บันทึกครบทุกรูปเรียบร้อยแล้ว!");
@@ -372,6 +385,7 @@ export function BatchBillingPreviewButton({
 
       // Default or fallback for desktop: Sequential download to Downloads folder
       for (let i = 0; i < captured.length; i += 1) {
+        if (!isRunActive()) return;
         const percent = Math.round(((i + 1) / captured.length) * 100);
         setSavingProgress({ current: i + 1, total: captured.length, percent });
         setSavingStatus(`กำลังดาวน์โหลดรูปที่ ${i + 1}/${captured.length} (${percent}%)...`);
@@ -379,20 +393,31 @@ export function BatchBillingPreviewButton({
         await new Promise((resolve) => setTimeout(resolve, 200));
       }
 
+      if (!isRunActive()) return;
+
       setSavingStatus("ดาวน์โหลดครบทุกรูปเรียบร้อยแล้ว!");
       await new Promise((resolve) => setTimeout(resolve, 1000));
       setIsOpen(false);
       router.refresh();
     } catch (error) {
+      if (!isRunActive()) return;
       console.error("Save all images error:", error);
       setErrorMessage("เกิดข้อผิดพลาดในการบันทึกรูปภาพ กรุณาลองใหม่อีกครั้ง");
     } finally {
-      if (!isMobileLikeDevice()) {
+      if (isRunActive() && !isMobileLikeDevice()) {
         setIsSaving(false);
         setSavingStatus(null);
         setSavingProgress(null);
       }
     }
+  };
+
+  const handleCancelSave = () => {
+    saveRunGateRef.current.cancel();
+    setReadyCaptured(null);
+    setIsSaving(false);
+    setSavingStatus(null);
+    setSavingProgress(null);
   };
 
   const handleMobileSaveTrigger = async () => {
@@ -575,6 +600,14 @@ export function BatchBillingPreviewButton({
                         <p className="text-xs text-slate-400 mt-5 text-center leading-relaxed">
                           ระบบกำลังเรนเดอร์ภาพความคมชัดสูงทีละใบ กรุณารอสักครู่ครับ
                         </p>
+
+                        <button
+                          type="button"
+                          onClick={handleCancelSave}
+                          className="mt-6 rounded-xl border border-white/15 px-6 py-2.5 text-sm font-bold text-slate-300 transition hover:border-rose-400/50 hover:bg-rose-500/10 hover:text-rose-300 active:scale-95"
+                        >
+                          ยกเลิก
+                        </button>
                       </>
                     )}
                   </div>

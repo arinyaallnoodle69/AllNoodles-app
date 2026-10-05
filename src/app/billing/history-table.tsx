@@ -84,7 +84,7 @@ export function HistoryTable({ history, canViewAmounts }: Props) {
                         }))}
                         totalAmount={record.total_amount}
                         billingNumber={record.billing_number}
-                        billingDate={record.billing_date}
+                        billingDate={record.created_at || record.billing_date}
                         className="flex items-center gap-1.5 rounded-xl bg-purple-50 hover:bg-[#4A148C] text-[#4A148C] hover:text-white px-3 py-1.5 text-xs font-black transition-all active:scale-95 border border-purple-200 hover:border-[#4A148C]"
                       >
                         <ImageIcon className="h-3.5 w-3.5" />
@@ -128,7 +128,7 @@ export function HistoryTable({ history, canViewAmounts }: Props) {
                   }))}
                   totalAmount={record.total_amount}
                   billingNumber={record.billing_number}
-                  billingDate={record.billing_date}
+                  billingDate={record.created_at || record.billing_date}
                   className="flex items-center gap-1 rounded-lg bg-purple-100/90 px-2.5 py-1 text-xs font-black text-[#4A148C] transition active:scale-95 hover:bg-[#4A148C] hover:text-white"
                 >
                   <ImageIcon className="h-3.5 w-3.5" />
