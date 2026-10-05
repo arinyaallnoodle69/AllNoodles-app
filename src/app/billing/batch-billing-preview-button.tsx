@@ -20,13 +20,20 @@ import { createSaveRunGate } from "@/components/print/save-run-gate";
 
 const CAPTURE_TIMEOUT_MS = 6000;
 
-function isMobileLikeDevice() {
+function isMobileDevice() {
   if (typeof window === "undefined") return false;
   const ua = navigator.userAgent || "";
   const isMobileUA =
-    /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua) ||
-    (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
-  return isMobileUA || window.matchMedia("(max-width: 768px), (pointer: coarse)").matches;
+    /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua);
+  const isIPadOS = navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1;
+  if (isMobileUA || isIPadOS) return true;
+
+  // Desktop operating systems (Windows, Mac desktop, Linux desktop) are never mobile
+  if (/Windows NT|Macintosh|X11|Linux x86_64/i.test(ua) && !/Android/i.test(ua)) {
+    return false;
+  }
+
+  return window.matchMedia("(max-width: 768px) and (pointer: coarse)").matches;
 }
 
 function withTimeout<T>(promise: Promise<T>, timeoutMs: number, message: string): Promise<T> {
@@ -335,7 +342,7 @@ export function BatchBillingPreviewButton({
       }
 
       // 4. Save to device
-      const isMobile = isMobileLikeDevice();
+      const isMobile = isMobileDevice();
 
       if (isMobile) {
         // Transition to completion screen with direct tap trigger for Web Share API
@@ -404,7 +411,7 @@ export function BatchBillingPreviewButton({
       console.error("Save all images error:", error);
       setErrorMessage("เกิดข้อผิดพลาดในการบันทึกรูปภาพ กรุณาลองใหม่อีกครั้ง");
     } finally {
-      if (isRunActive() && !isMobileLikeDevice()) {
+      if (isRunActive() && !isMobileDevice()) {
         setIsSaving(false);
         setSavingStatus(null);
         setSavingProgress(null);

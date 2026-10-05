@@ -1,7 +1,7 @@
 import type { BillingStatementData } from "@/lib/billing/billing-statement";
 import { bahtText } from "@/lib/format/baht-text";
 import { chunkItems, fmt } from "@/components/print/print-shared";
-import { fitBillingBahtText } from "@/components/print/billing-baht-text";
+import { fitBillingBahtText, fitBillingTotalFontSize } from "@/components/print/billing-baht-text";
 
 export const BILLING_A4_WIDTH_MM = 210;
 export const BILLING_A4_HEIGHT_MM = 297;
@@ -134,6 +134,8 @@ export function BillingInvoicePage({
 
   const { rows, isLastPage, grandTotal } = page;
   const fittedBahtText = fitBillingBahtText(`(${bahtText(grandTotal)})`);
+  const formattedGrandTotal = fmt(grandTotal);
+  const fittedTotalFontSizePt = fitBillingTotalFontSize(formattedGrandTotal);
   
   // Calculate summary row height and empty rows to keep uniform height
   const summaryRowHeight = isLastPage ? 1 : 0;
@@ -234,7 +236,12 @@ export function BillingInvoicePage({
                   <div className="billing-summary-total-label">Total</div>
                   <div className="billing-summary-total-sub">รวมเงิน</div>
                 </td>
-                <td className="billing-summary-value">{fmt(grandTotal)}</td>
+                <td
+                  className="billing-summary-value"
+                  style={{ fontSize: `${fittedTotalFontSizePt}pt` }}
+                >
+                  {formattedGrandTotal}
+                </td>
               </tr>
             )}
           </tbody>
@@ -544,22 +551,27 @@ export const BILLING_INVOICE_STYLES = `
     border-top: 1.5px solid #000000;
     border-bottom: 1.5px solid #000000;
     height: 9mm;
-    font-weight: bold;
+    font-weight: 900;
     vertical-align: middle;
     color: #000000;
   }
 
   .billing-summary-baht {
     text-align: center;
-    font-weight: bold;
-    line-height: 1.05;
+    font-weight: 900;
+    -webkit-text-stroke: 0.25px #000000;
+    line-height: 1.1;
+    padding-left: 2mm !important;
+    padding-right: 2mm !important;
     padding-top: 0.35mm !important;
     padding-bottom: 0.35mm !important;
     white-space: nowrap;
+    overflow: hidden;
   }
 
   .billing-summary-baht > span {
     display: block;
+    white-space: nowrap;
   }
 
   .billing-summary-label {
@@ -571,23 +583,26 @@ export const BILLING_INVOICE_STYLES = `
   }
 
   .billing-summary-total-label {
-    font-weight: bold;
+    font-weight: 900;
     font-size: 11.5pt;
     line-height: 1.1;
   }
 
   .billing-summary-total-sub {
-    font-weight: bold;
+    font-weight: 900;
     font-size: 10pt;
     line-height: 1.1;
   }
 
   .billing-summary-value {
     text-align: right;
-    font-size: 15pt;
-    font-weight: bold;
+    font-size: 16.5pt;
+    font-weight: 900;
+    -webkit-text-stroke: 0.25px #000000;
     padding-right: 2.5mm !important;
+    padding-left: 1mm !important;
     white-space: nowrap;
+    overflow: hidden;
     font-variant-numeric: tabular-nums;
   }
 

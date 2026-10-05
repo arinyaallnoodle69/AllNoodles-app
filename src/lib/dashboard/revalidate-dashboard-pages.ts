@@ -4,6 +4,10 @@ const DASHBOARD_PATHS = ["/dashboard"] as const;
 
 export function revalidateDashboardPages() {
   for (const path of DASHBOARD_PATHS) {
-    revalidatePath(path);
+    try {
+      revalidatePath(path);
+    } catch {
+      // Ignore when invoked during render or unsupported context
+    }
   }
 }

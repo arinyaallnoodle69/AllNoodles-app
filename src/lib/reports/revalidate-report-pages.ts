@@ -12,6 +12,10 @@ const REPORT_PATHS = [
 
 export function revalidateReportPages() {
   for (const path of REPORT_PATHS) {
-    revalidatePath(path);
+    try {
+      revalidatePath(path);
+    } catch {
+      // Ignore when invoked during render or unsupported context
+    }
   }
 }

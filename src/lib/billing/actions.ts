@@ -302,7 +302,6 @@ export async function syncBillingSnapshotsForDeliveryNumbers(params: {
   }
 
   if (!records || records.length === 0) {
-    revalidateReportPages();
     return { success: true as const, updated: 0 };
   }
 

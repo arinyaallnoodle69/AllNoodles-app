@@ -1,8 +1,7 @@
-const ONE_LINE_LIMIT = 34;
-const ONE_LINE_MAX_FONT_PT = 10.5;
-const TWO_LINE_MAX_FONT_PT = 8.5;
-const MIN_FONT_PT = 7;
-const REFERENCE_LINE_LENGTH = 29;
+const MAX_BAHT_FONT_PT = 12.5;
+const MIN_BAHT_FONT_PT = 4.5;
+const SAFE_BAHT_WIDTH_PT = 245;
+const GRAPHEME_EM = 0.62;
 
 function splitGraphemes(text: string) {
   if (typeof Intl.Segmenter === "function") {
@@ -16,18 +15,32 @@ function splitGraphemes(text: string) {
 
 export function fitBillingBahtText(text: string) {
   const graphemes = splitGraphemes(text);
-  const lines = graphemes.length <= ONE_LINE_LIMIT
-    ? [text]
-    : [
-        graphemes.slice(0, Math.ceil(graphemes.length / 2)).join(""),
-        graphemes.slice(Math.ceil(graphemes.length / 2)).join(""),
-      ];
-  const longestLine = Math.max(...lines.map((line) => splitGraphemes(line).length));
-  const maxFont = lines.length === 1 ? ONE_LINE_MAX_FONT_PT : TWO_LINE_MAX_FONT_PT;
-  const fontSizePt = Math.max(
-    MIN_FONT_PT,
-    Math.min(maxFont, Math.floor((maxFont * REFERENCE_LINE_LENGTH * 4) / longestLine) / 4),
-  );
+  const length = graphemes.length;
+  // Always display on exactly 1 line without cutting or ellipsis
+  const lines: [string] = [text];
+
+  // Scale down font size dynamically so long baht text never overflows the cell
+  const calculated = length > 0 ? SAFE_BAHT_WIDTH_PT / (length * GRAPHEME_EM) : MAX_BAHT_FONT_PT;
+  const clamped = Math.min(MAX_BAHT_FONT_PT, calculated);
+  const rounded = Math.floor(clamped * 4) / 4;
+  const fontSizePt = Math.max(MIN_BAHT_FONT_PT, rounded);
 
   return { lines, fontSizePt };
+}
+
+export function fitBillingTotalFontSize(formattedTotal: string) {
+  const MAX_TOTAL_FONT_PT = 16.5;
+  const MIN_TOTAL_FONT_PT = 10;
+  const SAFE_TOTAL_WIDTH_PT = 120;
+
+  let emWidth = 0;
+  for (const ch of formattedTotal) {
+    if (ch === "," || ch === ".") emWidth += 0.28;
+    else emWidth += 0.55;
+  }
+
+  const calculated = emWidth > 0 ? SAFE_TOTAL_WIDTH_PT / emWidth : MAX_TOTAL_FONT_PT;
+  if (calculated >= MAX_TOTAL_FONT_PT) return MAX_TOTAL_FONT_PT;
+  const rounded = Math.floor(calculated * 4) / 4;
+  return Math.max(MIN_TOTAL_FONT_PT, rounded);
 }

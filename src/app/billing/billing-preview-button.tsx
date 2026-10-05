@@ -17,13 +17,20 @@ import {
 
 const CAPTURE_TIMEOUT_MS = 6000;
 
-function isMobileLikeDevice() {
+function isMobileDevice() {
   if (typeof window === "undefined") return false;
   const ua = navigator.userAgent || "";
   const isMobileUA =
-    /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua) ||
-    (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
-  return isMobileUA || window.matchMedia("(max-width: 768px), (pointer: coarse)").matches;
+    /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua);
+  const isIPadOS = navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1;
+  if (isMobileUA || isIPadOS) return true;
+
+  // Desktop operating systems (Windows, Mac desktop, Linux desktop) are never mobile
+  if (/Windows NT|Macintosh|X11|Linux x86_64/i.test(ua) && !/Android/i.test(ua)) {
+    return false;
+  }
+
+  return window.matchMedia("(max-width: 768px) and (pointer: coarse)").matches;
 }
 
 function withTimeout<T>(promise: Promise<T>, timeoutMs: number, message: string): Promise<T> {
@@ -247,7 +254,7 @@ export function BillingPreviewButton({
         captured.push({ blob, name: fileName });
       }
 
-      const isMobile = isMobileLikeDevice();
+      const isMobile = isMobileDevice();
 
       if (isMobile && typeof navigator !== "undefined" && navigator.share && navigator.canShare) {
         const files = captured.map((item) => new File([item.blob], item.name, { type: "image/png" }));
@@ -349,13 +356,13 @@ export function BillingPreviewButton({
                 </div>
 
                 <div className="flex items-center gap-2 sm:gap-3">
-                  {hasFSPicker && pages.length > 1 ? (
+                  {hasFSPicker ? (
                     <button
                       type="button"
                       onClick={() => saveAsImage("folder")}
                       disabled={isSaving}
                       className="hidden items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-black text-white shadow-lg shadow-emerald-600/20 transition hover:bg-emerald-500 active:scale-95 disabled:opacity-50 sm:flex"
-                      title="เลือกโฟลเดอร์ในเครื่องเพื่อบันทึกไฟล์ทั้งหมด"
+                      title="เลือกโฟลเดอร์ในเครื่องเพื่อบันทึกไฟล์ภาพ"
                     >
                       <FolderDown className="h-4.5 w-4.5" strokeWidth={2.5} />
                       <span>บันทึกลงโฟลเดอร์</span>
@@ -369,7 +376,7 @@ export function BillingPreviewButton({
                     className="hidden items-center gap-2.5 rounded-xl bg-white px-5 py-2.5 text-sm font-black text-[#0a0c10] shadow-[0_8px_20px_rgba(255,255,255,0.15)] transition hover:bg-slate-100 active:scale-95 disabled:opacity-60 sm:flex"
                   >
                     {isSaving ? <Loader2 className="h-4.5 w-4.5 animate-spin" /> : <Download className="h-4.5 w-4.5" strokeWidth={3} />}
-                    <span>{isSaving ? (savingStatus ?? "กำลังบันทึก...") : pages.length > 1 ? (hasFSPicker ? "ดาวน์โหลดทีละรูป" : "บันทึกทั้งหมด") : "บันทึกรูป"}</span>
+                    <span>{isSaving ? (savingStatus ?? "กำลังบันทึก...") : pages.length > 1 ? (hasFSPicker ? "ดาวน์โหลดทีละรูป" : "ดาวน์โหลดทั้งหมด") : "ดาวน์โหลดลงเครื่อง"}</span>
                   </button>
                   <button
                     type="button"
