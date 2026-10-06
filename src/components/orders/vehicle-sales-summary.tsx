@@ -1,9 +1,11 @@
 "use client";
 
-import { ChevronDown, ChevronRight, FileText } from "lucide-react";
+import { ChevronDown, FileText } from "lucide-react";
 import { useState } from "react";
-import type { CustomerSalesSummaryStore } from "@/components/print/customer-sales-summary-layout";
+import type { CustomerSalesSummaryData, CustomerSalesSummaryStore } from "@/components/print/customer-sales-summary-layout";
 import { CustomerSalesSummaryModal } from "@/components/print/customer-sales-summary-modal";
+import { ReportActionSheetModal } from "./report-action-sheet-modal";
+import { VehicleCashCollectionModal } from "./vehicle-cash-collection-modal";
 
 export type VehicleSalesSummaryItem = {
   href: string;
@@ -95,14 +97,28 @@ export function VehicleSalesSummary({
   showCombinedSummary = true,
 }: VehicleSalesSummaryProps) {
   const [modalOpen, setModalOpen] = useState(false);
+  const [actionSheetOpen, setActionSheetOpen] = useState(false);
+  const [collectionModalOpen, setCollectionModalOpen] = useState(false);
   const [activeVehicleIdForModal, setActiveVehicleIdForModal] = useState<string>("__all__");
+  const [previewAllVehiclesData, setPreviewAllVehiclesData] = useState<CustomerSalesSummaryData | null>(null);
+  const [previewVehicleDataList, setPreviewVehicleDataList] = useState<CustomerSalesSummaryData[] | null>(null);
+  const [previewModalTitle, setPreviewModalTitle] = useState<string>("รายงานสรุปยอดขายตามลูกค้า");
+  const [previewFileNamePrefix, setPreviewFileNamePrefix] = useState<string>("customer-sales-summary");
+
+  const [selectedStoresByVehicle, setSelectedStoresByVehicle] = useState<Record<string, Set<string>>>(() => {
+    const init: Record<string, Set<string>> = {};
+    for (const item of items) {
+      init[item.id] = new Set(item.stores.map((s) => s.customerCode));
+    }
+    return init;
+  });
 
   if (items.length === 0) return null;
 
   const totalStoreCount = items.reduce((sum, item) => sum + item.storeCount, 0);
   const printedAt = getFormattedPrintedAt();
 
-  const allVehiclesData = {
+  const allVehiclesData: CustomerSalesSummaryData = {
     vehicleId: "__all__",
     vehicleName: "ทุกสายรถ",
     dateLabel,
@@ -113,7 +129,7 @@ export function VehicleSalesSummary({
     totalOrders: totalOrderCount,
   };
 
-  const vehicleDataList = items.map((item) => ({
+  const vehicleDataList: CustomerSalesSummaryData[] = items.map((item) => ({
     vehicleId: item.id,
     vehicleName: item.name,
     dateLabel,
@@ -124,9 +140,9 @@ export function VehicleSalesSummary({
     totalOrders: item.orderCount,
   }));
 
-  function handleOpenModal(vehicleId: string) {
+  function handleOpenReportMenu(vehicleId: string) {
     setActiveVehicleIdForModal(vehicleId);
-    setModalOpen(true);
+    setActionSheetOpen(true);
   }
 
   return (
@@ -137,7 +153,7 @@ export function VehicleSalesSummary({
             {/* All Vehicles Card */}
             {showCombinedSummary ? <button
               type="button"
-              onClick={() => handleOpenModal("__all__")}
+              onClick={() => handleOpenReportMenu("__all__")}
               className={`group flex w-[290px] shrink-0 items-center gap-3.5 border-r border-slate-200 px-5 py-3 text-left transition-colors hover:bg-[#FFF7FC] ${
                 selectedVehicleId === "__all__" ? "bg-[#FFF7FC]" : "bg-white"
               }`}
@@ -173,7 +189,7 @@ export function VehicleSalesSummary({
                   <button
                     key={item.id}
                     type="button"
-                    onClick={() => handleOpenModal(item.id)}
+                    onClick={() => handleOpenReportMenu(item.id)}
                     className={`group flex min-w-[165px] flex-1 flex-col items-center justify-center border-r border-slate-200 px-3.5 py-3 text-center transition-colors hover:bg-[#FFF7FC] ${
                       active ? "bg-[#FFF1F8]" : "bg-white"
                     }`}
@@ -200,12 +216,12 @@ export function VehicleSalesSummary({
 
             {showCombinedSummary ? <button
               type="button"
-              onClick={() => handleOpenModal("__all__")}
-              className="flex w-[135px] shrink-0 items-center justify-center gap-1 whitespace-nowrap px-3 text-sm font-black text-[#EC4899] hover:bg-[#FFF7FC] transition-colors"
+              onClick={() => handleOpenReportMenu(selectedVehicleId || "__all__")}
+              className="flex w-[145px] shrink-0 items-center justify-center gap-1.5 whitespace-nowrap px-3 text-sm font-black text-[#EC4899] hover:bg-[#FFF7FC] transition-colors"
             >
               <FileText className="h-4 w-4" strokeWidth={2.5} />
               รายงาน A4
-              <ChevronRight className="h-4 w-4" strokeWidth={2.5} />
+              <ChevronDown className="h-4 w-4" strokeWidth={2.5} />
             </button> : null}
           </div>
         ) : null}
@@ -233,12 +249,13 @@ export function VehicleSalesSummary({
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation();
-                  handleOpenModal("__all__");
+                  handleOpenReportMenu(selectedVehicleId || "__all__");
                 }}
-                className="inline-flex shrink-0 items-center gap-1 rounded-md bg-[#4A148C] px-2 py-1 text-[10px] font-bold text-white shadow-sm"
+                className="inline-flex shrink-0 items-center gap-1 rounded-md bg-[#4A148C] px-2 py-1 text-[10px] font-bold text-white shadow-sm active:scale-95 transition-transform"
               >
                 <FileText className="h-3 w-3" />
                 รายงาน A4
+                <ChevronDown className="h-3 w-3" />
               </button> : null}
               <span className="inline-flex shrink-0 items-center gap-0.5 whitespace-nowrap text-[10px] font-black text-[#EC4899] ml-1">
                 <ChevronDown
@@ -253,7 +270,7 @@ export function VehicleSalesSummary({
                 <button
                   key={item.id}
                   type="button"
-                  onClick={() => handleOpenModal(item.id)}
+                  onClick={() => handleOpenReportMenu(item.id)}
                   className={`grid w-full min-h-11 grid-cols-[minmax(0,1fr)_108px_82px] items-center border-b border-slate-100 px-4 py-2.5 text-left transition-colors hover:bg-[#FFF7FC] last:border-b-0 ${
                     selectedVehicleId === item.id ? "bg-[#FFF1F8]" : "bg-white"
                   }`}
@@ -282,11 +299,71 @@ export function VehicleSalesSummary({
       {modalOpen ? (
         <CustomerSalesSummaryModal
           isOpen={modalOpen}
-          onClose={() => setModalOpen(false)}
+          onClose={() => {
+            setModalOpen(false);
+            if (previewModalTitle === "รายงานสรุปยอดเก็บเงินตามสายรถ") {
+              setCollectionModalOpen(true);
+            }
+          }}
+          onBack={
+            previewModalTitle === "รายงานสรุปยอดเก็บเงินตามสายรถ"
+              ? () => {
+                  setModalOpen(false);
+                  setCollectionModalOpen(true);
+                }
+              : undefined
+          }
           initialVehicleId={activeVehicleIdForModal}
-          allVehiclesData={allVehiclesData}
-          vehicleDataList={vehicleDataList}
+          allVehiclesData={previewAllVehiclesData || allVehiclesData}
+          vehicleDataList={previewVehicleDataList || vehicleDataList}
           showAllVehicles={showCombinedSummary}
+          modalTitle={previewModalTitle}
+          fileNamePrefix={previewFileNamePrefix}
+        />
+      ) : null}
+
+      {actionSheetOpen ? (
+        <ReportActionSheetModal
+          isOpen={actionSheetOpen}
+          onClose={() => setActionSheetOpen(false)}
+          targetVehicleName={
+            activeVehicleIdForModal === "__all__"
+              ? "ทุกสายรถ"
+              : items.find((i) => i.id === activeVehicleIdForModal)?.name
+          }
+          dateLabel={dateLabel}
+          onSelectSalesReport={() => {
+            setPreviewModalTitle("รายงานสรุปยอดขายตามลูกค้า");
+            setPreviewFileNamePrefix("customer-sales-summary");
+            setPreviewAllVehiclesData(null);
+            setPreviewVehicleDataList(null);
+            setModalOpen(true);
+          }}
+          onSelectCollectionReport={() => {
+            setCollectionModalOpen(true);
+          }}
+        />
+      ) : null}
+
+      {collectionModalOpen ? (
+        <VehicleCashCollectionModal
+          isOpen={collectionModalOpen}
+          onClose={() => setCollectionModalOpen(false)}
+          initialVehicleId={activeVehicleIdForModal}
+          vehicles={items}
+          dateLabel={dateLabel}
+          printedAt={printedAt}
+          selectedStoresByVehicle={selectedStoresByVehicle}
+          setSelectedStoresByVehicle={setSelectedStoresByVehicle}
+          onConfirm={(allData, vehicleList, vehicleId) => {
+            setCollectionModalOpen(false);
+            setPreviewAllVehiclesData(allData);
+            setPreviewVehicleDataList(vehicleList);
+            setActiveVehicleIdForModal(vehicleId);
+            setPreviewModalTitle("รายงานสรุปยอดเก็บเงินตามสายรถ");
+            setPreviewFileNamePrefix("customer-collection-summary");
+            setModalOpen(true);
+          }}
         />
       ) : null}
     </>

@@ -1561,7 +1561,7 @@ function PackingListStyles() {
         font-weight: 800;
         line-height: 1;
         color: #111827;
-        background: #ffd400;
+        background: #dbeafe;
       }
 
       .packing-cell--total-label strong {
@@ -1573,7 +1573,7 @@ function PackingListStyles() {
       }
 
       .packing-cell--total {
-        background: #ffd400;
+        background: #dbeafe;
       }
 
       /* The original 50-item layout uses its own highly legible print face.

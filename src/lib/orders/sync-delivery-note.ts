@@ -153,7 +153,14 @@ export async function syncDeliveryNoteForOrder(
   }, null);
 
   const itemIds = (orderItems ?? []).map((item) => item.id);
-  let existingDn: { id: string; total_amount: number; delivery_date: string; delivery_number: string } | null = null;
+  let existingDn: {
+    id: string;
+    total_amount: number;
+    delivery_date: string;
+    delivery_number: string;
+    previous_outstanding: number | null;
+    installment_paid: number | null;
+  } | null = null;
   let existingDnError = null;
 
   if (itemIds.length > 0) {
@@ -169,14 +176,21 @@ export async function syncDeliveryNoteForOrder(
     } else if (linkedDnItem?.delivery_note_id) {
       const { data: dn, error: dnError } = await admin
         .from("delivery_notes")
-        .select("id, total_amount, delivery_date, delivery_number")
+        .select("id, total_amount, delivery_date, delivery_number, previous_outstanding, installment_paid")
         .eq("id", linkedDnItem.delivery_note_id)
         .single();
       
       if (dnError) {
         existingDnError = dnError;
       } else {
-        existingDn = dn as unknown as { id: string; total_amount: number; delivery_date: string; delivery_number: string };
+        existingDn = dn as unknown as {
+          id: string;
+          total_amount: number;
+          delivery_date: string;
+          delivery_number: string;
+          previous_outstanding: number | null;
+          installment_paid: number | null;
+        };
       }
     }
   }
@@ -185,7 +199,7 @@ export async function syncDeliveryNoteForOrder(
   if (!existingDn && !existingDnError) {
     const { data: dn, error: dnError } = await admin
       .from("delivery_notes")
-      .select("id, total_amount, delivery_date, delivery_number")
+      .select("id, total_amount, delivery_date, delivery_number, previous_outstanding, installment_paid")
       .eq("organization_id", input.organizationId)
       .eq("customer_id", order.customer_id)
       .eq("delivery_date", order.order_date)
@@ -196,7 +210,14 @@ export async function syncDeliveryNoteForOrder(
       .maybeSingle();
     
     if (dnError) existingDnError = dnError;
-    else existingDn = dn as unknown as { id: string; total_amount: number; delivery_date: string; delivery_number: string };
+    else existingDn = dn as unknown as {
+      id: string;
+      total_amount: number;
+      delivery_date: string;
+      delivery_number: string;
+      previous_outstanding: number | null;
+      installment_paid: number | null;
+    };
   }
 
   if (existingDnError) {
@@ -235,7 +256,8 @@ export async function syncDeliveryNoteForOrder(
     p_items: payloadItems,
     p_warehouse_id: warehouseId,
     p_loss_by_order_item: Object.fromEntries(lossInBaseUnitByItemId),
-    p_installment_paid: null,
+    p_previous_outstanding: existingDn?.previous_outstanding ?? null,
+    p_installment_paid: existingDn?.installment_paid ?? null,
   });
 
   if (deliveryError) {

@@ -13,6 +13,10 @@ export type DailySpecialCatalogProduct = {
   unit: string;
   unitWeightGrams: number | null;
   isFresh: boolean;
+  brand?: string;
+  categoryIds?: string[];
+  categoryNames?: string[];
+  categorySortOrders?: number[];
 };
 
 export type DailySpecialItem = {
@@ -61,7 +65,7 @@ export async function getDailySpecialCatalog(organizationId: string): Promise<Da
   const admin = getSupabaseAdmin();
   const productsTable = (admin as unknown as SpecialCatalogAdmin).from("products");
   const modesTable = (admin as unknown as SpecialModesAdmin).from("product_warehouse_fulfillment_modes");
-  const [productsResult, imagesResult, modesResult] = await Promise.all([
+  const [productsResult, imagesResult, modesResult, categoriesResult, categoryItemsResult] = await Promise.all([
     productsTable
       .select("id, sku, name, unit, unit_weight_grams, display_order, metadata")
       .eq("organization_id", organizationId)
@@ -77,6 +81,16 @@ export async function getDailySpecialCatalog(organizationId: string): Promise<Da
       .select("product_id")
       .eq("organization_id", organizationId)
       .eq("mode", "fresh"),
+    admin
+      .from("product_categories")
+      .select("id, name, sort_order")
+      .eq("organization_id", organizationId)
+      .eq("is_active", true)
+      .order("sort_order", { ascending: true }),
+    admin
+      .from("product_category_items")
+      .select("product_category_id, product_id")
+      .eq("organization_id", organizationId),
   ]);
 
   if (productsResult.error) throw new Error(productsResult.error.message);
@@ -91,6 +105,15 @@ export async function getDailySpecialCatalog(organizationId: string): Promise<Da
     }
   }
 
+  const categories = ((categoriesResult.data ?? []) as { id: string; name: string; sort_order: number }[]);
+  const categoryMap = new Map(categories.map((c) => [c.id, c]));
+  const categoryItemIdsByProductId = new Map<string, string[]>();
+  for (const item of ((categoryItemsResult.data ?? []) as { product_category_id: string; product_id: string }[])) {
+    const list = categoryItemIdsByProductId.get(item.product_id) ?? [];
+    list.push(item.product_category_id);
+    categoryItemIdsByProductId.set(item.product_id, list);
+  }
+
   const catalogProducts = (productsResult.data ?? []) as SpecialCatalogProductRow[];
 
   return catalogProducts
@@ -100,17 +123,33 @@ export async function getDailySpecialCatalog(organizationId: string): Promise<Da
         : null;
       return !metadata?.deleted;
     })
-    .map((product) => ({
-      id: product.id,
-      imageUrl: firstImageByProductId.get(product.id) ?? null,
-      name: product.name,
-      sku: product.sku,
-      unit: product.unit || "-",
-      unitWeightGrams: product.unit_weight_grams === null || product.unit_weight_grams === undefined
-        ? null
-        : Number(product.unit_weight_grams),
-      isFresh: freshProductIds.has(product.id),
-    }));
+    .map((product) => {
+      const metadata = product.metadata && typeof product.metadata === "object"
+        ? product.metadata as Record<string, unknown>
+        : null;
+      const brand = typeof metadata?.brand === "string" ? metadata.brand.trim() : "";
+      const catIds = categoryItemIdsByProductId.get(product.id) ?? [];
+      const prodCategories = catIds
+        .map((cid) => categoryMap.get(cid))
+        .filter((c): c is { id: string; name: string; sort_order: number } => Boolean(c));
+      prodCategories.sort((a, b) => a.sort_order - b.sort_order);
+
+      return {
+        id: product.id,
+        imageUrl: firstImageByProductId.get(product.id) ?? null,
+        name: product.name,
+        sku: product.sku,
+        unit: product.unit || "-",
+        unitWeightGrams: product.unit_weight_grams === null || product.unit_weight_grams === undefined
+          ? null
+          : Number(product.unit_weight_grams),
+        isFresh: freshProductIds.has(product.id),
+        brand,
+        categoryIds: prodCategories.map((c) => c.id),
+        categoryNames: prodCategories.map((c) => c.name),
+        categorySortOrders: prodCategories.map((c) => c.sort_order),
+      };
+    });
 }
 
 export async function getDailySpecialItems(

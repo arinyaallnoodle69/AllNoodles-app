@@ -375,9 +375,9 @@ function VehicleSummaryStyles() {
 
       .vehicle-product-summary-sheet .vehicle-summary-header__line {
         display: flex;
-        align-items: flex-end;
-        justify-content: space-between;
-        gap: 2.4mm;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.15mm;
       }
 
       .vehicle-product-summary-sheet .vehicle-summary-header__title {
@@ -429,6 +429,7 @@ function VehicleSummaryStyles() {
       .vehicle-product-summary-sheet .vehicle-summary-header__meta-inline {
         display: flex;
         align-items: center;
+        justify-content: flex-end;
         gap: 1.6mm;
         flex-wrap: nowrap;
         white-space: nowrap;

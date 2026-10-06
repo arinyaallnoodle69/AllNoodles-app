@@ -1954,6 +1954,11 @@ export function CreateOrderModal({
   useEffect(() => {
     if (open && typeof window !== "undefined") {
       savedScrollYRef.current = window.scrollY || window.pageYOffset || 0;
+      const originalOverflow = document.body.style.overflow;
+      document.body.style.overflow = "hidden";
+      return () => {
+        document.body.style.overflow = originalOverflow;
+      };
     }
   }, [open]);
   const productsById = useMemo(
@@ -2888,11 +2893,11 @@ export function CreateOrderModal({
       ) : null}
 
       {open && customerPickerOpen ? (
-        <div className="fixed inset-0 z-[10000] flex items-end justify-center bg-slate-950/50 sm:items-center sm:p-4">
+        <div className="fixed inset-0 z-[10000] flex items-end justify-center bg-slate-950/50 sm:items-center sm:p-4 overscroll-contain">
           <div className="absolute inset-0" onClick={() => setCustomerPickerOpen(false)} />
-          <div className="relative flex h-full w-full max-h-full flex-col overflow-hidden rounded-none bg-white shadow-2xl sm:h-[80dvh] sm:max-w-md sm:rounded-[2rem]">
+          <div className="relative flex h-[100dvh] w-full max-h-[100dvh] flex-col overflow-hidden rounded-none bg-white shadow-2xl overscroll-contain sm:h-[80dvh] sm:max-h-[80dvh] sm:max-w-md sm:rounded-[2rem]">
             {/* Modal Header */}
-            <div className="sticky top-0 z-20 flex items-center justify-between gap-3 border-b border-[#EA80FC]/30 bg-[#4A148C] px-5 py-4 text-white">
+            <div className="sticky top-0 z-20 flex shrink-0 items-center justify-between gap-3 border-b border-[#EA80FC]/30 bg-[#4A148C] px-5 py-4 pt-[max(1rem,env(safe-area-inset-top))] text-white">
               <div className="min-w-0">
                 <h3 className="truncate text-lg font-black tracking-wide text-white">เลือกร้านค้า</h3>
                 <p className="text-[10px] font-semibold text-[#E1BEE7] mt-0.5">ค้นหาชื่อร้าน หรือรหัสร้าน</p>

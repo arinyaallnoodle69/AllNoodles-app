@@ -17,6 +17,9 @@ export type CustomerSalesSummaryData = {
   totalAmount: number;
   totalWeightGrams?: number;
   totalOrders?: number;
+  reportTitle?: string;
+  tableHeaderAmount?: string;
+  totalLabel?: string;
 };
 
 const money = (value: number) => value.toLocaleString("th-TH", {
@@ -101,7 +104,7 @@ export function CustomerSalesSummaryLayout({
         <header className="cs-header">
           <div className="cs-heading">
             <div className="cs-brand">{PRINT_ORGANIZATION_NAME}</div>
-            <h1>รายงานสรุปยอดขายตามลูกค้า</h1>
+            <h1>{data.reportTitle || "รายงานสรุปยอดขายตามลูกค้า"}</h1>
           </div>
           <div className="cs-meta">
             <span>วันที่รายการ <strong>{data.dateLabel}</strong></span>
@@ -110,7 +113,7 @@ export function CustomerSalesSummaryLayout({
         </header>
         <table className="cs-table">
           <colgroup><col style={{ width: "8%" }} /><col style={{ width: "18%" }} /><col style={{ width: "50%" }} /><col style={{ width: "24%" }} /></colgroup>
-          <thead><tr><th scope="col">ลำดับ</th><th scope="col">รหัสลูกค้า</th><th scope="col">ชื่อลูกค้า</th><th scope="col">ยอดขาย (บาท)</th></tr></thead>
+          <thead><tr><th scope="col">ลำดับ</th><th scope="col">รหัสลูกค้า</th><th scope="col">ชื่อลูกค้า</th><th scope="col">{data.tableHeaderAmount || "ยอดขาย (บาท)"}</th></tr></thead>
           <tbody>
             {data.stores.length ? data.stores.map((store, index) => (
               <tr key={index} data-store-row>
@@ -126,7 +129,7 @@ export function CustomerSalesSummaryLayout({
               {data.totalWeightGrams ? <span>น้ำหนักรวม {(data.totalWeightGrams / 1000).toLocaleString("th-TH", { maximumFractionDigits: 2 })} กก.</span> : null}
               <span className="cs-baht">{bahtText(data.totalAmount)}</span>
             </div>
-            <div className="cs-total"><span>ยอดขายรวมทั้งสิ้น</span><strong>{money(data.totalAmount)}</strong></div>
+            <div className="cs-total"><span>{data.totalLabel || "ยอดขายรวมทั้งสิ้น"}</span><strong>{money(data.totalAmount)}</strong></div>
           </div>
           <div className="cs-footnote">พิมพ์เมื่อ {data.printedAt}</div>
         </footer>

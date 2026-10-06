@@ -1293,11 +1293,12 @@ export async function fetchCustomerLastOrderItemsAction(
 
   const { data: orders } = await admin
     .from("orders")
-    .select("id, customer_id, order_date")
+    .select("id, customer_id, order_date, created_at")
     .eq("organization_id", session.organizationId)
     .eq("customer_id", customerId)
     .eq("order_date", sourceDate)
-    .in("status", ["submitted", "confirmed"]);
+    .in("status", ["submitted", "confirmed"])
+    .order("created_at", { ascending: true });
 
   const orderIds = (orders ?? []).map((row) => row.id);
   if (orderIds.length === 0) {
@@ -1306,8 +1307,9 @@ export async function fetchCustomerLastOrderItemsAction(
 
   const { data: orderItems } = await admin
     .from("order_items")
-    .select("product_id, product_sale_unit_id, quantity, sale_unit_label, sale_unit_ratio, unit_price, notes")
-    .in("order_id", orderIds);
+    .select("product_id, product_sale_unit_id, quantity, sale_unit_label, sale_unit_ratio, unit_price, notes, created_at")
+    .in("order_id", orderIds)
+    .order("created_at", { ascending: true });
 
   const grouped = new Map<string, CustomerLastOrderItem>();
 

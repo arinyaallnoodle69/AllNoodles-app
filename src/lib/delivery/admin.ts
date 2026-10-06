@@ -301,12 +301,35 @@ export async function getOrderItemsForDelivery(
   const order = orderRow as RawOrderRow;
 
   // 1.5 Fetch existing delivery note if any to load saved outstanding/installment values
-  const { data: dnRow } = await supabase
+  let dnRow: {
+    previous_outstanding: number | string | null;
+    installment_paid: number | string | null;
+    is_installment_plan: boolean | null;
+  } | null = null;
+
+  const { data: dnByOrder } = await supabase
     .from("delivery_notes")
     .select("previous_outstanding, installment_paid, is_installment_plan")
     .eq("order_id", orderId)
     .eq("status", "confirmed")
     .maybeSingle();
+
+  if (dnByOrder) {
+    dnRow = dnByOrder;
+  } else {
+    // If not found by order_id (e.g. multi-order store on the same day), lookup by customer and date
+    const { data: dnByCustomer } = await supabase
+      .from("delivery_notes")
+      .select("previous_outstanding, installment_paid, is_installment_plan")
+      .eq("organization_id", organizationId)
+      .eq("customer_id", order.customer_id)
+      .eq("delivery_date", order.order_date)
+      .eq("status", "confirmed")
+      .order("created_at", { ascending: true })
+      .limit(1)
+      .maybeSingle();
+    dnRow = dnByCustomer;
+  }
 
   // 2. Order items with product details
   const { data: itemRows, error: itemsError } = await supabase

@@ -18,6 +18,7 @@ export type VehicleSummaryProduct = {
   productKind?: string;
   supplierId?: string | null;
   supplierName?: string | null;
+  supplierCode?: string | null;
   isFresh?: boolean;
 };
 
@@ -33,6 +34,7 @@ export type VehicleProductSummaryData = {
   vehicles: VehicleSummaryVehicle[];
   qty: number[][];
   factoryName?: string;
+  factoryCode?: string;
   warehouseName?: string;
   sourceVehicleCount?: number;
 };
@@ -64,7 +66,7 @@ type DbProduct = {
   sku: string;
   product_kind?: string;
   supplier_id?: string | null;
-  suppliers?: { name: string } | null;
+  suppliers?: { name: string; supplier_code?: string | null } | null;
   product_images?: Array<{ public_url: string; sort_order: number | null }> | null;
 };
 
@@ -77,7 +79,7 @@ type ProductModeRow = {
   mode: ProductWarehouseFulfillmentMode;
   product_id: string;
   supplier_id: string | null;
-  suppliers?: { name: string } | null;
+  suppliers?: { name: string; supplier_code?: string | null } | null;
   warehouse_id: string;
 };
 
@@ -85,10 +87,12 @@ type ProductWarehouseFulfillment = {
   mode: ProductWarehouseFulfillmentMode;
   supplierId: string | null;
   supplierName: string | null;
+  supplierCode?: string | null;
 };
 
 type FactoryGroupAccumulator = {
   factoryName: string;
+  factoryCode?: string;
   warehouseName: string;
   productVehicleQty: Map<string, Map<string, number>>;
   vehicleNamesByKey: Map<string, string>;
@@ -156,7 +160,7 @@ async function loadSortedProducts(organizationId: string) {
   const [productsResult, categoriesResult, categoryItemsResult] = await Promise.all([
     admin
       .from("products")
-      .select("id, sku, name, unit, display_order, metadata, product_kind, supplier_id, suppliers(name), product_images(public_url, sort_order)")
+      .select("id, sku, name, unit, display_order, metadata, product_kind, supplier_id, suppliers(name, supplier_code), product_images(public_url, sort_order)")
       .eq("organization_id", organizationId)
       .eq("is_active", true),
     admin
@@ -200,6 +204,7 @@ async function loadSortedProducts(organizationId: string) {
         productKind: product.product_kind,
         supplierId: product.supplier_id ?? null,
         supplierName: product.suppliers?.name ?? null,
+        supplierCode: product.suppliers?.supplier_code ?? null,
       };
     }),
     ((categoriesResult.data ?? []) as DbCategory[]).map((category) => ({
@@ -421,7 +426,7 @@ export async function getFactoryOrderSheetData(
       .select("id, name")
       .eq("organization_id", organizationId),
     productWarehouseModesTable
-      .select("product_id, warehouse_id, mode, supplier_id, suppliers(name)")
+      .select("product_id, warehouse_id, mode, supplier_id, suppliers(name, supplier_code)")
       .eq("organization_id", organizationId),
     loadSortedProducts(organizationId),
     getDailySpecialPrintItems(organizationId, date, endDate),
@@ -444,6 +449,7 @@ export async function getFactoryOrderSheetData(
     productKind: product.productKind,
     supplierId: product.supplierId,
     supplierName: product.supplierName,
+    supplierCode: product.supplierCode,
   }));
   const productById = new Map(products.map((product) => [product.id, product]));
   const configuredVehicles: VehicleSummaryVehicle[] = ((vehiclesResult.data ?? []) as Array<{ id: string; name: string }>).map((vehicle) => ({
@@ -459,6 +465,7 @@ export async function getFactoryOrderSheetData(
         mode: row.mode,
         supplierId: row.supplier_id ?? null,
         supplierName: row.suppliers?.name ?? null,
+        supplierCode: row.suppliers?.supplier_code ?? null,
       },
     ]),
   );
@@ -486,12 +493,14 @@ export async function getFactoryOrderSheetData(
       if (fulfillment?.mode !== "fresh") continue;
 
       const supplierName = fulfillment.supplierName || product.supplierName || "โรงงานอนามัย";
+      const supplierCode = fulfillment.supplierCode || product.supplierCode || undefined;
       const supplierKey = fulfillment.supplierId || product.supplierId || supplierName;
       const groupKey = `${warehouseId}:${supplierKey}`;
       let group = groups.get(groupKey);
       if (!group) {
         group = {
           factoryName: supplierName,
+          factoryCode: supplierCode,
           warehouseName,
           productVehicleQty: new Map(),
           vehicleNamesByKey: new Map(),
@@ -521,12 +530,14 @@ export async function getFactoryOrderSheetData(
 
     const warehouseName = warehouseNameById.get(mode.warehouse_id) || "ไม่ระบุคลัง";
     const supplierName = mode.suppliers?.name || product.supplierName || "โรงงานอนามัย";
+    const supplierCode = mode.suppliers?.supplier_code || product.supplierCode || undefined;
     const supplierKey = mode.supplier_id || product.supplierId || supplierName;
     const groupKey = `${mode.warehouse_id}:${supplierKey}`;
     let group = groups.get(groupKey);
     if (!group) {
       group = {
         factoryName: supplierName,
+        factoryCode: supplierCode,
         warehouseName,
         productVehicleQty: new Map(),
         vehicleNamesByKey: new Map(),
@@ -606,6 +617,7 @@ export async function getFactoryOrderSheetData(
       organizationName: "All Noodles",
       dateLabel,
       factoryName: group.factoryName,
+      factoryCode: group.factoryCode,
       warehouseName: group.warehouseName,
       products: groupProducts,
       sourceVehicleCount: vehicleKeys.length,

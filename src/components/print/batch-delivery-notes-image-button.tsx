@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Image as ImageIcon, Loader2, Share2, X } from "lucide-react";
+import { Image as ImageIcon, Loader2, Printer, Share2, X } from "lucide-react";
 import { createPortal } from "react-dom";
 import * as htmlToImage from "html-to-image";
 import html2canvas from "html2canvas";
@@ -398,14 +398,26 @@ export function BatchDeliveryNotesImageButton({
                       </div>
                     </div>
 
-                    <div className="shrink-0 border-t border-white/10 bg-[#12151c] p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] sm:p-4">
+                    <div className="shrink-0 border-t border-white/10 bg-[#12151c] p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] sm:p-4 flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setReadyCaptured(null);
+                          setIsSaving(false);
+                          setTimeout(() => window.print(), 200);
+                        }}
+                        className="flex-1 flex items-center justify-center gap-2 rounded-2xl bg-[#4A148C] px-4 py-3.5 text-base font-black text-white shadow-[0_12px_28px_rgba(74,20,140,0.3)] transition active:scale-[0.98]"
+                      >
+                        <Printer className="h-5 w-5" strokeWidth={2.5} />
+                        <span>พิมพ์</span>
+                      </button>
                       <button
                         type="button"
                         onClick={handleMobileSaveTrigger}
-                        className="flex w-full items-center justify-center gap-3 rounded-2xl bg-emerald-600 px-5 py-3.5 text-base font-black text-white shadow-[0_12px_28px_rgba(16,185,129,0.28)] transition hover:bg-emerald-500 active:scale-[0.98] sm:text-lg"
+                        className="flex-1 flex items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-4 py-3.5 text-base font-black text-white shadow-[0_12px_28px_rgba(16,185,129,0.28)] transition hover:bg-emerald-500 active:scale-[0.98]"
                       >
                         <Share2 className="h-5 w-5" strokeWidth={2.5} />
-                        <span>บันทึก / แชร์รูปทั้งหมด ({readyCaptured.length} ใบ)</span>
+                        <span>บันทึกรูป ({readyCaptured.length})</span>
                       </button>
                     </div>
                   </div>

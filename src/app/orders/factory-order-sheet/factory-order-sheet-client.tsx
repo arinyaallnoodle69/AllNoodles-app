@@ -254,7 +254,15 @@ export function FactoryOrderSheetClient({
         }
         @media screen {
           .vehicle-summary-page.packing-print-container {
-            padding-top: 20px !important;
+            padding-top: 16px !important;
+            padding-bottom: 32px !important;
+          }
+          @media (max-width: 640px) {
+            .vehicle-summary-page.packing-print-container {
+              padding-top: 14px !important;
+              padding-bottom: 32px !important;
+              scroll-padding-top: 140px;
+            }
           }
         }
       `}</style>
@@ -262,14 +270,14 @@ export function FactoryOrderSheetClient({
       {/* Modern, Clean, Sticky Top Navigation Bar */}
       <header className="no-print print:hidden sticky top-0 z-50 w-full border-b border-slate-200/90 bg-white/95 backdrop-blur-md shadow-sm">
         <div className="mx-auto max-w-7xl px-3 sm:px-6 py-2.5 sm:py-3">
-          {/* Main Row: Header title, date info & action buttons */}
+          {/* Main Row: Header title, date info & action buttons (Desktop) */}
           <div className="flex items-center justify-between gap-3">
-            {/* Left: Back button + Title */}
+            {/* Left: Back button + Title + Date */}
             <div className="flex items-center gap-2 sm:gap-3 min-w-0">
               <Link
                 href={`/orders/incoming?date=${date}${endDate ? `&endDate=${endDate}` : ""}`}
                 scroll={false}
-                className="inline-flex items-center gap-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 px-3 py-2 text-xs sm:text-sm font-black text-slate-700 transition active:scale-95 shrink-0"
+                className="inline-flex items-center gap-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 px-2.5 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm font-black text-slate-700 transition active:scale-95 shrink-0"
                 title="กลับหน้ารายการออเดอร์"
               >
                 <ArrowLeft className="h-4 w-4" />
@@ -291,8 +299,15 @@ export function FactoryOrderSheetClient({
               </div>
             </div>
 
-            {/* Right: Factory Selector (Desktop) + Action Buttons */}
-            <div className="flex items-center gap-2 shrink-0">
+            {/* Mobile: Sheet count badge on right */}
+            <div className="flex items-center gap-1.5 sm:hidden shrink-0">
+              <span className="text-[11px] font-black px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">
+                {visibleSheets.length} ใบ
+              </span>
+            </div>
+
+            {/* Desktop Right: Factory Selector + Action Buttons */}
+            <div className="hidden sm:flex items-center gap-2 shrink-0">
               {/* Desktop Factory Dropdown Trigger (Anchored directly under button) */}
               {factoryOptions.length > 1 ? (
                 <div ref={desktopDropdownRef} className="relative hidden sm:block">
@@ -339,9 +354,26 @@ export function FactoryOrderSheetClient({
             </div>
           </div>
 
-          {/* Mobile Row 2: Full-width Factory Selector Button */}
+          {/* Mobile Row 2: Action Buttons (Print & Share PDF) side-by-side */}
+          <div className="grid grid-cols-2 gap-2 mt-2 pt-2 border-t border-slate-100 sm:hidden">
+            <PackingListPrintButton
+              unassignedStores={[]}
+              dateLabel={dateLabel}
+              documentTitle={`ใบสั่งของ ${!isAllSelected && selectedFactories.length > 0 ? `(${selectedLabel})` : ""}`}
+              printButtonText="พิมพ์ใบสั่งของ"
+              className="w-full flex items-center justify-center gap-1.5 rounded-xl bg-[#4A148C] px-3 py-2 text-xs font-bold text-white shadow-sm transition active:scale-95"
+            />
+            <SharePackingListPdfButton
+              fileName={exportFileName}
+              previewTitle={`ตัวอย่าง PDF ใบสั่งของ (${selectedLabel})`}
+              buttonText="แชร์ PDF"
+              className="w-full flex items-center justify-center gap-1.5 rounded-xl border border-[#4A148C]/25 bg-white px-3 py-2 text-xs font-bold text-[#4A148C] shadow-sm transition hover:bg-[#F3E5F5]/40 active:scale-95"
+            />
+          </div>
+
+          {/* Mobile Row 3: Full-width Factory Selector Button */}
           {factoryOptions.length > 1 && (
-            <div ref={mobileDropdownRef} className="relative mt-2.5 pt-2 border-t border-slate-100 sm:hidden">
+            <div ref={mobileDropdownRef} className="relative mt-2 sm:hidden">
               <button
                 type="button"
                 onClick={() => setIsDropdownOpen((prev) => !prev)}

@@ -8,20 +8,90 @@ const SCREEN_SHEET_H = "1123px";
 const ITEMS_PER_PAGE = 15;
 const ROW_HEIGHT_MM = 14;
 
-const VEHICLE_COLUMN_PALETTES = [
-  { header: "#EA80FC", body: "#F3E5F5", border: "#000000" },
-  { header: "#dcfce7", body: "#f3fdf7", border: "#000000" },
-  { header: "#fef3c7", body: "#fffaf0", border: "#000000" },
-  { header: "#fde2e8", body: "#fff4f6", border: "#000000" },
-  { header: "#ede9fe", body: "#f7f5ff", border: "#000000" },
-] as const;
+type SheetPalette = {
+  header: string;
+  body: string;
+  border: string;
+};
+
+// Designated soft pastel palettes for specific factories:
+// - TYV001 โรงงานมหาชัย: สีเขียวเข้มกว่าโรงงานดอกบัว
+// - TYV005 โรงงานดอกบัว: สีเขียวที่อ่อนกว่าโรงงานมหาชัย
+// - TYV002 โรงงานมังกร: สีฟ้า
+// - TYV009 โรงงานโบตั๋น: สีชมพู
+// - TYV008 โรงงานบะหมี่หง: สีเหลือง
+const DESIGNATED_FACTORY_PALETTES: Record<string, SheetPalette> = {
+  // TYV001 โรงงานมหาชัย - เขียวมิดเดิลพาสเทล (เข้มกว่าดอกบัว ชัดเจน อ่านง่าย สวยกลมกลืน)
+  mahachai: { header: "#a7f3d0", body: "#ecfdf5", border: "#000000" },
+  // TYV005 โรงงานดอกบัว - เขียวอ่อนพาสเทล (อ่อนกว่ามหาชัย ละมุน สบายตา)
+  dokbua: { header: "#dcfce7", body: "#f0fdf4", border: "#000000" },
+  // TYV002 โรงงานมังกร - ฟ้าพาสเทล
+  dragon: { header: "#bae6fd", body: "#f0f9ff", border: "#000000" },
+  // TYV009 โรงงานโบตั๋น - ชมพูพาสเทล
+  peony: { header: "#fbcfe8", body: "#fdf2f8", border: "#000000" },
+  // TYV008 โรงงานบะหมี่หง / หงส์ - เหลืองเนยพาสเทล
+  hong: { header: "#fef08a", body: "#fefce8", border: "#000000" },
+};
+
+// Fallback soft pastel palettes for any unspecified factories (แยกสีต่างกันตามโรงงาน)
+const FALLBACK_FACTORY_PALETTES: SheetPalette[] = [
+  { header: "#fed7aa", body: "#fff7ed", border: "#000000" }, // Soft Warm Peach (ส้มพีช)
+  { header: "#e9d5ff", body: "#faf5ff", border: "#000000" }, // Soft Lavender (ม่วงลาเวนเดอร์)
+  { header: "#99f6e4", body: "#f0fdfa", border: "#000000" }, // Soft Teal (เขียวทะเล/เทล)
+  { header: "#c7d2fe", body: "#eef2ff", border: "#000000" }, // Soft Periwinkle (ฟ้าอมม่วงคลาสสิก)
+  { header: "#fecdd3", body: "#fff1f2", border: "#000000" }, // Soft Coral (คอรัลพาสเทล)
+  { header: "#a5f3fc", body: "#ecfeff", border: "#000000" }, // Soft Pale Cyan (ฟ้าไซแอนใส)
+  { header: "#d9f99d", body: "#f7fee7", border: "#000000" }, // Soft Sage / Lime (เขียวเซจละมุน)
+  { header: "#f5d0fe", body: "#fdf4ff", border: "#000000" }, // Soft Plum / Lilac (พลัมอ่อน)
+  { header: "#cbd5e1", body: "#f8fafc", border: "#000000" }, // Soft Slate / Ice (ฟ้าหม่นไอซ์บลู)
+  { header: "#ffedd5", body: "#fffaf5", border: "#000000" }, // Soft Warm Sand / Apricot (ทรายอุ่น)
+];
 
 function formatQty(value: number) {
   return value > 0 ? value.toLocaleString("th-TH") : "";
 }
 
-function getVehiclePalette(columnIndex: number) {
-  return VEHICLE_COLUMN_PALETTES[columnIndex % VEHICLE_COLUMN_PALETTES.length] ?? VEHICLE_COLUMN_PALETTES[0];
+function hashString(str: string) {
+  let hash = 0;
+  for (let i = 0; i < str.length; i += 1) {
+    hash = Math.imul(31, hash) + str.charCodeAt(i);
+    hash |= 0;
+  }
+  return hash;
+}
+
+function getSheetColumnPalette(factoryName?: string, factoryCode?: string, columnIndex = 0): SheetPalette {
+  const combined = `${factoryName || ""} ${factoryCode || ""}`.trim().toLowerCase();
+
+  // 1. TYV001 โรงงานมหาชัย (เขียวเข้มกว่าดอกบัว)
+  if (combined.includes("tyv001") || combined.includes("มหาชัย")) {
+    return DESIGNATED_FACTORY_PALETTES.mahachai;
+  }
+  // 2. TYV005 โรงงานดอกบัว (เขียวอ่อนกว่ามหาชัย)
+  if (combined.includes("tyv005") || combined.includes("ดอกบัว")) {
+    return DESIGNATED_FACTORY_PALETTES.dokbua;
+  }
+  // 3. TYV002 โรงงานมังกร (ฟ้า)
+  if (combined.includes("tyv002") || combined.includes("มังกร")) {
+    return DESIGNATED_FACTORY_PALETTES.dragon;
+  }
+  // 4. TYV009 โรงงานโบตั๋น (ชมพู)
+  if (combined.includes("tyv009") || combined.includes("โบตั๋น")) {
+    return DESIGNATED_FACTORY_PALETTES.peony;
+  }
+  // 5. TYV008 โรงงานบะหมี่หง / หงส์ (เหลือง)
+  if (combined.includes("tyv008") || combined.includes("หง")) {
+    return DESIGNATED_FACTORY_PALETTES.hong;
+  }
+
+  // Fallback: Separate color by factory only (warehouse does not alter color)
+  if (!combined) {
+    return FALLBACK_FACTORY_PALETTES[columnIndex % FALLBACK_FACTORY_PALETTES.length];
+  }
+
+  const hashF = hashString(combined);
+  const index = Math.abs(hashF) % FALLBACK_FACTORY_PALETTES.length;
+  return FALLBACK_FACTORY_PALETTES[index];
 }
 
 function FactoryOrderSheet({ data, startIndex }: { data: VehicleProductSummaryData; startIndex: number }) {
@@ -56,7 +126,7 @@ function FactoryOrderSheet({ data, startIndex }: { data: VehicleProductSummaryDa
                 <th className="vehicle-summary-table__product-col">สินค้า</th>
                 <th className="vehicle-summary-table__unit-col">หน่วย</th>
                 {data.vehicles.map((vehicle, columnIndex) => {
-                  const palette = getVehiclePalette(columnIndex);
+                  const palette = getSheetColumnPalette(data.factoryName, data.factoryCode, columnIndex);
                   return (
                     <th
                       key={vehicle.id ?? "unassigned"}
@@ -82,7 +152,7 @@ function FactoryOrderSheet({ data, startIndex }: { data: VehicleProductSummaryDa
                   </td>
                   <td className="vehicle-summary-table__unit-cell">{product.unit}</td>
                   {data.vehicles.map((vehicle, vehicleIndex) => {
-                    const palette = getVehiclePalette(vehicleIndex);
+                    const palette = getSheetColumnPalette(data.factoryName, data.factoryCode, vehicleIndex);
                     return (
                       <td
                         key={`${product.id}-${vehicle.id ?? "unassigned"}`}
@@ -290,9 +360,9 @@ function FactoryOrderStyles() {
 
       .factory-order-sheet .vehicle-summary-header__line {
         display: flex;
-        align-items: flex-end;
-        justify-content: space-between;
-        gap: 2.4mm;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.15mm;
         width: 100%;
       }
 
@@ -308,6 +378,7 @@ function FactoryOrderStyles() {
       .factory-order-sheet .vehicle-summary-header__meta-inline {
         display: flex;
         align-items: center;
+        justify-content: flex-end;
         gap: 1.6mm;
         flex-wrap: nowrap;
         white-space: nowrap;
@@ -448,7 +519,7 @@ function FactoryOrderStyles() {
         max-width: none;
         overflow: visible;
         text-overflow: clip;
-        white-space: normal;
+        white-space: nowrap;
         font-size: 20.15pt;
         font-weight: 700;
         line-height: 1.2;

@@ -1,6 +1,6 @@
 "use client";
 
-import { Download, FileText, Loader2, Printer, X } from "lucide-react";
+import { ArrowLeft, Download, FileText, Loader2, Printer, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
@@ -21,19 +21,25 @@ const A4_WIDTH_MM = 210;
 type CustomerSalesSummaryModalProps = {
   isOpen: boolean;
   onClose: () => void;
+  onBack?: () => void;
   initialVehicleId?: string;
   allVehiclesData: CustomerSalesSummaryData;
   vehicleDataList: CustomerSalesSummaryData[];
   showAllVehicles?: boolean;
+  modalTitle?: string;
+  fileNamePrefix?: string;
 };
 
 export function CustomerSalesSummaryModal({
   isOpen,
   onClose,
+  onBack,
   initialVehicleId = "__all__",
   allVehiclesData,
   vehicleDataList,
   showAllVehicles = true,
+  modalTitle,
+  fileNamePrefix,
 }: CustomerSalesSummaryModalProps) {
   const [selectedVehicleId, setSelectedVehicleId] = useState<string>(initialVehicleId);
   const [isPrinting, setIsPrinting] = useState(false);
@@ -143,6 +149,9 @@ export function CustomerSalesSummaryModal({
     };
   }, [activeData, isOpen, pageScale]);
 
+  const currentTitle = modalTitle || activeData.reportTitle || "รายงานสรุปยอดขายตามลูกค้า";
+  const currentFileNamePrefix = fileNamePrefix || (activeData.reportTitle ? "customer-collection-summary" : "customer-sales-summary");
+
   if (!isOpen) return null;
 
   async function handleSaveImage() {
@@ -150,10 +159,10 @@ export function CustomerSalesSummaryModal({
     setIsSavingImage(true);
 
     try {
-      const fileName = `customer-sales-summary-${activeData.vehicleName || "all"}`;
+      const fileName = `${currentFileNamePrefix}-${activeData.vehicleName || "all"}`;
       await saveCustomerSalesImagesFromDocument(
         document,
-        `รายงานสรุปยอดขายตามลูกค้า - ${activeData.vehicleName}`,
+        `${currentTitle} - ${activeData.vehicleName}`,
         fileName,
       );
     } catch (error) {
@@ -170,7 +179,7 @@ export function CustomerSalesSummaryModal({
     const previousTitle = document.title;
     try {
       await document.fonts.ready;
-      document.title = `สรุปยอดขาย-${activeData.vehicleName}-${activeData.dateLabel}`;
+      document.title = `${currentTitle}-${activeData.vehicleName}-${activeData.dateLabel}`;
       window.print();
     } finally {
       document.title = previousTitle;
@@ -183,7 +192,7 @@ export function CustomerSalesSummaryModal({
     try {
       const preview = await createCustomerSalesPdfPreviewFromDocument(
         document,
-        `customer-sales-summary-${activeData.vehicleName || "all"}`,
+        `${currentFileNamePrefix}-${activeData.vehicleName || "all"}`,
       );
       if (preview) setPdfPreview(preview);
     } catch (error) {
@@ -194,20 +203,20 @@ export function CustomerSalesSummaryModal({
     }
   }
   return createPortal(
-    <><div className="customer-sales-modal fixed inset-0 z-[500] flex flex-col bg-[#0a0c10] animate-in fade-in duration-200">
+    <><div style={{ zIndex: 99999 }} className="customer-sales-modal fixed inset-0 flex flex-col bg-[#0a0c10] subpixel-antialiased animate-in fade-in duration-200">
       {/* Top Header Bar */}
-      <div className="no-print sticky top-0 z-50 flex shrink-0 flex-col gap-3 border-b border-white/10 bg-[#12151c]/95 px-4 py-3 backdrop-blur-xl sm:px-6">
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#4A148C] text-white shadow-[0_0_20px_rgba(74,20,140,0.4)]">
+      <div className="no-print sticky top-0 z-50 flex shrink-0 flex-col gap-2.5 border-b border-white/10 bg-[#12151c] px-3 py-2.5 pt-[calc(0.625rem+env(safe-area-inset-top))] sm:px-6 sm:py-3.5">
+        <div className="flex w-full items-center justify-between gap-2 sm:gap-3">
+          <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
+            <div className="flex h-9 w-9 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-xl bg-[#4A148C] text-white shadow-[0_0_20px_rgba(74,20,140,0.4)]">
               <FileText className="h-5 w-5" strokeWidth={2.5} />
             </div>
-            <div className="min-w-0">
-              <h2 className="text-base font-black text-white sm:text-lg">
-                รายงานสรุปยอดขายตามลูกค้า
+            <div className="min-w-0 flex-1">
+              <h2 className="truncate text-sm sm:text-base md:text-lg font-bold text-white leading-tight">
+                {currentTitle}
               </h2>
-              <p className="truncate text-xs font-semibold text-slate-400">
-                {activeData.dateLabel} · รวม {activeData.stores.length} ร้านค้า · ฿
+              <p className="truncate text-xs sm:text-sm font-semibold text-slate-300 leading-tight mt-0.5">
+                {activeData.dateLabel} · {activeData.stores.length} ร้าน · ฿
                 {activeData.totalAmount.toLocaleString("th-TH", {
                   minimumFractionDigits: 2,
                   maximumFractionDigits: 2,
@@ -216,7 +225,19 @@ export function CustomerSalesSummaryModal({
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+            {onBack ? (
+              <button
+                type="button"
+                onClick={onBack}
+                aria-label="ย้อนกลับไปแก้ไขร้านค้า"
+                className="flex shrink-0 items-center gap-1 rounded-xl border border-purple-400/40 bg-purple-600/30 px-2.5 py-1.5 sm:px-3 sm:py-2 text-xs sm:text-sm font-bold text-purple-200 transition hover:bg-purple-600/50 hover:text-white active:scale-95"
+              >
+                <ArrowLeft className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                <span>แก้ไข</span>
+              </button>
+            ) : null}
+
             <button
               type="button"
               onClick={handlePrint}
@@ -257,9 +278,9 @@ export function CustomerSalesSummaryModal({
 
             <button
               type="button"
-              onClick={onClose}
-              aria-label="ปิดตัวอย่างรายงาน"
-              className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/5 text-white/60 transition hover:bg-rose-500/10 hover:text-rose-400 active:scale-95"
+              onClick={onBack ? onBack : onClose}
+              aria-label={onBack ? "ย้อนกลับไปแก้ไขร้านค้า" : "ปิดตัวอย่างรายงาน"}
+              className="flex h-9 w-9 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-xl bg-white/10 text-white/80 transition hover:bg-rose-500/20 hover:text-rose-400 active:scale-95"
             >
               <X className="h-5 w-5" strokeWidth={2.5} />
             </button>
@@ -277,7 +298,7 @@ export function CustomerSalesSummaryModal({
                 : "bg-white/5 text-slate-300 hover:bg-white/10"
             }`}
           >
-            ยอดขายรวมทุกคัน ({allVehiclesData.stores.length} ร้าน)
+            {allVehiclesData.totalLabel ? `${allVehiclesData.totalLabel.replace("ทั้งสิ้น", "").trim()} (${allVehiclesData.stores.length} ร้าน)` : `ยอดขายรวมทุกคัน (${allVehiclesData.stores.length} ร้าน)`}
           </button> : null}
           {vehicleDataList.map((v) => (
             <button
@@ -308,33 +329,43 @@ export function CustomerSalesSummaryModal({
       </div>
 
       {/* Mobile Footer Sticky Action Bar */}
-      <div className="no-print border-t border-white/5 bg-[#12151c]/95 p-3 pb-safe-offset-3 backdrop-blur-xl sm:hidden flex items-center gap-2">
+      <div className="no-print border-t border-white/10 bg-[#12151c] p-2.5 pb-safe-offset-2 sm:hidden flex items-center gap-1.5">
+        <button
+          type="button"
+          onClick={handlePrint}
+          disabled={isPrinting || isSavingImage || isSavingPdf}
+          className="flex-1 flex items-center justify-center gap-1.5 rounded-xl bg-[#4A148C] py-2.5 text-xs font-bold text-white shadow-sm transition active:scale-95 disabled:opacity-70"
+        >
+          <Printer className="h-3.5 w-3.5" />
+          <span>พิมพ์</span>
+        </button>
+
         <button
           type="button"
           onClick={handleSaveImage}
           disabled={isPrinting || isSavingImage || isSavingPdf}
-          className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-emerald-600 py-3 text-sm font-black text-white shadow-sm transition active:scale-95 disabled:opacity-70"
+          className="flex-1 flex items-center justify-center gap-1.5 rounded-xl bg-emerald-600 py-2.5 text-xs font-bold text-white shadow-sm transition active:scale-95 disabled:opacity-70"
         >
           {isSavingImage ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
           ) : (
-            <Download className="h-4 w-4" />
+            <Download className="h-3.5 w-3.5" />
           )}
-          {isSavingImage ? "กำลังบันทึก..." : "บันทึกรูป"}
+          <span>{isSavingImage ? "บันทึก..." : "บันทึกรูป"}</span>
         </button>
 
         <button
           type="button"
           onClick={handleSavePdf}
           disabled={isPrinting || isSavingImage || isSavingPdf}
-          className="flex-1 flex items-center justify-center gap-2 rounded-xl border border-white/20 bg-white/10 py-3 text-sm font-black text-white shadow-sm transition active:scale-95 disabled:opacity-70"
+          className="flex-1 flex items-center justify-center gap-1.5 rounded-xl border border-white/20 bg-white/10 py-2.5 text-xs font-bold text-white shadow-sm transition active:scale-95 disabled:opacity-70"
         >
           {isSavingPdf ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
           ) : (
-            <FileText className="h-4 w-4 text-rose-400" />
+            <FileText className="h-3.5 w-3.5 text-rose-400" />
           )}
-          {isSavingPdf ? "กำลังสร้าง..." : "บันทึก PDF"}
+          <span>{isSavingPdf ? "สร้าง..." : "บันทึก PDF"}</span>
         </button>
       </div>
 
@@ -342,7 +373,7 @@ export function CustomerSalesSummaryModal({
       <DeliveryPdfPreviewModal
         file={pdfPreview.file}
         previewImages={pdfPreview.previewImages}
-        title="ตัวอย่าง PDF รายงานสรุปยอดขาย"
+        title={`ตัวอย่าง PDF ${currentTitle}`}
         onClose={() => setPdfPreview(null)}
       />
     ) : null}</>,

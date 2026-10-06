@@ -400,14 +400,22 @@ export function PackingListPrintButton({
             </div>
 
             {!isCapturing && previewImages.length > 0 ? (
-              <div className="border-t border-white/5 bg-[#12151c]/90 p-4 pb-safe-offset-4 backdrop-blur-xl sm:hidden">
+              <div className="border-t border-white/5 bg-[#12151c]/90 p-3 pb-safe-offset-3 backdrop-blur-xl sm:hidden flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handlePrintFromPreview}
+                  className="flex-1 flex items-center justify-center gap-2 rounded-2xl bg-[#4A148C] py-3.5 text-base font-black text-white shadow-[0_15px_30px_rgba(74,20,140,0.3)] transition active:scale-95"
+                >
+                  <Printer className="h-5 w-5 text-white" strokeWidth={2.6} />
+                  <span>พิมพ์</span>
+                </button>
                 <button
                   type="button"
                   onClick={downloadAll}
-                  className="flex w-full items-center justify-center gap-3 rounded-2xl bg-emerald-600 py-4 text-lg font-black text-white shadow-[0_15px_30px_rgba(255,255,255,0.1)] transition active:scale-95"
+                  className="flex-1 flex items-center justify-center gap-2 rounded-2xl bg-emerald-600 py-3.5 text-base font-black text-white shadow-[0_15px_30px_rgba(16,185,129,0.3)] transition active:scale-95"
                 >
-                  <Download className="h-6 w-6 text-white" strokeWidth={3} />
-                  บันทึกรูป
+                  <Download className="h-5 w-5 text-white" strokeWidth={2.6} />
+                  <span>บันทึกรูป</span>
                 </button>
               </div>
             ) : null}
