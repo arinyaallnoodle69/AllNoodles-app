@@ -4,13 +4,12 @@ import { revalidatePath } from "next/cache";
 import { requireAppRole } from "@/lib/auth/authorization";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { isBangkokVehicleGroup } from "@/components/print/packing-list-bkk-split";
+import type { Json } from "@/types/database";
 
-type CustomersTable = {
-  update(values: { packing_list_group: string | null }): {
-    eq(column: string, value: string): {
-      in(column: string, values: string[]): Promise<{ error: { message?: string } | null }>;
-    };
-  };
+type CustomerMetaRow = {
+  id: string;
+  default_vehicle_id: string | null;
+  metadata: unknown;
 };
 
 export async function saveBkkNoodleCustomersAction(
@@ -24,7 +23,7 @@ export async function saveBkkNoodleCustomersAction(
     admin.from("vehicles").select("id, name").eq("organization_id", session.organizationId),
     admin
       .from("customers")
-      .select("id, default_vehicle_id")
+      .select("id, default_vehicle_id, metadata")
       .eq("organization_id", session.organizationId)
       .eq("is_active", true),
   ]);
@@ -32,33 +31,46 @@ export async function saveBkkNoodleCustomersAction(
   const bkkVehicleIds = new Set(
     (vehicles ?? []).filter((v) => isBangkokVehicleGroup(v.id, v.name)).map((v) => v.id),
   );
-  const eligibleIds = (customers ?? [])
-    .filter((c) => c.default_vehicle_id && bkkVehicleIds.has(c.default_vehicle_id))
-    .map((c) => c.id);
-  const eligible = new Set(eligibleIds);
+  const eligibleCustomers = ((customers ?? []) as CustomerMetaRow[]).filter(
+    (c) => c.default_vehicle_id && bkkVehicleIds.has(c.default_vehicle_id),
+  );
+  const eligibleIds = new Set(eligibleCustomers.map((c) => c.id));
 
-  if (selected.some((id) => !eligible.has(id))) {
+  if (selected.some((id) => !eligibleIds.has(id))) {
     return { error: "มีร้านที่ไม่ได้อยู่ในรถกรุงเทพ กรุณารีเฟรชหน้าแล้วลองใหม่" };
   }
 
-  const table = admin.from("customers") as unknown as CustomersTable;
   const selectedSet = new Set(selected);
-  const unselected = eligibleIds.filter((id) => !selectedSet.has(id));
+  const updates: Promise<{ error: { message?: string } | null }>[] = [];
 
-  const results = await Promise.all([
-    unselected.length
-      ? table.update({ packing_list_group: null }).eq("organization_id", session.organizationId).in("id", unselected)
-      : Promise.resolve({ error: null }),
-    selected.length
-      ? table
-          .update({ packing_list_group: "bkk_noodle" })
-          .eq("organization_id", session.organizationId)
-          .in("id", selected)
-      : Promise.resolve({ error: null }),
-  ]);
+  for (const customer of eligibleCustomers) {
+    const isSelected = selectedSet.has(customer.id);
+    const currentMeta =
+      customer.metadata && typeof customer.metadata === "object" && !Array.isArray(customer.metadata)
+        ? { ...(customer.metadata as Record<string, unknown>) }
+        : {};
+    const targetGroup = isSelected ? "bkk_noodle" : "default";
 
-  if (results.some((r) => r.error)) {
-    return { error: "บันทึกไม่สำเร็จ กรุณาลองใหม่อีกครั้ง" };
+    if (currentMeta.packing_list_group !== targetGroup) {
+      currentMeta.packing_list_group = targetGroup;
+      updates.push(
+        (async () => {
+          const { error } = await admin
+            .from("customers")
+            .update({ metadata: currentMeta as Json })
+            .eq("organization_id", session.organizationId)
+            .eq("id", customer.id);
+          return { error };
+        })(),
+      );
+    }
+  }
+
+  if (updates.length > 0) {
+    const results = await Promise.all(updates);
+    if (results.some((r) => r.error)) {
+      return { error: "บันทึกไม่สำเร็จ กรุณาลองใหม่อีกครั้ง" };
+    }
   }
 
   revalidatePath("/orders/packing-list");

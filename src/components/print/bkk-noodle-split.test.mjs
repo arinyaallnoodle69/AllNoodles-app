@@ -1,6 +1,20 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { buildVehicleGroups, isBangkokVehicleGroup } from "./packing-list-bkk-split.ts";
+import {
+  BKK_NOODLE_CUSTOMER_CODES,
+  buildVehicleGroups,
+  isBangkokVehicleGroup,
+  isBkkNoodleStore,
+} from "./packing-list-bkk-split.ts";
+
+test("isBkkNoodleStore falls back to 39 customer codes when group is not set", () => {
+  assert.equal(BKK_NOODLE_CUSTOMER_CODES.size, 39);
+  assert.equal(isBkkNoodleStore({ id: "ANS002" }), true);
+  assert.equal(isBkkNoodleStore({ id: "ANS002-R" }), true);
+  assert.equal(isBkkNoodleStore({ id: "ANS015" }), false);
+  assert.equal(isBkkNoodleStore({ id: "ANS015", packingListGroup: "bkk_noodle" }), true);
+  assert.equal(isBkkNoodleStore({ id: "ANS002", packingListGroup: "default" }), false);
+});
 
 test("isBangkokVehicleGroup detects Bangkok vehicle by ID or name", () => {
   assert.equal(isBangkokVehicleGroup("67c8b5f9-6cdf-4c83-a464-40827f561939", "รถกรุงเทพ"), true);

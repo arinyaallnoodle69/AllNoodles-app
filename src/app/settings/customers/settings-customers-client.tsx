@@ -5,7 +5,7 @@ import { Plus, PlusCircle, Search, Upload, PackageSearch } from "lucide-react";
 import { MobileSearchDrawer } from "@/components/mobile-search/mobile-search-drawer";
 import { CustomerForm } from "@/components/settings/customer-form";
 import { CustomerListPanel } from "@/components/settings/customer-list-panel";
-import { CustomerSettingsTabs } from "@/components/settings/customer-settings-tabs";
+import { CustomerSettingsTabs, type CustomerSettingsTab } from "@/components/settings/customer-settings-tabs";
 import { SettingsShell } from "@/components/settings/settings-shell";
 import { CustomerImportModal } from "@/components/settings/customer-import-modal";
 import { CustomerPricePanel, type CustomerPriceGroup } from "@/components/settings/customer-price-panel";
@@ -80,7 +80,8 @@ export function SettingsCustomersPageClient({
     return () => window.removeEventListener("popstate", handlePopState);
   }, []);
 
-  const selectTab = (nextTab: "customers" | "pricing") => {
+  const selectTab = (nextTab: CustomerSettingsTab) => {
+    if (nextTab === "bkk-noodles") return;
     if (nextTab === activeTab) return;
     setActiveTab(nextTab);
     const href = nextTab === "customers" ? "/settings/customers" : "/settings/customers?tab=pricing";

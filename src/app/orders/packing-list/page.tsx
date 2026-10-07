@@ -47,9 +47,17 @@ type OrderCustomer = {
   customer_code: string;
   default_vehicle_id: string | null;
   sort_order?: number | null;
-  packing_list_group?: string | null;
+  metadata?: unknown;
   vehicles: unknown;
 };
+
+function extractPackingListGroup(metadata: unknown): string | null {
+  if (metadata && typeof metadata === "object" && !Array.isArray(metadata)) {
+    const val = (metadata as Record<string, unknown>).packing_list_group;
+    if (typeof val === "string") return val;
+  }
+  return null;
+}
 
 type DeliveryNoteRow = {
   created_at?: string | null;
@@ -206,7 +214,7 @@ async function PackingListPage({ searchParams }: Props) {
       id,
       assigned_vehicle_id,
       order_date,
-      customers!inner(id, name, customer_code, default_vehicle_id, sort_order, packing_list_group, vehicles(id, name)),
+      customers!inner(id, name, customer_code, default_vehicle_id, sort_order, metadata, vehicles(id, name)),
       delivery_notes!order_id(vehicle_id, status, created_at, vehicles(id, name)),
       order_items(
         notes,
@@ -598,7 +606,7 @@ async function PackingListPage({ searchParams }: Props) {
             consolidatedItems: group.items,
             missingWeightProductIds: Array.from(group.missingWeightProductIds),
             totalWeightGrams: group.totalWeightGrams,
-            packingListGroup: group.customer.packing_list_group ?? null,
+            packingListGroup: extractPackingListGroup(group.customer.metadata),
           }),
         );
 

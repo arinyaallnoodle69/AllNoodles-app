@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-export type CustomerSettingsTab = "customers" | "pricing";
+export type CustomerSettingsTab = "customers" | "pricing" | "bkk-noodles";
 
 type CustomerSettingsTabsProps = {
   current: CustomerSettingsTab;
@@ -18,6 +18,11 @@ const tabs = [
     key: "pricing",
     label: "ผูกราคาสินค้า",
   },
+  {
+    href: "/settings/customers/bkk-noodles",
+    key: "bkk-noodles",
+    label: "รถกรุงเทพบะหมี่",
+  },
 ] as const;
 
 export function CustomerSettingsTabs({ current, onTabChange }: CustomerSettingsTabsProps) {
@@ -27,6 +32,9 @@ export function CustomerSettingsTabs({ current, onTabChange }: CustomerSettingsT
         const isActive = current === tab.key;
 
         const handleClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+          if (tab.key === "bkk-noodles") {
+            return;
+          }
           if (onTabChange) {
             e.preventDefault();
             onTabChange(tab.key);
@@ -38,9 +46,9 @@ export function CustomerSettingsTabs({ current, onTabChange }: CustomerSettingsT
             key={tab.key}
             href={tab.href}
             onClick={handleClick}
-            className={`flex-1 rounded-[1rem] px-4 py-2.5 text-center text-sm font-medium transition ${
+            className={`flex-1 rounded-[1rem] px-2.5 py-2.5 text-center text-xs sm:text-sm font-bold transition sm:px-4 ${
               isActive
-                ? "bg-[#4A148C] text-white shadow-[0_10px_24px_rgba(142, 36, 170,0.24)]"
+                ? "bg-[#4A148C] text-white shadow-[0_10px_24px_rgba(74,20,140,0.24)]"
                 : "text-slate-600 hover:bg-slate-50 hover:text-slate-950"
             }`}
           >

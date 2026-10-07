@@ -2,6 +2,7 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { Check, Loader2, Search } from "lucide-react";
+import { CustomerSettingsTabs } from "@/components/settings/customer-settings-tabs";
 import { saveBkkNoodleCustomersAction } from "./actions";
 
 export type BkkNoodleStore = {
@@ -55,6 +56,10 @@ export function BkkNoodlesClient({ stores }: { stores: BkkNoodleStore[] }) {
 
   return (
     <div className="mx-auto w-full max-w-3xl pb-28">
+      <div className="mb-5">
+        <CustomerSettingsTabs current="bkk-noodles" />
+      </div>
+
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center">
         <label className="relative block flex-1">
           <span className="sr-only">ค้นหาร้านค้า</span>
