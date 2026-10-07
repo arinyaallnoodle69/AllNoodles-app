@@ -46,6 +46,7 @@ type OrderCustomer = {
   name: string;
   customer_code: string;
   default_vehicle_id: string | null;
+  sort_order?: number | null;
   vehicles: unknown;
 };
 
@@ -204,7 +205,7 @@ async function PackingListPage({ searchParams }: Props) {
       id,
       assigned_vehicle_id,
       order_date,
-      customers!inner(id, name, customer_code, default_vehicle_id, vehicles(id, name)),
+      customers!inner(id, name, customer_code, default_vehicle_id, sort_order, vehicles(id, name)),
       delivery_notes!order_id(vehicle_id, status, created_at, vehicles(id, name)),
       order_items(
         notes,
@@ -533,6 +534,7 @@ async function PackingListPage({ searchParams }: Props) {
               name: special.type === "office" ? "เข้าออฟฟิศ" : special.type === "claim" ? "เคลม" : "ของเหลือ",
               customer_code: special.type === "office" ? "SPECIAL-OFFICE" : special.type === "claim" ? "SPECIAL-CLAIM" : "SPECIAL-REMAINING",
               default_vehicle_id: special.vehicleId,
+              sort_order: null,
               vehicles: null,
             },
             vehicleId: special.vehicleId,
@@ -579,7 +581,12 @@ async function PackingListPage({ searchParams }: Props) {
             b.vehicleId === null ? 999 : (vehicleSortIndexMap.get(b.vehicleId) ?? 998);
           if (indexA !== indexB) return indexA - indexB;
           if (a.specialSort !== b.specialSort) return a.specialSort - b.specialSort;
-          return a.customer.customer_code.localeCompare(b.customer.customer_code);
+
+          const sortOrderA = typeof a.customer.sort_order === "number" ? a.customer.sort_order : Infinity;
+          const sortOrderB = typeof b.customer.sort_order === "number" ? b.customer.sort_order : Infinity;
+          if (sortOrderA !== sortOrderB) return sortOrderA - sortOrderB;
+
+          return a.customer.customer_code.localeCompare(b.customer.customer_code, undefined, { numeric: true });
         })
         .map(
           (group): PackingListStore & { consolidatedItems: Map<string, number> } => ({

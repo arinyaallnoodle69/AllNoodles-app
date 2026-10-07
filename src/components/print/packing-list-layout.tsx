@@ -1,5 +1,6 @@
 import type { CSSProperties } from "react";
 import { paginateStandardStoreIndices } from "./packing-list-pagination";
+import { buildVehicleGroups } from "./packing-list-bkk-split";
 import {
   buildCategoryPrintPalette,
   type CategoryPrintPalette,
@@ -88,6 +89,9 @@ type BasePageDef = {
   organizationName: string;
   vehicleMissingWeightProductCount: number;
   vehicleTotalWeightGrams: number;
+  hasCombinedTotalRow?: boolean;
+  combinedTotalWeightGrams?: number;
+  combinedMissingWeightProductCount?: number;
 };
 
 type StandardPageDef = BasePageDef & {
@@ -96,6 +100,7 @@ type StandardPageDef = BasePageDef & {
   vehicleStoreIndices: number[];
   pageProducts: PackingListProduct[];
   pageProductIndices: number[];
+  combinedVehicleStoreIndices?: number[];
 };
 
 type TransposedPageDef = BasePageDef & {
@@ -116,7 +121,8 @@ function chunk<T>(items: T[], size: number): T[][] {
 
 function vehicleColor(vehicleId: string | null, vehicles: PackingListVehicle[]): string {
   if (!vehicleId) return UNASSIGNED_COLOR;
-  const index = vehicles.findIndex((vehicle) => vehicle.id === vehicleId);
+  const baseVehicleId = vehicleId.replace(/__noodles$/, "");
+  const index = vehicles.findIndex((vehicle) => vehicle.id === baseVehicleId);
   return VEHICLE_COLORS[index % VEHICLE_COLORS.length] ?? VEHICLE_COLORS[0];
 }
 
@@ -339,27 +345,6 @@ function splitProductNameToLines(name: string, maxLines = 4, maxTokenLength = 7)
 }
 */
 
-function buildVehicleGroups(data: PackingListData) {
-  type Group = { vehicleId: string | null; vehicleName: string | null; storeIndices: number[] };
-  const groups = new Map<string, Group>();
-
-  for (const vehicle of data.vehicles) {
-    groups.set(vehicle.id, { vehicleId: vehicle.id, vehicleName: vehicle.name, storeIndices: [] });
-  }
-
-  groups.set("__unassigned__", { vehicleId: null, vehicleName: null, storeIndices: [] });
-
-  data.stores.forEach((store, index) => {
-    const key = store.vehicleId ?? "__unassigned__";
-    if (!groups.has(key)) {
-      groups.set(key, { vehicleId: store.vehicleId, vehicleName: store.vehicleName, storeIndices: [] });
-    }
-    groups.get(key)?.storeIndices.push(index);
-  });
-
-  return Array.from(groups.values()).filter((group) => group.storeIndices.length > 0);
-}
-
 function getVehicleWeightSummary(data: PackingListData, storeIndices: number[]) {
   const missingProductIds = new Set<string>();
   let totalWeightGrams = 0;
@@ -390,15 +375,28 @@ function buildStandardPages(data: PackingListData): StandardPageDef[] {
 
   for (const group of buildVehicleGroups(data)) {
     const vehicleWeightSummary = getVehicleWeightSummary(data, group.storeIndices);
+    const hasCombinedTotalRow = Boolean(
+      group.isBkkMain &&
+        group.combinedStoreIndices &&
+        group.combinedStoreIndices.length > group.storeIndices.length,
+    );
+    const combinedWeightSummary = hasCombinedTotalRow && group.combinedStoreIndices
+      ? getVehicleWeightSummary(data, group.combinedStoreIndices)
+      : undefined;
+
     const activeProductIndices = data.products
       .map((_, productIndex) => productIndex)
       .filter((productIndex) => group.storeIndices.some((storeIndex) => (data.qty[productIndex]?.[storeIndex] ?? 0) !== 0));
+
+    const reservedTotalHeight = hasCombinedTotalRow
+      ? STANDARD_TOTAL_ROW_HEIGHT_MM * 2
+      : STANDARD_TOTAL_ROW_HEIGHT_MM;
 
     const storeChunks = paginateStandardStoreIndices(
       group.storeIndices,
       STANDARD_BODY_HEIGHT_MM,
       STANDARD_MIN_ROW_HEIGHT_MM,
-      STANDARD_TOTAL_ROW_HEIGHT_MM,
+      reservedTotalHeight,
     );
     const productChunks = chunk(activeProductIndices, STANDARD_PRODUCTS_PER_PAGE);
 
@@ -425,6 +423,10 @@ function buildStandardPages(data: PackingListData): StandardPageDef[] {
           organizationName: data.organizationName,
           vehicleMissingWeightProductCount: vehicleWeightSummary.missingWeightProductCount,
           vehicleTotalWeightGrams: vehicleWeightSummary.totalWeightGrams,
+          hasCombinedTotalRow,
+          combinedVehicleStoreIndices: hasCombinedTotalRow ? group.combinedStoreIndices : undefined,
+          combinedTotalWeightGrams: combinedWeightSummary?.totalWeightGrams,
+          combinedMissingWeightProductCount: combinedWeightSummary?.missingWeightProductCount,
         });
       }
     }
@@ -496,6 +498,8 @@ function StandardPackingHeader({
   productTotalChunks,
   vehicleMissingWeightProductCount,
   vehicleTotalWeightGrams,
+  hasCombinedTotalRow,
+  combinedTotalWeightGrams,
 }: {
   accentColor: string;
   organizationName: string;
@@ -508,6 +512,8 @@ function StandardPackingHeader({
   productTotalChunks: number;
   vehicleMissingWeightProductCount: number;
   vehicleTotalWeightGrams: number;
+  hasCombinedTotalRow?: boolean;
+  combinedTotalWeightGrams?: number;
 }) {
   return (
     <header className="packing-header packing-header--standard" style={{ borderColor: accentColor }}>
@@ -537,8 +543,13 @@ function StandardPackingHeader({
           </strong>
         </div>
         <div className="packing-header__meta-cell packing-header__meta-cell--weight">
-          <span>น้ำหนักรวม</span>
+          <span>{hasCombinedTotalRow ? "น้ำหนัก (ใบแรก)" : "น้ำหนักรวม"}</span>
           <strong>{formatVehicleWeight(vehicleTotalWeightGrams)}</strong>
+          {hasCombinedTotalRow && combinedTotalWeightGrams !== undefined && (
+            <small style={{ color: "#713f12", fontWeight: 800, fontSize: "7.8pt", lineHeight: 1.1 }}>
+              (ทั้งสาย {formatVehicleWeight(combinedTotalWeightGrams)})
+            </small>
+          )}
           {vehicleMissingWeightProductCount > 0 ? (
             <small title={`มีสินค้าไม่ตั้งน้ำหนัก ${vehicleMissingWeightProductCount.toLocaleString("th-TH")} รายการ`}>
               *ขาด {vehicleMissingWeightProductCount.toLocaleString("th-TH")}
@@ -583,7 +594,7 @@ function StandardPackingListPage({ page, data }: { page: StandardPageDef; data: 
   const getCategoryPalette = (product: PackingListProduct) =>
     categoryPaletteByKey.get(getProductCategoryKey(product)) ?? COLUMN_COLOR_GROUPS[0];
   const isLastStorePage = page.storeChunk === page.storeTotalChunks;
-  const rowCount = page.pageStores.length + (isLastStorePage ? 1 : 0);
+  const rowCount = page.pageStores.length + (isLastStorePage ? (page.hasCombinedTotalRow ? 2 : 1) : 0);
   const rowHeightMm = Math.max(
     STANDARD_MIN_ROW_HEIGHT_MM,
     Math.min(5.2, STANDARD_BODY_HEIGHT_MM / Math.max(rowCount, 1)),
@@ -593,6 +604,15 @@ function StandardPackingListPage({ page, data }: { page: StandardPageDef; data: 
         page.vehicleStoreIndices.reduce((sum, storeIndex) => sum + (data.qty[productIndex]?.[storeIndex] ?? 0), 0),
       )
     : [];
+  const combinedProductTotals =
+    isLastStorePage && page.hasCombinedTotalRow && page.combinedVehicleStoreIndices
+      ? page.pageProductIndices.map((productIndex) =>
+          page.combinedVehicleStoreIndices!.reduce(
+            (sum, storeIndex) => sum + (data.qty[productIndex]?.[storeIndex] ?? 0),
+            0,
+          ),
+        )
+      : [];
 
   return (
     <section className="packing-sheet packing-sheet--standard">
@@ -609,6 +629,8 @@ function StandardPackingListPage({ page, data }: { page: StandardPageDef; data: 
           productTotalChunks={page.productTotalChunks}
           vehicleMissingWeightProductCount={page.vehicleMissingWeightProductCount}
           vehicleTotalWeightGrams={page.vehicleTotalWeightGrams}
+          hasCombinedTotalRow={page.hasCombinedTotalRow}
+          combinedTotalWeightGrams={page.combinedTotalWeightGrams}
         />
 
         <div className="packing-table-wrap">
@@ -735,24 +757,49 @@ function StandardPackingListPage({ page, data }: { page: StandardPageDef; data: 
               })}
 
               {isLastStorePage && (
-                <tr className="packing-table__total-row">
-                  <td className="packing-cell packing-cell--total-label">
-                    <span>รวมยอด</span>
-                    <strong>{formatVehicleWeight(page.vehicleTotalWeightGrams)}</strong>
-                  </td>
-                  {productTotals.map((total, index) => (
-                    <td
-                      key={`standard-total-${index}`}
-                      className="packing-cell packing-cell--total"
-                    >
-                      {total > 0 ? (
-                        <span className={`packing-number${getStandardNumberClass(total)}`}>
-                          {formatStandardQuantity(total)}
-                        </span>
-                      ) : ""}
+                <>
+                  <tr className="packing-table__total-row">
+                    <td className="packing-cell packing-cell--total-label">
+                      <span>{page.hasCombinedTotalRow ? "รวม (ใบแรก)" : "รวมยอด"}</span>
+                      <strong>{formatVehicleWeight(page.vehicleTotalWeightGrams)}</strong>
                     </td>
-                  ))}
-                </tr>
+                    {productTotals.map((total, index) => (
+                      <td
+                        key={`standard-total-${index}`}
+                        className="packing-cell packing-cell--total"
+                      >
+                        {total > 0 ? (
+                          <span className={`packing-number${getStandardNumberClass(total)}`}>
+                            {formatStandardQuantity(total)}
+                          </span>
+                        ) : ""}
+                      </td>
+                    ))}
+                  </tr>
+
+                  {page.hasCombinedTotalRow && combinedProductTotals.length > 0 && (
+                    <tr className="packing-table__total-row packing-table__total-row--combined">
+                      <td className="packing-cell packing-cell--total-label packing-cell--combined-label">
+                        <span>รวมทั้ง 2 ใบ</span>
+                        <strong>
+                          {formatVehicleWeight(page.combinedTotalWeightGrams ?? page.vehicleTotalWeightGrams)}
+                        </strong>
+                      </td>
+                      {combinedProductTotals.map((total, index) => (
+                        <td
+                          key={`standard-combined-total-${index}`}
+                          className="packing-cell packing-cell--total packing-cell--combined-total"
+                        >
+                          {total > 0 ? (
+                            <span className={`packing-number${getStandardNumberClass(total)}`}>
+                              {formatStandardQuantity(total)}
+                            </span>
+                          ) : ""}
+                        </td>
+                      ))}
+                    </tr>
+                  )}
+                </>
               )}
             </tbody>
           </table>
@@ -1574,6 +1621,23 @@ function PackingListStyles() {
 
       .packing-cell--total {
         background: #dbeafe;
+      }
+
+      .packing-table__total-row--combined .packing-cell--combined-label {
+        background: #f3e8ff;
+        color: #4a148c;
+        border-top: 1.5px solid #4a148c;
+      }
+
+      .packing-table__total-row--combined .packing-cell--combined-label strong {
+        color: #4a148c;
+      }
+
+      .packing-table__total-row--combined .packing-cell--combined-total {
+        background: #f3e8ff;
+        color: #4a148c;
+        font-weight: 900;
+        border-top: 1.5px solid #4a148c;
       }
 
       /* The original 50-item layout uses its own highly legible print face.
