@@ -1,4 +1,3 @@
-import { Store } from "lucide-react";
 import { SettingsShell } from "@/components/settings/settings-shell";
 import { requireAppRole } from "@/lib/auth/authorization";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
@@ -50,7 +49,6 @@ export default async function BkkNoodlesPage() {
     <SettingsShell
       title="ใบออเดอร์ รถกรุงเทพบะหมี่"
       description="เลือกร้านที่จะแยกไปอยู่ใบที่ 2 ของรถกรุงเทพ มีผลเฉพาะใบออเดอร์"
-      titleIcon={Store}
       current="customers"
       floatingSubmit={false}
     >
