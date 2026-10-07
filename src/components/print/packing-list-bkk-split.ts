@@ -1,10 +1,4 @@
-export const BKK_NOODLE_CUSTOMER_CODES = new Set([
-  "ANS002", "ANS004", "ANS003", "ANS033", "ANS034", "ANS035", "ANS036", "ANS037",
-  "ANS038", "ANS006", "ANS005", "ANS007", "ANS039", "ANS040", "ANS009", "ANS042",
-  "ANS043", "ANS044", "ANS045", "ANS046", "ANS047", "ANS011", "ANS019", "ANS050",
-  "ANS021", "ANS052", "ANS053", "ANS054", "ANS055", "ANS056", "ANS189", "ANS058",
-  "ANS026", "ANS028", "ANS060", "ANS061", "ANS062", "ANS063", "ANS064",
-]);
+export const BKK_NOODLE_GROUP = "bkk_noodle";
 
 export function isBangkokVehicleGroup(vehicleId: string | null, vehicleName: string | null): boolean {
   if (vehicleName && (vehicleName.includes("กรุงเทพ") || vehicleName.toLowerCase().includes("bkk"))) {
@@ -16,15 +10,11 @@ export function isBangkokVehicleGroup(vehicleId: string | null, vehicleName: str
   return false;
 }
 
-export function isBkkNoodleCustomer(customerCode: string): boolean {
-  const baseCode = customerCode.replace(/-R$/, "").trim().toUpperCase();
-  return BKK_NOODLE_CUSTOMER_CODES.has(baseCode);
-}
-
 export type PackingListStoreLike = {
   id: string;
   vehicleId: string | null;
   vehicleName: string | null;
+  packingListGroup?: string | null;
 };
 
 export type PackingListVehicleLike = {
@@ -56,7 +46,7 @@ export function buildVehicleGroups(data: {
       data.stores.forEach((store, index) => {
         if (store.vehicleId === vehicle.id || isBangkokVehicleGroup(store.vehicleId, store.vehicleName)) {
           allBkkStoreIndices.push(index);
-          if (isBkkNoodleCustomer(store.id)) {
+          if (store.packingListGroup === BKK_NOODLE_GROUP) {
             noodleStoreIndices.push(index);
           } else {
             mainStoreIndices.push(index);

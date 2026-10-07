@@ -1,26 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import {
-  BKK_NOODLE_CUSTOMER_CODES,
-  buildVehicleGroups,
-  isBangkokVehicleGroup,
-  isBkkNoodleCustomer,
-} from "./packing-list-bkk-split.ts";
-
-test("BKK_NOODLE_CUSTOMER_CODES contains exactly 39 target customer codes", () => {
-  assert.equal(BKK_NOODLE_CUSTOMER_CODES.size, 39);
-  assert.ok(BKK_NOODLE_CUSTOMER_CODES.has("ANS002"));
-  assert.ok(BKK_NOODLE_CUSTOMER_CODES.has("ANS064"));
-  assert.ok(!BKK_NOODLE_CUSTOMER_CODES.has("ANS001"));
-  assert.ok(!BKK_NOODLE_CUSTOMER_CODES.has("ANS015"));
-});
-
-test("isBkkNoodleCustomer identifies noodle customers and handles replacement suffixes", () => {
-  assert.equal(isBkkNoodleCustomer("ANS002"), true);
-  assert.equal(isBkkNoodleCustomer("ANS002-R"), true);
-  assert.equal(isBkkNoodleCustomer("ANS001"), false);
-  assert.equal(isBkkNoodleCustomer("ANS015-R"), false);
-});
+import { buildVehicleGroups, isBangkokVehicleGroup } from "./packing-list-bkk-split.ts";
 
 test("isBangkokVehicleGroup detects Bangkok vehicle by ID or name", () => {
   assert.equal(isBangkokVehicleGroup("67c8b5f9-6cdf-4c83-a464-40827f561939", "รถกรุงเทพ"), true);
@@ -33,14 +13,15 @@ test("buildVehicleGroups splits Bangkok vehicle into รถกรุงเทพ
     { id: "v-bkk", name: "รถกรุงเทพ" },
     { id: "v-surat", name: "รถสุราษฎร์1" },
   ];
+  const noodle = "bkk_noodle";
 
   // Stores already sorted by customer sort_order:
   const stores = [
     { id: "ANS015", vehicleId: "v-bkk", vehicleName: "รถกรุงเทพ" }, // other store (index 0)
-    { id: "ANS002", vehicleId: "v-bkk", vehicleName: "รถกรุงเทพ" }, // noodle store (index 1)
+    { id: "ANS002", vehicleId: "v-bkk", vehicleName: "รถกรุงเทพ", packingListGroup: noodle }, // index 1
     { id: "ANS001", vehicleId: "v-bkk", vehicleName: "รถกรุงเทพ" }, // other store (index 2)
-    { id: "ANS004", vehicleId: "v-bkk", vehicleName: "รถกรุงเทพ" }, // noodle store (index 3)
-    { id: "ANS003-R", vehicleId: "v-bkk", vehicleName: "รถกรุงเทพ" }, // noodle store replacement (index 4)
+    { id: "ANS004", vehicleId: "v-bkk", vehicleName: "รถกรุงเทพ", packingListGroup: noodle }, // index 3
+    { id: "ANS003-R", vehicleId: "v-bkk", vehicleName: "รถกรุงเทพ", packingListGroup: noodle }, // replacement (index 4)
     { id: "SUR001", vehicleId: "v-surat", vehicleName: "รถสุราษฎร์1" }, // surat store (index 5)
   ];
 

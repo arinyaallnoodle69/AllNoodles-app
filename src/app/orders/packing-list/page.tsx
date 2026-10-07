@@ -47,6 +47,7 @@ type OrderCustomer = {
   customer_code: string;
   default_vehicle_id: string | null;
   sort_order?: number | null;
+  packing_list_group?: string | null;
   vehicles: unknown;
 };
 
@@ -205,7 +206,7 @@ async function PackingListPage({ searchParams }: Props) {
       id,
       assigned_vehicle_id,
       order_date,
-      customers!inner(id, name, customer_code, default_vehicle_id, sort_order, vehicles(id, name)),
+      customers!inner(id, name, customer_code, default_vehicle_id, sort_order, packing_list_group, vehicles(id, name)),
       delivery_notes!order_id(vehicle_id, status, created_at, vehicles(id, name)),
       order_items(
         notes,
@@ -597,6 +598,7 @@ async function PackingListPage({ searchParams }: Props) {
             consolidatedItems: group.items,
             missingWeightProductIds: Array.from(group.missingWeightProductIds),
             totalWeightGrams: group.totalWeightGrams,
+            packingListGroup: group.customer.packing_list_group ?? null,
           }),
         );
 
@@ -635,6 +637,7 @@ async function PackingListPage({ searchParams }: Props) {
           vehicleName: store.vehicleName,
           missingWeightProductIds: store.missingWeightProductIds,
           totalWeightGrams: store.totalWeightGrams,
+          packingListGroup: store.packingListGroup,
         })),
         products: products.map((product) => ({
           key: product.key,

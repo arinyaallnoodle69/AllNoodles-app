@@ -1311,9 +1311,31 @@ export async function fetchCustomerLastOrderItemsAction(
     .in("order_id", orderIds)
     .order("created_at", { ascending: true });
 
+  // Items saved in one batch share the same created_at, so Postgres returns them in
+  // arbitrary order. Break ties by product display_order then sku for a stable result.
+  const productIdsForSort = Array.from(new Set((orderItems ?? []).map((row) => row.product_id)));
+  const { data: sortProducts } = productIdsForSort.length
+    ? await admin
+        .from("products")
+        .select("id, sku, display_order")
+        .in("id", productIdsForSort)
+    : { data: [] as { id: string; sku: string | null; display_order: number | null }[] };
+  const sortInfo = new Map(
+    (sortProducts ?? []).map((p) => [p.id, { order: p.display_order ?? Number.MAX_SAFE_INTEGER, sku: p.sku ?? "" }]),
+  );
+  const sortedOrderItems = [...(orderItems ?? [])].sort((a, b) => {
+    const timeDiff = new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+    if (timeDiff !== 0) return timeDiff;
+    const infoA = sortInfo.get(a.product_id);
+    const infoB = sortInfo.get(b.product_id);
+    const orderDiff = (infoA?.order ?? Number.MAX_SAFE_INTEGER) - (infoB?.order ?? Number.MAX_SAFE_INTEGER);
+    if (orderDiff !== 0) return orderDiff;
+    return (infoA?.sku ?? "").localeCompare(infoB?.sku ?? "", undefined, { numeric: true });
+  });
+
   const grouped = new Map<string, CustomerLastOrderItem>();
 
-  for (const row of orderItems ?? []) {
+  for (const row of sortedOrderItems) {
     // Replacements are one-off shipments, never repeat them via last-order import.
     if (row.notes === "ส่งชดเชย (ไม่คิดเงิน)") continue;
     const saleUnitId = row.product_sale_unit_id;

@@ -23,6 +23,12 @@ const options = [
     label: "จัดการร้านค้า",
   },
   {
+    description: "เลือกร้านของรถกรุงเทพที่จะแยกเป็นใบที่ 2 (รถกรุงเทพบะหมี่) ในใบออเดอร์",
+    href: "/settings/customers/bkk-noodles",
+    icon: Store,
+    label: "ใบออเดอร์ รถกรุงเทพบะหมี่",
+  },
+  {
     description: "อัปโหลดและเปลี่ยนรูปโลโก้ร้านค้า สำหรับพิมพ์หัวบิล หน้าจอหลัก และระบบ",
     href: "/settings/logo",
     icon: ImageIcon,

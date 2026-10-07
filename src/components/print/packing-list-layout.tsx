@@ -17,6 +17,7 @@ export type PackingListStore = {
   vehicleName: string | null;
   missingWeightProductIds: string[];
   totalWeightGrams: number;
+  packingListGroup?: string | null;
 };
 
 export type PackingListProduct = {

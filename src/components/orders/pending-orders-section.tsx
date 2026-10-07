@@ -687,7 +687,7 @@ export function StoreDeliveryModal({
           if (printData) {
             setDeliveryPrintData(printData);
             // Allow DOM to render offscreen DeliveryNoteLayout so toPng captures high-quality previewImages
-            await new Promise((resolve) => setTimeout(resolve, 80));
+            await new Promise((resolve) => setTimeout(resolve, 120));
           }
         } catch (fetchErr) {
           console.warn("[delivery/share-pdf] Failed to fetch delivery print data:", fetchErr);
@@ -1153,7 +1153,8 @@ export function StoreDeliveryModal({
             position: "fixed",
             left: "-99999px",
             top: 0,
-            width: "210mm",
+            width: "794px",
+            minHeight: "1123px",
             pointerEvents: "none",
             zIndex: -100,
           }}

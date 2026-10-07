@@ -1,5 +1,9 @@
+import { inlineCaptureImages, restoreCaptureImages } from "@/components/print/print-image-cache";
+
 const DELIVERY_SHEET_WIDTH_MM = 210;
 const DELIVERY_SHEET_HEIGHT_MM = 297;
+const FALLBACK_CAPTURE_WIDTH = 794;
+const FALLBACK_CAPTURE_HEIGHT = 1123;
 
 let cachedFontEmbedCSS: string | null = null;
 
@@ -18,7 +22,9 @@ function isWebKitOrSafari() {
 }
 
 export async function preloadDeliveryFontEmbedCSS() {
-  if (typeof window === "undefined" || cachedFontEmbedCSS) return;
+  if (typeof window === "undefined" || (cachedFontEmbedCSS && cachedFontEmbedCSS.includes("Angsana New Delivery Note"))) return;
+  const hasDeliveryNote = Boolean(document.querySelector("[data-delivery-note-page='true']"));
+  if (!hasDeliveryNote) return;
   try {
     const { getFontEmbedCSS } = await import("html-to-image");
     cachedFontEmbedCSS = await Promise.race([
@@ -27,7 +33,6 @@ export async function preloadDeliveryFontEmbedCSS() {
         window.setTimeout(() => reject(new Error("Font CSS preload timeout")), 2000)
       ),
     ]);
-    console.log("[FontPreloader:DeliveryPDF] Web fonts pre-loaded and cached successfully.");
   } catch (e) {
     console.warn("[FontPreloader:DeliveryPDF] Failed to background-preload fonts:", e);
   }
@@ -55,28 +60,6 @@ export function buildDeliveryPdfFileName(input: string | undefined) {
   return `${baseName}.pdf`;
 }
 
-async function waitForImage(image: HTMLImageElement) {
-  try {
-    // Wait for the browser to fully decode the image (essential for base64 / data URLs in Safari)
-    await image.decode();
-  } catch {
-    // Fallback if decode is not supported or fails
-    if (!image.complete) {
-      await new Promise<void>((resolve) => {
-        const done = () => resolve();
-        image.addEventListener("load", done, { once: true });
-        image.addEventListener("error", done, { once: true });
-      });
-    }
-  }
-}
-
-async function waitForDocumentImages(sourceDocument: Document) {
-  const images = Array.from(sourceDocument.images);
-  if (images.length === 0) return;
-  await Promise.all(images.map((image) => waitForImage(image)));
-}
-
 export async function createDeliveryPdfPreviewFromDocument(
   sourceDocument: Document,
   fileName?: string,
@@ -97,7 +80,7 @@ export async function createDeliveryPdfPreviewFromDocument(
     import("html2canvas").then((mod) => mod.default),
   ]);
 
-  if (!cachedFontEmbedCSS) {
+  if (!cachedFontEmbedCSS || !cachedFontEmbedCSS.includes("Angsana New Delivery Note")) {
     try {
       cachedFontEmbedCSS = await Promise.race([
         getFontEmbedCSS(sourceDocument.body || document.body),
@@ -125,89 +108,109 @@ export async function createDeliveryPdfPreviewFromDocument(
     console.warn("Fonts ready timed out, continuing anyway:", e);
   }
 
-  // Wait for images to load with a timeout
+  const inlinedImages = await inlineCaptureImages(pages);
+
   try {
-    await Promise.race([
-      waitForDocumentImages(sourceDocument),
-      new Promise((_, reject) =>
-        window.setTimeout(() => reject(new Error("Images load timeout")), 2500)
-      ),
-    ]);
-  } catch (e) {
-    console.warn("Images load timed out, continuing anyway:", e);
-  }
+    const pdf = new jsPDF({
+      orientation: "portrait",
+      unit: "mm",
+      format: [DELIVERY_SHEET_WIDTH_MM, DELIVERY_SHEET_HEIGHT_MM],
+      compress: true,
+    });
 
-  // Give iOS WebKit a moment to settle and paint fonts/images
-  await new Promise((resolve) => window.setTimeout(resolve, 300));
+    const isWebKit = isWebKitOrSafari();
+    const isMobileDevice =
+      typeof window !== "undefined" &&
+      /iphone|ipad|ipod|android/i.test(window.navigator.userAgent.toLowerCase());
+    // Safe High-DPI: Mobile 2.5x, Desktop 3.0x
+    const selectedPixelRatio = isMobileDevice ? 2.5 : 3.0;
+    const previewImages: string[] = [];
 
-  const pdf = new jsPDF({
-    orientation: "portrait",
-    unit: "mm",
-    format: [DELIVERY_SHEET_WIDTH_MM, DELIVERY_SHEET_HEIGHT_MM],
-    compress: true,
-  });
-
-  const isWebKit = isWebKitOrSafari();
-  const isMobileDevice = typeof window !== "undefined" && /iphone|ipad|ipod|android/i.test(window.navigator.userAgent.toLowerCase());
-  // Mobile: 2.5x (safe from iOS Safari memory limits while producing 240+ DPI crisp text)
-  // Desktop: 3.0x (300 DPI vector-sharp quality)
-  const selectedPixelRatio = isMobileDevice ? 2.5 : 3.0;
-  const previewImages: string[] = [];
-
-  for (const [index, page] of pages.entries()) {
-    if (index > 0) {
-      pdf.addPage([DELIVERY_SHEET_WIDTH_MM, DELIVERY_SHEET_HEIGHT_MM], "portrait");
-    }
-
-    // Warm-up call to force WebKit/Safari to decode and cache cloned image elements
-    if (isWebKit) {
-      try {
-        await toPng(page, {
-          backgroundColor: "#ffffff",
-          height: page.offsetHeight,
-          pixelRatio: selectedPixelRatio,
-          width: page.offsetWidth,
-          fontEmbedCSS: cachedFontEmbedCSS || undefined,
-        });
-        await new Promise((resolve) => window.setTimeout(resolve, 80));
-      } catch (e) {
-        console.warn("Warm-up toPng failed:", e);
+    for (const [index, page] of pages.entries()) {
+      if (index > 0) {
+        pdf.addPage([DELIVERY_SHEET_WIDTH_MM, DELIVERY_SHEET_HEIGHT_MM], "portrait");
       }
+
+      const datasetWidth = Number(page.dataset.captureWidth ?? "");
+      const datasetHeight = Number(page.dataset.captureHeight ?? "");
+      const captureWidth = datasetWidth || page.offsetWidth || FALLBACK_CAPTURE_WIDTH;
+      const captureHeight = datasetHeight || page.offsetHeight || FALLBACK_CAPTURE_HEIGHT;
+
+      const captureStyle = {
+        width: `${captureWidth}px`,
+        height: `${captureHeight}px`,
+        maxWidth: "none",
+        maxHeight: "none",
+        margin: "0",
+        boxShadow: "none",
+        display: "block",
+        transform: "none",
+        transformOrigin: "top left",
+      };
+
+      // Warm-up call to force WebKit/Safari to decode and cache cloned image elements
+      if (isWebKit) {
+        try {
+          await toPng(page, {
+            backgroundColor: "#ffffff",
+            height: captureHeight,
+            pixelRatio: selectedPixelRatio,
+            width: captureWidth,
+            fontEmbedCSS: cachedFontEmbedCSS || undefined,
+            style: captureStyle,
+          });
+          await new Promise((resolve) => window.setTimeout(resolve, 80));
+        } catch (e) {
+          console.warn("Warm-up toPng failed:", e);
+        }
+      }
+
+      let imageDataUrl: string;
+      try {
+        imageDataUrl = await toPng(page, {
+          backgroundColor: "#ffffff",
+          height: captureHeight,
+          pixelRatio: selectedPixelRatio,
+          width: captureWidth,
+          fontEmbedCSS: cachedFontEmbedCSS || undefined,
+          style: captureStyle,
+        });
+      } catch (captureErr) {
+        console.warn("html-to-image failed, falling back to html2canvas:", captureErr);
+        const canvas = await html2canvas(page, {
+          width: captureWidth,
+          height: captureHeight,
+          scale: selectedPixelRatio,
+          backgroundColor: "#ffffff",
+          useCORS: true,
+          logging: false,
+        });
+        imageDataUrl = canvas.toDataURL("image/png");
+      }
+
+      previewImages.push(imageDataUrl);
+      pdf.addImage(
+        imageDataUrl,
+        "PNG",
+        0,
+        0,
+        DELIVERY_SHEET_WIDTH_MM,
+        DELIVERY_SHEET_HEIGHT_MM,
+        undefined,
+        "FAST",
+      );
+
+      // Yield control to the main thread to keep UI responsive between rendering pages
+      await new Promise((resolve) => window.setTimeout(resolve, 0));
     }
 
-    let imageDataUrl: string;
-    try {
-      imageDataUrl = await toPng(page, {
-        backgroundColor: "#ffffff",
-        height: page.offsetHeight,
-        pixelRatio: selectedPixelRatio,
-        width: page.offsetWidth,
-        fontEmbedCSS: cachedFontEmbedCSS || undefined,
-      });
-    } catch (captureErr) {
-      console.warn("html-to-image failed, falling back to html2canvas:", captureErr);
-      const canvas = await html2canvas(page, {
-        width: page.offsetWidth,
-        height: page.offsetHeight,
-        scale: selectedPixelRatio,
-        backgroundColor: "#ffffff",
-        useCORS: true,
-        logging: false,
-      });
-      imageDataUrl = canvas.toDataURL("image/png");
-    }
-
-    previewImages.push(imageDataUrl);
-    pdf.addImage(imageDataUrl, "PNG", 0, 0, DELIVERY_SHEET_WIDTH_MM, DELIVERY_SHEET_HEIGHT_MM, undefined, "FAST");
-
-    // Yield control to the main thread to keep UI responsive between rendering pages
-    await new Promise((resolve) => window.setTimeout(resolve, 0));
+    const pdfBlob = pdf.output("blob");
+    const pdfFileName = buildDeliveryPdfFileName(fileName);
+    const file = new File([pdfBlob], pdfFileName, { type: "application/pdf" });
+    return { file, previewImages };
+  } finally {
+    restoreCaptureImages(inlinedImages);
   }
-
-  const pdfBlob = pdf.output("blob");
-  const pdfFileName = buildDeliveryPdfFileName(fileName);
-  const file = new File([pdfBlob], pdfFileName, { type: "application/pdf" });
-  return { file, previewImages };
 }
 
 export async function createDeliveryPdfFileFromDocument(sourceDocument: Document, fileName?: string) {
