@@ -37,6 +37,7 @@ import { DailySpecialOrderManager } from "@/components/orders/daily-special-orde
 import { getDailySpecialCatalog, getDailySpecialItems, getDailySpecialPrintItems } from "@/lib/orders/daily-special-items";
 import { FACTORY_ADJUSTMENT_SKUS, getDailyFactoryOrderAdjustments } from "@/lib/orders/factory-order-adjustments";
 import { getFactoryOrderSheetData } from "@/lib/orders/vehicle-product-summary";
+import { getBangkokFactoryAdjustmentDemand } from "@/lib/orders/factory-adjustment-demand";
 import { calculateFreshReserve } from "@/lib/orders/fresh-reserve-math";
 import {
   VehicleSalesSummary,
@@ -224,13 +225,7 @@ export default async function IncomingOrdersPage({ searchParams }: IncomingOrder
   const orders = ordersBundle.orders;
   const summaryItems = ordersBundle.summaryItems;
   const billedDeliveryNumbers = new Set(billedDeliveryNumbersArray);
-  const factoryDemandByProductId = new Map<string, number>();
-  for (const sheet of rawFactorySheets) {
-    sheet.products.forEach((product, index) => {
-      const demand = (sheet.qty[index] ?? []).reduce((sum, quantity) => sum + Number(quantity ?? 0), 0);
-      factoryDemandByProductId.set(product.id, (factoryDemandByProductId.get(product.id) ?? 0) + demand);
-    });
-  }
+  const factoryDemandByProductId = getBangkokFactoryAdjustmentDemand(rawFactorySheets);
   const factoryAdjustmentByProductId = new Map(factoryAdjustments.map((item) => [item.productId, item]));
   const factoryAdjustmentProducts = specialCatalog
     .filter((product) => FACTORY_ADJUSTMENT_SKUS.includes(product.sku.trim().toUpperCase() as typeof FACTORY_ADJUSTMENT_SKUS[number]))

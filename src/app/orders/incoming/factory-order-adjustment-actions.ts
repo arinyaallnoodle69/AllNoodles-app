@@ -4,6 +4,7 @@ import { revalidatePath, updateTag } from "next/cache";
 import { requireAnyRole } from "@/lib/auth/authorization";
 import { FACTORY_ADJUSTMENT_SKUS } from "@/lib/orders/factory-order-adjustments";
 import { getFactoryOrderSheetData } from "@/lib/orders/vehicle-product-summary";
+import { getBangkokFactoryAdjustmentDemand } from "@/lib/orders/factory-adjustment-demand";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import type { Json } from "@/types/database";
 
@@ -53,13 +54,9 @@ export async function saveFactoryOrderAdjustmentsAction(
     return { ok: false, error: "ปรับยอดได้เฉพาะ ANP180, ANP181 และ ANP182" };
   }
 
-  const demandByProductId = new Map<string, number>();
-  for (const sheet of await getFactoryOrderSheetData(session.organizationId, date, date, { applyAdjustments: false })) {
-    sheet.products.forEach((product, index) => {
-      const demand = (sheet.qty[index] ?? []).reduce((sum, quantity) => sum + Number(quantity ?? 0), 0);
-      demandByProductId.set(product.id, (demandByProductId.get(product.id) ?? 0) + demand);
-    });
-  }
+  const demandByProductId = getBangkokFactoryAdjustmentDemand(
+    await getFactoryOrderSheetData(session.organizationId, date, date, { applyAdjustments: false }),
+  );
   if (rows.some((row) => Math.abs(row.orderDemand - (demandByProductId.get(row.productId) ?? 0)) > 0.001)) {
     return { ok: false, error: "ยอดออเดอร์มีการเปลี่ยนแปลง กรุณาเปิดหน้าปรับยอดใหม่" };
   }
