@@ -8,8 +8,11 @@ import { AlertTriangle, CheckCircle2, Image as ImageIcon, Loader2, Package2, Pri
 import {
   createDeliveryNoteAction,
   getDeliveryFormDataAction,
+  getDeliveryNotePrintDataAction,
   getStoreDeliveryDataAction,
 } from "@/app/orders/delivery-actions";
+import { DeliveryNoteLayout } from "@/components/print/delivery-note-layout";
+import type { DeliveryNotePrintData } from "@/lib/delivery/print";
 import type { CreateDeliveryState } from "@/app/orders/delivery-actions";
 import type { DeliveryFormData, DeliveryItemData, PendingOrder } from "@/lib/delivery/admin";
 import { DeliveryPdfPreviewModal } from "@/components/print/delivery-pdf-preview-modal";
@@ -542,6 +545,7 @@ export function StoreDeliveryModal({
   const [results, setResults] = useState<CreateDeliveryState[]>([]);
   const [isSharingPdf, setIsSharingPdf] = useState(false);
   const [previewPdf, setPreviewPdf] = useState<DeliveryPdfPreview | null>(null);
+  const [deliveryPrintData, setDeliveryPrintData] = useState<DeliveryNotePrintData | null>(null);
 
   const hasAnyQty = groupedItems.some((g) => parseFloat(qtys[g.groupKey] ?? "0") > 0);
 
@@ -569,6 +573,7 @@ export function StoreDeliveryModal({
 
   useEffect(() => {
     setPreviewPdf(null);
+    setDeliveryPrintData(null);
   }, [notes, qtys, selectedVehicleId]);
 
   function buildDeliveryItemsPayload() {
@@ -674,9 +679,25 @@ export function StoreDeliveryModal({
         ? `/delivery/print?note_ids=${encodeURIComponent(result.deliveryId)}&date=${orders[0].orderDate}`
         : `/delivery/print?date=${orders[0].orderDate}&customer=${orders[0].customerId}`;
 
+      const fileName = `บิลจัดส่ง_${result.deliveryNumber ?? orders[0].orderDate}_${customerName}`;
+
+      if (result.deliveryId) {
+        try {
+          const printData = await getDeliveryNotePrintDataAction(result.deliveryId);
+          if (printData) {
+            setDeliveryPrintData(printData);
+            // Allow DOM to render offscreen DeliveryNoteLayout so toPng captures high-quality previewImages
+            await new Promise((resolve) => setTimeout(resolve, 80));
+          }
+        } catch (fetchErr) {
+          console.warn("[delivery/share-pdf] Failed to fetch delivery print data:", fetchErr);
+        }
+      }
+
       const pdf = await createDeliveryPdfPreviewFromUrl(
         printUrl,
-        `บิลจัดส่ง_${result.deliveryNumber ?? orders[0].orderDate}_${customerName}`,
+        fileName,
+        document,
       );
       setPreviewPdf(pdf);
     } catch (error) {
@@ -1119,8 +1140,26 @@ export function StoreDeliveryModal({
         <DeliveryPdfPreviewModal
           file={previewPdf.file}
           previewImages={previewPdf.previewImages}
-          onClose={() => setPreviewPdf(null)}
+          onClose={() => {
+            setPreviewPdf(null);
+            setDeliveryPrintData(null);
+          }}
         />
+      ) : null}
+      {deliveryPrintData ? (
+        <div
+          aria-hidden="true"
+          style={{
+            position: "fixed",
+            left: "-99999px",
+            top: 0,
+            width: "210mm",
+            pointerEvents: "none",
+            zIndex: -100,
+          }}
+        >
+          <DeliveryNoteLayout dns={[deliveryPrintData]} isEmbedded />
+        </div>
       ) : null}
     </div>
   );

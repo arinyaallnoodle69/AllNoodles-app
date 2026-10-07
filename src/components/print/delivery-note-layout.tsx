@@ -25,6 +25,7 @@ type Props = {
   logoDataUrl?: string;
   showAmount?: boolean;
   priceMode?: PriceDisplayMode;
+  isEmbedded?: boolean;
 };
 
 function resolvePriceMode(priceMode?: PriceDisplayMode, showAmount?: boolean): PriceDisplayMode {
@@ -362,7 +363,7 @@ function DeliveryNotePageView({
   );
 }
 
-export function DeliveryNoteLayout({ dns, showAmount, priceMode: propPriceMode }: Props) {
+export function DeliveryNoteLayout({ dns, showAmount, priceMode: propPriceMode, isEmbedded = false }: Props) {
   const resolvedPriceMode = resolvePriceMode(propPriceMode, showAmount);
   const notePages = buildNotePages(dns);
 
@@ -411,7 +412,7 @@ export function DeliveryNoteLayout({ dns, showAmount, priceMode: propPriceMode }
           }
         }
 
-        @media screen {
+        ${isEmbedded ? "" : `@media screen {
           body {
             background: #e5e7eb;
             min-height: 100vh;
@@ -422,7 +423,7 @@ export function DeliveryNoteLayout({ dns, showAmount, priceMode: propPriceMode }
             gap: 16px;
             overflow-x: hidden;
           }
-        }
+        }`}
 
         @font-face {
           font-family: "Angsana New Delivery Note";

@@ -6,6 +6,7 @@ import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { parseInstallmentPaid } from "@/lib/delivery/installment";
 import { getOrderItemsForDelivery, getStoreOrdersForDelivery } from "@/lib/delivery/admin";
 import { getOrderRequiredWarehouse } from "@/lib/warehouses";
+import { getDeliveryNotePrintData } from "@/lib/delivery/print";
 import type { DeliveryFormData } from "@/lib/delivery/admin";
 
 export type BatchDeliveryReviewStoreInput = {
@@ -777,4 +778,9 @@ export async function createBatchDeliveryNotesFromStoresAction(
   }));
 
   return createBatchDeliveryNotesAction(payload, deliveryDate);
+}
+
+export async function getDeliveryNotePrintDataAction(deliveryNoteId: string) {
+  const session = await requireAnyRole(["admin", "member", "warehouse"]);
+  return getDeliveryNotePrintData(session.organizationId, deliveryNoteId);
 }
