@@ -200,7 +200,8 @@ export async function mergeItemsIntoOrder(
     }
 
     const newRow = {
-      ...(item.isReplacement ? { is_replacement: true, notes: "ส่งชดเชย (ไม่คิดเงิน)" } : {}),
+      is_replacement: item.isReplacement === true,
+      ...(item.isReplacement ? { notes: "ส่งชดเชย (ไม่คิดเงิน)" } : {}),
       cost_price: Number(item.costPrice) || 0,
       line_total: incomingLineTotal,
       order_id: input.orderId,

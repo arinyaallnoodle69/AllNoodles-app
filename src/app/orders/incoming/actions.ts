@@ -799,7 +799,7 @@ export async function updateOrderItemsBatchAction(input: {
             : Number(saleUnit.fixed_cost_price),
       });
 
-      itemsToInsert.push({
+      const newItem = {
         ...(add.isReplacement ? { is_replacement: true, notes: "ส่งชดเชย (ไม่คิดเงิน)" } : {}),
         order_id: orderId,
         organization_id: session.organizationId,
@@ -812,7 +812,10 @@ export async function updateOrderItemsBatchAction(input: {
         sale_unit_label: saleUnit.unit_label,
         sale_unit_ratio: ratio,
         cost_price: effectiveCost,
-      });
+      };
+      itemsToInsert.push(
+        Object.assign(newItem, { is_replacement: add.isReplacement === true }),
+      );
     }
   }
 
@@ -2735,5 +2738,3 @@ export async function deleteOrderCascadeActionV3(formData: FormData): Promise<Ac
   invalidateIncomingOrderCaches(session.organizationId);
   return { success: true };
 }
-
-

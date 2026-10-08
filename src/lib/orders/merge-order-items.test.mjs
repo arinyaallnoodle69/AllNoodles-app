@@ -42,3 +42,26 @@ test("saving into an existing order preserves paid and replacement rows independ
   assert.equal(writes.find((row) => row.id === "replacement").quantity, 15);
   assert.equal(writes.find((row) => row.id === "replacement").unit_price, 0);
 });
+
+test("new paid and replacement rows always include an explicit replacement flag", async () => {
+  let inserted;
+  const admin = { from() { return {
+    select() { return { eq() { return { order: async () => ({ data: [], error: null }) }; } }; },
+    insert(rows) { inserted = rows; return Promise.resolve({ error: null }); },
+  }; } };
+  const base = { costPrice: 5, productId: "A", productSaleUnitId: "kg", quantity: 2, quantityInBaseUnit: 2, saleUnitLabel: "กก.", saleUnitRatio: 1, unitPrice: 35 };
+  const result = await sandboxModule.exports.mergeItemsIntoOrder(admin, {
+    items: [base, { ...base, isReplacement: true, unitPrice: 999 }],
+    orderId: "order",
+    organizationId: "org",
+  });
+
+  assert.equal(result.success, true);
+  assert.equal(inserted[0].is_replacement, false);
+  assert.equal(inserted[1].is_replacement, true);
+  assert.equal(inserted[0].unit_price, 35);
+  assert.equal(inserted[0].line_total, 70);
+  assert.equal(inserted[1].unit_price, 0);
+  assert.equal(inserted[1].line_total, 0);
+  assert.equal(inserted[1].notes, "ส่งชดเชย (ไม่คิดเงิน)");
+});

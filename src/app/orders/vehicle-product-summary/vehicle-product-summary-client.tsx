@@ -109,6 +109,7 @@ export function VehicleProductSummaryClient({
     const newVehicles = selectedVehiclesMeta.map((v) => ({
       id: v.id,
       name: v.name,
+      colorIndex: v.originalIndex,
     }));
 
     const newQty = summaryData.products.map((_, pIndex) =>

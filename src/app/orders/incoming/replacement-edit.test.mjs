@@ -49,6 +49,7 @@ test("editing adds a separate free shipment without overwriting customer prices"
   });
   assert.equal(result.success, true);
   assert.equal(inserted.length, 2);
+  assert.equal(inserted[0].is_replacement, false);
   assert.equal(inserted[0].line_total, 3500);
   assert.equal(inserted[1].is_replacement, true);
   assert.equal(inserted[1].unit_price, 0);

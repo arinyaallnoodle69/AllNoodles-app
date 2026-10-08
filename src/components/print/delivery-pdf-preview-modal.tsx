@@ -212,7 +212,7 @@ export function DeliveryPdfPreviewModal({
   }
 
   return createPortal(
-    <div className="fixed inset-0 z-[900] bg-[#4A148C]/40 p-0 text-[#4A148C] backdrop-blur-sm sm:flex sm:items-center sm:justify-center sm:p-6">
+    <div className="fixed inset-0 z-[100000] bg-[#4A148C]/40 p-0 text-[#4A148C] backdrop-blur-sm sm:flex sm:items-center sm:justify-center sm:p-6">
       <button
         type="button"
         onClick={handleClose}

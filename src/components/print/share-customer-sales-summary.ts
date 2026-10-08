@@ -1,4 +1,5 @@
 import type { DeliveryPdfPreview } from "./share-delivery-pdf";
+import { captureElementToPng } from "./print-export-service";
 
 function createCapturePage(report: HTMLElement, sourceDocument: Document) {
   const page = report.cloneNode(true) as HTMLElement;
@@ -167,17 +168,24 @@ export async function createCustomerSalesPdfPreviewFromDocument(
   sourceDocument: Document,
   fileNameBase = "customer-sales-summary",
 ): Promise<DeliveryPdfPreview | null> {
-  await sourceDocument.fonts.ready;
+  try {
+    await Promise.race([
+      sourceDocument.fonts.ready,
+      new Promise((_, reject) =>
+        window.setTimeout(() => reject(new Error("Fonts ready timeout")), 2000),
+      ),
+    ]);
+  } catch (error) {
+    console.warn("[CustomerSales:SavePdf] Fonts ready timed out, continuing:", error);
+  }
+
   const report = sourceDocument.querySelector<HTMLElement>("[data-customer-sales-report]");
   if (!report) throw new Error("ไม่พบรายงานสำหรับสร้าง PDF");
 
   const { host, pages } = buildCustomerSalesPages(report, sourceDocument);
   try {
     await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
-    const [{ toPng }, { jsPDF }] = await Promise.all([
-      import("html-to-image"),
-      import("jspdf"),
-    ]);
+    const { jsPDF } = await import("jspdf");
 
     const pdf = new jsPDF({
       orientation: "portrait",
@@ -188,20 +196,15 @@ export async function createCustomerSalesPdfPreviewFromDocument(
 
     const previewImages: string[] = [];
 
-    const isMobile = /iPad|iPhone|iPod|Android/i.test(navigator.userAgent)
-      || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
-    const pixelRatio = isMobile ? 2.5 : 3.0;
-
     for (const [index, page] of pages.entries()) {
       if (index > 0) {
         pdf.addPage([210, 297], "portrait");
       }
 
-      const dataUrl = await toPng(page, {
-        backgroundColor: "#ffffff",
-        pixelRatio,
+      const dataUrl = await captureElementToPng(page, {
         width: page.offsetWidth,
         height: page.offsetHeight,
+        backgroundColor: "#ffffff",
       });
 
       previewImages.push(dataUrl);

@@ -171,7 +171,7 @@ function DeliveryModal({
       if (data) {
         const init: Record<string, string> = {};
         for (const item of data.items) {
-          const defaultQty = getRemainingSaleUnitQty(item);
+          const defaultQty = getOrderedSaleUnitQty(item);
           init[item.orderItemId] =
             defaultQty > 0 ? formatNum(defaultQty, 3).replace(/,/g, "") : "";
         }
@@ -331,16 +331,9 @@ function DeliveryModal({
                           min="0"
                           step="any"
                           value={qty}
-                          onChange={(e) =>
-                            setQtys((prev) => ({
-                              ...prev,
-                              [item.orderItemId]: e.target.value,
-                            }))
-                          }
-                          className={`w-24 rounded-xl border px-3 py-2 text-right text-base font-bold outline-none transition focus:ring-2 ${
-                            "border-slate-200 bg-white text-slate-950 focus:border-[#4A148C] focus:ring-[#4A148C]/10"
-                          }`}
-                          placeholder="0"
+                          readOnly
+                          aria-label={`จำนวนตามออเดอร์ ${item.productName}`}
+                          className="w-24 cursor-not-allowed rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-right text-base font-bold text-slate-700 outline-none"
                         />
                         <span className="min-w-[3rem] text-sm text-slate-500">
                           {item.saleUnitLabel}
@@ -525,11 +518,11 @@ export function StoreDeliveryModal({
   const groupedItems = useMemo(() => buildGroupedItemsForOrders(orders), [orders]);
 
   // qtys keyed by product + sale unit
-  const [qtys, setQtys] = useState<Record<string, string>>(() => {
+  const [qtys] = useState<Record<string, string>>(() => {
     const init: Record<string, string> = {};
     for (const group of groupedItems) {
       init[group.groupKey] =
-        group.totalRemaining > 0 ? formatNum(group.totalRemaining, 3).replace(/,/g, "") : "";
+        group.totalOrdered > 0 ? formatNum(group.totalOrdered, 3).replace(/,/g, "") : "";
     }
     return init;
   });
@@ -588,7 +581,7 @@ export function StoreDeliveryModal({
         const key = toGroupKey(item.productId, item.saleUnitLabel);
         const remaining = toDistribute.get(key) ?? 0;
         if (remaining <= 0) continue;
-        const itemMax = getRemainingSaleUnitQty(item);
+        const itemMax = getOrderedSaleUnitQty(item);
         const qty = Math.min(remaining, itemMax);
         if (qty <= 0) continue;
         toDistribute.set(key, remaining - qty);
@@ -811,13 +804,9 @@ export function StoreDeliveryModal({
                       min="0"
                       step="any"
                       value={qty}
-                      onChange={(e) =>
-                        setQtys((prev) => ({ ...prev, [item.groupKey]: e.target.value }))
-                      }
-                      className={`w-20 rounded-xl border px-2 py-2 text-center text-sm font-bold outline-none transition focus:ring-2 ${
-                        "border-slate-200 bg-white text-slate-950 focus:border-[#4A148C] focus:ring-[#4A148C]/10"
-                      }`}
-                      placeholder="0"
+                      readOnly
+                      aria-label={`จำนวนตามออเดอร์ ${item.productName}`}
+                      className="w-20 cursor-not-allowed rounded-xl border border-slate-200 bg-white px-2 py-2 text-center text-sm font-bold text-slate-700 outline-none"
                     />
                     <span className="text-xs text-slate-500">{item.saleUnitLabel}</span>
                   </div>
@@ -930,13 +919,9 @@ export function StoreDeliveryModal({
                           min="0"
                           step="any"
                           value={qty}
-                          onChange={(e) =>
-                            setQtys((prev) => ({ ...prev, [item.groupKey]: e.target.value }))
-                          }
-                          className={`w-20 rounded-lg border px-2 py-1.5 text-center text-sm font-bold outline-none transition focus:ring-2 ${
-                            "border-slate-200 bg-white text-slate-950 focus:border-[#4A148C] focus:ring-[#4A148C]/10"
-                          }`}
-                          placeholder="0"
+                          readOnly
+                          aria-label={`จำนวนตามออเดอร์ ${item.productName}`}
+                          className="w-20 cursor-not-allowed rounded-lg border border-slate-200 bg-slate-50 px-2 py-1.5 text-center text-sm font-bold text-slate-700 outline-none"
                         />
                       </div>
                     </td>

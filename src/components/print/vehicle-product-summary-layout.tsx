@@ -21,8 +21,10 @@ function formatQty(value: number) {
   return value > 0 ? value.toLocaleString("th-TH") : "";
 }
 
-function getVehiclePalette(columnIndex: number) {
-  return VEHICLE_COLUMN_PALETTES[columnIndex % VEHICLE_COLUMN_PALETTES.length] ?? VEHICLE_COLUMN_PALETTES[0];
+function getVehiclePalette(vehicleName: string, fallbackIndex: number) {
+  if (vehicleName.includes("ปลีก")) return VEHICLE_COLUMN_PALETTES[1];
+  if (vehicleName.includes("กรุงเทพ")) return VEHICLE_COLUMN_PALETTES[3];
+  return VEHICLE_COLUMN_PALETTES[fallbackIndex % VEHICLE_COLUMN_PALETTES.length] ?? VEHICLE_COLUMN_PALETTES[0];
 }
 
 type VehicleSummarySheetDef = {
@@ -147,7 +149,7 @@ function VehicleSummarySheet({ sheet }: { sheet: VehicleSummarySheetDef }) {
                 <th className="vehicle-summary-table__product-col">สินค้า</th>
                 <th className="vehicle-summary-table__unit-col">หน่วย</th>
                 {data.vehicles.map((vehicle) => {
-                  const palette = getVehiclePalette(vehicleIndex);
+                  const palette = getVehiclePalette(vehicle.name, vehicle.colorIndex ?? vehicleIndex);
                   return (
                     <th
                       key={vehicle.id ?? "unassigned"}
@@ -189,7 +191,7 @@ function VehicleSummarySheet({ sheet }: { sheet: VehicleSummarySheetDef }) {
                   </td>
                   <td className="vehicle-summary-table__unit-cell">{product.unit}</td>
                   {data.vehicles.map((vehicle, currentVehicleIndex) => {
-                    const palette = getVehiclePalette(vehicleIndex);
+                    const palette = getVehiclePalette(vehicle.name, vehicle.colorIndex ?? vehicleIndex);
                     return (
                       <td
                         key={`${product.id}-${vehicle.id ?? "unassigned"}`}

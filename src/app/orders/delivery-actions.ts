@@ -571,6 +571,60 @@ type RpcAdmin = ReturnType<typeof getSupabaseAdmin> & {
   };
 };
 
+async function getCanonicalDeliveryItems(
+  organizationId: string,
+  customerId: string,
+  orderIds: string[],
+) {
+  const admin = getSupabaseAdmin();
+  const uniqueOrderIds = Array.from(new Set(orderIds));
+
+  const { data: orders, error: ordersError } = await admin
+    .from("orders")
+    .select("id")
+    .eq("organization_id", organizationId)
+    .eq("customer_id", customerId)
+    .in("status", ["submitted", "confirmed"])
+    .in("id", uniqueOrderIds);
+
+  if (ordersError) {
+    return { error: "ตรวจสอบออเดอร์ก่อนสร้างบิลส่งของไม่สำเร็จ" };
+  }
+
+  if ((orders ?? []).length !== uniqueOrderIds.length) {
+    return { error: "ไม่พบออเดอร์ที่ยังใช้งานได้ของร้านค้านี้ครบถ้วน" };
+  }
+
+  const { data: orderItems, error: itemsError } = await admin
+    .from("order_items")
+    .select(
+      "id, product_id, product_sale_unit_id, sale_unit_label, sale_unit_ratio, quantity, unit_price",
+    )
+    .eq("organization_id", organizationId)
+    .in("order_id", uniqueOrderIds)
+    .order("created_at", { ascending: true });
+
+  if (itemsError) {
+    return { error: "โหลดรายการออเดอร์เพื่อสร้างบิลส่งของไม่สำเร็จ" };
+  }
+
+  if (!orderItems?.length) {
+    return { error: "ไม่พบรายการสินค้าในออเดอร์" };
+  }
+
+  return {
+    items: orderItems.map((item) => ({
+      orderItemId: item.id,
+      productId: item.product_id,
+      productSaleUnitId: item.product_sale_unit_id,
+      saleUnitLabel: item.sale_unit_label ?? "",
+      saleUnitRatio: Number(item.sale_unit_ratio) || 1,
+      quantityDelivered: Number(item.quantity),
+      unitPrice: Number(item.unit_price),
+    })),
+  };
+}
+
 export async function createDeliveryNoteAction(
   _prev: CreateDeliveryState | null,
   formData: FormData,
@@ -580,7 +634,6 @@ export async function createDeliveryNoteAction(
   const orderIdsJson = String(formData.get("orderIds") ?? "[]");
   const customerId = String(formData.get("customerId") ?? "").trim();
   const notes = String(formData.get("notes") ?? "").trim();
-  const itemsJson = String(formData.get("items") ?? "[]");
   const vehicleId = String(formData.get("vehicleId") ?? "").trim() || null;
   const deliveryDate = normalizeDeliveryDate(formData.get("deliveryDate"));
 
@@ -591,19 +644,13 @@ export async function createDeliveryNoteAction(
     return { status: "error", message: "ข้อมูลออเดอร์ไม่ถูกต้อง" };
   }
 
-  if (!Array.isArray(orderIds) || orderIds.length === 0 || !customerId) {
+  if (
+    !Array.isArray(orderIds) ||
+    orderIds.length === 0 ||
+    !orderIds.every((id): id is string => typeof id === "string" && id.trim().length > 0) ||
+    !customerId
+  ) {
     return { status: "error", message: "ข้อมูลออเดอร์ไม่ครบถ้วน" };
-  }
-
-  let items: unknown[];
-  try {
-    items = JSON.parse(itemsJson);
-  } catch {
-    return { status: "error", message: "ข้อมูลสินค้าไม่ถูกต้อง" };
-  }
-
-  if (!Array.isArray(items) || items.length === 0) {
-    return { status: "error", message: "ต้องใส่จำนวนส่งอย่างน้อย 1 รายการ" };
   }
 
   const rawPreviousOutstanding = formData.get("previousOutstanding");
@@ -611,6 +658,15 @@ export async function createDeliveryNoteAction(
 
   const previousOutstanding = rawPreviousOutstanding !== null && rawPreviousOutstanding !== "" ? Number(rawPreviousOutstanding) : null;
   const installmentPaid = parseInstallmentPaid(rawInstallmentPaid);
+
+  const canonicalItems = await getCanonicalDeliveryItems(
+    session.organizationId,
+    customerId,
+    orderIds,
+  );
+  if (canonicalItems.error) {
+    return { status: "error", message: canonicalItems.error };
+  }
 
   const admin = getSupabaseAdmin() as unknown as RpcAdmin;
   const warehouseResult = await getOrderRequiredWarehouse(session.organizationId, orderIds[0]);
@@ -629,7 +685,7 @@ export async function createDeliveryNoteAction(
     p_delivery_date: deliveryDate,
     p_notes: notes || null,
     p_created_by: session.userId,
-    p_items: items,
+    p_items: canonicalItems.items,
     p_previous_outstanding: previousOutstanding,
     p_installment_paid: installmentPaid,
   });
@@ -677,15 +733,31 @@ export async function createBatchDeliveryNotesAction(
   for (const group of groups) {
     const customerId = group.customerId.trim();
     const orderIds = Array.from(new Set(group.orderIds.map((id) => id.trim()).filter(Boolean)));
-    const items = group.items.filter((item) => item.quantityDelivered > 0);
 
-    if (!customerId || orderIds.length === 0 || items.length === 0) {
+    if (!customerId || orderIds.length === 0) {
       results.push({
         customerId: group.customerId,
         customerName: group.customerName,
         state: {
           status: "error",
           message: "ข้อมูลบิลส่งของไม่ครบถ้วน",
+        },
+      });
+      continue;
+    }
+
+    const canonicalItems = await getCanonicalDeliveryItems(
+      session.organizationId,
+      customerId,
+      orderIds,
+    );
+    if (canonicalItems.error) {
+      results.push({
+        customerId: group.customerId,
+        customerName: group.customerName,
+        state: {
+          status: "error",
+          message: canonicalItems.error,
         },
       });
       continue;
@@ -715,7 +787,7 @@ export async function createBatchDeliveryNotesAction(
       p_delivery_date: normalizedDate,
       p_notes: group.notes?.trim() || null,
       p_created_by: session.userId,
-      p_items: items,
+      p_items: canonicalItems.items,
       p_installment_paid: null,
     });
 

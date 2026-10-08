@@ -25,6 +25,7 @@ export type VehicleSummaryProduct = {
 export type VehicleSummaryVehicle = {
   id: string | null;
   name: string;
+  colorIndex?: number;
 };
 
 export type VehicleProductSummaryData = {

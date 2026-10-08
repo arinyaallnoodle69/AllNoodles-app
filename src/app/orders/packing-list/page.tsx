@@ -9,6 +9,7 @@ import {
   type PackingListStore,
   type PackingListVehicle,
 } from "@/components/print/packing-list-layout";
+import { PackingListVehicleSelector } from "@/components/orders/packing-list-vehicle-selector";
 import { requireAnyRole } from "@/lib/auth/authorization";
 import { PRINT_ORGANIZATION_NAME } from "@/components/print/print-shared";
 import {
@@ -125,6 +126,8 @@ type GroupedStore = {
   missingWeightProductIds: Set<string>;
   specialSort: number;
   totalWeightGrams: number;
+  hasOrder: boolean;
+  isRosterStore?: boolean;
 };
 
 type ProductDescriptor = {
@@ -233,7 +236,7 @@ async function PackingListPage({ searchParams }: Props) {
       ? ordersQueryBase.gte("order_date", date).lte("order_date", endDate)
       : ordersQueryBase.eq("order_date", date);
 
-  const [vehicleRows, ordersResult, productsDb, categoriesDb, categoryItemsDb, brandsDb, specialItems] = await Promise.all([
+  const [vehicleRows, ordersResult, productsDb, categoriesDb, categoryItemsDb, brandsDb, specialItems, customersResult] = await Promise.all([
     admin
       .from("vehicles")
       .select("id, name")
@@ -261,7 +264,18 @@ async function PackingListPage({ searchParams }: Props) {
       .eq("organization_id", session.organizationId)
       .order("sort_order", { ascending: true }),
     getDailySpecialPrintItems(session.organizationId, date, endDate),
+    admin
+      .from("customers")
+      .select("id, name, customer_code, default_vehicle_id, sort_order, metadata, vehicles(id, name)")
+      .eq("organization_id", session.organizationId)
+      .eq("is_active", true)
+      .order("sort_order", { ascending: true })
+      .order("customer_code", { ascending: true }),
   ]);
+
+  if (customersResult.error) {
+    throw new Error(`Failed to load active customers for packing list: ${customersResult.error.message}`);
+  }
 
   const vehicles: PackingListVehicle[] = (vehicleRows.data ?? []).map(
     (vehicle: { id: string; name: string }) => ({
@@ -270,7 +284,6 @@ async function PackingListPage({ searchParams }: Props) {
     }),
   );
   const vehicleSortIndexMap = new Map(vehicles.map((vehicle, index) => [vehicle.id, index]));
-
   const isAllVehicles =
     selectedVehicleIds.length === 0 ||
     selectedVehicleIds.includes("__all__") ||
@@ -428,6 +441,34 @@ async function PackingListPage({ searchParams }: Props) {
     .map(([currentDate, dateOrders]) => {
       const groupedStores = new Map<string, GroupedStore>();
       const productMap = new Map<string, ProductDescriptor>();
+      const vehicleIdsWithCustomerOrders = new Set<string>();
+
+      for (const row of customersResult.data ?? []) {
+        const vehicleId = row.default_vehicle_id;
+        if (!vehicleId || !matchesVehicle(vehicleId)) continue;
+
+        const customer: OrderCustomer = {
+          id: row.id,
+          name: row.name,
+          customer_code: row.customer_code,
+          default_vehicle_id: vehicleId,
+          sort_order: row.sort_order,
+          metadata: row.metadata,
+          vehicles: row.vehicles,
+        };
+        const storeGroupKey = `${customer.id}_${vehicleId}`;
+        groupedStores.set(storeGroupKey, {
+          customer,
+          vehicleId,
+          vehicleName: vehicles.find((vehicle) => vehicle.id === vehicleId)?.name ?? null,
+          items: new Map(),
+          missingWeightProductIds: new Set(),
+          specialSort: 0,
+          totalWeightGrams: 0,
+          hasOrder: false,
+          isRosterStore: true,
+        });
+      }
 
       for (const order of dateOrders) {
         const customer = order.customers;
@@ -453,6 +494,8 @@ async function PackingListPage({ searchParams }: Props) {
           continue;
         }
 
+        if (vehicleId) vehicleIdsWithCustomerOrders.add(vehicleId);
+
         const vehicleName = activeDeliveryNote?.vehicle_id
           ? getVehicleName(activeDeliveryNote.vehicles)
           : order.assigned_vehicle_id
@@ -474,9 +517,11 @@ async function PackingListPage({ searchParams }: Props) {
             missingWeightProductIds: new Set(),
             specialSort: 0,
             totalWeightGrams: 0,
+            hasOrder: true,
           };
           groupedStores.set(storeGroupKey, groupedStore);
         }
+        groupedStore.hasOrder = true;
 
         for (const item of order.order_items ?? []) {
           let targetStore: GroupedStore | undefined = groupedStore;
@@ -492,6 +537,7 @@ async function PackingListPage({ searchParams }: Props) {
                 missingWeightProductIds: new Set(),
                 specialSort: 0,
                 totalWeightGrams: 0,
+                hasOrder: true,
               };
               groupedStores.set(replacementKey, targetStore);
             }
@@ -527,6 +573,12 @@ async function PackingListPage({ searchParams }: Props) {
         }
       }
 
+      for (const [storeGroupKey, store] of groupedStores) {
+        if (store.isRosterStore && !vehicleIdsWithCustomerOrders.has(store.vehicleId ?? "")) {
+          groupedStores.delete(storeGroupKey);
+        }
+      }
+
       for (const special of specialItems.filter((item) => item.date === currentDate)) {
         // Filter by selected vehicle if specified
         if (!matchesVehicle(special.vehicleId)) {
@@ -552,6 +604,7 @@ async function PackingListPage({ searchParams }: Props) {
             missingWeightProductIds: new Set(),
             specialSort: special.type === "office" ? 1 : special.type === "claim" ? 2 : 3,
             totalWeightGrams: 0,
+            hasOrder: true,
           };
           groupedStores.set(storeGroupKey, groupedStore);
         }
@@ -582,7 +635,7 @@ async function PackingListPage({ searchParams }: Props) {
       }
 
       const stores = Array.from(groupedStores.values())
-        .filter((store) => store.items.size > 0)
+        .filter((store) => store.items.size > 0 || store.isRosterStore)
         .sort((a, b) => {
           const indexA =
             a.vehicleId === null ? 999 : (vehicleSortIndexMap.get(a.vehicleId) ?? 998);
@@ -607,6 +660,7 @@ async function PackingListPage({ searchParams }: Props) {
             missingWeightProductIds: Array.from(group.missingWeightProductIds),
             totalWeightGrams: group.totalWeightGrams,
             packingListGroup: extractPackingListGroup(group.customer.metadata),
+            isStopped: group.isRosterStore && !group.hasOrder,
           }),
         );
 
@@ -721,7 +775,7 @@ async function PackingListPage({ searchParams }: Props) {
           .packing-list-toolbar__actions {
             display: grid !important;
             width: 100% !important;
-            grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto !important;
+            grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
             gap: 6px !important;
           }
 
@@ -780,6 +834,11 @@ async function PackingListPage({ searchParams }: Props) {
         </div>
 
         <div className="packing-list-toolbar__actions flex items-center gap-2 flex-nowrap">
+          <PackingListVehicleSelector
+            vehicles={vehicles}
+            selectedVehicleIds={selectedVehicleIds}
+            isAllVehicles={isAllVehicles}
+          />
           <PackingListPrintButton
             unassignedStores={unassignedStores}
             dateLabel={mainDateLabel}

@@ -18,6 +18,7 @@ export type PackingListStore = {
   missingWeightProductIds: string[];
   totalWeightGrams: number;
   packingListGroup?: string | null;
+  isStopped?: boolean;
 };
 
 export type PackingListProduct = {
@@ -371,6 +372,13 @@ function formatVehicleWeight(totalWeightGrams: number) {
   })} กก.`;
 }
 
+function isStoppedStore(data: PackingListData, store: PackingListStore, storeIndex: number) {
+  return (
+    store.isStopped ||
+    !data.products.some((_, productIndex) => (data.qty[productIndex]?.[storeIndex] ?? 0) !== 0)
+  );
+}
+
 function buildStandardPages(data: PackingListData): StandardPageDef[] {
   const rawDefs: Omit<StandardPageDef, "globalPage" | "totalPages">[] = [];
 
@@ -400,11 +408,17 @@ function buildStandardPages(data: PackingListData): StandardPageDef[] {
       reservedTotalHeight,
     );
     const productChunks = chunk(activeProductIndices, STANDARD_PRODUCTS_PER_PAGE);
+    const pageProductChunks =
+      productChunks.length > 0
+        ? productChunks
+        : group.storeIndices.some((storeIndex) => isStoppedStore(data, data.stores[storeIndex], storeIndex))
+          ? [[]]
+          : [];
 
     for (let storeChunkIndex = 0; storeChunkIndex < storeChunks.length; storeChunkIndex += 1) {
-      for (let productChunkIndex = 0; productChunkIndex < productChunks.length; productChunkIndex += 1) {
+      for (let productChunkIndex = 0; productChunkIndex < pageProductChunks.length; productChunkIndex += 1) {
         const pageStoreIndices = storeChunks[storeChunkIndex];
-        const pageProductIndices = productChunks[productChunkIndex];
+        const pageProductIndices = pageProductChunks[productChunkIndex];
 
         rawDefs.push({
           vehicleId: group.vehicleId,
@@ -419,7 +433,7 @@ function buildStandardPages(data: PackingListData): StandardPageDef[] {
           storeChunk: storeChunkIndex + 1,
           storeTotalChunks: storeChunks.length,
           productChunk: productChunkIndex + 1,
-          productTotalChunks: productChunks.length,
+          productTotalChunks: pageProductChunks.length,
           dateLabel: data.dateLabel,
           organizationName: data.organizationName,
           vehicleMissingWeightProductCount: vehicleWeightSummary.missingWeightProductCount,
@@ -451,11 +465,17 @@ function buildTransposedPages(data: PackingListData): TransposedPageDef[] {
 
     const storeChunks = chunk(group.storeIndices, TRANSPOSED_STORES_PER_PAGE);
     const productChunks = chunk(activeProductIndices, TRANSPOSED_PRODUCTS_PER_PAGE);
+    const pageProductChunks =
+      productChunks.length > 0
+        ? productChunks
+        : group.storeIndices.some((storeIndex) => isStoppedStore(data, data.stores[storeIndex], storeIndex))
+          ? [[]]
+          : [];
 
     for (let storeChunkIndex = 0; storeChunkIndex < storeChunks.length; storeChunkIndex += 1) {
-      for (let productChunkIndex = 0; productChunkIndex < productChunks.length; productChunkIndex += 1) {
+      for (let productChunkIndex = 0; productChunkIndex < pageProductChunks.length; productChunkIndex += 1) {
         const pageStoreIndices = storeChunks[storeChunkIndex];
-        const pageProductIndices = productChunks[productChunkIndex];
+        const pageProductIndices = pageProductChunks[productChunkIndex];
 
         rawDefs.push({
           vehicleId: group.vehicleId,
@@ -470,7 +490,7 @@ function buildTransposedPages(data: PackingListData): TransposedPageDef[] {
           storeChunk: storeChunkIndex + 1,
           storeTotalChunks: storeChunks.length,
           productChunk: productChunkIndex + 1,
-          productTotalChunks: productChunks.length,
+          productTotalChunks: pageProductChunks.length,
           dateLabel: data.dateLabel,
           organizationName: data.organizationName,
           vehicleMissingWeightProductCount: vehicleWeightSummary.missingWeightProductCount,
@@ -663,11 +683,14 @@ function StandardPackingListPage({ page, data }: { page: StandardPageDef; data: 
                     </th>
                   );
                 })}
+                {page.pageProducts.length === 0 ? (
+                  <th className="packing-col packing-col--category" />
+                ) : null}
               </tr>
               <tr>
                 <th className="packing-col packing-col--store">ร้านค้า</th>
                 {(() => {
-                  return page.pageProducts.map((product) => {
+                  const productHeaders = page.pageProducts.map((product) => {
                     const categoryPalette = getCategoryPalette(product);
                     const productPalette = getProductPalette(product, categoryPalette);
                     const colMm = parseFloat(columnWidth) || 12;
@@ -718,6 +741,9 @@ function StandardPackingListPage({ page, data }: { page: StandardPageDef; data: 
                       </th>
                     );
                   });
+                  return productHeaders.length > 0
+                    ? productHeaders
+                    : [<th key="empty-product-header" className="packing-col packing-col--product" />];
                 })()}
               </tr>
             </thead>
@@ -725,34 +751,73 @@ function StandardPackingListPage({ page, data }: { page: StandardPageDef; data: 
             <tbody>
               {page.pageStores.map((store, rowIndex) => {
                 const storeIndex = page.pageStoreIndices[rowIndex];
+                const isStopped = isStoppedStore(data, store, storeIndex);
 
                 return (
                   <tr key={store.id} className="packing-table__row">
-                    <td className="packing-cell packing-cell--store">{store.name}</td>
-                    {page.pageProductIndices.map((productIndex, cellIndex) => {
-                      const rawValue = data.qty[productIndex]?.[storeIndex] ?? 0;
-                      const value = Math.abs(rawValue);
-                      const product = page.pageProducts[cellIndex];
-                      const categoryPalette = product ? getCategoryPalette(product) : COLUMN_COLOR_GROUPS[0];
-                      const productPalette = product ? getProductPalette(product, categoryPalette) : COLUMN_COLOR_GROUPS[0];
-                      return (
-                        <td
-                          key={`${store.id}-${productIndex}`}
-                          className={
-                            value > 0
-                              ? `packing-cell packing-cell--qty${getStandardNumberClass(value)}`
-                              : "packing-cell packing-cell--empty"
-                          }
-                          style={{ backgroundColor: rowIndex % 2 === 0 ? productPalette.rowA : productPalette.rowB }}
-                        >
-                          {value > 0 ? (
-                            <span className={`packing-number${getStandardNumberClass(value)}`}>
-                              {formatStandardQuantity(value)}
-                            </span>
-                          ) : ""}
-                        </td>
-                      );
-                    })}
+                    {isStopped ? (
+                      <>
+                        <td className="packing-cell packing-cell--store">{store.name}</td>
+                        {page.pageProductIndices.length > 0
+                          ? page.pageProductIndices.map((productIndex, cellIndex) => {
+                              const product = page.pageProducts[cellIndex];
+                              const categoryPalette = product
+                                ? getCategoryPalette(product)
+                                : COLUMN_COLOR_GROUPS[0];
+                              const productPalette = product
+                                ? getProductPalette(product, categoryPalette)
+                                : COLUMN_COLOR_GROUPS[0];
+                              return (
+                                <td
+                                  key={`${store.id}-${productIndex}`}
+                                  className={`packing-cell packing-cell--empty${cellIndex === 0 ? " packing-cell--stopped-dash" : ""}`}
+                                  style={{
+                                    backgroundColor: rowIndex % 2 === 0
+                                      ? productPalette.rowA
+                                      : productPalette.rowB,
+                                  }}
+                                >
+                                  {cellIndex === 0 ? (
+                                    <span className="packing-stopped-dash-text">---</span>
+                                  ) : ""}
+                                </td>
+                              );
+                            })
+                          : (
+                            <td className="packing-cell packing-cell--empty packing-cell--stopped-dash">
+                              <span className="packing-stopped-dash-text">---</span>
+                            </td>
+                          )}
+                      </>
+                    ) : (
+                      <>
+                        <td className="packing-cell packing-cell--store">{store.name}</td>
+                        {page.pageProductIndices.map((productIndex, cellIndex) => {
+                          const rawValue = data.qty[productIndex]?.[storeIndex] ?? 0;
+                          const value = Math.abs(rawValue);
+                          const product = page.pageProducts[cellIndex];
+                          const categoryPalette = product ? getCategoryPalette(product) : COLUMN_COLOR_GROUPS[0];
+                          const productPalette = product ? getProductPalette(product, categoryPalette) : COLUMN_COLOR_GROUPS[0];
+                          return (
+                            <td
+                              key={`${store.id}-${productIndex}`}
+                              className={
+                                value > 0
+                                  ? `packing-cell packing-cell--qty${getStandardNumberClass(value)}`
+                                  : "packing-cell packing-cell--empty"
+                              }
+                              style={{ backgroundColor: rowIndex % 2 === 0 ? productPalette.rowA : productPalette.rowB }}
+                            >
+                              {value > 0 ? (
+                                <span className={`packing-number${getStandardNumberClass(value)}`}>
+                                  {formatStandardQuantity(value)}
+                                </span>
+                              ) : ""}
+                            </td>
+                          );
+                        })}
+                      </>
+                    )}
                   </tr>
                 );
               })}
@@ -776,6 +841,9 @@ function StandardPackingListPage({ page, data }: { page: StandardPageDef; data: 
                         ) : ""}
                       </td>
                     ))}
+                    {page.pageProducts.length === 0 ? (
+                      <td className="packing-cell packing-cell--total" />
+                    ) : null}
                   </tr>
 
                   {page.hasCombinedTotalRow && combinedProductTotals.length > 0 && (
@@ -798,6 +866,9 @@ function StandardPackingListPage({ page, data }: { page: StandardPageDef; data: 
                           ) : ""}
                         </td>
                       ))}
+                      {page.pageProducts.length === 0 ? (
+                        <td className="packing-cell packing-cell--total packing-cell--combined-total" />
+                      ) : null}
                     </tr>
                   )}
                 </>
@@ -864,7 +935,24 @@ function TransposedPackingListPage({ page, data }: { page: TransposedPageDef; da
             </thead>
 
             <tbody>
-              {page.pageProducts.map((product, rowIndex) => (
+              {page.pageProducts.length === 0 && page.pageStores.some((store, index) =>
+                isStoppedStore(data, store, page.pageStoreIndices[index]),
+              ) ? (
+                <tr className="packing-table__row" key="empty-product-status">
+                  <td className="packing-cell packing-cell--transpose-product">สถานะร้านค้า</td>
+                  {page.pageStores.map((store, index) => (
+                    <td
+                      key={store.id}
+                      className={`packing-cell packing-cell--empty${isStoppedStore(data, store, page.pageStoreIndices[index]) ? " packing-cell--stopped-dash" : ""}`}
+                    >
+                      {isStoppedStore(data, store, page.pageStoreIndices[index]) ? (
+                        <span className="packing-stopped-dash-text">---</span>
+                      ) : ""}
+                    </td>
+                  ))}
+                  <td className="packing-cell packing-cell--transpose-total-value" />
+                </tr>
+              ) : page.pageProducts.map((product, rowIndex) => (
                 <tr key={product.key} className="packing-table__row">
                   <td className="packing-cell packing-cell--transpose-product">
                     <div className="packing-transpose-product">
@@ -878,6 +966,20 @@ function TransposedPackingListPage({ page, data }: { page: TransposedPageDef; da
                     const rawValue = data.qty[page.pageProductIndices[rowIndex]]?.[storeIndex] ?? 0;
                     const value = Math.abs(rawValue);
                     const palette = getColumnPalette(cellIndex);
+                    const store = data.stores[storeIndex];
+                    if (isStoppedStore(data, store, storeIndex)) {
+                      return (
+                        <td
+                          key={`${product.key}-${storeIndex}`}
+                          className={`packing-cell packing-cell--empty${rowIndex === 0 ? " packing-cell--stopped-dash" : ""}`}
+                          style={{ backgroundColor: rowIndex % 2 === 0 ? palette.rowA : palette.rowB }}
+                        >
+                          {rowIndex === 0 ? (
+                            <span className="packing-stopped-dash-text">---</span>
+                          ) : ""}
+                        </td>
+                      );
+                    }
                     return (
                       <td
                         key={`${product.key}-${storeIndex}`}
@@ -1528,6 +1630,24 @@ function PackingListStyles() {
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
+      }
+
+      .packing-cell--empty.packing-cell--stopped-dash {
+        color: #0f172a;
+      }
+
+      .packing-stopped-dash-text {
+        display: block;
+        color: #0f172a !important;
+        font-size: 10pt;
+        font-weight: 700;
+        line-height: 1;
+        text-align: center;
+        white-space: nowrap;
+      }
+
+      .packing-table--transposed .packing-stopped-dash-text {
+        font-size: 8pt;
       }
 
       .packing-cell--transpose-product {

@@ -905,8 +905,6 @@ export default async function IncomingOrdersPage({ searchParams }: IncomingOrder
                 summaryProducts={summaryProducts}
                 summaryStores={summaryStores}
                 visibleOrderStores={visibleOrderStores}
-                vehicles={vehicles}
-                selectedVehicleId={selectedVehicleId}
                 triggerLabel="พิมพ์ใบสั่งของ"
               />
               <FactoryOrderAdjustmentManager
@@ -951,8 +949,6 @@ export default async function IncomingOrdersPage({ searchParams }: IncomingOrder
                 <PrintPackingListCombinedButton
                   date={orderDate}
                   endDate={endDate}
-                  vehicles={vehicles}
-                  selectedVehicleId={selectedVehicleId}
                 />
                 <PrintVehicleProductSummaryButton date={orderDate} endDate={endDate} />
                 <PrintFactoryOrderSheetButton date={orderDate} endDate={endDate} />
