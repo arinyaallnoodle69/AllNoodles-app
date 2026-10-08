@@ -38,7 +38,7 @@ export default async function FreshReservePage({ searchParams }: { searchParams:
   ]);
 
   const demandByProductId = new Map<string, number>();
-  for (const sheet of sheets) {
+  for (const sheet of sheets.filter((s) => s.warehouseName?.trim() === "คลังกรุงเทพ")) {
     sheet.products.forEach((product, index) => {
       const demand = (sheet.qty[index] ?? []).reduce((sum, quantity) => sum + Number(quantity ?? 0), 0);
       demandByProductId.set(product.id, (demandByProductId.get(product.id) ?? 0) + demand);
