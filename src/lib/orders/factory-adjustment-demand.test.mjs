@@ -1,6 +1,26 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { getBangkokFactoryAdjustmentDemand } from "./factory-adjustment-demand.ts";
+import {
+  getBangkokFactoryAdjustmentDemand,
+  getBangkokFactoryProductMode,
+} from "./factory-adjustment-demand.ts";
+
+test("factory adjustment target mode is selected only for the Bangkok warehouse", () => {
+  const modes = [
+    { product_id: "ANP180", warehouse_id: "province", mode: "fresh", supplier_id: "supplier" },
+    { product_id: "ANP180", warehouse_id: "bangkok", mode: "fresh", supplier_id: "supplier" },
+  ];
+  const warehouseNames = new Map([
+    ["province", "คลังต่างจังหวัด"],
+    ["bangkok", "คลังกรุงเทพ"],
+  ]);
+
+  assert.equal(
+    getBangkokFactoryProductMode("ANP180", modes, warehouseNames)?.warehouse_id,
+    "bangkok",
+  );
+  assert.equal(getBangkokFactoryProductMode("ANP181", modes, warehouseNames), undefined);
+});
 
 test("adjustment demand sums Bangkok sheets and excludes other or unknown warehouses", () => {
   const demand = getBangkokFactoryAdjustmentDemand([

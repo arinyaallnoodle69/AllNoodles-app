@@ -31,6 +31,7 @@ function invalidateIncomingOrderCaches(organizationId: string) {
     try {
       revalidatePath("/orders/incoming");
       revalidatePath("/orders");
+      revalidatePath("/orders/factory-order-sheet");
       revalidatePath("/billing");
       revalidateDashboardPages();
     } catch (err) {
@@ -41,12 +42,14 @@ function invalidateIncomingOrderCaches(organizationId: string) {
 
 function revalidateIncomingOrderCachesEventually(organizationId: string) {
   revalidateTag(`orders-${organizationId}`, "max");
+  updateTag(`orders-${organizationId}`);
   revalidateTag(`settings-${organizationId}`, "max");
   revalidateTag(`stock-${organizationId}`, "max");
   after(() => {
     try {
       revalidatePath("/orders/incoming");
       revalidatePath("/orders");
+      revalidatePath("/orders/factory-order-sheet");
       revalidatePath("/billing");
       revalidateDashboardPages();
     } catch (err) {

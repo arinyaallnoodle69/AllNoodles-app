@@ -4,6 +4,25 @@ type FactoryDemandSheet = {
   qty: number[][];
 };
 
+type FactoryProductMode = {
+  mode: string;
+  product_id: string;
+  warehouse_id: string;
+};
+
+export function getBangkokFactoryProductMode<T extends FactoryProductMode>(
+  productId: string,
+  modes: T[],
+  warehouseNameById: Map<string, string>,
+) {
+  return modes.find(
+    (mode) =>
+      mode.product_id === productId &&
+      mode.mode === "fresh" &&
+      warehouseNameById.get(mode.warehouse_id)?.trim() === "คลังกรุงเทพ",
+  );
+}
+
 export function getBangkokFactoryAdjustmentDemand(sheets: FactoryDemandSheet[]): Map<string, number> {
   const demandByProductId = new Map<string, number>();
   for (const sheet of sheets) {

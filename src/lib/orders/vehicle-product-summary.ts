@@ -5,6 +5,8 @@ import { sortProductsByCategory } from "@/lib/products/sort-by-category";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { getDailySpecialPrintItems } from "@/lib/orders/daily-special-items";
 import { getDailyFactoryOrderAdjustments } from "@/lib/orders/factory-order-adjustments";
+import { getBangkokFactoryProductMode } from "@/lib/orders/factory-adjustment-demand";
+import { calculateFactoryOrderQuantity } from "@/lib/orders/fresh-reserve-math";
 import { resolveVehicleSummaryProductMode } from "@/lib/orders/vehicle-summary-mode";
 
 type ProductWarehouseFulfillmentMode = "disabled" | "fresh" | "stock";
@@ -565,12 +567,27 @@ export async function getFactoryOrderSheetData(
     }
   }
 
-  const adjustmentByProductId = new Map(adjustments.map((item) => [item.productId, item.adjustedQuantity]));
-  for (const [productId, adjustedQuantity] of adjustmentByProductId) {
-    if (adjustedQuantity <= 0 || Array.from(groups.values()).some((group) => group.productVehicleQty.has(productId))) continue;
+  const adjustmentByProductId = new Map(adjustments.map((item) => [item.productId, item]));
+  const adjustmentGroupKeyByProductId = new Map<string, string>();
+  const currentBangkokDemandByProductId = new Map<string, number>();
+  for (const group of groups.values()) {
+    if (group.warehouseName.trim() !== "คลังกรุงเทพ") continue;
+    for (const [productId, quantitiesByVehicle] of group.productVehicleQty) {
+      const demand = Array.from(quantitiesByVehicle.values()).reduce((sum, quantity) => sum + quantity, 0);
+      currentBangkokDemandByProductId.set(
+        productId,
+        (currentBangkokDemandByProductId.get(productId) ?? 0) + demand,
+      );
+    }
+  }
+
+  const currentAdjustedQuantityByProductId = new Map<string, number>();
+  for (const [productId, adjustment] of adjustmentByProductId) {
     const product = productById.get(productId);
-    const mode = ((modesResult.data ?? []) as ProductModeRow[]).find(
-      (candidate) => candidate.product_id === productId && candidate.mode === "fresh",
+    const mode = getBangkokFactoryProductMode(
+      productId,
+      (modesResult.data ?? []) as ProductModeRow[],
+      warehouseNameById,
     );
     if (!product || !mode) continue;
 
@@ -578,7 +595,16 @@ export async function getFactoryOrderSheetData(
     const supplierName = mode.suppliers?.name || product.supplierName || "โรงงานอนามัย";
     const supplierKey = mode.supplier_id || product.supplierId || supplierName;
     const groupKey = `${mode.warehouse_id}:${supplierKey}`;
+    adjustmentGroupKeyByProductId.set(productId, groupKey);
+    const adjustedQuantity = calculateFactoryOrderQuantity(
+      currentBangkokDemandByProductId.get(productId) ?? 0,
+      adjustment.reserveQuantity,
+      adjustment.remainingQuantity,
+    );
+    currentAdjustedQuantityByProductId.set(productId, adjustedQuantity);
     let group = groups.get(groupKey);
+
+    if (!group && adjustedQuantity <= 0) continue;
     if (!group) {
       group = {
         factoryName: supplierName,
@@ -589,7 +615,9 @@ export async function getFactoryOrderSheetData(
       };
       groups.set(groupKey, group);
     }
-    group.productVehicleQty.set(productId, new Map([["__adjusted__", adjustedQuantity]]));
+    if (!group.productVehicleQty.has(productId) && adjustedQuantity > 0) {
+      group.productVehicleQty.set(productId, new Map([["__adjusted__", adjustedQuantity]]));
+    }
     group.vehicleKeys.add("__adjusted__");
     group.vehicleNamesByKey.set("__adjusted__", "ยอดปรับ");
   }
@@ -597,8 +625,7 @@ export async function getFactoryOrderSheetData(
   const dateLabel = formatDateLabel(date, endDate);
   const configuredVehicleKeys = configuredVehicles.map((vehicle) => vehicle.id ?? "__unassigned__");
 
-  const appliedAdjustments = new Set<string>();
-  return Array.from(groups.values()).map((group) => {
+  return Array.from(groups.entries()).map(([groupKey, group]) => {
     const vehicleKeys = [
       ...configuredVehicleKeys.filter((key) => group.vehicleKeys.has(key)),
       ...Array.from(group.vehicleKeys).filter((key) => !configuredVehicleKeys.includes(key)),
@@ -606,9 +633,11 @@ export async function getFactoryOrderSheetData(
     const groupProducts = products.filter((product) => group.productVehicleQty.has(product.id));
     const qty = groupProducts.map((product) => {
       const productQty = group.productVehicleQty.get(product.id) ?? new Map<string, number>();
-      const adjustedQuantity = adjustmentByProductId.get(product.id);
-      if (adjustedQuantity !== undefined && !appliedAdjustments.has(product.id)) {
-        appliedAdjustments.add(product.id);
+      const adjustedQuantity = currentAdjustedQuantityByProductId.get(product.id);
+      if (
+        adjustedQuantity !== undefined &&
+        adjustmentGroupKeyByProductId.get(product.id) === groupKey
+      ) {
         return [adjustedQuantity];
       }
       return [vehicleKeys.reduce((total, key) => total + (productQty.get(key) ?? 0), 0)];

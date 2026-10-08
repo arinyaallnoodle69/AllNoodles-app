@@ -5,6 +5,14 @@ export type FreshReserveAdjustment = {
   reserveQuantity: number;
 };
 
+export function calculateFactoryOrderQuantity(
+  currentDemand: number,
+  reserveQuantity: number,
+  remainingQuantity: number,
+) {
+  return Math.max(0, currentDemand + reserveQuantity - remainingQuantity);
+}
+
 export function calculateFreshReserve(adjustment: FreshReserveAdjustment | null, currentDemand: number) {
   if (!adjustment) return { available: 0, overCapacity: 0, percent: 0, used: 0 };
 
