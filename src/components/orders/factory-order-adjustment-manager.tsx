@@ -42,6 +42,7 @@ export function FactoryOrderAdjustmentManager({ date, dateLabel, products, varia
   const [saved, setSaved] = useState(false);
   const [isPending, startTransition] = useTransition();
   const isConfirmed = products.every((product) => product.updatedAt !== null);
+  const hasReducedReserve = isConfirmed && rows.some((row) => (row.additionalQuantity ?? 0) < 0);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -67,12 +68,22 @@ export function FactoryOrderAdjustmentManager({ date, dateLabel, products, varia
     setError("");
     setRows((current) => current.map((row, rowIndex) => {
       if (rowIndex !== index) return row;
+      if (isConfirmed && field === "remainingQuantity") return row;
       const next = { ...row, [field]: toNumber(value) };
+      if (isConfirmed) {
+        const original = products[index];
+        const additionalQuantity = next.reserveQuantity - original.reserveQuantity;
+        return { ...next, additionalQuantity, adjustedQuantity: original.adjustedQuantity + additionalQuantity };
+      }
       return { ...next, adjustedQuantity: Math.max(0, next.orderDemand + next.reserveQuantity - next.remainingQuantity) };
     }));
   }
 
   function handleSave() {
+    if (isConfirmed && rows.some((row) => (row.additionalQuantity ?? 0) < 0)) {
+      setError("ยอดโรงงานยืนยันแล้ว ของสำรองใหม่ต้องไม่ต่ำกว่ายอดเดิม");
+      return;
+    }
     startTransition(async () => {
       let result;
       try {
@@ -101,7 +112,7 @@ export function FactoryOrderAdjustmentManager({ date, dateLabel, products, varia
     <>
       <button type="button" className={triggerClass} style={{ backgroundColor: "#C62F75" }} onClick={() => { setRows(products); setError(""); setSaved(false); setIsOpen(true); }} disabled={products.length !== 3}>
         <Settings2 className="h-4 w-4 shrink-0" strokeWidth={2.5} />
-        {isConfirmed ? "สั่งผลิตเพิ่ม" : "ยืนยันสั่งโรงงาน"}
+        ปรับยอดสั่งผลิต
       </button>
 
       {isOpen && typeof document !== "undefined" ? createPortal(
@@ -109,7 +120,7 @@ export function FactoryOrderAdjustmentManager({ date, dateLabel, products, varia
           <section role="dialog" aria-modal="true" aria-labelledby="factory-adjustment-title" className="flex max-h-[94dvh] w-full flex-col overflow-hidden rounded-t-[22px] bg-white shadow-2xl sm:max-w-[900px] sm:rounded-[16px]">
             <header className="flex shrink-0 items-start justify-between gap-4 border-b border-[#E8E4EF] px-4 py-4 sm:px-7 sm:py-5">
               <div className="min-w-0">
-                <h2 id="factory-adjustment-title" className="text-xl font-black text-[#17152F] sm:text-2xl">{isConfirmed ? "สั่งผลิตเพิ่ม" : "ยืนยันสั่งโรงงาน"}</h2>
+                <h2 id="factory-adjustment-title" className="text-xl font-black text-[#17152F] sm:text-2xl">ปรับยอดสั่งผลิต</h2>
                 <p className="mt-0.5 text-xs font-semibold text-[#4A148C] sm:text-sm">เฉพาะ ANP180 · ANP181 · ANP182</p>
               </div>
               <div className="flex items-center gap-2">
@@ -123,21 +134,7 @@ export function FactoryOrderAdjustmentManager({ date, dateLabel, products, varia
             </header>
 
             <div className="overflow-y-auto px-3 py-3 sm:px-7 sm:py-4">
-              <p className="mb-3 text-sm font-semibold text-[#4A4380]">{isConfirmed ? "ยอดสั่งโรงงานเดิมถูกยืนยันแล้ว กรอกเฉพาะจำนวนที่สั่งโรงงานเพิ่มจริง ออเดอร์เพิ่มจะหักสำรองโดยอัตโนมัติ" : "กรอกของคงเหลือและจำนวนที่เผื่อสำรอง เมื่อยืนยันแล้ว ใบสั่งโรงงานจะยึดยอดนี้ ออเดอร์ที่เพิ่มภายหลังจะหักจากสำรอง"}</p>
-              {isConfirmed ? (
-                <div className="space-y-3">
-                  {rows.map((row, index) => (
-                    <div key={row.productId} className="rounded-xl border border-[#DED8E8] p-3">
-                      <p className="font-black">{row.sku} · {row.name}</p>
-                      <p className="my-2 text-sm">สั่งโรงงานแล้ว {formatQuantity(row.adjustedQuantity)} กก. · ออเดอร์ปัจจุบัน {formatQuantity(row.orderDemand)} กก.</p>
-                      <label className="text-sm font-bold">สั่งโรงงานเพิ่ม (กก.)
-                        <input aria-label={`${row.sku} สั่งโรงงานเพิ่ม`} inputMode="decimal" value={row.additionalQuantity ?? 0} onChange={(event) => { setError(""); setRows((current) => current.map((item, rowIndex) => rowIndex === index ? { ...item, additionalQuantity: toNumber(event.target.value) } : item)); }} className="ml-2 w-24 rounded-lg border-2 border-[#6930DC] p-2 text-center" />
-                      </label>
-                      <p className="mt-2 font-bold text-[#5720B7]">รวมสั่งโรงงาน {formatQuantity(row.adjustedQuantity + (row.additionalQuantity ?? 0))} กก.</p>
-                    </div>
-                  ))}
-                </div>
-              ) : <>
+              <p className="mb-3 text-sm font-semibold text-[#4A4380]">{isConfirmed ? "ยอดโรงงานยืนยันแล้ว คงเหลือยึดยอดเดิม หากสั่งโรงงานเพิ่มจริง ให้เพิ่มช่องของสำรองเป็นยอดรวมใหม่ ระบบจะบันทึกผลิตเพิ่มเฉพาะส่วนต่าง" : "กรอกของคงเหลือและจำนวนที่เผื่อสำรอง เมื่อยืนยันแล้ว ใบสั่งโรงงานจะยึดยอดนี้ ออเดอร์ที่เพิ่มภายหลังจะหักจากสำรอง"}</p>
               <div className="hidden overflow-hidden rounded-xl border border-[#DED8E8] sm:block">
                 <div className="grid grid-cols-[1.45fr_1fr_28px_1fr_28px_1fr_28px_1fr] items-center bg-[#F7F8FB] px-3 py-3 text-center text-sm font-black text-[#17152F]">
                   <span className="text-left">สินค้า</span><span>ยอดออเดอร์<br />(กก.)</span><span /><span>คงเหลือ<br />(กก.)</span><span /><span>ของสำรอง<br />(กก.)</span><span /><span>ยอดสั่ง<br />(กก.)</span>
@@ -146,11 +143,11 @@ export function FactoryOrderAdjustmentManager({ date, dateLabel, products, varia
                   <div key={row.productId} className="grid grid-cols-[1.45fr_1fr_28px_1fr_28px_1fr_28px_1fr] items-center border-t border-[#DED8E8] px-3 py-3 text-[#17152F]">
                     <div className="min-w-0 pr-2"><p className="text-base font-black text-[#18125D]">{row.sku}</p><p className="truncate text-sm font-medium text-[#334155]">{row.name}</p></div>
                     <div className="rounded-lg bg-[#EFF1F6] px-2 py-2.5 text-center text-base font-black tabular-nums">{formatQuantity(row.orderDemand)}</div>
-                    <span className="text-center text-xl font-black text-[#321471]">−</span>
-                    <input aria-label={`${row.sku} คงเหลือ`} inputMode="decimal" value={row.remainingQuantity} onChange={(event) => updateRow(index, "remainingQuantity", event.target.value)} className="min-w-0 rounded-lg border-2 border-[#6930DC] bg-white px-2 py-2 text-center text-base font-black tabular-nums text-[#17152F] outline-none focus:ring-2 focus:ring-[#6930DC]/20" />
-                    <span className="text-center text-xl font-black text-[#321471]">+</span>
+                    <span className="text-center text-xl font-black text-[#321471]">{isConfirmed ? "" : "−"}</span>
+                    <input aria-label={`${row.sku} คงเหลือ`} inputMode="decimal" readOnly={isConfirmed} tabIndex={isConfirmed ? -1 : undefined} value={row.remainingQuantity} onChange={(event) => updateRow(index, "remainingQuantity", event.target.value)} className="min-w-0 rounded-lg border-2 border-[#6930DC] bg-white px-2 py-2 text-center text-base font-black tabular-nums text-[#17152F] outline-none focus:ring-2 focus:ring-[#6930DC]/20" />
+                    <span className="text-center text-xl font-black text-[#321471]">{isConfirmed ? "" : "+"}</span>
                     <input aria-label={`${row.sku} ของสำรอง`} inputMode="decimal" value={row.reserveQuantity} onChange={(event) => updateRow(index, "reserveQuantity", event.target.value)} className="min-w-0 rounded-lg border-2 border-[#6930DC] bg-white px-2 py-2 text-center text-base font-black tabular-nums text-[#17152F] outline-none focus:ring-2 focus:ring-[#6930DC]/20" />
-                    <span className="text-center text-lg font-black text-[#321471]">=</span>
+                    <span className="text-center text-lg font-black text-[#321471]">{isConfirmed ? "" : "="}</span>
                     <div className="rounded-lg bg-[#5720B7] px-2 py-2.5 text-center text-base font-black tabular-nums text-white">{formatQuantity(row.adjustedQuantity)} กก.</div>
                   </div>
                 ))}
@@ -163,7 +160,7 @@ export function FactoryOrderAdjustmentManager({ date, dateLabel, products, varia
                     <div className="grid grid-cols-2 gap-x-3 gap-y-2.5">
                       <label className="min-w-0 text-xs font-bold text-[#241857]">ยอดออเดอร์ (กก.)<span className="mt-1 flex h-11 items-center justify-center rounded-lg bg-[#EFF1F6] text-base font-black tabular-nums text-[#17152F]">{formatQuantity(row.orderDemand)}</span></label>
                       <label className="min-w-0 text-xs font-bold text-[#241857]">ของสำรอง (กก.)<input aria-label={`${row.sku} ของสำรอง`} inputMode="decimal" value={row.reserveQuantity} onChange={(event) => updateRow(index, "reserveQuantity", event.target.value)} className="mt-1 h-11 w-full rounded-lg border-2 border-[#6930DC] px-2 text-center text-base font-black tabular-nums outline-none focus:ring-2 focus:ring-[#6930DC]/20" /></label>
-                      <label className="min-w-0 text-xs font-bold text-[#241857]">คงเหลือ (กก.)<input aria-label={`${row.sku} คงเหลือ`} inputMode="decimal" value={row.remainingQuantity} onChange={(event) => updateRow(index, "remainingQuantity", event.target.value)} className="mt-1 h-11 w-full rounded-lg border-2 border-[#6930DC] px-2 text-center text-base font-black tabular-nums outline-none focus:ring-2 focus:ring-[#6930DC]/20" /></label>
+                      <label className="min-w-0 text-xs font-bold text-[#241857]">คงเหลือ (กก.)<input aria-label={`${row.sku} คงเหลือ`} inputMode="decimal" readOnly={isConfirmed} tabIndex={isConfirmed ? -1 : undefined} value={row.remainingQuantity} onChange={(event) => updateRow(index, "remainingQuantity", event.target.value)} className="mt-1 h-11 w-full rounded-lg border-2 border-[#6930DC] px-2 text-center text-base font-black tabular-nums outline-none focus:ring-2 focus:ring-[#6930DC]/20" /></label>
                       <div className="min-w-0 text-xs font-bold text-[#241857]">ยอดสั่ง (กก.)<div className="mt-1 flex h-11 items-center justify-center rounded-lg bg-[#5720B7] px-2 text-base font-black tabular-nums text-white">{formatQuantity(row.adjustedQuantity)} กก.</div></div>
                     </div>
                   </article>
@@ -177,8 +174,7 @@ export function FactoryOrderAdjustmentManager({ date, dateLabel, products, varia
                   </div>
                 ))}
               </div>
-              </>}
-              {error ? <p role="alert" className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm font-bold text-red-700">{error}</p> : null}
+              {error || hasReducedReserve ? <p role="alert" className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm font-bold text-red-700">{error || "ยอดโรงงานยืนยันแล้ว ของสำรองใหม่ต้องไม่ต่ำกว่ายอดเดิม"}</p> : null}
               {saved ? <p role="status" className="mt-3 rounded-lg bg-emerald-50 px-3 py-2 text-sm font-bold text-emerald-700">บันทึกยอดสั่งผลิตแล้ว</p> : null}
             </div>
 
@@ -186,8 +182,8 @@ export function FactoryOrderAdjustmentManager({ date, dateLabel, products, varia
               <span className="hidden items-center gap-2 text-sm font-semibold text-[#4B5680] sm:inline-flex"><Keyboard className="h-5 w-5" /> Tab เพื่อกรอกช่องถัดไป</span>
               <div className="grid grid-cols-[0.8fr_1.4fr] gap-2 sm:flex">
                 <button type="button" onClick={() => setIsOpen(false)} className="h-12 rounded-xl border-2 border-[#5720B7] px-6 text-sm font-black text-[#321471]">ยกเลิก</button>
-                <button type="button" onClick={handleSave} disabled={isPending || (isConfirmed && !rows.some((row) => (row.additionalQuantity ?? 0) > 0))} className="h-12 whitespace-nowrap rounded-xl bg-[#5720B7] px-4 text-sm font-black text-white shadow-sm disabled:opacity-60 sm:px-6">
-                  {isPending ? "กำลังบันทึก..." : isConfirmed ? "ยืนยันสั่งผลิตเพิ่ม" : "ยืนยันสั่งโรงงานแล้ว"}
+                <button type="button" onClick={handleSave} disabled={isPending || hasReducedReserve || (isConfirmed && !rows.some((row) => (row.additionalQuantity ?? 0) > 0))} className="h-12 whitespace-nowrap rounded-xl bg-[#5720B7] px-4 text-sm font-black text-white shadow-sm disabled:opacity-60 sm:px-6">
+                  {isPending ? "กำลังบันทึก..." : <><span className="sm:hidden">บันทึกยอดสั่ง</span><span className="hidden sm:inline">บันทึกและใช้ในใบสั่งของ</span></>}
                 </button>
               </div>
             </footer>

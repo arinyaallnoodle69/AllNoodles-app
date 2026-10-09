@@ -32,20 +32,32 @@ try {
     await page.setRequestInterception(true);
     page.on("request", (request) => request.method() === "POST" ? request.abort() : request.continue());
     await page.goto(origin + "/orders/fresh-reserve?date=2026-10-09", { waitUntil: "networkidle0" });
-    await page.waitForFunction(() => [...document.querySelectorAll("button")].some((button) => button.textContent.trim() === "สั่งผลิตเพิ่ม"));
+    await page.waitForFunction(() => [...document.querySelectorAll("button")].some((button) => button.textContent.trim() === "ปรับยอดสั่งผลิต"));
+    await page.evaluate(() => [...document.querySelectorAll("button")].find((button) => button.textContent.trim() === "ปรับยอดสั่งผลิต").click());
+    await page.waitForSelector('[aria-modal="true"]');
+    const saveDisabled = () => page.evaluate(() => document.querySelector('[aria-modal="true"] footer button:last-child').disabled);
+    assert.equal(await saveDisabled(), true);
+    const original = products.find((product) => product.sku === "ANP180").metadata.factory_order_adjustments["2026-10-09"];
+    let input;
+    for (const field of await page.$$('[aria-label="ANP180 ของสำรอง"]')) {
+      if (await field.boundingBox()) { input = field; break; }
+    }
+    assert.ok(input);
+    const enter = async (value) => { await input.focus(); await page.keyboard.down("Control"); await page.keyboard.press("A"); await page.keyboard.up("Control"); await input.type(String(value)); };
+    assert.equal(await page.$eval('[aria-label="ANP180 คงเหลือ"]', (element) => element.readOnly), true);
+    await enter(original.reserveQuantity - 1);
+    assert.equal(await saveDisabled(), true);
+    assert.match(await page.$eval('[role="alert"]', (element) => element.textContent), /ไม่ต่ำกว่ายอดเดิม/);
+    await enter(original.reserveQuantity + 12);
+    assert.equal(await saveDisabled(), false);
+    const total = original.adjustedQuantity + 12;
+    assert.match(await page.$eval('[aria-modal="true"]', (element) => element.textContent), new RegExp(total + " กก."));
     await page.screenshot({ path: `output/fresh-reserve/${mode}.png` });
-    await page.evaluate(() => [...document.querySelectorAll("button")].find((button) => button.textContent.trim() === "สั่งผลิตเพิ่ม").click());
-    await page.waitForSelector('[aria-label="ANP180 สั่งโรงงานเพิ่ม"]');
-    assert.equal(await page.evaluate(() => [...document.querySelectorAll("button")].find((b) => b.textContent.trim() === "ยืนยันสั่งผลิตเพิ่ม").disabled), true);
-    const input = await page.$('[aria-label="ANP180 สั่งโรงงานเพิ่ม"]');
-    await input.click({ clickCount: 3 });
-    await input.type("12");
-    assert.equal(await page.evaluate(() => [...document.querySelectorAll("button")].find((b) => b.textContent.trim() === "ยืนยันสั่งผลิตเพิ่ม").disabled), false);
-    await page.evaluate(() => [...document.querySelectorAll("button")].find((button) => button.textContent.trim() === "ยืนยันสั่งผลิตเพิ่ม").click());
+    await page.evaluate(() => document.querySelector('[aria-modal="true"] footer button:last-child').click());
     await page.waitForSelector('[role="alert"]');
     assert.match(await page.$eval('[role="alert"]', (element) => element.textContent), /บันทึกไม่สำเร็จ/);
     await page.goto(origin + "/orders/fresh-reserve?date=2099-01-01", { waitUntil: "networkidle0" });
-    await page.evaluate(() => [...document.querySelectorAll("button")].find((button) => button.textContent.trim() === "ยืนยันสั่งโรงงาน").click());
+    await page.evaluate(() => [...document.querySelectorAll("button")].find((button) => button.textContent.trim() === "ปรับยอดสั่งผลิต").click());
     await page.waitForSelector('[aria-modal="true"]');
     const reserve = (await page.$$('[aria-label="ANP180 ของสำรอง"]'));
     for (const field of reserve) {

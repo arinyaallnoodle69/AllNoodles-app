@@ -165,7 +165,7 @@ export function FreshReserveDashboard({ activities, date, dateLabel, lastUpdated
           <div className="hidden lg:block">{rows.map((row) => <ReserveRow key={row.productId} row={row} />)}</div>
           <div className="lg:hidden">{rows.map((row) => <ReserveRow key={row.productId} row={row} mobile />)}</div>
           {!rows.some((row) => row.isConfigured) ? (
-            <div className="m-4 rounded-xl border border-dashed border-[#CFC7E2] bg-[#FAF8FF] p-4 text-center text-sm font-semibold text-[#4A4380]">ยังไม่ได้ตั้งยอดสำรองของวันที่เลือก กด “ยืนยันสั่งโรงงาน” เพื่อเริ่มต้น</div>
+            <div className="m-4 rounded-xl border border-dashed border-[#CFC7E2] bg-[#FAF8FF] p-4 text-center text-sm font-semibold text-[#4A4380]">ยังไม่ได้ตั้งยอดสำรองของวันที่เลือก กด “ปรับยอดสั่งผลิต” เพื่อเริ่มต้น</div>
           ) : null}
         </main>
 
