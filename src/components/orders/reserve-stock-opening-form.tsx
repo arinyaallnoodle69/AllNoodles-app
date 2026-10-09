@@ -3,10 +3,11 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { ArrowLeft, Info, Layers3 } from "lucide-react";
+import { ArrowLeft, Info, Layers3, Package2 } from "lucide-react";
+import { ProductImagePreview } from "@/components/settings/product-image-preview";
 import { initializeReserveStockAction } from "@/app/orders/fresh-reserve-stock/actions";
 
-export function ReserveStockOpeningForm({ products, date }: { products: { id: string; name: string; sku: string }[]; date: string }) {
+export function ReserveStockOpeningForm({ products, date }: { products: { id: string; name: string; sku: string; imageUrl: string | null }[]; date: string }) {
   const router = useRouter();
   const [values, setValues] = useState<Record<string, string>>({});
   const [review, setReview] = useState(false);
@@ -35,7 +36,7 @@ export function ReserveStockOpeningForm({ products, date }: { products: { id: st
       {review ? <p className="text-base font-bold text-[#6D28D9]">ตรวจให้ตรงกับของจริง บันทึกยอดเริ่มต้นได้เพียงครั้งเดียว</p> : null}
     </div>
     <div className="hidden grid-cols-[2fr_1fr_1.2fr] gap-4 border-y border-[#E1E5EE] bg-[#FAFBFD] px-6 py-4 font-bold lg:grid"><span>สินค้า</span><span>รหัสสินค้า</span><span>จำนวนที่มีอยู่จริง (กก.)</span></div>
-    {products.map((product) => <div key={product.id} className="border-b border-[#E1E5EE] px-4 py-5 lg:grid lg:grid-cols-[2fr_1fr_1.2fr] lg:items-center lg:gap-4 lg:px-6"><label htmlFor={`opening-${product.id}`} className="block text-lg font-bold">{product.name}<span className="mt-1 block text-sm font-normal text-[#4A5072] lg:hidden">{product.sku}</span></label><span className="hidden text-base lg:block">{product.sku}</span>
+    {products.map((product) => <div key={product.id} className="border-b border-[#E1E5EE] px-4 py-5 lg:grid lg:grid-cols-[2fr_1fr_1.2fr] lg:items-center lg:gap-4 lg:px-6"><div className="flex min-w-0 items-center gap-3"><div className="relative flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-slate-50">{product.imageUrl ? <ProductImagePreview src={product.imageUrl} alt={product.name} thumbnailSizes="64px" /> : <Package2 className="h-7 w-7 text-slate-300" />}</div><label htmlFor={`opening-${product.id}`} className="block min-w-0 text-lg font-bold">{product.name}<span className="mt-1 block text-sm font-normal text-[#4A5072] lg:hidden">{product.sku}</span></label></div><span className="hidden text-base lg:block">{product.sku}</span>
       <div className="mt-3 flex items-center gap-3 lg:mt-0">{review ? <p className="text-2xl font-black text-[#6D28D9]">{format(Number(values[product.id]))} กก.</p> : <><input id={`opening-${product.id}`} type="number" inputMode="decimal" min="0" max="1000000000" step="0.001" required value={values[product.id] ?? ""} onChange={(event) => setValues((current) => ({ ...current, [product.id]: event.target.value }))} placeholder="ยังไม่ได้กรอก" className="h-14 min-w-0 flex-1 rounded-xl border border-[#D7C8F2] px-4 text-xl font-bold outline-none focus:border-[#6D28D9] focus:ring-2 focus:ring-[#EDE5FF]" /><span className="text-base">กก.</span></>}</div>
     </div>)}
     <div className="sticky bottom-[76px] z-10 space-y-3 border-t border-[#E1E5EE] bg-white px-4 py-4 lg:bottom-0 lg:flex lg:items-center lg:justify-between lg:gap-4 lg:space-y-0 lg:px-6"><div className="flex items-center gap-2 rounded-xl bg-[#F4EFFF] p-3 text-lg font-bold"><Layers3 className="h-6 w-6 text-[#6D28D9]" /><p>{Object.values(values).filter((value) => value.trim() !== "").length} / {products.length} สินค้า · รวม {format(total)} กก.</p></div><div className="flex gap-2">{review ? <button type="button" disabled={pending} onClick={() => setReview(false)} className="min-h-12 rounded-xl border border-[#D7C8F2] px-5 text-base font-bold text-[#6D28D9]">กลับไปแก้</button> : null}<button type="submit" disabled={pending || !products.length} className="min-h-12 flex-1 rounded-xl bg-[#6D28D9] px-5 py-3 text-lg font-bold text-white disabled:opacity-50">{pending ? "กำลังบันทึก…" : review ? "ยืนยันยอดเริ่มต้น" : "ตรวจสอบยอดก่อนบันทึก"}</button></div></div>

@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { ArrowLeft, Clock3, History, Info, Layers3 } from "lucide-react";
+import { ArrowLeft, Clock3, History, Info, Layers3, Package2 } from "lucide-react";
+import { ProductImagePreview } from "@/components/settings/product-image-preview";
 import { SettingsShell } from "@/components/settings/settings-shell";
 import { FreshReserveRefresh } from "@/components/orders/fresh-reserve-refresh";
 import { ReserveStockOpeningForm } from "@/components/orders/reserve-stock-opening-form";
@@ -48,7 +49,7 @@ export default async function ReserveStockPage({ searchParams }: { searchParams:
           <h1 className="hidden text-3xl font-black lg:block">สต็อคสำรองผลิตสด</h1>
           <p className="text-base text-[#4A5072] lg:mt-1">โรงงานมังกร · คลังกรุงเทพ</p>
         </header>
-        {setup && !group ? <ReserveStockOpeningForm products={products.map(({ id, name, sku }) => ({ id, name, sku }))} date={date} /> : (
+        {setup && !group ? <ReserveStockOpeningForm products={products.map(({ id, name, sku, imageUrl }) => ({ id, name, sku, imageUrl }))} date={date} /> : (
           <>
             <div className="space-y-3 px-4 py-4 lg:flex lg:items-center lg:gap-4 lg:space-y-0 lg:px-6">
               {group ? <div className="lg:order-2 lg:ml-auto lg:min-w-60"><DailySpecialOrderManager date={date} products={catalog} vehicles={vehicles} initialItems={specials} defaultVehicleId={vehicle?.id} variant="reserve" /></div> : <Link href="/orders/fresh-reserve-stock?setup=1" className="flex min-h-12 items-center justify-center rounded-xl bg-[#6D28D9] px-5 py-3 text-lg font-bold text-white">ตั้งยอดสต็อคเริ่มต้น</Link>}
@@ -62,7 +63,7 @@ export default async function ReserveStockPage({ searchParams }: { searchParams:
               const ready = Boolean(group && balance);
               const available = Number(balance?.available ?? 0), pending = Number(balance?.pending ?? 0);
               return <article key={product.id} className="border-b border-[#E1E5EE] px-4 py-5 lg:grid lg:grid-cols-[2fr_1fr_1.2fr_1fr] lg:items-center lg:gap-4 lg:px-6">
-                <div className="flex items-start justify-between gap-3 lg:block"><div><h2 className="text-lg font-bold leading-relaxed">{product.name}</h2><p className="text-sm text-[#4A5072]">{product.sku}</p></div><span className={`shrink-0 rounded-full px-3 py-1 text-sm font-bold lg:hidden ${!ready ? "bg-slate-100" : available > 0 ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}>{!ready ? "ยังไม่ตั้งยอด" : available > 0 ? "ปกติ" : "ไม่มีของสำรอง"}</span></div>
+                <div className="flex items-start justify-between gap-3 lg:block"><div className="flex min-w-0 items-center gap-3"><div className="relative flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-slate-50">{product.imageUrl ? <ProductImagePreview src={product.imageUrl} alt={product.name} thumbnailSizes="64px" /> : <Package2 className="h-7 w-7 text-slate-300" />}</div><div className="min-w-0"><h2 className="text-lg font-bold leading-relaxed">{product.name}</h2><p className="text-sm text-[#4A5072]">{product.sku}</p></div></div><span className={`shrink-0 rounded-full px-3 py-1 text-sm font-bold lg:hidden ${!ready ? "bg-slate-100" : available > 0 ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}>{!ready ? "ยังไม่ตั้งยอด" : available > 0 ? "ปกติ" : "ไม่มีของสำรอง"}</span></div>
                 <div className="mt-3 grid grid-cols-2 lg:contents"><div className="border-r border-[#E1E5EE] pr-3 lg:border-0"><p className="text-base lg:hidden">คงเหลือใช้ได้</p><p className="mt-1 text-3xl font-black text-[#6D28D9] lg:text-2xl">{ready ? `${quantity(available)} กก.` : "—"}</p></div>
                 <div className="pl-4 lg:pl-0"><p className="text-base lg:hidden">รอรับเข้า</p>{pending > 0 ? <><p className="mt-1 flex items-center gap-1 text-xl font-bold text-[#6D28D9]"><Clock3 className="h-4 w-4" />{quantity(pending)} กก.</p><p className="mt-1 text-sm text-[#4A5072]">รับเข้า {balance?.pending_at ? dateTime(balance.pending_at) : "—"}</p></> : <p className="mt-1 text-lg">{group ? "ไม่มี" : "—"}</p>}</div></div>
                 <div className="hidden lg:block"><span className={`rounded-full px-3 py-1 text-sm font-bold ${!ready ? "bg-slate-100" : available > 0 ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}>{!ready ? "ยังไม่ตั้งยอด" : available > 0 ? "ปกติ" : "ไม่มีของสำรอง"}</span></div>
