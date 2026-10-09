@@ -822,6 +822,7 @@ export function DeliveryNoteLayout({ dns, showAmount, priceMode: propPriceMode, 
           <div
             className="note-page"
             data-delivery-note-page="true"
+            data-export-tokens={JSON.stringify(notePage.dn.exportTokens ?? [])}
             data-capture-width="794"
             data-capture-height="1123"
             data-customer-code={notePage.dn.customer.code}

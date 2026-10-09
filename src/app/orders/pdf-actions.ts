@@ -2,6 +2,19 @@
 
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { getAppSession } from "@/lib/auth/session";
+import { validateDeliveryExportToken } from "@/lib/delivery/export-consistency";
+
+export async function validateDeliveryPdfAction(tokens: string[]) {
+  try {
+    const session = await getAppSession();
+    if (!session) return { error: "กรุณาเข้าสู่ระบบใหม่" };
+    if (!tokens.length) return { error: "ไม่พบข้อมูลตรวจสอบบิล กรุณาโหลดข้อมูลใหม่" };
+    for (const token of tokens) await validateDeliveryExportToken(token, session.organizationId);
+    return { success: true };
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : "ตรวจสอบบิลไม่สำเร็จ" };
+  }
+}
 
 const TEMP_PDF_BUCKET = "temp-pdfs";
 const TEMP_PDF_MAX_BYTES = 45 * 1024 * 1024;
@@ -88,6 +101,10 @@ export async function uploadTempPdfAction(formData: FormData) {
     const cleanFileName = file.name.replace(/[^\w.-]/g, "_");
     const fileName = `${session.organizationId}/${timestamp}-${cleanFileName}`;
     const buffer = Buffer.from(await file.arrayBuffer());
+    const exportToken = formData.get("exportToken");
+    if (typeof exportToken === "string" && exportToken) {
+      await validateDeliveryExportToken(exportToken, session.organizationId, buffer);
+    }
 
     const { error: uploadError } = await supabase.storage
       .from(TEMP_PDF_BUCKET)
@@ -99,6 +116,14 @@ export async function uploadTempPdfAction(formData: FormData) {
     if (uploadError) {
       console.error("[uploadTempPdfAction:upload]", uploadError);
       return { error: `อัปโหลดไฟล์ไม่สำเร็จ: ${uploadError.message}` };
+    }
+    if (typeof exportToken === "string" && exportToken) {
+      try {
+        await validateDeliveryExportToken(exportToken, session.organizationId, buffer);
+      } catch (error) {
+        await supabase.storage.from(TEMP_PDF_BUCKET).remove([fileName]);
+        return { error: error instanceof Error ? error.message : "ออเดอร์เปลี่ยนแล้ว กรุณาสร้าง PDF ใหม่" };
+      }
     }
 
     await cleanupOldTempPdfs(supabase.storage, session.organizationId);

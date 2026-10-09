@@ -644,6 +644,7 @@ export async function moveIncomingOrdersVehicleAction(
 
 export async function updateOrderItemsBatchAction(input: {
   orderId: string;
+  expectedUpdatedAt?: string;
   notes?: string | null;
   removedIds: string[];
   updates: { itemId: string; quantity: number; unitPrice?: number; reductionMode?: StockReductionMode }[];
@@ -665,10 +666,12 @@ export async function updateOrderItemsBatchAction(input: {
     return { error: "จำนวนหรือราคาสินค้าไม่ถูกต้อง" };
   }
 
+  if (updates.some((item) => !Number.isFinite(item.quantity) || item.quantity <= 0 || (item.unitPrice !== undefined && (!Number.isFinite(item.unitPrice) || item.unitPrice < 0)))) return { error: "จำนวนหรือราคาสินค้าไม่ถูกต้อง" };
+  if (new Set(updates.map((item) => item.itemId)).size !== updates.length || removedIds.some((id) => updates.some((item) => item.itemId === id))) return { error: "รายการสินค้าที่แก้ไขซ้ำกัน" };
   // 1. Verify order
   const { data: order } = await getWarehouseOrderAdmin(admin)
     .from("orders")
-    .select("id, status, organization_id, customer_id, order_number, total_amount, warehouse_id")
+    .select("id, status, organization_id, customer_id, order_number, total_amount, warehouse_id, updated_at")
     .eq("id", orderId)
     .single();
 
@@ -687,7 +690,7 @@ export async function updateOrderItemsBatchAction(input: {
 
   const [itemsRes, additionProductsRes, additionSaleUnitsRes] = await Promise.all([
     itemIdsToFetch.length > 0
-      ? admin.from("order_items").select("*").in("id", itemIdsToFetch)
+      ? admin.from("order_items").select("*").eq("organization_id", session.organizationId).eq("order_id", orderId).in("id", itemIdsToFetch)
       : Promise.resolve({ data: [] }),
     additionProductIds.length > 0
       ? admin.from("products").select("id, cost_price").in("id", additionProductIds)
@@ -697,6 +700,7 @@ export async function updateOrderItemsBatchAction(input: {
       : Promise.resolve({ data: [] }),
   ]);
 
+  if ((itemsRes.data ?? []).length !== new Set(itemIdsToFetch).size) return { error: "รายการสินค้าเปลี่ยนแล้ว กรุณาเปิดออเดอร์ใหม่" };
   const itemsMap = new Map((itemsRes.data ?? []).map((i) => [i.id, i]));
   const productsMap = new Map((additionProductsRes.data ?? []).map((p) => [p.id, p]));
   const saleUnitsMap = new Map((additionSaleUnitsRes.data ?? []).map((s) => [s.id, s]));
@@ -785,6 +789,7 @@ export async function updateOrderItemsBatchAction(input: {
       ? saleUnitsMap.get(add.productSaleUnitId)
       : saleUnitsMap.get(`default-${add.productId}`);
 
+    if (!saleUnit || saleUnit.product_id !== add.productId || !productsMap.has(add.productId)) return { error: "ไม่พบสินค้าหรือหน่วยขายที่เลือก" };
     if (saleUnit) {
       const product = productsMap.get(add.productId);
       const ratio = Number(saleUnit.base_unit_quantity) || 1;
@@ -820,23 +825,6 @@ export async function updateOrderItemsBatchAction(input: {
         Object.assign(newItem, { is_replacement: add.isReplacement === true }),
       );
     }
-  }
-
-  // 4. Execution
-  // Delete removed items
-  if (removedIds.length > 0) {
-    await admin.from("order_items").delete().in("id", removedIds);
-  }
-
-  // Upsert updated and new items
-  if (itemsToUpdate.length > 0) {
-    const { error: upsertError } = await admin.from("order_items").upsert(itemsToUpdate);
-    if (upsertError) return { error: "ไม่สามารถปรับปรุงรายการสินค้าได้: " + upsertError.message };
-  }
-
-  if (itemsToInsert.length > 0) {
-    const { error: insertError } = await admin.from("order_items").insert(itemsToInsert);
-    if (insertError) return { error: "ไม่สามารถเพิ่มรายการสินค้าได้: " + insertError.message };
   }
 
   const priceRowsByKey = new Map<
@@ -887,36 +875,25 @@ export async function updateOrderItemsBatchAction(input: {
     });
   }
 
-  if (priceRowsByKey.size > 0) {
-    const { error: priceUpsertError } = await admin
-      .from("customer_product_prices")
-      .upsert(Array.from(priceRowsByKey.values()), {
-        onConflict: "organization_id,customer_id,product_sale_unit_id",
-      });
-
-    if (priceUpsertError) {
-      return { error: "อัปเดตราคาขายร้านค้าไม่สำเร็จ: " + priceUpsertError.message };
+  const { data: deliveryNumber, error: saveError } = await admin.rpc("save_order_items_and_delivery", {
+    p_organization_id: session.organizationId,
+    p_order_id: orderId,
+    p_user_id: session.userId,
+    p_expected_updated_at: input.expectedUpdatedAt ?? order.updated_at,
+    p_notes: notes?.trim() || "",
+    p_removed_ids: removedIds,
+    p_updates: itemsToUpdate,
+    p_additions: itemsToInsert,
+    p_prices: Array.from(priceRowsByKey.values()),
+    p_loss_by_order_item: Object.fromEntries(lossInBaseUnitByItemId),
+  });
+  if (saveError) return { error: "บันทึกออเดอร์และบิลไม่สำเร็จ: " + saveError.message };
+  if (deliveryNumber) {
+    const billing = await syncBillingSnapshotsForDeliveryNumbers({ organizationId: session.organizationId, customerId: order.customer_id, deliveryNumbers: [deliveryNumber] });
+    if (!billing.success) {
+      invalidateIncomingOrderCaches(session.organizationId);
+      return { success: true, receiptWarning: "ออเดอร์และบิลจัดส่งบันทึกแล้ว แต่ใบวางบิลอัปเดตไม่สำเร็จ: " + billing.error };
     }
-  }
-
-
-
-  // 5. Recalculate Order Total
-  const { data: finalItems } = await admin.from("order_items").select("line_total").eq("order_id", orderId);
-  const finalTotal = (finalItems ?? []).reduce((sum, i) => sum + Number(i.line_total), 0);
-
-  await admin.from("orders").update({
-    notes: notes?.trim() ? notes.trim() : null,
-    subtotal_amount: finalTotal,
-    total_amount: finalTotal,
-  }).eq("id", orderId);
-
-  // 6. Sync Delivery Note if needed
-  if (order.status === "confirmed" || order.status === "submitted") {
-    const syncRes = await syncOrderDeliveryNoteAction(orderId, {
-      lossInBaseUnitByItemId,
-    });
-    if ("error" in syncRes) return { error: "ปรับปรุงใบส่งของไม่สำเร็จ: " + syncRes.error };
   }
 
   after(() => {
@@ -1500,10 +1477,7 @@ export async function createManualOrderAction(formData: FormData): Promise<Actio
   } else {
     const currentOrder = existingOrder!;
     const mergedNotes = mergeOrderNotes(currentOrder.notes ?? null, notes);
-    const updatePayload: Record<string, unknown> = {
-      subtotal_amount: Number(currentOrder.subtotal_amount ?? 0) + totalAmount,
-      total_amount: Number(currentOrder.total_amount ?? 0) + totalAmount,
-    };
+    const updatePayload: Record<string, unknown> = {};
 
     if (mergedNotes !== (currentOrder.notes ?? null)) {
       updatePayload.notes = mergedNotes;
@@ -1530,6 +1504,8 @@ export async function createManualOrderAction(formData: FormData): Promise<Actio
     items: mapManualItemsToMergeableInputs(items),
     orderId,
     organizationId: session.organizationId,
+    userId: session.userId,
+    syncDelivery: true,
   });
 
   if ("error" in mergeResult) {
@@ -1978,8 +1954,9 @@ export async function syncOrderDeliveryNoteAction(
 
   const { data: oldOrderDnItems } = await admin
     .from("delivery_note_items")
-    .select("delivery_note_id")
-    .eq("order_id", orderId);
+    .select("delivery_note_id, order_items!inner(order_id)")
+    .eq("organization_id", session.organizationId)
+    .eq("order_items.order_id", orderId);
 
   const oldDeliveryNoteIds = Array.from(
     new Set((oldOrderDnItems ?? []).map((row) => String(row.delivery_note_id)).filter(Boolean)),

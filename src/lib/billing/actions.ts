@@ -351,9 +351,8 @@ export async function syncBillingSnapshotsForDeliveryNumbers(params: {
         .delete()
         .eq("id", record.id);
         
-      if (!deleteError) {
-        updated += 1;
-      }
+      if (deleteError) return { success: false as const, error: deleteError.message };
+      updated += 1;
       continue;
     }
 
@@ -374,9 +373,8 @@ export async function syncBillingSnapshotsForDeliveryNumbers(params: {
       })
       .eq("id", record.id);
 
-    if (!updateError) {
-      updated += 1;
-    }
+    if (updateError) return { success: false as const, error: updateError.message };
+    updated += 1;
   }
 
   if (!params.skipRevalidate) {

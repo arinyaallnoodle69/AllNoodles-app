@@ -12,7 +12,13 @@ test("editing adds a separate free shipment without overwriting customer prices"
   let synced = false;
   const order = { id: "order", organization_id: "org", customer_id: "customer", status: "confirmed", warehouse_id: "warehouse" };
   const unit = { id: "kg", product_id: "A", base_unit_quantity: 1, unit_label: "กก." };
-  const db = { from(table) {
+  const db = { rpc: async (name, args) => {
+    assert.equal(name, "save_order_items_and_delivery");
+    inserted.push(...args.p_additions);
+    customerPrices.push(...args.p_prices);
+    synced = true;
+    return { data: "DN", error: null };
+  }, from(table) {
     let columns;
     const query = {
       select(value) { columns = value; return this; },
@@ -37,6 +43,7 @@ test("editing adds a separate free shipment without overwriting customer prices"
     getSupabaseAdmin: () => db, getWarehouseOrderAdmin: () => db,
     isEditableOrderStatus: () => true, getEffectiveSaleUnitCost: () => 10,
     syncOrderDeliveryNoteAction: async () => { synced = true; return { success: true }; },
+    syncBillingSnapshotsForDeliveryNumbers: async () => ({ success: true }),
     after() {}, invalidateIncomingOrderCaches() {},
   };
   vm.runInNewContext(ts.transpileModule(action, { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, context);

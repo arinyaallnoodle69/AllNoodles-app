@@ -1,3 +1,4 @@
+import { getDeliveryExportVersions, assertDeliveryExportVersions, createDeliveryExportToken } from "@/lib/delivery/export-consistency";
 import { PRINT_ORGANIZATION_NAME } from "@/components/print/print-shared";
 import { sortDeliveryPrintDataByCustomerOrder } from "@/lib/delivery/print-ordering";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
@@ -5,6 +6,7 @@ import { formatDisplayUnit } from "@/app/order/customer/unit-label";
 
 export type DeliveryNotePrintData = {
   deliveryNumber: string;
+  exportTokens?: string[];
   deliveryDate: string;
   createdAt?: string | null;
   orderNumber: string | null;
@@ -112,6 +114,7 @@ export async function getMergedDeliveryPrintData(
     deliveryNoteIds.map((id) => getDeliveryNotePrintData(organizationId, id)),
   );
   const valid = parts.filter((p): p is DeliveryNotePrintData => p !== null);
+  if (valid.length !== parts.length) throw new Error("โหลดบิลที่เลือกไม่ครบ กรุณาโหลดข้อมูลใหม่");
   if (valid.length === 0) return null;
 
   // Merge: first DN metadata, sum amounts, concatenate items & notes
@@ -153,6 +156,7 @@ export async function getMergedDeliveryPrintData(
 
   return {
     ...base,
+    exportTokens: valid.flatMap((part) => part.exportTokens ?? []),
     deliveryNumber,
     totalAmount,
     notes: mergedNotes,
@@ -165,6 +169,7 @@ export async function getDeliveryNotePrintData(
   deliveryNoteId: string,
 ): Promise<DeliveryNotePrintData | null> {
   const supabase = getSupabaseAdmin();
+  const before = await getDeliveryExportVersions(organizationId, /^[0-9a-f-]{36}$/i.test(deliveryNoteId) ? [deliveryNoteId] : undefined);
   const headerSelect = `
       id, delivery_number, delivery_date, total_amount, notes, created_at, vehicle_id, vehicles(id, name),
       previous_outstanding, installment_paid, remaining_outstanding, is_installment_plan,
@@ -272,7 +277,10 @@ export async function getDeliveryNotePrintData(
   const orgAddress = (meta.address as string) ?? null;
   const orgPhone = (meta.phone as string) ?? null;
 
+  const current = await getDeliveryExportVersions(organizationId, [header.id]);
+  assertDeliveryExportVersions(before, current, [header.id]);
   return {
+    exportTokens: [createDeliveryExportToken(organizationId, current)],
     deliveryNumber: header.delivery_number,
     deliveryDate: header.delivery_date,
     createdAt: header.created_at,

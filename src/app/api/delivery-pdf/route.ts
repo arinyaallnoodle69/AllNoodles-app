@@ -2,6 +2,8 @@ import { existsSync } from "node:fs";
 import chromium from "@sparticuz/chromium";
 import puppeteer from "puppeteer-core";
 import { NextRequest, NextResponse } from "next/server";
+import { getAppSession } from "@/lib/auth/session";
+import { createDeliveryExportToken, validateDeliveryExportToken } from "@/lib/delivery/export-consistency";
 
 export const maxDuration = 60;
 
@@ -36,6 +38,8 @@ export async function POST(request: NextRequest) {
   let browser;
 
   try {
+    const session = await getAppSession();
+    if (!session) return NextResponse.json({ error: "กรุณาเข้าสู่ระบบใหม่" }, { status: 401 });
     const body = (await request.json()) as { url?: string };
     const rawTargetUrl = new URL(body.url ?? "", request.nextUrl.origin);
 
@@ -51,6 +55,7 @@ export async function POST(request: NextRequest) {
     if (!allowed) {
       return NextResponse.json({ error: "Invalid document URL." }, { status: 400 });
     }
+    const isDeliveryBill = rawTargetUrl.pathname === "/delivery/print" || rawTargetUrl.pathname.startsWith("/orders/delivery-notes/");
 
     // Next.js local server on port 3000 runs plain HTTP.
     // If client connects via https (e.g. reverse proxy or tunnel), accessing https://localhost:3000
@@ -97,10 +102,21 @@ export async function POST(request: NextRequest) {
     }
     await page.waitForSelector(
       "[data-delivery-note-page='true'], .packing-sheet, [data-print-page='true'], [data-customer-sales-report], #report-print-area, .vehicle-summary-page, .packing-print-container",
-      { timeout: 30_000 },
+      { timeout: 30_000, visible: true },
     );
     await page.emulateMediaType("print");
     await page.evaluate(() => document.fonts.ready);
+
+    const tokens = isDeliveryBill ? await page.evaluate(() => Array.from(new Set(
+      Array.from(document.querySelectorAll<HTMLElement>("[data-delivery-note-page='true']"))
+        .flatMap((element) => JSON.parse(element.dataset.exportTokens || "[]") as string[]),
+    ))) : [];
+    if (isDeliveryBill && tokens.length === 0) {
+      return NextResponse.json({ error: "ไม่พบบิลที่ผ่านการตรวจสอบ กรุณาโหลดข้อมูลใหม่" }, { status: 409 });
+    }
+    if (isDeliveryBill) {
+      for (const token of tokens) await validateDeliveryExportToken(token, session.organizationId);
+    }
 
     const pdf = await page.pdf({
       format: "A4",
@@ -109,10 +125,24 @@ export async function POST(request: NextRequest) {
       margin: { top: 0, right: 0, bottom: 0, left: 0 },
     });
 
+    const versions = [];
+    for (const token of tokens) {
+      try {
+        versions.push(...await validateDeliveryExportToken(token, session.organizationId));
+      } catch (error) {
+        return NextResponse.json({ error: error instanceof Error ? error.message : "ออเดอร์เปลี่ยนแล้ว กรุณาสร้าง PDF ใหม่" }, { status: 409 });
+      }
+    }
+
+    const exportToken = isDeliveryBill ? createDeliveryExportToken(session.organizationId, versions, pdf) : null;
+    if (exportToken && exportToken.length > 7000) {
+      return NextResponse.json({ error: "ชุดบิลใหญ่เกินไป กรุณาแบ่งสร้าง PDF เป็นชุดเล็กลง" }, { status: 413 });
+    }
     return new NextResponse(Buffer.from(pdf), {
       headers: {
         "Cache-Control": "no-store",
         "Content-Type": "application/pdf",
+        ...(exportToken ? { "X-Delivery-Export-Token": exportToken } : {}),
       },
     });
   } catch (error) {

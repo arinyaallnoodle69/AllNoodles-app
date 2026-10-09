@@ -46,6 +46,7 @@ type OrderDetailAdminClient = ReturnType<typeof getSupabaseAdmin> & {
 type OrderRow = {
   assigned_vehicle_id: string | null;
   created_at: string;
+  updated_at: string;
   customer_id: string;
   fulfillment_status: string | null;
   id: string;
@@ -142,6 +143,7 @@ export type OrderDetailItem = {
 };
 
 export type OrderDetailData = {
+  updatedAt: string;
   channelLabel: string;
   createdAt: string;
   customer: {
@@ -245,7 +247,7 @@ export async function getOrderDetailById(
   const orderResult = await admin
     .from("orders")
     .select(
-      "id, customer_id, order_number, order_date, status, subtotal_amount, total_amount, notes, metadata, created_at, warehouse_id",
+      "id, customer_id, order_number, order_date, status, subtotal_amount, total_amount, notes, metadata, created_at, updated_at, warehouse_id",
     )
     .eq("organization_id", organizationId)
     .eq("id", orderId)
@@ -411,6 +413,7 @@ export async function getOrderDetailById(
   return {
     channelLabel: getChannelLabel(order.metadata),
     createdAt: order.created_at,
+    updatedAt: order.updated_at,
     customer: {
       address: customer?.address ?? "-",
       code: customer?.customer_code ?? "-",

@@ -3,7 +3,7 @@
 import { ArrowLeft, Download, Loader2, Share2, X, AlertTriangle, ExternalLink } from "lucide-react";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { sharePreparedDeliveryPdf } from "@/components/print/share-delivery-pdf";
+import { sharePreparedDeliveryPdf, assertPreparedDeliveryPdfCurrent, getDeliveryPdfExportToken } from "@/components/print/share-delivery-pdf";
 import { uploadTempPdfAction } from "@/app/orders/pdf-actions";
 
 type DeliveryPdfPreviewModalProps = {
@@ -82,6 +82,8 @@ export function DeliveryPdfPreviewModal({
       try {
         const formData = new FormData();
         formData.append("file", file);
+        const token = getDeliveryPdfExportToken(file);
+        if (token) formData.append("exportToken", token);
 
         const result = await uploadTempPdfAction(formData);
         if (!active) return;
@@ -111,7 +113,21 @@ export function DeliveryPdfPreviewModal({
     };
   }, [file]);
 
-  function handleCopyLink() {
+  async function ensureCurrent() {
+    try {
+      await assertPreparedDeliveryPdfCurrent(file);
+      return true;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "ออเดอร์เปลี่ยนแล้ว กรุณาสร้าง PDF ใหม่";
+      setPublicUrl(null);
+      setUploadError(message);
+      window.alert(message);
+      return false;
+    }
+  }
+
+  async function handleCopyLink() {
+    if (!await ensureCurrent()) return;
     // If publicUrl is available, we copy that instead of the current page URL, so they can directly open the PDF!
     const linkToCopy = publicUrl || window.location.href;
     navigator.clipboard
@@ -140,6 +156,7 @@ export function DeliveryPdfPreviewModal({
   const shareTitle = title.replace(/^ตัวอย่าง PDF\s*/, "").trim() || "บิลส่งของ";
 
   async function handleDownload() {
+    if (!await ensureCurrent()) return;
     if (!isFileValid) {
       window.alert("ไฟล์ PDF ยังไม่พร้อมใช้งาน กรุณาลองใหม่อีกครั้ง");
       return;
@@ -180,6 +197,7 @@ export function DeliveryPdfPreviewModal({
 
     setIsSharing(true);
     try {
+      if (!await ensureCurrent()) return;
       if (typeof navigator !== "undefined" && navigator.share) {
         if (navigator.canShare?.({ files: [file] })) {
           await navigator.share({

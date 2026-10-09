@@ -99,6 +99,7 @@ export default async function DeliveryNotePreviewPage({ searchParams }: Props) {
     selectedNoteIds.map((id) => getDeliveryNotePrintData(session.organizationId, id)),
   );
 
+  if (printDataResults.some((data) => data === null)) throw new Error("โหลดบิลที่เลือกไม่ครบ กรุณาโหลดข้อมูลใหม่");
   const validPrintData = sortDeliveryPrintDataByCustomerOrder(
     printDataResults.filter((data): data is DeliveryNotePrintData => data !== null),
   );

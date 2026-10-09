@@ -1,3 +1,4 @@
+import { validateDeliveryPdfAction } from "@/app/orders/pdf-actions";
 import { inlineCaptureImages, restoreCaptureImages } from "@/components/print/print-image-cache";
 
 const DELIVERY_SHEET_WIDTH_MM = 210;
@@ -6,6 +7,26 @@ const FALLBACK_CAPTURE_WIDTH = 794;
 const FALLBACK_CAPTURE_HEIGHT = 1123;
 
 let cachedFontEmbedCSS: string | null = null;
+const exportTokens = new WeakMap<File, string>();
+
+export function getDeliveryPdfExportToken(file: File) {
+  return exportTokens.get(file);
+}
+
+export async function assertPreparedDeliveryPdfCurrent(file: File) {
+  const token = exportTokens.get(file);
+  if (!token) return;
+  const result = await validateDeliveryPdfAction([token]);
+  if (result.error) throw new Error(result.error);
+}
+
+export async function assertDeliveryDocumentCurrent(sourceDocument: Document = document) {
+  const pages = Array.from(sourceDocument.querySelectorAll<HTMLElement>("[data-delivery-note-page='true']"));
+  if (!pages.length) return;
+  const tokens = [...new Set(pages.flatMap((page) => JSON.parse(page.dataset.exportTokens || "[]") as string[]))];
+  const result = await validateDeliveryPdfAction(tokens);
+  if (result.error) throw new Error(result.error);
+}
 
 export type DeliveryPdfPreview = {
   file: File;
@@ -49,7 +70,8 @@ function downloadBlob(blob: Blob, fileName: string) {
   window.setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-export function downloadPreparedDeliveryPdf(pdfFile: File) {
+export async function downloadPreparedDeliveryPdf(pdfFile: File) {
+  await assertPreparedDeliveryPdfCurrent(pdfFile);
   downloadBlob(pdfFile, pdfFile.name);
 }
 
@@ -65,6 +87,9 @@ export async function createDeliveryPdfPreviewFromDocument(
   fileName?: string,
   pageSelector = "[data-delivery-note-page='true']",
 ): Promise<DeliveryPdfPreview | null> {
+  if (pageSelector === "[data-delivery-note-page='true']" && sourceDocument.querySelector(pageSelector)) {
+    return createDeliveryPdfPreviewFromUrl(sourceDocument.location?.href || window.location.href, fileName);
+  }
   const pages = Array.from(
     sourceDocument.querySelectorAll<HTMLElement>(pageSelector),
   );
@@ -219,6 +244,7 @@ export async function createDeliveryPdfFileFromDocument(sourceDocument: Document
 }
 
 export async function sharePreparedDeliveryPdf(pdfFile: File, title = "บิลส่งของ") {
+  await assertPreparedDeliveryPdfCurrent(pdfFile);
   if (navigator.share && navigator.canShare?.({ files: [pdfFile] })) {
     await navigator.share({
       files: [pdfFile],
@@ -242,43 +268,33 @@ export async function createDeliveryPdfPreviewFromUrl(
   sourceDocument?: Document,
 ): Promise<DeliveryPdfPreview | null> {
   const doc = sourceDocument || (typeof document !== "undefined" ? document : null);
-
+  const pathname = new URL(url, window.location.origin).pathname;
+  const isDeliveryBill = pathname === "/delivery/print" || pathname.startsWith("/orders/delivery-notes/");
   try {
     const response = await fetch("/api/delivery-pdf", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ url }),
     });
-
-    if (response.ok) {
-      const blob = await response.blob();
-      if (blob.size > 500) {
-        const file = new File([blob], buildDeliveryPdfFileName(fileName), { type: "application/pdf" });
-
-        // If document is available, supply preview images for mobile modal display
-        let previewImages: string[] = [];
-        if (doc && doc.querySelectorAll("[data-delivery-note-page='true']").length > 0) {
-          try {
-            const clientPreview = await createDeliveryPdfPreviewFromDocument(doc, fileName);
-            if (clientPreview?.previewImages) {
-              previewImages = clientPreview.previewImages;
-            }
-          } catch {
-            // Non-blocking: modal handles empty previewImages with native viewer / Docs viewer
-          }
-        }
-        return { file, previewImages };
-      }
+    if (!response.ok) {
+      const failure = await response.json().catch(() => ({}));
+      throw new Error(failure.error || "สร้าง PDF ไม่สำเร็จ กรุณาลองใหม่");
     }
-  } catch (err) {
-    console.warn("[share-delivery-pdf] Server vector PDF request failed, falling back to client:", err);
+    const token = response.headers.get("X-Delivery-Export-Token");
+    if (isDeliveryBill && !token) throw new Error("บิลยังไม่ผ่านการตรวจสอบ กรุณาโหลดข้อมูลใหม่");
+    const blob = await response.blob();
+    if (blob.size <= 500) throw new Error("ไฟล์ PDF ไม่สมบูรณ์ กรุณาลองใหม่");
+    const file = new File([blob], buildDeliveryPdfFileName(fileName), { type: "application/pdf" });
+    if (token) exportTokens.set(file, token);
+    return { file, previewImages: [] };
+  } catch (error) {
+    // Delivery bills must never fall back to a previously loaded document.
+    if (isDeliveryBill) throw error;
+    if (doc?.querySelector("[data-delivery-note-page='true']")) {
+      return createDeliveryPdfPreviewFromDocument(doc, fileName, "[data-print-page='true']");
+    }
+    throw error;
   }
-
-  if (doc && doc.querySelectorAll("[data-delivery-note-page='true']").length > 0) {
-    return createDeliveryPdfPreviewFromDocument(doc, fileName);
-  }
-
-  throw new Error("Failed to create delivery PDF.");
 }
 
 export async function createDeliveryPdfFileFromUrl(url: string, fileName?: string) {

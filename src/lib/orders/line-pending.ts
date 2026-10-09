@@ -634,6 +634,8 @@ async function convertSinglePendingOrder(input: {
     items: orderItems,
     orderId: targetOrder.id,
     organizationId: input.organizationId,
+    userId: input.userId,
+    syncDelivery: true,
   });
 
   if ("error" in mergeResult) {

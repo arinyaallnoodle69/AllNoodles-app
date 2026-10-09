@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Pencil, X, Save } from "lucide-react";
 import type { DeliveryNotePrintData } from "@/lib/delivery/print";
-import { adjustDeliveryNoteItemAction } from "./actions";
+import { adjustDeliveryNoteItemsAction } from "./actions";
 
 type Item = DeliveryNotePrintData["items"][0];
 
@@ -61,13 +61,12 @@ export function EditQuantitiesForm({
     }
 
     startTransition(async () => {
-      for (const item of changed) {
-        const newQty = parseFloat(quantities[item.id]!);
-        const result = await adjustDeliveryNoteItemAction(deliveryNoteId, item.id, newQty);
-        if (result.error) {
-          setError(result.error);
-          return;
-        }
+      const result = await adjustDeliveryNoteItemsAction(deliveryNoteId, changed.map((item) => ({
+        itemId: item.id, quantity: parseFloat(quantities[item.id]!),
+      })));
+      if (result.error) {
+        setError(result.error);
+        return;
       }
       setEditing(false);
       router.refresh();
@@ -78,7 +77,7 @@ export function EditQuantitiesForm({
     <div className="no-print mb-4 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
       {/* Header */}
       <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
-        <p className="text-sm font-semibold text-slate-700">แก้ไขจำนวนที่ส่งจริง</p>
+        <p className="text-sm font-semibold text-slate-700">แก้ไขจำนวนที่ส่งจริง (อัปเดตออเดอร์และบิลพร้อมกัน)</p>
         {!editing ? (
           <button
             onClick={() => setEditing(true)}

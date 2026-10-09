@@ -368,6 +368,7 @@ const EditItemsPanel = memo(({
 
       const result = await updateOrderItemsBatchAction({
         orderId: detail.id,
+        expectedUpdatedAt: detail.updatedAt,
         notes,
         removedIds: Array.from(removed),
         updates: Object.entries(normalizedQuantities)
@@ -402,7 +403,7 @@ const EditItemsPanel = memo(({
         normalizedAddedItems.reduce((s, i) => s + i.quantity * i.unitPrice, 0);
       const computedCount =
         activeItems.filter((i) => (quantities[i.id] ?? i.quantity) > 0).length + normalizedAddedItems.length;
-      onDone("บันทึกรายการสำเร็จแล้ว", {
+      onDone(result.receiptWarning || "บันทึกออเดอร์และบิลแล้ว หากส่งบิลเดิมไปแล้ว กรุณาส่งฉบับใหม่ให้ลูกค้า", {
         notes: notes.trim() || null,
         totalAmount: computedTotal,
         productCount: computedCount,

@@ -1,15 +1,23 @@
 "use client";
 
+import { assertDeliveryDocumentCurrent } from "@/components/print/share-delivery-pdf";
+
 import { useRef, useState } from "react";
 
 export function PrintButton() {
   const [isPrinting, setIsPrinting] = useState(false);
   const fallbackTimerRef = useRef<number | null>(null);
 
-  function handlePrint() {
+  async function handlePrint() {
     if (isPrinting) return;
 
     setIsPrinting(true);
+    try { await assertDeliveryDocumentCurrent(); }
+    catch (error) {
+      window.alert(error instanceof Error ? error.message : "ตรวจสอบบิลไม่สำเร็จ");
+      setIsPrinting(false);
+      return;
+    }
     const done = () => {
       if (fallbackTimerRef.current) {
         window.clearTimeout(fallbackTimerRef.current);

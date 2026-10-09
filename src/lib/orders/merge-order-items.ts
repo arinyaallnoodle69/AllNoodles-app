@@ -17,21 +17,6 @@ export type MergeableOrderItemInput = {
   unitPrice: number;
 };
 
-type ExistingOrderItemRow = {
-  is_replacement?: boolean;
-  cost_price: number | null;
-  created_at: string | null;
-  id: string;
-  line_total: number | string | null;
-  product_id: string;
-  product_sale_unit_id: string | null;
-  quantity: number | string | null;
-  quantity_in_base_unit: number | string | null;
-  sale_unit_label: string;
-  sale_unit_ratio: number | string | null;
-  unit_price: number | string | null;
-};
-
 function getOrderItemKey(productId: string, productSaleUnitId: string | null, isReplacement = false) {
   return `${productId}__${productSaleUnitId ?? "__default__"}__${isReplacement ? "replacement" : "sale"}`;
 }
@@ -85,167 +70,22 @@ export function aggregateMergeableOrderItems(items: MergeableOrderItemInput[]) {
   return Array.from(grouped.values());
 }
 
-export async function mergeItemsIntoOrder(
-  admin: Admin,
-  input: {
-    items: MergeableOrderItemInput[];
-    orderId: string;
-    organizationId: string;
-  },
-) {
-  const aggregatedIncomingItems = aggregateMergeableOrderItems(input.items);
-  if (aggregatedIncomingItems.length === 0) {
-    return { success: true as const };
-  }
-
-  const { data: existingRows, error: existingRowsError } = await admin
-    .from("order_items")
-    .select("*")
-    .eq("order_id", input.orderId)
-    .order("created_at", { ascending: true });
-
-  if (existingRowsError) {
-    return { error: existingRowsError.message ?? "ไม่สามารถโหลดรายการสินค้าเดิมได้" };
-  }
-
-  const groupedExisting = new Map<string, ExistingOrderItemRow[]>();
-  for (const row of (existingRows ?? []) as ExistingOrderItemRow[]) {
-    const key = getOrderItemKey(row.product_id, row.product_sale_unit_id, row.is_replacement);
-    const bucket = groupedExisting.get(key);
-    if (bucket) {
-      bucket.push(row);
-    } else {
-      groupedExisting.set(key, [row]);
-    }
-  }
-
-  const rowsToDelete: string[] = [];
-  const rowsToUpdate = new Map<string, Database["public"]["Tables"]["order_items"]["Update"]>();
-  const rowsToInsert: Database["public"]["Tables"]["order_items"]["Insert"][] = [];
-
-  for (const [key, rows] of groupedExisting.entries()) {
-    if (rows.length <= 1) continue;
-
-    const primary = rows[0];
-    const duplicates = rows.slice(1);
-    const mergedQuantity = rows.reduce((sum, row) => sum + Number(row.quantity ?? 0), 0);
-    const mergedBaseQuantity = rows.reduce(
-      (sum, row) => sum + Number(row.quantity_in_base_unit ?? 0),
-      0,
-    );
-    const mergedLineTotal = rows.reduce((sum, row) => sum + Number(row.line_total ?? 0), 0);
-    const mergedUnitPrice = normalizeMergedUnitPrice(
-      mergedLineTotal,
-      mergedQuantity,
-      Number(primary.unit_price ?? 0),
-    );
-
-    rowsToUpdate.set(primary.id, {
-      cost_price: Number(primary.cost_price ?? 0),
-      line_total: mergedLineTotal,
-      product_id: primary.product_id,
-      product_sale_unit_id: primary.product_sale_unit_id,
-      quantity: mergedQuantity,
-      quantity_in_base_unit: mergedBaseQuantity,
-      sale_unit_label: primary.sale_unit_label,
-      sale_unit_ratio: Number(primary.sale_unit_ratio ?? 1) || 1,
-      unit_price: mergedUnitPrice,
-    });
-
-    rowsToDelete.push(...duplicates.map((row) => row.id));
-    primary.quantity = mergedQuantity;
-    primary.quantity_in_base_unit = mergedBaseQuantity;
-    primary.line_total = mergedLineTotal;
-    primary.unit_price = mergedUnitPrice;
-    groupedExisting.set(key, [primary]);
-  }
-
-  for (const item of aggregatedIncomingItems) {
-    const key = getOrderItemKey(item.productId, item.productSaleUnitId, item.isReplacement);
-    const existingGroup = groupedExisting.get(key);
-    const existing = existingGroup?.[0];
-    const incomingLineTotal = Number(item.quantity) * Number(item.unitPrice);
-
-    if (existing) {
-      const currentQuantity = Number(existing.quantity ?? 0);
-      const currentBaseQuantity = Number(existing.quantity_in_base_unit ?? 0);
-      const currentLineTotal = Number(existing.line_total ?? 0);
-      const mergedQuantity = currentQuantity + Number(item.quantity);
-      const mergedBaseQuantity = currentBaseQuantity + Number(item.quantityInBaseUnit);
-      const mergedLineTotal = currentLineTotal + incomingLineTotal;
-      const mergedUnitPrice = normalizeMergedUnitPrice(
-        mergedLineTotal,
-        mergedQuantity,
-        Number(item.unitPrice) || Number(existing.unit_price ?? 0),
-      );
-
-      rowsToUpdate.set(existing.id, {
-        cost_price: Number(item.costPrice) || Number(existing.cost_price ?? 0),
-        line_total: mergedLineTotal,
-        product_id: existing.product_id,
-        product_sale_unit_id: existing.product_sale_unit_id,
-        quantity: mergedQuantity,
-        quantity_in_base_unit: mergedBaseQuantity,
-        sale_unit_label: item.saleUnitLabel,
-        sale_unit_ratio: Number(item.saleUnitRatio) || 1,
-        unit_price: mergedUnitPrice,
-      });
-      existing.quantity = mergedQuantity;
-      existing.quantity_in_base_unit = mergedBaseQuantity;
-      existing.line_total = mergedLineTotal;
-      existing.unit_price = mergedUnitPrice;
-      existing.sale_unit_label = item.saleUnitLabel;
-      existing.sale_unit_ratio = Number(item.saleUnitRatio) || 1;
-      continue;
-    }
-
-    const newRow = {
-      is_replacement: item.isReplacement === true,
-      ...(item.isReplacement ? { notes: "ส่งชดเชย (ไม่คิดเงิน)" } : {}),
-      cost_price: Number(item.costPrice) || 0,
-      line_total: incomingLineTotal,
-      order_id: input.orderId,
-      organization_id: input.organizationId,
-      product_id: item.productId,
-      product_sale_unit_id: item.productSaleUnitId,
-      quantity: Number(item.quantity),
-      quantity_in_base_unit: Number(item.quantityInBaseUnit),
-      sale_unit_label: item.saleUnitLabel,
-      sale_unit_ratio: Number(item.saleUnitRatio) || 1,
-      unit_price: Number(item.unitPrice) || 0,
-    };
-    rowsToInsert.push(newRow);
-  }
-
-  if (rowsToDelete.length > 0) {
-    const { error: deleteError } = await admin.from("order_items").delete().in("id", rowsToDelete);
-    if (deleteError) {
-      return { error: deleteError.message ?? "ไม่สามารถลบรายการสินค้าซ้ำได้" };
-    }
-  }
-
-  if (rowsToUpdate.size > 0) {
-    const updatePromises = Array.from(rowsToUpdate.entries()).map(async ([rowId, payload]) => {
-      const { error: updateError } = await admin.from("order_items").update(payload).eq("id", rowId);
-      if (updateError) {
-        throw new Error(updateError.message ?? "ไม่สามารถรวมรายการสินค้าเดิมได้");
-      }
-    });
-
-    try {
-      await Promise.all(updatePromises);
-    } catch (error) {
-      const errMsg = error instanceof Error ? error.message : "ไม่สามารถรวมรายการสินค้าเดิมได้";
-      return { error: errMsg };
-    }
-  }
-
-  if (rowsToInsert.length > 0) {
-    const { error: insertError } = await admin.from("order_items").insert(rowsToInsert);
-    if (insertError) {
-      return { error: insertError.message ?? "ไม่สามารถเพิ่มสินค้าในออเดอร์ได้" };
-    }
-  }
-
+export async function mergeItemsIntoOrder(admin: Admin, input: {
+  items: MergeableOrderItemInput[];
+  orderId: string;
+  organizationId: string;
+  userId?: string | null;
+  syncDelivery?: boolean;
+}) {
+  const items = aggregateMergeableOrderItems(input.items);
+  if (items.length === 0) return { success: true as const };
+  const { error } = await admin.rpc("merge_order_items_atomic", {
+    p_organization_id: input.organizationId,
+    p_order_id: input.orderId,
+    p_items: items,
+    p_user_id: input.userId ?? undefined,
+    p_sync_delivery: input.syncDelivery ?? false,
+  });
+  if (error) return { error: error.message };
   return { success: true as const };
 }

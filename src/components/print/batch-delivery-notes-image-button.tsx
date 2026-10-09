@@ -1,5 +1,7 @@
 "use client";
 
+import { assertDeliveryDocumentCurrent } from "@/components/print/share-delivery-pdf";
+
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Image as ImageIcon, Loader2, Printer, Share2, X } from "lucide-react";
 import { createPortal } from "react-dom";
@@ -145,6 +147,7 @@ export function BatchDeliveryNotesImageButton({
     setSavingProgress(null);
 
     try {
+      await assertDeliveryDocumentCurrent();
       const targets = Array.from(
         document.querySelectorAll<HTMLElement>("[data-delivery-note-page='true']"),
       );
@@ -198,6 +201,7 @@ export function BatchDeliveryNotesImageButton({
         captured.push({ blob, name: fileName });
       }
 
+      await assertDeliveryDocumentCurrent();
       const isMobile = isMobileDevice();
 
       if (isMobile) {
@@ -298,6 +302,7 @@ export function BatchDeliveryNotesImageButton({
     if (!readyCaptured || readyCaptured.length === 0) return;
 
     try {
+      await assertDeliveryDocumentCurrent();
       const files = readyCaptured.map((item) => new File([item.blob], item.name, { type: "image/png" }));
 
       if (typeof navigator !== "undefined" && navigator.share && navigator.canShare && navigator.canShare({ files })) {
@@ -327,7 +332,7 @@ export function BatchDeliveryNotesImageButton({
       setIsSaving(false);
     } catch (err) {
       console.error("Mobile save trigger error:", err);
-      setErrorMessage("เกิดข้อผิดพลาดในการบันทึกรูปภาพ กรุณาลองใหม่อีกครั้ง");
+      setErrorMessage(err instanceof Error ? err.message : "เกิดข้อผิดพลาดในการบันทึกรูปภาพ กรุณาลองใหม่อีกครั้ง");
     }
   };
 
@@ -404,7 +409,9 @@ export function BatchDeliveryNotesImageButton({
                         onClick={() => {
                           setReadyCaptured(null);
                           setIsSaving(false);
-                          setTimeout(() => window.print(), 200);
+                          assertDeliveryDocumentCurrent().then(() => window.print()).catch((error: unknown) => {
+                            window.alert(error instanceof Error ? error.message : "ตรวจสอบบิลไม่สำเร็จ");
+                          });
                         }}
                         className="flex-1 flex items-center justify-center gap-2 rounded-2xl bg-[#4A148C] px-4 py-3.5 text-base font-black text-white shadow-[0_12px_28px_rgba(74,20,140,0.3)] transition active:scale-[0.98]"
                       >

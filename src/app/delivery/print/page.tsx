@@ -1,3 +1,4 @@
+import { getDeliveryExportVersions, assertDeliveryExportVersions, createDeliveryExportToken } from "@/lib/delivery/export-consistency";
 import { requireAnyRole } from "@/lib/auth/authorization";
 import { type DeliveryNotePrintData, sortDeliveryItems } from "@/lib/delivery/print";
 import { sortDeliveryPrintRowsByCustomerOrder } from "@/lib/delivery/print-ordering";
@@ -38,6 +39,7 @@ type RawDeliveryPrintRow = {
   remaining_outstanding: number | string | null;
   is_installment_plan: boolean | null;
   customer_id: string;
+  warehouse_id: string | null;
   vehicle_id: string | null;
   vehicles: { id: string; name: string } | { id: string; name: string }[] | null;
   customers: {
@@ -68,6 +70,8 @@ type RawDeliveryPrintRow = {
     | null;
   delivery_note_items: {
     id: string;
+    sale_unit_label: string;
+    order_items: { is_replacement: boolean } | null;
     quantity_delivered: number | string | null;
     unit_price: number | string | null;
     line_total: number | string | null;
@@ -129,7 +133,7 @@ function buildPrintData(rows: RawDeliveryPrintRow[]): DeliveryNotePrintData[] {
   const groupMap = new Map<string, RawDeliveryPrintRow[]>();
 
   for (const row of rows) {
-    const key = `${row.customer_id}_${row.delivery_date}`;
+    const key = `${row.customer_id}_${row.delivery_date}_${row.warehouse_id}`;
     const bucket = groupMap.get(key) ?? [];
     bucket.push(row);
     groupMap.set(key, bucket);
@@ -155,6 +159,7 @@ function buildPrintData(rows: RawDeliveryPrintRow[]): DeliveryNotePrintData[] {
         saleUnitLabel: string;
         unitPrice: number;
         lineTotal: number;
+        isReplacement?: boolean;
         display_order?: number | null;
       }
     >();
@@ -163,13 +168,15 @@ function buildPrintData(rows: RawDeliveryPrintRow[]): DeliveryNotePrintData[] {
       for (const item of row.delivery_note_items ?? []) {
         const sku = item.products.sku.trim();
         const name = item.products.name.trim();
-        const unitLabel = item.products.unit.trim();
-        const key = `${sku.toLowerCase() || name.toLowerCase()}||${unitLabel.toLowerCase()}`;
+        const unitLabel = item.sale_unit_label.trim();
+        const isReplacement = item.order_items?.is_replacement === true;
+        const key = `${sku.toLowerCase() || name.toLowerCase()}||${unitLabel.toLowerCase()}||${isReplacement}`;
 
         if (itemMap.has(key)) {
           const existing = itemMap.get(key)!;
           existing.quantityDelivered += toNumber(item.quantity_delivered);
           existing.lineTotal += toNumber(item.line_total);
+          existing.unitPrice = existing.lineTotal / existing.quantityDelivered;
           continue;
         }
 
@@ -178,6 +185,7 @@ function buildPrintData(rows: RawDeliveryPrintRow[]): DeliveryNotePrintData[] {
           lineNumber: 0,
           productSku: sku,
           productName: name,
+          isReplacement,
           quantityDelivered: toNumber(item.quantity_delivered),
           saleUnitLabel: unitLabel,
           unitPrice: toNumber(item.unit_price),
@@ -285,13 +293,13 @@ export default async function DeliveryBatchPrintPage({ searchParams }: Props) {
   let query = supabase
     .from("delivery_notes")
     .select(`
-      id, delivery_number, delivery_date, total_amount, notes, customer_id, created_at, vehicle_id, vehicles(id, name),
+      id, delivery_number, delivery_date, total_amount, notes, customer_id, warehouse_id, created_at, vehicle_id, vehicles(id, name),
       previous_outstanding, installment_paid, remaining_outstanding, is_installment_plan,
       customers!inner(id, name, customer_code, address, default_vehicle_id, vehicles(id, name)),
       organizations!inner(name, metadata),
       orders(order_number, assigned_vehicle_id, assigned_vehicle:assigned_vehicle_id(id, name), warehouses:warehouse_id(name)),
       delivery_note_items(
-        id, quantity_delivered, unit_price, line_total,
+        id, quantity_delivered, sale_unit_label, unit_price, line_total, order_items(is_replacement),
         products!inner(name, sku, unit, display_order)
       )
     `)
@@ -312,14 +320,22 @@ export default async function DeliveryBatchPrintPage({ searchParams }: Props) {
     }
   }
 
-  const { data: rows } = await query
+  const before = await getDeliveryExportVersions(session.organizationId, noteIds.length ? noteIds : undefined);
+  const { data: rows, error: printError } = await query
     .order("delivery_date", { ascending: true })
     .order("created_at", { ascending: true });
 
+  if (printError) throw new Error("โหลดบิลไม่สำเร็จ: " + printError.message);
+  const ids = (rows ?? []).map((row) => row.id);
+  if (noteIds.length && noteIds.some((id) => !ids.includes(id))) throw new Error("โหลดบิลที่เลือกไม่ครบ กรุณาโหลดข้อมูลใหม่");
+  const current = ids.length ? await getDeliveryExportVersions(session.organizationId, ids) : [];
+  if (ids.length) assertDeliveryExportVersions(before, current, ids);
   const sortedRows = rows && rows.length > 0
     ? sortDeliveryPrintRowsByCustomerOrder(rows as unknown as RawDeliveryPrintRow[])
     : [];
   const dns = sortedRows.length > 0 ? buildPrintData(sortedRows) : [];
+  const exportTokens = ids.length ? [createDeliveryExportToken(session.organizationId, current)] : [];
+  dns.forEach((dn) => { dn.exportTokens = exportTokens; });
 
   return (
     <>
