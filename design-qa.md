@@ -29,3 +29,5 @@ Rendered route: `/orders/fresh-reserve-stock`, including `?setup=1`. Captured in
 - Lint and production build passed. Real database migration applied; private ledger privileges checked.
 
 P3 follow-up: history's opening date can use a Thai date label. No province/Lotus interface has been added.
+
+Post-delivery logic audit: confirmed a missing-opening gap when adding an eligible product after initialization. Migration `20261009152637_guard_missing_fresh_reserve_opening.sql` now rejects such withdrawals/receipts atomically. The page shows an unset balance rather than a misleading zero. Regression assertions include claim, other vehicles, and missing openings; generated database types remain identical because the existing function signature was preserved.

@@ -30,6 +30,7 @@ try {
  await db.query("insert into products values($1,$2,true,'{}')",[product,org]);
  await db.query("insert into product_warehouse_fulfillment_modes values($1,$2,$3,$4,'fresh')",[org,product,wh,supplier]);
  await db.query(readFileSync("supabase/migrations/20261009133427_fresh_reserve_stock.sql","utf8"));
+ await db.query(readFileSync("supabase/migrations/20261009152637_guard_missing_fresh_reserve_opening.sql","utf8"));
  await db.query("select initialize_fresh_reserve_stock($1,$2,$3,$4)",[org,user,day,JSON.stringify([{productId:product,quantity:200}])]);
  assert.deepEqual(await balance(),[200,0]);
  await save([item("remaining",100)]);assert.deepEqual(await balance(),[100,0]);
@@ -58,6 +59,19 @@ try {
  await save([item("remaining",100),item("office",40)]);assert.deepEqual(await balance(),[140,0]);
  await save([]);assert.deepEqual(await balance(),[200,0]);
  assert.equal((await db.query("select has_table_privilege('anon','fresh_reserve_stock_movements','select') allowed")).rows[0].allowed,false);
+ await save([item("claim",50)]);assert.deepEqual(await balance(),[200,0]);await save([]);
+ const otherVehicle=id(7);await db.query("insert into vehicles values($1,$2,'รถต่างจังหวัด')",[otherVehicle,org]);
+ await save([{...item("remaining",25),vehicleId:otherVehicle}]);assert.deepEqual(await balance(),[200,0]);await save([]);
+ const addedProduct=id(8);await db.query("insert into products values($1,$2,true,'{}')",[addedProduct,org]);
+ await db.query("insert into product_warehouse_fulfillment_modes values($1,$2,$3,$4,'fresh')",[org,addedProduct,wh,supplier]);
+ for (const type of ["remaining","office"]) {
+  await db.query("savepoint missing_opening");
+  await assert.rejects(()=>save([{...item(type,25),productId:addedProduct}]),/ยังไม่ได้ตั้งยอดสต็อค/);
+  await db.query("rollback to savepoint missing_opening");
+  assert.deepEqual(await balance(),[200,0]);
+  assert.equal(Number((await db.query("select count(*) from daily_order_special_items")).rows[0].count),0);
+ }
+ console.log("PASS: claim, other vehicles, missing product opening guard and full rollback");
  console.log("PASS: opening, immediate deduction, edit difference, stable IDs, delayed receipts, midnight, refunds, shortage rollback, stale protection, no-op and private ledger");
 } finally { await db.query("rollback");await db.end(); }
 
