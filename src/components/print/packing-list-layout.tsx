@@ -1480,6 +1480,10 @@ function PackingListStyles() {
         --standard-row-height: 7.8mm;
       }
 
+      .packing-table--combined-summary thead .packing-col {
+        border-top: 1px solid #000000;
+      }
+
       .packing-combined-summary-title {
         height: 6mm;
         padding: 0 0.8mm;
