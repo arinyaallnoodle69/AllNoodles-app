@@ -57,6 +57,7 @@ type AppRole = "admin" | "member" | "warehouse";
 
 const PAGE_TITLES: [string, string][] = [
   ["/orders/incoming", "รายการออเดอร์"],
+  ["/orders/fresh-reserve-stock", "สต็อคสำรองผลิตสด"],
   ["/orders/fresh-reserve", "สำรองผลิตสด"],
   ["/orders/packing-list", "ใบออเดอร์"],
   ["/delivery/print", "พิมพ์ใบจัดส่ง"],
@@ -148,6 +149,7 @@ const mainNavItems = [
   { href: "/stock/movements", icon: BarChart2, label: "ความเคลื่อนไหวสต็อก" },
   { href: "/orders/incoming", icon: ReceiptText, label: "รายการออเดอร์" },
   { href: "/orders/fresh-reserve", icon: Layers3, label: "สำรองผลิตสด" },
+  { href: "/orders/fresh-reserve-stock", icon: Boxes, label: "สต็อคสำรองผลิตสด" },
   { href: "/billing", icon: Receipt, label: "ใบวางบิล" },
 ] as const;
 
@@ -189,6 +191,7 @@ function canAccessNavHref(role: AppRole | null, href: string) {
     return (
       href === "/orders/incoming" ||
       href === "/orders/fresh-reserve" ||
+      href === "/orders/fresh-reserve-stock" ||
       href === "/billing" ||
       href === "/stock" ||
       href === "/stock/movements" ||

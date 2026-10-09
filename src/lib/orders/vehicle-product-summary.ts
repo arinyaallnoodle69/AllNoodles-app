@@ -526,7 +526,7 @@ export async function getFactoryOrderSheetData(
     const freshModes = ((modesResult.data ?? []) as ProductModeRow[]).filter(
       (candidate) => candidate.product_id === item.productId && candidate.mode === "fresh",
     );
-    const mode = FACTORY_ADJUSTMENT_SKUS.some((sku) => sku === product.sku)
+    const mode = vehicleNameByKey.get(item.vehicleId)?.trim() === "รถกรุงเทพ" || FACTORY_ADJUSTMENT_SKUS.some((sku) => sku === product.sku)
       ? freshModes.find((candidate) => warehouseNameById.get(candidate.warehouse_id)?.trim() === "คลังกรุงเทพ") ?? freshModes[0]
       : freshModes[0];
     if (!mode) continue;

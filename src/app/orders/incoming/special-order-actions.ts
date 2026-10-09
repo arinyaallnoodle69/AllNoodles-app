@@ -12,10 +12,6 @@ export type SaveDailySpecialItemInput = {
   vehicleId: string;
 };
 
-type SpecialItemsAdmin = {
-  from(table: "daily_order_special_items"): any; // eslint-disable-line @typescript-eslint/no-explicit-any
-};
-
 type SpecialModesAdmin = {
   from(table: "product_warehouse_fulfillment_modes"): any; // eslint-disable-line @typescript-eslint/no-explicit-any
 };
@@ -23,6 +19,7 @@ type SpecialModesAdmin = {
 export async function saveDailySpecialItemsAction(
   date: string,
   input: SaveDailySpecialItemInput[],
+  expected: SaveDailySpecialItemInput[],
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   const session = await requireAnyRole(["admin", "member"]);
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return { ok: false, error: "วันที่ไม่ถูกต้อง" };
@@ -67,47 +64,11 @@ export async function saveDailySpecialItemsAction(
     return { ok: false, error: "ของเหลือเลือกได้เฉพาะสินค้าผลิตสด" };
   }
 
-  const table = (admin as unknown as SpecialItemsAdmin).from("daily_order_special_items");
-  const { data: previousRows, error: previousError } = await table
-    .select("entry_type, vehicle_id, product_id, quantity, created_by")
-    .eq("organization_id", session.organizationId)
-    .eq("entry_date", date);
-
-  if (previousError) return { ok: false, error: previousError.message ?? "บันทึกรายการไม่สำเร็จ" };
-
-  const { error: deleteError } = await table
-    .delete()
-    .eq("organization_id", session.organizationId)
-    .eq("entry_date", date);
-
-  if (deleteError) return { ok: false, error: deleteError.message ?? "บันทึกรายการไม่สำเร็จ" };
-
-  if (items.length > 0) {
-    const { error: insertError } = await table.insert(items.map((item) => ({
-      organization_id: session.organizationId,
-      entry_date: date,
-      entry_type: item.type,
-      vehicle_id: item.vehicleId,
-      product_id: item.productId,
-      quantity: item.quantity,
-      created_by: session.userId,
-    })));
-
-    if (insertError) {
-      if ((previousRows?.length ?? 0) > 0) {
-        await table.insert(previousRows.map((row: any) => ({ // eslint-disable-line @typescript-eslint/no-explicit-any
-          organization_id: session.organizationId,
-          entry_date: date,
-          entry_type: row.entry_type,
-          vehicle_id: row.vehicle_id,
-          product_id: row.product_id,
-          quantity: row.quantity,
-          created_by: row.created_by,
-        })));
-      }
-      return { ok: false, error: insertError.message ?? "บันทึกรายการไม่สำเร็จ" };
-    }
-  }
+  const { error } = await admin.rpc("save_daily_special_items_atomic", {
+    p_org: session.organizationId, p_user: session.userId, p_date: date,
+    p_items: items, p_expected: expected.map(({ productId, vehicleId, type, quantity }) => ({ productId, vehicleId, type, quantity })),
+  });
+  if (error) return { ok: false, error: error.message };
 
   updateTag(`orders-${session.organizationId}`);
   revalidatePath("/orders/incoming");
@@ -115,5 +76,6 @@ export async function saveDailySpecialItemsAction(
   revalidatePath("/orders/vehicle-product-summary");
   revalidatePath("/orders/factory-order-sheet");
   revalidatePath("/orders/fresh-reserve");
+  revalidatePath("/orders/fresh-reserve-stock");
   return { ok: true };
 }

@@ -1,0 +1,63 @@
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { Client } from "pg";
+const db = new Client({ host: "127.0.0.1", port: 55439, user: "postgres", database: "factory_test" });
+await db.connect();
+const id = (n) => `00000000-0000-0000-0000-${String(n).padStart(12,"0")}`;
+const [org,user,wh,supplier,vehicle,product] = [1,2,3,4,5,6].map(id);
+let day = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Bangkok" }).format(new Date());
+const item = (type,quantity) => ({ type,quantity,vehicleId:vehicle,productId:product });
+const balance = async () => { const r=(await db.query("select available,pending from fresh_reserve_stock_balances")).rows[0]; return [Number(r.available),Number(r.pending)]; };
+let previous=[];
+const save=async(next)=>{ await db.query("select save_daily_special_items_atomic($1,$2,$3,$4,$5)",[org,user,day,JSON.stringify(next),JSON.stringify(previous)]); previous=next; };
+try {
+ await db.query("begin");
+ await db.query(`create role anon;create role authenticated;create role service_role;
+ create table organizations(id uuid primary key);
+ create table warehouses(id uuid primary key,organization_id uuid,name text);
+ create table suppliers(id uuid primary key,organization_id uuid,name text);
+ create table vehicles(id uuid primary key,organization_id uuid,name text);
+ create table app_users(id uuid primary key,organization_id uuid,is_active boolean,role text);
+ create table products(id uuid primary key,organization_id uuid,is_active boolean,metadata jsonb);
+ create table product_warehouse_fulfillment_modes(organization_id uuid,product_id uuid,warehouse_id uuid,supplier_id uuid,mode text);
+ create table daily_order_special_items(id uuid primary key default gen_random_uuid(),organization_id uuid,entry_date date,entry_type text,vehicle_id uuid,product_id uuid,quantity numeric,created_by uuid,
+ unique(organization_id,entry_date,entry_type,vehicle_id,product_id));`);
+ await db.query("insert into organizations values($1)",[org]);
+ await db.query("insert into warehouses values($1,$2,'คลังกรุงเทพ')",[wh,org]);
+ await db.query("insert into suppliers values($1,$2,'โรงงานมังกร')",[supplier,org]);
+ await db.query("insert into vehicles values($1,$2,'รถกรุงเทพ')",[vehicle,org]);
+ await db.query("insert into app_users values($1,$2,true,'admin')",[user,org]);
+ await db.query("insert into products values($1,$2,true,'{}')",[product,org]);
+ await db.query("insert into product_warehouse_fulfillment_modes values($1,$2,$3,$4,'fresh')",[org,product,wh,supplier]);
+ await db.query(readFileSync("supabase/migrations/20261009133427_fresh_reserve_stock.sql","utf8"));
+ await db.query("select initialize_fresh_reserve_stock($1,$2,$3,$4)",[org,user,day,JSON.stringify([{productId:product,quantity:200}])]);
+ assert.deepEqual(await balance(),[200,0]);
+ await save([item("remaining",100)]);assert.deepEqual(await balance(),[100,0]);
+ const original=(await db.query("select id from daily_order_special_items")).rows[0].id;
+ await save([item("remaining",120)]);assert.deepEqual(await balance(),[80,0]);
+ assert.equal((await db.query("select id from daily_order_special_items")).rows[0].id,original);
+ assert.equal(Number((await db.query("select quantity_delta from fresh_reserve_stock_movements order by created_at desc limit 1")).rows[0].quantity_delta),-20);
+ await save([item("remaining",100),item("office",50)]);assert.deepEqual(await balance(),[100,50]);
+ const count=(await db.query("select count(*) from fresh_reserve_stock_movements")).rows[0].count;
+ await save(previous);assert.equal((await db.query("select count(*) from fresh_reserve_stock_movements")).rows[0].count,count);
+ await save([item("remaining",100),item("office",30)]);assert.deepEqual(await balance(),[100,30]);
+ await db.query("savepoint invalid");
+ await assert.rejects(()=>save([item("remaining",201),item("office",30)]),/ของสำรองไม่พอ/);
+ await db.query("rollback to savepoint invalid");assert.deepEqual(await balance(),[100,30]);
+ await db.query("savepoint stale");
+ await assert.rejects(()=>db.query("select save_daily_special_items_atomic($1,$2,$3,$4,'[]')",[org,user,day,JSON.stringify(previous)]),/มีคนแก้แล้ว/);
+ await db.query("rollback to savepoint stale");
+ // Move the fixture's scheduled receipt into the past to simulate the midnight boundary.
+ await db.query("update fresh_reserve_stock_movements set effective_at=clock_timestamp()-interval '1 second' where reason='office'");
+ assert.deepEqual(await balance(),[130,0]);assert.deepEqual(await balance(),[130,0]);
+ day=(await db.query("select to_char($1::date-1,'YYYY-MM-DD') entry_day",[day])).rows[0].entry_day;
+ await db.query("alter table daily_order_special_items disable trigger reserve_stock_special_after");
+ await db.query("update daily_order_special_items set entry_date=$1",[day]);
+ await db.query("update fresh_reserve_stock_groups set start_date=$1",[day]);
+ await db.query("alter table daily_order_special_items enable trigger reserve_stock_special_after");
+ await save([item("remaining",100),item("office",40)]);assert.deepEqual(await balance(),[140,0]);
+ await save([]);assert.deepEqual(await balance(),[200,0]);
+ assert.equal((await db.query("select has_table_privilege('anon','fresh_reserve_stock_movements','select') allowed")).rows[0].allowed,false);
+ console.log("PASS: opening, immediate deduction, edit difference, stable IDs, delayed receipts, midnight, refunds, shortage rollback, stale protection, no-op and private ledger");
+} finally { await db.query("rollback");await db.end(); }
+

@@ -42,6 +42,7 @@ const primaryNav = [
 
 const moreItems = [
   { href: "/orders/fresh-reserve", icon: Layers3, label: "สำรองผลิตสด" },
+  { href: "/orders/fresh-reserve-stock", icon: Boxes, label: "สต็อคสำรองผลิตสด" },
   { href: "/stock", icon: Boxes, label: "สต็อก" },
   { href: "/stock/movements", icon: BarChart2, label: "Movement" },
   { href: "/billing", icon: Receipt, label: "ใบวางบิล" },
@@ -97,7 +98,7 @@ export function SettingsMobileBottomNav() {
   const { open: openCreateOrder, isOpen: isCreateModalOpen } = useCreateOrder();
 
   const visibleMoreItems = isMember
-    ? moreItems.filter((item) => item.href === "/orders/fresh-reserve" || item.href === "/stock/movements")
+    ? moreItems.filter((item) => item.href === "/orders/fresh-reserve" || item.href === "/orders/fresh-reserve-stock" || item.href === "/stock/movements")
     : moreItems;
   const moreActive = visibleMoreItems.some((item) => pathname.startsWith(item.href));
   const settingsModalOpen = settingsOpen;

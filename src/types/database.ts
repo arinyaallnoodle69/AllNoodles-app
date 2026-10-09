@@ -998,6 +998,166 @@ export type Database = {
         }
         Relationships: []
       }
+      fresh_reserve_stock_groups: {
+        Row: {
+          id: string
+          initialized_at: string
+          initialized_by: string | null
+          organization_id: string
+          start_date: string
+          supplier_id: string
+          vehicle_id: string
+          warehouse_id: string
+        }
+        Insert: {
+          id?: string
+          initialized_at?: string
+          initialized_by?: string | null
+          organization_id: string
+          start_date: string
+          supplier_id: string
+          vehicle_id: string
+          warehouse_id: string
+        }
+        Update: {
+          id?: string
+          initialized_at?: string
+          initialized_by?: string | null
+          organization_id?: string
+          start_date?: string
+          supplier_id?: string
+          vehicle_id?: string
+          warehouse_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fresh_reserve_stock_groups_initialized_by_fkey"
+            columns: ["initialized_by"]
+            isOneToOne: false
+            referencedRelation: "app_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fresh_reserve_stock_groups_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fresh_reserve_stock_groups_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fresh_reserve_stock_groups_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "vehicles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fresh_reserve_stock_groups_warehouse_id_fkey"
+            columns: ["warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "warehouses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fresh_reserve_stock_movements: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          effective_at: string
+          group_id: string
+          id: string
+          product_id: string
+          quantity_delta: number
+          reason: string
+          special_item_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          effective_at: string
+          group_id: string
+          id?: string
+          product_id: string
+          quantity_delta: number
+          reason: string
+          special_item_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          effective_at?: string
+          group_id?: string
+          id?: string
+          product_id?: string
+          quantity_delta?: number
+          reason?: string
+          special_item_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fresh_reserve_stock_movements_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "app_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fresh_reserve_stock_movements_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "fresh_reserve_stock_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fresh_reserve_stock_movements_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fresh_reserve_stock_openings: {
+        Row: {
+          group_id: string
+          product_id: string
+          quantity: number
+        }
+        Insert: {
+          group_id: string
+          product_id: string
+          quantity: number
+        }
+        Update: {
+          group_id?: string
+          product_id?: string
+          quantity?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fresh_reserve_stock_openings_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "fresh_reserve_stock_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fresh_reserve_stock_openings_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       inventory_movements: {
         Row: {
           created_at: string
@@ -2491,6 +2651,40 @@ export type Database = {
       }
     }
     Views: {
+      fresh_reserve_stock_balances: {
+        Row: {
+          available: number | null
+          group_id: string | null
+          opening_quantity: number | null
+          organization_id: string | null
+          pending: number | null
+          pending_at: string | null
+          product_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fresh_reserve_stock_groups_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fresh_reserve_stock_openings_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "fresh_reserve_stock_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fresh_reserve_stock_openings_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       system_database_stats: {
         Row: {
           index_scans: number | null
@@ -2844,6 +3038,10 @@ export type Database = {
               sales: number
             }[]
           }
+      initialize_fresh_reserve_stock: {
+        Args: { p_date: string; p_org: string; p_rows: Json; p_user: string }
+        Returns: string
+      }
       merge_order_items_atomic: {
         Args: {
           p_items: Json
@@ -2937,6 +3135,16 @@ export type Database = {
           p_organization_id: string
           p_rows: Json
           p_user_id: string
+        }
+        Returns: undefined
+      }
+      save_daily_special_items_atomic: {
+        Args: {
+          p_date: string
+          p_expected: Json
+          p_items: Json
+          p_org: string
+          p_user: string
         }
         Returns: undefined
       }
@@ -3121,4 +3329,3 @@ export const Constants = {
     },
   },
 } as const
-

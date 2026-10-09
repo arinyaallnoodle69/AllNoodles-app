@@ -26,7 +26,8 @@ import type { OrderVehicleOption } from "@/lib/orders/manage";
 type Props = {
   date: string;
   initialItems: DailySpecialItem[];
-  variant?: "desktop" | "mobile" | "mobile-compact";
+  variant?: "desktop" | "mobile" | "mobile-compact" | "reserve";
+  defaultVehicleId?: string;
   products: DailySpecialCatalogProduct[];
   vehicles: OrderVehicleOption[];
 };
@@ -57,12 +58,12 @@ function formatDate(date: string) {
   return year && month && day ? `${day}/${month}/${Number(year) + 543}` : date;
 }
 
-export function DailySpecialOrderManager({ date, initialItems, products, variant = "mobile", vehicles }: Props) {
+export function DailySpecialOrderManager({ date, initialItems, products, variant = "mobile", vehicles, defaultVehicleId }: Props) {
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [type, setType] = useState<DailySpecialItemType>("office");
-  const [vehicleId, setVehicleId] = useState(vehicles[0]?.id ?? "");
+  const [vehicleId, setVehicleId] = useState(defaultVehicleId ?? vehicles[0]?.id ?? "");
   const [search, setSearch] = useState("");
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [selectedCategoryId, setSelectedCategoryId] = useState("__all__");
@@ -195,7 +196,7 @@ export function DailySpecialOrderManager({ date, initialItems, products, variant
   function saveAll() {
     setError(null);
     startTransition(async () => {
-      const result = await saveDailySpecialItemsAction(date, cart);
+      const result = await saveDailySpecialItemsAction(date, cart, initialItemsToCart(initialItems));
       if (!result.ok) {
         setError(result.error);
         return;
@@ -278,7 +279,7 @@ export function DailySpecialOrderManager({ date, initialItems, products, variant
 
   return (
     <>
-      {variant === "mobile" ? mobileTrigger : variant === "mobile-compact" ? mobileCompactTrigger : desktopTrigger}
+      {variant === "reserve" ? <button type="button" onClick={() => { setType("remaining"); setIsOpen(true); }} className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#6D28D9] px-5 py-3 text-base font-bold text-white"><ShoppingBasket className="h-5 w-5" />กรอกรายการพิเศษ</button> : variant === "mobile" ? mobileTrigger : variant === "mobile-compact" ? mobileCompactTrigger : desktopTrigger}
       {toast ? (
         <div className="fixed left-1/2 top-5 z-[700] flex -translate-x-1/2 items-center gap-2 rounded-full bg-emerald-600 px-4 py-2 text-sm font-black text-white shadow-xl animate-in fade-in">
           <Check className="h-4 w-4" />

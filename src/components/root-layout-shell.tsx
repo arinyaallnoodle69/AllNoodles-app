@@ -8,6 +8,7 @@ const APP_SHELL_PATHS = [
   "/billing",
   "/dashboard",
   "/orders/fresh-reserve",
+  "/orders/fresh-reserve-stock",
   "/orders/incoming",
   "/reports",
   "/settings",
