@@ -2843,6 +2843,16 @@ export type Database = {
         }[]
       }
       revoke_app_session: { Args: { p_session_id: string }; Returns: undefined }
+      save_confirmed_factory_production: {
+        Args: {
+          p_date: string
+          p_operation: string
+          p_organization_id: string
+          p_rows: Json
+          p_user_id: string
+        }
+        Returns: undefined
+      }
       save_order_items_and_delivery: {
         Args: {
           p_additions: Json
@@ -3024,4 +3034,3 @@ export const Constants = {
     },
   },
 } as const
-

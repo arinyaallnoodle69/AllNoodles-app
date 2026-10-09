@@ -6,7 +6,6 @@ import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { getDailySpecialPrintItems } from "@/lib/orders/daily-special-items";
 import { getDailyFactoryOrderAdjustments } from "@/lib/orders/factory-order-adjustments";
 import { getBangkokFactoryProductMode } from "@/lib/orders/factory-adjustment-demand";
-import { calculateFactoryOrderQuantity } from "@/lib/orders/fresh-reserve-math";
 import { resolveVehicleSummaryProductMode } from "@/lib/orders/vehicle-summary-mode";
 
 type ProductWarehouseFulfillmentMode = "disabled" | "fresh" | "stock";
@@ -479,9 +478,7 @@ export async function getFactoryOrderSheetData(
     const warehouseId = activeDeliveryNote?.warehouse_id ?? order.warehouse_id ?? order.customers.default_warehouse_id ?? null;
     if (!warehouseId) continue;
 
-    const warehouseName = activeDeliveryNote?.warehouse_id
-      ? getRelationName(activeDeliveryNote.warehouses) || warehouseNameById.get(warehouseId) || "ไม่ระบุคลัง"
-      : getRelationName(order.customers.warehouses) || warehouseNameById.get(warehouseId) || "ไม่ระบุคลัง";
+    const warehouseName = warehouseNameById.get(warehouseId) || "ไม่ระบุคลัง";
     const vehicleId = activeDeliveryNote?.vehicle_id ?? order.assigned_vehicle_id ?? order.customers.default_vehicle_id;
     const vehicleKey = vehicleId ?? "__unassigned__";
     const vehicleName = (activeDeliveryNote?.vehicle_id ? getRelationName(activeDeliveryNote.vehicles) : null)
@@ -569,18 +566,6 @@ export async function getFactoryOrderSheetData(
 
   const adjustmentByProductId = new Map(adjustments.map((item) => [item.productId, item]));
   const adjustmentGroupKeyByProductId = new Map<string, string>();
-  const currentBangkokDemandByProductId = new Map<string, number>();
-  for (const group of groups.values()) {
-    if (group.warehouseName.trim() !== "คลังกรุงเทพ") continue;
-    for (const [productId, quantitiesByVehicle] of group.productVehicleQty) {
-      const demand = Array.from(quantitiesByVehicle.values()).reduce((sum, quantity) => sum + quantity, 0);
-      currentBangkokDemandByProductId.set(
-        productId,
-        (currentBangkokDemandByProductId.get(productId) ?? 0) + demand,
-      );
-    }
-  }
-
   const currentAdjustedQuantityByProductId = new Map<string, number>();
   for (const [productId, adjustment] of adjustmentByProductId) {
     const product = productById.get(productId);
@@ -596,11 +581,7 @@ export async function getFactoryOrderSheetData(
     const supplierKey = mode.supplier_id || product.supplierId || supplierName;
     const groupKey = `${mode.warehouse_id}:${supplierKey}`;
     adjustmentGroupKeyByProductId.set(productId, groupKey);
-    const adjustedQuantity = calculateFactoryOrderQuantity(
-      currentBangkokDemandByProductId.get(productId) ?? 0,
-      adjustment.reserveQuantity,
-      adjustment.remainingQuantity,
-    );
+    const adjustedQuantity = adjustment.adjustedQuantity;
     currentAdjustedQuantityByProductId.set(productId, adjustedQuantity);
     let group = groups.get(groupKey);
 

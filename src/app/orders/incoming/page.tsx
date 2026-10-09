@@ -236,7 +236,8 @@ export default async function IncomingOrdersPage({ searchParams }: IncomingOrder
       const remainingQuantity = saved?.remainingQuantity ?? 0;
       const reserveQuantity = saved?.reserveQuantity ?? 0;
       return {
-        adjustedQuantity: Math.max(0, orderDemand + reserveQuantity - remainingQuantity),
+        adjustedQuantity: saved?.adjustedQuantity ?? Math.max(0, orderDemand + reserveQuantity - remainingQuantity),
+        updatedAt: saved?.updatedAt ?? null,
         name: product.name,
         orderDemand,
         productId: product.id,

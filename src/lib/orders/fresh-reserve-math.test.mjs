@@ -5,7 +5,7 @@ import {
   calculateFreshReserve,
 } from "./fresh-reserve-math.ts";
 
-test("factory order quantity updates automatically when current demand changes", () => {
+test("draft factory quantity follows demand before confirmation", () => {
   assert.equal(calculateFactoryOrderQuantity(285, 115, 300), 100);
   assert.equal(calculateFactoryOrderQuantity(315, 115, 300), 130);
   assert.equal(calculateFactoryOrderQuantity(10, 5, 100), 0);

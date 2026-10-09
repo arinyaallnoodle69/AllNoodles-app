@@ -13,6 +13,7 @@ export type FactoryOrderAdjustment = {
   remainingQuantity: number;
   reserveQuantity: number;
   updatedAt: string | null;
+  confirmedAt: string | null;
 };
 
 type StoredAdjustment = Omit<FactoryOrderAdjustment, "date" | "productId">;
@@ -31,8 +32,9 @@ function readAdjustment(metadata: unknown, date: string): StoredAdjustment | nul
     remainingQuantity: Number(value.remainingQuantity ?? 0),
     reserveQuantity: Number(value.reserveQuantity ?? 0),
   };
-  return Object.values(parsed).every(Number.isFinite)
-    ? { ...parsed, updatedAt: typeof value.updatedAt === "string" ? value.updatedAt : null }
+  const updatedAt = typeof value.updatedAt === "string" ? value.updatedAt : null;
+  return Object.values(parsed).every((number) => Number.isFinite(number) && number >= 0)
+    ? { ...parsed, updatedAt, confirmedAt: typeof value.confirmedAt === "string" ? value.confirmedAt : updatedAt }
     : null;
 }
 
