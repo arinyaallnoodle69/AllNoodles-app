@@ -1,3 +1,4 @@
+import { describeFreshReserveActivity } from "@/lib/orders/fresh-reserve-activity";
 import Link from "next/link";
 import { FreshReserveRefresh } from "@/components/orders/fresh-reserve-refresh";
 import { ChevronDown, ChevronRight, Clock3, Layers3 } from "lucide-react";
@@ -14,8 +15,13 @@ export type FreshReserveRow = FactoryAdjustmentProduct & {
 
 export type FreshReserveActivity = {
   customerName: string;
-  quantity: number;
-  sku: string;
+  productName: string;
+  beforeQuantity: number | null;
+  afterQuantity: number;
+  demandChange: number | null;
+  reserveChange: number | null;
+  remaining: number | null;
+  reason: string;
   time: string;
 };
 
@@ -105,12 +111,15 @@ function ActivityList({ activities, dateLabel }: { activities: FreshReserveActiv
     <div>
       <p className="rounded-md bg-[#F3F5FA] px-2 py-1.5 text-sm font-bold text-[#202354]">{dateLabel}</p>
       {activities.length ? activities.map((activity, index) => (
-        <div key={`${activity.time}-${activity.sku}-${index}`} className="grid grid-cols-[48px_12px_1fr] gap-2 py-3 text-sm">
+        <div key={`${activity.time}-${activity.productName}-${index}`} className="grid grid-cols-[48px_12px_1fr] gap-2 py-3 text-sm">
           <span className="font-medium text-[#50577A]">{activity.time}</span>
           <span className="relative mt-1.5 h-3 w-3 rounded-full bg-[#6D28D9] ring-4 ring-[#EEE7FF] after:absolute after:left-1/2 after:top-3 after:h-[calc(100%+36px)] after:w-px after:-translate-x-1/2 after:bg-[#D8DDEF] last:after:hidden" />
           <div className="min-w-0">
             <p className="truncate font-bold text-[#15183E]">{activity.customerName}</p>
-            <p className="mt-0.5 text-[#4A5072]">ยอดปัจจุบัน {activity.sku} {formatQuantity(activity.quantity)} กก.</p>
+            <p className="mt-0.5 text-[#4A5072]">{activity.productName}</p>
+            {describeFreshReserveActivity(activity).map((line, lineIndex) => (
+              <p key={lineIndex} className={lineIndex === 2 ? "mt-1 font-semibold text-[#4B20C4]" : lineIndex === 3 ? "text-xs font-semibold text-red-700" : "mt-1 text-xs text-[#4A5072]"}>{line}</p>
+            ))}
           </div>
         </div>
       )) : <p className="py-5 text-center text-sm font-medium text-[#667085]">ยังไม่มีรายการเปลี่ยนแปลงหลังยืนยันยอดโรงงาน</p>}
@@ -170,13 +179,13 @@ export function FreshReserveDashboard({ activities, date, dateLabel, lastUpdated
         </main>
 
         <aside className="hidden min-h-[calc(100dvh-9rem)] border-l border-[#E1E5EE] bg-white p-5 lg:block">
-          <div className="flex items-center justify-between"><h2 className="text-lg font-black text-[#17145B]">รายการล่าสุด</h2><Link href={`/orders/incoming?date=${date}`} className="inline-flex items-center gap-1 text-sm font-bold text-[#4B20C4]">ดูทั้งหมด <ChevronRight className="h-4 w-4" /></Link></div>
+          <div className="flex items-center justify-between"><h2 className="text-base font-black text-[#17145B]">การใช้สำรองล่าสุด</h2><Link href={`/orders/incoming?date=${date}`} className="inline-flex items-center gap-1 text-sm font-bold text-[#4B20C4]">ดูทั้งหมด <ChevronRight className="h-4 w-4" /></Link></div>
           <div className="mt-5"><ActivityList activities={activities} dateLabel={dateLabel} /></div>
         </aside>
       </div>
 
       <details className="mx-3 mt-3 overflow-hidden rounded-xl border border-[#E0E4ED] bg-white lg:hidden">
-        <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-4 text-base font-black text-[#17145B]">รายการล่าสุด <ChevronDown className="h-5 w-5" /></summary>
+        <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-4 text-base font-black text-[#17145B]">การใช้สำรองล่าสุด <ChevronDown className="h-5 w-5" /></summary>
         <div className="border-t border-[#E6E9F1] px-4 pb-2"><ActivityList activities={activities} dateLabel={dateLabel} /></div>
       </details>
     </div>

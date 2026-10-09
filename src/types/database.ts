@@ -935,6 +935,69 @@ export type Database = {
           },
         ]
       }
+      fresh_reserve_activity: {
+        Row: {
+          after_quantity: number
+          available_after: number | null
+          before_quantity: number | null
+          created_at: string
+          customer_name: string
+          demand_change: number | null
+          id: string
+          order_date: string
+          order_id: string | null
+          organization_id: string
+          pending_available: number
+          pending_demand: number
+          product_id: string
+          reason: string
+          reserve_change: number | null
+          source_key: string
+          transaction_id: number
+          updated_at: string
+        }
+        Insert: {
+          after_quantity: number
+          available_after?: number | null
+          before_quantity?: number | null
+          created_at?: string
+          customer_name: string
+          demand_change?: number | null
+          id?: string
+          order_date: string
+          order_id?: string | null
+          organization_id: string
+          pending_available: number
+          pending_demand: number
+          product_id: string
+          reason: string
+          reserve_change?: number | null
+          source_key: string
+          transaction_id: number
+          updated_at?: string
+        }
+        Update: {
+          after_quantity?: number
+          available_after?: number | null
+          before_quantity?: number | null
+          created_at?: string
+          customer_name?: string
+          demand_change?: number | null
+          id?: string
+          order_date?: string
+          order_id?: string | null
+          organization_id?: string
+          pending_available?: number
+          pending_demand?: number
+          product_id?: string
+          reason?: string
+          reserve_change?: number | null
+          source_key?: string
+          transaction_id?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       inventory_movements: {
         Row: {
           created_at: string
@@ -2662,6 +2725,18 @@ export type Database = {
         }
         Returns: string
       }
+      fresh_reserve_current_demand: {
+        Args: { p_date: string; p_org: string; p_product: string }
+        Returns: number
+      }
+      fresh_reserve_order_quantities: {
+        Args: { p_date: string; p_org: string; p_product: string }
+        Returns: {
+          order_id: string
+          quantity: number
+          vehicle_id: string
+        }[]
+      }
       generate_receipt_number: {
         Args: { p_date?: string; p_organization_id: string }
         Returns: string
@@ -2827,6 +2902,18 @@ export type Database = {
       }
       recalculate_product_stock_totals: {
         Args: { p_organization_id: string; p_product_id: string }
+        Returns: undefined
+      }
+      record_fresh_reserve_activity: {
+        Args: {
+          p_date: string
+          p_order: string
+          p_org: string
+          p_phase: string
+          p_product: string
+          p_reason: string
+          p_special: string
+        }
         Returns: undefined
       }
       record_pin_auth_result: {
@@ -3034,3 +3121,4 @@ export const Constants = {
     },
   },
 } as const
+

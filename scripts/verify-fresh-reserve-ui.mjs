@@ -33,6 +33,10 @@ try {
     page.on("request", (request) => request.method() === "POST" ? request.abort() : request.continue());
     await page.goto(origin + "/orders/fresh-reserve?date=2026-10-09", { waitUntil: "networkidle0" });
     await page.waitForFunction(() => [...document.querySelectorAll("button")].some((button) => button.textContent.trim() === "ปรับยอดสั่งผลิต"));
+    const reserveText = await page.evaluate(() => document.body.textContent);
+    assert.ok(reserveText.includes("การใช้สำรองล่าสุด"));
+    assert.ok(reserveText.includes("ไม่มีข้อมูลก่อนแก้"));
+    assert.ok(!reserveText.includes("ยอดปัจจุบัน ANP180 80"));
     await page.evaluate(() => [...document.querySelectorAll("button")].find((button) => button.textContent.trim() === "ปรับยอดสั่งผลิต").click());
     await page.waitForSelector('[aria-modal="true"]');
     const saveDisabled = () => page.evaluate(() => document.querySelector('[aria-modal="true"] footer button:last-child').disabled);

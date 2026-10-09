@@ -4,7 +4,7 @@ import { cacheLife, cacheTag } from "next/cache";
 import { sortProductsByCategory } from "@/lib/products/sort-by-category";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { getDailySpecialPrintItems } from "@/lib/orders/daily-special-items";
-import { getDailyFactoryOrderAdjustments } from "@/lib/orders/factory-order-adjustments";
+import { FACTORY_ADJUSTMENT_SKUS, getDailyFactoryOrderAdjustments } from "@/lib/orders/factory-order-adjustments";
 import { getBangkokFactoryProductMode } from "@/lib/orders/factory-adjustment-demand";
 import { resolveVehicleSummaryProductMode } from "@/lib/orders/vehicle-summary-mode";
 
@@ -523,9 +523,12 @@ export async function getFactoryOrderSheetData(
   for (const item of specialItems.filter((special) => special.type === "office")) {
     const product = productById.get(item.productId);
     if (!product) continue;
-    const mode = ((modesResult.data ?? []) as ProductModeRow[]).find(
+    const freshModes = ((modesResult.data ?? []) as ProductModeRow[]).filter(
       (candidate) => candidate.product_id === item.productId && candidate.mode === "fresh",
     );
+    const mode = FACTORY_ADJUSTMENT_SKUS.some((sku) => sku === product.sku)
+      ? freshModes.find((candidate) => warehouseNameById.get(candidate.warehouse_id)?.trim() === "คลังกรุงเทพ") ?? freshModes[0]
+      : freshModes[0];
     if (!mode) continue;
 
     const warehouseName = warehouseNameById.get(mode.warehouse_id) || "ไม่ระบุคลัง";

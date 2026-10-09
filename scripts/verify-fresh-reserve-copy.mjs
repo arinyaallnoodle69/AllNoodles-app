@@ -1,0 +1,11 @@
+import assert from "node:assert/strict";
+import { describeFreshReserveActivity } from "../src/lib/orders/fresh-reserve-activity.ts";
+const event = { reason: "order", beforeQuantity: 10, afterQuantity: 25, demandChange: 15, reserveChange: 15, remaining: 0 };
+assert.deepEqual(describeFreshReserveActivity(event), ["เพิ่มออเดอร์ 15 กก.", "10 → 25 กก.", "ใช้สำรอง 15 กก. → เหลือ 0 กก."]);
+assert.deepEqual(describeFreshReserveActivity({ ...event, reason: "legacy", beforeQuantity: null, reserveChange: null }), ["ไม่มีข้อมูลก่อนแก้"]);
+assert.equal(describeFreshReserveActivity({ ...event, demandChange: -5, reserveChange: -5, remaining: 5 })[2], "คืนสำรอง 5 กก. → เหลือ 5 กก.");
+assert.equal(describeFreshReserveActivity({ ...event, demandChange: 50, reserveChange: 30 })[3], "เกินสำรอง 20 กก.");
+assert.match(describeFreshReserveActivity({ ...event, reason: "cancel" })[0], /^ยกเลิกออเดอร์/);
+assert.match(describeFreshReserveActivity({ ...event, reason: "transfer" })[0], /^ปรับการจัดส่ง/);
+assert.match(describeFreshReserveActivity({ ...event, reason: "special" })[0], /^ปรับรายการพิเศษ/);
+console.log("PASS: reserve activity labels, before/after, consumption, returns, shortage and unknown legacy history");

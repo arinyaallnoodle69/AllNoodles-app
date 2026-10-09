@@ -12,17 +12,6 @@ import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
 export const metadata = { title: "สำรองผลิตสดวันนี้" };
 
-type ActivityRow = {
-  product_id: string;
-  quantity_in_base_unit: number;
-  updated_at: string;
-  orders: {
-    warehouse_id: string | null;
-    customers: { name: string; default_warehouse_id: string | null } | { name: string; default_warehouse_id: string | null }[] | null;
-    delivery_notes: { warehouse_id: string | null; status: string; created_at: string }[];
-  } | null;
-};
-
 function formatDate(date: string) {
   return new Intl.DateTimeFormat("th-TH", { day: "numeric", month: "short", year: "numeric" }).format(new Date(`${date}T12:00:00+07:00`));
 }
@@ -71,42 +60,24 @@ export default async function FreshReservePage({ searchParams }: { searchParams:
       };
     });
 
-  const updatedAtValues = adjustments.flatMap((item) => item.confirmedAt ? [item.confirmedAt] : []);
-  const firstConfiguredAt = updatedAtValues.sort()[0] ?? null;
-  let activities: FreshReserveActivity[] = [];
-  if (firstConfiguredAt && rows.length) {
-    const { data: warehouses, error: warehouseError } = await getSupabaseAdmin().from("warehouses")
-      .select("id, name").eq("organization_id", session.organizationId);
-    if (warehouseError) throw new Error("โหลดข้อมูลคลังไม่สำเร็จ");
-    const bangkokId = warehouses?.find((warehouse) => warehouse.name.trim() === "คลังกรุงเทพ")?.id;
-    const { data, error: activityError } = await getSupabaseAdmin()
-      .from("order_items")
-      .select("product_id, quantity_in_base_unit, updated_at, orders!inner(warehouse_id, customers(name, default_warehouse_id), delivery_notes!order_id(warehouse_id, status, created_at))")
-      .eq("organization_id", session.organizationId)
-      .eq("orders.order_date", date)
-      .neq("orders.status", "cancelled")
-      .in("product_id", rows.map((row) => row.productId))
-      .gte("updated_at", firstConfiguredAt)
-      .order("updated_at", { ascending: false })
-      .limit(100);
-    if (activityError) throw new Error("โหลดรายการเปลี่ยนแปลงออเดอร์ไม่สำเร็จ");
-    const skuById = new Map(rows.map((row) => [row.productId, row.sku]));
-    activities = ((data ?? []) as unknown as ActivityRow[]).filter((item) => {
-      const customer = Array.isArray(item.orders?.customers) ? item.orders.customers[0] : item.orders?.customers;
-      const note = [...(item.orders?.delivery_notes ?? [])].sort((a, b) => a.created_at.localeCompare(b.created_at)).find((entry) => entry.status !== "cancelled");
-      const warehouseId = note?.warehouse_id ?? item.orders?.warehouse_id ?? customer?.default_warehouse_id;
-      const confirmedAt = adjustmentByProductId.get(item.product_id)?.confirmedAt;
-      return Boolean(bangkokId && warehouseId === bangkokId && confirmedAt && Date.parse(item.updated_at) >= Date.parse(confirmedAt));
-    }).slice(0, 8).map((item) => {
-      const customers = item.orders?.customers;
-      return {
-        customerName: (Array.isArray(customers) ? customers[0]?.name : customers?.name) ?? "ลูกค้า",
-        quantity: Number(item.quantity_in_base_unit ?? 0),
-        sku: skuById.get(item.product_id) ?? "สินค้า",
-        time: formatTime(item.updated_at),
-      };
-    });
-  }
+  const { data, error: activityError } = await getSupabaseAdmin()
+    .from("fresh_reserve_activity")
+    .select("customer_name,product_id,before_quantity,after_quantity,demand_change,reserve_change,available_after,reason,updated_at")
+    .eq("organization_id", session.organizationId).eq("order_date", date)
+    .order("updated_at", { ascending: false }).limit(8);
+  if (activityError) throw new Error("โหลดประวัติการใช้สำรองไม่สำเร็จ");
+  const productById = new Map(rows.map((row) => [row.productId, row]));
+  const activities: FreshReserveActivity[] = (data ?? []).map((item) => ({
+    customerName: item.customer_name,
+    productName: productById.get(item.product_id)?.name ?? "สินค้า",
+    beforeQuantity: item.before_quantity,
+    afterQuantity: item.after_quantity,
+    demandChange: item.demand_change,
+    reserveChange: item.reserve_change,
+    remaining: item.available_after,
+    reason: item.reason,
+    time: formatTime(item.updated_at),
+  }));
 
   return (
     <SettingsShell title="สำรองผลิตสดวันนี้" floatingSubmit={false} fullWidthDesktop edgeToEdgeDesktop fullWidthMobile hideHeader>
