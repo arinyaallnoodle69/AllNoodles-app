@@ -35,6 +35,7 @@ import { GripVertical, ListTree, LoaderCircle, PencilLine, Store } from "lucide-
 import { updateCustomerOrderAction } from "@/app/settings/customers/actions";
 import type { SettingsCustomer, SettingsVehicle } from "@/lib/settings/admin";
 import type { WarehouseOption } from "@/lib/warehouses";
+import type { PackingOrderScope } from "@/lib/orders/packing-list-customer-order";
 import {
   SettingsEmptyState,
   SettingsPanel,
@@ -47,6 +48,7 @@ import { CustomerWarehouseSelect } from "@/components/settings/customer-warehous
 type CustomerListPanelProps = {
   customers: SettingsCustomer[];
   reorderEnabled?: boolean;
+  packingOrderScope?: PackingOrderScope;
   searchTerm?: string;
   vehicles: SettingsVehicle[];
   warehouses: WarehouseOption[];
@@ -346,6 +348,7 @@ function SortableDesktopCustomerRow({
 export function CustomerListPanel({
   customers,
   reorderEnabled = false,
+  packingOrderScope,
   searchTerm = "",
   vehicles,
   warehouses,
@@ -369,7 +372,7 @@ export function CustomerListPanel({
       : orderedCustomers;
   }, [orderedCustomers, q]);
 
-  const canReorder = reorderEnabled && !q && filtered.length > 1;
+  const canReorder = reorderEnabled && !isReordering && !q && filtered.length > 1;
   const enableMobileReorder = canReorder && isMounted && !isDesktopViewport;
   const enableDesktopReorder = canReorder && isMounted && isDesktopViewport;
   const sensors = useSensors(
@@ -449,10 +452,15 @@ export function CustomerListPanel({
     setOrderedCustomers(nextCustomers);
 
     startReorderTransition(async () => {
-      const result = await updateCustomerOrderAction(nextCustomers.map((customer) => customer.id));
-      if (result.error) {
+      try {
+        const result = await updateCustomerOrderAction(nextCustomers.map((customer) => customer.id), packingOrderScope);
+        if (result.error) {
+          setOrderedCustomers(previousCustomers);
+          alert(result.error);
+        }
+      } catch {
         setOrderedCustomers(previousCustomers);
-        alert(result.error);
+        alert("บันทึกลำดับร้านค้าไม่สำเร็จ กรุณาลองใหม่");
       }
     });
   }
@@ -586,7 +594,9 @@ export function CustomerListPanel({
           ) : null}
         </div>
         <p className="mt-1 text-sm leading-6 text-slate-500">
-          ร้านค้าที่บันทึกแล้วจะแสดงในรายการนี้ทันที พร้อมเลือกรถประจำร้านได้จากคอลัมน์รถประจำร้าน
+          {packingOrderScope
+            ? "ลากเรียงร้านสำหรับใบออเดอร์กลุ่มนี้เท่านั้น ทั้งสองกลุ่มใช้รถกรุงเทพคันเดียวกัน ลำดับใบสั่งของและใบขึ้นของไม่เปลี่ยน"
+            : "ร้านค้าที่บันทึกแล้วจะแสดงในรายการนี้ทันที พร้อมเลือกรถประจำร้านได้จากคอลัมน์รถประจำร้าน"}
         </p>
       </div>
 

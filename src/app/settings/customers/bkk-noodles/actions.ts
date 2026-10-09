@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
 import { requireAppRole } from "@/lib/auth/authorization";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { isBangkokVehicleGroup } from "@/components/print/packing-list-bkk-split";
@@ -75,5 +75,7 @@ export async function saveBkkNoodleCustomersAction(
 
   revalidatePath("/orders/packing-list");
   revalidatePath("/settings/customers/bkk-noodles");
+  updateTag(`settings-${session.organizationId}`);
+  revalidatePath("/settings/customers");
   return {};
 }

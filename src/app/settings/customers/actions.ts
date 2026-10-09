@@ -4,6 +4,8 @@ import { revalidatePath, revalidateTag, updateTag } from "next/cache";
 import { requireAppRole } from "@/lib/auth/authorization";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { resolveGeography } from "@/lib/settings/geography-resolver";
+import { getCustomerPackingGroup, type PackingOrderScope } from "@/lib/orders/packing-list-customer-order";
+import { isBangkokVehicleGroup } from "@/components/print/packing-list-bkk-split";
 
 type CreateCustomerField = "address" | "customerCode" | "defaultVehicleId" | "defaultWarehouseId" | "name" | "outstandingBalance" | "installmentLimit";
 
@@ -527,7 +529,7 @@ export async function updateCustomerDefaultVehicleAction(
   return {};
 }
 
-export async function updateCustomerOrderAction(customerIds: string[]): Promise<{ error?: string }> {
+export async function updateCustomerOrderAction(customerIds: string[], packingScope?: PackingOrderScope): Promise<{ error?: string }> {
   const session = await requireAppRole("admin");
   const admin = getSupabaseAdmin();
   const uniqueCustomerIds = [...new Set(customerIds.map((id) => id.trim()).filter(Boolean))];
@@ -538,13 +540,35 @@ export async function updateCustomerOrderAction(customerIds: string[]): Promise<
 
   const { data: customers, error: lookupError } = await admin
     .from("customers")
-    .select("id")
+    .select("id, customer_code, default_vehicle_id, metadata")
     .eq("organization_id", session.organizationId)
     .eq("is_active", true)
     .in("id", uniqueCustomerIds);
 
   if (lookupError || (customers ?? []).length !== uniqueCustomerIds.length) {
     return { error: "รายการร้านค้าไม่ถูกต้อง กรุณารีเฟรชหน้าแล้วลองใหม่" };
+  }
+
+  if (packingScope) {
+    if (packingScope.group !== "default" && packingScope.group !== "bkk_noodle") {
+      return { error: "กลุ่มใบออเดอร์ไม่ถูกต้อง" };
+    }
+    const { data: vehicle, error: vehicleError } = await admin.from("vehicles")
+      .select("id, name").eq("organization_id", session.organizationId).eq("id", packingScope.vehicleId).maybeSingle();
+    if (vehicleError || !vehicle || !isBangkokVehicleGroup(vehicle.id, vehicle.name) || customers?.some((customer) =>
+      customer.default_vehicle_id !== packingScope.vehicleId || getCustomerPackingGroup(customer.customer_code, customer.metadata) !== packingScope.group)) {
+      return { error: "ร้านค้าไม่ได้อยู่ในกลุ่มใบออเดอร์ที่เลือก กรุณารีเฟรชแล้วลองใหม่" };
+    }
+    const { error } = await admin.rpc("update_customer_packing_order", {
+      p_organization_id: session.organizationId,
+      p_vehicle_id: packingScope.vehicleId,
+      p_customer_ids: uniqueCustomerIds,
+    });
+    if (error) return { error: "บันทึกลำดับใบออเดอร์ไม่สำเร็จ กรุณารีเฟรชแล้วลองใหม่" };
+    updateTag(`settings-${session.organizationId}`);
+    revalidatePath("/settings/customers");
+    revalidatePath("/orders/packing-list");
+    return {};
   }
 
   const customersTable = admin.from("customers") as unknown as {

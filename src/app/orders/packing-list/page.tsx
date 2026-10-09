@@ -22,6 +22,7 @@ import { AutoPrint, PackingListPrintButton } from "./preview/print-button";
 import { getDailySpecialPrintItems } from "@/lib/orders/daily-special-items";
 import { SharePackingListPdfButton } from "@/components/print/share-packing-list-pdf-button";
 import { fmtDateRangeFileTH } from "@/lib/utils/date";
+import { getPackingCustomerSortOrder } from "@/lib/orders/packing-list-customer-order";
 
 export const metadata = { title: "ใบออเดอร์" };
 export const viewport: Viewport = {
@@ -48,6 +49,7 @@ type OrderCustomer = {
   customer_code: string;
   default_vehicle_id: string | null;
   sort_order?: number | null;
+  packing_list_sort_order?: number | null;
   metadata?: unknown;
   vehicles: unknown;
 };
@@ -217,7 +219,7 @@ async function PackingListPage({ searchParams }: Props) {
       id,
       assigned_vehicle_id,
       order_date,
-      customers!inner(id, name, customer_code, default_vehicle_id, sort_order, metadata, vehicles(id, name)),
+      customers!inner(id, name, customer_code, default_vehicle_id, sort_order, packing_list_sort_order, metadata, vehicles(id, name)),
       delivery_notes!order_id(vehicle_id, status, created_at, vehicles(id, name)),
       order_items(
         notes,
@@ -266,7 +268,7 @@ async function PackingListPage({ searchParams }: Props) {
     getDailySpecialPrintItems(session.organizationId, date, endDate),
     admin
       .from("customers")
-      .select("id, name, customer_code, default_vehicle_id, sort_order, metadata, vehicles(id, name)")
+      .select("id, name, customer_code, default_vehicle_id, sort_order, packing_list_sort_order, metadata, vehicles(id, name)")
       .eq("organization_id", session.organizationId)
       .eq("is_active", true)
       .order("sort_order", { ascending: true })
@@ -453,6 +455,7 @@ async function PackingListPage({ searchParams }: Props) {
           customer_code: row.customer_code,
           default_vehicle_id: vehicleId,
           sort_order: row.sort_order,
+          packing_list_sort_order: row.packing_list_sort_order,
           metadata: row.metadata,
           vehicles: row.vehicles,
         };
@@ -644,9 +647,12 @@ async function PackingListPage({ searchParams }: Props) {
           if (indexA !== indexB) return indexA - indexB;
           if (a.specialSort !== b.specialSort) return a.specialSort - b.specialSort;
 
-          const sortOrderA = typeof a.customer.sort_order === "number" ? a.customer.sort_order : Infinity;
-          const sortOrderB = typeof b.customer.sort_order === "number" ? b.customer.sort_order : Infinity;
+          const sortOrderA = getPackingCustomerSortOrder(a.customer.sort_order, a.customer.packing_list_sort_order, a.vehicleId, a.vehicleName);
+          const sortOrderB = getPackingCustomerSortOrder(b.customer.sort_order, b.customer.packing_list_sort_order, b.vehicleId, b.vehicleName);
           if (sortOrderA !== sortOrderB) return sortOrderA - sortOrderB;
+          const originalOrderA = a.customer.sort_order ?? Infinity;
+          const originalOrderB = b.customer.sort_order ?? Infinity;
+          if (originalOrderA !== originalOrderB) return originalOrderA - originalOrderB;
 
           return a.customer.customer_code.localeCompare(b.customer.customer_code, undefined, { numeric: true });
         })

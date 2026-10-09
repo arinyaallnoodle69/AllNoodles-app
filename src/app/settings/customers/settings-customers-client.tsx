@@ -12,6 +12,8 @@ import { CustomerPricePanel, type CustomerPriceGroup } from "@/components/settin
 import { SettingsPanel, SettingsPanelBody } from "@/components/settings/settings-ui";
 import type { SettingsCustomer, SettingsVehicle, SettingsPriceRow, SettingsSaleUnitOption } from "@/lib/settings/admin";
 import type { WarehouseOption } from "@/lib/warehouses";
+import { isBangkokVehicleGroup } from "@/components/print/packing-list-bkk-split";
+import type { PackingOrderScope } from "@/lib/orders/packing-list-customer-order";
 
 type SettingsCustomersPageClientProps = {
   initialCustomers: SettingsCustomer[];
@@ -101,6 +103,17 @@ export function SettingsCustomersPageClient({
     return vehicles.filter((v) => v.isActive);
   }, [vehicles]);
 
+  const customerVehicleOptions = useMemo(() => vehicleOptions.flatMap((vehicle) =>
+    isBangkokVehicleGroup(vehicle.id, vehicle.name)
+      ? [vehicle, { ...vehicle, id: `${vehicle.id}__noodles`, name: "รถกรุงเทพบะหมี่" }]
+      : [vehicle]), [vehicleOptions]);
+  const packingVehicleId = selectedVehicleId.replace(/__noodles$/, "");
+  const selectedPackingVehicle = vehicleOptions.find((vehicle) => vehicle.id === packingVehicleId);
+  const packingOrderScope = useMemo<PackingOrderScope | undefined>(() =>
+    selectedPackingVehicle && isBangkokVehicleGroup(selectedPackingVehicle.id, selectedPackingVehicle.name)
+      ? { vehicleId: selectedPackingVehicle.id, group: selectedVehicleId.endsWith("__noodles") ? "bkk_noodle" : "default" }
+      : undefined, [selectedPackingVehicle, selectedVehicleId]);
+
   useEffect(() => {
     const container = vehicleTabsContainerRef.current;
     if (!container) return;
@@ -116,7 +129,7 @@ export function SettingsCustomersPageClient({
       }
     }, 0);
     return () => clearTimeout(timer);
-  }, [selectedVehicleId, vehicleOptions]);
+  }, [selectedVehicleId, customerVehicleOptions]);
 
   const handleVehicleSelect = (id: string, e: React.MouseEvent<HTMLButtonElement>) => {
     setSelectedVehicleId(id);
@@ -128,12 +141,16 @@ export function SettingsCustomersPageClient({
   };
 
   const filteredCustomers = useMemo(() => {
-    return initialCustomers.filter((c) => {
+    const customers = initialCustomers.filter((c) => {
       if (selectedVehicleId === "__all__") return true;
       if (selectedVehicleId === "__none__") return !c.defaultVehicleId;
+      if (packingOrderScope) return c.defaultVehicleId === packingOrderScope.vehicleId && c.packingListGroup === packingOrderScope.group;
       return c.defaultVehicleId === selectedVehicleId;
     });
-  }, [initialCustomers, selectedVehicleId]);
+    if (packingOrderScope) customers.sort((a, b) =>
+      (a.packingListSortOrder ?? a.sortOrder) - (b.packingListSortOrder ?? b.sortOrder) || a.sortOrder - b.sortOrder || a.code.localeCompare(b.code, undefined, { numeric: true }));
+    return customers;
+  }, [initialCustomers, selectedVehicleId, packingOrderScope]);
 
   return (
     <SettingsShell
@@ -281,7 +298,7 @@ export function SettingsCustomersPageClient({
                     ไม่ระบุรถประจำร้าน
                   </button>
 
-                  {vehicleOptions.map((v) => (
+                  {customerVehicleOptions.map((v) => (
                     <button
                       key={v.id}
                       type="button"
@@ -301,6 +318,8 @@ export function SettingsCustomersPageClient({
             )}
 
             <CustomerListPanel 
+              key={selectedVehicleId}
+              packingOrderScope={packingOrderScope}
               customers={filteredCustomers} 
               reorderEnabled={searchTerm.trim().length === 0}
               vehicles={vehicles} 

@@ -3,6 +3,7 @@ import "server-only";
 import { cacheLife, cacheTag } from "next/cache";
 import { sortProductsByCategory } from "@/lib/products/sort-by-category";
 import { getActiveWarehouses } from "@/lib/warehouses";
+import { getCustomerPackingGroup } from "@/lib/orders/packing-list-customer-order";
 
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import {
@@ -86,6 +87,8 @@ export type SettingsCustomer = {
   pricingCount: number;
   sortOrder: number;
   outstandingBalance: number;
+  packingListSortOrder?: number | null;
+  packingListGroup?: "default" | "bkk_noodle";
   installmentLimit: number | null;
 };
 
@@ -221,6 +224,7 @@ type CustomerRow = {
   postal_code: string | null;
   province: string | null;
   sort_order: number | string;
+  packing_list_sort_order: number | null;
   subdistrict: string | null;
   outstanding_balance: number | string | null;
   installment_limit: number | string | null;
@@ -449,7 +453,7 @@ async function fetchSettingsData(organizationId: string): Promise<SettingsData> 
       admin
         .from("customers")
         .select(
-          "id, customer_code, name, address, province, district, subdistrict, postal_code, metadata, default_vehicle_id, default_warehouse_id, sort_order, outstanding_balance, installment_limit",
+          "id, customer_code, name, address, province, district, subdistrict, postal_code, metadata, default_vehicle_id, default_warehouse_id, sort_order, packing_list_sort_order, outstanding_balance, installment_limit",
         )
         .eq("organization_id", organizationId)
         .eq("is_active", true)
@@ -768,6 +772,8 @@ async function fetchSettingsData(organizationId: string): Promise<SettingsData> 
         name: customer.name,
         pricingCount: customerPricingCount.get(customer.id) ?? 0,
         sortOrder: Number(customer.sort_order ?? 0),
+        packingListSortOrder: customer.packing_list_sort_order,
+        packingListGroup: getCustomerPackingGroup(customer.customer_code, customer.metadata),
         outstandingBalance: Number(customer.outstanding_balance ?? 0),
         installmentLimit: customer.installment_limit !== null ? Number(customer.installment_limit) : null,
       };
