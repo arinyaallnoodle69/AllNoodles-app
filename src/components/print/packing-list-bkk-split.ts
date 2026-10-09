@@ -88,6 +88,7 @@ export function buildVehicleGroups(data: {
           vehicleId: `${vehicle.id}__noodles`,
           vehicleName: "รถกรุงเทพบะหมี่",
           storeIndices: noodleStoreIndices,
+          combinedStoreIndices: allBkkStoreIndices,
           isBkkNoodles: true,
         });
       }

@@ -116,17 +116,21 @@ function VehicleSummarySheet({ sheet }: { sheet: VehicleSummarySheetDef }) {
         <header className="vehicle-summary-header">
           <div className="vehicle-summary-header__brand">All Noodles</div>
           <div className="vehicle-summary-header__line">
-            <div style={{ display: "flex", alignItems: "baseline", gap: "2.5mm" }}>
-              <h1 className={`vehicle-summary-header__title vehicle-summary-header__title--${groupType}`}>
-                {sheetTitle}
-              </h1>
-              <span className={`vehicle-summary-header__tag vehicle-summary-header__tag--${groupType}`}>
-                {groupType === "fresh" ? "ผลิตสด" : "สต็อก"}
-              </span>
+            <div className="vehicle-summary-header__heading-row">
+              <div style={{ display: "flex", alignItems: "baseline", gap: "2.5mm" }}>
+                <h1 className={`vehicle-summary-header__title vehicle-summary-header__title--${groupType}`}>
+                  {sheetTitle}
+                </h1>
+                <span className={`vehicle-summary-header__tag vehicle-summary-header__tag--${groupType}`}>
+                  {groupType === "fresh" ? "ผลิตสด" : "สต็อก"}
+                </span>
+              </div>
+              <div className="vehicle-summary-header__vehicle-main">
+                {data.vehicles[0]?.name ?? "ยังไม่ได้กำหนดรถ"}
+              </div>
             </div>
             <div className="vehicle-summary-header__meta-inline">
               <span>{data.dateLabel}</span>
-              <span className="vehicle-summary-header__vehicle-badge">{data.vehicles[0]?.name ?? "ยังไม่ได้กำหนดรถ"}</span>
               <span>{totalRows.toLocaleString("th-TH")} รายการ</span>
               {pageCount > 1 ? <span>หน้า {pageNumber}/{pageCount}</span> : null}
             </div>
@@ -390,6 +394,12 @@ function VehicleSummaryStyles() {
         white-space: nowrap;
       }
 
+      .vehicle-product-summary-sheet .vehicle-summary-header__heading-row {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+        align-items: baseline;
+      }
+
       .vehicle-product-summary-sheet .vehicle-summary-header__title--fresh {
         color: #1b5e20;
       }
@@ -426,6 +436,20 @@ function VehicleSummaryStyles() {
         border: 1px solid #cbd5e1;
         padding: 0.5mm 2.5mm;
         border-radius: 4px;
+      }
+
+      .vehicle-product-summary-sheet .vehicle-summary-header__vehicle-main {
+        min-width: 0;
+        text-align: center;
+        font-size: 30pt;
+        font-weight: 800;
+        line-height: 1.15;
+        color: #0f172a;
+        letter-spacing: 0.01em;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        padding: 0.5mm 0;
       }
 
       .vehicle-product-summary-sheet .vehicle-summary-header__meta-inline {

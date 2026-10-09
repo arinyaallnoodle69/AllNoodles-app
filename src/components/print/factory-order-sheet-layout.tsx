@@ -100,12 +100,16 @@ function FactoryOrderSheet({ data, startIndex }: { data: VehicleProductSummaryDa
       <div className="vehicle-summary-sheet__inner">
         <header className="vehicle-summary-header">
           <div className="vehicle-summary-header__title-container">
-            <h1 className="vehicle-summary-header__title">ใบสั่งของ</h1>
+            <h1 className="vehicle-summary-header__title">
+              ใบสั่งของ
+              {data.factoryName ? (
+                <span className="vehicle-summary-header__title-factory">({data.factoryName})</span>
+              ) : null}
+            </h1>
           </div>
           <div className="vehicle-summary-header__line">
             <div className="vehicle-summary-header__brand">
-              โรงงาน : {data.factoryName || "โรงงานอนามัย"}
-              {data.warehouseName ? ` · คลัง : ${data.warehouseName}` : ""}
+              {data.warehouseName ? `คลัง : ${data.warehouseName}` : ""}
             </div>
             <div className="vehicle-summary-header__meta-inline">
               <span>{data.dateLabel}</span>
@@ -373,6 +377,13 @@ function FactoryOrderStyles() {
         font-weight: 800;
         white-space: nowrap;
         text-align: center;
+      }
+
+      .factory-order-sheet .vehicle-summary-header__title-factory {
+        font-size: 27.9pt;
+        font-weight: 900;
+        color: #1a1a1a;
+        margin-left: 0.1em;
       }
 
       .factory-order-sheet .vehicle-summary-header__meta-inline {

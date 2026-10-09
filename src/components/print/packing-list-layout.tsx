@@ -1,5 +1,5 @@
 import type { CSSProperties } from "react";
-import { paginateStandardStoreIndices } from "./packing-list-pagination";
+import { paginateCombinedSummary, paginateStandardStoreIndices } from "./packing-list-pagination";
 import { buildVehicleGroups } from "./packing-list-bkk-split";
 import {
   buildCategoryPrintPalette,
@@ -58,6 +58,7 @@ const STANDARD_PRODUCTS_PER_PAGE = 50;
 const STANDARD_BODY_HEIGHT_MM = 146;
 const STANDARD_MIN_ROW_HEIGHT_MM = 5.0;
 const STANDARD_TOTAL_ROW_HEIGHT_MM = 7.8;
+const COMBINED_SUMMARY_TABLE_HEIGHT_MM = 6 + 6 + 26 + STANDARD_TOTAL_ROW_HEIGHT_MM;
 const TRANSPOSED_PRODUCTS_PER_PAGE = 25;
 const TRANSPOSED_STORES_PER_PAGE = 37;
 
@@ -103,6 +104,8 @@ type StandardPageDef = BasePageDef & {
   pageProducts: PackingListProduct[];
   pageProductIndices: number[];
   combinedVehicleStoreIndices?: number[];
+  combinedSummaryProductChunks?: number[][];
+  summaryOnly?: boolean;
 };
 
 type TransposedPageDef = BasePageDef & {
@@ -439,11 +442,39 @@ function buildStandardPages(data: PackingListData): StandardPageDef[] {
           vehicleMissingWeightProductCount: vehicleWeightSummary.missingWeightProductCount,
           vehicleTotalWeightGrams: vehicleWeightSummary.totalWeightGrams,
           hasCombinedTotalRow,
-          combinedVehicleStoreIndices: hasCombinedTotalRow ? group.combinedStoreIndices : undefined,
+          combinedVehicleStoreIndices: hasCombinedTotalRow || group.isBkkNoodles ? group.combinedStoreIndices : undefined,
           combinedTotalWeightGrams: combinedWeightSummary?.totalWeightGrams,
           combinedMissingWeightProductCount: combinedWeightSummary?.missingWeightProductCount,
         });
       }
+    }
+
+    if (group.isBkkNoodles && group.combinedStoreIndices && pageProductChunks.length > 0) {
+      const lastPage = rawDefs[rawDefs.length - 1];
+      const combinedProductIndices = data.products
+        .map((_, productIndex) => productIndex)
+        .filter((productIndex) => group.combinedStoreIndices!.some((storeIndex) => (data.qty[productIndex]?.[storeIndex] ?? 0) !== 0));
+      const rowHeight = Math.max(STANDARD_MIN_ROW_HEIGHT_MM, Math.min(5.2, STANDARD_BODY_HEIGHT_MM / (lastPage.pageStores.length + 1)));
+      const summaryPages = paginateCombinedSummary(
+        combinedProductIndices,
+        STANDARD_PRODUCTS_PER_PAGE,
+        STANDARD_BODY_HEIGHT_MM - lastPage.pageStores.length * rowHeight - STANDARD_TOTAL_ROW_HEIGHT_MM,
+        COMBINED_SUMMARY_TABLE_HEIGHT_MM,
+        STANDARD_BODY_HEIGHT_MM,
+      );
+      lastPage.combinedSummaryProductChunks = summaryPages[0];
+      summaryPages.slice(1).forEach((productChunks, index) => {
+        rawDefs.push({
+          ...lastPage,
+          pageStores: [],
+          pageStoreIndices: [],
+          pageProducts: [],
+          pageProductIndices: [],
+          storeChunk: lastPage.storeTotalChunks + index + 1,
+          combinedSummaryProductChunks: productChunks,
+          summaryOnly: true,
+        });
+      });
     }
   }
 
@@ -599,8 +630,79 @@ function formatStandardQuantity(value: number) {
   return value.toLocaleString("th-TH", { useGrouping: false });
 }
 
+function StandardProductHeaders({ products }: { products: PackingListProduct[] }) {
+  const columnWidth = calcDataColWidth(Math.max(products.length, 1), 267, 5);
+  const categoryGroups = buildHeaderGroups(products, "category");
+  const categoryPaletteByKey = new Map(
+    categoryGroups.map((group, index) => {
+      const fallback = COLUMN_COLOR_GROUPS[index % COLUMN_COLOR_GROUPS.length] ?? COLUMN_COLOR_GROUPS[0];
+      return [
+        group.key,
+        getCategoryPrintPalette(products[group.startIndex], fallback),
+      ];
+    }),
+  );
+  const getCategoryPalette = (product: PackingListProduct) =>
+    categoryPaletteByKey.get(getProductCategoryKey(product)) ?? COLUMN_COLOR_GROUPS[0];
+  const catBoundarySet = new Set(categoryGroups.slice(0, -1).map((group) => group.startIndex + group.span - 1));
+  const productHeaders = products.map((product, cellIndex) => {
+    const categoryPalette = getCategoryPalette(product);
+    const productPalette = getProductPalette(product, categoryPalette);
+    const colMm = parseFloat(columnWidth) || 12;
+    const maxCharsPerLine = Math.max(3, Math.min(6, Math.floor((colMm - 1) / 2.4)));
+    const productNameLines = splitProductNameForStandardHeader(product.name, maxCharsPerLine);
+    const longestLineLength = Math.max(...productNameLines.map((line) => getThaiVisualLength(line)));
+    const fittedFontSize = fitPackingProductHeaderFont({
+      columnWidthMm: colMm,
+      hasIcon: Boolean(product.icon),
+      lineCount: productNameLines.length,
+      longestLineLength,
+      productCount: products.length,
+    });
+    const isDense =
+      colMm < 8 ||
+      productNameLines.length >= 6 ||
+      (colMm <= 10 && longestLineLength >= 5);
+    const isCompact =
+      !isDense &&
+      (colMm <= 9 ||
+        productNameLines.length >= 5 ||
+        (colMm <= 11 && longestLineLength >= 4));
+    const isBoundary = catBoundarySet.has(cellIndex);
+    return (
+      <th
+        key={product.key}
+        className={`packing-col packing-col--product${isBoundary ? " packing-col--cat-boundary" : ""}`}
+        style={{ width: columnWidth, backgroundColor: productPalette.header }}
+      >
+        <div className="packing-product-header">
+          <div
+            className={`packing-product-header__name${
+              isDense
+                ? " packing-product-header__name--dense"
+                : isCompact
+                  ? " packing-product-header__name--compact"
+                  : ""
+            }`}
+            style={{ fontSize: `${fittedFontSize}pt` }}
+          >
+            {product.icon ? (
+              <span className="packing-product-header__icon" aria-hidden="true">{product.icon}</span>
+            ) : null}
+            {productNameLines.map((line, lineIndex) => (
+              <span key={`${product.key}-name-line-${lineIndex}`}>{line}</span>
+            ))}
+          </div>
+        </div>
+      </th>
+    );
+  });
+  return productHeaders.length > 0
+    ? productHeaders
+    : [<th key="empty-product-header" className="packing-col packing-col--product" />];
+}
+
 function StandardPackingListPage({ page, data }: { page: StandardPageDef; data: PackingListData }) {
-  const columnWidth = calcDataColWidth(Math.max(page.pageProducts.length, 1), 267, 5);
   const pageFontScale = getPackingPageFontScale(page.pageProducts.length);
   const categoryGroups = buildHeaderGroups(page.pageProducts, "category");
   const categoryPaletteByKey = new Map(
@@ -625,15 +727,13 @@ function StandardPackingListPage({ page, data }: { page: StandardPageDef; data: 
         page.vehicleStoreIndices.reduce((sum, storeIndex) => sum + (data.qty[productIndex]?.[storeIndex] ?? 0), 0),
       )
     : [];
-  const combinedProductTotals =
-    isLastStorePage && page.hasCombinedTotalRow && page.combinedVehicleStoreIndices
-      ? page.pageProductIndices.map((productIndex) =>
-          page.combinedVehicleStoreIndices!.reduce(
-            (sum, storeIndex) => sum + (data.qty[productIndex]?.[storeIndex] ?? 0),
-            0,
-          ),
-        )
-      : [];
+
+  // Set ของ cellIndex ที่เป็น product ตัวสุดท้ายของแต่ละ category group (ใช้แสดงเส้นแบ่งหมวด)
+  const catBoundarySet = new Set<number>(
+    categoryGroups
+      .filter((_, gi) => gi < categoryGroups.length - 1) // ไม่รวม group สุดท้ายเพราะขอบขวาสุดไม่ต้องแสดง
+      .map((group) => group.startIndex + group.span - 1),
+  );
 
   return (
     <section className="packing-sheet packing-sheet--standard">
@@ -654,8 +754,8 @@ function StandardPackingListPage({ page, data }: { page: StandardPageDef; data: 
           combinedTotalWeightGrams={page.combinedTotalWeightGrams}
         />
 
-        <div className="packing-table-wrap">
-          <table
+        <div className={`packing-table-wrap${page.combinedSummaryProductChunks?.length ? " packing-table-wrap--summary" : ""}`}>
+          {!page.summaryOnly && <table
             className="packing-table"
             style={
               {
@@ -668,12 +768,13 @@ function StandardPackingListPage({ page, data }: { page: StandardPageDef; data: 
             <thead>
               <tr>
                 <th className="packing-col packing-col--store packing-col--group-label">หมวดหมู่</th>
-                {categoryGroups.map((group) => {
+                {categoryGroups.map((group, gi) => {
                   const palette = categoryPaletteByKey.get(group.key) ?? COLUMN_COLOR_GROUPS[0];
+                  const isBoundary = gi < categoryGroups.length - 1;
                   return (
                     <th
                       key={`category-${group.startIndex}-${group.label}`}
-                      className="packing-col packing-col--category"
+                      className={`packing-col packing-col--category${isBoundary ? " packing-col--cat-boundary" : ""}`}
                       colSpan={group.span}
                       style={{ backgroundColor: palette.header }}
                     >
@@ -689,62 +790,7 @@ function StandardPackingListPage({ page, data }: { page: StandardPageDef; data: 
               </tr>
               <tr>
                 <th className="packing-col packing-col--store">ร้านค้า</th>
-                {(() => {
-                  const productHeaders = page.pageProducts.map((product) => {
-                    const categoryPalette = getCategoryPalette(product);
-                    const productPalette = getProductPalette(product, categoryPalette);
-                    const colMm = parseFloat(columnWidth) || 12;
-                    const maxCharsPerLine = Math.max(3, Math.min(6, Math.floor((colMm - 1) / 2.4)));
-                    const productNameLines = splitProductNameForStandardHeader(product.name, maxCharsPerLine);
-                    const longestLineLength = Math.max(...productNameLines.map((line) => getThaiVisualLength(line)));
-                    const fittedFontSize = fitPackingProductHeaderFont({
-                      columnWidthMm: colMm,
-                      hasIcon: Boolean(product.icon),
-                      lineCount: productNameLines.length,
-                      longestLineLength,
-                      productCount: page.pageProducts.length,
-                    });
-                    const isDense =
-                      colMm < 8 ||
-                      productNameLines.length >= 6 ||
-                      (colMm <= 10 && longestLineLength >= 5);
-                    const isCompact =
-                      !isDense &&
-                      (colMm <= 9 ||
-                        productNameLines.length >= 5 ||
-                        (colMm <= 11 && longestLineLength >= 4));
-                    return (
-                      <th
-                        key={product.key}
-                        className="packing-col packing-col--product"
-                        style={{ width: columnWidth, backgroundColor: productPalette.header }}
-                      >
-                        <div className="packing-product-header">
-                          <div
-                            className={`packing-product-header__name${
-                              isDense
-                                ? " packing-product-header__name--dense"
-                                : isCompact
-                                  ? " packing-product-header__name--compact"
-                                  : ""
-                            }`}
-                            style={{ fontSize: `${fittedFontSize}pt` }}
-                          >
-                            {product.icon ? (
-                              <span className="packing-product-header__icon" aria-hidden="true">{product.icon}</span>
-                            ) : null}
-                            {productNameLines.map((line, lineIndex) => (
-                              <span key={`${product.key}-name-line-${lineIndex}`}>{line}</span>
-                            ))}
-                          </div>
-                        </div>
-                      </th>
-                    );
-                  });
-                  return productHeaders.length > 0
-                    ? productHeaders
-                    : [<th key="empty-product-header" className="packing-col packing-col--product" />];
-                })()}
+                <StandardProductHeaders products={page.pageProducts} />
               </tr>
             </thead>
 
@@ -767,10 +813,11 @@ function StandardPackingListPage({ page, data }: { page: StandardPageDef; data: 
                               const productPalette = product
                                 ? getProductPalette(product, categoryPalette)
                                 : COLUMN_COLOR_GROUPS[0];
+                              const isBoundary = catBoundarySet.has(cellIndex);
                               return (
                                 <td
                                   key={`${store.id}-${productIndex}`}
-                                  className={`packing-cell packing-cell--empty${cellIndex === 0 ? " packing-cell--stopped-dash" : ""}`}
+                                  className={`packing-cell packing-cell--empty${cellIndex === 0 ? " packing-cell--stopped-dash" : ""}${isBoundary ? " packing-cell--cat-boundary" : ""}`}
                                   style={{
                                     backgroundColor: rowIndex % 2 === 0
                                       ? productPalette.rowA
@@ -798,13 +845,15 @@ function StandardPackingListPage({ page, data }: { page: StandardPageDef; data: 
                           const product = page.pageProducts[cellIndex];
                           const categoryPalette = product ? getCategoryPalette(product) : COLUMN_COLOR_GROUPS[0];
                           const productPalette = product ? getProductPalette(product, categoryPalette) : COLUMN_COLOR_GROUPS[0];
+                          const isBoundary = catBoundarySet.has(cellIndex);
                           return (
                             <td
                               key={`${store.id}-${productIndex}`}
                               className={
-                                value > 0
+                                (value > 0
                                   ? `packing-cell packing-cell--qty${getStandardNumberClass(value)}`
-                                  : "packing-cell packing-cell--empty"
+                                  : "packing-cell packing-cell--empty") +
+                                (isBoundary ? " packing-cell--cat-boundary" : "")
                               }
                               style={{ backgroundColor: rowIndex % 2 === 0 ? productPalette.rowA : productPalette.rowB }}
                             >
@@ -832,7 +881,7 @@ function StandardPackingListPage({ page, data }: { page: StandardPageDef; data: 
                     {productTotals.map((total, index) => (
                       <td
                         key={`standard-total-${index}`}
-                        className="packing-cell packing-cell--total"
+                        className={`packing-cell packing-cell--total${catBoundarySet.has(index) ? " packing-cell--cat-boundary" : ""}`}
                       >
                         {total > 0 ? (
                           <span className={`packing-number${getStandardNumberClass(total)}`}>
@@ -846,39 +895,57 @@ function StandardPackingListPage({ page, data }: { page: StandardPageDef; data: 
                     ) : null}
                   </tr>
 
-                  {page.hasCombinedTotalRow && combinedProductTotals.length > 0 && (
-                    <tr className="packing-table__total-row packing-table__total-row--combined">
-                      <td className="packing-cell packing-cell--total-label packing-cell--combined-label">
-                        <span>รวมทั้ง 2 ใบ</span>
-                        <strong>
-                          {formatVehicleWeight(page.combinedTotalWeightGrams ?? page.vehicleTotalWeightGrams)}
-                        </strong>
-                      </td>
-                      {combinedProductTotals.map((total, index) => (
-                        <td
-                          key={`standard-combined-total-${index}`}
-                          className="packing-cell packing-cell--total packing-cell--combined-total"
-                        >
-                          {total > 0 ? (
-                            <span className={`packing-number${getStandardNumberClass(total)}`}>
-                              {formatStandardQuantity(total)}
-                            </span>
-                          ) : ""}
-                        </td>
-                      ))}
-                      {page.pageProducts.length === 0 ? (
-                        <td className="packing-cell packing-cell--total packing-cell--combined-total" />
-                      ) : null}
-                    </tr>
-                  )}
+
                 </>
               )}
             </tbody>
-          </table>
+          </table>}
+          {page.combinedSummaryProductChunks?.map((productIndices, index) => (
+            <CombinedPackingSummary key={index} productIndices={productIndices} storeIndices={page.combinedVehicleStoreIndices ?? []} data={data} />
+          ))}
         </div>
 
       </div>
     </section>
+  );
+}
+
+function CombinedPackingSummary({ productIndices, storeIndices, data }: {
+  productIndices: number[];
+  storeIndices: number[];
+  data: PackingListData;
+}) {
+  const products = productIndices.map((index) => data.products[index]);
+  const boundaries = new Set(buildHeaderGroups(products, "category").slice(0, -1).map((group) => group.startIndex + group.span - 1));
+  return (
+    <table
+      className="packing-table packing-table--combined-summary"
+      style={{ "--packing-number-font-size": `${12.4 * Math.min(getPackingPageFontScale(products.length), 1.15)}pt` } as CSSProperties}
+    >
+      <caption className="packing-combined-summary-title">รวมรถกรุงเทพ + รถกรุงเทพบะหมี่</caption>
+      <thead>
+        <tr>
+          <th className="packing-col packing-col--store">สินค้า</th>
+          <StandardProductHeaders products={products} />
+        </tr>
+      </thead>
+      <tbody>
+        <tr className="packing-table__total-row packing-table__total-row--combined">
+          <td className="packing-cell packing-cell--total-label packing-cell--combined-label">
+            <span>รวมทั้ง 2 ใบ</span>
+            <strong>{formatVehicleWeight(getVehicleWeightSummary(data, storeIndices).totalWeightGrams)}</strong>
+          </td>
+          {productIndices.map((productIndex, index) => {
+            const total = storeIndices.reduce((sum, storeIndex) => sum + (data.qty[productIndex]?.[storeIndex] ?? 0), 0);
+            return (
+              <td key={data.products[productIndex].key} className={`packing-cell packing-cell--total packing-cell--combined-total${boundaries.has(index) ? " packing-cell--cat-boundary" : ""}`}>
+                <span className={`packing-number${getStandardNumberClass(total)}`}>{formatStandardQuantity(total)}</span>
+              </td>
+            );
+          })}
+        </tr>
+      </tbody>
+    </table>
   );
 }
 
@@ -1253,13 +1320,14 @@ function PackingListStyles() {
       .packing-header__vehicle-main {
         min-width: 0;
         text-align: center;
-        font-size: 21.39pt;
+        font-size: 30pt;
         font-weight: 800;
-        line-height: 1.18;
+        line-height: 1.15;
         color: #0f172a;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
+        letter-spacing: 0.01em;
       }
 
       .packing-header__subtitle {
@@ -1398,6 +1466,30 @@ function PackingListStyles() {
         table-layout: fixed;
       }
 
+      .packing-table-wrap--summary {
+        flex-direction: column;
+      }
+
+      .packing-table-wrap--summary > .packing-table {
+        flex: 0 0 auto;
+      }
+
+      .packing-table--combined-summary {
+        margin-top: 6mm;
+        --packing-number-font-size: 12.4pt;
+        --standard-row-height: 7.8mm;
+      }
+
+      .packing-combined-summary-title {
+        height: 6mm;
+        padding: 0 0.8mm;
+        text-align: left;
+        font-size: 12.71pt;
+        font-weight: 800;
+        line-height: 6mm;
+        color: #4a148c;
+      }
+
       .packing-col,
       .packing-cell {
         border-right: 1px solid #000000;
@@ -1408,6 +1500,11 @@ function PackingListStyles() {
       .packing-col:last-child,
       .packing-cell:last-child {
         border-right: none;
+      }
+
+      .packing-col--cat-boundary,
+      .packing-cell--cat-boundary {
+        border-right: 2px solid #000000 !important;
       }
 
       .packing-col {

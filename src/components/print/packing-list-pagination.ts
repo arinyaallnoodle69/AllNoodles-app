@@ -39,3 +39,23 @@ export function paginateStandardStoreIndices(
   return pages;
 }
 
+export function paginateCombinedSummary(
+  productIndices: number[],
+  productsPerTable: number,
+  availableHeightMm: number,
+  tableHeightMm: number,
+  pageHeightMm: number,
+): number[][][] {
+  const pages: number[][][] = [[]];
+  let remainingHeight = availableHeightMm;
+  for (let offset = 0; offset < productIndices.length; offset += productsPerTable) {
+    if (remainingHeight < tableHeightMm) {
+      pages.push([]);
+      remainingHeight = pageHeightMm;
+    }
+    pages[pages.length - 1].push(productIndices.slice(offset, offset + productsPerTable));
+    remainingHeight -= tableHeightMm;
+  }
+  return pages;
+}
+

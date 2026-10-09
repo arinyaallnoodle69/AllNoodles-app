@@ -1,0 +1,49 @@
+{
+  "commit": "96f6aa0793bc3b49bb02c33819ed36b894a7a9d4",
+  "site": "https://all-noodles.vercel.app",
+  "deployment": "https://vercel.com/arinyaallnoodle69-s-projects/all-noodles/9eXGd5kMF3XPbzN7MfyAzYEhveV4",
+  "productionDeploymentStatus": "success",
+  "verifiedAt": "2026-10-09T08:38:28.065Z",
+  "warehouseSamples": [
+    {
+      "warehouse": "คลังกรุงเทพ",
+      "deliveryNumber": "DN2026100475",
+      "total": 390
+    },
+    {
+      "warehouse": "คลังต่างจังหวัด",
+      "deliveryNumber": "DN2026100437",
+      "total": 92425
+    }
+  ],
+  "pdfChecks": {
+    "single": {
+      "status": 200,
+      "pages": 1,
+      "bytes": 147303
+    },
+    "batch": {
+      "status": 200,
+      "pages": 2,
+      "bytes": 289220
+    },
+    "preview": {
+      "status": 200,
+      "pages": 2,
+      "bytes": 289244
+    },
+    "fileHashesVerified": true,
+    "pdfTextTotalsVerified": true,
+    "unauthenticatedRequestStatus": 401
+  },
+  "databaseAudit": {
+    "checked": 1262,
+    "bangkok": 733,
+    "province": 529,
+    "mismatches": 0
+  },
+  "limitations": [
+    "No physical iPhone/LINE share verification",
+    "Already-sent immutable PDFs require a newly generated replacement"
+  ]
+}
