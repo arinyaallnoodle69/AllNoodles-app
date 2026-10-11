@@ -40,3 +40,12 @@ test("automatically paginates when stores exceed safe capacity for closing total
   assert.deepEqual(pages28.flat(), stores28);
 });
 
+test("continuation pages keep the same bottom allowance so the last Bangkok noodle store is not clipped", () => {
+  const stores = Array.from({ length: 40 }, (_, index) => index);
+  const pages = paginateStandardStoreIndices(stores, 140, 5, 7.8);
+  assert.deepEqual(pages.map(page => page.length), [26, 14]);
+  assert.deepEqual(pages.flat(), stores);
+  assert.equal(pages[1][0], 26);
+  assert.ok(pages[1].includes(27));
+});
+

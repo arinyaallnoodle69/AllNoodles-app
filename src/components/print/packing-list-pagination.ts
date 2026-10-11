@@ -4,13 +4,16 @@ export function paginateStandardStoreIndices(
   minRowHeightMm: number,
   totalRowHeightMm?: number,
 ): number[][] {
-  const maxRowsPerPage = Math.max(2, Math.floor(bodyHeightMm / minRowHeightMm));
   // Reserve space for the closing total row on the final page per docs/paginationlogic.md
   const reservedTotalHeight = totalRowHeightMm ?? minRowHeightMm;
   const lastPageStoreCapacity = Math.max(
     1,
     Math.floor((bodyHeightMm - reservedTotalHeight) / minRowHeightMm),
   );
+  // Continuation pages need the same bottom allowance for font and border growth.
+  const maxRowsPerPage = Math.max(2, totalRowHeightMm === undefined
+    ? Math.floor(bodyHeightMm / minRowHeightMm)
+    : lastPageStoreCapacity);
 
   if (storeIndices.length <= lastPageStoreCapacity) return [storeIndices];
 
