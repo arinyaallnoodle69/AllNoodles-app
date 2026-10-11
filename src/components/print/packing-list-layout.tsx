@@ -58,7 +58,7 @@ const STANDARD_PRODUCTS_PER_PAGE = 50;
 const STANDARD_BODY_HEIGHT_MM = 146;
 const STANDARD_MIN_ROW_HEIGHT_MM = 5.0;
 const STANDARD_TOTAL_ROW_HEIGHT_MM = 7.8;
-const COMBINED_SUMMARY_TABLE_HEIGHT_MM = 6 + 6 + 26 + STANDARD_TOTAL_ROW_HEIGHT_MM;
+const COMBINED_SUMMARY_TABLE_HEIGHT_MM = 6 + 6 + 7 + 26 + STANDARD_TOTAL_ROW_HEIGHT_MM;
 const TRANSPOSED_PRODUCTS_PER_PAGE = 25;
 const TRANSPOSED_STORES_PER_PAGE = 37;
 
@@ -449,7 +449,7 @@ function buildStandardPages(data: PackingListData): StandardPageDef[] {
       }
     }
 
-    if (group.isBkkNoodles && group.combinedStoreIndices && pageProductChunks.length > 0) {
+    if (hasCombinedTotalRow && group.combinedStoreIndices && pageProductChunks.length > 0) {
       const lastPage = rawDefs[rawDefs.length - 1];
       const combinedProductIndices = data.products
         .map((_, productIndex) => productIndex)
@@ -595,7 +595,7 @@ function StandardPackingHeader({
           </strong>
         </div>
         <div className="packing-header__meta-cell packing-header__meta-cell--weight">
-          <span>{hasCombinedTotalRow ? "น้ำหนัก (ใบแรก)" : "น้ำหนักรวม"}</span>
+          <span>{hasCombinedTotalRow ? "น้ำหนัก (ใบนี้)" : "น้ำหนักรวม"}</span>
           <strong>{formatVehicleWeight(vehicleTotalWeightGrams)}</strong>
           {hasCombinedTotalRow && combinedTotalWeightGrams !== undefined && (
             <small style={{ color: "#713f12", fontWeight: 800, fontSize: "7.8pt", lineHeight: 1.1 }}>
@@ -875,7 +875,7 @@ function StandardPackingListPage({ page, data }: { page: StandardPageDef; data: 
                 <>
                   <tr className="packing-table__total-row">
                     <td className="packing-cell packing-cell--total-label">
-                      <span>{page.hasCombinedTotalRow ? "รวม (ใบแรก)" : "รวมยอด"}</span>
+                      <span>{page.hasCombinedTotalRow ? "รวม (ใบนี้)" : "รวมยอด"}</span>
                       <strong>{formatVehicleWeight(page.vehicleTotalWeightGrams)}</strong>
                     </td>
                     {productTotals.map((total, index) => (
@@ -916,7 +916,8 @@ function CombinedPackingSummary({ productIndices, storeIndices, data }: {
   data: PackingListData;
 }) {
   const products = productIndices.map((index) => data.products[index]);
-  const boundaries = new Set(buildHeaderGroups(products, "category").slice(0, -1).map((group) => group.startIndex + group.span - 1));
+  const categoryGroups = buildHeaderGroups(products, "category");
+  const boundaries = new Set(categoryGroups.slice(0, -1).map((group) => group.startIndex + group.span - 1));
   return (
     <table
       className="packing-table packing-table--combined-summary"
@@ -924,6 +925,13 @@ function CombinedPackingSummary({ productIndices, storeIndices, data }: {
     >
       <caption className="packing-combined-summary-title">รวมรถกรุงเทพ + รถกรุงเทพบะหมี่</caption>
       <thead>
+        <tr>
+          <th className="packing-col packing-col--store packing-col--group-label">หมวดหมู่</th>
+          {categoryGroups.map((group, index) => {
+            const palette = getCategoryPrintPalette(products[group.startIndex], COLUMN_COLOR_GROUPS[index % COLUMN_COLOR_GROUPS.length]);
+            return <th key={group.startIndex} colSpan={group.span} className={`packing-col packing-col--category${index < categoryGroups.length - 1 ? " packing-col--cat-boundary" : ""}`} style={{ backgroundColor: palette.header }}><span className="packing-header-label packing-header-label--category">{insertZeroWidthSpaces(group.label)}</span></th>;
+          })}
+        </tr>
         <tr>
           <th className="packing-col packing-col--store">สินค้า</th>
           <StandardProductHeaders products={products} />

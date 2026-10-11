@@ -46,7 +46,7 @@ function summaries(data) {
   const html = renderToStaticMarkup(createElement(PackingListLayout, { data }));
   return [...html.matchAll(/<table class="packing-table packing-table--combined-summary"[\s\S]*?<\/table>/g)].map((match) => match[0]);
 }
-test("final noodle sheet includes main-only, noodle-only and shared products, excluding other vehicles", () => {
+test("final main Bangkok sheet includes main-only, noodle-only and shared products, excluding other vehicles", () => {
   const tables = summaries(fixture());
   assert.equal(tables.length, 1);
   assert.ok(tables[0].includes("รวมรถกรุงเทพ + รถกรุงเทพบะหมี่"));
@@ -64,11 +64,14 @@ test("no Bangkok noodle orders means no extra summary", () => {
   data.stores.forEach((store) => { store.packingListGroup = "default"; });
   assert.deepEqual(summaries(data), []);
 });
-test("main Bangkok sheet keeps its own total and combined totals appear only in the noodle summary", () => {
+test("main Bangkok sheet keeps its own total and combined totals appear only in the main summary", () => {
   const html = renderToStaticMarkup(createElement(PackingListLayout, { data: fixture() }));
   const sections = [...html.matchAll(/<section[\s\S]*?<\/section>/g)].map((match) => match[0]);
   assert.ok(sections[0].includes("packing-table__total-row"));
+  assert.ok(sections[0].includes('packing-header__vehicle-main">รถกรุงเทพบะหมี่<'));
+  assert.ok(sections[1].includes('packing-header__vehicle-main">รถกรุงเทพ<'));
   assert.ok(!sections[0].includes("packing-table__total-row--combined"));
+  assert.ok(!sections[0].includes("packing-table--combined-summary"));
   assert.equal(sections.filter((section) => section.includes("packing-table__total-row--combined")).length, 1);
   assert.ok(sections[1].includes("packing-table--combined-summary"));
 });
@@ -77,4 +80,16 @@ test("summary overflow continues on full-size pages without losing or duplicatin
   const pages = paginateCombinedSummary(indices, 50, 20, 33.8, 146);
   assert.deepEqual(pages.map((page) => page.length), [0, 4, 2]);
   assert.deepEqual(pages.flat(2), indices);
+});
+
+test("combined summary repeats category headings above product names on each chunk", () => {
+ const data=fixture(2,101);
+ data.products.forEach((p,i)=>{p.category=i<2 ? "บะหมี่" : "เส้นเล็ก";});
+ const tables=summaries(data);
+ for(const table of tables) {
+  const header=table.slice(table.indexOf("<thead>"),table.indexOf("</thead>"));
+  assert.equal((header.match(/<tr>/g)||[]).length,2);
+  assert.ok(header.indexOf("หมวดหมู่")<header.indexOf(">สินค้า<"));
+  assert.equal([...header.matchAll(/colSpan="(\d+)"/g)].reduce((sum,m)=>sum+Number(m[1]),0),(header.match(/packing-col--product/g)||[]).length);
+ }
 });

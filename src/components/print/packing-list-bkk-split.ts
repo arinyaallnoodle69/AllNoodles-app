@@ -73,6 +73,16 @@ export function buildVehicleGroups(data: {
         }
       });
 
+      if (noodleStoreIndices.length > 0) {
+        groups.push({
+          vehicleId: `${vehicle.id}__noodles`,
+          vehicleName: "รถกรุงเทพบะหมี่",
+          storeIndices: noodleStoreIndices,
+          combinedStoreIndices: allBkkStoreIndices,
+          isBkkNoodles: true,
+        });
+      }
+
       if (mainStoreIndices.length > 0) {
         groups.push({
           vehicleId: vehicle.id,
@@ -83,15 +93,6 @@ export function buildVehicleGroups(data: {
         });
       }
 
-      if (noodleStoreIndices.length > 0) {
-        groups.push({
-          vehicleId: `${vehicle.id}__noodles`,
-          vehicleName: "รถกรุงเทพบะหมี่",
-          storeIndices: noodleStoreIndices,
-          combinedStoreIndices: allBkkStoreIndices,
-          isBkkNoodles: true,
-        });
-      }
     } else {
       const storeIndices: number[] = [];
       data.stores.forEach((store, index) => {
