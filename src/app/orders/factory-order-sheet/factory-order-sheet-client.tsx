@@ -7,6 +7,7 @@ import { AutoPrint, PackingListPrintButton } from "@/app/orders/packing-list/pre
 import { SharePackingListPdfButton } from "@/components/print/share-packing-list-pdf-button";
 import { FactoryOrderSheetLayout } from "@/components/print/factory-order-sheet-layout";
 import type { VehicleProductSummaryData } from "@/lib/orders/vehicle-product-summary";
+import { fmtDateTH } from "@/lib/utils/date";
 
 type FactoryOption = {
   name: string;
@@ -103,7 +104,7 @@ export function FactoryOrderSheetClient({
   }, [date, endDate, isAllSelected, selectedFactories]);
 
   const firstSheet = factorySheets[0];
-  const dateLabel = firstSheet?.dateLabel ?? (date === endDate ? date : `${date} - ${endDate}`);
+  const dateLabel = date === endDate ? firstSheet?.dateLabel ?? date : `${fmtDateTH(date)} - ${fmtDateTH(endDate)}`;
   const hasData = factorySheets.length > 0;
 
   // Multi-select toggle handlers

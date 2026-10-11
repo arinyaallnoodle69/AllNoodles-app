@@ -46,7 +46,7 @@ function summaries(data) {
   const html = renderToStaticMarkup(createElement(PackingListLayout, { data }));
   return [...html.matchAll(/<table class="packing-table packing-table--combined-summary"[\s\S]*?<\/table>/g)].map((match) => match[0]);
 }
-test("final main Bangkok sheet includes main-only, noodle-only and shared products, excluding other vehicles", () => {
+test("final noodle Bangkok sheet includes main-only, noodle-only and shared products, excluding other vehicles", () => {
   const tables = summaries(fixture());
   assert.equal(tables.length, 1);
   assert.ok(tables[0].includes("รวมรถกรุงเทพ + รถกรุงเทพบะหมี่"));
@@ -64,12 +64,12 @@ test("no Bangkok noodle orders means no extra summary", () => {
   data.stores.forEach((store) => { store.packingListGroup = "default"; });
   assert.deepEqual(summaries(data), []);
 });
-test("main Bangkok sheet keeps its own total and combined totals appear only in the main summary", () => {
+test("main Bangkok sheet keeps its own total and combined totals appear only in the noodle summary", () => {
   const html = renderToStaticMarkup(createElement(PackingListLayout, { data: fixture() }));
   const sections = [...html.matchAll(/<section[\s\S]*?<\/section>/g)].map((match) => match[0]);
   assert.ok(sections[0].includes("packing-table__total-row"));
-  assert.ok(sections[0].includes('packing-header__vehicle-main">รถกรุงเทพบะหมี่<'));
-  assert.ok(sections[1].includes('packing-header__vehicle-main">รถกรุงเทพ<'));
+  assert.ok(sections[0].includes('packing-header__vehicle-main">รถกรุงเทพ<'));
+  assert.ok(sections[1].includes('packing-header__vehicle-main">รถกรุงเทพบะหมี่<'));
   assert.ok(!sections[0].includes("packing-table__total-row--combined"));
   assert.ok(!sections[0].includes("packing-table--combined-summary"));
   assert.equal(sections.filter((section) => section.includes("packing-table__total-row--combined")).length, 1);

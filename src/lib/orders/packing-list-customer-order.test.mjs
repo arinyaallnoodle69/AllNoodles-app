@@ -39,7 +39,7 @@ test("independent group ranks do not change shared sorting or vehicle assignment
     vehicles: [{ id: "bkk", name: "รถกรุงเทพ" }],
   });
   const sorted = [...customers].sort((a, b) => a.packing - b.packing);
-  assert.deepEqual(groups[1].storeIndices.map((i) => sorted[i].id), ["ANS001", "ANS015"]);
-  assert.deepEqual(groups[0].storeIndices.map((i) => sorted[i].id), ["ANS002", "ANS004"]);
+  assert.deepEqual(groups[0].storeIndices.map((i) => sorted[i].id), ["ANS001", "ANS015"]);
+  assert.deepEqual(groups[1].storeIndices.map((i) => sorted[i].id), ["ANS002", "ANS004"]);
   assert.deepEqual([...customers].sort((a, b) => a.order - b.order).map((c) => c.id), ["ANS015", "ANS002", "ANS001", "ANS004"]);
 });

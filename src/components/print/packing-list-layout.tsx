@@ -55,7 +55,8 @@ const SHEET_H = "210mm";
 const SCREEN_SHEET_W = "1123px";
 const SCREEN_SHEET_H = "794px";
 const STANDARD_PRODUCTS_PER_PAGE = 50;
-const STANDARD_BODY_HEIGHT_MM = 146;
+// Allow for two-line category headings and the font's actual row height.
+const STANDARD_BODY_HEIGHT_MM = 140;
 const STANDARD_MIN_ROW_HEIGHT_MM = 5.0;
 const STANDARD_TOTAL_ROW_HEIGHT_MM = 7.8;
 const COMBINED_SUMMARY_TABLE_HEIGHT_MM = 6 + 6 + 7 + 26 + STANDARD_TOTAL_ROW_HEIGHT_MM;
@@ -449,7 +450,7 @@ function buildStandardPages(data: PackingListData): StandardPageDef[] {
       }
     }
 
-    if (hasCombinedTotalRow && group.combinedStoreIndices && pageProductChunks.length > 0) {
+    if (group.isBkkNoodles && group.combinedStoreIndices && pageProductChunks.length > 0) {
       const lastPage = rawDefs[rawDefs.length - 1];
       const combinedProductIndices = data.products
         .map((_, productIndex) => productIndex)
@@ -595,7 +596,7 @@ function StandardPackingHeader({
           </strong>
         </div>
         <div className="packing-header__meta-cell packing-header__meta-cell--weight">
-          <span>{hasCombinedTotalRow ? "น้ำหนัก (ใบนี้)" : "น้ำหนักรวม"}</span>
+          <span>{hasCombinedTotalRow ? "น้ำหนัก (ใบแรก)" : "น้ำหนักรวม"}</span>
           <strong>{formatVehicleWeight(vehicleTotalWeightGrams)}</strong>
           {hasCombinedTotalRow && combinedTotalWeightGrams !== undefined && (
             <small style={{ color: "#713f12", fontWeight: 800, fontSize: "7.8pt", lineHeight: 1.1 }}>
@@ -875,7 +876,7 @@ function StandardPackingListPage({ page, data }: { page: StandardPageDef; data: 
                 <>
                   <tr className="packing-table__total-row">
                     <td className="packing-cell packing-cell--total-label">
-                      <span>{page.hasCombinedTotalRow ? "รวม (ใบนี้)" : "รวมยอด"}</span>
+                      <span>{page.hasCombinedTotalRow ? "รวม (ใบแรก)" : "รวมยอด"}</span>
                       <strong>{formatVehicleWeight(page.vehicleTotalWeightGrams)}</strong>
                     </td>
                     {productTotals.map((total, index) => (

@@ -73,16 +73,6 @@ export function buildVehicleGroups(data: {
         }
       });
 
-      if (noodleStoreIndices.length > 0) {
-        groups.push({
-          vehicleId: `${vehicle.id}__noodles`,
-          vehicleName: "รถกรุงเทพบะหมี่",
-          storeIndices: noodleStoreIndices,
-          combinedStoreIndices: allBkkStoreIndices,
-          isBkkNoodles: true,
-        });
-      }
-
       if (mainStoreIndices.length > 0) {
         groups.push({
           vehicleId: vehicle.id,
@@ -90,6 +80,16 @@ export function buildVehicleGroups(data: {
           storeIndices: mainStoreIndices,
           combinedStoreIndices: allBkkStoreIndices,
           isBkkMain: true,
+        });
+      }
+
+      if (noodleStoreIndices.length > 0) {
+        groups.push({
+          vehicleId: `${vehicle.id}__noodles`,
+          vehicleName: "รถกรุงเทพบะหมี่",
+          storeIndices: noodleStoreIndices,
+          combinedStoreIndices: allBkkStoreIndices,
+          isBkkNoodles: true,
         });
       }
 

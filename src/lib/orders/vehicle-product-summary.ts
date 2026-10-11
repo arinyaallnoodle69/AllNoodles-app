@@ -392,6 +392,18 @@ export async function getFactoryOrderSheetData(
   cacheTag(`settings-${organizationId}`);
   cacheTag(`stock-${organizationId}`);
 
+  if (date < endDate) {
+    const sheets: VehicleProductSummaryData[] = [];
+    const cursor = new Date(`${date}T00:00:00Z`);
+    const last = new Date(`${endDate}T00:00:00Z`);
+    while (cursor <= last) {
+      const day = cursor.toISOString().slice(0, 10);
+      sheets.push(...await getFactoryOrderSheetData(organizationId, day, day, options));
+      cursor.setUTCDate(cursor.getUTCDate() + 1);
+    }
+    return sheets;
+  }
+
   const admin = getSupabaseAdmin();
   const productWarehouseModesTable = (admin as unknown as {
     from(table: "product_warehouse_fulfillment_modes"): {
