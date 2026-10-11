@@ -93,3 +93,16 @@ test("combined summary repeats category headings above product names on each chu
   assert.equal([...header.matchAll(/colSpan="(\d+)"/g)].reduce((sum,m)=>sum+Number(m[1]),0),(header.match(/packing-col--product/g)||[]).length);
  }
 });
+
+test("26 main Bangkok stores and their subtotal fit on one sheet with the combined summary on the noodle sheet", () => {
+  const data = fixture(27, 20);
+  data.stores.forEach((store, index) => { store.packingListGroup = index === 26 ? "bkk_noodle" : "default"; });
+  const html = renderToStaticMarkup(createElement(PackingListLayout, { data }));
+  const sections = [...html.matchAll(/<section[\s\S]*?<\/section>/g)].map(match => match[0]);
+  const mainSheets = sections.filter(section => section.includes('packing-header__vehicle-main">รถกรุงเทพ<'));
+  assert.equal(mainSheets.length, 1);
+  assert.equal((mainSheets[0].match(/class="packing-table__row"/g) ?? []).length, 26);
+  assert.ok(mainSheets[0].includes("packing-table__total-row"));
+  assert.ok(!mainSheets[0].includes("packing-table--combined-summary"));
+  assert.ok(sections.find(section => section.includes('packing-header__vehicle-main">รถกรุงเทพบะหมี่<')).includes("packing-table--combined-summary"));
+});

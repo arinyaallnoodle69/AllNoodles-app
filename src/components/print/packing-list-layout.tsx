@@ -401,15 +401,11 @@ function buildStandardPages(data: PackingListData): StandardPageDef[] {
       .map((_, productIndex) => productIndex)
       .filter((productIndex) => group.storeIndices.some((storeIndex) => (data.qty[productIndex]?.[storeIndex] ?? 0) !== 0));
 
-    const reservedTotalHeight = hasCombinedTotalRow
-      ? STANDARD_TOTAL_ROW_HEIGHT_MM * 2
-      : STANDARD_TOTAL_ROW_HEIGHT_MM;
-
     const storeChunks = paginateStandardStoreIndices(
       group.storeIndices,
       STANDARD_BODY_HEIGHT_MM,
       STANDARD_MIN_ROW_HEIGHT_MM,
-      reservedTotalHeight,
+      STANDARD_TOTAL_ROW_HEIGHT_MM,
     );
     const productChunks = chunk(activeProductIndices, STANDARD_PRODUCTS_PER_PAGE);
     const pageProductChunks =
@@ -718,7 +714,7 @@ function StandardPackingListPage({ page, data }: { page: StandardPageDef; data: 
   const getCategoryPalette = (product: PackingListProduct) =>
     categoryPaletteByKey.get(getProductCategoryKey(product)) ?? COLUMN_COLOR_GROUPS[0];
   const isLastStorePage = page.storeChunk === page.storeTotalChunks;
-  const rowCount = page.pageStores.length + (isLastStorePage ? (page.hasCombinedTotalRow ? 2 : 1) : 0);
+  const rowCount = page.pageStores.length + (isLastStorePage ? 1 : 0);
   const rowHeightMm = Math.max(
     STANDARD_MIN_ROW_HEIGHT_MM,
     Math.min(5.2, STANDARD_BODY_HEIGHT_MM / Math.max(rowCount, 1)),
