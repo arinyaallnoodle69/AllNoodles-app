@@ -95,6 +95,20 @@ function getSheetColumnPalette(factoryName?: string, factoryCode?: string, colum
 }
 
 function FactoryOrderSheet({ data, startIndex }: { data: VehicleProductSummaryData; startIndex: number }) {
+  let weightKg = 0;
+  let missingWeights = 0;
+  data.products.forEach((product, index) => {
+    const quantity = (data.qty[index] ?? []).reduce((sum, value) => sum + value, 0);
+    if (quantity <= 0) return;
+    const unit = product.unit.trim().toLowerCase().replace(/\./g, "");
+    if (["กก", "กิโลกรัม", "kg", "kgs"].includes(unit)) {
+      weightKg += quantity;
+    } else if (Number.isFinite(product.unitWeightGrams) && (product.unitWeightGrams ?? 0) > 0) {
+      weightKg += quantity * product.unitWeightGrams! / 1000;
+    } else {
+      missingWeights += 1;
+    }
+  });
   return (
     <section className="packing-sheet factory-order-sheet vehicle-summary-sheet">
       <div className="vehicle-summary-sheet__inner">
@@ -110,6 +124,11 @@ function FactoryOrderSheet({ data, startIndex }: { data: VehicleProductSummaryDa
           <div className="vehicle-summary-header__line">
             <div className="vehicle-summary-header__brand">
               {data.warehouseName ? `คลัง : ${data.warehouseName}` : ""}
+            </div>
+            <div className="factory-order-weight">
+              <span>{missingWeights ? "น้ำหนักเฉพาะที่คำนวณได้" : "น้ำหนักรวมใบนี้"}</span>
+              <strong>{weightKg.toLocaleString("th-TH", { maximumFractionDigits: 3 })}</strong> กก.
+              {missingWeights ? <small>ยังไม่ตั้งน้ำหนัก {missingWeights} รายการ</small> : null}
             </div>
             <div className="vehicle-summary-header__meta-inline">
               <span>{data.dateLabel}</span>
@@ -355,7 +374,8 @@ function FactoryOrderStyles() {
       }
 
       .factory-order-sheet .vehicle-summary-header__brand {
-        font-size: 15.5pt;
+        grid-column: 1 / -1;
+        font-size: 20pt;
         font-weight: 800;
         line-height: 1.25;
         letter-spacing: 0.04em;
@@ -363,9 +383,9 @@ function FactoryOrderStyles() {
       }
 
       .factory-order-sheet .vehicle-summary-header__line {
-        display: flex;
-        flex-direction: column;
-        align-items: stretch;
+        display: grid;
+        grid-template-columns: 1fr auto;
+        align-items: end;
         gap: 0.15mm;
         width: 100%;
       }
@@ -393,9 +413,29 @@ function FactoryOrderStyles() {
         gap: 1.6mm;
         flex-wrap: nowrap;
         white-space: nowrap;
-        font-size: 14.72pt;
-        font-weight: 700;
-        color: #334155;
+        font-size: 18pt;
+        font-weight: 900;
+        color: #000000;
+      }
+
+      .factory-order-sheet .factory-order-weight {
+        justify-self: start;
+        padding: 0.5mm 0;
+        color: #000;
+        font-size: 20pt;
+        font-weight: 800;
+        line-height: 1.2;
+        white-space: nowrap;
+      }
+
+      .factory-order-weight strong {
+        margin-left: 3mm;
+        font-size: 26pt;
+      }
+
+      .factory-order-weight small {
+        display: block;
+        font-size: 14pt;
       }
 
       .factory-order-sheet .vehicle-summary-table-wrap {

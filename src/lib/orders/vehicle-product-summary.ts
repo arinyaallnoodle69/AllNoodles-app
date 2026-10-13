@@ -16,6 +16,7 @@ export type VehicleSummaryProduct = {
   name: string;
   unit: string;
   imageUrl: string | null;
+  unitWeightGrams?: number | null;
   productKind?: string;
   supplierId?: string | null;
   supplierName?: string | null;
@@ -63,6 +64,7 @@ type DbProduct = {
   id: string;
   name: string;
   unit: string;
+  unit_weight_grams: number | string | null;
   display_order: number | null;
   metadata: unknown;
   sku: string;
@@ -162,7 +164,7 @@ async function loadSortedProducts(organizationId: string) {
   const [productsResult, categoriesResult, categoryItemsResult] = await Promise.all([
     admin
       .from("products")
-      .select("id, sku, name, unit, display_order, metadata, product_kind, supplier_id, suppliers(name, supplier_code), product_images(public_url, sort_order)")
+      .select("id, sku, name, unit, unit_weight_grams, display_order, metadata, product_kind, supplier_id, suppliers(name, supplier_code), product_images(public_url, sort_order)")
       .eq("organization_id", organizationId)
       .eq("is_active", true),
     admin
@@ -202,6 +204,7 @@ async function loadSortedProducts(organizationId: string) {
         categoryIds: categoryIdsByProductId.get(product.id) ?? [],
         sku: product.sku,
         unit: product.unit,
+        unitWeightGrams: product.unit_weight_grams == null ? null : Number(product.unit_weight_grams),
         imageUrl: sortedImages[0]?.public_url ?? null,
         productKind: product.product_kind,
         supplierId: product.supplier_id ?? null,
@@ -276,6 +279,7 @@ export async function getVehicleProductSummaryData(
     sku: product.sku,
     name: product.name,
     unit: product.unit || "-",
+    unitWeightGrams: product.unitWeightGrams,
     imageUrl: product.imageUrl ?? null,
     productKind: product.productKind,
     supplierId: product.supplierId,
@@ -459,6 +463,7 @@ export async function getFactoryOrderSheetData(
     sku: product.sku,
     name: product.name,
     unit: product.unit || "-",
+    unitWeightGrams: product.unitWeightGrams,
     imageUrl: product.imageUrl ?? null,
     productKind: product.productKind,
     supplierId: product.supplierId,

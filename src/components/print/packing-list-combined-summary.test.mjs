@@ -25,6 +25,14 @@ function loadComponent(path) {
   return loaded.exports;
 }
 const { PackingListLayout } = loadComponent(resolve(root, "components/print/packing-list-layout.tsx"));
+test("only special entry name cells receive the pink background", () => {
+  const data = fixture();
+  data.stores[0].id = "SPECIAL-REMAINING";
+  data.stores[0].name = "ของเหลือ";
+  const html = renderToStaticMarkup(createElement(PackingListLayout, { data }));
+  assert.match(html, /class="packing-cell packing-cell--store" style="background-color:#fce7f3">ของเหลือ<\/td>/);
+  assert.doesNotMatch(html, /style="background-color:#fce7f3">ร้าน/);
+});
 function fixture(storeCount = 2, productCount = 4) {
   return {
     date: "2026-10-09", dateLabel: "9 ตุลาคม 2569", organizationName: "All Noodles",
@@ -51,7 +59,7 @@ test("final noodle Bangkok sheet includes main-only, noodle-only and shared prod
   assert.equal(tables.length, 1);
   assert.ok(tables[0].includes("รวมรถกรุงเทพ + รถกรุงเทพบะหมี่"));
   for (let index = 0; index < 4; index++) assert.ok(tables[0].includes(`>P${index}<`));
-  assert.deepEqual([...tables[0].matchAll(/class="packing-number[^\"]*">([^<]+)/g)].map((match) => Number(match[1])), [7, 5, 4, 4]);
+  assert.deepEqual([...tables[0].matchAll(/class="packing-number[^\"]*"[^>]*>([^<]+)/g)].map((match) => Number(match[1])), [7, 5, 4, 4]);
 });
 test("summary is printed once after all store pages and includes all product chunks", () => {
   const tables = summaries(fixture(60, 101));

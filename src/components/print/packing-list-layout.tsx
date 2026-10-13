@@ -615,8 +615,9 @@ function calcDataColWidth(count: number, availableMm: number, minMm = 6) {
   return `${Math.max(minMm, raw)}mm`;
 }
 
-function getStandardNumberClass(value: number) {
-  const digitCount = Math.abs(Math.trunc(value)).toString().length;
+function getStandardNumberClass(value: number, isTotal = false) {
+  const digitCount = isTotal ? formatStandardQuantity(value).length : Math.abs(Math.trunc(value)).toString().length;
+  if (isTotal && digitCount >= 6) return " packing-number--xxs";
   if (digitCount >= 5) return " packing-number--xs";
   if (digitCount >= 4) return " packing-number--sm";
   if (digitCount >= 3) return " packing-number--md";
@@ -800,7 +801,7 @@ function StandardPackingListPage({ page, data }: { page: StandardPageDef; data: 
                   <tr key={store.id} className="packing-table__row">
                     {isStopped ? (
                       <>
-                        <td className="packing-cell packing-cell--store">{store.name}</td>
+                        <td className="packing-cell packing-cell--store" style={store.id.startsWith("SPECIAL-") ? { backgroundColor: "#fce7f3" } : undefined}>{store.name}</td>
                         {page.pageProductIndices.length > 0
                           ? page.pageProductIndices.map((productIndex, cellIndex) => {
                               const product = page.pageProducts[cellIndex];
@@ -835,7 +836,7 @@ function StandardPackingListPage({ page, data }: { page: StandardPageDef; data: 
                       </>
                     ) : (
                       <>
-                        <td className="packing-cell packing-cell--store">{store.name}</td>
+                        <td className="packing-cell packing-cell--store" style={store.id.startsWith("SPECIAL-") ? { backgroundColor: "#fce7f3" } : undefined}>{store.name}</td>
                         {page.pageProductIndices.map((productIndex, cellIndex) => {
                           const rawValue = data.qty[productIndex]?.[storeIndex] ?? 0;
                           const value = Math.abs(rawValue);
@@ -881,7 +882,7 @@ function StandardPackingListPage({ page, data }: { page: StandardPageDef; data: 
                         className={`packing-cell packing-cell--total${catBoundarySet.has(index) ? " packing-cell--cat-boundary" : ""}`}
                       >
                         {total > 0 ? (
-                          <span className={`packing-number${getStandardNumberClass(total)}`}>
+                          <span className={`packing-number${getStandardNumberClass(total, true)}`} style={{ "--packing-total-characters": formatStandardQuantity(total).length } as CSSProperties}>
                             {formatStandardQuantity(total)}
                           </span>
                         ) : ""}
@@ -944,7 +945,7 @@ function CombinedPackingSummary({ productIndices, storeIndices, data }: {
             const total = storeIndices.reduce((sum, storeIndex) => sum + (data.qty[productIndex]?.[storeIndex] ?? 0), 0);
             return (
               <td key={data.products[productIndex].key} className={`packing-cell packing-cell--total packing-cell--combined-total${boundaries.has(index) ? " packing-cell--cat-boundary" : ""}`}>
-                <span className={`packing-number${getStandardNumberClass(total)}`}>{formatStandardQuantity(total)}</span>
+                <span className={`packing-number${getStandardNumberClass(total, true)}`} style={{ "--packing-total-characters": formatStandardQuantity(total).length } as CSSProperties}>{formatStandardQuantity(total)}</span>
               </td>
             );
           })}
@@ -992,7 +993,7 @@ function TransposedPackingListPage({ page, data }: { page: TransposedPageDef; da
                     <th
                       key={store.id}
                       className="packing-col packing-col--transpose-store"
-                      style={{ width: storeColumnWidth, backgroundColor: palette.header }}
+                      style={{ width: storeColumnWidth, backgroundColor: store.id.startsWith("SPECIAL-") ? "#fce7f3" : palette.header }}
                     >
                       <div className="packing-transpose-header">
                         <span className="packing-transpose-header__name">
@@ -1416,6 +1417,25 @@ function PackingListStyles() {
 
       .packing-number--xs {
         font-size: 8.06pt;
+        letter-spacing: -0.09em;
+      }
+
+      .packing-cell--total .packing-number,
+      .packing-cell--total .packing-number--md {
+        color: #000;
+        font-size: calc(var(--packing-number-font-size, 12.4pt) * 1.2);
+      }
+
+      .packing-cell--total .packing-number--sm {
+        font-size: 12.4pt;
+      }
+
+      .packing-cell--total .packing-number--xs {
+        font-size: 10pt;
+      }
+
+      .packing-cell--total .packing-number--xxs {
+        font-size: calc(48pt / var(--packing-total-characters));
         letter-spacing: -0.09em;
       }
 

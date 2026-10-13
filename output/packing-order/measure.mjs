@@ -2,12 +2,9 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { dirname, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
-import test from "node:test";
 import ts from "typescript";
 import { renderToStaticMarkup } from "react-dom/server";
 import { createElement } from "react";
-import { paginateCombinedSummary } from "../../src/components/print/packing-list-pagination.ts";
 
 const require = createRequire(import.meta.url);
 const root = resolve(process.cwd(), "src");
@@ -42,10 +39,6 @@ function fixture(storeCount = 2, productCount = 4) {
       store === storeCount ? 999 : index === 0 ? (store === 0 ? 7 : 0) : index === 1 ? (store === 0 ? 0 : 5) : 2)),
   };
 }
-function summaries(data) {
-  const html = renderToStaticMarkup(createElement(PackingListLayout, { data }));
-  return [...html.matchAll(/<table class="packing-table packing-table--combined-summary"[\s\S]*?<\/table>/g)].map((match) => match[0]);
-}
 
 
 const { chromium } = require("C:/Users/Riew/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright");
@@ -63,15 +56,27 @@ for(const count of [27,29,30,58]) {
  console.log(count,measurements); worstOverflow=Math.max(worstOverflow,...measurements.map(m=>m.overflow));
 }
 
-for (const productCount of [1,20,50,101,251]) {
- const data=fixture(60,productCount);data.products.forEach((p,i)=>p.category="หมวดสินค้าผลิตสด "+i);
+for (const productCount of [1,20,40,50,101,251]) {
+ const data=fixture(60,productCount);data.qty=data.products.map((_,i)=>data.stores.map((_,s)=>s===0 ? [9,99,999,9999,99999,1230,1090,150,12.5,999999,999.999,1000000000][i%12] : 0));data.products.forEach((p,i)=>p.category="หมวดสินค้าผลิตสด "+i);
  await page.setContent(renderToStaticMarkup(createElement(PackingListLayout,{data})).replaceAll("/fonts/angsana-new/angsab.woff", "data:font/woff;base64,"+readFileSync("public/fonts/angsana-new/angsab.woff").toString("base64")));
  await page.evaluate(()=>document.fonts.ready);
  const overflows=await page.locator('.packing-table-wrap').evaluateAll(nodes=>nodes.map(w=>Math.max(...[...w.querySelectorAll('table')].map(t=>t.getBoundingClientRect().bottom))-w.getBoundingClientRect().bottom));
+ const numberOverflows=await page.locator('.packing-cell--total .packing-number').evaluateAll(nodes=>nodes.flatMap(n=>{
+  const range=document.createRange();range.selectNodeContents(n);const text=range.getBoundingClientRect(),cell=n.parentElement.getBoundingClientRect();
+  const context=document.createElement("canvas").getContext("2d");const style=getComputedStyle(n);context.font=`${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;const metrics=context.measureText(n.textContent);const baseline=text.top+metrics.fontBoundingBoxAscent;const inkTop=baseline-metrics.actualBoundingBoxAscent,inkBottom=baseline+metrics.actualBoundingBoxDescent;
+  return inkTop<cell.top || inkBottom>cell.bottom || text.left<cell.left+1 || text.right>cell.right-1 ? [{value:n.textContent,width:text.width,cellWidth:cell.width,left:text.left-cell.left,right:cell.right-text.right}] : [];
+ }));
+ assert.deepEqual(numberOverflows,[],`Summary numbers overflow with ${productCount} products`);
  console.log("Mixed Bangkok sheets",productCount,Math.max(...overflows));worstOverflow=Math.max(worstOverflow,...overflows);
 }
 await page.emulateMedia({media:"print"});
 const printOverflow=await page.locator('.packing-table-wrap').evaluateAll(nodes=>nodes.map(w=>Math.max(...[...w.querySelectorAll('table')].map(t=>t.getBoundingClientRect().bottom))-w.getBoundingClientRect().bottom));
+ const printNumberOverflows=await page.locator('.packing-cell--total .packing-number').evaluateAll(nodes=>nodes.flatMap(n=>{
+  const range=document.createRange();range.selectNodeContents(n);const text=range.getBoundingClientRect(),cell=n.parentElement.getBoundingClientRect();
+  const context=document.createElement("canvas").getContext("2d");const style=getComputedStyle(n);context.font=`${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;const metrics=context.measureText(n.textContent);const baseline=text.top+metrics.fontBoundingBoxAscent;const inkTop=baseline-metrics.actualBoundingBoxAscent,inkBottom=baseline+metrics.actualBoundingBoxDescent;
+  return inkTop<cell.top || inkBottom>cell.bottom || text.left<cell.left+1 || text.right>cell.right-1 ? [{value:n.textContent,width:text.width,cellWidth:cell.width,left:text.left-cell.left,right:cell.right-text.right}] : [];
+ }));
+ assert.deepEqual(printNumberOverflows,[],`Summary numbers overflow with print products`);
 console.log("Print overflow",Math.max(...printOverflow));worstOverflow=Math.max(worstOverflow,...printOverflow);
 await browser.close();
 assert.ok(worstOverflow <= 0, `Last row clipped by ${worstOverflow}px`);

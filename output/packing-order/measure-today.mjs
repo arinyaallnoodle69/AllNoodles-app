@@ -2,12 +2,9 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { dirname, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
-import test from "node:test";
 import ts from "typescript";
 import { renderToStaticMarkup } from "react-dom/server";
 import { createElement } from "react";
-import { paginateCombinedSummary } from "../../src/components/print/packing-list-pagination.ts";
 
 const require = createRequire(import.meta.url);
 const root = resolve(process.cwd(), "src");
@@ -25,27 +22,6 @@ function loadComponent(path) {
   return loaded.exports;
 }
 const { PackingListLayout } = loadComponent(resolve(root, "components/print/packing-list-layout.tsx"));
-function fixture(storeCount = 2, productCount = 4) {
-  return {
-    date: "2026-10-09", dateLabel: "9 ตุลาคม 2569", organizationName: "All Noodles",
-    vehicles: [{ id: "bkk", name: "รถกรุงเทพ" }, { id: "province", name: "รถต่างจังหวัด" }],
-    stores: Array.from({ length: storeCount + 1 }, (_, index) => ({
-      id: `store${index}`, name: `ร้าน${index}`, vehicleId: index === storeCount ? "province" : "bkk",
-      vehicleName: index === storeCount ? "รถต่างจังหวัด" : "รถกรุงเทพ",
-      packingListGroup: index === 0 ? "default" : "bkk_noodle",
-      totalWeightGrams: 1000, missingWeightProductIds: [],
-    })),
-    products: Array.from({ length: productCount }, (_, index) => ({
-      key: `sku${index}||กก.`, sku: `sku${index}`, name: `P${index}`, unit: "กก.", category: "เส้น", brand: "", icon: "",
-    })),
-    qty: Array.from({ length: productCount }, (_, index) => Array.from({ length: storeCount + 1 }, (_, store) =>
-      store === storeCount ? 999 : index === 0 ? (store === 0 ? 7 : 0) : index === 1 ? (store === 0 ? 0 : 5) : 2)),
-  };
-}
-function summaries(data) {
-  const html = renderToStaticMarkup(createElement(PackingListLayout, { data }));
-  return [...html.matchAll(/<table class="packing-table packing-table--combined-summary"[\s\S]*?<\/table>/g)].map((match) => match[0]);
-}
 
 
 const { readdirSync }=require("node:fs");

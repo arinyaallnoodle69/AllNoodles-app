@@ -178,7 +178,7 @@ const ItemsViewList = memo(({ detail }: { detail: OrderDetailData }) => {
 });
 ItemsViewList.displayName = "ItemsViewList";
 
-const EditItemsPanel = memo(({
+const CurrentOrderEditItemsPanel = memo(({
   detail,
   onDone,
   products,
@@ -946,7 +946,58 @@ const EditItemsPanel = memo(({
     </div>
   );
 });
-EditItemsPanel.displayName = "EditItemsPanel";
+CurrentOrderEditItemsPanel.displayName = "CurrentOrderEditItemsPanel";
+
+function EditItemsPanel(props: React.ComponentProps<typeof CurrentOrderEditItemsPanel>) {
+  const orderId = props.detail.id;
+  const [loaded, setLoaded] = useState<{
+    orderId: string;
+    detail: OrderDetailData | null;
+    error?: string;
+  } | null>(null);
+  const [retry, setRetry] = useState(0);
+
+  useEffect(() => {
+    let cancelled = false;
+    // Editing must start from a fresh read, not the preview or an in-flight prefetch.
+    void fetchIncomingOrderDetailAction(orderId)
+      .then((result) => {
+        if (cancelled) return;
+        setLoaded({
+          orderId,
+          detail: result.error ? null : result.detail,
+          error: result.error || (!result.detail ? "ไม่พบออเดอร์นี้" : undefined),
+        });
+      })
+      .catch((error: unknown) => {
+        if (!cancelled) setLoaded({ orderId, detail: null, error: error instanceof Error ? error.message : "โหลดออเดอร์ล่าสุดไม่สำเร็จ" });
+      });
+    return () => { cancelled = true; };
+  }, [orderId, retry]);
+
+  if (loaded?.orderId === orderId && loaded.detail) {
+    return <CurrentOrderEditItemsPanel key={orderId} {...props} detail={loaded.detail} />;
+  }
+
+  const error = loaded?.orderId === orderId ? loaded.error : undefined;
+  return (
+    <div className="flex h-full flex-col items-center justify-center gap-4 p-6 text-center" role="status">
+      {error ? (
+        <>
+          <p className="text-sm font-bold text-rose-700">{error}</p>
+          <button type="button" onClick={() => { setLoaded(null); setRetry(retry + 1); }} className="rounded-xl bg-[#4A148C] px-5 py-3 text-sm font-bold text-white">
+            โหลดข้อมูลอีกครั้ง
+          </button>
+        </>
+      ) : (
+        <>
+          <Loader2 className="h-6 w-6 animate-spin text-[#4A148C]" />
+          <p className="text-sm font-bold text-[#4A148C]">กำลังโหลดออเดอร์ล่าสุด...</p>
+        </>
+      )}
+    </div>
+  );
+}
 
 // Main modal
 
@@ -1539,6 +1590,7 @@ export function IncomingOrderModal({
             </div>
           ) : editMode ? (
             <EditItemsPanel
+              key={activeDetail.id}
               detail={activeDetail}
               onDone={(message, updatedStats) => {
                 if (message) {
