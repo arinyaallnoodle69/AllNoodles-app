@@ -1894,6 +1894,7 @@ export function CreateOrderModal({
   const [priceMap, setPriceMap] = useState<Record<string, number>>({});
 
   const vehicleTabsContainerRef = useRef<HTMLDivElement>(null);
+  const customerPickerViewportRef = useRef<HTMLDivElement>(null);
   const [vehicleUnderlineStyle, setVehicleUnderlineStyle] = useState<React.CSSProperties | null>(null);
 
   useEffect(() => {
@@ -1919,7 +1920,10 @@ export function CreateOrderModal({
       left: `${e.currentTarget.offsetLeft}px`,
       width: `${e.currentTarget.offsetWidth}px`,
     });
-    e.currentTarget.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+    const container = vehicleTabsContainerRef.current;
+    if (container) {
+      container.scrollTo({ left: e.currentTarget.offsetLeft - (container.clientWidth - e.currentTarget.offsetWidth) / 2, behavior: "smooth" });
+    }
   };
 
   const showSubmitPopup = useCallback((message: string) => {
@@ -1952,15 +1956,51 @@ export function CreateOrderModal({
   const savedScrollYRef = useRef<number>(0);
 
   useEffect(() => {
-    if (open && typeof window !== "undefined") {
-      savedScrollYRef.current = window.scrollY || window.pageYOffset || 0;
-      const originalOverflow = document.body.style.overflow;
-      document.body.style.overflow = "hidden";
-      return () => {
-        document.body.style.overflow = originalOverflow;
-      };
-    }
+    if (!open) return;
+    const html = document.documentElement;
+    const body = document.body;
+    const scrollY = window.scrollY || window.pageYOffset || 0;
+    savedScrollYRef.current = scrollY;
+    const previousHtml = { overflow: html.style.overflow, overscrollBehavior: html.style.overscrollBehavior };
+    const previousBody = {
+      overflow: body.style.overflow, position: body.style.position, top: body.style.top,
+      width: body.style.width, paddingRight: body.style.paddingRight,
+    };
+    const scrollbarWidth = Math.max(0, window.innerWidth - html.clientWidth);
+    html.style.overflow = "hidden";
+    html.style.overscrollBehavior = "none";
+    // iOS can still move the page behind a modal with overflow:hidden alone.
+    body.style.overflow = "hidden";
+    body.style.position = "fixed";
+    body.style.top = `-${scrollY}px`;
+    body.style.width = "100%";
+    if (scrollbarWidth > 0) body.style.paddingRight = `${scrollbarWidth}px`;
+    return () => {
+      Object.assign(html.style, previousHtml);
+      Object.assign(body.style, previousBody);
+      window.scrollTo({ top: scrollY, left: 0, behavior: "instant" });
+    };
   }, [open]);
+
+  useEffect(() => {
+    if (!open || !customerPickerOpen) return;
+    const frame = customerPickerViewportRef.current;
+    const viewport = window.visualViewport;
+    if (!frame || !viewport) return;
+    const updateViewport = () => {
+      frame.style.setProperty("--customer-picker-height", `${viewport.height}px`);
+      frame.style.setProperty("--customer-picker-top", `${viewport.offsetTop}px`);
+    };
+    updateViewport();
+    viewport.addEventListener("resize", updateViewport);
+    viewport.addEventListener("scroll", updateViewport);
+    return () => {
+      viewport.removeEventListener("resize", updateViewport);
+      viewport.removeEventListener("scroll", updateViewport);
+      frame.style.removeProperty("--customer-picker-height");
+      frame.style.removeProperty("--customer-picker-top");
+    };
+  }, [open, customerPickerOpen]);
   const productsById = useMemo(
     () => new Map(products.map((product) => [product.id, product])),
     [products],
@@ -2893,19 +2933,19 @@ export function CreateOrderModal({
       ) : null}
 
       {open && customerPickerOpen ? (
-        <div className="fixed inset-0 z-[10000] flex items-end justify-center bg-slate-950/50 sm:items-center sm:p-4 overscroll-contain">
+        <div ref={customerPickerViewportRef} role="dialog" aria-modal="true" aria-labelledby="customer-picker-title" data-disable-pull-refresh="true" className="fixed inset-x-0 top-[var(--customer-picker-top,0px)] z-[10000] flex h-[var(--customer-picker-height,100dvh)] min-h-0 items-end justify-center overflow-hidden overscroll-none bg-slate-950/50 sm:top-0 sm:h-dvh sm:items-center sm:p-4">
           <div className="absolute inset-0" onClick={() => setCustomerPickerOpen(false)} />
-          <div className="relative flex h-[100dvh] w-full max-h-[100dvh] flex-col overflow-hidden rounded-none bg-white shadow-2xl overscroll-contain sm:h-[80dvh] sm:max-h-[80dvh] sm:max-w-md sm:rounded-[2rem]">
+          <div className="relative flex h-full min-h-0 w-full max-h-full flex-col overflow-hidden rounded-none bg-white shadow-2xl overscroll-contain sm:h-[80dvh] sm:max-h-[80dvh] sm:max-w-md sm:rounded-[2rem]">
             {/* Modal Header */}
-            <div className="sticky top-0 z-20 flex shrink-0 items-center justify-between gap-3 border-b border-[#EA80FC]/30 bg-[#4A148C] px-5 py-4 pt-[max(1rem,env(safe-area-inset-top))] text-white">
+            <div className="relative z-20 flex shrink-0 touch-none items-center justify-between gap-3 border-b border-[#EA80FC]/30 bg-[#4A148C] px-5 py-4 pt-[max(1rem,env(safe-area-inset-top))] text-white">
               <div className="min-w-0">
-                <h3 className="truncate text-lg font-black tracking-wide text-white">เลือกร้านค้า</h3>
+                <h3 id="customer-picker-title" className="truncate text-lg font-black tracking-wide text-white">เลือกร้านค้า</h3>
                 <p className="text-[10px] font-semibold text-[#E1BEE7] mt-0.5">ค้นหาชื่อร้าน หรือรหัสร้าน</p>
               </div>
               <button
                 type="button"
                 onClick={() => setCustomerPickerOpen(false)}
-                className="action-touch-safe flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/12 text-white/90 hover:bg-white/20 transition active:scale-95"
+                className="action-touch-safe flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white/12 text-white/90 hover:bg-white/20 transition active:scale-95"
                 aria-label="ปิดหน้าต่างเลือกร้านค้า"
               >
                 <X className="h-5 w-5" strokeWidth={2.5} />
@@ -2940,7 +2980,7 @@ export function CreateOrderModal({
             <div className="shrink-0 border-b border-[#EA80FC]/15 bg-white">
               <div 
                 ref={vehicleTabsContainerRef}
-                className="relative flex gap-6 overflow-x-auto px-4 pt-3.5 pb-0.5 no-scrollbar scroll-smooth"
+                className="relative flex touch-pan-x gap-6 overscroll-x-contain overflow-x-auto px-4 pt-3.5 pb-0.5 no-scrollbar scroll-smooth"
               >
                 {/* Sliding Indicator Line */}
                 <span
@@ -2982,7 +3022,7 @@ export function CreateOrderModal({
             </div>
 
             {/* Customer List */}
-            <div className="flex-1 overflow-y-auto bg-slate-50/50 px-4 py-4">
+            <div className="min-h-0 flex-1 touch-pan-y overflow-x-hidden overflow-y-auto overscroll-y-none bg-slate-50/50 px-4 py-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
               {filteredCustomers.length === 0 ? (
                 <div className="flex h-full min-h-[14rem] flex-col items-center justify-center rounded-[2rem] border border-dashed border-[#EA80FC]/30 bg-[#F3E5F5]/10 px-4 text-center">
                   <Building2 className="h-10 w-10 text-[#4A148C]/40" strokeWidth={1.8} />

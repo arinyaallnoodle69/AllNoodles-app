@@ -3,14 +3,14 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 import ts from "typescript";
 
-function loadSummary() {
+function loadSummary(provincial = false, fulfillmentMode = "fresh") {
   const adjustmentDates = [];
   const queryDates = [];
-  const mode = { product_id: "p1", warehouse_id: "wh", mode: "fresh", supplier_id: "factory", suppliers: { name: "โรงงานมังกร" } };
+  const mode = { product_id: "p1", warehouse_id: "wh", mode: fulfillmentMode, supplier_id: "factory", suppliers: { name: provincial ? "A.ดอกบัว" : "โรงงานมังกร", supplier_code: provincial ? "TYV005" : "dragon" } };
   const rows = {
-    products: [{ id: "p1", sku: "ANP180", name: "บะหมี่", unit: "กก.", product_kind: "fresh" }],
-    vehicles: [{ id: "bkk", name: "รถกรุงเทพ" }],
-    warehouses: [{ id: "wh", name: "คลังกรุงเทพ" }],
+    products: [{ id: "p1", sku: provincial ? "ANP128" : "ANP180", name: "บะหมี่", unit: "กก.", product_kind: "fresh" }],
+    vehicles: [{ id: "bkk", name: provincial ? "รถระนอง1" : "รถกรุงเทพ" }],
+    warehouses: [{ id: "wh", name: provincial ? "คลังต่างจังหวัด" : "คลังกรุงเทพ" }],
     product_warehouse_fulfillment_modes: [mode],
   };
   const admin = {
@@ -39,14 +39,17 @@ function loadSummary() {
     "next/cache": { cacheLife() {}, cacheTag() {} },
     "@/lib/supabase/admin": { getSupabaseAdmin: () => admin },
     "@/lib/products/sort-by-category": { sortProductsByCategory: products => products },
-    "@/lib/orders/daily-special-items": { getDailySpecialPrintItems: async () => [] },
+    "@/lib/orders/daily-special-items": { getDailySpecialPrintItems: async (_org, date) => provincial && date === "2026-10-09" ? [
+      { productId: "p1", vehicleId: "bkk", vehicleName: "รถระนอง1", type: "office", quantity: 50 },
+      { productId: "p1", vehicleId: "bkk", vehicleName: "รถระนอง1", type: "remaining", quantity: 20 },
+    ] : [] },
     "@/lib/orders/factory-adjustment-demand": { getBangkokFactoryProductMode: () => mode },
     "@/lib/orders/vehicle-summary-mode": {},
     "@/lib/orders/factory-order-adjustments": {
       FACTORY_ADJUSTMENT_SKUS: ["ANP180"],
       getDailyFactoryOrderAdjustments: async (_org, date) => {
         adjustmentDates.push(date);
-        return date === "2026-10-09" ? [{ productId: "p1", adjustedQuantity: 45 }] : [];
+        return !provincial && date === "2026-10-09" ? [{ productId: "p1", adjustedQuantity: 45 }] : [];
       },
     },
   };
@@ -58,7 +61,7 @@ function loadSummary() {
     assert.ok(name in dependencies, `Unexpected dependency: ${name}`);
     return dependencies[name];
   }, loaded, loaded.exports);
-  return { ...loaded.exports, adjustmentDates, queryDates };
+  return { ...loaded.exports, adjustmentDates, queryDates, rows };
 }
 
 test("factory date range produces separate daily sheets and keeps each day's confirmed quantity", async () => {
@@ -77,4 +80,20 @@ test("factory date split preserves the unadjusted demand option", async () => {
   const sheets = await summary.getFactoryOrderSheetData("org", "2026-10-09", "2026-10-10", { applyAdjustments: false });
   assert.deepEqual(sheets.map(sheet => sheet.qty), [[[20]], [[30]]]);
   assert.deepEqual(summary.adjustmentDates, []);
+});
+
+test("provincial Lotus orders use reserve while only office entries order from factory", async () => {
+  const summary = loadSummary(true);
+  const sheets = await summary.getFactoryOrderSheetData("org", "2026-10-09", "2026-10-10");
+  assert.equal(sheets.length, 1);
+  assert.equal(sheets[0].warehouseName, "คลังต่างจังหวัด");
+  assert.deepEqual(sheets[0].qty, [[50]]);
+});
+
+test("provincial Lotus stock-mode products never enter the fresh factory flow", async () => {
+  const summary = loadSummary(true, "stock");
+  assert.deepEqual(await summary.getFactoryOrderSheetData("org", "2026-10-09", "2026-10-10"), []);
+  summary.rows.warehouses.push({ id: "bkk-wh", name: "คลังกรุงเทพ" });
+  summary.rows.product_warehouse_fulfillment_modes.push({ ...summary.rows.product_warehouse_fulfillment_modes[0], warehouse_id: "bkk-wh", mode: "fresh" });
+  assert.deepEqual(await summary.getFactoryOrderSheetData("org", "2026-10-09", "2026-10-10"), []);
 });

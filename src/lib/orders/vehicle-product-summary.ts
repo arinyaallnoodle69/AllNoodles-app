@@ -508,6 +508,7 @@ export async function getFactoryOrderSheetData(
       if (!product) continue;
       const fulfillment = fulfillmentByProductWarehouse.get(modeKey(product.id, warehouseId));
       if (fulfillment?.mode !== "fresh") continue;
+      if (warehouseName === "คลังต่างจังหวัด" && fulfillment.supplierCode === "TYV005") continue;
 
       const supplierName = fulfillment.supplierName || product.supplierName || "โรงงานอนามัย";
       const supplierCode = fulfillment.supplierCode || product.supplierCode || undefined;
@@ -543,9 +544,10 @@ export async function getFactoryOrderSheetData(
     const freshModes = ((modesResult.data ?? []) as ProductModeRow[]).filter(
       (candidate) => candidate.product_id === item.productId && candidate.mode === "fresh",
     );
-    const mode = vehicleNameByKey.get(item.vehicleId)?.trim() === "รถกรุงเทพ" || FACTORY_ADJUSTMENT_SKUS.some((sku) => sku === product.sku)
+    const mode = vehicleNameByKey.get(item.vehicleId)?.trim().startsWith("รถกรุงเทพ") || FACTORY_ADJUSTMENT_SKUS.some((sku) => sku === product.sku)
       ? freshModes.find((candidate) => warehouseNameById.get(candidate.warehouse_id)?.trim() === "คลังกรุงเทพ") ?? freshModes[0]
-      : freshModes[0];
+      : freshModes.find((candidate) => candidate.suppliers?.supplier_code === "TYV005" && warehouseNameById.get(candidate.warehouse_id)?.trim() === "คลังต่างจังหวัด")
+        ?? (freshModes.some((candidate) => candidate.suppliers?.supplier_code === "TYV005") ? undefined : freshModes[0]);
     if (!mode) continue;
 
     const warehouseName = warehouseNameById.get(mode.warehouse_id) || "ไม่ระบุคลัง";
@@ -577,6 +579,7 @@ export async function getFactoryOrderSheetData(
   // planning adjustment only, not a sale or stock movement.
   for (const item of specialItems.filter((special) => special.type === "remaining")) {
     for (const group of groups.values()) {
+      if (group.warehouseName === "คลังต่างจังหวัด" && group.factoryCode === "TYV005") continue;
       const productQty = group.productVehicleQty.get(item.productId);
       if (!productQty?.has(item.vehicleId)) continue;
       productQty.set(item.vehicleId, Math.max(0, (productQty.get(item.vehicleId) ?? 0) - item.quantity));

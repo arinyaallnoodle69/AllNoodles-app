@@ -7,7 +7,7 @@ import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 
 const require = createRequire(import.meta.url);
-function formWith(values) {
+function formWith(values, scope) {
   const state = [values, false, null];
   let hook = 0;
   const saved = [], pending = [];
@@ -21,8 +21,8 @@ function formWith(values) {
     "next/navigation": { useRouter: () => ({ replace() {}, refresh() {} }) },
     "lucide-react": new Proxy({}, { get: () => () => null }),
     "@/components/settings/product-image-preview": { ProductImagePreview: () => null },
-    "@/app/orders/fresh-reserve-stock/actions": { initializeReserveStockAction: async (date, rows) => {
-      saved.push({ date, rows }); return { ok: true };
+    "@/app/orders/fresh-reserve-stock/actions": { initializeReserveStockAction: async (date, rows, scope) => {
+      saved.push({ date, rows, scope }); return { ok: true };
     } },
   };
   const compiled = ts.transpileModule(readFileSync(new URL("./reserve-stock-opening-form.tsx", import.meta.url), "utf8"), {
@@ -33,7 +33,7 @@ function formWith(values) {
   const products = ["p1", "p2", "p3"].map(id => ({ id, name: id, sku: id, imageUrl: null }));
   return { state, saved, pending, render() {
     hook = 0;
-    return loaded.exports.ReserveStockOpeningForm({ products, date: "2026-10-11" });
+    return loaded.exports.ReserveStockOpeningForm({ products, date: "2026-10-11", scope });
   } };
 }
 
@@ -54,6 +54,19 @@ test("partial opening quantities reach review and save every blank product as ze
     assert.deepEqual(form.saved[0].rows, [
       { productId: "p1", quantity: 12.5 }, { productId: "p2", quantity: 0 }, { productId: "p3", quantity: 0 },
     ]);
+  } finally { globalThis.window = originalWindow; }
+});
+
+test("provincial opening explains today's reservations and saves in provincial scope", async () => {
+  const originalWindow = globalThis.window;
+  globalThis.window = { scrollTo() {} };
+  try {
+    const form = formWith({ p1: "50" }, "province");
+    assert.match(renderToStaticMarkup(form.render()), /คลังต่างจังหวัด ก่อนหักออเดอร์ตั้งแต่วันนี้/);
+    form.render().props.onSubmit({ preventDefault() {} });
+    form.render().props.onSubmit({ preventDefault() {} });
+    await Promise.all(form.pending);
+    assert.equal(form.saved[0].scope, "province");
   } finally { globalThis.window = originalWindow; }
 });
 

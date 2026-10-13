@@ -1,35 +1,21 @@
-# Fresh reserve stock design QA
+# Reserve stock implementation QA
 
 final result: passed
 
-Selected target: `codex-clipboard-ef69cab1-7a78-4688-a8fa-56e2cb1d4a8f.png` (user-approved four-panel mockup).
+Scope: opening setup for both warehouses, compact reserve overview, and shared balance editor. Passed refers to the rendered components and the approved responsive layout; authenticated production integration remains unverified.
 
-Rendered route: `/orders/fresh-reserve-stock`, including `?setup=1`. Captured in the in-app browser at 390 × 844 and 1440 × 1024. Combined visual comparisons: `output/reserve-stock/comparison-mobile.png` and `comparison-desktop.png`.
+Compared the four approved image references with actual page/component renders in `output/reserve-stock/implementation-comparison.png`. References were normalized to the same mobile comparison region. Catalog images/names differ intentionally: reference products were illustrative, implementation uses existing product assets. The fixture omits the existing authenticated app shell and bottom navigation; neither was changed.
 
-## Findings and resolved issues
+Accepted differences requested by the user: preserve existing app typography/components; province displays remaining quantity only, without supply/order/pending/status columns. Desktop retains the existing table layout.
 
-- P2, mobile header: the original implementation repeated the page title above the setup heading. Removed the duplicate mobile title and shortened the helper copy. Latest mobile capture shows the original shell title, compact warehouse context, one setup heading, and the first input above the sticky footer.
-- Desktop capture initially caught the sidebar padding transition. Recaptured after navigation settled; headings and product labels are fully visible beside the sidebar.
-- No horizontal overflow at either tested size. The review CTA remains above the original mobile navigation. Native blank-field validation prevents advancing with unentered quantities.
+Resolved findings:
+- P1: sticky mobile summary obscured the final input row. Summary now follows all products; desktop keeps its existing sticky footer.
+- P2: long placeholder was clipped in the two-column input. Blank-as-zero remains explained above; input placeholder is now `0`.
+- P2: unequal product-name lengths moved paired inputs out of alignment. Cards use flex columns with inputs aligned at the bottom.
+- P2: primary action and History occupied separate mobile rows. They now share one row.
 
-## Fidelity surfaces
+Evidence: current-bangkok-setup-mobile.png, current-province-setup-mobile.png, current-bangkok-stock-mobile.png, current-province-stock-mobile.png, current-bangkok-setup-desktop.png, current-province-setup-desktop.png, current-province-stock-desktop.png. Browser verified 320px and approximately 393px mobile layouts with no horizontal overflow, 48px opening inputs, and desktop table layout at 1280px.
 
-- Typography: reused the installed Thai font and existing app-wide sizing/weights; larger than the isolated mockup, intentionally preserving the familiar system and readability for older users. Names are not truncated.
-- Layout: white product rows, mobile stacked name/input or two balance columns, desktop table, lavender helper and totals, persistent primary action. Existing desktop sidebar and mobile navigation are retained rather than replaced with the mockup's decorative sidebar.
-- Colors: purple primary action and quantities, navy text, pale lavender panels, green positive and amber empty stock status match the approved direction.
-- Assets: original supplied All Noodles logo and installed icon library; no placeholder or recreated logo.
-- Copy/content: real eligible catalog contains 35 products, rather than the mock's three example products. Opening inputs are deliberately blank; example 200/80 values were tested only in an unsaved review draft. Date is fixed to the actual starting day, preventing retrospective opening balances.
+Behavior verification: 12 Node tests passed, including partial opening quantities, scoped save preservation, failure retaining drafts, provincial shortage snapshots, and factory ordering isolation. Temporary SQL fixtures passed 25 provincial assertions plus 12 Bangkok assertions, rolled back without production data changes. New provincial RPC is service-role-only and checks active organization membership and fresh supplier/warehouse eligibility. Migration applied; generated database types refreshed. Lint and production build passed.
 
-## Functional evidence and limits
-
-- Unsaved draft: 35 entered quantities, total 280, review/confirmation, and return to edit verified. No production opening was submitted.
-- Empty stock page and setup visually checked on desktop/mobile. Initialized positive/pending balances checked by transaction-based database tests; not populated in production merely for screenshots.
-- Fresh navigation produced no new browser errors. Earlier retained console entries came from restarting the local build during testing.
-- Opening, immediate withdrawal, edit differences, stable record IDs, midnight receipts, returns, shortage rollback, stale-edit rejection and no-op saving passed the isolated PostgreSQL check.
-- Lint and production build passed. Real database migration applied; private ledger privileges checked.
-
-P3 follow-up: history's opening date can use a Thai date label. No province/Lotus interface has been added.
-
-Post-delivery logic audit: confirmed a missing-opening gap when adding an eligible product after initialization. Migration `20261009152637_guard_missing_fresh_reserve_opening.sql` now rejects such withdrawals/receipts atomically. The page shows an unset balance rather than a misleading zero. Regression assertions include claim, other vehicles, and missing openings; generated database types remain identical because the existing function signature was preserved.
-
-User-requested product photos: added existing catalog images beside product names in both stock and opening/review screens, reusing the system's image preview. Mobile 390 × 844 and desktop 1440 × 1024 have no horizontal overflow; zoom open/close works and opening inputs remain untouched. The current 35-product catalog has 23 photos; the remaining 12 show the standard package icon. Captures: `output/reserve-stock/mobile-product-images.jpg` and `desktop-product-images.jpg`. Layout and calculation behavior remain unchanged; lint/build pass.
+Limits: live app requires PIN login; no actual opening or adjustment was submitted through the browser. There are currently zero eligible provincial fresh Lotus products, so populated province screenshots use clearly labeled fixtures. No deployment performed. Existing project security advisor findings outside this change were left unchanged; the new RPC is not executable by anon/authenticated, and its view uses security_invoker.

@@ -30,6 +30,7 @@ type Props = {
   defaultVehicleId?: string;
   products: DailySpecialCatalogProduct[];
   vehicles: OrderVehicleOption[];
+  restrictToSelection?: boolean;
 };
 
 type CartItem = SaveDailySpecialItemInput;
@@ -58,7 +59,7 @@ function formatDate(date: string) {
   return year && month && day ? `${day}/${month}/${Number(year) + 543}` : date;
 }
 
-export function DailySpecialOrderManager({ date, initialItems, products, variant = "mobile", vehicles, defaultVehicleId }: Props) {
+export function DailySpecialOrderManager({ date, initialItems, products, variant = "mobile", vehicles, defaultVehicleId, restrictToSelection = false }: Props) {
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -69,7 +70,8 @@ export function DailySpecialOrderManager({ date, initialItems, products, variant
   const [selectedCategoryId, setSelectedCategoryId] = useState("__all__");
   const [selectedBrand, setSelectedBrand] = useState("__all__");
   const [draft, setDraft] = useState<Record<string, number>>({});
-  const [cart, setCart] = useState<CartItem[]>(() => initialItemsToCart(initialItems));
+  const isInSelection = (item: DailySpecialItem) => products.some((product) => product.id === item.productId) && vehicles.some((vehicle) => vehicle.id === item.vehicleId);
+  const [cart, setCart] = useState<CartItem[]>(() => initialItemsToCart(restrictToSelection ? initialItems.filter(isInSelection) : initialItems));
   const [isMobileCartOpen, setIsMobileCartOpen] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -196,7 +198,8 @@ export function DailySpecialOrderManager({ date, initialItems, products, variant
   function saveAll() {
     setError(null);
     startTransition(async () => {
-      const result = await saveDailySpecialItemsAction(date, cart, initialItemsToCart(initialItems));
+      const preserved = restrictToSelection ? initialItemsToCart(initialItems.filter((item) => !isInSelection(item))) : [];
+      const result = await saveDailySpecialItemsAction(date, [...preserved, ...cart], initialItemsToCart(initialItems));
       if (!result.ok) {
         setError(result.error);
         return;
@@ -279,7 +282,7 @@ export function DailySpecialOrderManager({ date, initialItems, products, variant
 
   return (
     <>
-      {variant === "reserve" ? <button type="button" onClick={() => { setType("remaining"); setIsOpen(true); }} className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#6D28D9] px-5 py-3 text-base font-bold text-white"><ShoppingBasket className="h-5 w-5" />กรอกรายการพิเศษ</button> : variant === "mobile" ? mobileTrigger : variant === "mobile-compact" ? mobileCompactTrigger : desktopTrigger}
+      {variant === "reserve" ? <button type="button" onClick={() => { setType(restrictToSelection ? "office" : "remaining"); setIsOpen(true); }} className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#6D28D9] px-5 py-3 text-base font-bold text-white"><ShoppingBasket className="h-5 w-5" />กรอกรายการพิเศษ</button> : variant === "mobile" ? mobileTrigger : variant === "mobile-compact" ? mobileCompactTrigger : desktopTrigger}
       {toast ? (
         <div className="fixed left-1/2 top-5 z-[700] flex -translate-x-1/2 items-center gap-2 rounded-full bg-emerald-600 px-4 py-2 text-sm font-black text-white shadow-xl animate-in fade-in">
           <Check className="h-4 w-4" />
