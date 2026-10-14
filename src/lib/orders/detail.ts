@@ -74,6 +74,7 @@ type VehicleRow = {
 };
 
 type OrderItemRow = {
+  is_barcode?: boolean;
   id: string;
   line_total: number | string;
   notes: string | null;
@@ -126,6 +127,7 @@ type DeliveryNoteRow = {
 };
 
 export type OrderDetailItem = {
+  isBarcode?: boolean;
   id: string;
   imageUrl: string | null;
   lineTotal: number;
@@ -271,7 +273,7 @@ export async function getOrderDetailById(
     admin
       .from("order_items")
       .select(
-        "id, product_id, product_sale_unit_id, quantity, quantity_in_base_unit, sale_unit_label, sale_unit_ratio, unit_price, line_total, notes",
+        "id, product_id, product_sale_unit_id, quantity, quantity_in_base_unit, sale_unit_label, sale_unit_ratio, unit_price, line_total, notes, is_barcode",
       )
       .eq("order_id", order.id)
       .order("created_at", { ascending: true }),
@@ -396,10 +398,11 @@ export async function getOrderDetailById(
       id: item.id,
       imageUrl: imageMap.get(item.product_id) ?? null,
       lineTotal: normalizeNumber(item.line_total),
+      isBarcode: item.is_barcode === true,
       notes: item.notes,
       productId: item.product_id,
       productSaleUnitId: item.product_sale_unit_id,
-      productName: `${product?.name ?? "สินค้าไม่ทราบชื่อ"}${item.notes === "ส่งชดเชย (ไม่คิดเงิน)" ? " (ส่งชดเชย)" : ""}`,
+      productName: `${product?.name ?? "สินค้าไม่ทราบชื่อ"}${item.notes === "ส่งชดเชย (ไม่คิดเงิน)" ? " (ส่งชดเชย)" : item.is_barcode ? " (บาร์โค้ด)" : ""}`,
       quantity,
       fulfillmentMode,
       shortQuantity: fulfillmentMode === "fresh" ? 0 : Math.max(quantity - stockQuantity, 0),

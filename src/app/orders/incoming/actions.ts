@@ -1,5 +1,7 @@
 "use server";
 
+import { BARCODE_CUSTOMER_CODE, BARCODE_PRODUCT_SKUS } from "@/lib/orders/barcode-packaging";
+
 import { revalidatePath, revalidateTag, updateTag } from "next/cache";
 import { after } from "next/server";
 import { requireAppRole, requireAnyRole } from "@/lib/auth/authorization";
@@ -650,6 +652,7 @@ export async function updateOrderItemsBatchAction(input: {
   updates: { itemId: string; quantity: number; unitPrice?: number; reductionMode?: StockReductionMode }[];
   additions: {
     isReplacement?: boolean;
+    isBarcode?: boolean;
     productId: string;
     productSaleUnitId: string | null;
     quantity: number;
@@ -662,7 +665,7 @@ export async function updateOrderItemsBatchAction(input: {
 
   if (!orderId) return { error: "ไม่พบเลขออเดอร์" };
 
-  if (additions.some((item) => !Number.isFinite(item.quantity) || item.quantity <= 0 || !Number.isFinite(item.unitPrice) || item.unitPrice < 0 || (item.isReplacement !== undefined && typeof item.isReplacement !== "boolean"))) {
+  if (additions.some((item) => !Number.isFinite(item.quantity) || item.quantity <= 0 || !Number.isFinite(item.unitPrice) || item.unitPrice < 0 || (item.isReplacement !== undefined && typeof item.isReplacement !== "boolean") || (item.isBarcode !== undefined && typeof item.isBarcode !== "boolean"))) {
     return { error: "จำนวนหรือราคาสินค้าไม่ถูกต้อง" };
   }
 
@@ -808,6 +811,7 @@ export async function updateOrderItemsBatchAction(input: {
       });
 
       const newItem = {
+        is_barcode: add.isBarcode === true,
         ...(add.isReplacement ? { is_replacement: true, notes: "ส่งชดเชย (ไม่คิดเงิน)" } : {}),
         order_id: orderId,
         organization_id: session.organizationId,
@@ -1290,7 +1294,7 @@ export async function fetchCustomerLastOrderItemsAction(
 
   const { data: orderItems } = await admin
     .from("order_items")
-    .select("product_id, product_sale_unit_id, quantity, sale_unit_label, sale_unit_ratio, unit_price, notes, created_at")
+    .select("product_id, product_sale_unit_id, quantity, sale_unit_label, sale_unit_ratio, unit_price, notes, created_at, is_barcode")
     .in("order_id", orderIds)
     .order("created_at", { ascending: true });
 
@@ -1322,7 +1326,7 @@ export async function fetchCustomerLastOrderItemsAction(
     // Replacements are one-off shipments, never repeat them via last-order import.
     if (row.notes === "ส่งชดเชย (ไม่คิดเงิน)") continue;
     const saleUnitId = row.product_sale_unit_id;
-    const key = `${row.product_id}__${saleUnitId ?? "__default__"}`;
+    const key = `${row.product_id}__${saleUnitId ?? "__default__"}__${row.is_barcode ? "barcode" : "normal"}`;
     const quantity = Number(row.quantity);
     const saleUnitBaseQty = Number(row.sale_unit_ratio) || 1;
     const unitPrice = Number(row.unit_price) || 0;
@@ -1334,6 +1338,7 @@ export async function fetchCustomerLastOrderItemsAction(
     }
 
     grouped.set(key, {
+      isBarcode: row.is_barcode === true,
       productId: row.product_id,
       quantity,
       saleUnitBaseQty,
@@ -1354,6 +1359,7 @@ export async function fetchCustomerLastOrderItemsAction(
 
 type ManualOrderItem = {
   isReplacement?: boolean;
+  isBarcode?: boolean;
   productId: string;
   quantity: number;
   saleUnitBaseQty: number;
@@ -1367,6 +1373,7 @@ function mapManualItemsToMergeableInputs(
 ): MergeableOrderItemInput[] {
   return items.map((item) => ({
     isReplacement: item.isReplacement === true,
+    isBarcode: item.isBarcode === true,
     costPrice: 0,
     productId: item.productId,
     productSaleUnitId: item.saleUnitId,
@@ -1398,8 +1405,20 @@ export async function createManualOrderAction(formData: FormData): Promise<Actio
 
   if (!customerId) return { error: "กรุณาเลือกลูกค้า" };
   if (!Array.isArray(items) || items.length === 0) return { error: "กรุณาเพิ่มสินค้าอย่างน้อย 1 รายการ" };
-  if (items.some((item) => !item || typeof item.productId !== "string" || !Number.isFinite(item.quantity) || item.quantity <= 0 || !Number.isFinite(item.saleUnitBaseQty) || item.saleUnitBaseQty <= 0 || !Number.isFinite(item.unitPrice) || item.unitPrice < 0 || (item.isReplacement !== undefined && typeof item.isReplacement !== "boolean"))) {
+  if (items.some((item) => !item || typeof item.productId !== "string" || !Number.isFinite(item.quantity) || item.quantity <= 0 || !Number.isFinite(item.saleUnitBaseQty) || item.saleUnitBaseQty <= 0 || !Number.isFinite(item.unitPrice) || item.unitPrice < 0 || (item.isReplacement !== undefined && typeof item.isReplacement !== "boolean") || (item.isBarcode !== undefined && typeof item.isBarcode !== "boolean"))) {
     return { error: "ข้อมูลสินค้าหรือจำนวนไม่ถูกต้อง" };
+  }
+  if (items.some(item => item.isBarcode)) {
+    const barcodeItems = items.filter(item => item.isBarcode);
+    const db = getSupabaseAdmin();
+    const [customer, products] = await Promise.all([
+      db.from("customers").select("customer_code").eq("organization_id", session.organizationId).eq("id", customerId).single(),
+      db.from("products").select("id,sku").eq("organization_id", session.organizationId).in("id", barcodeItems.map(item => item.productId)),
+    ]);
+    const eligible = new Set((products.data ?? []).filter(product => BARCODE_PRODUCT_SKUS.includes(product.sku)).map(product => product.id));
+    if (customer.error || products.error || customer.data?.customer_code !== BARCODE_CUSTOMER_CODE || barcodeItems.some(item => item.isReplacement || !eligible.has(item.productId))) {
+      return { error: "บาร์โค้ดใช้ได้เฉพาะร้าน ANS109 และสินค้าที่กำหนด" };
+    }
   }
   if (items.some((item) => item.isReplacement)) {
     // Fail before creating or updating an order if the additive migration is absent.
@@ -1702,6 +1721,7 @@ export async function updateIncomingOrderDateAction(formData: FormData): Promise
 
     const mergeableItems = (orderItems ?? []).map((item) => ({
       isReplacement: (item as typeof item & { is_replacement?: boolean }).is_replacement === true,
+      isBarcode: (item as typeof item & { is_barcode?: boolean }).is_barcode === true,
       costPrice: Number(item.cost_price),
       productId: item.product_id,
       productSaleUnitId: item.product_sale_unit_id,

@@ -23,12 +23,14 @@ import {
   fetchIncomingOrderProductOptionsAction,
 } from "@/app/orders/incoming/actions";
 import { getEffectiveSaleUnitCost } from "@/lib/products/sale-unit-cost";
+import { BARCODE_CUSTOMER_CODE, BARCODE_PRODUCT_SKUS } from "@/lib/orders/barcode-packaging";
 import type { OrderProductOption } from "@/lib/orders/manage";
 import { normalizeSearch } from "@/lib/utils/search";
 import { useClientRole } from "@/lib/auth/client-role";
 
 export type AddedOrderItemDraft = {
   isReplacement?: boolean;
+  isBarcode?: boolean;
   imageUrl: string | null;
   key: string;
   productId: string;
@@ -60,11 +62,13 @@ type SelectionDraft = {
 export type ExistingOrderItem = {
   productId: string;
   isReplacement?: boolean;
+  isBarcode?: boolean;
 };
 
 type Props = {
   addedItems: AddedOrderItemDraft[];
   customerId: string;
+  customerCode?: string;
   customerWarehouseId: string | null;
   existingOrderItems?: ExistingOrderItem[];
   onAddMany: (items: AddedOrderItemDraft[]) => void;
@@ -171,6 +175,7 @@ function WarehouseModeBadge({ mode }: { mode: "disabled" | "fresh" | "stock" }) 
 export function OrderAddProductPicker({
   addedItems,
   customerId,
+  customerCode,
   customerWarehouseId,
   existingOrderItems,
   onAddMany,
@@ -178,16 +183,17 @@ export function OrderAddProductPicker({
 }: Props) {
   const [open, setOpen] = useState(false);
   const [isReplacement, setIsReplacement] = useState(false);
+  const [isBarcode, setIsBarcode] = useState(false);
 
   const existingProductIds = useMemo(() => {
     const set = new Set<string>();
     for (const item of existingOrderItems ?? []) {
-      if (Boolean(item.isReplacement) === isReplacement) {
+      if (Boolean(item.isReplacement) === isReplacement && Boolean(item.isBarcode) === isBarcode) {
         set.add(item.productId);
       }
     }
     return set;
-  }, [existingOrderItems, isReplacement]);
+  }, [existingOrderItems, isReplacement, isBarcode]);
   const role = useClientRole();
   const [query, setQuery] = useState("");
   const deferredQuery = useDeferredValue(query);
@@ -201,8 +207,16 @@ export function OrderAddProductPicker({
   const [productsLoading, setProductsLoading] = useState(false);
   const effectiveProducts = products.length > 0 ? products : fallbackProducts;
 
-  const handleOpenPicker = (replacement: boolean) => {
+  const handleOpenPicker = (replacement: boolean, barcode = false) => {
+    if (replacement !== isReplacement || barcode !== isBarcode) {
+      setSelections({});
+      setQuery("");
+      setSelectedCategoryId("__all__");
+      setSelectedBrand("__all__");
+      setDisplayLimit(40);
+    }
     setIsReplacement(replacement);
+    setIsBarcode(barcode);
     setOpen(true);
     if (products.length === 0 && fallbackProducts.length === 0) {
       setProductsLoading(true);
@@ -322,6 +336,7 @@ export function OrderAddProductPicker({
   const filteredProducts = useMemo(() => {
     const normalized = normalizeSearch(deferredQuery);
     const source = effectiveProducts.filter((product) => {
+      if (isBarcode && !BARCODE_PRODUCT_SKUS.includes(product.sku)) return false;
       const matchesCategory = selectedCategoryId === "__all__" || product.categoryIds.includes(selectedCategoryId);
       if (!matchesCategory) return false;
       const matchesBrand = selectedBrand === "__all__" || product.brand === selectedBrand;
@@ -341,7 +356,7 @@ export function OrderAddProductPicker({
     });
 
     return source;
-  }, [effectiveProducts, deferredQuery, selectedCategoryId, selectedBrand, priceFilter, priceMap]);
+  }, [effectiveProducts, deferredQuery, selectedCategoryId, selectedBrand, priceFilter, priceMap, isBarcode]);
 
   const selectedCount = Object.keys(selections).length;
 
@@ -459,10 +474,11 @@ export function OrderAddProductPicker({
 
         return {
           isReplacement,
+          isBarcode,
           imageUrl: product.imageUrl,
           key: `${product.id}:${unit.id ?? "base"}:${crypto.randomUUID()}`,
           productId: product.id,
-          productName: product.name,
+          productName: `${product.name}${isBarcode ? " (บาร์โค้ด)" : ""}`,
           productSaleUnitId: unit.id,
           quantity: draft.quantity,
           sku: product.sku,
@@ -526,6 +542,7 @@ export function OrderAddProductPicker({
         >
           <Package2 className="h-4 w-4" /> ส่งชดเชย (ไม่คิดเงิน)
         </button>
+        {customerCode === BARCODE_CUSTOMER_CODE ? <button type="button" onClick={() => handleOpenPicker(false, true)} className="mt-2 min-h-11 w-full rounded-2xl border border-[#4A148C]/20 px-4 py-2.5 text-sm font-bold text-[#4A148C]">เพิ่มสินค้าบาร์โค้ด</button> : null}
       </div>
       {open && typeof document !== "undefined" ? createPortal((
         <div className="fixed inset-0 z-[10000] flex items-end justify-center bg-[#001D3F]/70 p-0 backdrop-blur-[2px] sm:items-center sm:p-4">
@@ -539,7 +556,7 @@ export function OrderAddProductPicker({
             <div className="flex shrink-0 items-center justify-between gap-4 border-b border-[#EA80FC]/70 bg-[#4A148C] px-4 py-2.5 text-white sm:px-8 sm:py-4">
               <div className="min-w-0 flex-1">
                 <h3 className="truncate text-2xl font-black leading-tight tracking-tight text-white sm:text-3xl">
-                  {isReplacement ? "ส่งชดเชย (ไม่คิดเงิน)" : "เพิ่มสินค้าใหม่"}
+                  {isReplacement ? "ส่งชดเชย (ไม่คิดเงิน)" : isBarcode ? "เพิ่มสินค้าบาร์โค้ด" : "เพิ่มสินค้าใหม่"}
                 </h3>
                 <p className="mt-0.5 text-[10px] font-black uppercase tracking-[0.16em] text-white/70 sm:text-xs">
                   เลือกสินค้าเพิ่ม

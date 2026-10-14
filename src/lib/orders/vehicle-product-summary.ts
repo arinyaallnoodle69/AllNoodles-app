@@ -22,6 +22,7 @@ export type VehicleSummaryProduct = {
   supplierName?: string | null;
   supplierCode?: string | null;
   isFresh?: boolean;
+  isBarcode?: boolean;
 };
 
 export type VehicleSummaryVehicle = {
@@ -49,6 +50,7 @@ type OrderRow = {
   warehouse_id?: string | null;
   order_items: Array<{
     product_id: string;
+    is_barcode?: boolean;
     quantity_in_base_unit: number | string | null;
   }>;
   customers: {
@@ -244,7 +246,7 @@ export async function getVehicleProductSummaryData(
         warehouse_id,
         customers!inner(default_vehicle_id, default_warehouse_id, vehicles(id, name)),
         delivery_notes!order_id(vehicle_id, warehouse_id, status, created_at, vehicles(id, name)),
-        order_items(product_id, quantity_in_base_unit)
+        order_items(product_id, quantity_in_base_unit, is_barcode)
       `)
       .eq("organization_id", organizationId)
       .neq("status", "cancelled")
@@ -307,13 +309,13 @@ export async function getVehicleProductSummaryData(
   const vehicleIndexById = new Map(vehicles.map((vehicle, index) => [vehicle.id ?? "__unassigned__", index]));
   const summaryRows = new Map<string, { product: VehicleSummaryProduct; qty: number[] }>();
 
-  function getSummaryRow(productId: string, isFresh: boolean) {
-    const key = `${productId}:${isFresh ? "fresh" : "stock"}`;
+  function getSummaryRow(productId: string, isFresh: boolean, isBarcode = false) {
+    const key = `${productId}:${isFresh ? "fresh" : "stock"}:${isBarcode ? "barcode" : "normal"}`;
     let row = summaryRows.get(key);
     if (!row) {
       const product = productById.get(productId);
       if (!product) return null;
-      row = { product: { ...product, isFresh }, qty: vehicles.map(() => 0) };
+      row = { product: { ...product, id: isBarcode ? `${product.id}:barcode` : product.id, name: `${product.name}${isBarcode ? " (บาร์โค้ด)" : ""}`, isFresh, isBarcode }, qty: vehicles.map(() => 0) };
       summaryRows.set(key, row);
     }
     return row;
@@ -345,7 +347,7 @@ export async function getVehicleProductSummaryData(
         warehouseId,
         fulfillmentModeByProductWarehouse,
       ) === "fresh";
-      const row = getSummaryRow(item.product_id, isFresh);
+      const row = getSummaryRow(item.product_id, isFresh, item.is_barcode === true);
       if (!row) continue;
       row.qty[vehicleIndex] = (row.qty[vehicleIndex] ?? 0) + Number(item.quantity_in_base_unit ?? 0);
     }
@@ -371,8 +373,8 @@ export async function getVehicleProductSummaryData(
     .filter((row) => row.qty.some((value) => value > 0))
     .sort(
       (a, b) =>
-        (productSortIndexById.get(a.product.id) ?? Number.MAX_SAFE_INTEGER) -
-        (productSortIndexById.get(b.product.id) ?? Number.MAX_SAFE_INTEGER),
+        (productSortIndexById.get(a.product.id.replace(/:barcode$/, "")) ?? Number.MAX_SAFE_INTEGER) -
+        (productSortIndexById.get(b.product.id.replace(/:barcode$/, "")) ?? Number.MAX_SAFE_INTEGER) || Number(Boolean(a.product.isBarcode)) - Number(Boolean(b.product.isBarcode)),
     );
 
   return {
@@ -427,7 +429,7 @@ export async function getFactoryOrderSheetData(
         warehouse_id,
         customers!inner(default_vehicle_id, default_warehouse_id, vehicles(id, name), warehouses(id, name)),
         delivery_notes!order_id(vehicle_id, warehouse_id, status, created_at, vehicles(id, name), warehouses(id, name)),
-        order_items(product_id, quantity_in_base_unit)
+        order_items(product_id, quantity_in_base_unit, is_barcode)
       `)
       .eq("organization_id", organizationId)
       .neq("status", "cancelled")
@@ -527,9 +529,10 @@ export async function getFactoryOrderSheetData(
         groups.set(groupKey, group);
       }
 
-      const productQty = group.productVehicleQty.get(product.id) ?? new Map<string, number>();
+      const packagingKey = item.is_barcode ? `${product.id}:barcode` : product.id;
+      const productQty = group.productVehicleQty.get(packagingKey) ?? new Map<string, number>();
       productQty.set(vehicleKey, (productQty.get(vehicleKey) ?? 0) + Number(item.quantity_in_base_unit ?? 0));
-      group.productVehicleQty.set(product.id, productQty);
+      group.productVehicleQty.set(packagingKey, productQty);
       group.vehicleKeys.add(vehicleKey);
       group.vehicleNamesByKey.set(vehicleKey, vehicleName);
     }
@@ -634,7 +637,10 @@ export async function getFactoryOrderSheetData(
       ...configuredVehicleKeys.filter((key) => group.vehicleKeys.has(key)),
       ...Array.from(group.vehicleKeys).filter((key) => !configuredVehicleKeys.includes(key)),
     ];
-    const groupProducts = products.filter((product) => group.productVehicleQty.has(product.id));
+    const groupProducts = products.flatMap(product => [
+      ...(group.productVehicleQty.has(product.id) ? [product] : []),
+      ...(group.productVehicleQty.has(`${product.id}:barcode`) ? [{ ...product, id: `${product.id}:barcode`, name: `${product.name} (บาร์โค้ด)`, isBarcode: true }] : []),
+    ]);
     const qty = groupProducts.map((product) => {
       const productQty = group.productVehicleQty.get(product.id) ?? new Map<string, number>();
       const adjustedQuantity = currentAdjustedQuantityByProductId.get(product.id);

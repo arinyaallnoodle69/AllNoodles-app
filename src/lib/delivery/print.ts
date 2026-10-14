@@ -40,6 +40,7 @@ export type DeliveryNotePrintData = {
     unitPrice: number;
     lineTotal: number;
     isReplacement?: boolean;
+    isBarcode?: boolean;
     display_order?: number | null;
   }>;
 };
@@ -126,7 +127,7 @@ export async function getMergedDeliveryPrintData(
     const normalizedSku = item.productSku.trim().toLowerCase();
     const normalizedUnit = item.saleUnitLabel.trim().toLowerCase();
     const normalizedName = item.productName.trim().toLowerCase();
-    const key = `${normalizedSku || normalizedName}||${normalizedUnit}||${item.isReplacement ? "replacement" : "sale"}`;
+    const key = `${normalizedSku || normalizedName}||${normalizedUnit}||${item.isReplacement ? "replacement" : "sale"}||${item.isBarcode ? "barcode" : "normal"}`;
     const existing = itemMap.get(key);
     if (existing) {
       existing.quantityDelivered += item.quantityDelivered;
@@ -245,7 +246,7 @@ export async function getDeliveryNotePrintData(
     .from("delivery_note_items")
     .select(`
       id, quantity_delivered, sale_unit_label, unit_price, line_total,
-      order_items(notes),
+      order_items(notes,is_barcode),
       products!inner(name, sku, unit, display_order)
     `)
     .eq("delivery_note_id", header.id)
@@ -254,7 +255,7 @@ export async function getDeliveryNotePrintData(
   if (itemsError || !items) return null;
 
   type RawItem = {
-    order_items: { notes: string | null } | null;
+    order_items: { notes: string | null; is_barcode?: boolean } | null;
     id: string;
     quantity_delivered: number | string;
     sale_unit_label: string;
@@ -317,7 +318,8 @@ export async function getDeliveryNotePrintData(
         id: item.id,
         lineNumber: 0,
         productSku: item.products.sku,
-        productName: item.products.name,
+        productName: `${item.products.name}${item.order_items?.is_barcode ? " (บาร์โค้ด)" : ""}`,
+        isBarcode: item.order_items?.is_barcode === true,
         isReplacement: item.order_items?.notes === "ส่งชดเชย (ไม่คิดเงิน)",
         quantityDelivered: toNum(item.quantity_delivered),
         saleUnitLabel: formatDisplayUnit(item.sale_unit_label || item.products.unit),

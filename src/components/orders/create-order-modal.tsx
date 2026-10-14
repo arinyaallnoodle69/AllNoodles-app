@@ -21,6 +21,10 @@ import {
   Trash2,
   X,
   Boxes,
+  Barcode,
+  SlidersHorizontal,
+  ArrowLeftRight,
+  Files,
 } from "lucide-react";
 import { useCreateOrder } from "./create-order-context";
 import { getEffectiveSaleUnitCost } from "@/lib/products/sale-unit-cost";
@@ -36,10 +40,13 @@ import {
 } from "@/app/orders/incoming/actions";
 import type { CustomerLastOrderSnapshot } from "@/app/orders/incoming/types";
 
+import { BARCODE_CUSTOMER_CODE, BARCODE_PRODUCT_SKUS } from "@/lib/orders/barcode-packaging";
+
 import { ThaiDatePicker } from "@/components/ui/thai-date-picker";
 
 type CartItem = {
   isReplacement?: boolean;
+  isBarcode?: boolean;
   productId: string;
   productName: string;
   quantity: number;
@@ -72,6 +79,7 @@ type ProductSelectionField = keyof ProductSelection;
 
 type ProductSelectModalProps = {
   isReplacement?: boolean;
+  isBarcode?: boolean;
   cart: CartItem[];
   noCustomer: boolean;
   onClose: () => void;
@@ -747,6 +755,7 @@ DesktopProductTableRow.displayName = "DesktopProductTableRow";
 
 function ProductSelectModal({
   isReplacement = false,
+  isBarcode = false,
   cart,
   noCustomer,
   onClose,
@@ -1190,7 +1199,7 @@ function ProductSelectModal({
               {selectedCustomerLabel ?? "ยังไม่ได้เลือกร้านค้า"}
             </h3>
             <p className="mt-0.5 text-[10px] font-black uppercase tracking-[0.16em] text-white/70 sm:text-xs">
-              {isReplacement ? "ส่งชดเชย (ไม่คิดเงิน) · เลือกสินค้าและจำนวน" : "เลือกสินค้าเพิ่ม"}
+              {isReplacement ? "ส่งชดเชย (ไม่คิดเงิน) · เลือกสินค้าและจำนวน" : isBarcode ? "บาร์โค้ด · เลือกสินค้าและจำนวน" : "เลือกสินค้าเพิ่ม"}
             </p>
           </div>
           <div className="flex shrink-0 items-center gap-2">
@@ -1604,7 +1613,7 @@ function ProductSelectModal({
                     onSelect={handleSelectProduct}
                     selection={selections[p.id]}
                     onUpdateSelection={handleUpdateSelection}
-                    addedCount={cart.filter(item => item.productId === p.id).reduce((s, i) => s + i.quantity, 0)}
+                    addedCount={cart.filter(item => item.productId === p.id && Boolean(item.isBarcode) === isBarcode && Boolean(item.isReplacement) === isReplacement).reduce((s, i) => s + i.quantity, 0)}
                     priceMap={priceMap}
                     noCustomer={noCustomer}
                     selectedWarehouseId={selectedWarehouseId}
@@ -1871,6 +1880,27 @@ export function CreateOrderModal({
   const [activeTab, setActiveTab] = useState<ModalTab>("create");
   const [productModalOpen, setProductModalOpen] = useState(false);
   const [replacementMode, setReplacementMode] = useState(false);
+  const [barcodeMode, setBarcodeMode] = useState(false);
+  const [toolsOpen, setToolsOpen] = useState(false);
+  const toolsMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!toolsOpen) return;
+    const menu = toolsMenuRef.current;
+    if (!menu) return;
+    const positionMenu = () => {
+      menu.style.top = "";
+      menu.style.bottom = "";
+      const footerTop = document.querySelector('[data-create-order-footer]')?.getBoundingClientRect().top ?? window.innerHeight;
+      if (menu.getBoundingClientRect().bottom > footerTop - 8) {
+        menu.style.top = "auto";
+        menu.style.bottom = "calc(100% + 0.5rem)";
+      }
+    };
+    positionMenu();
+    window.addEventListener("resize", positionMenu);
+    return () => window.removeEventListener("resize", positionMenu);
+  }, [toolsOpen]);
   const [pending, startTransition] = useTransition();
   const [successToast, setSuccessToast] = useState<string | null>(null);
   const [saveWarning, setSaveWarning] = useState<string | null>(null);
@@ -1941,6 +1971,7 @@ export function CreateOrderModal({
     }
     setProductModalOpen(true);
     setReplacementMode(false);
+    setBarcodeMode(false);
   }, [customerId, showSubmitPopup]);
   const [pricesLoading, setPricesLoading] = useState(false);
   const [historyLoading, setHistoryLoading] = useState(false);
@@ -2127,10 +2158,10 @@ export function CreateOrderModal({
           };
 
         const resolvedUnitPrice =
-          priceMap[row.saleUnitId ?? row.productId] ?? priceMap[row.productId] ?? row.unitPrice;
+          row.isReplacement ? 0 : priceMap[row.saleUnitId ?? row.productId] ?? priceMap[row.productId] ?? row.unitPrice;
 
         const existingIndex = nextCart.findIndex(
-          (item) => item.productId === row.productId && (item.saleUnitId || null) === (row.saleUnitId || null),
+          (item) => item.productId === row.productId && (item.saleUnitId || null) === (row.saleUnitId || null) && Boolean(item.isBarcode) === Boolean(row.isBarcode) && Boolean(item.isReplacement) === Boolean(row.isReplacement),
         );
 
         if (existingIndex >= 0) {
@@ -2148,6 +2179,8 @@ export function CreateOrderModal({
         }
 
         nextCart.push({
+          isBarcode: row.isBarcode === true,
+          isReplacement: row.isReplacement === true,
           productId: row.productId,
           productName: product.name,
           quantity: normalizeToRule(row.quantity, matchedUnit.minOrderQty, matchedUnit.stepOrderQty),
@@ -2168,6 +2201,7 @@ export function CreateOrderModal({
   }
 
   async function handleCustomerSelect(id: string) {
+    if (customers.find(customer => customer.id === id)?.code !== BARCODE_CUSTOMER_CODE && cart.some(item => item.isBarcode)) { showSubmitPopup("กรุณาลบรายการบาร์โค้ดก่อนเปลี่ยนร้านค้า"); return; }
     setError(null);
     setHistoryNotice(null);
     setCustomerId(id);
@@ -2219,7 +2253,7 @@ export function CreateOrderModal({
       const nextCart = [...prev];
       for (const sel of selections) {
         const existingIndex = nextCart.findIndex(
-          (item) => item.productId === sel.product.id && (item.saleUnitId || null) === (sel.unitId || null) && Boolean(item.isReplacement) === replacementMode,
+          (item) => item.productId === sel.product.id && (item.saleUnitId || null) === (sel.unitId || null) && Boolean(item.isReplacement) === replacementMode && Boolean(item.isBarcode) === barcodeMode,
         );
         if (existingIndex >= 0) {
           nextCart[existingIndex] = {
@@ -2236,6 +2270,7 @@ export function CreateOrderModal({
         } else {
           nextCart.push({
             isReplacement: replacementMode,
+            isBarcode: barcodeMode,
             productId: sel.product.id,
             productName: sel.product.name,
             quantity: sel.quantity,
@@ -2326,6 +2361,8 @@ export function CreateOrderModal({
     setCustomerId("");
     setCustomerPickerOpen(openCustomerPicker);
     setCustomerPickerQuery("");
+    setBarcodeMode(false);
+    setToolsOpen(false);
     if (!keepOrderDate) {
       setOrderDate(today);
     }
@@ -2682,29 +2719,22 @@ export function CreateOrderModal({
                     </div>
 
                     {activeTab === "create" ? (
-                      <section className="overflow-hidden rounded-3xl border border-[#EA80FC]/35 bg-white shadow-[0_12px_30px_rgba(142, 36, 170,0.06)]">
-                        <div className="flex items-center justify-between gap-3 border-b border-[#EA80FC]/25 bg-[#F3E5F5] px-4 py-3">
+                      <section className="rounded-3xl border border-[#EA80FC]/35 bg-white shadow-[0_12px_30px_rgba(142, 36, 170,0.06)]">
+                        <div className="flex flex-wrap rounded-t-3xl items-center justify-between gap-3 border-b border-[#EA80FC]/25 bg-[#F3E5F5] px-4 py-3">
                           <p className="text-xs font-black uppercase tracking-widest text-[#4A148C]">
                             รายการสินค้า
                           </p>
-                          <div className="flex flex-wrap justify-end gap-2">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              if (!customerId) { showSubmitPopup("กรุณาเลือกร้านค้าก่อน"); return; }
-                              setReplacementMode(true);
-                              setProductModalOpen(true);
-                            }}
-                            className="action-touch-safe rounded-xl border border-[#EA80FC]/70 bg-white px-3 py-2 text-sm font-bold text-[#4A148C]"
-                          >ส่งชดเชย</button>
-                          <button
-                            type="button"
-                            onClick={handleAddProductClick}
-                            className="action-touch-safe inline-flex items-center gap-1.5 rounded-xl border border-[#EA80FC]/70 bg-[#4A148C] px-3 py-2 text-sm font-bold text-white transition hover:bg-[#4A148C] active:scale-95"
-                          >
-                            <Plus className="h-4 w-4" strokeWidth={2.5} />
-                            เพิ่มสินค้า
-                          </button>
+                          <div className="relative ml-auto flex shrink-0 justify-end gap-2">
+                            <button type="button" onClick={handleAddProductClick} className="action-touch-safe inline-flex min-h-11 items-center gap-1.5 rounded-xl border border-[#EA80FC]/70 bg-[#4A148C] px-3 py-2 text-sm font-bold text-white"><Plus className="h-4 w-4" />เพิ่มสินค้า</button>
+                            <button type="button" onClick={() => setToolsOpen(value => !value)} aria-expanded={toolsOpen} aria-haspopup="menu" className="action-touch-safe inline-flex min-h-11 items-center gap-1.5 rounded-xl border border-[#4A148C] bg-white px-3 py-2 text-sm font-bold text-[#4A148C]"><SlidersHorizontal className="h-5 w-5 shrink-0" />เครื่องมือ</button>
+                            {toolsOpen ? <>
+                              <button type="button" aria-label="ปิดเมนูเครื่องมือ" className="fixed inset-0 z-40 cursor-default" onClick={() => setToolsOpen(false)} />
+                              <div ref={toolsMenuRef} role="menu" aria-label="เครื่องมือออเดอร์" className="absolute right-0 top-full z-50 mt-2 w-56 divide-y divide-[#EA80FC]/25 overflow-hidden rounded-2xl border border-[#EA80FC]/30 bg-white shadow-xl">
+                                <button type="button" role="menuitem" onClick={() => { setToolsOpen(false); if (!customerId) { showSubmitPopup("กรุณาเลือกร้านค้าก่อน"); return; } setBarcodeMode(false); setReplacementMode(true); setProductModalOpen(true); }} className="flex min-h-14 w-full items-center gap-3 px-4 py-3 text-left text-base font-bold text-[#15154F]"><ArrowLeftRight className="h-6 w-6 shrink-0 text-[#4A148C]" />ส่งชดเชย</button>
+                                <button type="button" role="menuitem" disabled={selectedCustomer?.code !== BARCODE_CUSTOMER_CODE} onClick={() => { setToolsOpen(false); setReplacementMode(false); setBarcodeMode(true); setProductModalOpen(true); }} className="flex min-h-14 w-full items-center gap-3 px-4 py-3 text-left text-base font-bold text-[#15154F] disabled:text-slate-400"><Barcode className="h-6 w-6 shrink-0 text-[#4A148C]" />บาร์โค้ด</button>
+                                <button type="button" role="menuitem" disabled className="flex min-h-14 w-full items-center gap-3 px-4 py-3 text-left text-base font-bold text-slate-400"><Files className="h-6 w-6 shrink-0 text-[#D58B00]" />สต็อคสำรอง</button>
+                              </div>
+                            </> : null}
                           </div>
                         </div>
 
@@ -2727,7 +2757,7 @@ export function CreateOrderModal({
                                 const product = productsById.get(item.productId);
                                 return (
                                   <div
-                                    key={`${item.productId}-${item.saleUnitId}-${Boolean(item.isReplacement)}`}
+                                    key={`${item.productId}-${item.saleUnitId}-${Boolean(item.isReplacement)}-${Boolean(item.isBarcode)}`}
                                     className="flex items-center gap-2.5 px-2 py-3 sm:gap-3"
                                   >
                                     <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-xl bg-slate-100">
@@ -2750,6 +2780,7 @@ export function CreateOrderModal({
                                       <p className="max-h-[2.8rem] overflow-hidden whitespace-normal break-words text-sm font-semibold leading-snug text-slate-900">
                                         {item.productName}
                                       </p>
+                                      {item.isBarcode && <p className="mt-1 text-xs font-bold text-[#4A148C]">บรรจุภัณฑ์บาร์โค้ด</p>}
                                       {item.isReplacement && <p className="mt-1 text-xs font-bold text-[#4A148C]">ส่งชดเชย (ไม่คิดเงิน)</p>}
                                     </div>
 
@@ -2778,8 +2809,8 @@ export function CreateOrderModal({
                         </div>
                       </section>
                     ) : (
-                      <section className="overflow-hidden rounded-3xl border border-[#EA80FC]/35 bg-white shadow-[0_12px_30px_rgba(142, 36, 170,0.06)]">
-                        <div className="flex items-center justify-between border-b border-[#EA80FC]/25 bg-[#F3E5F5] px-4 py-3">
+                      <section className="rounded-3xl border border-[#EA80FC]/35 bg-white shadow-[0_12px_30px_rgba(142, 36, 170,0.06)]">
+                        <div className="flex flex-wrap rounded-t-3xl items-center justify-between border-b border-[#EA80FC]/25 bg-[#F3E5F5] px-4 py-3">
                           <p className="text-sm font-black text-[#4A148C]">รายการที่เคยสั่งล่าสุด</p>
                           {customerId ? (
                             <button
@@ -2870,7 +2901,7 @@ export function CreateOrderModal({
             </div>
 
             {/* Sticky Footer */}
-            <div className="sticky bottom-0 z-40 border-t border-[#EA80FC]/35 bg-white/95 px-4 pb-safe-or-5 pt-4 backdrop-blur supports-[backdrop-filter]:bg-white/90 sm:px-6">
+            <div data-create-order-footer className="sticky bottom-0 z-40 border-t border-[#EA80FC]/35 bg-white/95 px-4 pb-safe-or-5 pt-4 backdrop-blur supports-[backdrop-filter]:bg-white/90 sm:px-6">
               <div className="mx-auto max-w-6xl">
                 {error && (
                   <div className="mb-4 flex items-start gap-2.5 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3">
@@ -3177,18 +3208,19 @@ export function CreateOrderModal({
       ) : null}
 
       <ProductSelectModal
-        key={replacementMode ? "replacement" : "sale"}
+        key={replacementMode ? "replacement" : barcodeMode ? "barcode" : "sale"}
         isReplacement={replacementMode}
+        isBarcode={barcodeMode}
         cart={cart}
         noCustomer={!customerId}
         onClose={() => setProductModalOpen(false)}
         onConfirmMany={addManyToCart}
         open={productModalOpen}
         priceMap={priceMap}
-        products={products}
+        products={barcodeMode ? products.filter(product => BARCODE_PRODUCT_SKUS.includes(product.sku)) : products}
         productsLoading={pricesLoading}
         selectedCustomerLabel={
-          selectedCustomer ? `${selectedCustomer.code} ${selectedCustomer.name}` : null
+          selectedCustomer ? `${selectedCustomer.code} ${selectedCustomer.name}${barcodeMode ? " (บาร์โค้ด)" : ""}` : null
         }
         selectedWarehouseId={selectedCustomer?.defaultWarehouseId ?? null}
       />

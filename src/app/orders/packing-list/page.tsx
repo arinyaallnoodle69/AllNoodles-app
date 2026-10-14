@@ -70,6 +70,7 @@ type DeliveryNoteRow = {
 };
 
 type OrderItemRow = {
+  is_barcode?: boolean;
   notes: string | null;
   product_id: string;
   quantity: number | string;
@@ -222,6 +223,7 @@ async function PackingListPage({ searchParams }: Props) {
       customers!inner(id, name, customer_code, default_vehicle_id, sort_order, packing_list_sort_order, metadata, vehicles(id, name)),
       delivery_notes!order_id(vehicle_id, status, created_at, vehicles(id, name)),
       order_items(
+        is_barcode,
         notes,
         product_id,
         quantity,
@@ -528,7 +530,14 @@ async function PackingListPage({ searchParams }: Props) {
 
         for (const item of order.order_items ?? []) {
           let targetStore: GroupedStore | undefined = groupedStore;
-          if (item.notes === "ส่งชดเชย (ไม่คิดเงิน)") {
+          if (item.is_barcode) {
+            const barcodeKey = `${storeGroupKey}_barcode`;
+            targetStore = groupedStores.get(barcodeKey);
+            if (!targetStore) {
+              targetStore = { ...groupedStore, customer: { ...customer, customer_code: `${customer.customer_code}-B`, name: `${customer.name} (บาร์โค้ด)` }, items: new Map(), missingWeightProductIds: new Set(), totalWeightGrams: 0, hasOrder: true };
+              groupedStores.set(barcodeKey, targetStore);
+            }
+          } else if (item.notes === "ส่งชดเชย (ไม่คิดเงิน)") {
             const replacementKey = `${storeGroupKey}_replacement`;
             targetStore = groupedStores.get(replacementKey);
             if (!targetStore) {
@@ -577,6 +586,7 @@ async function PackingListPage({ searchParams }: Props) {
       }
 
       for (const [storeGroupKey, store] of groupedStores) {
+        if (store.items.size === 0 && groupedStores.has(`${storeGroupKey}_barcode`)) { groupedStores.delete(storeGroupKey); continue; }
         if (store.isRosterStore && !vehicleIdsWithCustomerOrders.has(store.vehicleId ?? "")) {
           groupedStores.delete(storeGroupKey);
         }

@@ -3,6 +3,8 @@ export type ActionResult =
   | { receiptWarning?: string; success: true; orderDate?: string; orderNumber?: string; deliveryNumber?: string };
 
 export type CustomerLastOrderItem = {
+  isBarcode?: boolean;
+  isReplacement?: boolean;
   productId: string;
   quantity: number;
   saleUnitBaseQty: number;

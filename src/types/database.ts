@@ -1661,6 +1661,7 @@ export type Database = {
           cost_price: number
           created_at: string
           id: string
+          is_barcode: boolean
           is_replacement: boolean
           line_total: number
           notes: string | null
@@ -1679,6 +1680,7 @@ export type Database = {
           cost_price?: number
           created_at?: string
           id?: string
+          is_barcode?: boolean
           is_replacement?: boolean
           line_total: number
           notes?: string | null
@@ -1697,6 +1699,7 @@ export type Database = {
           cost_price?: number
           created_at?: string
           id?: string
+          is_barcode?: boolean
           is_replacement?: boolean
           line_total?: number
           notes?: string | null

@@ -7,6 +7,7 @@ type Admin = SupabaseClient<Database>;
 
 export type MergeableOrderItemInput = {
   isReplacement?: boolean;
+  isBarcode?: boolean;
   costPrice: number;
   productId: string;
   productSaleUnitId: string | null;
@@ -17,8 +18,8 @@ export type MergeableOrderItemInput = {
   unitPrice: number;
 };
 
-function getOrderItemKey(productId: string, productSaleUnitId: string | null, isReplacement = false) {
-  return `${productId}__${productSaleUnitId ?? "__default__"}__${isReplacement ? "replacement" : "sale"}`;
+function getOrderItemKey(productId: string, productSaleUnitId: string | null, isReplacement = false, isBarcode = false) {
+  return `${productId}__${productSaleUnitId ?? "__default__"}__${isReplacement ? "replacement" : "sale"}__${isBarcode ? "barcode" : "normal"}`;
 }
 
 function normalizeMergedUnitPrice(lineTotal: number, quantity: number, fallback: number) {
@@ -31,13 +32,14 @@ export function aggregateMergeableOrderItems(items: MergeableOrderItemInput[]) {
 
   for (const item of items) {
     const unitPrice = item.isReplacement ? 0 : Number(item.unitPrice) || 0;
-    const key = getOrderItemKey(item.productId, item.productSaleUnitId, item.isReplacement);
+    const key = getOrderItemKey(item.productId, item.productSaleUnitId, item.isReplacement, item.isBarcode);
     const existing = grouped.get(key);
     const lineTotal = Number(item.quantity) * unitPrice;
 
     if (!existing) {
       grouped.set(key, {
         isReplacement: item.isReplacement === true,
+        isBarcode: item.isBarcode === true,
         costPrice: Number(item.costPrice) || 0,
         productId: item.productId,
         productSaleUnitId: item.productSaleUnitId,
