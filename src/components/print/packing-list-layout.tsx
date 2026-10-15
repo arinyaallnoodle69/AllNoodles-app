@@ -1377,8 +1377,8 @@ function PackingListStyles() {
 
       .packing-table:not(.packing-table--transposed) .packing-cell--store {
         overflow: hidden;
-        font-size: var(--packing-store-font-size, 12.4pt);
-        line-height: 1.05;
+        font-size: min(var(--packing-store-font-size, 12.4pt), calc(var(--standard-row-height) / 1.3));
+        line-height: 1.3;
         text-overflow: ellipsis;
       }
 

@@ -23,7 +23,9 @@ function loadSummary(provincial = false, fulfillmentMode = "fresh", barcode = fa
         then(resolve) {
           if (table !== "orders") return Promise.resolve({ data: rows[table] ?? [] }).then(resolve);
           queryDates.push([from, to]);
-          const dates = ["2026-10-09", "2026-10-10"].filter(date => date >= from && date <= to);
+          const dates = (provincial
+            ? ["2026-10-12", "2026-10-13", "2026-10-14", "2026-10-15", "2026-10-16", "2026-10-17", "2026-10-18"]
+            : ["2026-10-09", "2026-10-10"]).filter(date => date >= from && date <= to);
           return Promise.resolve({ data: dates.map(date => ({
             id: date, warehouse_id: "wh", assigned_vehicle_id: "bkk",
             customers: { default_vehicle_id: "bkk", default_warehouse_id: "wh" },
@@ -39,7 +41,7 @@ function loadSummary(provincial = false, fulfillmentMode = "fresh", barcode = fa
     "next/cache": { cacheLife() {}, cacheTag() {} },
     "@/lib/supabase/admin": { getSupabaseAdmin: () => admin },
     "@/lib/products/sort-by-category": { sortProductsByCategory: products => products },
-    "@/lib/orders/daily-special-items": { getDailySpecialPrintItems: async (_org, date) => provincial && date === "2026-10-09" ? [
+    "@/lib/orders/daily-special-items": { getDailySpecialPrintItems: async () => provincial ? [
       { productId: "p1", vehicleId: "bkk", vehicleName: "รถระนอง1", type: "office", quantity: 50 },
       { productId: "p1", vehicleId: "bkk", vehicleName: "รถระนอง1", type: "remaining", quantity: 20 },
     ] : [] },
@@ -82,20 +84,33 @@ test("factory date split preserves the unadjusted demand option", async () => {
   assert.deepEqual(summary.adjustmentDates, []);
 });
 
-test("provincial Lotus orders use reserve while only office entries order from factory", async () => {
+test("provincial Lotus factory sheets order only Monday and Thursday, including orders plus office", async () => {
   const summary = loadSummary(true);
-  const sheets = await summary.getFactoryOrderSheetData("org", "2026-10-09", "2026-10-10");
-  assert.equal(sheets.length, 1);
+  const sheets = await summary.getFactoryOrderSheetData("org", "2026-10-12", "2026-10-18");
+  assert.equal(sheets.length, 2);
   assert.equal(sheets[0].warehouseName, "คลังต่างจังหวัด");
-  assert.deepEqual(sheets[0].qty, [[50]]);
+  assert.deepEqual(sheets.map(sheet => sheet.qty), [[[80]], [[80]]]);
+  for (let day = 12; day <= 18; day++) {
+    const date = `2026-10-${day}`;
+    const daily = await summary.getFactoryOrderSheetData("org", date, date, { applyAdjustments: false });
+    assert.equal(daily.length, day === 12 || day === 15 ? 1 : 0, date);
+  }
 });
 
 test("provincial Lotus stock-mode products never enter the fresh factory flow", async () => {
   const summary = loadSummary(true, "stock");
-  assert.deepEqual(await summary.getFactoryOrderSheetData("org", "2026-10-09", "2026-10-10"), []);
+  assert.deepEqual(await summary.getFactoryOrderSheetData("org", "2026-10-12", "2026-10-18"), []);
   summary.rows.warehouses.push({ id: "bkk-wh", name: "คลังกรุงเทพ" });
   summary.rows.product_warehouse_fulfillment_modes.push({ ...summary.rows.product_warehouse_fulfillment_modes[0], warehouse_id: "bkk-wh", mode: "fresh" });
-  assert.deepEqual(await summary.getFactoryOrderSheetData("org", "2026-10-09", "2026-10-10"), []);
+  assert.deepEqual(await summary.getFactoryOrderSheetData("org", "2026-10-12", "2026-10-18"), []);
+});
+
+test("Lotus non-order days keep loading quantities and other factories keep their daily sheets", async () => {
+  const summary = loadSummary(true);
+  const loading = await summary.getVehicleProductSummaryData("org", "2026-10-13", "2026-10-13");
+  assert.deepEqual(loading.qty, [[30]]);
+  summary.rows.product_warehouse_fulfillment_modes[0].suppliers.supplier_code = "other";
+  assert.equal((await summary.getFactoryOrderSheetData("org", "2026-10-13", "2026-10-13")).length, 1);
 });
 
 test("factory and loading sheets split barcode packaging but retain total weight quantities", async () => {

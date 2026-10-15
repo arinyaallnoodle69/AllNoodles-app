@@ -510,7 +510,6 @@ export async function getFactoryOrderSheetData(
       if (!product) continue;
       const fulfillment = fulfillmentByProductWarehouse.get(modeKey(product.id, warehouseId));
       if (fulfillment?.mode !== "fresh") continue;
-      if (warehouseName === "คลังต่างจังหวัด" && fulfillment.supplierCode === "TYV005") continue;
 
       const supplierName = fulfillment.supplierName || product.supplierName || "โรงงานอนามัย";
       const supplierCode = fulfillment.supplierCode || product.supplierCode || undefined;
@@ -631,8 +630,12 @@ export async function getFactoryOrderSheetData(
 
   const dateLabel = formatDateLabel(date, endDate);
   const configuredVehicleKeys = configuredVehicles.map((vehicle) => vehicle.id ?? "__unassigned__");
+  const weekday = new Date(`${date}T00:00:00Z`).getUTCDay();
+  const lotusOrderDay = weekday === 1 || weekday === 4;
 
-  return Array.from(groups.entries()).map(([groupKey, group]) => {
+  return Array.from(groups.entries()).filter(([, group]) =>
+    group.warehouseName !== "คลังต่างจังหวัด" || group.factoryCode !== "TYV005" || lotusOrderDay,
+  ).map(([groupKey, group]) => {
     const vehicleKeys = [
       ...configuredVehicleKeys.filter((key) => group.vehicleKeys.has(key)),
       ...Array.from(group.vehicleKeys).filter((key) => !configuredVehicleKeys.includes(key)),
