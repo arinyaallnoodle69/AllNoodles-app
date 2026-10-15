@@ -11,6 +11,7 @@ function editor(result = { ok: true }) {
   const saved = [], pending = [], scopes = [];
   let cursor = 0;
   const mocks = {
+    "./reserve-stock-dialog": { ReserveStockDialog: () => null },
     react: { ...React, useState(initial) {
       const index = cursor++;
       if (!(index in state)) state[index] = initial;
@@ -25,7 +26,8 @@ function editor(result = { ok: true }) {
   new Function("require", "module", "exports", compiled)(name => mocks[name] ?? require(name), loaded, loaded.exports);
   return { state, saved, pending, scopes, render(available = 50, scope = "bangkok") {
     cursor = 0;
-    return loaded.exports.ReserveStockBalanceEditor({ groupId: "group", productId: "product", productName: "เส้นเล็ก", available, scope });
+    const view = loaded.exports.ReserveStockBalanceEditor({ groupId: "group", productId: "product", productName: "เส้นเล็ก", available, scope });
+    return view.type === mocks["./reserve-stock-dialog"].ReserveStockDialog ? view.props.children : view;
   } };
 }
 

@@ -10,6 +10,7 @@ import { revalidateDashboardPages } from "@/lib/dashboard/revalidate-dashboard-p
 import { getEffectiveSaleUnitCost, normalizeSaleUnitCostMode } from "@/lib/products/sale-unit-cost";
 import { notifyNewCustomerInquiry, notifyNewOrder, notifyPriceInquiry } from "@/lib/line/notify";
 import { uploadAndNotifyCustomerReceiptImage } from "@/lib/line/customer-receipt-image";
+import { getReserveRebuildError } from "@/lib/orders/reserve-order-protection";
 import { syncDeliveryNoteForOrder } from "@/lib/orders/sync-delivery-note";
 import { notifyUpdatedCustomerReceiptForOrder } from "@/lib/orders/notify-customer-receipt";
 import {
@@ -1067,6 +1068,8 @@ export async function createOrder(
 
   let order: Database["public"]["Tables"]["orders"]["Row"];
   if (isUpdating) {
+    const reserveError = await getReserveRebuildError(supabase, organizationId, orderIdToUse);
+    if (reserveError) return { success: false, error: reserveError };
     const { data: updatedOrder, error: updateOrderError } = await supabase
       .from("orders")
       .update({
@@ -1337,6 +1340,9 @@ export async function updateCustomerOrder(
 
   const { orderItemsData, productMap } = builtItems.data;
   const totalAmount = orderItemsData.reduce((sum, item) => sum + item.line_total, 0);
+
+  const reserveError = await getReserveRebuildError(supabase, organizationId, orderId);
+  if (reserveError) return { success: false, error: reserveError };
 
   const { error: deleteItemsError } = await supabase
     .from("order_items")

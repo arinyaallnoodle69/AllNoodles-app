@@ -6,6 +6,7 @@ import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import * as htmlToImage from "html-to-image";
 import html2canvas from "html2canvas";
+import { BillingDocumentActions } from "@/components/print/billing-document-actions";
 import { PRINT_ORGANIZATION_NAME } from "@/components/print/print-shared";
 import { recordBillingHistoryAction } from "@/lib/billing/actions";
 import {
@@ -535,6 +536,8 @@ export function BatchBillingPreviewButton({
                   </button>
                 </div>
               </div>
+
+              <BillingDocumentActions rootRef={previewBodyRef} fileName={`ใบวางบิลทั้งหมด-${fromDate}-${toDate}`} disabled={isSaving} />
 
               {/* Progress Modal Overlay during saving */}
               {isSaving && (

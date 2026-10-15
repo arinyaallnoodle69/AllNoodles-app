@@ -31,6 +31,7 @@ import { useClientRole } from "@/lib/auth/client-role";
 export type AddedOrderItemDraft = {
   isReplacement?: boolean;
   isBarcode?: boolean;
+  isReserve?: boolean;
   imageUrl: string | null;
   key: string;
   productId: string;
@@ -63,6 +64,7 @@ export type ExistingOrderItem = {
   productId: string;
   isReplacement?: boolean;
   isBarcode?: boolean;
+  isReserve?: boolean;
 };
 
 type Props = {

@@ -17,6 +17,7 @@ import { mergeItemsIntoOrder, type MergeableOrderItemInput } from "@/lib/orders/
 import { notifyUpdatedCustomerReceiptForOrder } from "@/lib/orders/notify-customer-receipt";
 import { syncDeliveryNoteForOrder } from "@/lib/orders/sync-delivery-note";
 import { isVehicleTransferInput, type VehicleTransferInput } from "@/lib/orders/vehicle-transfer";
+import { getReserveRebuildError } from "@/lib/orders/reserve-order-protection";
 import { getCustomerRequiredWarehouse } from "@/lib/warehouses";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/types/database";
@@ -64,16 +65,6 @@ function revalidateIncomingOrderCachesEventually(organizationId: string) {
 
 
 type OrderIdRow = { id: string };
-type ExistingWarehouseOrderRow = {
-  created_at: string;
-  id: string;
-  notes: string | null;
-  order_number: string;
-  status: string;
-  subtotal_amount: number | string | null;
-  total_amount: number | string | null;
-  warehouse_id: string | null;
-};
 
 type ActionsAdmin = SupabaseClient<Database>;
 type VehicleTransferRpcAdmin = {
@@ -145,15 +136,6 @@ function isEditableOrderStatus(status: string | null | undefined) {
   return status !== "cancelled";
 }
 
-function mergeOrderNotes(existingNotes: string | null, nextNotes: string | null) {
-  const current = existingNotes?.trim() ?? "";
-  const incoming = nextNotes?.trim() ?? "";
-
-  if (!incoming) return current || null;
-  if (!current) return incoming;
-  if (current.includes(incoming)) return current;
-  return `${current} / ${incoming}`;
-}
 
 export async function fetchIncomingOrderDetailAction(
   orderId: string,
@@ -388,11 +370,17 @@ export async function updateOrderItemQtyAction(formData: FormData): Promise<Acti
 
   const { data: item } = await admin
     .from("order_items")
-    .select("order_id, product_id, quantity, quantity_in_base_unit, sale_unit_ratio, unit_price")
+    .select("order_id, product_id, quantity, quantity_in_base_unit, sale_unit_ratio, unit_price, supply_source")
     .eq("id", itemId)
     .single();
 
   if (!item) return { error: "ไม่พบรายการสินค้า" };
+  if (item.supply_source === "reserve") {
+    const { data: snapshot } = await admin.from("orders").select("updated_at,notes").eq("id", item.order_id).eq("organization_id", session.organizationId).single();
+    if (!snapshot) return { error: "ไม่พบออเดอร์" };
+    return updateOrderItemsBatchAction({ orderId: item.order_id, expectedUpdatedAt: snapshot.updated_at,
+      notes: snapshot.notes, removedIds: [], updates: [{ itemId, quantity: newQty }], additions: [] });
+  }
 
   const { data: order } = await getWarehouseOrderAdmin(admin)
     .from("orders")
@@ -470,11 +458,17 @@ export async function removeOrderItemAction(formData: FormData): Promise<ActionR
 
   const { data: item } = await admin
     .from("order_items")
-    .select("order_id, product_id, quantity_in_base_unit, line_total")
+    .select("order_id, product_id, quantity_in_base_unit, line_total, supply_source")
     .eq("id", itemId)
     .single();
 
   if (!item) return { error: "ไม่พบรายการสินค้า" };
+  if (item.supply_source === "reserve") {
+    const { data: snapshot } = await admin.from("orders").select("updated_at,notes").eq("id", item.order_id).eq("organization_id", session.organizationId).single();
+    if (!snapshot) return { error: "ไม่พบออเดอร์" };
+    return updateOrderItemsBatchAction({ orderId: item.order_id, expectedUpdatedAt: snapshot.updated_at,
+      notes: snapshot.notes, removedIds: [itemId], updates: [], additions: [] });
+  }
 
   const { data: order } = await getWarehouseOrderAdmin(admin)
     .from("orders")
@@ -653,6 +647,7 @@ export async function updateOrderItemsBatchAction(input: {
   additions: {
     isReplacement?: boolean;
     isBarcode?: boolean;
+  isReserve?: boolean;
     productId: string;
     productSaleUnitId: string | null;
     quantity: number;
@@ -665,7 +660,7 @@ export async function updateOrderItemsBatchAction(input: {
 
   if (!orderId) return { error: "ไม่พบเลขออเดอร์" };
 
-  if (additions.some((item) => !Number.isFinite(item.quantity) || item.quantity <= 0 || !Number.isFinite(item.unitPrice) || item.unitPrice < 0 || (item.isReplacement !== undefined && typeof item.isReplacement !== "boolean") || (item.isBarcode !== undefined && typeof item.isBarcode !== "boolean"))) {
+  if (additions.some((item) => !Number.isFinite(item.quantity) || item.quantity <= 0 || !Number.isFinite(item.unitPrice) || item.unitPrice < 0 || (item.isReplacement !== undefined && typeof item.isReplacement !== "boolean") || (item.isBarcode !== undefined && typeof item.isBarcode !== "boolean") || (item.isReserve !== undefined && typeof item.isReserve !== "boolean"))) {
     return { error: "จำนวนหรือราคาสินค้าไม่ถูกต้อง" };
   }
 
@@ -812,6 +807,7 @@ export async function updateOrderItemsBatchAction(input: {
 
       const newItem = {
         is_barcode: add.isBarcode === true,
+        supply_source: add.isReserve ? "reserve" : "auto",
         ...(add.isReplacement ? { is_replacement: true, notes: "ส่งชดเชย (ไม่คิดเงิน)" } : {}),
         order_id: orderId,
         organization_id: session.organizationId,
@@ -1360,6 +1356,7 @@ export async function fetchCustomerLastOrderItemsAction(
 type ManualOrderItem = {
   isReplacement?: boolean;
   isBarcode?: boolean;
+  isReserve?: boolean;
   productId: string;
   quantity: number;
   saleUnitBaseQty: number;
@@ -1374,6 +1371,7 @@ function mapManualItemsToMergeableInputs(
   return items.map((item) => ({
     isReplacement: item.isReplacement === true,
     isBarcode: item.isBarcode === true,
+    isReserve: item.isReserve === true,
     costPrice: 0,
     productId: item.productId,
     productSaleUnitId: item.saleUnitId,
@@ -1405,7 +1403,7 @@ export async function createManualOrderAction(formData: FormData): Promise<Actio
 
   if (!customerId) return { error: "กรุณาเลือกลูกค้า" };
   if (!Array.isArray(items) || items.length === 0) return { error: "กรุณาเพิ่มสินค้าอย่างน้อย 1 รายการ" };
-  if (items.some((item) => !item || typeof item.productId !== "string" || !Number.isFinite(item.quantity) || item.quantity <= 0 || !Number.isFinite(item.saleUnitBaseQty) || item.saleUnitBaseQty <= 0 || !Number.isFinite(item.unitPrice) || item.unitPrice < 0 || (item.isReplacement !== undefined && typeof item.isReplacement !== "boolean") || (item.isBarcode !== undefined && typeof item.isBarcode !== "boolean"))) {
+  if (items.some((item) => !item || typeof item.productId !== "string" || !Number.isFinite(item.quantity) || item.quantity <= 0 || !Number.isFinite(item.saleUnitBaseQty) || item.saleUnitBaseQty <= 0 || !Number.isFinite(item.unitPrice) || item.unitPrice < 0 || (item.isReplacement !== undefined && typeof item.isReplacement !== "boolean") || (item.isBarcode !== undefined && typeof item.isBarcode !== "boolean") || (item.isReserve !== undefined && typeof item.isReserve !== "boolean"))) {
     return { error: "ข้อมูลสินค้าหรือจำนวนไม่ถูกต้อง" };
   }
   if (items.some(item => item.isBarcode)) {
@@ -1431,106 +1429,21 @@ export async function createManualOrderAction(formData: FormData): Promise<Actio
   if (customerWarehouse.error) {
     return { error: customerWarehouse.error };
   }
-  const customerWarehouseId = customerWarehouse.warehouse!.id;
 
-  console.log(`[createManualOrderAction] Received Date: ${orderDate}, Customer: ${customerId}`);
-
-  const totalAmount = items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
-  const { data: existingOrderRows, error: existingOrderError } = await getWarehouseOrderAdmin(admin)
-    .from("orders")
-    .select("id, order_number, notes, subtotal_amount, total_amount, created_at, status, warehouse_id")
-    .eq("organization_id", session.organizationId)
-    .eq("customer_id", customerId)
-    .eq("warehouse_id", customerWarehouseId)
-    .eq("order_date", orderDate)
-    .order("created_at", { ascending: true });
-
-  if (existingOrderError) {
-    console.error("[createManualOrderAction] Existing Order Lookup Error:", existingOrderError);
-    return { error: "ไม่สามารถตรวจสอบออเดอร์เดิมได้" };
+  const requestId = String(formData.get("requestId") ?? "");
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(requestId)) {
+    return { error: "กรุณาโหลดหน้าใหม่ก่อนบันทึกออเดอร์" };
   }
-
-  const existingOrder = ((existingOrderRows ?? []) as ExistingWarehouseOrderRow[])
-    .find((row) => row.status !== "cancelled") ?? null;
-
-  let orderId = existingOrder?.id ?? null;
-  let effectiveOrderNumber = existingOrder?.order_number ?? null;
-
-  if (!orderId) {
-    const { data: nextOrderNumber } = await admin.rpc("next_order_number", {
-      p_order_date: orderDate,
-      p_organization_id: session.organizationId,
-    });
-
-    if (!nextOrderNumber) {
-      return { error: "ไม่สามารถสร้างเลขออเดอร์ได้" };
-    }
-
-    const { data: newOrder, error: insertError } = await admin
-      .from("orders")
-      .insert({
-        customer_id: customerId,
-        fulfillment_status: "pending",
-        metadata: { channel, source: "manual" },
-        notes,
-        order_date: orderDate,
-        order_number: String(nextOrderNumber),
-        organization_id: session.organizationId,
-        placed_by_user_id: session.userId,
-        status: "submitted",
-        subtotal_amount: totalAmount,
-        total_amount: totalAmount,
-        warehouse_id: customerWarehouseId,
-      })
-      .select("id, order_number")
-      .single();
-
-    if (insertError || !newOrder) {
-      console.error("[createManualOrderAction] Insert Error:", insertError);
-      return { error: "ไม่สามารถสร้างออเดอร์ได้" };
-    }
-
-    orderId = newOrder.id;
-    effectiveOrderNumber = newOrder.order_number;
-    console.log(`[createManualOrderAction] Order Created: ${orderId} for Date: ${orderDate}`);
-  } else {
-    const currentOrder = existingOrder!;
-    const mergedNotes = mergeOrderNotes(currentOrder.notes ?? null, notes);
-    const updatePayload: Record<string, unknown> = {};
-
-    if (mergedNotes !== (currentOrder.notes ?? null)) {
-      updatePayload.notes = mergedNotes;
-    }
-
-    if (!currentOrder.warehouse_id) {
-      updatePayload.warehouse_id = customerWarehouseId;
-    }
-
-    const { error: updateExistingOrderError } = await admin
-      .from("orders")
-      .update(updatePayload)
-      .eq("id", orderId);
-
-    if (updateExistingOrderError) {
-      console.error("[createManualOrderAction] Existing Order Update Error:", updateExistingOrderError);
-      return { error: "ไม่สามารถอัปเดตออเดอร์เดิมได้" };
-    }
-
-    console.log(`[createManualOrderAction] Merged Into Existing Order: ${orderId} for Date: ${orderDate}`);
-  }
-
-  const mergeResult = await mergeItemsIntoOrder(admin, {
-    items: mapManualItemsToMergeableInputs(items),
-    orderId,
-    organizationId: session.organizationId,
-    userId: session.userId,
-    syncDelivery: true,
+  const { data: saved, error: saveError } = await getSupabaseAdmin().rpc("save_manual_order_with_reserve", {
+    p_org: session.organizationId, p_user: session.userId, p_customer: customerId,
+    p_date: orderDate, p_notes: notes ?? "", p_channel: channel,
+    p_items: mapManualItemsToMergeableInputs(items), p_request: requestId,
   });
-
-  if ("error" in mergeResult) {
-    console.error("[createManualOrderAction] Merge Items Error:", mergeResult.error);
-    return { error: mergeResult.error ?? "ไม่สามารถรวมรายการสินค้าในออเดอร์ได้" };
-  }
+  if (saveError) return { error: saveError.message };
+  const savedOrder = saved as { orderId: string; orderNumber: string } | null;
+  if (!savedOrder?.orderId) return { error: "บันทึกออเดอร์ไม่สำเร็จ" };
+  const orderId = savedOrder.orderId;
+  const effectiveOrderNumber = savedOrder.orderNumber;
 
   const syncResult = await syncDeliveryNoteForOrder(admin, {
     orderId,
@@ -1666,6 +1579,8 @@ export async function updateIncomingOrderDateAction(formData: FormData): Promise
   const session = await requireAnyRole(["admin", "member"]);
   const admin = getSupabaseAdmin() as unknown as ActionsAdmin;
   const orderId = String(formData.get("orderId") ?? "").trim();
+  const reserveError = await getReserveRebuildError(admin, session.organizationId, orderId);
+  if (reserveError) return { error: reserveError };
   const nextOrderDate = String(formData.get("orderDate") ?? "").trim();
 
   if (!orderId) {
@@ -2049,6 +1964,8 @@ export async function deleteOrderAction(formData: FormData): Promise<ActionResul
   const session = await requireAnyRole(["admin", "member"]);
   const admin = getSupabaseAdmin() as unknown as ActionsAdmin;
   const orderId = String(formData.get("orderId") ?? "").trim();
+  const reserveError = await getReserveRebuildError(admin, session.organizationId, orderId);
+  if (reserveError) return { error: reserveError };
 
   if (!orderId) {
     return { error: "ไม่พบรหัสออเดอร์" };
@@ -2257,6 +2174,8 @@ export async function deleteOrderCascadeActionV2(formData: FormData): Promise<Ac
   const session = await requireAnyRole(["admin", "member"]);
   const admin = getSupabaseAdmin() as unknown as ActionsAdmin;
   const orderId = String(formData.get("orderId") ?? "").trim();
+  const reserveError = await getReserveRebuildError(admin, session.organizationId, orderId);
+  if (reserveError) return { error: reserveError };
 
   if (!orderId) {
     return { error: "ไม่พบรหัสออเดอร์" };
@@ -2467,6 +2386,8 @@ export async function deleteOrderCascadeActionV3(formData: FormData): Promise<Ac
   const session = await requireAnyRole(["admin", "member"]);
   const admin = getSupabaseAdmin() as unknown as ActionsAdmin;
   const orderId = String(formData.get("orderId") ?? "").trim();
+  const reserveError = await getReserveRebuildError(admin, session.organizationId, orderId);
+  if (reserveError) return { error: reserveError };
 
   if (!orderId) {
     return { error: "ไม่พบรหัสออเดอร์" };

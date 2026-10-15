@@ -478,7 +478,7 @@ const CurrentOrderEditItemsPanel = memo(({
 	              for (const newItem of newItems) {
                 const newUnitId = newItem.productSaleUnitId || null;
                 const existingIdx = detail.items.findIndex(
-                  (i) => i.productId === newItem.productId && (i.productSaleUnitId || null) === newUnitId && (i.notes === "ส่งชดเชย (ไม่คิดเงิน)") === Boolean(newItem.isReplacement) && Boolean(i.isBarcode) === Boolean(newItem.isBarcode)
+                  (i) => i.productId === newItem.productId && (i.productSaleUnitId || null) === newUnitId && (i.notes === "ส่งชดเชย (ไม่คิดเงิน)") === Boolean(newItem.isReplacement) && Boolean(i.isBarcode) === Boolean(newItem.isBarcode) && !i.isReserve
                 );
 
 	                if (existingIdx >= 0) {
@@ -492,7 +492,7 @@ const CurrentOrderEditItemsPanel = memo(({
 	                }
 
                 const addedIdx = nextAdded.findIndex(
-                  (i) => i.productId === newItem.productId && (i.productSaleUnitId || null) === newUnitId && Boolean(i.isReplacement) === Boolean(newItem.isReplacement) && Boolean(i.isBarcode) === Boolean(newItem.isBarcode)
+                  (i) => i.productId === newItem.productId && (i.productSaleUnitId || null) === newUnitId && Boolean(i.isReplacement) === Boolean(newItem.isReplacement) && Boolean(i.isBarcode) === Boolean(newItem.isBarcode) && !i.isReserve
                 );
 
 	                if (addedIdx >= 0) {

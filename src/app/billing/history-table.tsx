@@ -6,6 +6,7 @@ import type { BillingRecord } from "@/lib/billing/billing-statement";
 import { fmtDateTH } from "@/lib/utils/date";
 import { fmt } from "@/components/print/print-shared";
 import { BillingPreviewButton } from "./billing-preview-button";
+import { HistoryBillingPreviewButton } from "./history-billing-preview-button";
 
 type Props = {
   history: BillingRecord[];
@@ -19,6 +20,7 @@ export function HistoryTable({ history, canViewAmounts }: Props) {
 
   return (
     <>
+      {canViewAmounts && history.length > 0 ? <HistoryBillingPreviewButton history={history} /> : null}
       {/* Desktop View */}
       <div className="hidden md:block overflow-hidden border border-slate-200 bg-white shadow-md">
         <table className="w-full border-collapse text-left">

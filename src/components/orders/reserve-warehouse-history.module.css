@@ -1,0 +1,30 @@
+.history { color: #15154f; font-size: 16px !important; line-height: 1.55; }
+.history * { font-weight: 500 !important; }
+.filters { padding: 16px 12px 10px; }
+.warehouse { display: flex; align-items: center; gap: 8px; font-size: 17px !important; font-weight: 700 !important; margin-bottom: 12px; }
+.warehouse svg, .presets svg { flex-shrink: 0; }
+.presets { display: flex; flex-wrap: wrap; gap: 6px; }
+.presets button { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 6px 8px; border: 1px solid #ded8ee; border-radius: 9px; background: #f7f4ff; font-size: 14px !important; font-weight: 700 !important; color: #15154f; }
+.presets button[aria-pressed="true"] { background: #6d28d9; color: white; border-color: #6d28d9; }
+.presets .range { flex: 1; gap: 5px; white-space: nowrap; font-size: 13px !important; font-weight: 500 !important; }
+.dates { display: flex; flex-wrap: wrap; gap: 8px; padding-top: 12px; }
+.dates label { flex: 1; min-width: 115px; font-size: 14px !important; }
+.dates input { display: block; min-height: 44px; width: 100%; min-width: 0; border: 1px solid #ded8ee; border-radius: 6px; padding: 6px; font-size: 16px !important; }
+.dates button { min-height: 44px; background: #6d28d9; color: white; border-radius: 8px; padding: 8px 12px; font-weight: 700 !important; }
+.table { width: 100%; table-layout: fixed; border-collapse: collapse; }
+.table thead { position: sticky; top: 0; z-index: 1; background: #f0e9ff; color: #4a148c; }
+.table thead th { font-size: 17px !important; font-weight: 700 !important; padding: 10px 4px; }
+.table thead th:first-child { text-align: left; padding-left: 16px; }
+.table td { text-align: center; padding: 9px 3px; border-bottom: 1px solid #d9ddeb; border-left: 1px solid #d9ddeb; font-size: 17px !important; font-weight: 700 !important; color: #10101e; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.table tbody th { text-align: left; padding: 9px 10px 9px 16px; border-bottom: 1px solid #d9ddeb; }
+.table .day th { background: #f0e9ff; padding: 6px 16px; color: #4a148c; font-size: 17px !important; font-weight: 700 !important; }
+.name { display: block; font-size: 16px !important; font-weight: 700 !important; overflow-wrap: anywhere; }
+.meta { display: block; color: #596183; font-size: 13px !important; margin-top: 2px; }
+.table .balance { color: #6d28d9; }
+.footer { padding: 14px 16px 18px; color: #737b99; font-size: 13px !important; }
+.footer button { width: 100%; min-height: 44px; border: 1px solid #6d28d9; border-radius: 10px; color: #6d28d9; font-size: 17px !important; font-weight: 700 !important; margin-top: 14px; padding: 8px; }
+.count { margin-top: 4px; text-align: center; font-size: 13px !important; }
+.status { padding: 20px 16px; text-align: center; font-size: 15px !important; }
+.status button { display: block; margin: 8px auto 0; min-height: 44px; color: #6d28d9; text-decoration: underline; }
+.history button:disabled { opacity: 0.5; }
+@media (max-width: 359px) { .presets .range { flex-basis: 100%; } .table td { font-size: 16px !important; } }

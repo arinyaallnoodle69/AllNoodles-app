@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 import ts from "typescript";
 
-function loadSummary(provincial = false, fulfillmentMode = "fresh", barcode = false) {
+function loadSummary(provincial = false, fulfillmentMode = "fresh", barcode = false, reserve = false) {
   const adjustmentDates = [];
   const queryDates = [];
   const mode = { product_id: "p1", warehouse_id: "wh", mode: fulfillmentMode, supplier_id: "factory", suppliers: { name: provincial ? "A.ดอกบัว" : "โรงงานมังกร", supplier_code: provincial ? "TYV005" : "dragon" } };
@@ -29,7 +29,7 @@ function loadSummary(provincial = false, fulfillmentMode = "fresh", barcode = fa
           return Promise.resolve({ data: dates.map(date => ({
             id: date, warehouse_id: "wh", assigned_vehicle_id: "bkk",
             customers: { default_vehicle_id: "bkk", default_warehouse_id: "wh" },
-            order_items: [{ product_id: "p1", quantity_in_base_unit: date.endsWith("09") ? 20 : 30 }, ...(barcode ? [{ product_id: "p1", quantity_in_base_unit: 6, is_barcode: true }] : [])],
+            order_items: [{ product_id: "p1", quantity_in_base_unit: date.endsWith("09") ? 20 : 30 }, ...(barcode ? [{ product_id: "p1", quantity_in_base_unit: 6, is_barcode: true }] : []), ...(reserve ? [{ product_id: "p1", quantity_in_base_unit: 8, supply_source: "reserve" }] : [])],
           })) }).then(resolve);
         },
       };
@@ -133,4 +133,18 @@ test("stock packaging stays stock and does not create a factory order", async ()
   assert.equal(loading.products[1].isBarcode, true);
   assert.equal(loading.products[1].isFresh, false);
   assert.deepEqual(loading.qty, [[20], [6]]);
+});
+
+test("reserve is excluded from factory demand but included once in the loading quantities", async () => {
+  for (const provincial of [false, true]) {
+    const summary = loadSummary(provincial, "fresh", false, true);
+    const date = provincial ? "2026-10-12" : "2026-10-09";
+    const [sheet] = await summary.getFactoryOrderSheetData("org", date, date, { applyAdjustments: false });
+    assert.deepEqual(sheet.qty, [[provincial ? 80 : 20]]);
+    const loading = await summary.getVehicleProductSummaryData("org", date, date);
+    assert.equal(loading.qty.flat().reduce((sum, qty) => sum + qty, 0), provincial ? 38 : 28);
+    const reserveIndex = loading.products.findIndex(product => product.isReserve);
+    assert.ok(reserveIndex >= 0);
+    assert.deepEqual(loading.qty[reserveIndex], [8]);
+  }
 });

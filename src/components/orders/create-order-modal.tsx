@@ -40,6 +40,7 @@ import {
 } from "@/app/orders/incoming/actions";
 import type { CustomerLastOrderSnapshot } from "@/app/orders/incoming/types";
 
+import { fetchOrderReserveStockAction } from "@/app/orders/incoming/reserve-stock-actions";
 import { BARCODE_CUSTOMER_CODE, BARCODE_PRODUCT_SKUS } from "@/lib/orders/barcode-packaging";
 
 import { ThaiDatePicker } from "@/components/ui/thai-date-picker";
@@ -47,6 +48,7 @@ import { ThaiDatePicker } from "@/components/ui/thai-date-picker";
 type CartItem = {
   isReplacement?: boolean;
   isBarcode?: boolean;
+  isReserve?: boolean;
   productId: string;
   productName: string;
   quantity: number;
@@ -78,8 +80,10 @@ type ProductSelection = {
 type ProductSelectionField = keyof ProductSelection;
 
 type ProductSelectModalProps = {
+  reserveStock?: Record<string, number>;
   isReplacement?: boolean;
   isBarcode?: boolean;
+  isReserve?: boolean;
   cart: CartItem[];
   noCustomer: boolean;
   onClose: () => void;
@@ -301,6 +305,7 @@ const ProductRow = React.memo(({
   priceMap,
   noCustomer,
   selectedWarehouseId,
+  reserveQuantity,
 }: {
   hidePrices?: boolean;
   product: OrderProductOption;
@@ -316,6 +321,7 @@ const ProductRow = React.memo(({
   priceMap: Record<string, number>;
   noCustomer: boolean;
   selectedWarehouseId: string | null;
+  reserveQuantity?: number;
 }) => {
   const role = useClientRole();
   const units = getUnits(product);
@@ -398,7 +404,7 @@ const ProductRow = React.memo(({
 
             <div className="mt-2 flex flex-wrap items-center justify-center gap-2 md:justify-start">
               <WarehouseModeBadge mode={fulfillmentMode} />
-              {fulfillmentMode === "fresh" ? (
+              {reserveQuantity !== undefined ? <span className="text-sm font-black text-amber-700">สำรอง {reserveQuantity.toLocaleString("th-TH")} {product.unit}</span> : fulfillmentMode === "fresh" ? (
                 <span className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-2.5 py-1 text-[13.5px] font-black text-white shadow-sm">
                   <Boxes className="h-3.5 w-3.5 md:h-4 md:w-4" strokeWidth={2.5} />
                   ขายแล้ว: {Number(selection?.quantity ?? 0).toLocaleString("th-TH")} {unit?.label ?? product.unit}
@@ -532,6 +538,7 @@ const DesktopProductTableRow = React.memo(({
   priceMap,
   product,
   selectedWarehouseId,
+  reserveQuantity,
   selection,
 }: {
   hidePrices?: boolean;
@@ -546,6 +553,7 @@ const DesktopProductTableRow = React.memo(({
   priceMap: Record<string, number>;
   product: OrderProductOption;
   selectedWarehouseId: string | null;
+  reserveQuantity?: number;
   selection?: ProductSelection;
 }) => {
   const role = useClientRole();
@@ -666,7 +674,7 @@ const DesktopProductTableRow = React.memo(({
         <WarehouseModeBadge mode={fulfillmentMode} />
       </td>
       <td className="w-24 px-1.5 py-3 text-center xl:w-32 xl:px-3">
-        {fulfillmentMode === "fresh" ? (
+        {reserveQuantity !== undefined ? <span className="text-sm font-black text-amber-700">สำรอง {reserveQuantity.toLocaleString("th-TH")} {product.unit}</span> : fulfillmentMode === "fresh" ? (
           <span className="text-sm font-black text-emerald-700">
             ขายแล้ว {Number(selection?.quantity ?? 0).toLocaleString("th-TH")} {selectedUnit?.label ?? product.unit}
           </span>
@@ -756,6 +764,8 @@ DesktopProductTableRow.displayName = "DesktopProductTableRow";
 function ProductSelectModal({
   isReplacement = false,
   isBarcode = false,
+  isReserve = false,
+  reserveStock = {},
   cart,
   noCustomer,
   onClose,
@@ -1072,6 +1082,14 @@ function ProductSelectModal({
       if (!unit) continue;
 
       const quantity = Number(selection.quantity);
+      if (isReserve) {
+        const inCart = cart.filter(item => item.isReserve && item.productId === product.id)
+          .reduce((sum, item) => sum + item.quantity * item.saleUnitBaseQty, 0);
+        if (inCart + quantity * unit.baseUnitQuantity > (reserveStock[product.id] ?? 0) + 0.000001) {
+          showPopup(`${product.name} มีสำรองใช้ได้ ${reserveStock[product.id] ?? 0} ${product.unit} รวมที่เลือกไว้แล้ว กรุณาลดจำนวน`);
+          return;
+        }
+      }
       const linkedPrice = getUnitPrice(productId, unit.id, priceMap);
       const unitPrice = isReplacement ? 0 : linkedPrice > 0 ? linkedPrice : Number(selection.unitPrice);
 
@@ -1199,7 +1217,7 @@ function ProductSelectModal({
               {selectedCustomerLabel ?? "ยังไม่ได้เลือกร้านค้า"}
             </h3>
             <p className="mt-0.5 text-[10px] font-black uppercase tracking-[0.16em] text-white/70 sm:text-xs">
-              {isReplacement ? "ส่งชดเชย (ไม่คิดเงิน) · เลือกสินค้าและจำนวน" : isBarcode ? "บาร์โค้ด · เลือกสินค้าและจำนวน" : "เลือกสินค้าเพิ่ม"}
+              {isReserve ? "ใช้สต็อคสำรอง · ไม่เพิ่มยอดสั่งโรงงาน" : isReplacement ? "ส่งชดเชย (ไม่คิดเงิน) · เลือกสินค้าและจำนวน" : isBarcode ? "บาร์โค้ด · เลือกสินค้าและจำนวน" : "เลือกสินค้าเพิ่ม"}
             </p>
           </div>
           <div className="flex shrink-0 items-center gap-2">
@@ -1547,7 +1565,7 @@ function ProductSelectModal({
               ) : filteredProducts.length === 0 ? (
                 <div className="flex h-full min-h-64 flex-col items-center justify-center gap-3 text-slate-400">
                   <Search className="h-10 w-10" strokeWidth={1.7} />
-                  <p className="text-sm font-black">ไม่พบสินค้าที่ตรงกับตัวกรอง</p>
+                  <p className="text-sm font-black">{isReserve && products.length === 0 ? "ไม่มีสินค้าผลิตสดที่มีสำรองใช้ได้ในคลังนี้" : "ไม่พบสินค้าที่ตรงกับตัวกรอง"}</p>
                 </div>
               ) : (
                 <table className="w-full table-fixed border-collapse">
@@ -1574,6 +1592,7 @@ function ProductSelectModal({
                         onUpdateSelection={handleUpdateSelection}
                         priceMap={priceMap}
                         noCustomer={noCustomer}
+                        reserveQuantity={isReserve ? reserveStock[product.id] : undefined}
                         selectedWarehouseId={selectedWarehouseId}
                       />
                     ))}
@@ -1594,7 +1613,7 @@ function ProductSelectModal({
           ) : products.length === 0 ? (
             <div className="flex h-64 flex-col items-center justify-center gap-4 text-slate-300">
               <Package2 className="h-16 w-16" strokeWidth={1} />
-              <p className="text-lg font-black uppercase tracking-widest text-center px-6">ไม่มีข้อมูลสินค้าในระบบ</p>
+              <p className="text-lg font-black uppercase tracking-widest text-center px-6">{isReserve ? "ไม่มีสินค้าผลิตสดที่มีสำรองใช้ได้ในคลังนี้" : "ไม่มีข้อมูลสินค้าในระบบ"}</p>
             </div>
           ) : filteredProducts.length === 0 ? (
             <div className="flex h-64 flex-col items-center justify-center gap-4 text-slate-300">
@@ -1613,9 +1632,10 @@ function ProductSelectModal({
                     onSelect={handleSelectProduct}
                     selection={selections[p.id]}
                     onUpdateSelection={handleUpdateSelection}
-                    addedCount={cart.filter(item => item.productId === p.id && Boolean(item.isBarcode) === isBarcode && Boolean(item.isReplacement) === isReplacement).reduce((s, i) => s + i.quantity, 0)}
+                    addedCount={cart.filter(item => item.productId === p.id && Boolean(item.isBarcode) === isBarcode && Boolean(item.isReplacement) === isReplacement && Boolean(item.isReserve) === isReserve).reduce((s, i) => s + i.quantity, 0)}
                     priceMap={priceMap}
                     noCustomer={noCustomer}
+                    reserveQuantity={isReserve ? reserveStock[p.id] : undefined}
                     selectedWarehouseId={selectedWarehouseId}
                   />
                 ))}
@@ -1881,6 +1901,12 @@ export function CreateOrderModal({
   const [productModalOpen, setProductModalOpen] = useState(false);
   const [replacementMode, setReplacementMode] = useState(false);
   const [barcodeMode, setBarcodeMode] = useState(false);
+  const [reserveMode, setReserveMode] = useState(false);
+  const [reserveStock, setReserveStock] = useState<Record<string, number>>({});
+  const [reserveLoading, setReserveLoading] = useState(false);
+  const reserveRequestRef = useRef(0);
+  const saveRequestRef = useRef<{ payload: string; id: string } | null>(null);
+  const saveInFlightRef = useRef(false);
   const [toolsOpen, setToolsOpen] = useState(false);
   const toolsMenuRef = useRef<HTMLDivElement>(null);
 
@@ -1965,6 +1991,7 @@ export function CreateOrderModal({
   }, []);
 
   const handleAddProductClick = useCallback(() => {
+    setReserveMode(false);
     if (!customerId) {
       showSubmitPopup("กรุณาเลือกร้านค้าก่อน");
       return;
@@ -2161,7 +2188,7 @@ export function CreateOrderModal({
           row.isReplacement ? 0 : priceMap[row.saleUnitId ?? row.productId] ?? priceMap[row.productId] ?? row.unitPrice;
 
         const existingIndex = nextCart.findIndex(
-          (item) => item.productId === row.productId && (item.saleUnitId || null) === (row.saleUnitId || null) && Boolean(item.isBarcode) === Boolean(row.isBarcode) && Boolean(item.isReplacement) === Boolean(row.isReplacement),
+          (item) => item.productId === row.productId && (item.saleUnitId || null) === (row.saleUnitId || null) && Boolean(item.isBarcode) === Boolean(row.isBarcode) && Boolean(item.isReplacement) === Boolean(row.isReplacement) && !item.isReserve,
         );
 
         if (existingIndex >= 0) {
@@ -2201,6 +2228,7 @@ export function CreateOrderModal({
   }
 
   async function handleCustomerSelect(id: string) {
+    if (id !== customerId && cart.some(item => item.isReserve)) { showSubmitPopup("กรุณาลบรายการใช้สำรองก่อนเปลี่ยนร้านค้า"); return; }
     if (customers.find(customer => customer.id === id)?.code !== BARCODE_CUSTOMER_CODE && cart.some(item => item.isBarcode)) { showSubmitPopup("กรุณาลบรายการบาร์โค้ดก่อนเปลี่ยนร้านค้า"); return; }
     setError(null);
     setHistoryNotice(null);
@@ -2253,7 +2281,7 @@ export function CreateOrderModal({
       const nextCart = [...prev];
       for (const sel of selections) {
         const existingIndex = nextCart.findIndex(
-          (item) => item.productId === sel.product.id && (item.saleUnitId || null) === (sel.unitId || null) && Boolean(item.isReplacement) === replacementMode && Boolean(item.isBarcode) === barcodeMode,
+          (item) => item.productId === sel.product.id && (item.saleUnitId || null) === (sel.unitId || null) && Boolean(item.isReplacement) === replacementMode && Boolean(item.isBarcode) === barcodeMode && Boolean(item.isReserve) === reserveMode,
         );
         if (existingIndex >= 0) {
           nextCart[existingIndex] = {
@@ -2271,6 +2299,7 @@ export function CreateOrderModal({
           nextCart.push({
             isReplacement: replacementMode,
             isBarcode: barcodeMode,
+            isReserve: reserveMode,
             productId: sel.product.id,
             productName: sel.product.name,
             quantity: sel.quantity,
@@ -2337,6 +2366,13 @@ export function CreateOrderModal({
     const item = cart[editingCartIndex];
     if (!item) return;
     const normalized = normalizeToRule(editQty, item.minOrderQty, item.stepOrderQty);
+    if (item.isReserve) {
+      const others = cart.reduce((sum, row, index) => sum + (index !== editingCartIndex && row.isReserve && row.productId === item.productId ? row.quantity * row.saleUnitBaseQty : 0), 0);
+      if (others + normalized * item.saleUnitBaseQty > (reserveStock[item.productId] ?? 0) + 0.000001) {
+        showSubmitPopup("จำนวนรวมเกินสต็อคสำรองที่ใช้ได้ กรุณาลดจำนวน");
+        return;
+      }
+    }
     setCart((prev) =>
       prev.map((c, i) => (i === editingCartIndex ? { ...c, quantity: normalized } : c)),
     );
@@ -2363,6 +2399,10 @@ export function CreateOrderModal({
     setCustomerPickerQuery("");
     setBarcodeMode(false);
     setToolsOpen(false);
+    reserveRequestRef.current += 1;
+    setReserveMode(false);
+    setReserveLoading(false);
+    setReserveStock({});
     if (!keepOrderDate) {
       setOrderDate(today);
     }
@@ -2403,7 +2443,32 @@ export function CreateOrderModal({
     }, 380);
   }
 
+  async function handleReserveClick() {
+    setToolsOpen(false);
+    const warehouseId = selectedCustomer?.defaultWarehouseId;
+    if (!warehouseId) { showSubmitPopup("กรุณาเลือกร้านค้าที่กำหนดคลังก่อน"); return; }
+    const request = ++reserveRequestRef.current;
+    setReserveMode(true);
+    setBarcodeMode(false);
+    setReplacementMode(false);
+    setReserveStock({});
+    setReserveLoading(true);
+    setProductModalOpen(true);
+    try {
+      const rows = await fetchOrderReserveStockAction(warehouseId);
+      if (request === reserveRequestRef.current) setReserveStock(Object.fromEntries(rows.map(row => [row.productId, row.available])));
+    } catch (error) {
+      if (request === reserveRequestRef.current) {
+        setProductModalOpen(false);
+        showSubmitPopup(error instanceof Error ? error.message : "โหลดสำรองไม่สำเร็จ");
+      }
+    } finally {
+      if (request === reserveRequestRef.current) setReserveLoading(false);
+    }
+  }
+
   function handleSubmit() {
+    if (pending || saveInFlightRef.current) return;
     setError(null);
 
 
@@ -2428,19 +2493,25 @@ export function CreateOrderModal({
       showSubmitPopup("ยังมีสินค้าที่ยังไม่ตั้งราคา กรุณาใส่ราคามากกว่า 0 ก่อนบันทึกออเดอร์");
       return;
     }
+    saveInFlightRef.current = true;
     startTransition(async () => {
+      try {
       const formData = new FormData();
       formData.set("customerId", customerId);
       formData.set("channel", "created");
       formData.set("orderDate", orderDate);
       formData.set("notes", notes.trim());
       formData.set("items", JSON.stringify(cart));
+      const payload = JSON.stringify([customerId, orderDate, notes.trim(), cart]);
+      if (saveRequestRef.current?.payload !== payload) saveRequestRef.current = { payload, id: crypto.randomUUID() };
+      formData.set("requestId", saveRequestRef.current.id);
       const result = await createManualOrderAction(formData);
       if ("error" in result) {
         setError(result.error);
         return;
       }
       
+      saveRequestRef.current = null;
       // SHOW SUCCESS OVERLAY AND RESET FORM (DON'T CLOSE)
       const resolvedDeliveryNumber =
         (result.deliveryNumber && String(result.deliveryNumber).trim()) ||
@@ -2470,6 +2541,11 @@ export function CreateOrderModal({
       }, result.receiptWarning ? 12000 : 1400);
 
       resetForm({ keepOrderDate: true, openCustomerPicker: true });
+      } catch (error) {
+        setError(error instanceof Error ? error.message : "บันทึกไม่สำเร็จ กรุณาลองใหม่");
+      } finally {
+        saveInFlightRef.current = false;
+      }
     });
   }
 
@@ -2617,6 +2693,7 @@ export function CreateOrderModal({
                         name="orderDate"
                         value={orderDate}
                         onChange={(nextOrderDate) => {
+                          if (nextOrderDate !== orderDate && cart.some(item => item.isReserve)) { showSubmitPopup("กรุณาลบรายการใช้สำรองก่อนเปลี่ยนวันที่ แล้วเลือกสำรองใหม่"); return; }
                           setOrderDate(nextOrderDate);
                           setHistoryNotice(null);
                           if (!customerId) return;
@@ -2725,14 +2802,14 @@ export function CreateOrderModal({
                             รายการสินค้า
                           </p>
                           <div className="relative ml-auto flex shrink-0 justify-end gap-2">
-                            <button type="button" onClick={handleAddProductClick} className="action-touch-safe inline-flex min-h-11 items-center gap-1.5 rounded-xl border border-[#EA80FC]/70 bg-[#4A148C] px-3 py-2 text-sm font-bold text-white"><Plus className="h-4 w-4" />เพิ่มสินค้า</button>
                             <button type="button" onClick={() => setToolsOpen(value => !value)} aria-expanded={toolsOpen} aria-haspopup="menu" className="action-touch-safe inline-flex min-h-11 items-center gap-1.5 rounded-xl border border-[#4A148C] bg-white px-3 py-2 text-sm font-bold text-[#4A148C]"><SlidersHorizontal className="h-5 w-5 shrink-0" />เครื่องมือ</button>
+                            <button type="button" onClick={handleAddProductClick} className="action-touch-safe inline-flex min-h-11 items-center gap-1.5 rounded-xl border border-[#EA80FC]/70 bg-[#4A148C] px-3 py-2 text-sm font-bold text-white"><Plus className="h-4 w-4" />เพิ่มสินค้า</button>
                             {toolsOpen ? <>
                               <button type="button" aria-label="ปิดเมนูเครื่องมือ" className="fixed inset-0 z-40 cursor-default" onClick={() => setToolsOpen(false)} />
                               <div ref={toolsMenuRef} role="menu" aria-label="เครื่องมือออเดอร์" className="absolute right-0 top-full z-50 mt-2 w-56 divide-y divide-[#EA80FC]/25 overflow-hidden rounded-2xl border border-[#EA80FC]/30 bg-white shadow-xl">
-                                <button type="button" role="menuitem" onClick={() => { setToolsOpen(false); if (!customerId) { showSubmitPopup("กรุณาเลือกร้านค้าก่อน"); return; } setBarcodeMode(false); setReplacementMode(true); setProductModalOpen(true); }} className="flex min-h-14 w-full items-center gap-3 px-4 py-3 text-left text-base font-bold text-[#15154F]"><ArrowLeftRight className="h-6 w-6 shrink-0 text-[#4A148C]" />ส่งชดเชย</button>
-                                <button type="button" role="menuitem" disabled={selectedCustomer?.code !== BARCODE_CUSTOMER_CODE} onClick={() => { setToolsOpen(false); setReplacementMode(false); setBarcodeMode(true); setProductModalOpen(true); }} className="flex min-h-14 w-full items-center gap-3 px-4 py-3 text-left text-base font-bold text-[#15154F] disabled:text-slate-400"><Barcode className="h-6 w-6 shrink-0 text-[#4A148C]" />บาร์โค้ด</button>
-                                <button type="button" role="menuitem" disabled className="flex min-h-14 w-full items-center gap-3 px-4 py-3 text-left text-base font-bold text-slate-400"><Files className="h-6 w-6 shrink-0 text-[#D58B00]" />สต็อคสำรอง</button>
+                                <button type="button" role="menuitem" onClick={() => { setToolsOpen(false); if (!customerId) { showSubmitPopup("กรุณาเลือกร้านค้าก่อน"); return; } setReserveMode(false); setBarcodeMode(false); setReplacementMode(true); setProductModalOpen(true); }} className="flex min-h-14 w-full items-center gap-3 px-4 py-3 text-left text-base font-bold text-[#15154F]"><ArrowLeftRight className="h-6 w-6 shrink-0 text-[#4A148C]" />ส่งชดเชย</button>
+                                <button type="button" role="menuitem" disabled={selectedCustomer?.code !== BARCODE_CUSTOMER_CODE} onClick={() => { setToolsOpen(false); setReserveMode(false); setReplacementMode(false); setBarcodeMode(true); setProductModalOpen(true); }} className="flex min-h-14 w-full items-center gap-3 px-4 py-3 text-left text-base font-bold text-[#15154F] disabled:text-slate-400"><Barcode className="h-6 w-6 shrink-0 text-[#4A148C]" />บาร์โค้ด</button>
+                                <button type="button" role="menuitem" disabled={reserveLoading} onClick={handleReserveClick} className="flex min-h-14 w-full items-center gap-3 px-4 py-3 text-left text-base font-bold text-[#15154F] disabled:opacity-50"><Files className="h-6 w-6 shrink-0 text-[#D58B00]" />หักสต็อคสำรอง</button>
                               </div>
                             </> : null}
                           </div>
@@ -2757,7 +2834,7 @@ export function CreateOrderModal({
                                 const product = productsById.get(item.productId);
                                 return (
                                   <div
-                                    key={`${item.productId}-${item.saleUnitId}-${Boolean(item.isReplacement)}-${Boolean(item.isBarcode)}`}
+                                    key={`${item.productId}-${item.saleUnitId}-${Boolean(item.isReplacement)}-${Boolean(item.isBarcode)}-${Boolean(item.isReserve)}`}
                                     className="flex items-center gap-2.5 px-2 py-3 sm:gap-3"
                                   >
                                     <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-xl bg-slate-100">
@@ -2780,6 +2857,7 @@ export function CreateOrderModal({
                                       <p className="max-h-[2.8rem] overflow-hidden whitespace-normal break-words text-sm font-semibold leading-snug text-slate-900">
                                         {item.productName}
                                       </p>
+                                      {item.isReserve && <p className="mt-1 text-xs font-bold text-amber-700">ใช้สต็อคสำรอง · ไม่สั่งโรงงาน</p>}
                                       {item.isBarcode && <p className="mt-1 text-xs font-bold text-[#4A148C]">บรรจุภัณฑ์บาร์โค้ด</p>}
                                       {item.isReplacement && <p className="mt-1 text-xs font-bold text-[#4A148C]">ส่งชดเชย (ไม่คิดเงิน)</p>}
                                     </div>
@@ -3208,16 +3286,22 @@ export function CreateOrderModal({
       ) : null}
 
       <ProductSelectModal
-        key={replacementMode ? "replacement" : barcodeMode ? "barcode" : "sale"}
+        key={reserveMode ? "reserve" : replacementMode ? "replacement" : barcodeMode ? "barcode" : "sale"}
         isReplacement={replacementMode}
         isBarcode={barcodeMode}
+        isReserve={reserveMode}
+        reserveStock={reserveStock}
         cart={cart}
         noCustomer={!customerId}
-        onClose={() => setProductModalOpen(false)}
+        onClose={() => {
+          reserveRequestRef.current += 1;
+          setReserveLoading(false);
+          setProductModalOpen(false);
+        }}
         onConfirmMany={addManyToCart}
         open={productModalOpen}
         priceMap={priceMap}
-        products={barcodeMode ? products.filter(product => BARCODE_PRODUCT_SKUS.includes(product.sku)) : products}
+        products={reserveMode ? products.filter(product => reserveStock[product.id] > 0) : barcodeMode ? products.filter(product => BARCODE_PRODUCT_SKUS.includes(product.sku)) : products}
         productsLoading={pricesLoading}
         selectedCustomerLabel={
           selectedCustomer ? `${selectedCustomer.code} ${selectedCustomer.name}${barcodeMode ? " (บาร์โค้ด)" : ""}` : null

@@ -134,17 +134,17 @@ export function FactoryOrderAdjustmentManager({ date, dateLabel, products, varia
             </header>
 
             <div className="overflow-y-auto px-3 py-3 sm:px-7 sm:py-4">
-              <p className="mb-3 text-sm font-semibold text-[#4A4380]">{isConfirmed ? "ยอดโรงงานยืนยันแล้ว คงเหลือยึดยอดเดิม หากสั่งโรงงานเพิ่มจริง ให้เพิ่มช่องของสำรองเป็นยอดรวมใหม่ ระบบจะบันทึกผลิตเพิ่มเฉพาะส่วนต่าง" : "กรอกของคงเหลือและจำนวนที่เผื่อสำรอง เมื่อยืนยันแล้ว ใบสั่งโรงงานจะยึดยอดนี้ ออเดอร์ที่เพิ่มภายหลังจะหักจากสำรอง"}</p>
+              <p className="mb-3 text-sm font-semibold text-[#4A4380]">{isConfirmed ? "ยอดโรงงานยืนยันแล้ว ของเหลือยึดยอดเดิม หากสั่งโรงงานเพิ่มจริง ให้เพิ่มช่องของสำรองเป็นยอดรวมใหม่ ระบบจะบันทึกผลิตเพิ่มเฉพาะส่วนต่าง" : "กรอกของเหลือและจำนวนที่เผื่อสำรอง เมื่อยืนยันแล้ว ใบสั่งโรงงานจะยึดยอดนี้ ออเดอร์ที่เพิ่มภายหลังจะหักจากสำรอง"}</p>
               <div className="hidden overflow-hidden rounded-xl border border-[#DED8E8] sm:block">
                 <div className="grid grid-cols-[1.45fr_1fr_28px_1fr_28px_1fr_28px_1fr] items-center bg-[#F7F8FB] px-3 py-3 text-center text-sm font-black text-[#17152F]">
-                  <span className="text-left">สินค้า</span><span>ยอดออเดอร์<br />(กก.)</span><span /><span>คงเหลือ<br />(กก.)</span><span /><span>ของสำรอง<br />(กก.)</span><span /><span>ยอดสั่ง<br />(กก.)</span>
+                  <span className="text-left">สินค้า</span><span>ยอดออเดอร์<br />(กก.)</span><span /><span>ของเหลือ<br />(กก.)</span><span /><span>ของสำรอง<br />(กก.)</span><span /><span>ยอดสั่ง<br />(กก.)</span>
                 </div>
                 {rows.map((row, index) => (
                   <div key={row.productId} className="grid grid-cols-[1.45fr_1fr_28px_1fr_28px_1fr_28px_1fr] items-center border-t border-[#DED8E8] px-3 py-3 text-[#17152F]">
                     <div className="min-w-0 pr-2"><p className="text-base font-black text-[#18125D]">{row.sku}</p><p className="truncate text-sm font-medium text-[#334155]">{row.name}</p></div>
                     <div className="rounded-lg bg-[#EFF1F6] px-2 py-2.5 text-center text-base font-black tabular-nums">{formatQuantity(row.orderDemand)}</div>
                     <span className="text-center text-xl font-black text-[#321471]">{isConfirmed ? "" : "−"}</span>
-                    <input aria-label={`${row.sku} คงเหลือ`} inputMode="decimal" readOnly={isConfirmed} tabIndex={isConfirmed ? -1 : undefined} value={row.remainingQuantity} onChange={(event) => updateRow(index, "remainingQuantity", event.target.value)} className="min-w-0 rounded-lg border-2 border-[#6930DC] bg-white px-2 py-2 text-center text-base font-black tabular-nums text-[#17152F] outline-none focus:ring-2 focus:ring-[#6930DC]/20" />
+                    <input aria-label={`${row.sku} ของเหลือ`} inputMode="decimal" readOnly={isConfirmed} tabIndex={isConfirmed ? -1 : undefined} value={row.remainingQuantity} onChange={(event) => updateRow(index, "remainingQuantity", event.target.value)} className="min-w-0 rounded-lg border-2 border-[#6930DC] bg-white px-2 py-2 text-center text-base font-black tabular-nums text-[#17152F] outline-none focus:ring-2 focus:ring-[#6930DC]/20" />
                     <span className="text-center text-xl font-black text-[#321471]">{isConfirmed ? "" : "+"}</span>
                     <input aria-label={`${row.sku} ของสำรอง`} inputMode="decimal" value={row.reserveQuantity} onChange={(event) => updateRow(index, "reserveQuantity", event.target.value)} className="min-w-0 rounded-lg border-2 border-[#6930DC] bg-white px-2 py-2 text-center text-base font-black tabular-nums text-[#17152F] outline-none focus:ring-2 focus:ring-[#6930DC]/20" />
                     <span className="text-center text-lg font-black text-[#321471]">{isConfirmed ? "" : "="}</span>
@@ -160,7 +160,7 @@ export function FactoryOrderAdjustmentManager({ date, dateLabel, products, varia
                     <div className="grid grid-cols-2 gap-x-3 gap-y-2.5">
                       <label className="min-w-0 text-xs font-bold text-[#241857]">ยอดออเดอร์ (กก.)<span className="mt-1 flex h-11 items-center justify-center rounded-lg bg-[#EFF1F6] text-base font-black tabular-nums text-[#17152F]">{formatQuantity(row.orderDemand)}</span></label>
                       <label className="min-w-0 text-xs font-bold text-[#241857]">ของสำรอง (กก.)<input aria-label={`${row.sku} ของสำรอง`} inputMode="decimal" value={row.reserveQuantity} onChange={(event) => updateRow(index, "reserveQuantity", event.target.value)} className="mt-1 h-11 w-full rounded-lg border-2 border-[#6930DC] px-2 text-center text-base font-black tabular-nums outline-none focus:ring-2 focus:ring-[#6930DC]/20" /></label>
-                      <label className="min-w-0 text-xs font-bold text-[#241857]">คงเหลือ (กก.)<input aria-label={`${row.sku} คงเหลือ`} inputMode="decimal" readOnly={isConfirmed} tabIndex={isConfirmed ? -1 : undefined} value={row.remainingQuantity} onChange={(event) => updateRow(index, "remainingQuantity", event.target.value)} className="mt-1 h-11 w-full rounded-lg border-2 border-[#6930DC] px-2 text-center text-base font-black tabular-nums outline-none focus:ring-2 focus:ring-[#6930DC]/20" /></label>
+                      <label className="min-w-0 text-xs font-bold text-[#241857]">ของเหลือ (กก.)<input aria-label={`${row.sku} ของเหลือ`} inputMode="decimal" readOnly={isConfirmed} tabIndex={isConfirmed ? -1 : undefined} value={row.remainingQuantity} onChange={(event) => updateRow(index, "remainingQuantity", event.target.value)} className="mt-1 h-11 w-full rounded-lg border-2 border-[#6930DC] px-2 text-center text-base font-black tabular-nums outline-none focus:ring-2 focus:ring-[#6930DC]/20" /></label>
                       <div className="min-w-0 text-xs font-bold text-[#241857]">ยอดสั่ง (กก.)<div className="mt-1 flex h-11 items-center justify-center rounded-lg bg-[#5720B7] px-2 text-base font-black tabular-nums text-white">{formatQuantity(row.adjustedQuantity)} กก.</div></div>
                     </div>
                   </article>
@@ -168,7 +168,7 @@ export function FactoryOrderAdjustmentManager({ date, dateLabel, products, varia
               </div>
 
               <div className="mt-3 grid grid-cols-4 gap-2 rounded-xl bg-[#F3E8FF] p-2 sm:p-3">
-                {[["รวมยอดออเดอร์", totals.demand], ["รวมคงเหลือ", totals.remaining], ["รวมของสำรอง", totals.reserve], ["รวมยอดสั่ง", totals.adjusted]].map(([label, value], index) => (
+                {[["รวมยอดออเดอร์", totals.demand], ["รวมของเหลือ", totals.remaining], ["รวมของสำรอง", totals.reserve], ["รวมยอดสั่ง", totals.adjusted]].map(([label, value], index) => (
                   <div key={String(label)} className={`min-w-0 rounded-lg px-1 py-2 text-center sm:px-2 ${index === 3 ? "bg-[#5720B7] text-white" : "bg-white/75 text-[#27106B]"}`}>
                     <p className="truncate text-[9px] font-black sm:text-xs">{label}</p><p className="mt-0.5 whitespace-nowrap text-sm font-black tabular-nums sm:text-xl">{formatQuantity(Number(value))}<span className="hidden sm:inline"> กก.</span></p>
                   </div>

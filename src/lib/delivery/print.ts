@@ -41,6 +41,7 @@ export type DeliveryNotePrintData = {
     lineTotal: number;
     isReplacement?: boolean;
     isBarcode?: boolean;
+    isReserve?: boolean;
     display_order?: number | null;
   }>;
 };
@@ -127,7 +128,7 @@ export async function getMergedDeliveryPrintData(
     const normalizedSku = item.productSku.trim().toLowerCase();
     const normalizedUnit = item.saleUnitLabel.trim().toLowerCase();
     const normalizedName = item.productName.trim().toLowerCase();
-    const key = `${normalizedSku || normalizedName}||${normalizedUnit}||${item.isReplacement ? "replacement" : "sale"}||${item.isBarcode ? "barcode" : "normal"}`;
+    const key = `${normalizedSku || normalizedName}||${normalizedUnit}||${item.isReplacement ? "replacement" : "sale"}||${item.isBarcode ? "barcode" : "normal"}||${item.isReserve ? "reserve" : "factory"}`;
     const existing = itemMap.get(key);
     if (existing) {
       existing.quantityDelivered += item.quantityDelivered;
@@ -246,7 +247,7 @@ export async function getDeliveryNotePrintData(
     .from("delivery_note_items")
     .select(`
       id, quantity_delivered, sale_unit_label, unit_price, line_total,
-      order_items(notes,is_barcode),
+      order_items(notes,is_barcode,supply_source),
       products!inner(name, sku, unit, display_order)
     `)
     .eq("delivery_note_id", header.id)
@@ -255,7 +256,7 @@ export async function getDeliveryNotePrintData(
   if (itemsError || !items) return null;
 
   type RawItem = {
-    order_items: { notes: string | null; is_barcode?: boolean } | null;
+    order_items: { notes: string | null; is_barcode?: boolean; supply_source?: string } | null;
     id: string;
     quantity_delivered: number | string;
     sale_unit_label: string;
@@ -318,8 +319,9 @@ export async function getDeliveryNotePrintData(
         id: item.id,
         lineNumber: 0,
         productSku: item.products.sku,
-        productName: `${item.products.name}${item.order_items?.is_barcode ? " (บาร์โค้ด)" : ""}`,
+        productName: `${item.products.name}${item.order_items?.is_barcode ? " (บาร์โค้ด)" : ""}${item.order_items?.supply_source === "reserve" ? " (ใช้สำรอง)" : ""}`,
         isBarcode: item.order_items?.is_barcode === true,
+        isReserve: item.order_items?.supply_source === "reserve",
         isReplacement: item.order_items?.notes === "ส่งชดเชย (ไม่คิดเงิน)",
         quantityDelivered: toNum(item.quantity_delivered),
         saleUnitLabel: formatDisplayUnit(item.sale_unit_label || item.products.unit),

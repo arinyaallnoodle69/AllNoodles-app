@@ -282,7 +282,7 @@ export function DailySpecialOrderManager({ date, initialItems, products, variant
 
   return (
     <>
-      {variant === "reserve" ? <button type="button" onClick={() => { setType(restrictToSelection ? "office" : "remaining"); setIsOpen(true); }} className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#6D28D9] px-5 py-3 text-base font-bold text-white"><ShoppingBasket className="h-5 w-5" />กรอกรายการพิเศษ</button> : variant === "mobile" ? mobileTrigger : variant === "mobile-compact" ? mobileCompactTrigger : desktopTrigger}
+      {variant === "reserve" ? <button type="button" onClick={() => { setType(restrictToSelection ? "office" : "remaining"); setIsOpen(true); }} className="flex min-h-11 w-full items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-[#6D28D9] px-3 py-2 text-base font-bold text-white"><ShoppingBasket className="h-5 w-5" />รายการพิเศษ</button> : variant === "mobile" ? mobileTrigger : variant === "mobile-compact" ? mobileCompactTrigger : desktopTrigger}
       {toast ? (
         <div className="fixed left-1/2 top-5 z-[700] flex -translate-x-1/2 items-center gap-2 rounded-full bg-emerald-600 px-4 py-2 text-sm font-black text-white shadow-xl animate-in fade-in">
           <Check className="h-4 w-4" />

@@ -71,6 +71,7 @@ type DeliveryNoteRow = {
 
 type OrderItemRow = {
   is_barcode?: boolean;
+  supply_source?: string;
   notes: string | null;
   product_id: string;
   quantity: number | string;
@@ -224,6 +225,7 @@ async function PackingListPage({ searchParams }: Props) {
       delivery_notes!order_id(vehicle_id, status, created_at, vehicles(id, name)),
       order_items(
         is_barcode,
+        supply_source,
         notes,
         product_id,
         quantity,
@@ -530,7 +532,14 @@ async function PackingListPage({ searchParams }: Props) {
 
         for (const item of order.order_items ?? []) {
           let targetStore: GroupedStore | undefined = groupedStore;
-          if (item.is_barcode) {
+          if (item.supply_source === "reserve") {
+            const reserveKey = `${storeGroupKey}_reserve${item.is_barcode ? "_barcode" : ""}`;
+            targetStore = groupedStores.get(reserveKey);
+            if (!targetStore) {
+              targetStore = { ...groupedStore, customer: { ...customer, customer_code: `${customer.customer_code}-S${item.is_barcode ? "B" : ""}`, name: `${customer.name} (ใช้สำรอง${item.is_barcode ? " บาร์โค้ด" : ""})` }, items: new Map(), missingWeightProductIds: new Set(), totalWeightGrams: 0, hasOrder: true };
+              groupedStores.set(reserveKey, targetStore);
+            }
+          } else if (item.is_barcode) {
             const barcodeKey = `${storeGroupKey}_barcode`;
             targetStore = groupedStores.get(barcodeKey);
             if (!targetStore) {

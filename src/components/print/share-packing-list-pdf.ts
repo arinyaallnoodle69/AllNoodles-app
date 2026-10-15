@@ -69,6 +69,7 @@ export function buildPackingListPdfFileName(input: string | undefined) {
 export async function createPackingListPdfPreviewFromDocument(
   sourceDocument: Document,
   fileName?: string,
+  fontEmbedCSS?: string,
 ): Promise<PackingListPdfPreview | null> {
   const pages = Array.from(sourceDocument.querySelectorAll<HTMLElement>(".packing-sheet"));
 
@@ -83,7 +84,7 @@ export async function createPackingListPdfPreviewFromDocument(
     import("html2canvas").then((mod) => mod.default),
   ]);
 
-  if (!cachedFontEmbedCSS) {
+  if (!cachedFontEmbedCSS && !fontEmbedCSS) {
     try {
       cachedFontEmbedCSS = await Promise.race([
         getFontEmbedCSS(sourceDocument.body || document.body),
@@ -149,7 +150,7 @@ export async function createPackingListPdfPreviewFromDocument(
         maxHeight: "none",
         margin: "0",
         boxShadow: "none",
-        display: "block",
+        display: page.classList.contains("billing-invoice-sheet") ? "flex" : "block",
         transform: "none",
         transformOrigin: "top left",
       };
@@ -161,7 +162,7 @@ export async function createPackingListPdfPreviewFromDocument(
             height: captureHeight,
             pixelRatio: selectedPixelRatio,
             width: captureWidth,
-            fontEmbedCSS: cachedFontEmbedCSS || undefined,
+            fontEmbedCSS: fontEmbedCSS || cachedFontEmbedCSS || undefined,
             style: captureStyle,
           });
           await new Promise((resolve) => window.setTimeout(resolve, 80));
@@ -177,7 +178,7 @@ export async function createPackingListPdfPreviewFromDocument(
           height: captureHeight,
           pixelRatio: selectedPixelRatio,
           width: captureWidth,
-          fontEmbedCSS: cachedFontEmbedCSS || undefined,
+          fontEmbedCSS: fontEmbedCSS || cachedFontEmbedCSS || undefined,
           style: captureStyle,
         });
       } catch (captureErr) {

@@ -5,6 +5,7 @@ import { Download, FileText, FolderDown, Image as ImageIcon, Loader2, X } from "
 import { createPortal } from "react-dom";
 import * as htmlToImage from "html-to-image";
 import html2canvas from "html2canvas";
+import { BillingDocumentActions } from "@/components/print/billing-document-actions";
 import { PRINT_ORGANIZATION_NAME } from "@/components/print/print-shared";
 import {
   BILLING_A4_HEIGHT_MM,
@@ -389,6 +390,8 @@ export function BillingPreviewButton({
                   </button>
                 </div>
               </div>
+
+              <BillingDocumentActions rootRef={previewBodyRef} fileName={`ใบวางบิล-${customerCode}-${fromDate}-${toDate}`} disabled={isSaving} />
 
               <div
                 ref={previewBodyRef}

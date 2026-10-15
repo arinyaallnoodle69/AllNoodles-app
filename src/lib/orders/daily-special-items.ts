@@ -71,7 +71,7 @@ export async function getDailySpecialCatalog(organizationId: string): Promise<Da
       .eq("organization_id", organizationId)
       .eq("is_active", true)
       .order("display_order", { ascending: true })
-      .order("name", { ascending: true }),
+      .order("sku", { ascending: true }),
     admin
       .from("product_images")
       .select("product_id, public_url, sort_order")

@@ -16,7 +16,7 @@ test("cart permits the same product/unit in both packaging types and merges only
   let cart = [];
   const selection = { product: { id: "p", name: "ผัดไท" }, unitId: "u", unitLabel: "กก.", baseQty: 1, quantity: 10, minOrderQty: 1, stepOrderQty: null, unitPrice: 100 };
   const invoke = (barcodeMode, quantity) => {
-    const dependencies = { customerId: "ANS109", replacementMode: false, barcodeMode, setCart: update => { cart = update(cart); }, normalizeToRule: value => value, role: "member", setPriceMap() {} };
+    const dependencies = { customerId: "ANS109", replacementMode: false, barcodeMode, reserveMode: false, setCart: update => { cart = update(cart); }, normalizeToRule: value => value, role: "member", setPriceMap() {} };
     const add = new Function(...Object.keys(dependencies), `${compiled};return addManyToCart;`)(...Object.values(dependencies));
     add([{ ...selection, quantity }]);
   };

@@ -41,3 +41,7 @@ yarn-error.log*
 next-env.d.ts
 backup/*.zip
 /ffmpeg.exe
+
+# Generated interactive history fixture (rebuild with output/reserve-history/render.mjs)
+/output/reserve-history/*bundle.js
+/output/reserve-history/*.cjs

@@ -19,6 +19,9 @@ const eslintConfig = defineConfig([
     "fix-revalidate-back.js",
     "lint_output.txt",
     "fix-unit.sql",
+    // Generated browser fixture code; its source render script is linted normally.
+    "output/reserve-history/*bundle.js",
+    "output/reserve-history/*.cjs",
   ]),
 ]);
 

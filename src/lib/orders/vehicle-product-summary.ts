@@ -23,6 +23,7 @@ export type VehicleSummaryProduct = {
   supplierCode?: string | null;
   isFresh?: boolean;
   isBarcode?: boolean;
+  isReserve?: boolean;
 };
 
 export type VehicleSummaryVehicle = {
@@ -51,6 +52,7 @@ type OrderRow = {
   order_items: Array<{
     product_id: string;
     is_barcode?: boolean;
+    supply_source?: string;
     quantity_in_base_unit: number | string | null;
   }>;
   customers: {
@@ -246,7 +248,7 @@ export async function getVehicleProductSummaryData(
         warehouse_id,
         customers!inner(default_vehicle_id, default_warehouse_id, vehicles(id, name)),
         delivery_notes!order_id(vehicle_id, warehouse_id, status, created_at, vehicles(id, name)),
-        order_items(product_id, quantity_in_base_unit, is_barcode)
+        order_items(product_id, quantity_in_base_unit, is_barcode, supply_source)
       `)
       .eq("organization_id", organizationId)
       .neq("status", "cancelled")
@@ -309,13 +311,13 @@ export async function getVehicleProductSummaryData(
   const vehicleIndexById = new Map(vehicles.map((vehicle, index) => [vehicle.id ?? "__unassigned__", index]));
   const summaryRows = new Map<string, { product: VehicleSummaryProduct; qty: number[] }>();
 
-  function getSummaryRow(productId: string, isFresh: boolean, isBarcode = false) {
-    const key = `${productId}:${isFresh ? "fresh" : "stock"}:${isBarcode ? "barcode" : "normal"}`;
+  function getSummaryRow(productId: string, isFresh: boolean, isBarcode = false, isReserve = false) {
+    const key = `${productId}:${isFresh ? "fresh" : "stock"}:${isBarcode ? "barcode" : "normal"}:${isReserve ? "reserve" : "factory"}`;
     let row = summaryRows.get(key);
     if (!row) {
       const product = productById.get(productId);
       if (!product) return null;
-      row = { product: { ...product, id: isBarcode ? `${product.id}:barcode` : product.id, name: `${product.name}${isBarcode ? " (บาร์โค้ด)" : ""}`, isFresh, isBarcode }, qty: vehicles.map(() => 0) };
+      row = { product: { ...product, id: `${product.id}${isBarcode ? ":barcode" : ""}${isReserve ? ":reserve" : ""}`, name: `${product.name}${isBarcode ? " (บาร์โค้ด)" : ""}${isReserve ? " (ใช้สำรอง)" : ""}`, isFresh, isBarcode, isReserve }, qty: vehicles.map(() => 0) };
       summaryRows.set(key, row);
     }
     return row;
@@ -347,7 +349,7 @@ export async function getVehicleProductSummaryData(
         warehouseId,
         fulfillmentModeByProductWarehouse,
       ) === "fresh";
-      const row = getSummaryRow(item.product_id, isFresh, item.is_barcode === true);
+      const row = getSummaryRow(item.product_id, isFresh, item.is_barcode === true, item.supply_source === "reserve");
       if (!row) continue;
       row.qty[vehicleIndex] = (row.qty[vehicleIndex] ?? 0) + Number(item.quantity_in_base_unit ?? 0);
     }
@@ -429,7 +431,7 @@ export async function getFactoryOrderSheetData(
         warehouse_id,
         customers!inner(default_vehicle_id, default_warehouse_id, vehicles(id, name), warehouses(id, name)),
         delivery_notes!order_id(vehicle_id, warehouse_id, status, created_at, vehicles(id, name), warehouses(id, name)),
-        order_items(product_id, quantity_in_base_unit, is_barcode)
+        order_items(product_id, quantity_in_base_unit, is_barcode, supply_source)
       `)
       .eq("organization_id", organizationId)
       .neq("status", "cancelled")
@@ -510,6 +512,7 @@ export async function getFactoryOrderSheetData(
       if (!product) continue;
       const fulfillment = fulfillmentByProductWarehouse.get(modeKey(product.id, warehouseId));
       if (fulfillment?.mode !== "fresh") continue;
+      if (item.supply_source === "reserve") continue;
 
       const supplierName = fulfillment.supplierName || product.supplierName || "โรงงานอนามัย";
       const supplierCode = fulfillment.supplierCode || product.supplierCode || undefined;
