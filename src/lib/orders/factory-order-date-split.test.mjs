@@ -2,11 +2,12 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import ts from "typescript";
+import { isProvincialLotusReserve } from "./provincial-lotus-reserve.ts";
 
 function loadSummary(provincial = false, fulfillmentMode = "fresh", barcode = false, reserve = false) {
   const adjustmentDates = [];
   const queryDates = [];
-  const mode = { product_id: "p1", warehouse_id: "wh", mode: fulfillmentMode, supplier_id: "factory", suppliers: { name: provincial ? "A.ดอกบัว" : "โรงงานมังกร", supplier_code: provincial ? "TYV005" : "dragon" } };
+  const mode = { product_id: "p1", warehouse_id: "wh", mode: fulfillmentMode, supplier_id: "factory", warehouses: { name: provincial ? "คลังต่างจังหวัด" : "คลังกรุงเทพ" }, suppliers: { name: provincial ? "A.ดอกบัว" : "โรงงานมังกร", supplier_code: provincial ? "TYV005" : "dragon" } };
   const rows = {
     products: [{ id: "p1", sku: provincial ? "ANP128" : "ANP180", name: "บะหมี่", unit: "กก.", product_kind: "fresh" }],
     vehicles: [{ id: "bkk", name: provincial ? "รถระนอง1" : "รถกรุงเทพ" }],
@@ -27,9 +28,9 @@ function loadSummary(provincial = false, fulfillmentMode = "fresh", barcode = fa
             ? ["2026-10-12", "2026-10-13", "2026-10-14", "2026-10-15", "2026-10-16", "2026-10-17", "2026-10-18"]
             : ["2026-10-09", "2026-10-10"]).filter(date => date >= from && date <= to);
           return Promise.resolve({ data: dates.map(date => ({
-            id: date, warehouse_id: "wh", assigned_vehicle_id: "bkk",
+            id: date, order_date: date, warehouse_id: "wh", assigned_vehicle_id: "bkk",
             customers: { default_vehicle_id: "bkk", default_warehouse_id: "wh" },
-            order_items: [{ product_id: "p1", quantity_in_base_unit: date.endsWith("09") ? 20 : 30 }, ...(barcode ? [{ product_id: "p1", quantity_in_base_unit: 6, is_barcode: true }] : []), ...(reserve ? [{ product_id: "p1", quantity_in_base_unit: 8, supply_source: "reserve" }] : [])],
+            order_items: [{ product_id: "p1", quantity_in_base_unit: date.endsWith("09") ? 20 : 30, supply_source: "legacy" }, ...(barcode ? [{ product_id: "p1", quantity_in_base_unit: 6, is_barcode: true }] : []), ...(reserve ? [{ product_id: "p1", quantity_in_base_unit: 8, supply_source: "reserve" }] : [])],
           })) }).then(resolve);
         },
       };
@@ -38,6 +39,7 @@ function loadSummary(provincial = false, fulfillmentMode = "fresh", barcode = fa
   };
   const dependencies = {
     "server-only": {},
+    "./provincial-lotus-reserve": { isProvincialLotusReserve },
     "next/cache": { cacheLife() {}, cacheTag() {} },
     "@/lib/supabase/admin": { getSupabaseAdmin: () => admin },
     "@/lib/products/sort-by-category": { sortProductsByCategory: products => products },
@@ -147,4 +149,17 @@ test("reserve is excluded from factory demand but included once in the loading q
     assert.ok(reserveIndex >= 0);
     assert.deepEqual(loading.qty[reserveIndex], [8]);
   }
+});
+
+
+test("Lotus loading sheets put old automatic reserve on stock sheets except factory weekdays", async () => {
+ const summary = loadSummary(true);
+ for (let day = 12; day <= 18; day++) {
+  const date = `2026-10-${day}`;
+  const result = await summary.getVehicleProductSummaryData("org",date,date);
+  const ordered = result.products.map((product,index)=>({product,quantity:result.qty[index][0]})).filter(row=>row.quantity===30);
+  assert.equal(ordered.length,1,date);
+  assert.equal(ordered[0].product.isFresh,day===12||day===15,date);
+  assert.equal(ordered[0].product.isReserve,day!==12&&day!==15,date);
+ }
 });

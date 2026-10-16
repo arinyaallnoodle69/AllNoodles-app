@@ -111,5 +111,29 @@ begin
   delete from reserve_feature_test.orders where id=md5('normal-delete')::uuid;
   if exists(select 1 from reserve_feature_test.manual_order_save_requests where request_id=md5('normal-request')::uuid) then raise exception 'Normal deletion must remove its request receipt'; end if;
 end $tests$;
+
+-- Historical orders must follow the same weekday rule as newly saved orders.
+alter table reserve_feature_test.order_items disable trigger user;
+do $legacy_tests$
+declare day date; before_qty numeric; history jsonb;
+begin
+  select available into before_qty from reserve_feature_test.provincial_fresh_reserve_stock_balances;
+  for day in select generate_series('2026-10-12'::date,'2026-10-18'::date,'1 day')::date loop
+    insert into reserve_feature_test.orders(id,organization_id,customer_id,warehouse_id,order_date,status)
+      values(md5('legacy-'||day)::uuid,md5('org')::uuid,md5('customer')::uuid,md5('prov')::uuid,day,'submitted');
+    insert into reserve_feature_test.order_items(organization_id,order_id,product_id,quantity,quantity_in_base_unit,supply_source)
+      values(md5('org')::uuid,md5('legacy-'||day)::uuid,md5('product')::uuid,1,1,'legacy');
+  end loop;
+  if (select available from reserve_feature_test.provincial_fresh_reserve_stock_balances)<>before_qty-5 then
+    raise exception 'Legacy orders must deduct only five reserve weekdays';
+  end if;
+  execute replace(pg_get_functiondef('public.get_reserve_product_history(uuid,uuid,uuid,date)'::regprocedure),'public.','reserve_feature_test.');
+  history:=reserve_feature_test.get_reserve_product_history(md5('org')::uuid,md5('provgroup')::uuid,md5('product')::uuid,'2026-10-12');
+  if exists(select 1 from jsonb_array_elements(history->'events') e
+    where e->>'reason'='legacy' and extract(isodow from (e->>'at')::timestamptz at time zone 'Asia/Bangkok') in (1,4)) then
+    raise exception 'Factory weekdays must not appear as legacy withdrawals';
+  end if;
+  if (history->>'available')::numeric<>before_qty-5 then raise exception 'History and stock must agree'; end if;
+end $legacy_tests$;
 rollback;
 select 'reserve source lifecycle, weekday, unit, warehouse, shortage and retry checks passed; fixtures rolled back' result;

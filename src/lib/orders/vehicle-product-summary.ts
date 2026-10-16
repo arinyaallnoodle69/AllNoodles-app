@@ -1,5 +1,7 @@
 import "server-only";
 
+import { isProvincialLotusReserve } from "./provincial-lotus-reserve";
+
 import { cacheLife, cacheTag } from "next/cache";
 import { sortProductsByCategory } from "@/lib/products/sort-by-category";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
@@ -45,6 +47,7 @@ export type VehicleProductSummaryData = {
 };
 
 type OrderRow = {
+  order_date: string;
   assigned_vehicle_id: string | null;
   id: string;
   customer_id: string;
@@ -84,6 +87,7 @@ type DbCategory = {
 };
 
 type ProductModeRow = {
+  warehouses?: { name: string } | null;
   mode: ProductWarehouseFulfillmentMode;
   product_id: string;
   supplier_id: string | null;
@@ -244,6 +248,7 @@ export async function getVehicleProductSummaryData(
       .select(`
         id,
         assigned_vehicle_id,
+        order_date,
         customer_id,
         warehouse_id,
         customers!inner(default_vehicle_id, default_warehouse_id, vehicles(id, name)),
@@ -261,7 +266,7 @@ export async function getVehicleProductSummaryData(
       .order("sort_order", { ascending: true })
       .order("created_at", { ascending: true }),
     productWarehouseModesTable
-      .select("product_id, warehouse_id, mode")
+      .select("product_id, warehouse_id, mode, suppliers(supplier_code), warehouses(name)")
       .eq("organization_id", organizationId),
     loadSortedProducts(organizationId),
     getDailySpecialPrintItems(organizationId, date, endDate),
@@ -271,6 +276,7 @@ export async function getVehicleProductSummaryData(
   if (vehiclesResult.error) throw new Error(vehiclesResult.error.message ?? "Failed to load vehicles.");
   if (modesResult.error) throw new Error(modesResult.error.message ?? "Failed to load warehouse product modes.");
 
+  const fulfillmentDetails = new Map(((modesResult.data ?? []) as ProductModeRow[]).map(row => [modeKey(row.product_id, row.warehouse_id), row]));
   const fulfillmentModeByProductWarehouse = new Map(
     ((modesResult.data ?? []) as ProductModeRow[]).map((row) => [
       modeKey(row.product_id, row.warehouse_id),
@@ -344,12 +350,14 @@ export async function getVehicleProductSummaryData(
     }
 
     for (const item of order.order_items ?? []) {
-      const isFresh = resolveVehicleSummaryProductMode(
+      const mode = warehouseId ? fulfillmentDetails.get(modeKey(item.product_id, warehouseId)) : undefined;
+      const provincialReserve = isProvincialLotusReserve(mode?.mode, mode?.warehouses?.name, mode?.suppliers?.supplier_code, order.order_date, item.supply_source);
+      const isFresh = !provincialReserve && resolveVehicleSummaryProductMode(
         item.product_id,
         warehouseId,
         fulfillmentModeByProductWarehouse,
       ) === "fresh";
-      const row = getSummaryRow(item.product_id, isFresh, item.is_barcode === true, item.supply_source === "reserve");
+      const row = getSummaryRow(item.product_id, isFresh, item.is_barcode === true, provincialReserve || item.supply_source === "reserve");
       if (!row) continue;
       row.qty[vehicleIndex] = (row.qty[vehicleIndex] ?? 0) + Number(item.quantity_in_base_unit ?? 0);
     }
@@ -427,6 +435,7 @@ export async function getFactoryOrderSheetData(
       .select(`
         id,
         assigned_vehicle_id,
+        order_date,
         customer_id,
         warehouse_id,
         customers!inner(default_vehicle_id, default_warehouse_id, vehicles(id, name), warehouses(id, name)),
@@ -512,7 +521,7 @@ export async function getFactoryOrderSheetData(
       if (!product) continue;
       const fulfillment = fulfillmentByProductWarehouse.get(modeKey(product.id, warehouseId));
       if (fulfillment?.mode !== "fresh") continue;
-      if (item.supply_source === "reserve") continue;
+      if (item.supply_source === "reserve" || isProvincialLotusReserve(fulfillment.mode, warehouseName, fulfillment.supplierCode, order.order_date, item.supply_source)) continue;
 
       const supplierName = fulfillment.supplierName || product.supplierName || "โรงงานอนามัย";
       const supplierCode = fulfillment.supplierCode || product.supplierCode || undefined;

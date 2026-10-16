@@ -28,10 +28,10 @@ test("cart permits the same product/unit in both packaging types and merges only
 
 test("barcode SKU allowlist agrees with the database guard", () => {
   const configuration = readFileSync(new URL("../../lib/orders/barcode-packaging.ts", import.meta.url), "utf8");
-  const sql = readFileSync(new URL("../../../supabase/migrations/20261014164834_order_barcode_packaging.sql", import.meta.url), "utf8");
-  const expected = ["ANP137", "ANP138", "ANP139", "ANP140", "ANP146", "ANP115", "ANP229", "ANP119", "ANP136", "ANP088", "ANP087", "ANP052", "ANP054", "ANP109"].sort();
+  const sql = readFileSync(new URL("../../../supabase/migrations/20261016043954_remove_anp054_barcode_packaging.sql", import.meta.url), "utf8");
+  const expected = ["ANP137", "ANP138", "ANP139", "ANP140", "ANP146", "ANP115", "ANP229", "ANP119", "ANP136", "ANP088", "ANP087", "ANP052", "ANP109", "ANP097"].sort();
   assert.deepEqual([...configuration.matchAll(/ANP\d+/g)].map(match => match[0]).sort(), expected);
-  assert.deepEqual([...sql.matchAll(/ANP\d+/g)].map(match => match[0]).sort(), expected);
+  assert.deepEqual([...sql.match(/p\.sku in \(([^)]+)\)/)[1].matchAll(/ANP\d+/g)].map(match => match[0]).sort(), expected);
 });
 
 test("tools menu flips above the trigger when the totals footer would cover it", () => {

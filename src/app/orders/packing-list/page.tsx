@@ -449,6 +449,7 @@ async function PackingListPage({ searchParams }: Props) {
       const groupedStores = new Map<string, GroupedStore>();
       const productMap = new Map<string, ProductDescriptor>();
       const vehicleIdsWithCustomerOrders = new Set<string>();
+      const customerIdsWithOrders = new Set(dateOrders.map((order) => order.customers.id));
 
       for (const row of customersResult.data ?? []) {
         const vehicleId = row.default_vehicle_id;
@@ -583,7 +584,10 @@ async function PackingListPage({ searchParams }: Props) {
       }
 
       for (const [storeGroupKey, store] of groupedStores) {
-        if (store.isRosterStore && !vehicleIdsWithCustomerOrders.has(store.vehicleId ?? "")) {
+        if (store.isRosterStore && (
+          !vehicleIdsWithCustomerOrders.has(store.vehicleId ?? "") ||
+          (!store.hasOrder && customerIdsWithOrders.has(store.customer.id))
+        )) {
           groupedStores.delete(storeGroupKey);
         }
       }
