@@ -56,6 +56,7 @@ test("failed manual saves reuse a request ID, changed contents use a new request
   let nextId = 0, pendingSave;
   const dependencies = {
     pending: false, setError() {}, customerId: "shop", cart: [{ productId: "p", quantity: 2, minOrderQty: 1, stepOrderQty: 1, unitPrice: 100 }],
+    entry: { ready: true, busy: false, token: { current: "entry-token" }, saving: { current: false } },
     isValidByRule: () => true, role: "member", showSubmitPopup() {}, startTransition: callback => { pendingSave = callback(); },
     orderDate: "2026-10-15", notes: "", saveRequestRef, saveInFlightRef: { current: false }, FormData, crypto: { randomUUID: () => `request-${++nextId}` },
     createManualOrderAction: async data => { requestIds.push(data.get("requestId")); return { error: "network" }; },
@@ -65,4 +66,23 @@ test("failed manual saves reuse a request ID, changed contents use a new request
   dependencies.cart[0].quantity = 3;
   submit(); await pendingSave;
   assert.deepEqual(requestIds, ["request-1", "request-1", "request-2"]);
+  assert.equal(dependencies.entry.saving.current, false);
+  dependencies.entry.ready = false;
+  submit(); await pendingSave;
+  assert.equal(requestIds.length, 3, "a device without a confirmed lease cannot submit");
+});
+
+test("a Realtime update arriving before save response does not double the ordered badge", async () => {
+  let pendingSave, counts = { shop: 1 };
+  const submit = bind("handleSubmit", {
+    pending: false, setError() {}, customerId: "shop", cart: [{ productId: "p", quantity: 2, minOrderQty: 1, stepOrderQty: 1, unitPrice: 100 }],
+    entry: { ready: true, busy: false, token: { current: "entry-token" }, saving: { current: false } },
+    isValidByRule: () => true, role: "member", showSubmitPopup() {}, startTransition: callback => { pendingSave = callback(); },
+    orderDate: "2026-10-16", notes: "", saveRequestRef: { current: null }, saveInFlightRef: { current: false }, FormData,
+    crypto: { randomUUID: () => "request" }, createManualOrderAction: async () => ({ orderNumber: "DN1" }),
+    setCustomerOrderCountsByDate: update => { counts = update(counts); }, successToastTimerRef: { current: null },
+    setSaveWarning() {}, setSuccessToast() {}, setTimeout: () => 1, resetForm() {},
+  });
+  submit(); await pendingSave;
+  assert.deepEqual(counts, { shop: 1 });
 });

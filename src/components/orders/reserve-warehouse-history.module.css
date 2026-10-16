@@ -1,5 +1,4 @@
-.history { color: #15154f; font-size: 16px !important; line-height: 1.55; }
-.history * { font-weight: 500 !important; }
+.history { color: #101044; font-size: 16px !important; font-weight: 400; line-height: 1.55; }
 .filters { padding: 16px 12px 10px; }
 .warehouse { display: flex; align-items: center; gap: 8px; font-size: 17px !important; font-weight: 700 !important; margin-bottom: 12px; }
 .warehouse svg, .presets svg { flex-shrink: 0; }

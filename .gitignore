@@ -45,3 +45,5 @@ backup/*.zip
 # Generated interactive history fixture (rebuild with output/reserve-history/render.mjs)
 /output/reserve-history/*bundle.js
 /output/reserve-history/*.cjs
+/output/order-entry/*.cjs
+/output/order-entry/*bundle.js

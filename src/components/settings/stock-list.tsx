@@ -4,7 +4,7 @@ import React, { memo, useState, useEffect, useMemo } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { Boxes, Package2, Plus, ClipboardEdit, Coins, Wallet, Warehouse, Search, PackagePlus, ListFilter, X } from "lucide-react";
+import { Boxes, Package2, Plus, ClipboardEdit, Coins, Wallet, Warehouse, Search, PackagePlus } from "lucide-react";
 import { MobileSearchDrawer } from "@/components/mobile-search/mobile-search-drawer";
 import { useMobileSearch } from "@/components/mobile-search/mobile-search-context";
 import {
@@ -15,6 +15,7 @@ import {
 import { normalizeSearch } from "@/lib/utils/search";
 import { StockReceiveForm } from "./stock-receive-form";
 import { StockAdjustForm } from "./stock-adjust-form";
+import { ProductFactoryBrandFilters } from "./product-factory-brand-filters";
 import { StockTabs } from "./stock-tabs";
 import type { StockProductOption, StockSupplierOption } from "@/lib/stock/admin";
 import { useClientRole } from "@/lib/auth/client-role";
@@ -323,8 +324,6 @@ export function StockList({ products, warehouses, initialWarehouseId, baseHref =
   const [selectedWarehouseId, setSelectedWarehouseId] = useState(fallbackWarehouseId);
   const [selectedFactory, setSelectedFactory] = useState<string | "__all__">("__all__");
   const [selectedBrand, setSelectedBrand] = useState<string | "__all__">("__all__");
-  const [mobileFilterDrawer, setMobileFilterDrawer] = useState<"brand" | "factory" | null>(null);
-  const [isMobileFilterDrawerClosing, setIsMobileFilterDrawerClosing] = useState(false);
 
   const selectedWarehouseName = warehouses.find((warehouse) => warehouse.id === selectedWarehouseId)?.name ?? "คลังสินค้า";
 
@@ -372,7 +371,7 @@ export function StockList({ products, warehouses, initialWarehouseId, baseHref =
     return unsortedBrands.sort((a, b) => a.localeCompare(b, "th"));
   }, [stockProductsForWarehouse, selectedFactory, selectedWarehouseId, brands]);
 
-  const handleFactorySelect = (factory: string, e?: React.MouseEvent<HTMLButtonElement>) => {
+  const handleFactorySelect = (factory: string) => {
     setSelectedFactory(factory);
     if (factory === "__all__") {
       setSelectedBrand("__all__");
@@ -388,29 +387,10 @@ export function StockList({ products, warehouses, initialWarehouseId, baseHref =
         setSelectedBrand("__all__");
       }
     }
-    if (e) {
-      e.currentTarget.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
-    }
   };
 
-  const handleBrandSelect = (brand: string, e?: React.MouseEvent<HTMLButtonElement>) => {
+  const handleBrandSelect = (brand: string) => {
     setSelectedBrand(brand);
-    if (e) {
-      e.currentTarget.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
-    }
-  };
-
-  const openMobileFilterDrawer = (type: "brand" | "factory") => {
-    setIsMobileFilterDrawerClosing(false);
-    setMobileFilterDrawer(type);
-  };
-
-  const closeMobileFilterDrawer = () => {
-    setIsMobileFilterDrawerClosing(true);
-    setTimeout(() => {
-      setMobileFilterDrawer(null);
-      setIsMobileFilterDrawerClosing(false);
-    }, 200);
   };
 
   const filteredProducts = useMemo(() => {
@@ -573,194 +553,13 @@ export function StockList({ products, warehouses, initialWarehouseId, baseHref =
           </div>
 
 
-          {/* Desktop Factory Row */}
-          {factoryOptions.length > 0 && (
-            <div className="flex items-center gap-5 border-t border-slate-100 pt-3">
-              <span className="text-xs font-black uppercase tracking-wider text-slate-400 shrink-0 min-w-[70px]">
-                โรงงาน:
-              </span>
-              <div className="flex min-w-0 flex-1 items-center gap-6 overflow-x-auto no-scrollbar">
-                <button
-                  type="button"
-                  onClick={(e) => handleFactorySelect("__all__", e)}
-                  className={`relative h-10 shrink-0 px-1 text-sm font-black whitespace-nowrap transition-colors ${
-                    selectedFactory === "__all__"
-                      ? "text-[#4A148C]"
-                      : "text-slate-500 hover:text-[#4A148C]"
-                  }`}
-                >
-                  ทุกโรงงาน
-                  {selectedFactory === "__all__" ? (
-                    <span className="absolute inset-x-0 bottom-0 h-0.5 bg-[#4A148C]" />
-                  ) : null}
-                </button>
-
-                {factoryOptions.map((factory) => (
-                  <button
-                    key={factory}
-                    type="button"
-                    onClick={(e) => handleFactorySelect(factory, e)}
-                    className={`relative h-10 shrink-0 px-1 text-sm font-black whitespace-nowrap transition-colors ${
-                      selectedFactory === factory
-                        ? "text-[#4A148C]"
-                        : "text-slate-500 hover:text-[#4A148C]"
-                    }`}
-                  >
-                    {factory}
-                    {selectedFactory === factory ? (
-                      <span className="absolute inset-x-0 bottom-0 h-0.5 bg-[#4A148C]" />
-                    ) : null}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Desktop Brand Row */}
-          {brandOptions.length > 0 && (
-            <div className="flex items-center gap-5 border-t border-slate-100 pt-3">
-              <span className="text-xs font-black uppercase tracking-wider text-slate-400 shrink-0 min-w-[70px]">
-                แบรนด์:
-              </span>
-              <div className="flex min-w-0 flex-1 items-center gap-6 overflow-x-auto no-scrollbar">
-                <button
-                  type="button"
-                  onClick={(e) => handleBrandSelect("__all__", e)}
-                  className={`relative h-10 shrink-0 px-1 text-sm font-black whitespace-nowrap transition-colors ${
-                    selectedBrand === "__all__"
-                      ? "text-[#4A148C]"
-                      : "text-slate-500 hover:text-[#4A148C]"
-                  }`}
-                >
-                  ทั้งหมด
-                  {selectedBrand === "__all__" ? (
-                    <span className="absolute inset-x-0 bottom-0 h-0.5 bg-[#4A148C]" />
-                  ) : null}
-                </button>
-
-                {brandOptions.map((b) => (
-                  <button
-                    key={b}
-                    type="button"
-                    onClick={(e) => handleBrandSelect(b, e)}
-                    className={`relative h-10 shrink-0 px-1 text-sm font-black whitespace-nowrap transition-colors ${
-                      selectedBrand === b
-                        ? "text-[#4A148C]"
-                        : "text-slate-500 hover:text-[#4A148C]"
-                    }`}
-                  >
-                    {b}
-                    {selectedBrand === b ? (
-                      <span className="absolute inset-x-0 bottom-0 h-0.5 bg-[#4A148C]" />
-                    ) : null}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
+          <ProductFactoryBrandFilters variant="desktop" factoryOptions={factoryOptions} brandOptions={brandOptions} selectedFactory={selectedFactory} selectedBrand={selectedBrand} onFactorySelect={handleFactorySelect} onBrandSelect={handleBrandSelect} />
         </div>
       </div>
 
       <StockTabs current="stock" onChangeTab={onChangeTab} />
 
-      {/* Mobile-only Factory & Brand Filter */}
-      <div className="mb-0 mt-2 block w-full max-w-full overflow-hidden border-b border-slate-200 bg-white px-4 py-1 lg:hidden">
-        {factoryOptions.length > 0 && (
-          <div className="flex items-center gap-5">
-            <button
-              type="button"
-              onClick={() => openMobileFilterDrawer("factory")}
-              className="flex h-12 shrink-0 items-center gap-1.5 text-sm font-black text-[#4A148C]"
-              aria-label="เปิดรายการโรงงานทั้งหมด"
-            >
-              โรงงาน
-              <ListFilter className="h-4 w-4" strokeWidth={2.5} />
-            </button>
-            <div className="no-scrollbar flex min-w-0 flex-1 items-center gap-6 overflow-x-auto overscroll-x-contain -mx-4 px-4">
-              <button
-                type="button"
-                onClick={(e) => handleFactorySelect("__all__", e)}
-                className={`relative h-12 shrink-0 px-1 text-sm font-black whitespace-nowrap transition-colors ${
-                  selectedFactory === "__all__"
-                    ? "text-[#4A148C]"
-                    : "text-slate-500"
-                }`}
-              >
-                ทุกโรงงาน
-                {selectedFactory === "__all__" ? (
-                  <span className="absolute inset-x-0 bottom-0 h-0.5 bg-[#4A148C]" />
-                ) : null}
-              </button>
-
-              {factoryOptions.map((factory) => (
-                <button
-                  key={factory}
-                  type="button"
-                  onClick={(e) => handleFactorySelect(factory, e)}
-                  className={`relative h-12 shrink-0 px-1 text-sm font-black whitespace-nowrap transition-colors ${
-                    selectedFactory === factory
-                      ? "text-[#4A148C]"
-                      : "text-slate-500"
-                  }`}
-                >
-                  {factory}
-                  {selectedFactory === factory ? (
-                    <span className="absolute inset-x-0 bottom-0 h-0.5 bg-[#4A148C]" />
-                  ) : null}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {brandOptions.length > 0 && (
-          <div className="flex items-center gap-5 border-t border-slate-100">
-            <button
-              type="button"
-              onClick={() => openMobileFilterDrawer("brand")}
-              className="flex h-12 shrink-0 items-center gap-1.5 text-sm font-black text-[#4A148C]"
-              aria-label="เปิดรายการแบรนด์ทั้งหมด"
-            >
-              แบรนด์
-              <ListFilter className="h-4 w-4" strokeWidth={2.5} />
-            </button>
-            <div className="no-scrollbar flex min-w-0 flex-1 items-center gap-6 overflow-x-auto overscroll-x-contain -mx-4 px-4">
-              <button
-                type="button"
-                onClick={(e) => handleBrandSelect("__all__", e)}
-                className={`relative h-12 shrink-0 px-1 text-sm font-black whitespace-nowrap transition-colors ${
-                  selectedBrand === "__all__"
-                    ? "text-[#4A148C]"
-                    : "text-slate-500"
-                }`}
-              >
-                ทั้งหมด
-                {selectedBrand === "__all__" ? (
-                  <span className="absolute inset-x-0 bottom-0 h-0.5 bg-[#4A148C]" />
-                ) : null}
-              </button>
-
-              {brandOptions.map((b) => (
-                <button
-                  key={b}
-                  type="button"
-                  onClick={(e) => handleBrandSelect(b, e)}
-                  className={`relative h-12 shrink-0 px-1 text-sm font-black whitespace-nowrap transition-colors ${
-                    selectedBrand === b
-                      ? "text-[#4A148C]"
-                      : "text-slate-500"
-                  }`}
-                >
-                  {b}
-                  {selectedBrand === b ? (
-                    <span className="absolute inset-x-0 bottom-0 h-0.5 bg-[#4A148C]" />
-                  ) : null}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
+      <ProductFactoryBrandFilters variant="mobile" factoryOptions={factoryOptions} brandOptions={brandOptions} selectedFactory={selectedFactory} selectedBrand={selectedBrand} onFactorySelect={handleFactorySelect} onBrandSelect={handleBrandSelect} />
 
       <MobileSearchDrawer title="ค้นหาสต็อก">
         <div className="space-y-4">
@@ -918,127 +717,6 @@ export function StockList({ products, warehouses, initialWarehouseId, baseHref =
           onClose={closeModals}
         />
       )}
-
-      {mobileFilterDrawer ? (
-        <div
-          className={`fixed inset-0 z-[120] flex items-end bg-slate-950/45 lg:hidden ${
-            isMobileFilterDrawerClosing
-              ? "animate-out fade-out duration-200"
-              : "animate-in fade-in duration-200"
-          }`}
-        >
-          <button
-            type="button"
-            className="absolute inset-0"
-            onClick={closeMobileFilterDrawer}
-            aria-label="ปิดรายการตัวกรอง"
-          />
-          <section
-            className={`relative flex max-h-[78dvh] w-full flex-col overflow-hidden rounded-t-[1.5rem] bg-white shadow-[0_-20px_60px_rgba(15,23,42,0.22)] ${
-              isMobileFilterDrawerClosing
-                ? "animate-out slide-out-to-bottom-full duration-250 ease-in"
-                : "animate-in slide-in-from-bottom-full duration-300 ease-out"
-            }`}
-          >
-            <header className="flex items-center justify-between border-b border-[#E1BEE7] px-5 py-4">
-              <div>
-                <p className="text-xs font-black uppercase tracking-[0.14em] text-[#4A148C]">
-                  ตัวกรองสต็อก
-                </p>
-                <h3 className="mt-1 text-xl font-black text-slate-950">
-                  {mobileFilterDrawer === "factory" ? "เลือกโรงงาน" : "เลือกแบรนด์"}
-                </h3>
-              </div>
-              <button
-                type="button"
-                onClick={closeMobileFilterDrawer}
-                className="flex h-11 w-11 items-center justify-center rounded-full border border-[#E1BEE7] text-[#4A148C]"
-                aria-label="ปิด"
-              >
-                <X className="h-5 w-5" strokeWidth={2.5} />
-              </button>
-            </header>
-
-            <div className="min-h-0 flex-1 overflow-y-auto px-5 py-2">
-              {mobileFilterDrawer === "factory" ? (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      handleFactorySelect("__all__");
-                      closeMobileFilterDrawer();
-                    }}
-                    className={`flex min-h-14 w-full items-center justify-between border-b border-[#E1BEE7]/70 text-left text-base font-black ${
-                      selectedFactory === "__all__" ? "text-[#4A148C]" : "text-slate-950"
-                    }`}
-                  >
-                    ทุกโรงงาน
-                    {selectedFactory === "__all__" ? (
-                      <span className="h-2.5 w-2.5 rounded-full bg-[#4A148C]" />
-                    ) : null}
-                  </button>
-
-                  {factoryOptions.map((factory) => (
-                    <button
-                      key={factory}
-                      type="button"
-                      onClick={() => {
-                        handleFactorySelect(factory);
-                        closeMobileFilterDrawer();
-                      }}
-                      className={`flex min-h-14 w-full items-center justify-between border-b border-[#E1BEE7]/70 text-left text-base font-black ${
-                        selectedFactory === factory ? "text-[#4A148C]" : "text-slate-950"
-                      }`}
-                    >
-                      {factory}
-                      {selectedFactory === factory ? (
-                        <span className="h-2.5 w-2.5 rounded-full bg-[#4A148C]" />
-                      ) : null}
-                    </button>
-                  ))}
-                </>
-              ) : (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      handleBrandSelect("__all__");
-                      closeMobileFilterDrawer();
-                    }}
-                    className={`flex min-h-14 w-full items-center justify-between border-b border-[#E1BEE7]/70 text-left text-base font-black ${
-                      selectedBrand === "__all__" ? "text-[#4A148C]" : "text-slate-950"
-                    }`}
-                  >
-                    ทั้งหมด
-                    {selectedBrand === "__all__" ? (
-                      <span className="h-2.5 w-2.5 rounded-full bg-[#4A148C]" />
-                    ) : null}
-                  </button>
-
-                  {brandOptions.map((b) => (
-                    <button
-                      key={b}
-                      type="button"
-                      onClick={() => {
-                        handleBrandSelect(b);
-                        closeMobileFilterDrawer();
-                      }}
-                      className={`flex min-h-14 w-full items-center justify-between border-b border-[#E1BEE7]/70 text-left text-base font-black ${
-                        selectedBrand === b ? "text-[#4A148C]" : "text-slate-950"
-                      }`}
-                    >
-                      {b}
-                      {selectedBrand === b ? (
-                        <span className="h-2.5 w-2.5 rounded-full bg-[#4A148C]" />
-                      ) : null}
-                    </button>
-                  ))}
-                </>
-              )}
-            </div>
-          </section>
-        </div>
-      ) : null}
     </>
   );
 }

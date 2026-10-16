@@ -4,7 +4,7 @@ do $setup$
 declare name text; definition text;
 begin
   perform set_config('app.reserve_mutation_order',md5('bkkorder')::uuid::text,true);
-  foreach name in array array['organizations','app_users','warehouses','suppliers','vehicles','customers','products','product_sale_units','orders','order_items','delivery_notes','fresh_reserve_stock_groups','fresh_reserve_stock_openings','fresh_reserve_stock_movements','product_warehouse_fulfillment_modes','daily_order_special_items','customer_product_prices','manual_order_save_requests'] loop
+  foreach name in array array['organizations','app_users','warehouses','suppliers','vehicles','customers','products','product_sale_units','orders','order_items','delivery_notes','fresh_reserve_stock_groups','fresh_reserve_stock_openings','fresh_reserve_stock_movements','product_warehouse_fulfillment_modes','daily_order_special_items','customer_product_prices','manual_order_save_requests','order_entry_leases'] loop
     execute format('create table reserve_feature_test.%I as select * from public.%I with no data',name,name);
   end loop;
   foreach name in array array['organizations','orders','fresh_reserve_stock_groups'] loop
@@ -14,6 +14,7 @@ begin
     execute format('alter table reserve_feature_test.%I alter column id set default gen_random_uuid()',name);
   end loop;
   alter table reserve_feature_test.order_items alter column supply_source set default 'auto';
+  alter table reserve_feature_test.order_entry_leases add primary key(organization_id,customer_id,order_date);
   if not exists(select 1 from pg_constraint where conrelid='public.manual_order_save_requests'::regclass and conname='manual_order_save_requests_order_id_fkey' and confdeltype='c') then
     raise exception 'Request receipts must permit normal order deletion';
   end if;
@@ -23,7 +24,7 @@ begin
     execute 'create view reserve_feature_test.'||name||' as '||replace(pg_get_viewdef(('public.'||name)::regclass,true),'public.','reserve_feature_test.');
   end loop;
   for definition in select pg_get_functiondef(p.oid) from pg_proc p join pg_namespace n on n.oid=p.pronamespace
-    where n.nspname='public' and p.proname in ('merge_order_items_atomic','save_order_items_and_delivery','capture_fresh_reserve_stock_special','fresh_reserve_order_quantities','resolve_fresh_supply_source','guard_fresh_reserve_item','log_fresh_reserve_order_delta','capture_fresh_reserve_item_source','guard_fresh_reserve_order','capture_fresh_reserve_order_status','guard_reserve_remaining_overlap','guard_reserve_delivery_warehouse','save_manual_order_with_reserve','protect_reserved_items_from_rebuild','protect_reserved_product_mode') loop
+    where n.nspname='public' and p.proname in ('merge_order_items_atomic','save_order_items_and_delivery','capture_fresh_reserve_stock_special','fresh_reserve_order_quantities','resolve_fresh_supply_source','guard_fresh_reserve_item','log_fresh_reserve_order_delta','capture_fresh_reserve_item_source','guard_fresh_reserve_order','capture_fresh_reserve_order_status','guard_reserve_remaining_overlap','guard_reserve_delivery_warehouse','save_manual_order_with_reserve','protect_reserved_items_from_rebuild','protect_reserved_product_mode','order_entry_lease','save_manual_order_with_lease') loop
     execute replace(definition,'public.','reserve_feature_test.');
   end loop;
 end $setup$;
@@ -135,5 +136,40 @@ begin
   end if;
   if (history->>'available')::numeric<>before_qty-5 then raise exception 'History and stock must agree'; end if;
 end $legacy_tests$;
+do $lease_tests$
+declare a uuid:=md5('device-a')::uuid; b uuid:=md5('device-b')::uuid; result jsonb; items jsonb;
+  failed boolean; saved_id uuid; before_qty numeric;
+begin
+  items:=jsonb_build_array(jsonb_build_object('productId',md5('product')::uuid,'productSaleUnitId',md5('unit')::uuid,'quantity',1,'quantityInBaseUnit',5,'saleUnitRatio',5,'unitPrice',10));
+  result:=reserve_feature_test.order_entry_lease(md5('org')::uuid,md5('user')::uuid,'same-login',a,'2026-10-12',md5('customer')::uuid,'acquire');
+  if not (result->>'granted')::boolean then raise exception 'First device must acquire'; end if;
+  result:=reserve_feature_test.order_entry_lease(md5('org')::uuid,md5('user')::uuid,'same-login',b,'2026-10-12',md5('customer')::uuid,'acquire');
+  if (result->>'granted')::boolean then raise exception 'Same account second device must be blocked'; end if;
+  result:=reserve_feature_test.order_entry_lease(md5('org')::uuid,md5('user')::uuid,'different-session',a,'2026-10-12',md5('customer')::uuid,'renew');
+  if (result->>'granted')::boolean then raise exception 'Owner token must be session bound'; end if;
+  perform reserve_feature_test.order_entry_lease(md5('org')::uuid,md5('user')::uuid,'same-login',b,'2026-10-12',md5('customer')::uuid,'release');
+  if not exists(select 1 from reserve_feature_test.order_entry_leases where owner_token=a) then raise exception 'Foreign release must not clear owner'; end if;
+  failed:=false;
+  begin
+    perform reserve_feature_test.save_manual_order_with_reserve(md5('org')::uuid,md5('user')::uuid,md5('customer')::uuid,'2026-10-12','','created',items,md5('old-client-request')::uuid);
+  exception when others then failed:=true; end;
+  if not failed then raise exception 'Old save path must respect active lease'; end if;
+  update reserve_feature_test.order_entry_leases set expires_at=clock_timestamp()-interval '1 second' where owner_token=a;
+  result:=reserve_feature_test.order_entry_lease(md5('org')::uuid,md5('user')::uuid,'same-login',b,'2026-10-12',md5('customer')::uuid,'acquire');
+  if not (result->>'granted')::boolean then raise exception 'Expired lease must be reclaimable'; end if;
+  failed:=false;
+  begin
+    perform reserve_feature_test.save_manual_order_with_lease(md5('org')::uuid,md5('user')::uuid,md5('customer')::uuid,'2026-10-12','','created',items,md5('lease-request')::uuid,a,'same-login');
+  exception when others then failed:=true; end;
+  if not failed then raise exception 'Expired owner cannot save'; end if;
+  result:=reserve_feature_test.save_manual_order_with_lease(md5('org')::uuid,md5('user')::uuid,md5('customer')::uuid,'2026-10-12','','created',items,md5('lease-request')::uuid,b,'same-login');
+  saved_id:=(result->>'orderId')::uuid;
+  if exists(select 1 from reserve_feature_test.order_entry_leases where owner_token=b) then raise exception 'Successful save must release immediately'; end if;
+  select sum(quantity_in_base_unit) into before_qty from reserve_feature_test.order_items where order_id=saved_id;
+  result:=reserve_feature_test.save_manual_order_with_lease(md5('org')::uuid,md5('user')::uuid,md5('customer')::uuid,'2026-10-12','','created',items,md5('lease-request')::uuid,b,'same-login');
+  if (result->>'replayed')::boolean is not true or (select sum(quantity_in_base_unit) from reserve_feature_test.order_items where order_id=saved_id)<>before_qty then raise exception 'Network retry after release must not duplicate'; end if;
+  result:=reserve_feature_test.order_entry_lease(md5('org')::uuid,md5('user')::uuid,'same-login',a,'2026-10-12',md5('customer')::uuid,'state');
+  if coalesce((result->'counts'->>md5('customer')::uuid::text)::int,0)=0 then raise exception 'Other device must see committed order count'; end if;
+end $lease_tests$;
 rollback;
 select 'reserve source lifecycle, weekday, unit, warehouse, shortage and retry checks passed; fixtures rolled back' result;

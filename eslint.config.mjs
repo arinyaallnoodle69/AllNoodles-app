@@ -22,6 +22,8 @@ const eslintConfig = defineConfig([
     // Generated browser fixture code; its source render script is linted normally.
     "output/reserve-history/*bundle.js",
     "output/reserve-history/*.cjs",
+    "output/order-entry/*bundle.js",
+    "output/order-entry/*.cjs",
   ]),
 ]);
 

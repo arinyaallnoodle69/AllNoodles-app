@@ -2,9 +2,12 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import ts from "typescript";
+import { createRequire } from "node:module";
+import React from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 import { isProvincialLotusReserve } from "./provincial-lotus-reserve.ts";
 
-function loadSummary(provincial = false, fulfillmentMode = "fresh", barcode = false, reserve = false) {
+function loadSummary(provincial = false, fulfillmentMode = "fresh", barcode = false, reserve = false, remaining = [], demandQuantity) {
   const adjustmentDates = [];
   const queryDates = [];
   const mode = { product_id: "p1", warehouse_id: "wh", mode: fulfillmentMode, supplier_id: "factory", warehouses: { name: provincial ? "คลังต่างจังหวัด" : "คลังกรุงเทพ" }, suppliers: { name: provincial ? "A.ดอกบัว" : "โรงงานมังกร", supplier_code: provincial ? "TYV005" : "dragon" } };
@@ -30,7 +33,7 @@ function loadSummary(provincial = false, fulfillmentMode = "fresh", barcode = fa
           return Promise.resolve({ data: dates.map(date => ({
             id: date, order_date: date, warehouse_id: "wh", assigned_vehicle_id: "bkk",
             customers: { default_vehicle_id: "bkk", default_warehouse_id: "wh" },
-            order_items: [{ product_id: "p1", quantity_in_base_unit: date.endsWith("09") ? 20 : 30, supply_source: "legacy" }, ...(barcode ? [{ product_id: "p1", quantity_in_base_unit: 6, is_barcode: true }] : []), ...(reserve ? [{ product_id: "p1", quantity_in_base_unit: 8, supply_source: "reserve" }] : [])],
+            order_items: [{ product_id: "p1", quantity_in_base_unit: demandQuantity ?? (date.endsWith("09") ? 20 : 30), supply_source: "legacy" }, ...(barcode ? [{ product_id: "p1", quantity_in_base_unit: 6, is_barcode: true }] : []), ...(reserve ? [{ product_id: "p1", quantity_in_base_unit: 8, supply_source: "reserve" }] : [])],
           })) }).then(resolve);
         },
       };
@@ -46,7 +49,7 @@ function loadSummary(provincial = false, fulfillmentMode = "fresh", barcode = fa
     "@/lib/orders/daily-special-items": { getDailySpecialPrintItems: async () => provincial ? [
       { productId: "p1", vehicleId: "bkk", vehicleName: "รถระนอง1", type: "office", quantity: 50 },
       { productId: "p1", vehicleId: "bkk", vehicleName: "รถระนอง1", type: "remaining", quantity: 20 },
-    ] : [] },
+    ] : remaining },
     "@/lib/orders/factory-adjustment-demand": { getBangkokFactoryProductMode: () => mode },
     "@/lib/orders/vehicle-summary-mode": { resolveVehicleSummaryProductMode: () => fulfillmentMode },
     "@/lib/orders/factory-order-adjustments": {
@@ -162,4 +165,51 @@ test("Lotus loading sheets put old automatic reserve on stock sheets except fact
   assert.equal(ordered[0].product.isFresh,day===12||day===15,date);
   assert.equal(ordered[0].product.isReserve,day!==12&&day!==15,date);
  }
+});
+
+const leftover = (quantity, date = "2026-10-09", vehicleId = "bkk") => ({ productId: "p1", vehicleId, vehicleName: "รถกรุงเทพ", type: "remaining", quantity, date });
+
+test("Bangkok 100kg demand with 50kg remaining loads factory 50 plus office 50, factory sheet stays 50", async () => {
+  const summary = loadSummary(false, "fresh", false, false, [leftover(50)], 100);
+  const loading = await summary.getVehicleProductSummaryData("org", "2026-10-09", "2026-10-09");
+  assert.deepEqual(loading.qty, [[50], [50]]);
+  assert.deepEqual(loading.products.map(p => p.name), ["บะหมี่", "บะหมี่ (เอาจากออฟฟิศ)"]);
+  assert.ok(loading.products.every(p => p.isFresh));
+  assert.equal(loading.products[1].isOffice, true);
+  const compiled = ts.transpileModule(readFileSync(new URL("../../components/print/vehicle-product-summary-layout.tsx", import.meta.url), "utf8"), { compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX, target: ts.ScriptTarget.ES2022 } }).outputText;
+  const layout = { exports: {} };
+  new Function("require", "module", "exports", compiled)(createRequire(import.meta.url), layout, layout.exports);
+  const html = renderToStaticMarkup(React.createElement(layout.exports.VehicleProductSummaryLayout, { data: loading }));
+  assert.match(html, /บะหมี่ \(เอาจากออฟฟิศ\)/);
+  assert.equal((html.match(/vehicle-summary-table__qty-cell"/g) ?? []).length, 2);
+  const [factory] = await summary.getFactoryOrderSheetData("org", "2026-10-09", "2026-10-09", { applyAdjustments: false });
+  assert.deepEqual(factory.qty, [[50]]);
+});
+
+test("remaining is capped per day and vehicle, never creates additional loading quantity", async () => {
+  for (const amount of [0, 100, 150]) {
+    const summary = loadSummary(false, "fresh", false, false, [leftover(amount)], 100);
+    const loading = await summary.getVehicleProductSummaryData("org", "2026-10-09", "2026-10-09");
+    assert.equal(loading.qty.flat().reduce((sum, n) => sum + n, 0), 100);
+    assert.deepEqual(loading.qty, [[100]]);
+    assert.equal(Boolean(loading.products[0].isOffice), amount > 0);
+  }
+  const summary = loadSummary(false, "fresh", false, false, [leftover(30), leftover(100, "2026-10-10", "another-car")]);
+  const loading = await summary.getVehicleProductSummaryData("org", "2026-10-09", "2026-10-10");
+  assert.deepEqual(loading.qty, [[30], [20]]);
+});
+
+test("office split leaves barcode, explicit reserve, stock-mode and provincial rules intact", async () => {
+  const summary = loadSummary(false, "fresh", true, true, [leftover(50)], 100);
+  const loading = await summary.getVehicleProductSummaryData("org", "2026-10-09", "2026-10-09");
+  const quantityFor = test => loading.qty[loading.products.findIndex(test)][0];
+  assert.equal(quantityFor(p => p.isOffice), 50);
+  assert.equal(quantityFor(p => p.isBarcode), 6);
+  assert.equal(quantityFor(p => p.isReserve), 8);
+  assert.equal(loading.qty.flat().reduce((sum, n) => sum + n, 0), 114);
+  const stock = await loadSummary(false, "stock", false, false, [leftover(50)], 100).getVehicleProductSummaryData("org", "2026-10-09", "2026-10-09");
+  assert.deepEqual(stock.qty, [[100]]);
+  assert.ok(stock.products.every(p => !p.isOffice));
+  const province = await loadSummary(true).getVehicleProductSummaryData("org", "2026-10-12", "2026-10-12");
+  assert.ok(province.products.every(p => !p.isOffice));
 });

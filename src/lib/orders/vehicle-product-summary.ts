@@ -26,6 +26,7 @@ export type VehicleSummaryProduct = {
   isFresh?: boolean;
   isBarcode?: boolean;
   isReserve?: boolean;
+  isOffice?: boolean;
 };
 
 export type VehicleSummaryVehicle = {
@@ -316,14 +317,15 @@ export async function getVehicleProductSummaryData(
 
   const vehicleIndexById = new Map(vehicles.map((vehicle, index) => [vehicle.id ?? "__unassigned__", index]));
   const summaryRows = new Map<string, { product: VehicleSummaryProduct; qty: number[] }>();
+  const bangkokFactoryDemand = new Map<string, number>();
 
-  function getSummaryRow(productId: string, isFresh: boolean, isBarcode = false, isReserve = false) {
-    const key = `${productId}:${isFresh ? "fresh" : "stock"}:${isBarcode ? "barcode" : "normal"}:${isReserve ? "reserve" : "factory"}`;
+  function getSummaryRow(productId: string, isFresh: boolean, isBarcode = false, isReserve = false, isOffice = false) {
+    const key = `${productId}:${isFresh ? "fresh" : "stock"}:${isBarcode ? "barcode" : "normal"}:${isReserve ? "reserve" : isOffice ? "office" : "factory"}`;
     let row = summaryRows.get(key);
     if (!row) {
       const product = productById.get(productId);
       if (!product) return null;
-      row = { product: { ...product, id: `${product.id}${isBarcode ? ":barcode" : ""}${isReserve ? ":reserve" : ""}`, name: `${product.name}${isBarcode ? " (บาร์โค้ด)" : ""}${isReserve ? " (ใช้สำรอง)" : ""}`, isFresh, isBarcode, isReserve }, qty: vehicles.map(() => 0) };
+      row = { product: { ...product, id: `${product.id}${isBarcode ? ":barcode" : ""}${isReserve ? ":reserve" : ""}${isOffice ? ":office" : ""}`, name: `${product.name}${isBarcode ? " (บาร์โค้ด)" : ""}${isReserve ? " (ใช้สำรอง)" : ""}${isOffice ? " (เอาจากออฟฟิศ)" : ""}`, isFresh, isBarcode, isReserve, isOffice }, qty: vehicles.map(() => 0) };
       summaryRows.set(key, row);
     }
     return row;
@@ -360,7 +362,26 @@ export async function getVehicleProductSummaryData(
       const row = getSummaryRow(item.product_id, isFresh, item.is_barcode === true, provincialReserve || item.supply_source === "reserve");
       if (!row) continue;
       row.qty[vehicleIndex] = (row.qty[vehicleIndex] ?? 0) + Number(item.quantity_in_base_unit ?? 0);
+      if (isFresh && mode?.warehouses?.name.trim() === "คลังกรุงเทพ" && item.supply_source !== "reserve" && !item.is_barcode) {
+        const key = `${order.order_date}:${item.product_id}:${resolvedVehicleId}`;
+        bangkokFactoryDemand.set(key, (bangkokFactoryDemand.get(key) ?? 0) + Number(item.quantity_in_base_unit ?? 0));
+      }
     }
+  }
+
+  // Match the factory sheet's normal-packaging deduction, separately for each date and vehicle.
+  for (const item of specialItems.filter(special => special.type === "remaining")) {
+    const key = `${item.date}:${item.productId}:${item.vehicleId}`;
+    const demand = bangkokFactoryDemand.get(key) ?? 0;
+    const fromOffice = Math.min(demand, Math.max(0, item.quantity));
+    const vehicleIndex = vehicleIndexById.get(item.vehicleId);
+    if (fromOffice <= 0 || vehicleIndex === undefined) continue;
+    const factory = getSummaryRow(item.productId, true);
+    const office = getSummaryRow(item.productId, true, false, false, true);
+    if (!factory || !office) continue;
+    factory.qty[vehicleIndex] = Math.round(((factory.qty[vehicleIndex] ?? 0) - fromOffice) * 1000) / 1000;
+    office.qty[vehicleIndex] = Math.round(((office.qty[vehicleIndex] ?? 0) + fromOffice) * 1000) / 1000;
+    bangkokFactoryDemand.set(key, demand - fromOffice);
   }
 
   // Claims are daily, non-sale loading quantities. They appear only on the
@@ -383,8 +404,8 @@ export async function getVehicleProductSummaryData(
     .filter((row) => row.qty.some((value) => value > 0))
     .sort(
       (a, b) =>
-        (productSortIndexById.get(a.product.id.replace(/:barcode$/, "")) ?? Number.MAX_SAFE_INTEGER) -
-        (productSortIndexById.get(b.product.id.replace(/:barcode$/, "")) ?? Number.MAX_SAFE_INTEGER) || Number(Boolean(a.product.isBarcode)) - Number(Boolean(b.product.isBarcode)),
+        (productSortIndexById.get(a.product.id.replace(/:(barcode|reserve|office)/g, "")) ?? Number.MAX_SAFE_INTEGER) -
+        (productSortIndexById.get(b.product.id.replace(/:(barcode|reserve|office)/g, "")) ?? Number.MAX_SAFE_INTEGER) || Number(Boolean(a.product.isBarcode)) - Number(Boolean(b.product.isBarcode)) || Number(Boolean(a.product.isOffice)) - Number(Boolean(b.product.isOffice)),
     );
 
   return {

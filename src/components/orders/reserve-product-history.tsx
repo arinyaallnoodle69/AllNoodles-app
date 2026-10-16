@@ -1,11 +1,12 @@
 "use client";
 
-import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { ChevronLeft, CalendarDays, History, Loader2, Package2, X } from "lucide-react";
+import { ChevronLeft, ChevronDown, CalendarDays, History, Info, Loader2, Minus, Plus, X } from "lucide-react";
 import { fetchReserveProductHistory } from "@/app/orders/fresh-reserve-stock/history-actions";
-import { bangkokDate, buildReserveHistory, reserveHistoryLabel, type ReserveHistorySnapshot } from "@/lib/orders/reserve-product-history";
+import { bangkokDate, buildReserveHistory, reserveHistoryLabel, type ReserveHistoryDay, type ReserveHistorySnapshot } from "@/lib/orders/reserve-product-history";
+
+import styles from "./reserve-product-history.module.css";
 
 type Props = { groupId: string; productId: string; name: string; sku: string; imageUrl?: string | null; warehouseName: string; supplierName: string };
 const quantity = (n: number) => n.toLocaleString("th-TH", { maximumFractionDigits: 3 });
@@ -58,24 +59,23 @@ export function ReserveProductHistoryDialog({ onClose, ...props }: Props & { onC
       onKeyDown={event => {
         if (event.key === "Escape") { event.stopPropagation(); onClose(); }
         if (event.key === "Tab") {
-          const nodes = [...event.currentTarget.querySelectorAll<HTMLElement>('button:not(:disabled),input:not(:disabled),[tabindex="0"]')].filter(node => node.getClientRects().length > 0);
+          const nodes = [...event.currentTarget.querySelectorAll<HTMLElement>('button:not(:disabled),input:not(:disabled),summary,[tabindex="0"]')].filter(node => node.getClientRects().length > 0);
           const first = nodes[0], last = nodes.at(-1);
           if (event.shiftKey && (document.activeElement === first || document.activeElement === event.currentTarget)) { event.preventDefault(); last?.focus(); }
           else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
         }
       }} className="flex h-[100dvh] w-full flex-col overflow-hidden bg-white text-[#15154F] outline-none lg:h-auto lg:max-h-[90dvh] lg:max-w-4xl lg:rounded-2xl">
-      <header className="flex shrink-0 items-center justify-between bg-[#4A148C] px-3 py-3 text-white lg:px-6 lg:py-4" style={{ paddingTop: "max(0.75rem, env(safe-area-inset-top))" }}>
+      <header className={styles.header}>
         <button type="button" onClick={onClose} aria-label="กลับหน้าสต็อค" className="flex h-11 w-11 items-center justify-center rounded-lg hover:bg-white/10"><ChevronLeft className="h-8 w-8" /></button>
         <h2 id="reserve-history-title" className="text-2xl font-bold lg:text-3xl">ประวัติสินค้า</h2>
         <button type="button" onClick={onClose} aria-label="ปิดประวัติสินค้า" className="flex h-11 w-11 items-center justify-center rounded-lg hover:bg-white/10"><X className="h-7 w-7" /></button>
       </header>
-      <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-6 lg:px-8" style={{ paddingBottom: "max(1.5rem, env(safe-area-inset-bottom))" }}>
-        <div className="flex items-center gap-4 py-4 lg:gap-6">
-          <div className="relative h-28 w-20 shrink-0 lg:h-32 lg:w-24">{props.imageUrl ? <Image src={props.imageUrl} alt={props.name} fill sizes="96px" className="object-contain" /> : <Package2 className="h-full w-full p-4 text-slate-300" />}</div>
-          <div className="min-w-0"><h3 className="text-xl font-bold leading-relaxed lg:text-2xl">{props.name}</h3><p className="mt-1 text-base leading-relaxed text-[#4A5072] lg:text-lg">{props.sku} · {props.warehouseName}</p><p className="mt-1 text-base text-[#4A5072] lg:text-lg">{props.supplierName}</p></div>
+      <div ref={scrollRef} className={styles.scroll}>
+        <div className={styles.identity}>
+          <div><h3>{props.name}</h3><p>{props.sku} · {props.warehouseName.replace(/^คลัง/, "")}</p></div>
+          <div className={styles.balance}><p>คงเหลือปัจจุบัน</p><strong>{snapshot ? quantity(snapshot.available) : "—"} <span>กก.</span></strong></div>
         </div>
-        <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-[#F4EFFF] px-4 py-3 lg:px-6"><span className="text-lg font-bold lg:text-xl">คงเหลือปัจจุบัน</span><strong className="text-4xl font-black tabular-nums text-[#6D28D9] lg:text-5xl">{snapshot ? quantity(snapshot.available) : "—"} <span className="text-xl lg:text-2xl">กก.</span></strong></div>
-        <button type="button" onClick={() => { setDraft(range); setDatesOpen(!datesOpen); }} aria-expanded={datesOpen} className="mt-3 flex min-h-12 w-full items-center gap-3 rounded-lg border border-[#CDD2E0] px-3 py-2 text-left text-base lg:text-lg"><CalendarDays className="h-6 w-6 shrink-0" />{dayLabel(range.from)} – {dayLabel(range.to)}</button>
+        <button type="button" onClick={() => { setDraft(range); setDatesOpen(!datesOpen); }} aria-expanded={datesOpen} className={styles.range}><CalendarDays className="h-5 w-5" />{new Intl.DateTimeFormat("th-TH", { day: "numeric", month: "short", year: "numeric", timeZone: "Asia/Bangkok" }).formatRange(new Date(range.from + "T12:00:00+07:00"), new Date(range.to + "T12:00:00+07:00"))}<ChevronDown className="h-5 w-5" /></button>
         {datesOpen ? <form className="mt-2 grid grid-cols-2 gap-3 rounded-lg border border-[#D7C8F2] p-3" onSubmit={event => { event.preventDefault(); const values = new FormData(event.currentTarget); const next = { from: String(values.get("from")), to: String(values.get("to")) }; if (next.from > next.to || next.to > today) return; setRange(next); setDatesOpen(false); }}>
           <label className="min-w-0 text-base">ตั้งแต่<input aria-label="ตั้งแต่วันที่" name="from" type="date" required min="2000-01-01" max={draft.to} value={draft.from} onChange={event => setDraft({ ...draft, from: event.target.value })} className="mt-1 min-h-11 w-full min-w-0 rounded border p-1" /></label>
           <label className="min-w-0 text-base">ถึง<input aria-label="ถึงวันที่" name="to" type="date" required min={draft.from} max={today} value={draft.to} onChange={event => setDraft({ ...draft, to: event.target.value })} className="mt-1 min-h-11 w-full min-w-0 rounded border p-1" /></label>
@@ -84,25 +84,35 @@ export function ReserveProductHistoryDialog({ onClose, ...props }: Props & { onC
         {error ? <div role="alert" className="mt-4 rounded-lg bg-red-50 p-4 text-base text-red-700">{error}<button type="button" onClick={() => setRetry(value => value + 1)} className="ml-3 min-h-11 underline">ลองใหม่</button></div> : loading ? <p role="status" className="flex items-center justify-center gap-2 py-12 text-lg"><Loader2 className="h-5 w-5 animate-spin" />กำลังโหลดประวัติ…</p> : result ? <>
           {result.pending.length ? <p className="mt-3 rounded-lg bg-amber-50 p-3 text-base">รอรับเข้า {quantity(result.pending.reduce((sum, item) => sum + Number(item.delta), 0))} กก. · ยังไม่รวมในยอดคงเหลือ</p> : null}
           {result.futureLegacy > 0 ? <p className="mt-3 text-base text-[#4A5072]">ยอดคงเหลือหักออเดอร์เดิมล่วงหน้า {quantity(result.futureLegacy)} กก. แล้ว</p> : null}
-          <p className="mb-2 mt-4 text-right text-base text-[#4A5072]">หน่วย: กก.</p>
-          <table className="w-full table-fixed border-collapse text-base leading-relaxed lg:text-lg">
-            <colgroup><col className="w-[18%] lg:w-[13%]" /><col className="w-[31%] lg:w-[42%]" /><col className="w-[17%] lg:w-[15%]" /><col className="w-[17%] lg:w-[15%]" /><col className="w-[17%] lg:w-[15%]" /></colgroup>
-            <thead className="bg-[#F0E9FF] text-[#4A148C]"><tr><th colSpan={2} scope="col" className="border border-[#DADDE7] px-2 py-2 text-left font-bold">รายการ</th>{["รับ", "จ่าย", "เหลือ"].map(label => <th key={label} scope="col" className="border border-[#DADDE7] px-1 py-2 text-center font-bold">{label}</th>)}</tr></thead>
-            {result.days.map(day => <tbody key={day.date}>
-              <tr><th colSpan={5} scope="rowgroup" className="border border-[#DADDE7] bg-[#F0E9FF] px-2 py-2 text-left font-bold">{dayLabel(day.date)}{day.date === today ? <span className="text-[#6D28D9]"> · วันนี้</span> : null}</th></tr>
-              <tr><td className="border border-[#DADDE7] px-1 py-2 text-center text-[#4A5072]">–</td><th scope="row" className="border border-[#DADDE7] px-2 py-2 text-left font-normal">ยกยอดมา</th><td className="border border-[#DADDE7] text-center">–</td><td className="border border-[#DADDE7] text-center">–</td><td className="break-words border border-[#DADDE7] px-1 text-center font-bold tabular-nums">{quantity(day.opening)}</td></tr>
-              {day.rows.map((row, index) => <tr key={row.id}>
-                <td className="border border-[#DADDE7] px-1 py-2 text-center text-[15px] text-[#4A5072] lg:text-base">{row.reason === "legacy" ? "–" : timeLabel(row.at)}</td>
-                <th scope="row" className="break-words border border-[#DADDE7] px-2 py-2 text-left font-normal">{reserveHistoryLabel(row)}{row.reason === "legacy" ? <span className="block text-sm text-[#4A5072]">ยอดออเดอร์เดิม</span> : null}{row.notes && row.reason === "adjustment" ? <span className="block text-sm text-[#4A5072]">{row.notes}</span> : null}</th>
-                <td className="break-words border border-[#DADDE7] px-1 py-2 text-center font-bold tabular-nums">{row.delta > 0 ? quantity(row.delta) : "–"}</td><td className="break-words border border-[#DADDE7] px-1 py-2 text-center font-bold tabular-nums">{row.delta < 0 ? quantity(-row.delta) : "–"}</td>
-                <td className={`break-words border border-[#DADDE7] px-1 py-2 text-center font-bold tabular-nums ${index === day.rows.length - 1 && day === result.days.at(-1) ? "bg-[#F0E9FF] text-[#6D28D9]" : ""}`}>{quantity(row.remaining)}</td>
-              </tr>)}
-            </tbody>)}
-          </table>
+          <ReserveProductHistoryTable days={result.days} today={today} />
+          <p className={styles.note}><Info size={18} /><span>รับ = เข้าออฟฟิศ · ปรับ = ตรวจนับ/แก้ยอด · หน่วย กก.<br />เครื่องหมาย + ในช่องจ่าย = คืนสำรอง</span></p>
           {result.days.every(day => !day.rows.length) ? <p role="status" className="py-4 text-center text-base text-[#4A5072]">ไม่มีรายการเคลื่อนไหวในช่วงวันที่เลือก</p> : null}
-          <button type="button" disabled={range.from <= snapshot!.startDate} onClick={() => setRange(value => ({ ...value, from: shiftDay(value.from, -30) < snapshot!.startDate ? snapshot!.startDate : shiftDay(value.from, -30) }))} className="mt-6 min-h-12 w-full rounded-xl border border-[#6D28D9] px-4 py-3 text-lg font-bold text-[#6D28D9] disabled:opacity-40">ดูรายการก่อนหน้า</button>
+          <button type="button" disabled={range.from <= snapshot!.startDate} onClick={() => setRange(value => ({ ...value, from: shiftDay(value.from, -30) < snapshot!.startDate ? snapshot!.startDate : shiftDay(value.from, -30) }))} className={styles.more}>ดูรายการก่อนหน้า</button>
         </> : null}
       </div>
     </div>
   </div>;
+}
+
+export function ReserveProductHistoryTable({ days, today }: { days: ReserveHistoryDay[]; today: string }) {
+  return <table className={styles.table} aria-label="รายการเคลื่อนไหวสินค้า หน่วยกิโลกรัม">
+    <colgroup><col style={{ width: "40%" }} /><col style={{ width: "14%" }} /><col style={{ width: "14%" }} /><col style={{ width: "16%" }} /><col style={{ width: "16%" }} /></colgroup>
+    <thead><tr><th scope="col">รายการ</th><th scope="col" className={styles.receive}><span className={styles.amount}><Plus size={12} aria-hidden="true" />รับ</span></th><th scope="col" className={styles.issue}><span className={styles.amount}><Minus size={12} aria-hidden="true" />จ่าย</span></th><th scope="col" className={styles.adjust}>ปรับ</th><th scope="col">เหลือ</th></tr></thead>
+    {days.map(day => <tbody key={day.date}>
+      <tr><th colSpan={5} scope="rowgroup" className={styles.day}>{dayLabel(day.date)}{day.date === today ? " · วันนี้" : ""}</th></tr>
+      <tr><th scope="row">ของเหลือ</th><td>–</td><td>–</td><td>–</td><td className={styles.remaining}>{quantity(day.opening)}</td></tr>
+      {day.rows.map((row, index) => {
+        const receipt = row.reason === "office" && row.delta > 0;
+        const adjustment = row.reason === "adjustment" || (row.reason === "office" && row.delta < 0);
+        const label = row.reason === "adjustment" ? row.notes?.includes("ปรับฐาน") ? "แก้ฐาน" : "ตรวจนับ" : reserveHistoryLabel(row);
+        return <tr key={row.id}>
+          <th scope="row"><div className={styles.description}><span>{label}</span>{row.notes && adjustment ? <details className={styles.details}><summary aria-label={"ดูเหตุผล " + label}><Info size={17} /></summary><div>{row.notes}</div></details> : null}</div><span className={styles.time}>{row.reason === "legacy" ? "ยอดออเดอร์เดิม" : timeLabel(row.at)}</span></th>
+          <td className={receipt ? styles.receive : undefined}>{receipt ? <span className={styles.amount} aria-label={"+" + quantity(row.delta)}><Plus size={12} aria-hidden="true" />{quantity(row.delta)}</span> : "–"}</td>
+          <td className={!receipt && !adjustment && row.delta !== 0 ? styles.issue : undefined}>{!receipt && !adjustment && row.delta !== 0 ? <span className={styles.amount} aria-label={(row.delta < 0 ? "−" : "+") + quantity(Math.abs(row.delta))}>{row.delta < 0 ? <Minus size={12} aria-hidden="true" /> : <Plus size={12} aria-hidden="true" />}{quantity(Math.abs(row.delta))}</span> : "–"}</td>
+          <td className={styles.adjust}>{adjustment && row.delta !== 0 ? (row.delta > 0 ? "+" : "−") + quantity(Math.abs(row.delta)) : "–"}</td>
+          <td className={`${styles.remaining} ${index === day.rows.length - 1 && day === days.at(-1) ? styles.latest : ""}`}>{quantity(row.remaining)}</td>
+        </tr>;
+      })}
+    </tbody>)}
+  </table>;
 }

@@ -27,13 +27,13 @@ import {
   Files,
 } from "lucide-react";
 import { useCreateOrder } from "./create-order-context";
+import { useOrderEntry } from "./use-order-entry";
 import { getEffectiveSaleUnitCost } from "@/lib/products/sale-unit-cost";
 import type { OrderCustomerOption, OrderProductOption, OrderVehicleOption } from "@/lib/orders/manage";
 import { normalizeSearch } from "@/lib/utils/search";
 import { useClientRole } from "@/lib/auth/client-role";
 import {
   createManualOrderAction,
-  fetchCustomerOrderCountsForDateAction,
   fetchCustomerLastOrderItemsAction,
   fetchCustomerPricesAction,
   upsertCustomerPricesBatchFromOrderModalAction,
@@ -1934,6 +1934,7 @@ export function CreateOrderModal({
   const [historyNotice, setHistoryNotice] = useState<string | null>(null);
   const [customerId, setCustomerId] = useState("");
   const [orderDate, setOrderDate] = useState(today);
+  const entry = useOrderEntry(open, orderDate);
   const [notes, setNotes] = useState("");
   const [customerOrderCountsByDate, setCustomerOrderCountsByDate] =
     useState<Record<string, number>>(customerOrderCountsToday);
@@ -1941,6 +1942,10 @@ export function CreateOrderModal({
   useEffect(() => {
     setCustomerOrderCountsByDate(customerOrderCountsToday);
   }, [customerOrderCountsToday]);
+
+  useEffect(() => {
+    if (entry.counts) setCustomerOrderCountsByDate(entry.counts);
+  }, [entry.counts]);
 
 
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -2102,21 +2107,6 @@ export function CreateOrderModal({
     }
   }, [autoOpen, setOpen]);
 
-  useEffect(() => {
-    if (!open) return;
-    let cancelled = false;
-    (async () => {
-      const counts = await fetchCustomerOrderCountsForDateAction(orderDate);
-      if (!cancelled) {
-        setCustomerOrderCountsByDate(counts);
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [open, orderDate]);
-
   const filteredCustomers = useMemo(() => {
     let list = orderedCustomers;
     if (selectedVehicleId !== "__all__") {
@@ -2230,6 +2220,7 @@ export function CreateOrderModal({
   async function handleCustomerSelect(id: string) {
     if (id !== customerId && cart.some(item => item.isReserve)) { showSubmitPopup("กรุณาลบรายการใช้สำรองก่อนเปลี่ยนร้านค้า"); return; }
     if (customers.find(customer => customer.id === id)?.code !== BARCODE_CUSTOMER_CODE && cart.some(item => item.isBarcode)) { showSubmitPopup("กรุณาลบรายการบาร์โค้ดก่อนเปลี่ยนร้านค้า"); return; }
+    if (!await entry.select(id, orderDate || today)) return;
     setError(null);
     setHistoryNotice(null);
     setCustomerId(id);
@@ -2391,6 +2382,7 @@ export function CreateOrderModal({
     keepOrderDate?: boolean;
     openCustomerPicker?: boolean;
   } = {}) {
+    entry.release();
     historyRequestId.current += 1;
     setActiveTab("create");
     setCart([]);
@@ -2419,6 +2411,7 @@ export function CreateOrderModal({
   }
 
   function handleClose() {
+    if (saveInFlightRef.current || entry.busy) return;
     if (!open || isClosing) return;
     setIsClosing(true);
     setCustomerPickerOpen(false);
@@ -2469,6 +2462,7 @@ export function CreateOrderModal({
 
   function handleSubmit() {
     if (pending || saveInFlightRef.current) return;
+    if (!entry.ready || entry.busy) { showSubmitPopup("กรุณาเลือกร้านค้าและรอการตรวจสอบสิทธิ์ก่อนบันทึก"); return; }
     setError(null);
 
 
@@ -2494,10 +2488,12 @@ export function CreateOrderModal({
       return;
     }
     saveInFlightRef.current = true;
+    entry.saving.current = true;
     startTransition(async () => {
       try {
       const formData = new FormData();
       formData.set("customerId", customerId);
+      formData.set("entryToken", entry.token.current);
       formData.set("channel", "created");
       formData.set("orderDate", orderDate);
       formData.set("notes", notes.trim());
@@ -2518,10 +2514,10 @@ export function CreateOrderModal({
         (result.orderNumber && String(result.orderNumber).trim().startsWith("DN")
           ? String(result.orderNumber).trim()
           : "");
-      // Update local ordered counts today state instantly so that the badge "สั่งแล้ววันนี้" appears without reopening
+      // Realtime may already include this save, and the server can merge into an existing order.
       setCustomerOrderCountsByDate((prev) => ({
         ...prev,
-        [customerId]: (prev[customerId] ?? 0) + 1,
+        [customerId]: Math.max(prev[customerId] ?? 0, 1),
       }));
 
       if (successToastTimerRef.current) {
@@ -2545,6 +2541,7 @@ export function CreateOrderModal({
         setError(error instanceof Error ? error.message : "บันทึกไม่สำเร็จ กรุณาลองใหม่");
       } finally {
         saveInFlightRef.current = false;
+        entry.saving.current = false;
       }
     });
   }
@@ -2692,8 +2689,10 @@ export function CreateOrderModal({
                         id="create-order-date"
                         name="orderDate"
                         value={orderDate}
-                        onChange={(nextOrderDate) => {
+                        onChange={async (nextOrderDate) => {
+                          if (saveInFlightRef.current || entry.busy) return;
                           if (nextOrderDate !== orderDate && cart.some(item => item.isReserve)) { showSubmitPopup("กรุณาลบรายการใช้สำรองก่อนเปลี่ยนวันที่ แล้วเลือกสำรองใหม่"); return; }
+                          if (customerId && nextOrderDate !== orderDate && !await entry.select(customerId, nextOrderDate)) return;
                           setOrderDate(nextOrderDate);
                           setHistoryNotice(null);
                           if (!customerId) return;
@@ -2981,6 +2980,7 @@ export function CreateOrderModal({
             {/* Sticky Footer */}
             <div data-create-order-footer className="sticky bottom-0 z-40 border-t border-[#EA80FC]/35 bg-white/95 px-4 pb-safe-or-5 pt-4 backdrop-blur supports-[backdrop-filter]:bg-white/90 sm:px-6">
               <div className="mx-auto max-w-6xl">
+                {entry.error ? <p role="alert" className="mb-3 rounded-xl bg-amber-50 p-3 text-sm font-bold text-amber-800">{entry.error}</p> : null}
                 {error && (
                   <div className="mb-4 flex items-start gap-2.5 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3">
                     <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-rose-500 text-xs font-bold text-white">
@@ -3009,7 +3009,7 @@ export function CreateOrderModal({
                   <button
                     type="button"
                     onClick={handleSubmit}
-                    disabled={pending}
+                    disabled={pending || !entry.ready || entry.busy}
                     className="action-touch-safe flex h-14 min-w-0 items-center justify-center rounded-2xl border border-[#EA80FC]/75 bg-[#4A148C] px-4 py-4 text-lg font-bold text-white shadow-lg shadow-[#4A148C]/20 transition hover:bg-[#4A148C] disabled:opacity-40 active:scale-[0.98] sm:h-16 sm:text-xl"
                   >
                     {pending ? (
@@ -3132,6 +3132,7 @@ export function CreateOrderModal({
 
             {/* Customer List */}
             <div className="min-h-0 flex-1 touch-pan-y overflow-x-hidden overflow-y-auto overscroll-y-none bg-slate-50/50 px-4 py-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+              {entry.error ? <p role="alert" className="mb-3 rounded-xl bg-amber-50 p-3 text-sm font-bold text-amber-800">{entry.error}</p> : null}
               {filteredCustomers.length === 0 ? (
                 <div className="flex h-full min-h-[14rem] flex-col items-center justify-center rounded-[2rem] border border-dashed border-[#EA80FC]/30 bg-[#F3E5F5]/10 px-4 text-center">
                   <Building2 className="h-10 w-10 text-[#4A148C]/40" strokeWidth={1.8} />
@@ -3141,6 +3142,7 @@ export function CreateOrderModal({
                 <div className="space-y-2.5">
                   {filteredCustomers.map((customer) => {
                     const isSelected = customer.id === customerId;
+                    const entryLock = entry.locks.find(lock => lock.customerId === customer.id && !lock.owned && Date.parse(lock.expiresAt) > Date.now());
                     const orderCountToday = customerOrderCountsByDate[customer.id] ?? 0;
                     
                     return (
@@ -3148,6 +3150,7 @@ export function CreateOrderModal({
                         key={customer.id}
                         type="button"
                         onClick={() => void handleCustomerSelect(customer.id)}
+                        disabled={Boolean(entryLock) || entry.busy || pending}
                         className={`action-touch-safe flex w-full items-center gap-3.5 rounded-2xl border px-4 py-3.5 text-left transition ${
                           isSelected
                             ? "border-[#EA80FC] bg-[#4A148C]/[0.06] shadow-sm shadow-[#4A148C]/5"
@@ -3170,6 +3173,7 @@ export function CreateOrderModal({
                                 สั่งแล้ววันนี้{orderCountToday > 1 ? ` ${orderCountToday}` : ""}
                               </span>
                             ) : null}
+                            {entryLock ? <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-bold text-amber-800">{entryLock.displayName || "ผู้ใช้อื่น"} กำลังกรอก</span> : null}
                           </div>
                         </div>
                         <div className="shrink-0">

@@ -1693,6 +1693,58 @@ export type Database = {
           },
         ]
       }
+      order_entry_leases: {
+        Row: {
+          customer_id: string
+          expires_at: string
+          order_date: string
+          organization_id: string
+          owner_token: string
+          session_id: string
+          user_id: string
+        }
+        Insert: {
+          customer_id: string
+          expires_at: string
+          order_date: string
+          organization_id: string
+          owner_token: string
+          session_id: string
+          user_id: string
+        }
+        Update: {
+          customer_id?: string
+          expires_at?: string
+          order_date?: string
+          organization_id?: string
+          owner_token?: string
+          session_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_entry_leases_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_entry_leases_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_entry_leases_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "app_users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       order_items: {
         Row: {
           cost_price: number
@@ -2739,6 +2791,25 @@ export type Database = {
       }
     }
     Views: {
+      fresh_reserve_history_events: {
+        Row: {
+          created_at: string | null
+          effective_at: string | null
+          event_at: string | null
+          event_kind: string | null
+          group_id: string | null
+          id: string | null
+          movement_id: string | null
+          organization_id: string | null
+          product_id: string | null
+          product_name: string | null
+          quantity_after: number | null
+          quantity_before: number | null
+          quantity_delta: number | null
+          reason: string | null
+        }
+        Relationships: []
+      }
       fresh_reserve_stock_balances: {
         Row: {
           available: number | null
@@ -3268,6 +3339,18 @@ export type Database = {
         Args: { p_organization_id: string }
         Returns: string
       }
+      order_entry_lease: {
+        Args: {
+          p_action: string
+          p_customer: string
+          p_date: string
+          p_org: string
+          p_owner: string
+          p_session: string
+          p_user: string
+        }
+        Returns: Json
+      }
       recalculate_product_stock_totals: {
         Args: { p_organization_id: string; p_product_id: string }
         Returns: undefined
@@ -3321,6 +3404,21 @@ export type Database = {
           p_user: string
         }
         Returns: undefined
+      }
+      save_manual_order_with_lease: {
+        Args: {
+          p_channel: string
+          p_customer: string
+          p_date: string
+          p_items: Json
+          p_notes: string
+          p_org: string
+          p_owner: string
+          p_request: string
+          p_session: string
+          p_user: string
+        }
+        Returns: Json
       }
       save_manual_order_with_reserve: {
         Args: {

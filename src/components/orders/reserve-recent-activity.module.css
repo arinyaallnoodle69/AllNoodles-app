@@ -1,0 +1,39 @@
+.section { padding: 0 16px; color: #101044; }
+.listTitle { padding: 12px 0; color: #4a008c; font-size: 23px; line-height: 1.4; font-weight: 800; border-bottom: 1px solid #dadde7; }
+.day { padding-top: 10px; font-size: 13px; font-weight: 500; color: #59617e; }
+.sortNote { display: block; margin-top: 2px; color: #59617e; font-size: 12px; font-weight: 400; }
+.heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding-bottom: 14px; border-bottom: 1px solid #dadde7; }
+.heading h2 { font-size: 22px; font-weight: 700; color: #4a148c; }
+.heading > p { flex-shrink: 0; color: #59617e; font-size: 13px; }
+.row { padding: 15px 0 13px; border-bottom: 1px solid #dadde7; }
+.rowHeading { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; align-items: start; }
+.product { min-width: 0; }
+.product h3 { color: #0d093f; font-size: 18px; font-weight: 800; line-height: 1.45; overflow-wrap: anywhere; }
+.meta { margin-top: 5px; font-size: 14px; line-height: 1.5; color: #59617e; }
+.meta > span:last-child { font-weight: 700; }
+.balance { text-align: right; }
+.balance > p { color: #59617e; font-size: 12px; white-space: nowrap; }
+.balance > strong { display: block; font-size: 26px; line-height: 1.35; color: #4a008c; font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.balance > strong > span { font-size: 20px; }
+.equation { margin-top: 10px; padding: 8px 10px; border-radius: 8px; color: #4a5072; }
+.equationViewport { width: 100%; overflow-x: auto; }
+.equationViewport > p { width: max-content; min-width: 100%; font-size: 16px; line-height: 1.6; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.equation strong { color: #6200e8; font-weight: 800; }
+.change { font-weight: 700; }
+.pending { background: #fff9ed; }
+.received { background: #eff8f4; }
+.used { background: #f4f4fa; }
+.pending .change, .pendingText { color: #ff8000; }
+.received .change, .receivedText { color: #008936; }
+.used .change, .usedText { color: #ff0000; }
+.effective { margin-top: 2px; font-size: 12px; color: #6a5c46; }
+.note { display: flex; align-items: center; gap: 8px; margin: 14px -16px 0; padding: 10px 16px; background: #f4efff; font-size: 14px; color: #4a148c; }
+.note svg { flex-shrink: 0; }
+.all { padding-top: 14px; }
+.unknown { padding: 12px 0; color: #59617e; font-size: 14px; }
+@media (min-width: 1024px) {
+  .section { padding-inline: 24px; max-width: 960px; }
+  .heading h2 { font-size: 24px; }
+  .product h3 { font-size: 20px; }
+  .balance > strong { font-size: 28px; }
+}

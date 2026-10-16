@@ -1,6 +1,7 @@
 "use server";
 
 import { BARCODE_CUSTOMER_CODE, BARCODE_PRODUCT_SKUS } from "@/lib/orders/barcode-packaging";
+import { notifyOrderEntry } from "@/lib/orders/order-entry-live";
 
 import { revalidatePath, revalidateTag, updateTag } from "next/cache";
 import { after } from "next/server";
@@ -1434,12 +1435,16 @@ export async function createManualOrderAction(formData: FormData): Promise<Actio
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(requestId)) {
     return { error: "กรุณาโหลดหน้าใหม่ก่อนบันทึกออเดอร์" };
   }
-  const { data: saved, error: saveError } = await getSupabaseAdmin().rpc("save_manual_order_with_reserve", {
+  const entryToken = String(formData.get("entryToken") ?? "");
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(entryToken)) return { error: "กรุณาเลือกร้านค้าใหม่เพื่อตรวจสอบสิทธิ์กรอกออเดอร์" };
+  const { data: saved, error: saveError } = await getSupabaseAdmin().rpc("save_manual_order_with_lease", {
     p_org: session.organizationId, p_user: session.userId, p_customer: customerId,
     p_date: orderDate, p_notes: notes ?? "", p_channel: channel,
     p_items: mapManualItemsToMergeableInputs(items), p_request: requestId,
+    p_owner: entryToken, p_session: session.sessionId,
   });
   if (saveError) return { error: saveError.message };
+  await notifyOrderEntry(session.organizationId);
   const savedOrder = saved as { orderId: string; orderNumber: string } | null;
   if (!savedOrder?.orderId) return { error: "บันทึกออเดอร์ไม่สำเร็จ" };
   const orderId = savedOrder.orderId;

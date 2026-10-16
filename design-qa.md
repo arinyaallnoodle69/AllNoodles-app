@@ -53,3 +53,63 @@ Data verification: ten targeted tests passed, including organization boundary re
 Limitations: no physical iPhone or authenticated end-to-end browser session tested. Browser uses actual production components/CSS with mocked read actions; the actual database action was verified separately. No deployment.
 
 Final verification update: final cursor-precision version passed full lint, production build, all ten targeted tests, real read-only queries for both warehouse groups, and git diff --check. Browser also verified an empty custom date range and Escape dismissal. final result: passed.
+
+---
+
+# Fresh reserve recent activity
+
+Reference: `C:/Users/Riew/AppData/Local/Temp/codex-clipboard-931b1cb3-368c-488a-ac10-6e15e2f60745.png`
+
+Scope: compact movement rows in the existing fresh reserve stock page, full product names, word-labelled arithmetic, current balance separated from pending receipt forecasts. Existing stock rules and history modal retained.
+
+Verification: balance and rendering regression tests; TypeScript and production build. Browser probe uses actual components with simulated data at port 3028.
+
+Visual verification blocked: the in-app browser returned “Local browser use is disabled in Work settings”. No screenshot comparison or mobile viewport inspection was possible. Single-line equations retain horizontal scrolling for unusually long values rather than hiding figures.
+
+final result: blocked
+
+## Permanent scheduling and receipt events / ledger colour cues
+
+Warehouse history now reads a server-only security-invoker event view. Deferred office movements expose a permanent scheduling event at creation time plus a separate receipt event at effective time. Date filters, event counts, stable forward pagination and date grouping follow the event timestamp. The scheduling equation reconstructs the usable balance at the scheduling time, rather than borrowing the product's current balance. The view adds no stock writes. Applied `20261017010000_reserve_history_events.sql` and regenerated database types through Supabase.
+
+Live database checks found four scheduled/received pairs, no duplicated events, and the sum of actual receipt/movement quantities equal to original stock movements. Unit/rendering checks cover the midnight boundary, persistent scheduled status, separate date headings, historical balances, cursor validation and unchanged current stock.
+
+Individual-product ledger headers and nonempty values now use green plus icons for receipts and red minus icons for issues. Returns in the issue column use a plus icon with an explanatory legend. Adjustments remain purple; balance figures are slightly bolder, preserving their original colours and final-cell highlight. Empty cells stay neutral.
+
+Visual verification remains blocked by Work browser settings; real mobile icon spacing and sticky behaviour have not been visually confirmed.
+
+Correction: the selected movement design belongs inside the existing “ประวัติรวม” dialog. The standalone bottom section and its page-level reads have been removed. The dialog now renders the shared compact movement rows, while keeping date filters, pagination, and error states. Regression coverage explicitly opens the history trigger and checks the equations inside that dialog, and checks that the stock page has no separate movement section. Visual inspection remains blocked by Work browser settings.
+
+## Shared stock factory and brand filters
+
+Both `/stock` and `/orders/fresh-reserve-stock` now use `ProductFactoryBrandFilters`: the existing purple underlined horizontal options and label-triggered picker. Reserve stock filters only its existing warehouse/supplier eligibility and preserves catalog product order; brands follow the configured `product_brands.sort_order`. No stock calculations or mutations changed.
+
+Verification: eight filter and history regression checks passed, including selection/reset, missing brands, empty products, horizontal strip handling, and opening/selecting the picker. Mobile/desktop visual comparison remains unverified because local browser use is disabled in Work settings.
+
+## Movement typography and colour correction
+
+Reference: `C:/Users/Riew/AppData/Local/Temp/codex-clipboard-e6ace71f-ee13-4e6e-8a31-670b0a4bac7f.png`; reported application mismatch: `C:/Users/Riew/AppData/Local/Temp/codex-clipboard-3ec2196d-e957-4df4-b2b1-5fbe9bc81f31.png`.
+
+Removed the history wrapper's universal `font-weight: 500 !important`, which overrode the movement component's bold hierarchy. Product headings now explicitly use dark navy and bold weight; balances use deep purple, equation results vivid purple, receipts green, withdrawals red and pending receipts orange. Updated the movement heading, units and tinted equation backgrounds to follow the selected reference. Existing data, dates, pagination and equations are preserved.
+
+Eight rendering/behaviour checks passed. Visual verification was attempted again: `cua.getState()` returned “Local browser use is disabled in Work settings”. Pixel comparison and real viewport verification remain blocked; no claim of pixel-perfect matching.
+
+final result: blocked
+
+## History chronological order
+
+Warehouse history now queries recording time ascending, with ascending ID as its stable tie-breaker and a matching forward pagination cursor. The timeline displays recording time consistently with its date headings and date filter. Office receipts retain a separate effective-date/time line, so midnight receipts do not look out of order. No stock calculations or stored movements changed.
+
+Twelve action/rendering regression checks passed, including forward cursor bounds, timestamp ties, snapshot/count isolation and separate recording/effective time. Browser visual verification remains blocked by the Work browser setting.
+
+Pending receipt clarification: only rows that are still waiting show the orange pending label, current usable balance, forecast equation and effective-time line. Completed office receipts remain green and no longer show the potentially confusing effective-time line. Recording-time ordering is unchanged. Nine movement/history regression checks passed; browser visual verification remains blocked as recorded above.
+
+## Selected compact individual-product history
+
+Reference: `C:/Users/Riew/AppData/Local/Temp/codex-clipboard-096a3e5b-5199-4b82-9aa3-6ca124d0fc9c.png`.
+
+Replaced the tall product/image and balance blocks with compact product identity and side-by-side current balance. The ledger uses five columns: description with time below, office receipts, issues, signed adjustments and remaining. Opening rows now say “ของเหลือ”. Adjustment reasons are available through an accessible information disclosure instead of making every row tall. All five header cells are sticky within the single two-axis scroll container. Pending receipts remain separate and never enter the received column before becoming effective. Returns appear as negative issues; cancelled office receipts appear as negative adjustments.
+
+Nine ledger/rendering tests and production build passed. Visual comparison and real mobile sticky-header behaviour remain unverified because local browser access is disabled in Work settings.
+
+final result: blocked

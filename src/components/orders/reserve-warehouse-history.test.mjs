@@ -9,12 +9,15 @@ const require = createRequire(import.meta.url);
 const compile = file => ts.transpileModule(readFileSync(new URL(file, import.meta.url), "utf8"), { compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX, esModuleInterop: true } }).outputText;
 const math = { exports: {} };
 new Function("require", "module", "exports", compile("../../lib/orders/reserve-warehouse-history.ts"))(require, math, math.exports);
+const movements = { exports: {} };
+new Function("require", "module", "exports", compile("./reserve-recent-activity.tsx"))(name => name.endsWith(".module.css") ? new Proxy({}, { get: (_, key) => key === "__esModule" ? false : String(key) }) : require(name), movements, movements.exports);
 function harness(fetch) {
   const state = [], refs = [];
   let cursor = 0, refCursor = 0;
   const mocks = {
     react: { ...React, useState(initial) { const i = cursor++; if (!(i in state)) state[i] = initial; return [state[i], v => state[i] = typeof v === "function" ? v(state[i]) : v]; }, useRef(initial) { const i = refCursor++; return refs[i] ??= { current: initial }; } },
     "./reserve-stock-dialog": { ReserveStockDialog: ({ children }) => children },
+    "./reserve-recent-activity": movements.exports,
     "./reserve-warehouse-history.module.css": new Proxy({}, { get: (_, key) => key === "__esModule" ? false : String(key) }),
     "@/lib/orders/reserve-warehouse-history": math.exports,
     "@/app/orders/fresh-reserve-stock/history-actions": { fetchReserveWarehouseHistory: fetch },
@@ -27,17 +30,26 @@ function nodes(tree, type) { return !tree || typeof tree !== "object" ? [] : [..
 const tick = () => new Promise(resolve => setImmediate(resolve));
 const base = { reason: "order", effective_at: "2026-10-15T08:00:00+07:00", created_at: "2026-10-15T08:00:00+07:00" };
 const snapshot = { asOf: "2026-10-15T12:00:00+07:00", cursor: null, total: 3, items: [
-  { ...base, id: "zero", productName: "ยอดศูนย์", quantity_delta: -20, quantity_after: 0 },
+  { ...base, id: "zero", productName: "ยอดศูนย์", quantity_delta: -20, quantity_after: 0, before: 20, after: 0 },
   { ...base, id: "old", productName: "ไม่มีข้อมูลเดิม", quantity_delta: -10, quantity_after: null },
-  { ...base, id: "pending", productName: "ยอดรอเข้า", reason: "office", quantity_delta: 50, quantity_after: 100, effective_at: "2026-10-16T00:00:00+07:00" },
+  { ...base, id: "pending", productName: "ยอดรอเข้า", reason: "office", quantity_delta: 50, quantity_after: null, before: 80, after: 130, waiting: true, effective_at: "2026-10-16T00:00:00+07:00" },
 ] };
-test("table keeps zero, missing balances and pending receipts distinct and groups dates", async () => {
+test("history modal uses compact movement equations and separates pending balances", async () => {
   const ui = harness(async () => snapshot);
   nodes(ui.render(), "button")[0].props.onClick(); await tick();
   const html = renderToStaticMarkup(ui.render());
-  const rows = [...html.matchAll(/<tr>([\s\S]*?)<\/tr>/g)].map(match => [...match[1].matchAll(/<td[^>]*>([^<]*)<\/td>/g)].map(cell => cell[1])).filter(row => row.length);
-  assert.deepEqual(rows, [["–", "20", "0"], ["–", "10", "–"], ["50", "–", "–"]]);
-  assert.match(html, /รอรับเข้า/); assert.match(html, /15 ต.ค. 2569/); assert.doesNotMatch(html, /ข้อมูลตัวอย่าง/);
+  const text = html.replace(/<[^>]*>/g, "");
+  assert.ok(text.includes("คงเหลือเดิม 20 − ใช้สำรอง 20 = 0 กก."));
+  assert.ok(text.includes("ไม่มีข้อมูลยอดก่อน–หลังรายการนี้"));
+  assert.ok(text.includes("ใช้ได้ตอนนี้80 กก."));
+  assert.ok(text.includes("รอรับเข้า 50 + คงเหลือเดิม 80 = คาดการณ์ 130 กก."));
+  assert.doesNotMatch(html, /<table|ข้อมูลตัวอย่าง/);
+});
+
+test("main stock page keeps the history trigger without a separate bottom activity section", () => {
+  const source = readFileSync(new URL("../../app/orders/fresh-reserve-stock/page.tsx", import.meta.url), "utf8");
+  assert.match(source, /<ReserveWarehouseHistory/);
+  assert.doesNotMatch(source, /ReserveRecentActivity|ReserveMovementList|buildRecentReserveActivities/);
 });
 test("load more keeps the snapshot and appends; a newer filter discards a late response", async () => {
   const calls = [], pending = [];

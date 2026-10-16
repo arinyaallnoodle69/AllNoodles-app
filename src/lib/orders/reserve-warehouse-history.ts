@@ -1,6 +1,8 @@
 export type WarehouseReserveMovement = {
   id: string; productName: string; quantity_delta: number; quantity_after: number | null;
   reason: string; effective_at: string; created_at: string;
+  before?: number | null; after?: number | null; waiting?: boolean; at?: string;
+  event_kind?: string;
 };
 export type WarehouseHistoryPage = {
   items: WarehouseReserveMovement[];
