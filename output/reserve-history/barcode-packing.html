@@ -1,0 +1,857 @@
+<!doctype html><meta charset="utf-8"><title>ทดสอบดอกจันบาร์โค้ด</title><style>
+      @font-face {
+        font-family: "Angsana New Order Print";
+        src: url("/fonts/angsana-new/angsab.woff") format("woff");
+        font-style: normal;
+        font-weight: 400;
+        font-display: swap;
+      }
+
+      @font-face {
+        font-family: "Angsana New Order Print";
+        src: url("/fonts/angsana-new/angsab.woff") format("woff");
+        font-style: normal;
+        font-weight: 700;
+        font-display: swap;
+      }
+
+      @font-face {
+        font-family: "Angsana New Order Print";
+        src: url("/fonts/angsana-new/angsab.woff") format("woff");
+        font-style: normal;
+        font-weight: 800 900;
+        font-display: swap;
+      }
+
+      @page { size: A4 landscape; margin: 0; }
+
+      @media print {
+        html, body {
+          width: 297mm !important;
+          height: 210mm !important;
+          margin: 0 !important;
+          padding: 0 !important;
+          overflow: visible !important;
+          background: #ffffff !important;
+        }
+
+        body {
+          print-color-adjust: exact;
+          -webkit-print-color-adjust: exact;
+        }
+
+        main,
+        div[class*="pull-to-refresh"],
+        div[class*="RootAppLayoutShell"] {
+          width: auto !important;
+          margin: 0 !important;
+          padding: 0 !important;
+          display: block !important;
+          background: transparent !important;
+          box-shadow: none !important;
+        }
+
+        .no-print {
+          display: none !important;
+        }
+
+        .packing-print-container {
+          display: block !important;
+          margin: 0 !important;
+          padding: 0 !important;
+          line-height: 1.22 !important;
+        }
+
+        .packing-sheet-shell {
+          width: 297mm !important;
+          height: 210mm !important;
+          margin: 0 !important;
+          padding: 0 !important;
+          display: block !important;
+          overflow: hidden !important;
+          line-height: 1.22 !important;
+        }
+
+        .packing-sheet {
+          width: 297mm !important;
+          height: 210mm !important;
+          margin: 0 !important;
+          border: none !important;
+          box-shadow: none !important;
+          transform: scale(0.98) !important;
+          transform-origin: top left !important;
+          page-break-after: always;
+          break-after: page;
+        }
+
+        .packing-sheet__inner {
+          padding-top: 4mm !important;
+          padding-right: 4mm !important;
+          padding-bottom: 4mm !important;
+          padding-left: 4mm !important;
+          gap: 0.55mm !important;
+        }
+
+        .packing-sheet:last-child {
+          page-break-after: auto;
+          break-after: auto;
+        }
+      }
+
+      @media screen {
+        body {
+          background: #e2e8f0 !important;
+        }
+
+        .packing-print-container {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 20px;
+          padding: 78px 12px 36px;
+          overflow-x: hidden;
+        }
+
+        .packing-sheet-shell {
+          width: 1123px;
+          height: 794px;
+          display: flex;
+          justify-content: center;
+          align-items: flex-start;
+        }
+
+        .packing-sheet {
+          width: 1123px;
+          height: 794px;
+          box-shadow: 0 16px 34px rgba(15, 23, 42, 0.16);
+        }
+      }
+
+      @media screen and (max-width: 767px) {
+        .packing-print-container {
+          gap: 10px;
+          width: 100vw;
+          padding: 116px 0 20px;
+        }
+
+        .packing-sheet-shell {
+          --packing-mobile-available: calc(100vw - 8px);
+          --packing-mobile-scale: min(1, calc(var(--packing-mobile-available) / 1123px));
+          width: var(--packing-mobile-available);
+          height: calc(794px * var(--packing-mobile-scale));
+          max-width: 100vw;
+          overflow: hidden;
+        }
+
+        .packing-sheet {
+          width: 1123px !important;
+          height: 794px !important;
+          max-width: none !important;
+          flex: none;
+          transform: scale(var(--packing-mobile-scale));
+          transform-origin: top center;
+          box-shadow: 0 8px 20px rgba(15, 23, 42, 0.14);
+        }
+      }
+
+      .packing-sheet {
+        width: 297mm;
+        height: 210mm;
+        overflow: hidden;
+        background: #ffffff;
+        border: 1px solid #cbd5e1;
+        font-family: "Angsana New Order Print", "Sarabun", "Noto Sans Thai", sans-serif;
+        font-synthesis: none;
+        color: #0f172a;
+        box-sizing: border-box;
+      }
+
+      .packing-sheet__inner {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        padding: 4mm;
+        gap: 1.2mm;
+        box-sizing: border-box;
+      }
+
+      .packing-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 6mm;
+        padding-bottom: 1.2mm;
+        border-bottom: 1.3px solid #4A148C;
+      }
+
+      .packing-header__title-block {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5mm;
+        min-width: 0;
+        flex: 1;
+      }
+
+      .packing-header--standard {
+        display: grid;
+        grid-template-columns: minmax(72mm, auto) minmax(0, 1fr) auto;
+        align-items: end;
+        gap: 1.8mm;
+        padding-bottom: 0.35mm;
+      }
+
+      .packing-header__summary-line {
+        display: flex;
+        align-items: baseline;
+        gap: 1.2mm;
+        min-width: 0;
+        white-space: nowrap;
+      }
+
+      .packing-header__org {
+        font-size: 11.16pt;
+        font-weight: 800;
+        line-height: 1.22;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: #4A148C;
+        white-space: nowrap;
+      }
+
+      .packing-header__org--inline {
+        font-size: 10.38pt;
+      }
+
+      .packing-header__title {
+        margin: 0;
+        font-size: 19.84pt;
+        line-height: 1.18;
+        font-weight: 800;
+        color: #0f172a;
+        white-space: nowrap;
+      }
+
+      .packing-header__title--standard {
+        font-size: 14.42pt;
+      }
+
+      .packing-header__date {
+        font-size: 10.54pt;
+        font-weight: 700;
+        line-height: 1.24;
+        color: #475569;
+        white-space: nowrap;
+      }
+
+      .packing-header__vehicle-main {
+        min-width: 0;
+        text-align: center;
+        font-size: 30pt;
+        font-weight: 800;
+        line-height: 1.15;
+        color: #0f172a;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        letter-spacing: 0.01em;
+      }
+
+      .packing-header__subtitle {
+        display: flex;
+        gap: 5mm;
+        align-items: center;
+        font-size: 11.63pt;
+        font-weight: 700;
+        line-height: 1.24;
+        color: #475569;
+        white-space: nowrap;
+      }
+
+      .packing-header__meta {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(17mm, auto)) minmax(31mm, auto);
+        gap: 1px;
+        border: 1px solid #cbd5e1;
+        background: #cbd5e1;
+        flex-shrink: 0;
+      }
+
+      .packing-header__meta-cell {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 1.2mm;
+        min-height: 4.8mm;
+        padding: 0.35mm 1mm;
+        background: #ffffff;
+        white-space: nowrap;
+      }
+
+      .packing-table:not(.packing-table--transposed) .packing-table__row {
+        height: var(--standard-row-height);
+      }
+
+      .packing-table:not(.packing-table--transposed) .packing-table__total-row {
+        height: var(--standard-row-height);
+      }
+
+      .packing-table:not(.packing-table--transposed) .packing-cell--store {
+        overflow: hidden;
+        font-size: min(var(--packing-store-font-size, 12.4pt), calc(var(--standard-row-height) / 1.3));
+        line-height: 1.3;
+        text-overflow: ellipsis;
+      }
+
+      .packing-table:not(.packing-table--transposed) .packing-cell--qty,
+      .packing-table:not(.packing-table--transposed) .packing-cell--total {
+        overflow: hidden;
+        padding: 0;
+        font-size: 9.46pt;
+        white-space: nowrap;
+      }
+
+      .packing-number {
+        display: block;
+        width: 100%;
+        max-width: 100%;
+        overflow: hidden;
+        font-family: "Angsana New Order Print", "Sarabun", "Noto Sans Thai", sans-serif;
+        font-size: var(--packing-number-font-size, 12.4pt);
+        font-weight: 800;
+        font-variant-numeric: tabular-nums;
+        line-height: 1;
+        letter-spacing: -0.03em;
+        text-align: center;
+        white-space: nowrap;
+      }
+
+      .packing-number--md {
+        font-size: 10.85pt;
+        letter-spacing: -0.05em;
+      }
+
+      .packing-number--sm {
+        font-size: 9.3pt;
+        letter-spacing: -0.07em;
+      }
+
+      .packing-number--xs {
+        font-size: 8.06pt;
+        letter-spacing: -0.09em;
+      }
+
+      .packing-cell--total .packing-number,
+      .packing-cell--total .packing-number--md {
+        color: #000;
+        font-size: calc(var(--packing-number-font-size, 12.4pt) * 1.2);
+      }
+
+      .packing-cell--total .packing-number--sm {
+        font-size: 12.4pt;
+      }
+
+      .packing-cell--total .packing-number--xs {
+        font-size: 10pt;
+      }
+
+      .packing-cell--total .packing-number--xxs {
+        font-size: calc(48pt / var(--packing-total-characters));
+        letter-spacing: -0.09em;
+      }
+
+      .packing-header__meta-cell span {
+        font-size: 9.77pt;
+        font-weight: 700;
+        color: #64748b;
+      }
+
+      .packing-header__meta-cell strong {
+        font-size: 12.25pt;
+        font-weight: 800;
+        color: #0f172a;
+      }
+
+      .packing-header__meta-cell--weight {
+        gap: 0.9mm;
+        background: #ffd400;
+        border-left: 1px solid #0f172a;
+      }
+
+      .packing-header__meta-cell--weight span {
+        color: #713f12;
+        font-weight: 800;
+      }
+
+      .packing-header__meta-cell--weight strong {
+        color: #111827;
+        font-size: 13.33pt;
+        font-weight: 900;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .packing-header__meta-cell--weight small {
+        color: #b91c1c;
+        font-size: 7.9pt;
+        font-weight: 900;
+        line-height: 1;
+      }
+
+      .packing-table-wrap {
+        flex: 1;
+        min-height: 0;
+        border: 1px solid #000000;
+        display: flex;
+        align-items: flex-start;
+        overflow: hidden;
+      }
+
+      .packing-table {
+        width: 100%;
+        border-collapse: collapse;
+        table-layout: fixed;
+      }
+
+      .packing-table-wrap--summary {
+        flex-direction: column;
+      }
+
+      .packing-table-wrap--summary > .packing-table {
+        flex: 0 0 auto;
+      }
+
+      .packing-table--combined-summary {
+        margin-top: 6mm;
+        --packing-number-font-size: 12.4pt;
+        --standard-row-height: 7.8mm;
+      }
+
+      .packing-table--combined-summary thead .packing-col {
+        border-top: 1px solid #000000;
+      }
+
+      .packing-combined-summary-title {
+        height: 6mm;
+        padding: 0 0.8mm;
+        text-align: left;
+        font-size: 12.71pt;
+        font-weight: 800;
+        line-height: 6mm;
+        color: #4a148c;
+      }
+
+      .packing-col,
+      .packing-cell {
+        border-right: 1px solid #000000;
+        border-bottom: 1px solid #000000;
+        box-sizing: border-box;
+      }
+
+      .packing-col:last-child,
+      .packing-cell:last-child {
+        border-right: none;
+      }
+
+      .packing-col--cat-boundary,
+      .packing-cell--cat-boundary {
+        border-right: 2px solid #000000 !important;
+      }
+
+      .packing-col {
+        padding: 0;
+        text-align: center;
+        vertical-align: middle;
+      }
+
+      .packing-col--store {
+        width: 18mm;
+        min-width: 18mm;
+        padding: 1mm 0.6mm 0.75mm;
+        background: #ffffff;
+        color: #0f172a;
+        font-size: 12.71pt;
+        font-weight: 800;
+        line-height: 1.2;
+        text-align: left;
+        white-space: nowrap;
+      }
+
+      .packing-col--group-label {
+        padding-top: 0.45mm;
+        padding-bottom: 0.45mm;
+        background: #f8fafc;
+        color: #475569;
+        font-size: 9.92pt;
+        text-align: center;
+      }
+
+      .packing-col--category {
+        min-height: 7mm;
+        padding: 0.45mm 0.35mm 0.3mm;
+        overflow: hidden;
+        text-align: center;
+        vertical-align: middle;
+      }
+
+      .packing-col--category {
+        height: 7mm;
+        font-size: 10.85pt;
+        line-height: 1.15;
+        font-weight: 900;
+        color: #0f172a;
+      }
+
+      .packing-header-label {
+        width: 100%;
+        min-width: 0;
+        overflow: visible;
+        line-height: 1.35;
+      }
+
+      .packing-header-label--category {
+        display: -webkit-box;
+        position: relative;
+        top: 0;
+        overflow: hidden;
+        white-space: normal;
+        word-break: break-word;
+        overflow-wrap: anywhere;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 2;
+      }
+
+      .packing-col--transpose-product {
+        width: 27mm;
+        min-width: 27mm;
+        padding: 1.2mm 0.7mm;
+        background: #ffffff;
+        color: #0f172a;
+        font-size: 11.16pt;
+        font-weight: 800;
+        text-align: left;
+        white-space: nowrap;
+      }
+
+      .packing-col--transpose-total {
+        width: 8mm;
+        min-width: 8mm;
+        padding: 1.2mm 0.2mm;
+        background: #ffd400;
+        color: #0f172a;
+        font-size: 10.38pt;
+        font-weight: 800;
+        text-align: center;
+        white-space: nowrap;
+      }
+
+      .packing-product-header {
+        position: relative;
+        height: 26mm;
+        min-height: 26mm;
+        max-height: 26mm;
+        padding: 0.7mm 0.1mm 0.4mm;
+        width: 100%;
+        max-width: 100%;
+        min-width: 0;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        box-sizing: border-box;
+      }
+
+      .packing-product-header__name {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        max-width: 100%;
+        max-height: 100%;
+        gap: 0;
+        font-size: 15pt;
+        line-height: 1.25;
+        font-weight: 800;
+        color: #0f172a;
+        white-space: nowrap;
+        text-align: center;
+        padding: 0;
+        overflow: visible;
+        box-sizing: border-box;
+      }
+
+      .packing-product-header__name > span {
+        display: block;
+        max-width: 100%;
+        white-space: nowrap;
+        overflow: visible;
+        box-sizing: border-box;
+      }
+
+      .packing-product-header__name--compact {
+        font-size: 12.5pt;
+        line-height: 1.23;
+      }
+
+      .packing-product-header__name--dense {
+        font-size: 10pt;
+        line-height: 1.2;
+      }
+
+      .packing-product-header__icon {
+        display: block;
+        font-size: 7pt;
+        line-height: 1;
+        margin-bottom: 0.3mm;
+        font-family: "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", var(--font-noto-sans-thai), "Noto Sans Thai", sans-serif;
+      }
+
+      .packing-product-header__unit {
+        font-size: 8.99pt;
+        font-weight: 700;
+        line-height: 1.15;
+        color: #475569;
+        text-align: center;
+        padding-left: 0;
+        width: 100%;
+        box-sizing: border-box;
+      }
+
+      .packing-transpose-header {
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-start;
+        min-height: 14mm;
+        padding: 0.55mm 0.05mm;
+        width: 100%;
+        min-width: 0;
+        overflow: hidden;
+        box-sizing: border-box;
+      }
+
+      .packing-transpose-header__name {
+        display: -webkit-box;
+        -webkit-line-clamp: 4;
+        -webkit-box-orient: vertical;
+        flex: 1;
+        font-size: 11.16pt;
+        line-height: 1.2;
+        font-weight: 800;
+        color: #0f172a;
+        width: 100%;
+        min-width: 0;
+        overflow: hidden;
+        white-space: normal;
+        word-break: normal;
+        overflow-wrap: break-word;
+        text-align: left;
+        padding-left: 0.8mm;
+        padding-right: 0.8mm;
+        padding-top: 0.5mm;
+        box-sizing: border-box;
+      }
+
+      .packing-table--transposed .packing-table__row {
+        height: var(--transposed-row-height);
+      }
+
+      .packing-table--transposed .packing-cell--qty,
+      .packing-table--transposed .packing-cell--empty {
+        font-size: 14.26pt;
+      }
+
+      .packing-cell {
+        padding: 0;
+        text-align: center;
+        vertical-align: middle;
+      }
+
+      .packing-cell--store {
+        padding: 0 0.6mm;
+        text-align: left;
+        font-size: 13.64pt;
+        font-weight: 700;
+        line-height: 1.16;
+        color: #0f172a;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .packing-cell--empty.packing-cell--stopped-dash {
+        color: #0f172a;
+      }
+
+      .packing-stopped-dash-text {
+        display: block;
+        color: #0f172a !important;
+        font-size: 10pt;
+        font-weight: 700;
+        line-height: 1;
+        text-align: center;
+        white-space: nowrap;
+      }
+
+      .packing-table--transposed .packing-stopped-dash-text {
+        font-size: 8pt;
+      }
+
+      .packing-cell--transpose-product {
+        padding: 0 0.45mm;
+        text-align: left;
+        background: #ffffff;
+      }
+
+      .packing-transpose-product {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: center;
+        gap: 0.35mm;
+      }
+
+      .packing-transpose-product__name {
+        display: -webkit-box;
+        overflow: hidden;
+        font-size: 13.02pt;
+        font-weight: 700;
+        line-height: 1.16;
+        color: #0f172a;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 2;
+      }
+
+      .packing-transpose-product__unit {
+        flex-shrink: 0;
+        font-size: 9.61pt;
+        font-weight: 700;
+        color: #475569;
+        white-space: nowrap;
+        text-align: right;
+      }
+
+      .packing-cell--qty,
+      .packing-cell--total {
+        font-size: 16.12pt;
+        font-weight: 800;
+        color: #0f172a;
+      }
+
+      .packing-table:not(.packing-table--transposed) .packing-cell--qty {
+        font-size: 18.29pt;
+        font-weight: 900;
+        line-height: 1;
+      }
+
+      .packing-cell--transpose-total-value {
+        background: #ffd400;
+        font-size: 13.8pt;
+        font-weight: 800;
+        color: #0f172a;
+      }
+
+      .packing-cell--empty {
+        font-size: 10.85pt;
+        font-weight: 600;
+        color: transparent;
+      }
+
+      .packing-table__total-row .packing-cell {
+        border-top: 1.2px solid #111827;
+      }
+
+      .packing-table--transposed .packing-table__total-row {
+        display: none;
+      }
+
+      .packing-cell--total-label {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        justify-content: center;
+        gap: 0;
+        padding: 0 0.8mm;
+        text-align: left;
+        font-size: 9.46pt;
+        font-weight: 800;
+        line-height: 1;
+        color: #111827;
+        background: #dbeafe;
+      }
+
+      .packing-cell--total-label strong {
+        font-size: 9.77pt;
+        font-weight: 900;
+        line-height: 1;
+        white-space: nowrap;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .packing-cell--total {
+        background: #dbeafe;
+      }
+
+      .packing-table__total-row--combined .packing-cell--combined-label {
+        background: #f3e8ff;
+        color: #4a148c;
+        border-top: 1.5px solid #4a148c;
+      }
+
+      .packing-table__total-row--combined .packing-cell--combined-label strong {
+        color: #4a148c;
+      }
+
+      .packing-table__total-row--combined .packing-cell--combined-total {
+        background: #f3e8ff;
+        color: #4a148c;
+        font-weight: 900;
+        border-top: 1.5px solid #4a148c;
+      }
+
+      /* The original 50-item layout uses its own highly legible print face.
+         Keep the transposed layout and every other document unchanged. */
+      .packing-sheet--standard {
+        font-family: "Angsana New Order Print", "Sarabun", "Noto Sans Thai", sans-serif;
+        font-synthesis: none;
+        text-rendering: geometricPrecision;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      .packing-sheet--standard .packing-header__org,
+      .packing-sheet--standard .packing-header__title,
+      .packing-sheet--standard .packing-header__date,
+      .packing-sheet--standard .packing-header__vehicle-main,
+      .packing-sheet--standard .packing-header__meta-cell span,
+      .packing-sheet--standard .packing-header__meta-cell strong,
+      .packing-sheet--standard .packing-header__meta-cell small,
+      .packing-sheet--standard .packing-col,
+      .packing-sheet--standard .packing-cell--store,
+      .packing-sheet--standard .packing-cell--total-label,
+      .packing-sheet--standard .packing-cell--total-label strong {
+        font-family: "Angsana New Order Print", "Sarabun", "Noto Sans Thai", sans-serif;
+      }
+
+      .packing-sheet--standard .packing-cell--store {
+        font-weight: 700;
+      }
+
+      .packing-sheet--standard .packing-product-header__name {
+        font-family: "Angsana New Order Print", "Sarabun", "Noto Sans Thai", sans-serif;
+        font-size: 15pt;
+        line-height: 1.25;
+        font-weight: 700;
+      }
+
+      .packing-sheet--standard .packing-product-header__name--compact {
+        font-size: 12.5pt;
+        line-height: 1.23;
+      }
+
+      .packing-sheet--standard .packing-product-header__name--dense {
+        font-size: 10pt;
+        line-height: 1.2;
+      }
+
+      .packing-sheet--standard .packing-product-header__icon {
+        font-family: "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif;
+      }
+    </style><div class="packing-sheet-shell"><section class="packing-sheet packing-sheet--standard"><div class="packing-sheet__inner"><header class="packing-header packing-header--standard" style="border-color:#4A148C"><div class="packing-header__summary-line"><span class="packing-header__org packing-header__org--inline">All Noodles</span><h1 class="packing-header__title packing-header__title--standard">ตารางเช็คออเดอร์ลูกค้า</h1><span class="packing-header__date">วันที่ 9 ตุลาคม 2569</span></div><div class="packing-header__vehicle-main">รถกรุงเทพ</div><div class="packing-header__meta"><div class="packing-header__meta-cell"><span>ร้านค้า</span><strong>1</strong></div><div class="packing-header__meta-cell"><span>หน้า</span><strong>1/3</strong></div><div class="packing-header__meta-cell"><span>กลุ่มสินค้า</span><strong>1/1</strong></div><div class="packing-header__meta-cell packing-header__meta-cell--weight"><span>น้ำหนัก (ใบแรก)</span><strong>1.00 กก.</strong><small style="color:#713f12;font-weight:800;font-size:7.8pt;line-height:1.1">(ทั้งสาย 4.00 กก.)</small></div></div></header><div class="packing-table-wrap"><table class="packing-table" style="--standard-row-height:5.2mm;--packing-number-font-size:12.4pt;--packing-store-font-size:12.4pt"><thead><tr><th class="packing-col packing-col--store packing-col--group-label">หมวดหมู่</th><th class="packing-col packing-col--category packing-col--cat-boundary" colSpan="16" style="background-color:#EA80FC"><span class="packing-header-label packing-header-label--category">บะหมี่</span></th><th class="packing-col packing-col--category packing-col--cat-boundary" colSpan="14" style="background-color:#d7ebd3"><span class="packing-header-label packing-header-label--category">เส้น​เล็ก</span></th><th class="packing-col packing-col--category" colSpan="14" style="background-color:#f2e6bd"><span class="packing-header-label packing-header-label--category">เส้น​ใหญ่</span></th></tr><tr><th class="packing-col packing-col--store">ร้านค้า</th><th class="packing-col packing-col--product" style="width:6mm;background-color:#EA80FC"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>1</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#EA80FC"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>2</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#EA80FC"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>3</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#EA80FC"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>4</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#EA80FC"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>5</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#EA80FC"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>6</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#EA80FC"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>7</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#EA80FC"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>8</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#EA80FC"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>9</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#EA80FC"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>10</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#EA80FC"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>11</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#EA80FC"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>12</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#EA80FC"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>13</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#EA80FC"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>14</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#EA80FC"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>15</span></div></div></th><th class="packing-col packing-col--product packing-col--cat-boundary" style="width:6mm;background-color:#EA80FC"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>16</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#d7ebd3"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>17</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#d7ebd3"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>18</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#d7ebd3"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>19</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#d7ebd3"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>20</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#d7ebd3"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>21</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#d7ebd3"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>22</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#d7ebd3"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>23</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#d7ebd3"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>24</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#d7ebd3"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>25</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#d7ebd3"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>26</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#d7ebd3"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>27</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#d7ebd3"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>28</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#d7ebd3"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>29</span></div></div></th><th class="packing-col packing-col--product packing-col--cat-boundary" style="width:6mm;background-color:#d7ebd3"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>30</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#f2e6bd"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>31</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#f2e6bd"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>32</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#f2e6bd"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>33</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#f2e6bd"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>34</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#f2e6bd"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>35</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#f2e6bd"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>36</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#f2e6bd"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>37</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#f2e6bd"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>38</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#f2e6bd"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>39</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#f2e6bd"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>40</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#f2e6bd"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>41</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#f2e6bd"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>42</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#f2e6bd"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>43</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#f2e6bd"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>44</span></div></div></th></tr></thead><tbody><tr class="packing-table__row"><td class="packing-cell packing-cell--store">ซุปเปอร์ชิพ</td><td class="packing-cell packing-cell--qty packing-number--md" style="background-color:#F3E5F5"><span class="packing-number packing-number--md">20*</span></td><td class="packing-cell packing-cell--qty packing-number--md" style="background-color:#F3E5F5"><span class="packing-number packing-number--md">100</span></td><td class="packing-cell packing-cell--qty packing-number--xs" style="background-color:#F3E5F5"><span class="packing-number packing-number--xs">1000*</span></td><td class="packing-cell packing-cell--qty packing-number--xs" style="background-color:#F3E5F5"><span class="packing-number packing-number--xs">10000</span></td><td class="packing-cell packing-cell--qty packing-number--xs" style="background-color:#F3E5F5"><span class="packing-number packing-number--xs">1234.5*</span></td><td class="packing-cell packing-cell--qty" style="background-color:#F3E5F5"><span class="packing-number">20</span></td><td class="packing-cell packing-cell--qty packing-number--sm" style="background-color:#F3E5F5"><span class="packing-number packing-number--sm">100*</span></td><td class="packing-cell packing-cell--qty packing-number--sm" style="background-color:#F3E5F5"><span class="packing-number packing-number--sm">1000</span></td><td class="packing-cell packing-cell--qty packing-number--xs" style="background-color:#F3E5F5"><span class="packing-number packing-number--xs">10000*</span></td><td class="packing-cell packing-cell--qty packing-number--sm" style="background-color:#F3E5F5"><span class="packing-number packing-number--sm">1234.5</span></td><td class="packing-cell packing-cell--qty packing-number--md" style="background-color:#F3E5F5"><span class="packing-number packing-number--md">20*</span></td><td class="packing-cell packing-cell--qty packing-number--md" style="background-color:#F3E5F5"><span class="packing-number packing-number--md">100</span></td><td class="packing-cell packing-cell--qty packing-number--xs" style="background-color:#F3E5F5"><span class="packing-number packing-number--xs">1000*</span></td><td class="packing-cell packing-cell--qty packing-number--xs" style="background-color:#F3E5F5"><span class="packing-number packing-number--xs">10000</span></td><td class="packing-cell packing-cell--qty packing-number--xs" style="background-color:#F3E5F5"><span class="packing-number packing-number--xs">1234.5*</span></td><td class="packing-cell packing-cell--qty packing-cell--cat-boundary" style="background-color:#F3E5F5"><span class="packing-number">20</span></td><td class="packing-cell packing-cell--qty packing-number--sm" style="background-color:#eef8eb"><span class="packing-number packing-number--sm">100*</span></td><td class="packing-cell packing-cell--qty packing-number--sm" style="background-color:#eef8eb"><span class="packing-number packing-number--sm">1000</span></td><td class="packing-cell packing-cell--qty packing-number--xs" style="background-color:#eef8eb"><span class="packing-number packing-number--xs">10000*</span></td><td class="packing-cell packing-cell--qty packing-number--sm" style="background-color:#eef8eb"><span class="packing-number packing-number--sm">1234.5</span></td><td class="packing-cell packing-cell--qty packing-number--md" style="background-color:#eef8eb"><span class="packing-number packing-number--md">20*</span></td><td class="packing-cell packing-cell--qty packing-number--md" style="background-color:#eef8eb"><span class="packing-number packing-number--md">100</span></td><td class="packing-cell packing-cell--qty packing-number--xs" style="background-color:#eef8eb"><span class="packing-number packing-number--xs">1000*</span></td><td class="packing-cell packing-cell--qty packing-number--xs" style="background-color:#eef8eb"><span class="packing-number packing-number--xs">10000</span></td><td class="packing-cell packing-cell--qty packing-number--xs" style="background-color:#eef8eb"><span class="packing-number packing-number--xs">1234.5*</span></td><td class="packing-cell packing-cell--qty" style="background-color:#eef8eb"><span class="packing-number">20</span></td><td class="packing-cell packing-cell--qty packing-number--sm" style="background-color:#eef8eb"><span class="packing-number packing-number--sm">100*</span></td><td class="packing-cell packing-cell--qty packing-number--sm" style="background-color:#eef8eb"><span class="packing-number packing-number--sm">1000</span></td><td class="packing-cell packing-cell--qty packing-number--xs" style="background-color:#eef8eb"><span class="packing-number packing-number--xs">10000*</span></td><td class="packing-cell packing-cell--qty packing-number--sm packing-cell--cat-boundary" style="background-color:#eef8eb"><span class="packing-number packing-number--sm">1234.5</span></td><td class="packing-cell packing-cell--qty packing-number--md" style="background-color:#fbf5e6"><span class="packing-number packing-number--md">20*</span></td><td class="packing-cell packing-cell--qty packing-number--md" style="background-color:#fbf5e6"><span class="packing-number packing-number--md">100</span></td><td class="packing-cell packing-cell--qty packing-number--xs" style="background-color:#fbf5e6"><span class="packing-number packing-number--xs">1000*</span></td><td class="packing-cell packing-cell--qty packing-number--xs" style="background-color:#fbf5e6"><span class="packing-number packing-number--xs">10000</span></td><td class="packing-cell packing-cell--qty packing-number--xs" style="background-color:#fbf5e6"><span class="packing-number packing-number--xs">1234.5*</span></td><td class="packing-cell packing-cell--qty" style="background-color:#fbf5e6"><span class="packing-number">20</span></td><td class="packing-cell packing-cell--qty packing-number--sm" style="background-color:#fbf5e6"><span class="packing-number packing-number--sm">100*</span></td><td class="packing-cell packing-cell--qty packing-number--sm" style="background-color:#fbf5e6"><span class="packing-number packing-number--sm">1000</span></td><td class="packing-cell packing-cell--qty packing-number--xs" style="background-color:#fbf5e6"><span class="packing-number packing-number--xs">10000*</span></td><td class="packing-cell packing-cell--qty packing-number--sm" style="background-color:#fbf5e6"><span class="packing-number packing-number--sm">1234.5</span></td><td class="packing-cell packing-cell--qty packing-number--md" style="background-color:#fbf5e6"><span class="packing-number packing-number--md">20*</span></td><td class="packing-cell packing-cell--qty packing-number--md" style="background-color:#fbf5e6"><span class="packing-number packing-number--md">100</span></td><td class="packing-cell packing-cell--qty packing-number--xs" style="background-color:#fbf5e6"><span class="packing-number packing-number--xs">1000*</span></td><td class="packing-cell packing-cell--qty packing-number--xs" style="background-color:#fbf5e6"><span class="packing-number packing-number--xs">10000</span></td></tr><tr class="packing-table__total-row"><td class="packing-cell packing-cell--total-label"><span>รวม (ใบแรก)</span><strong>1.00 กก.</strong></td><td class="packing-cell packing-cell--total"><span class="packing-number" style="--packing-total-characters:2">20</span></td><td class="packing-cell packing-cell--total"><span class="packing-number packing-number--md" style="--packing-total-characters:3">100</span></td><td class="packing-cell packing-cell--total"><span class="packing-number packing-number--sm" style="--packing-total-characters:4">1000</span></td><td class="packing-cell packing-cell--total"><span class="packing-number packing-number--xs" style="--packing-total-characters:5">10000</span></td><td class="packing-cell packing-cell--total"><span class="packing-number packing-number--xxs" style="--packing-total-characters:6">1234.5</span></td><td class="packing-cell packing-cell--total"><span class="packing-number" style="--packing-total-characters:2">20</span></td><td class="packing-cell packing-cell--total"><span class="packing-number packing-number--md" style="--packing-total-characters:3">100</span></td><td class="packing-cell packing-cell--total"><span class="packing-number packing-number--sm" style="--packing-total-characters:4">1000</span></td><td class="packing-cell packing-cell--total"><span class="packing-number packing-number--xs" style="--packing-total-characters:5">10000</span></td><td class="packing-cell packing-cell--total"><span class="packing-number packing-number--xxs" style="--packing-total-characters:6">1234.5</span></td><td class="packing-cell packing-cell--total"><span class="packing-number" style="--packing-total-characters:2">20</span></td><td class="packing-cell packing-cell--total"><span class="packing-number packing-number--md" style="--packing-total-characters:3">100</span></td><td class="packing-cell packing-cell--total"><span class="packing-number packing-number--sm" style="--packing-total-characters:4">1000</span></td><td class="packing-cell packing-cell--total"><span class="packing-number packing-number--xs" style="--packing-total-characters:5">10000</span></td><td class="packing-cell packing-cell--total"><span class="packing-number packing-number--xxs" style="--packing-total-characters:6">1234.5</span></td><td class="packing-cell packing-cell--total packing-cell--cat-boundary"><span class="packing-number" style="--packing-total-characters:2">20</span></td><td class="packing-cell packing-cell--total"><span class="packing-number packing-number--md" style="--packing-total-characters:3">100</span></td><td class="packing-cell packing-cell--total"><span class="packing-number packing-number--sm" style="--packing-total-characters:4">1000</span></td><td class="packing-cell packing-cell--total"><span class="packing-number packing-number--xs" style="--packing-total-characters:5">10000</span></td><td class="packing-cell packing-cell--total"><span class="packing-number packing-number--xxs" style="--packing-total-characters:6">1234.5</span></td><td class="packing-cell packing-cell--total"><span class="packing-number" style="--packing-total-characters:2">20</span></td><td class="packing-cell packing-cell--total"><span class="packing-number packing-number--md" style="--packing-total-characters:3">100</span></td><td class="packing-cell packing-cell--total"><span class="packing-number packing-number--sm" style="--packing-total-characters:4">1000</span></td><td class="packing-cell packing-cell--total"><span class="packing-number packing-number--xs" style="--packing-total-characters:5">10000</span></td><td class="packing-cell packing-cell--total"><span class="packing-number packing-number--xxs" style="--packing-total-characters:6">1234.5</span></td><td class="packing-cell packing-cell--total"><span class="packing-number" style="--packing-total-characters:2">20</span></td><td class="packing-cell packing-cell--total"><span class="packing-number packing-number--md" style="--packing-total-characters:3">100</span></td><td class="packing-cell packing-cell--total"><span class="packing-number packing-number--sm" style="--packing-total-characters:4">1000</span></td><td class="packing-cell packing-cell--total"><span class="packing-number packing-number--xs" style="--packing-total-characters:5">10000</span></td><td class="packing-cell packing-cell--total packing-cell--cat-boundary"><span class="packing-number packing-number--xxs" style="--packing-total-characters:6">1234.5</span></td><td class="packing-cell packing-cell--total"><span class="packing-number" style="--packing-total-characters:2">20</span></td><td class="packing-cell packing-cell--total"><span class="packing-number packing-number--md" style="--packing-total-characters:3">100</span></td><td class="packing-cell packing-cell--total"><span class="packing-number packing-number--sm" style="--packing-total-characters:4">1000</span></td><td class="packing-cell packing-cell--total"><span class="packing-number packing-number--xs" style="--packing-total-characters:5">10000</span></td><td class="packing-cell packing-cell--total"><span class="packing-number packing-number--xxs" style="--packing-total-characters:6">1234.5</span></td><td class="packing-cell packing-cell--total"><span class="packing-number" style="--packing-total-characters:2">20</span></td><td class="packing-cell packing-cell--total"><span class="packing-number packing-number--md" style="--packing-total-characters:3">100</span></td><td class="packing-cell packing-cell--total"><span class="packing-number packing-number--sm" style="--packing-total-characters:4">1000</span></td><td class="packing-cell packing-cell--total"><span class="packing-number packing-number--xs" style="--packing-total-characters:5">10000</span></td><td class="packing-cell packing-cell--total"><span class="packing-number packing-number--xxs" style="--packing-total-characters:6">1234.5</span></td><td class="packing-cell packing-cell--total"><span class="packing-number" style="--packing-total-characters:2">20</span></td><td class="packing-cell packing-cell--total"><span class="packing-number packing-number--md" style="--packing-total-characters:3">100</span></td><td class="packing-cell packing-cell--total"><span class="packing-number packing-number--sm" style="--packing-total-characters:4">1000</span></td><td class="packing-cell packing-cell--total"><span class="packing-number packing-number--xs" style="--packing-total-characters:5">10000</span></td></tr></tbody></table></div></div></section></div><div class="packing-sheet-shell"><section class="packing-sheet packing-sheet--standard"><div class="packing-sheet__inner"><header class="packing-header packing-header--standard" style="border-color:#4A148C"><div class="packing-header__summary-line"><span class="packing-header__org packing-header__org--inline">All Noodles</span><h1 class="packing-header__title packing-header__title--standard">ตารางเช็คออเดอร์ลูกค้า</h1><span class="packing-header__date">วันที่ 9 ตุลาคม 2569</span></div><div class="packing-header__vehicle-main">รถกรุงเทพบะหมี่</div><div class="packing-header__meta"><div class="packing-header__meta-cell"><span>ร้านค้า</span><strong>3</strong></div><div class="packing-header__meta-cell"><span>หน้า</span><strong>2/3</strong></div><div class="packing-header__meta-cell"><span>กลุ่มสินค้า</span><strong>1/1</strong></div><div class="packing-header__meta-cell packing-header__meta-cell--weight"><span>น้ำหนักรวม</span><strong>3.00 กก.</strong></div></div></header><div class="packing-table-wrap packing-table-wrap--summary"><table class="packing-table" style="--standard-row-height:5.2mm;--packing-number-font-size:12.4pt;--packing-store-font-size:12.4pt"><thead><tr><th class="packing-col packing-col--store packing-col--group-label">หมวดหมู่</th><th class="packing-col packing-col--category packing-col--cat-boundary" colSpan="15" style="background-color:#EA80FC"><span class="packing-header-label packing-header-label--category">บะหมี่</span></th><th class="packing-col packing-col--category packing-col--cat-boundary" colSpan="14" style="background-color:#d7ebd3"><span class="packing-header-label packing-header-label--category">เส้น​เล็ก</span></th><th class="packing-col packing-col--category" colSpan="14" style="background-color:#f2e6bd"><span class="packing-header-label packing-header-label--category">เส้น​ใหญ่</span></th></tr><tr><th class="packing-col packing-col--store">ร้านค้า</th><th class="packing-col packing-col--product" style="width:6mm;background-color:#EA80FC"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>2</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#EA80FC"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>3</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#EA80FC"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>4</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#EA80FC"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>5</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#EA80FC"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>6</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#EA80FC"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>7</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#EA80FC"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>8</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#EA80FC"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>9</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#EA80FC"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>10</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#EA80FC"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>11</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#EA80FC"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>12</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#EA80FC"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>13</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#EA80FC"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>14</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#EA80FC"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>15</span></div></div></th><th class="packing-col packing-col--product packing-col--cat-boundary" style="width:6mm;background-color:#EA80FC"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>16</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#d7ebd3"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>17</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#d7ebd3"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>18</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#d7ebd3"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>19</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#d7ebd3"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>20</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#d7ebd3"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>21</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#d7ebd3"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>22</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#d7ebd3"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>23</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#d7ebd3"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>24</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#d7ebd3"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>25</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#d7ebd3"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>26</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#d7ebd3"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>27</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#d7ebd3"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>28</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#d7ebd3"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>29</span></div></div></th><th class="packing-col packing-col--product packing-col--cat-boundary" style="width:6mm;background-color:#d7ebd3"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>30</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#f2e6bd"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>31</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#f2e6bd"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>32</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#f2e6bd"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>33</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#f2e6bd"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>34</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#f2e6bd"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>35</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#f2e6bd"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>36</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#f2e6bd"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>37</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#f2e6bd"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>38</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#f2e6bd"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>39</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#f2e6bd"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>40</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#f2e6bd"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>41</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#f2e6bd"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>42</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#f2e6bd"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>43</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#f2e6bd"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>44</span></div></div></th></tr></thead><tbody><tr class="packing-table__row"><td class="packing-cell packing-cell--store">ร้าน1</td><td class="packing-cell packing-cell--qty" style="background-color:#F3E5F5"><span class="packing-number">5</span></td><td class="packing-cell packing-cell--qty" style="background-color:#F3E5F5"><span class="packing-number">2</span></td><td class="packing-cell packing-cell--qty" style="background-color:#F3E5F5"><span class="packing-number">2</span></td><td class="packing-cell packing-cell--qty" style="background-color:#F3E5F5"><span class="packing-number">2</span></td><td class="packing-cell packing-cell--qty" style="background-color:#F3E5F5"><span class="packing-number">2</span></td><td class="packing-cell packing-cell--qty" style="background-color:#F3E5F5"><span class="packing-number">2</span></td><td class="packing-cell packing-cell--qty" style="background-color:#F3E5F5"><span class="packing-number">2</span></td><td class="packing-cell packing-cell--qty" style="background-color:#F3E5F5"><span class="packing-number">2</span></td><td class="packing-cell packing-cell--qty" style="background-color:#F3E5F5"><span class="packing-number">2</span></td><td class="packing-cell packing-cell--qty" style="background-color:#F3E5F5"><span class="packing-number">2</span></td><td class="packing-cell packing-cell--qty" style="background-color:#F3E5F5"><span class="packing-number">2</span></td><td class="packing-cell packing-cell--qty" style="background-color:#F3E5F5"><span class="packing-number">2</span></td><td class="packing-cell packing-cell--qty" style="background-color:#F3E5F5"><span class="packing-number">2</span></td><td class="packing-cell packing-cell--qty" style="background-color:#F3E5F5"><span class="packing-number">2</span></td><td class="packing-cell packing-cell--qty packing-cell--cat-boundary" style="background-color:#F3E5F5"><span class="packing-number">2</span></td><td class="packing-cell packing-cell--qty" style="background-color:#eef8eb"><span class="packing-number">2</span></td><td class="packing-cell packing-cell--qty" style="background-color:#eef8eb"><span class="packing-number">2</span></td><td class="packing-cell packing-cell--qty" style="background-color:#eef8eb"><span class="packing-number">2</span></td><td class="packing-cell packing-cell--qty" style="background-color:#eef8eb"><span class="packing-number">2</span></td><td class="packing-cell packing-cell--qty" style="background-color:#eef8eb"><span class="packing-number">2</span></td><td class="packing-cell packing-cell--qty" style="background-color:#eef8eb"><span class="packing-number">2</span></td><td class="packing-cell packing-cell--qty" style="background-color:#eef8eb"><span class="packing-number">2</span></td><td class="packing-cell packing-cell--qty" style="background-color:#eef8eb"><span class="packing-number">2</span></td><td class="packing-cell packing-cell--qty" style="background-color:#eef8eb"><span class="packing-number">2</span></td><td class="packing-cell packing-cell--qty" style="background-color:#eef8eb"><span class="packing-number">2</span></td><td class="packing-cell packing-cell--qty" style="background-color:#eef8eb"><span class="packing-number">2</span></td><td class="packing-cell packing-cell--qty" style="background-color:#eef8eb"><span class="packing-number">2</span></td><td class="packing-cell packing-cell--qty" style="background-color:#eef8eb"><span class="packing-number">2</span></td><td class="packing-cell packing-cell--qty packing-cell--cat-boundary" style="background-color:#eef8eb"><span class="packing-number">2</span></td><td class="packing-cell packing-cell--qty" style="background-color:#fbf5e6"><span class="packing-number">2</span></td><td class="packing-cell packing-cell--qty" style="background-color:#fbf5e6"><span class="packing-number">2</span></td><td class="packing-cell packing-cell--qty" style="background-color:#fbf5e6"><span class="packing-number">2</span></td><td class="packing-cell packing-cell--qty" style="background-color:#fbf5e6"><span class="packing-number">2</span></td><td class="packing-cell packing-cell--qty" style="background-color:#fbf5e6"><span class="packing-number">2</span></td><td class="packing-cell packing-cell--qty" style="background-color:#fbf5e6"><span class="packing-number">2</span></td><td class="packing-cell packing-cell--qty" style="background-color:#fbf5e6"><span class="packing-number">2</span></td><td class="packing-cell packing-cell--qty" style="background-color:#fbf5e6"><span class="packing-number">2</span></td><td class="packing-cell packing-cell--qty" style="background-color:#fbf5e6"><span class="packing-number">2</span></td><td class="packing-cell packing-cell--qty" style="background-color:#fbf5e6"><span class="packing-number">2</span></td><td class="packing-cell packing-cell--qty" style="background-color:#fbf5e6"><span class="packing-number">2</span></td><td class="packing-cell packing-cell--qty" style="background-color:#fbf5e6"><span class="packing-number">2</span></td><td class="packing-cell packing-cell--qty" style="background-color:#fbf5e6"><span class="packing-number">2</span></td><td class="packing-cell packing-cell--qty" style="background-color:#fbf5e6"><span class="packing-number">2</span></td></tr><tr class="packing-table__row"><td class="packing-cell packing-cell--store">ร้าน2</td><td class="packing-cell packing-cell--qty" style="background-color:#F3E5F5"><span class="packing-number">5</span></td><td class="packing-cell packing-cell--qty" style="background-color:#F3E5F5"><span class="packing-number">2</span></td><td class="packing-cell packing-cell--qty" style="background-color:#F3E5F5"><span class="packing-number">2</span></td><td class="packing-cell packing-cell--qty" style="background-color:#F3E5F5"><span class="packing-number">2</span></td><td class="packing-cell packing-cell--qty" style="background-color:#F3E5F5"><span class="packing-number">2</span></td><td class="packing-cell packing-cell--qty" style="background-color:#F3E5F5"><span class="packing-number">2</span></td><td class="packing-cell packing-cell--qty" style="background-color:#F3E5F5"><span class="packing-number">2</span></td><td class="packing-cell packing-cell--qty" style="background-color:#F3E5F5"><span class="packing-number">2</span></td><td class="packing-cell packing-cell--qty" style="background-color:#F3E5F5"><span class="packing-number">2</span></td><td class="packing-cell packing-cell--qty" style="background-color:#F3E5F5"><span class="packing-number">2</span></td><td class="packing-cell packing-cell--qty" style="background-color:#F3E5F5"><span class="packing-number">2</span></td><td class="packing-cell packing-cell--qty" style="background-color:#F3E5F5"><span class="packing-number">2</span></td><td class="packing-cell packing-cell--qty" style="background-color:#F3E5F5"><span class="packing-number">2</span></td><td class="packing-cell packing-cell--qty" style="background-color:#F3E5F5"><span class="packing-number">2</span></td><td class="packing-cell packing-cell--qty packing-cell--cat-boundary" style="background-color:#F3E5F5"><span class="packing-number">2</span></td><td class="packing-cell packing-cell--qty" style="background-color:#f7fcf4"><span class="packing-number">2</span></td><td class="packing-cell packing-cell--qty" style="background-color:#f7fcf4"><span class="packing-number">2</span></td><td class="packing-cell packing-cell--qty" style="background-color:#f7fcf4"><span class="packing-number">2</span></td><td class="packing-cell packing-cell--qty" style="background-color:#f7fcf4"><span class="packing-number">2</span></td><td class="packing-cell packing-cell--qty" style="background-color:#f7fcf4"><span class="packing-number">2</span></td><td class="packing-cell packing-cell--qty" style="background-color:#f7fcf4"><span class="packing-number">2</span></td><td class="packing-cell packing-cell--qty" style="background-color:#f7fcf4"><span class="packing-number">2</span></td><td class="packing-cell packing-cell--qty" style="background-color:#f7fcf4"><span class="packing-number">2</span></td><td class="packing-cell packing-cell--qty" style="background-color:#f7fcf4"><span class="packing-number">2</span></td><td class="packing-cell packing-cell--qty" style="background-color:#f7fcf4"><span class="packing-number">2</span></td><td class="packing-cell packing-cell--qty" style="background-color:#f7fcf4"><span class="packing-number">2</span></td><td class="packing-cell packing-cell--qty" style="background-color:#f7fcf4"><span class="packing-number">2</span></td><td class="packing-cell packing-cell--qty" style="background-color:#f7fcf4"><span class="packing-number">2</span></td><td class="packing-cell packing-cell--qty packing-cell--cat-boundary" style="background-color:#f7fcf4"><span class="packing-number">2</span></td><td class="packing-cell packing-cell--qty" style="background-color:#fefbf1"><span class="packing-number">2</span></td><td class="packing-cell packing-cell--qty" style="background-color:#fefbf1"><span class="packing-number">2</span></td><td class="packing-cell packing-cell--qty" style="background-color:#fefbf1"><span class="packing-number">2</span></td><td class="packing-cell packing-cell--qty" style="background-color:#fefbf1"><span class="packing-number">2</span></td><td class="packing-cell packing-cell--qty" style="background-color:#fefbf1"><span class="packing-number">2</span></td><td class="packing-cell packing-cell--qty" style="background-color:#fefbf1"><span class="packing-number">2</span></td><td class="packing-cell packing-cell--qty" style="background-color:#fefbf1"><span class="packing-number">2</span></td><td class="packing-cell packing-cell--qty" style="background-color:#fefbf1"><span class="packing-number">2</span></td><td class="packing-cell packing-cell--qty" style="background-color:#fefbf1"><span class="packing-number">2</span></td><td class="packing-cell packing-cell--qty" style="background-color:#fefbf1"><span class="packing-number">2</span></td><td class="packing-cell packing-cell--qty" style="background-color:#fefbf1"><span class="packing-number">2</span></td><td class="packing-cell packing-cell--qty" style="background-color:#fefbf1"><span class="packing-number">2</span></td><td class="packing-cell packing-cell--qty" style="background-color:#fefbf1"><span class="packing-number">2</span></td><td class="packing-cell packing-cell--qty" style="background-color:#fefbf1"><span class="packing-number">2</span></td></tr><tr class="packing-table__row"><td class="packing-cell packing-cell--store">ร้าน3</td><td class="packing-cell packing-cell--qty" style="background-color:#F3E5F5"><span class="packing-number">5</span></td><td class="packing-cell packing-cell--qty" style="background-color:#F3E5F5"><span class="packing-number">2</span></td><td class="packing-cell packing-cell--qty" style="background-color:#F3E5F5"><span class="packing-number">2</span></td><td class="packing-cell packing-cell--qty" style="background-color:#F3E5F5"><span class="packing-number">2</span></td><td class="packing-cell packing-cell--qty" style="background-color:#F3E5F5"><span class="packing-number">2</span></td><td class="packing-cell packing-cell--qty" style="background-color:#F3E5F5"><span class="packing-number">2</span></td><td class="packing-cell packing-cell--qty" style="background-color:#F3E5F5"><span class="packing-number">2</span></td><td class="packing-cell packing-cell--qty" style="background-color:#F3E5F5"><span class="packing-number">2</span></td><td class="packing-cell packing-cell--qty" style="background-color:#F3E5F5"><span class="packing-number">2</span></td><td class="packing-cell packing-cell--qty" style="background-color:#F3E5F5"><span class="packing-number">2</span></td><td class="packing-cell packing-cell--qty" style="background-color:#F3E5F5"><span class="packing-number">2</span></td><td class="packing-cell packing-cell--qty" style="background-color:#F3E5F5"><span class="packing-number">2</span></td><td class="packing-cell packing-cell--qty" style="background-color:#F3E5F5"><span class="packing-number">2</span></td><td class="packing-cell packing-cell--qty" style="background-color:#F3E5F5"><span class="packing-number">2</span></td><td class="packing-cell packing-cell--qty packing-cell--cat-boundary" style="background-color:#F3E5F5"><span class="packing-number">2</span></td><td class="packing-cell packing-cell--qty" style="background-color:#eef8eb"><span class="packing-number">2</span></td><td class="packing-cell packing-cell--qty" style="background-color:#eef8eb"><span class="packing-number">2</span></td><td class="packing-cell packing-cell--qty" style="background-color:#eef8eb"><span class="packing-number">2</span></td><td class="packing-cell packing-cell--qty" style="background-color:#eef8eb"><span class="packing-number">2</span></td><td class="packing-cell packing-cell--qty" style="background-color:#eef8eb"><span class="packing-number">2</span></td><td class="packing-cell packing-cell--qty" style="background-color:#eef8eb"><span class="packing-number">2</span></td><td class="packing-cell packing-cell--qty" style="background-color:#eef8eb"><span class="packing-number">2</span></td><td class="packing-cell packing-cell--qty" style="background-color:#eef8eb"><span class="packing-number">2</span></td><td class="packing-cell packing-cell--qty" style="background-color:#eef8eb"><span class="packing-number">2</span></td><td class="packing-cell packing-cell--qty" style="background-color:#eef8eb"><span class="packing-number">2</span></td><td class="packing-cell packing-cell--qty" style="background-color:#eef8eb"><span class="packing-number">2</span></td><td class="packing-cell packing-cell--qty" style="background-color:#eef8eb"><span class="packing-number">2</span></td><td class="packing-cell packing-cell--qty" style="background-color:#eef8eb"><span class="packing-number">2</span></td><td class="packing-cell packing-cell--qty packing-cell--cat-boundary" style="background-color:#eef8eb"><span class="packing-number">2</span></td><td class="packing-cell packing-cell--qty" style="background-color:#fbf5e6"><span class="packing-number">2</span></td><td class="packing-cell packing-cell--qty" style="background-color:#fbf5e6"><span class="packing-number">2</span></td><td class="packing-cell packing-cell--qty" style="background-color:#fbf5e6"><span class="packing-number">2</span></td><td class="packing-cell packing-cell--qty" style="background-color:#fbf5e6"><span class="packing-number">2</span></td><td class="packing-cell packing-cell--qty" style="background-color:#fbf5e6"><span class="packing-number">2</span></td><td class="packing-cell packing-cell--qty" style="background-color:#fbf5e6"><span class="packing-number">2</span></td><td class="packing-cell packing-cell--qty" style="background-color:#fbf5e6"><span class="packing-number">2</span></td><td class="packing-cell packing-cell--qty" style="background-color:#fbf5e6"><span class="packing-number">2</span></td><td class="packing-cell packing-cell--qty" style="background-color:#fbf5e6"><span class="packing-number">2</span></td><td class="packing-cell packing-cell--qty" style="background-color:#fbf5e6"><span class="packing-number">2</span></td><td class="packing-cell packing-cell--qty" style="background-color:#fbf5e6"><span class="packing-number">2</span></td><td class="packing-cell packing-cell--qty" style="background-color:#fbf5e6"><span class="packing-number">2</span></td><td class="packing-cell packing-cell--qty" style="background-color:#fbf5e6"><span class="packing-number">2</span></td><td class="packing-cell packing-cell--qty" style="background-color:#fbf5e6"><span class="packing-number">2</span></td></tr><tr class="packing-table__total-row"><td class="packing-cell packing-cell--total-label"><span>รวมยอด</span><strong>3.00 กก.</strong></td><td class="packing-cell packing-cell--total"><span class="packing-number" style="--packing-total-characters:2">15</span></td><td class="packing-cell packing-cell--total"><span class="packing-number" style="--packing-total-characters:1">6</span></td><td class="packing-cell packing-cell--total"><span class="packing-number" style="--packing-total-characters:1">6</span></td><td class="packing-cell packing-cell--total"><span class="packing-number" style="--packing-total-characters:1">6</span></td><td class="packing-cell packing-cell--total"><span class="packing-number" style="--packing-total-characters:1">6</span></td><td class="packing-cell packing-cell--total"><span class="packing-number" style="--packing-total-characters:1">6</span></td><td class="packing-cell packing-cell--total"><span class="packing-number" style="--packing-total-characters:1">6</span></td><td class="packing-cell packing-cell--total"><span class="packing-number" style="--packing-total-characters:1">6</span></td><td class="packing-cell packing-cell--total"><span class="packing-number" style="--packing-total-characters:1">6</span></td><td class="packing-cell packing-cell--total"><span class="packing-number" style="--packing-total-characters:1">6</span></td><td class="packing-cell packing-cell--total"><span class="packing-number" style="--packing-total-characters:1">6</span></td><td class="packing-cell packing-cell--total"><span class="packing-number" style="--packing-total-characters:1">6</span></td><td class="packing-cell packing-cell--total"><span class="packing-number" style="--packing-total-characters:1">6</span></td><td class="packing-cell packing-cell--total"><span class="packing-number" style="--packing-total-characters:1">6</span></td><td class="packing-cell packing-cell--total packing-cell--cat-boundary"><span class="packing-number" style="--packing-total-characters:1">6</span></td><td class="packing-cell packing-cell--total"><span class="packing-number" style="--packing-total-characters:1">6</span></td><td class="packing-cell packing-cell--total"><span class="packing-number" style="--packing-total-characters:1">6</span></td><td class="packing-cell packing-cell--total"><span class="packing-number" style="--packing-total-characters:1">6</span></td><td class="packing-cell packing-cell--total"><span class="packing-number" style="--packing-total-characters:1">6</span></td><td class="packing-cell packing-cell--total"><span class="packing-number" style="--packing-total-characters:1">6</span></td><td class="packing-cell packing-cell--total"><span class="packing-number" style="--packing-total-characters:1">6</span></td><td class="packing-cell packing-cell--total"><span class="packing-number" style="--packing-total-characters:1">6</span></td><td class="packing-cell packing-cell--total"><span class="packing-number" style="--packing-total-characters:1">6</span></td><td class="packing-cell packing-cell--total"><span class="packing-number" style="--packing-total-characters:1">6</span></td><td class="packing-cell packing-cell--total"><span class="packing-number" style="--packing-total-characters:1">6</span></td><td class="packing-cell packing-cell--total"><span class="packing-number" style="--packing-total-characters:1">6</span></td><td class="packing-cell packing-cell--total"><span class="packing-number" style="--packing-total-characters:1">6</span></td><td class="packing-cell packing-cell--total"><span class="packing-number" style="--packing-total-characters:1">6</span></td><td class="packing-cell packing-cell--total packing-cell--cat-boundary"><span class="packing-number" style="--packing-total-characters:1">6</span></td><td class="packing-cell packing-cell--total"><span class="packing-number" style="--packing-total-characters:1">6</span></td><td class="packing-cell packing-cell--total"><span class="packing-number" style="--packing-total-characters:1">6</span></td><td class="packing-cell packing-cell--total"><span class="packing-number" style="--packing-total-characters:1">6</span></td><td class="packing-cell packing-cell--total"><span class="packing-number" style="--packing-total-characters:1">6</span></td><td class="packing-cell packing-cell--total"><span class="packing-number" style="--packing-total-characters:1">6</span></td><td class="packing-cell packing-cell--total"><span class="packing-number" style="--packing-total-characters:1">6</span></td><td class="packing-cell packing-cell--total"><span class="packing-number" style="--packing-total-characters:1">6</span></td><td class="packing-cell packing-cell--total"><span class="packing-number" style="--packing-total-characters:1">6</span></td><td class="packing-cell packing-cell--total"><span class="packing-number" style="--packing-total-characters:1">6</span></td><td class="packing-cell packing-cell--total"><span class="packing-number" style="--packing-total-characters:1">6</span></td><td class="packing-cell packing-cell--total"><span class="packing-number" style="--packing-total-characters:1">6</span></td><td class="packing-cell packing-cell--total"><span class="packing-number" style="--packing-total-characters:1">6</span></td><td class="packing-cell packing-cell--total"><span class="packing-number" style="--packing-total-characters:1">6</span></td><td class="packing-cell packing-cell--total"><span class="packing-number" style="--packing-total-characters:1">6</span></td></tr></tbody></table><table class="packing-table packing-table--combined-summary" style="--packing-number-font-size:12.4pt"><caption class="packing-combined-summary-title">รวมรถกรุงเทพ + รถกรุงเทพบะหมี่</caption><thead><tr><th class="packing-col packing-col--store packing-col--group-label">หมวดหมู่</th><th colSpan="16" class="packing-col packing-col--category packing-col--cat-boundary" style="background-color:#EA80FC"><span class="packing-header-label packing-header-label--category">บะหมี่</span></th><th colSpan="14" class="packing-col packing-col--category packing-col--cat-boundary" style="background-color:#d7ebd3"><span class="packing-header-label packing-header-label--category">เส้น​เล็ก</span></th><th colSpan="14" class="packing-col packing-col--category" style="background-color:#f2e6bd"><span class="packing-header-label packing-header-label--category">เส้น​ใหญ่</span></th></tr><tr><th class="packing-col packing-col--store">สินค้า</th><th class="packing-col packing-col--product" style="width:6mm;background-color:#EA80FC"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>1</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#EA80FC"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>2</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#EA80FC"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>3</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#EA80FC"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>4</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#EA80FC"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>5</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#EA80FC"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>6</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#EA80FC"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>7</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#EA80FC"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>8</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#EA80FC"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>9</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#EA80FC"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>10</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#EA80FC"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>11</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#EA80FC"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>12</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#EA80FC"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>13</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#EA80FC"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>14</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#EA80FC"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>15</span></div></div></th><th class="packing-col packing-col--product packing-col--cat-boundary" style="width:6mm;background-color:#EA80FC"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>16</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#d7ebd3"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>17</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#d7ebd3"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>18</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#d7ebd3"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>19</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#d7ebd3"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>20</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#d7ebd3"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>21</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#d7ebd3"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>22</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#d7ebd3"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>23</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#d7ebd3"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>24</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#d7ebd3"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>25</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#d7ebd3"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>26</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#d7ebd3"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>27</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#d7ebd3"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>28</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#d7ebd3"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>29</span></div></div></th><th class="packing-col packing-col--product packing-col--cat-boundary" style="width:6mm;background-color:#d7ebd3"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>30</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#f2e6bd"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>31</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#f2e6bd"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>32</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#f2e6bd"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>33</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#f2e6bd"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>34</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#f2e6bd"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>35</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#f2e6bd"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>36</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#f2e6bd"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>37</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#f2e6bd"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>38</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#f2e6bd"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>39</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#f2e6bd"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>40</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#f2e6bd"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>41</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#f2e6bd"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>42</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#f2e6bd"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>43</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#f2e6bd"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>44</span></div></div></th></tr></thead><tbody><tr class="packing-table__total-row packing-table__total-row--combined"><td class="packing-cell packing-cell--total-label packing-cell--combined-label"><span>รวมทั้ง 2 ใบ</span><strong>4.00 กก.</strong></td><td class="packing-cell packing-cell--total packing-cell--combined-total"><span class="packing-number" style="--packing-total-characters:2">20</span></td><td class="packing-cell packing-cell--total packing-cell--combined-total"><span class="packing-number packing-number--md" style="--packing-total-characters:3">115</span></td><td class="packing-cell packing-cell--total packing-cell--combined-total"><span class="packing-number packing-number--sm" style="--packing-total-characters:4">1006</span></td><td class="packing-cell packing-cell--total packing-cell--combined-total"><span class="packing-number packing-number--xs" style="--packing-total-characters:5">10006</span></td><td class="packing-cell packing-cell--total packing-cell--combined-total"><span class="packing-number packing-number--xxs" style="--packing-total-characters:6">1240.5</span></td><td class="packing-cell packing-cell--total packing-cell--combined-total"><span class="packing-number" style="--packing-total-characters:2">26</span></td><td class="packing-cell packing-cell--total packing-cell--combined-total"><span class="packing-number packing-number--md" style="--packing-total-characters:3">106</span></td><td class="packing-cell packing-cell--total packing-cell--combined-total"><span class="packing-number packing-number--sm" style="--packing-total-characters:4">1006</span></td><td class="packing-cell packing-cell--total packing-cell--combined-total"><span class="packing-number packing-number--xs" style="--packing-total-characters:5">10006</span></td><td class="packing-cell packing-cell--total packing-cell--combined-total"><span class="packing-number packing-number--xxs" style="--packing-total-characters:6">1240.5</span></td><td class="packing-cell packing-cell--total packing-cell--combined-total"><span class="packing-number" style="--packing-total-characters:2">26</span></td><td class="packing-cell packing-cell--total packing-cell--combined-total"><span class="packing-number packing-number--md" style="--packing-total-characters:3">106</span></td><td class="packing-cell packing-cell--total packing-cell--combined-total"><span class="packing-number packing-number--sm" style="--packing-total-characters:4">1006</span></td><td class="packing-cell packing-cell--total packing-cell--combined-total"><span class="packing-number packing-number--xs" style="--packing-total-characters:5">10006</span></td><td class="packing-cell packing-cell--total packing-cell--combined-total"><span class="packing-number packing-number--xxs" style="--packing-total-characters:6">1240.5</span></td><td class="packing-cell packing-cell--total packing-cell--combined-total packing-cell--cat-boundary"><span class="packing-number" style="--packing-total-characters:2">26</span></td><td class="packing-cell packing-cell--total packing-cell--combined-total"><span class="packing-number packing-number--md" style="--packing-total-characters:3">106</span></td><td class="packing-cell packing-cell--total packing-cell--combined-total"><span class="packing-number packing-number--sm" style="--packing-total-characters:4">1006</span></td><td class="packing-cell packing-cell--total packing-cell--combined-total"><span class="packing-number packing-number--xs" style="--packing-total-characters:5">10006</span></td><td class="packing-cell packing-cell--total packing-cell--combined-total"><span class="packing-number packing-number--xxs" style="--packing-total-characters:6">1240.5</span></td><td class="packing-cell packing-cell--total packing-cell--combined-total"><span class="packing-number" style="--packing-total-characters:2">26</span></td><td class="packing-cell packing-cell--total packing-cell--combined-total"><span class="packing-number packing-number--md" style="--packing-total-characters:3">106</span></td><td class="packing-cell packing-cell--total packing-cell--combined-total"><span class="packing-number packing-number--sm" style="--packing-total-characters:4">1006</span></td><td class="packing-cell packing-cell--total packing-cell--combined-total"><span class="packing-number packing-number--xs" style="--packing-total-characters:5">10006</span></td><td class="packing-cell packing-cell--total packing-cell--combined-total"><span class="packing-number packing-number--xxs" style="--packing-total-characters:6">1240.5</span></td><td class="packing-cell packing-cell--total packing-cell--combined-total"><span class="packing-number" style="--packing-total-characters:2">26</span></td><td class="packing-cell packing-cell--total packing-cell--combined-total"><span class="packing-number packing-number--md" style="--packing-total-characters:3">106</span></td><td class="packing-cell packing-cell--total packing-cell--combined-total"><span class="packing-number packing-number--sm" style="--packing-total-characters:4">1006</span></td><td class="packing-cell packing-cell--total packing-cell--combined-total"><span class="packing-number packing-number--xs" style="--packing-total-characters:5">10006</span></td><td class="packing-cell packing-cell--total packing-cell--combined-total packing-cell--cat-boundary"><span class="packing-number packing-number--xxs" style="--packing-total-characters:6">1240.5</span></td><td class="packing-cell packing-cell--total packing-cell--combined-total"><span class="packing-number" style="--packing-total-characters:2">26</span></td><td class="packing-cell packing-cell--total packing-cell--combined-total"><span class="packing-number packing-number--md" style="--packing-total-characters:3">106</span></td><td class="packing-cell packing-cell--total packing-cell--combined-total"><span class="packing-number packing-number--sm" style="--packing-total-characters:4">1006</span></td><td class="packing-cell packing-cell--total packing-cell--combined-total"><span class="packing-number packing-number--xs" style="--packing-total-characters:5">10006</span></td><td class="packing-cell packing-cell--total packing-cell--combined-total"><span class="packing-number packing-number--xxs" style="--packing-total-characters:6">1240.5</span></td><td class="packing-cell packing-cell--total packing-cell--combined-total"><span class="packing-number" style="--packing-total-characters:2">26</span></td><td class="packing-cell packing-cell--total packing-cell--combined-total"><span class="packing-number packing-number--md" style="--packing-total-characters:3">106</span></td><td class="packing-cell packing-cell--total packing-cell--combined-total"><span class="packing-number packing-number--sm" style="--packing-total-characters:4">1006</span></td><td class="packing-cell packing-cell--total packing-cell--combined-total"><span class="packing-number packing-number--xs" style="--packing-total-characters:5">10006</span></td><td class="packing-cell packing-cell--total packing-cell--combined-total"><span class="packing-number packing-number--xxs" style="--packing-total-characters:6">1240.5</span></td><td class="packing-cell packing-cell--total packing-cell--combined-total"><span class="packing-number" style="--packing-total-characters:2">26</span></td><td class="packing-cell packing-cell--total packing-cell--combined-total"><span class="packing-number packing-number--md" style="--packing-total-characters:3">106</span></td><td class="packing-cell packing-cell--total packing-cell--combined-total"><span class="packing-number packing-number--sm" style="--packing-total-characters:4">1006</span></td><td class="packing-cell packing-cell--total packing-cell--combined-total"><span class="packing-number packing-number--xs" style="--packing-total-characters:5">10006</span></td></tr></tbody></table></div></div></section></div><div class="packing-sheet-shell"><section class="packing-sheet packing-sheet--standard"><div class="packing-sheet__inner"><header class="packing-header packing-header--standard" style="border-color:#0f766e"><div class="packing-header__summary-line"><span class="packing-header__org packing-header__org--inline">All Noodles</span><h1 class="packing-header__title packing-header__title--standard">ตารางเช็คออเดอร์ลูกค้า</h1><span class="packing-header__date">วันที่ 9 ตุลาคม 2569</span></div><div class="packing-header__vehicle-main">รถต่างจังหวัด</div><div class="packing-header__meta"><div class="packing-header__meta-cell"><span>ร้านค้า</span><strong>1</strong></div><div class="packing-header__meta-cell"><span>หน้า</span><strong>3/3</strong></div><div class="packing-header__meta-cell"><span>กลุ่มสินค้า</span><strong>1/1</strong></div><div class="packing-header__meta-cell packing-header__meta-cell--weight"><span>น้ำหนักรวม</span><strong>1.00 กก.</strong></div></div></header><div class="packing-table-wrap"><table class="packing-table" style="--standard-row-height:5.2mm;--packing-number-font-size:12.4pt;--packing-store-font-size:12.4pt"><thead><tr><th class="packing-col packing-col--store packing-col--group-label">หมวดหมู่</th><th class="packing-col packing-col--category packing-col--cat-boundary" colSpan="16" style="background-color:#EA80FC"><span class="packing-header-label packing-header-label--category">บะหมี่</span></th><th class="packing-col packing-col--category packing-col--cat-boundary" colSpan="14" style="background-color:#d7ebd3"><span class="packing-header-label packing-header-label--category">เส้น​เล็ก</span></th><th class="packing-col packing-col--category" colSpan="14" style="background-color:#f2e6bd"><span class="packing-header-label packing-header-label--category">เส้น​ใหญ่</span></th></tr><tr><th class="packing-col packing-col--store">ร้านค้า</th><th class="packing-col packing-col--product" style="width:6mm;background-color:#EA80FC"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>1</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#EA80FC"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>2</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#EA80FC"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>3</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#EA80FC"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>4</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#EA80FC"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>5</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#EA80FC"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>6</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#EA80FC"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>7</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#EA80FC"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>8</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#EA80FC"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>9</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#EA80FC"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>10</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#EA80FC"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>11</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#EA80FC"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>12</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#EA80FC"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>13</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#EA80FC"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>14</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#EA80FC"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>15</span></div></div></th><th class="packing-col packing-col--product packing-col--cat-boundary" style="width:6mm;background-color:#EA80FC"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>16</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#d7ebd3"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>17</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#d7ebd3"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>18</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#d7ebd3"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>19</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#d7ebd3"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>20</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#d7ebd3"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>21</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#d7ebd3"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>22</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#d7ebd3"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>23</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#d7ebd3"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>24</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#d7ebd3"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>25</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#d7ebd3"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>26</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#d7ebd3"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>27</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#d7ebd3"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>28</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#d7ebd3"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>29</span></div></div></th><th class="packing-col packing-col--product packing-col--cat-boundary" style="width:6mm;background-color:#d7ebd3"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>30</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#f2e6bd"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>31</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#f2e6bd"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>32</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#f2e6bd"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>33</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#f2e6bd"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>34</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#f2e6bd"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>35</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#f2e6bd"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>36</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#f2e6bd"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>37</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#f2e6bd"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>38</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#f2e6bd"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>39</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#f2e6bd"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>40</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#f2e6bd"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>41</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#f2e6bd"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>42</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#f2e6bd"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>43</span></div></div></th><th class="packing-col packing-col--product" style="width:6mm;background-color:#f2e6bd"><div class="packing-product-header"><div class="packing-product-header__name packing-product-header__name--dense" style="font-size:15pt"><span>สิน</span><span>ค้า</span><span>44</span></div></div></th></tr></thead><tbody><tr class="packing-table__row"><td class="packing-cell packing-cell--store">ร้าน4</td><td class="packing-cell packing-cell--qty packing-number--md" style="background-color:#F3E5F5"><span class="packing-number packing-number--md">999</span></td><td class="packing-cell packing-cell--qty packing-number--md" style="background-color:#F3E5F5"><span class="packing-number packing-number--md">999</span></td><td class="packing-cell packing-cell--qty packing-number--md" style="background-color:#F3E5F5"><span class="packing-number packing-number--md">999</span></td><td class="packing-cell packing-cell--qty packing-number--md" style="background-color:#F3E5F5"><span class="packing-number packing-number--md">999</span></td><td class="packing-cell packing-cell--qty packing-number--md" style="background-color:#F3E5F5"><span class="packing-number packing-number--md">999</span></td><td class="packing-cell packing-cell--qty packing-number--md" style="background-color:#F3E5F5"><span class="packing-number packing-number--md">999</span></td><td class="packing-cell packing-cell--qty packing-number--md" style="background-color:#F3E5F5"><span class="packing-number packing-number--md">999</span></td><td class="packing-cell packing-cell--qty packing-number--md" style="background-color:#F3E5F5"><span class="packing-number packing-number--md">999</span></td><td class="packing-cell packing-cell--qty packing-number--md" style="background-color:#F3E5F5"><span class="packing-number packing-number--md">999</span></td><td class="packing-cell packing-cell--qty packing-number--md" style="background-color:#F3E5F5"><span class="packing-number packing-number--md">999</span></td><td class="packing-cell packing-cell--qty packing-number--md" style="background-color:#F3E5F5"><span class="packing-number packing-number--md">999</span></td><td class="packing-cell packing-cell--qty packing-number--md" style="background-color:#F3E5F5"><span class="packing-number packing-number--md">999</span></td><td class="packing-cell packing-cell--qty packing-number--md" style="background-color:#F3E5F5"><span class="packing-number packing-number--md">999</span></td><td class="packing-cell packing-cell--qty packing-number--md" style="background-color:#F3E5F5"><span class="packing-number packing-number--md">999</span></td><td class="packing-cell packing-cell--qty packing-number--md" style="background-color:#F3E5F5"><span class="packing-number packing-number--md">999</span></td><td class="packing-cell packing-cell--qty packing-number--md packing-cell--cat-boundary" style="background-color:#F3E5F5"><span class="packing-number packing-number--md">999</span></td><td class="packing-cell packing-cell--qty packing-number--md" style="background-color:#eef8eb"><span class="packing-number packing-number--md">999</span></td><td class="packing-cell packing-cell--qty packing-number--md" style="background-color:#eef8eb"><span class="packing-number packing-number--md">999</span></td><td class="packing-cell packing-cell--qty packing-number--md" style="background-color:#eef8eb"><span class="packing-number packing-number--md">999</span></td><td class="packing-cell packing-cell--qty packing-number--md" style="background-color:#eef8eb"><span class="packing-number packing-number--md">999</span></td><td class="packing-cell packing-cell--qty packing-number--md" style="background-color:#eef8eb"><span class="packing-number packing-number--md">999</span></td><td class="packing-cell packing-cell--qty packing-number--md" style="background-color:#eef8eb"><span class="packing-number packing-number--md">999</span></td><td class="packing-cell packing-cell--qty packing-number--md" style="background-color:#eef8eb"><span class="packing-number packing-number--md">999</span></td><td class="packing-cell packing-cell--qty packing-number--md" style="background-color:#eef8eb"><span class="packing-number packing-number--md">999</span></td><td class="packing-cell packing-cell--qty packing-number--md" style="background-color:#eef8eb"><span class="packing-number packing-number--md">999</span></td><td class="packing-cell packing-cell--qty packing-number--md" style="background-color:#eef8eb"><span class="packing-number packing-number--md">999</span></td><td class="packing-cell packing-cell--qty packing-number--md" style="background-color:#eef8eb"><span class="packing-number packing-number--md">999</span></td><td class="packing-cell packing-cell--qty packing-number--md" style="background-color:#eef8eb"><span class="packing-number packing-number--md">999</span></td><td class="packing-cell packing-cell--qty packing-number--md" style="background-color:#eef8eb"><span class="packing-number packing-number--md">999</span></td><td class="packing-cell packing-cell--qty packing-number--md packing-cell--cat-boundary" style="background-color:#eef8eb"><span class="packing-number packing-number--md">999</span></td><td class="packing-cell packing-cell--qty packing-number--md" style="background-color:#fbf5e6"><span class="packing-number packing-number--md">999</span></td><td class="packing-cell packing-cell--qty packing-number--md" style="background-color:#fbf5e6"><span class="packing-number packing-number--md">999</span></td><td class="packing-cell packing-cell--qty packing-number--md" style="background-color:#fbf5e6"><span class="packing-number packing-number--md">999</span></td><td class="packing-cell packing-cell--qty packing-number--md" style="background-color:#fbf5e6"><span class="packing-number packing-number--md">999</span></td><td class="packing-cell packing-cell--qty packing-number--md" style="background-color:#fbf5e6"><span class="packing-number packing-number--md">999</span></td><td class="packing-cell packing-cell--qty packing-number--md" style="background-color:#fbf5e6"><span class="packing-number packing-number--md">999</span></td><td class="packing-cell packing-cell--qty packing-number--md" style="background-color:#fbf5e6"><span class="packing-number packing-number--md">999</span></td><td class="packing-cell packing-cell--qty packing-number--md" style="background-color:#fbf5e6"><span class="packing-number packing-number--md">999</span></td><td class="packing-cell packing-cell--qty packing-number--md" style="background-color:#fbf5e6"><span class="packing-number packing-number--md">999</span></td><td class="packing-cell packing-cell--qty packing-number--md" style="background-color:#fbf5e6"><span class="packing-number packing-number--md">999</span></td><td class="packing-cell packing-cell--qty packing-number--md" style="background-color:#fbf5e6"><span class="packing-number packing-number--md">999</span></td><td class="packing-cell packing-cell--qty packing-number--md" style="background-color:#fbf5e6"><span class="packing-number packing-number--md">999</span></td><td class="packing-cell packing-cell--qty packing-number--md" style="background-color:#fbf5e6"><span class="packing-number packing-number--md">999</span></td><td class="packing-cell packing-cell--qty packing-number--md" style="background-color:#fbf5e6"><span class="packing-number packing-number--md">999</span></td></tr><tr class="packing-table__total-row"><td class="packing-cell packing-cell--total-label"><span>รวมยอด</span><strong>1.00 กก.</strong></td><td class="packing-cell packing-cell--total"><span class="packing-number packing-number--md" style="--packing-total-characters:3">999</span></td><td class="packing-cell packing-cell--total"><span class="packing-number packing-number--md" style="--packing-total-characters:3">999</span></td><td class="packing-cell packing-cell--total"><span class="packing-number packing-number--md" style="--packing-total-characters:3">999</span></td><td class="packing-cell packing-cell--total"><span class="packing-number packing-number--md" style="--packing-total-characters:3">999</span></td><td class="packing-cell packing-cell--total"><span class="packing-number packing-number--md" style="--packing-total-characters:3">999</span></td><td class="packing-cell packing-cell--total"><span class="packing-number packing-number--md" style="--packing-total-characters:3">999</span></td><td class="packing-cell packing-cell--total"><span class="packing-number packing-number--md" style="--packing-total-characters:3">999</span></td><td class="packing-cell packing-cell--total"><span class="packing-number packing-number--md" style="--packing-total-characters:3">999</span></td><td class="packing-cell packing-cell--total"><span class="packing-number packing-number--md" style="--packing-total-characters:3">999</span></td><td class="packing-cell packing-cell--total"><span class="packing-number packing-number--md" style="--packing-total-characters:3">999</span></td><td class="packing-cell packing-cell--total"><span class="packing-number packing-number--md" style="--packing-total-characters:3">999</span></td><td class="packing-cell packing-cell--total"><span class="packing-number packing-number--md" style="--packing-total-characters:3">999</span></td><td class="packing-cell packing-cell--total"><span class="packing-number packing-number--md" style="--packing-total-characters:3">999</span></td><td class="packing-cell packing-cell--total"><span class="packing-number packing-number--md" style="--packing-total-characters:3">999</span></td><td class="packing-cell packing-cell--total"><span class="packing-number packing-number--md" style="--packing-total-characters:3">999</span></td><td class="packing-cell packing-cell--total packing-cell--cat-boundary"><span class="packing-number packing-number--md" style="--packing-total-characters:3">999</span></td><td class="packing-cell packing-cell--total"><span class="packing-number packing-number--md" style="--packing-total-characters:3">999</span></td><td class="packing-cell packing-cell--total"><span class="packing-number packing-number--md" style="--packing-total-characters:3">999</span></td><td class="packing-cell packing-cell--total"><span class="packing-number packing-number--md" style="--packing-total-characters:3">999</span></td><td class="packing-cell packing-cell--total"><span class="packing-number packing-number--md" style="--packing-total-characters:3">999</span></td><td class="packing-cell packing-cell--total"><span class="packing-number packing-number--md" style="--packing-total-characters:3">999</span></td><td class="packing-cell packing-cell--total"><span class="packing-number packing-number--md" style="--packing-total-characters:3">999</span></td><td class="packing-cell packing-cell--total"><span class="packing-number packing-number--md" style="--packing-total-characters:3">999</span></td><td class="packing-cell packing-cell--total"><span class="packing-number packing-number--md" style="--packing-total-characters:3">999</span></td><td class="packing-cell packing-cell--total"><span class="packing-number packing-number--md" style="--packing-total-characters:3">999</span></td><td class="packing-cell packing-cell--total"><span class="packing-number packing-number--md" style="--packing-total-characters:3">999</span></td><td class="packing-cell packing-cell--total"><span class="packing-number packing-number--md" style="--packing-total-characters:3">999</span></td><td class="packing-cell packing-cell--total"><span class="packing-number packing-number--md" style="--packing-total-characters:3">999</span></td><td class="packing-cell packing-cell--total"><span class="packing-number packing-number--md" style="--packing-total-characters:3">999</span></td><td class="packing-cell packing-cell--total packing-cell--cat-boundary"><span class="packing-number packing-number--md" style="--packing-total-characters:3">999</span></td><td class="packing-cell packing-cell--total"><span class="packing-number packing-number--md" style="--packing-total-characters:3">999</span></td><td class="packing-cell packing-cell--total"><span class="packing-number packing-number--md" style="--packing-total-characters:3">999</span></td><td class="packing-cell packing-cell--total"><span class="packing-number packing-number--md" style="--packing-total-characters:3">999</span></td><td class="packing-cell packing-cell--total"><span class="packing-number packing-number--md" style="--packing-total-characters:3">999</span></td><td class="packing-cell packing-cell--total"><span class="packing-number packing-number--md" style="--packing-total-characters:3">999</span></td><td class="packing-cell packing-cell--total"><span class="packing-number packing-number--md" style="--packing-total-characters:3">999</span></td><td class="packing-cell packing-cell--total"><span class="packing-number packing-number--md" style="--packing-total-characters:3">999</span></td><td class="packing-cell packing-cell--total"><span class="packing-number packing-number--md" style="--packing-total-characters:3">999</span></td><td class="packing-cell packing-cell--total"><span class="packing-number packing-number--md" style="--packing-total-characters:3">999</span></td><td class="packing-cell packing-cell--total"><span class="packing-number packing-number--md" style="--packing-total-characters:3">999</span></td><td class="packing-cell packing-cell--total"><span class="packing-number packing-number--md" style="--packing-total-characters:3">999</span></td><td class="packing-cell packing-cell--total"><span class="packing-number packing-number--md" style="--packing-total-characters:3">999</span></td><td class="packing-cell packing-cell--total"><span class="packing-number packing-number--md" style="--packing-total-characters:3">999</span></td><td class="packing-cell packing-cell--total"><span class="packing-number packing-number--md" style="--packing-total-characters:3">999</span></td></tr></tbody></table></div></div></section></div>

@@ -123,6 +123,7 @@ type ProductCategoryPrintColorTable = {
 };
 
 type GroupedStore = {
+  barcodeProductKeys?: Set<string>;
   customer: OrderCustomer;
   vehicleId: string | null;
   vehicleName: string | null;
@@ -532,21 +533,7 @@ async function PackingListPage({ searchParams }: Props) {
 
         for (const item of order.order_items ?? []) {
           let targetStore: GroupedStore | undefined = groupedStore;
-          if (item.supply_source === "reserve") {
-            const reserveKey = `${storeGroupKey}_reserve${item.is_barcode ? "_barcode" : ""}`;
-            targetStore = groupedStores.get(reserveKey);
-            if (!targetStore) {
-              targetStore = { ...groupedStore, customer: { ...customer, customer_code: `${customer.customer_code}-S${item.is_barcode ? "B" : ""}`, name: `${customer.name} (ใช้สำรอง${item.is_barcode ? " บาร์โค้ด" : ""})` }, items: new Map(), missingWeightProductIds: new Set(), totalWeightGrams: 0, hasOrder: true };
-              groupedStores.set(reserveKey, targetStore);
-            }
-          } else if (item.is_barcode) {
-            const barcodeKey = `${storeGroupKey}_barcode`;
-            targetStore = groupedStores.get(barcodeKey);
-            if (!targetStore) {
-              targetStore = { ...groupedStore, customer: { ...customer, customer_code: `${customer.customer_code}-B`, name: `${customer.name} (บาร์โค้ด)` }, items: new Map(), missingWeightProductIds: new Set(), totalWeightGrams: 0, hasOrder: true };
-              groupedStores.set(barcodeKey, targetStore);
-            }
-          } else if (item.notes === "ส่งชดเชย (ไม่คิดเงิน)") {
+          if (item.notes === "ส่งชดเชย (ไม่คิดเงิน)") {
             const replacementKey = `${storeGroupKey}_replacement`;
             targetStore = groupedStores.get(replacementKey);
             if (!targetStore) {
@@ -564,6 +551,7 @@ async function PackingListPage({ searchParams }: Props) {
             }
           }
           const key = getOrderKey(item);
+          if (item.is_barcode) (targetStore.barcodeProductKeys ??= new Set()).add(key);
           const quantity = Number(item.quantity ?? 0);
           targetStore.items.set(key, (targetStore.items.get(key) ?? 0) + quantity);
 
@@ -595,7 +583,6 @@ async function PackingListPage({ searchParams }: Props) {
       }
 
       for (const [storeGroupKey, store] of groupedStores) {
-        if (store.items.size === 0 && groupedStores.has(`${storeGroupKey}_barcode`)) { groupedStores.delete(storeGroupKey); continue; }
         if (store.isRosterStore && !vehicleIdsWithCustomerOrders.has(store.vehicleId ?? "")) {
           groupedStores.delete(storeGroupKey);
         }
@@ -678,6 +665,7 @@ async function PackingListPage({ searchParams }: Props) {
         .map(
           (group): PackingListStore & { consolidatedItems: Map<string, number> } => ({
             id: group.customer.customer_code,
+            barcodeProductKeys: Array.from(group.barcodeProductKeys ?? []),
             name: group.customer.name,
             vehicleId: group.vehicleId,
             vehicleName: group.vehicleName,
@@ -719,6 +707,7 @@ async function PackingListPage({ searchParams }: Props) {
         organizationName: PRINT_ORGANIZATION_NAME,
         stores: stores.map((store) => ({
           id: store.id,
+          barcodeProductKeys: store.barcodeProductKeys,
           name: store.name,
           vehicleId: store.vehicleId,
           vehicleName: store.vehicleName,

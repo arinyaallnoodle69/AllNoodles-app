@@ -39,4 +39,13 @@ function fixture(storeCount = 2, productCount = 4) {
   };
 }
 
-const data=fixture(4,24);data.products.forEach((p,i)=>{p.name='สินค้า '+(i+1);p.category=i<8?'บะหมี่':i<16?'เส้นเล็ก':'เส้นใหญ่';});require('node:fs').writeFileSync('output/packing-order/preview.html','<!doctype html><meta charset="utf-8"><title>ตัวอย่างทดสอบใบออเดอร์</title>'+renderToStaticMarkup(createElement(PackingListLayout,{data})));
+const data=fixture(4,44);data.products.forEach((p,i)=>{p.name='สินค้า '+(i+1);p.category=i<16?'บะหมี่':i<30?'เส้นเล็ก':'เส้นใหญ่';});
+data.stores[0].barcodeProductKeys=data.products.filter((_,i)=>i%2===0).map(p=>p.key);data.stores[0].name='ซุปเปอร์ชิพ';
+data.qty.forEach((row,i)=>row[0]=[20,100,1000,10000,1234.5][i%5]);
+const pageSource=readFileSync('src/app/orders/packing-list/page.tsx','utf8');
+const projectionStart=pageSource.indexOf('        stores: stores.map((store) => ({');
+const projectionEnd=pageSource.indexOf('        products: products.map',projectionStart);
+const projection=pageSource.slice(projectionStart,projectionEnd).trim().replace(/^stores:\s*/, '').replace(/,$/,'');
+data.stores=new Function('stores',`return (${projection});`)(data.stores);
+require('node:assert/strict').ok(data.stores[0].barcodeProductKeys.length>0);
+require('node:fs').writeFileSync('output/reserve-history/barcode-packing.html','<!doctype html><meta charset="utf-8"><title>ทดสอบดอกจันบาร์โค้ด</title>'+renderToStaticMarkup(createElement(PackingListLayout,{data})));

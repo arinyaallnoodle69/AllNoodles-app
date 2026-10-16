@@ -114,3 +114,20 @@ test("26 main Bangkok stores and their subtotal fit on one sheet with the combin
   assert.ok(!mainSheets[0].includes("packing-table--combined-summary"));
   assert.ok(sections.find(section => section.includes('packing-header__vehicle-main">รถกรุงเทพบะหมี่<')).includes("packing-table--combined-summary"));
 });
+
+for (const layout of ["standard", "transposed"]) test(`${layout}: asterisks appear only on barcode quantities, with numeric totals unchanged`, () => {
+  const data = fixture(2, 2);
+  data.stores.forEach(store => { store.packingListGroup = "default"; });
+  data.stores[0].barcodeProductKeys = [data.products[0].key];
+  data.stores[1].barcodeProductKeys = [data.products[1].key];
+  data.qty = [[1000, 20, 0], [30, 50, 0]];
+  const html = renderToStaticMarkup(createElement(PackingListLayout, { data, layout }));
+  const tables = [...html.matchAll(/<table[\s\S]*?<\/table>/g)].map(match => match[0]).join("");
+  assert.equal((tables.match(/\*/g) ?? []).length, 2);
+  assert.match(tables, /1,?000\*/);
+  assert.match(tables, /50\*/);
+  assert.doesNotMatch(tables, /30\*/);
+  assert.doesNotMatch(tables, /20\*/);
+  assert.match(tables, /1,?020/);
+  if (layout === "standard") assert.match(tables, /packing-number packing-number--xs">1000\*/);
+});

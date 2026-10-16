@@ -11,6 +11,7 @@ import {
 } from "@/components/print/packing-list-font-fit";
 
 export type PackingListStore = {
+  barcodeProductKeys?: string[];
   id: string;
   name: string;
   vehicleId: string | null;
@@ -615,8 +616,8 @@ function calcDataColWidth(count: number, availableMm: number, minMm = 6) {
   return `${Math.max(minMm, raw)}mm`;
 }
 
-function getStandardNumberClass(value: number, isTotal = false) {
-  const digitCount = isTotal ? formatStandardQuantity(value).length : Math.abs(Math.trunc(value)).toString().length;
+function getStandardNumberClass(value: number, isTotal = false, isBarcode = false) {
+  const digitCount = isTotal ? formatStandardQuantity(value).length : Math.abs(Math.trunc(value)).toString().length + (isBarcode ? 1 : 0);
   if (isTotal && digitCount >= 6) return " packing-number--xxs";
   if (digitCount >= 5) return " packing-number--xs";
   if (digitCount >= 4) return " packing-number--sm";
@@ -841,6 +842,7 @@ function StandardPackingListPage({ page, data }: { page: StandardPageDef; data: 
                           const rawValue = data.qty[productIndex]?.[storeIndex] ?? 0;
                           const value = Math.abs(rawValue);
                           const product = page.pageProducts[cellIndex];
+                          const isBarcode = store.barcodeProductKeys?.includes(product?.key ?? "");
                           const categoryPalette = product ? getCategoryPalette(product) : COLUMN_COLOR_GROUPS[0];
                           const productPalette = product ? getProductPalette(product, categoryPalette) : COLUMN_COLOR_GROUPS[0];
                           const isBoundary = catBoundarySet.has(cellIndex);
@@ -849,15 +851,15 @@ function StandardPackingListPage({ page, data }: { page: StandardPageDef; data: 
                               key={`${store.id}-${productIndex}`}
                               className={
                                 (value > 0
-                                  ? `packing-cell packing-cell--qty${getStandardNumberClass(value)}`
+                                  ? `packing-cell packing-cell--qty${getStandardNumberClass(value, false, isBarcode)}`
                                   : "packing-cell packing-cell--empty") +
                                 (isBoundary ? " packing-cell--cat-boundary" : "")
                               }
                               style={{ backgroundColor: rowIndex % 2 === 0 ? productPalette.rowA : productPalette.rowB }}
                             >
                               {value > 0 ? (
-                                <span className={`packing-number${getStandardNumberClass(value)}`}>
-                                  {formatStandardQuantity(value)}
+                                <span className={`packing-number${getStandardNumberClass(value, false, isBarcode)}`}>
+                                  {formatStandardQuantity(value)}{isBarcode ? "*" : ""}
                                 </span>
                               ) : ""}
                             </td>
@@ -1040,6 +1042,7 @@ function TransposedPackingListPage({ page, data }: { page: TransposedPageDef; da
                     const value = Math.abs(rawValue);
                     const palette = getColumnPalette(cellIndex);
                     const store = data.stores[storeIndex];
+                    const isBarcode = store.barcodeProductKeys?.includes(product.key);
                     if (isStoppedStore(data, store, storeIndex)) {
                       return (
                         <td
@@ -1059,7 +1062,7 @@ function TransposedPackingListPage({ page, data }: { page: TransposedPageDef; da
                         className={value > 0 ? "packing-cell packing-cell--qty" : "packing-cell packing-cell--empty"}
                         style={{ backgroundColor: rowIndex % 2 === 0 ? palette.rowA : palette.rowB }}
                       >
-                        {value > 0 ? value.toLocaleString("th-TH") : ""}
+                        {value > 0 ? `${value.toLocaleString("th-TH")}${isBarcode ? "*" : ""}` : ""}
                       </td>
                     );
                   })}
