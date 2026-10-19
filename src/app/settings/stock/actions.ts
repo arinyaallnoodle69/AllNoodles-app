@@ -5,7 +5,7 @@ import { requireAnyRole } from "@/lib/auth/authorization";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { getStockReceiptDetail, type StockReceiptDetail } from "@/lib/stock/admin";
 import { generateSequentialReceiptNumbers } from "@/lib/stock/receipt-number-sequence";
-import { createActionClient } from "@/lib/supabase/action";
+import { randomUUID } from "node:crypto";
 import type { Json } from "@/types/database";
 
 const STOCK_RECEIPT_IMAGES_BUCKET = "stock-receipts";
@@ -220,6 +220,11 @@ export async function receiveStockAction(
     };
   }
 
+  if (imageFile && (!(imageFile instanceof File) || (imageFile.size > 0 &&
+    (!["image/jpeg", "image/png", "image/webp"].includes(imageFile.type) || imageFile.size > 5 * 1024 * 1024)))) {
+    return { fieldErrors: {}, message: "รูปบิลต้องเป็น JPG, PNG หรือ WebP ขนาดไม่เกิน 5 MB", status: "error" };
+  }
+
   const { groups, error: groupError } = await buildReceiveStockReceiptGroups(
     admin,
     session.organizationId,
@@ -255,16 +260,16 @@ export async function receiveStockAction(
 
   if (imageFile && imageFile.size > 0) {
     try {
-      const supabase = await createActionClient();
-      const fileExt = imageFile.name.split(".").pop() || "jpg";
-      const fileName = `${session.organizationId}/${receiptNumbers[0]}.${fileExt}`;
+      const fileExt = imageFile.type === "image/png" ? "png" : imageFile.type === "image/webp" ? "webp" : "jpg";
+      const fileName = `${session.organizationId}/${randomUUID()}.${fileExt}`;
       const buffer = Buffer.from(await imageFile.arrayBuffer());
 
-      const { error: uploadError } = await supabase.storage
+      // App sessions are not Supabase Auth sessions; use the authorized server client.
+      const { error: uploadError } = await admin.storage
         .from(STOCK_RECEIPT_IMAGES_BUCKET)
         .upload(fileName, buffer, {
           contentType: imageFile.type,
-          upsert: true,
+          upsert: false,
         });
 
       if (uploadError) {
@@ -278,7 +283,7 @@ export async function receiveStockAction(
 
       const {
         data: { publicUrl },
-      } = supabase.storage.from(STOCK_RECEIPT_IMAGES_BUCKET).getPublicUrl(fileName);
+      } = admin.storage.from(STOCK_RECEIPT_IMAGES_BUCKET).getPublicUrl(fileName);
 
       receiptUrl = publicUrl;
     } catch (error) {
