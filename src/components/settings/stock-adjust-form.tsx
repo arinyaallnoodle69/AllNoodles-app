@@ -18,7 +18,6 @@ import {
   useEffect,
   useEffectEvent,
   useMemo,
-  useRef,
   useState,
   startTransition,
 } from "react";
@@ -66,7 +65,6 @@ export function StockAdjustForm({
   const [notes, setNotes] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const deferredQuery = useDeferredValue(searchQuery);
-  const pageScrollYRef = useRef(0);
 
   const selectedProduct = useMemo(() => {
     return products.find((p) => p.id === selectedProductId);
@@ -90,7 +88,6 @@ export function StockAdjustForm({
   }, [deferredQuery, products]);
 
   const handleSuccess = useEffectEvent(() => {
-    const pageScrollY = pageScrollYRef.current;
     startTransition(() => {
       if (onClose) {
         onClose();
@@ -100,11 +97,6 @@ export function StockAdjustForm({
       router.refresh();
     });
 
-    // A server refresh can restore the page to the top on some mobile browsers.
-    // Keep the stock list exactly where the user was working.
-    requestAnimationFrame(() => window.scrollTo({ top: pageScrollY, behavior: "auto" }));
-    window.setTimeout(() => window.scrollTo({ top: pageScrollY, behavior: "auto" }), 120);
-    window.setTimeout(() => window.scrollTo({ top: pageScrollY, behavior: "auto" }), 350);
   });
 
   useEffect(() => {
@@ -310,7 +302,6 @@ export function StockAdjustForm({
                 if (!warehouseId) {
                   return;
                 }
-                pageScrollYRef.current = window.scrollY;
                 const formData = new FormData();
                 formData.append("productId", selectedProductId);
                 formData.append("warehouseId", warehouseId);

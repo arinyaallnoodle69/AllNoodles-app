@@ -12,11 +12,26 @@ type EntryState = {
   topic: string;
 };
 
+async function recoverEntryLease(
+  request: (action: string, scope: Scope) => Promise<EntryState>,
+  scope: Scope,
+  previousOrderCount: number,
+) {
+  const data = await request("acquire", scope);
+  if (data.granted && data.orderedCount > previousOrderCount) {
+    await request("release", scope);
+    return { ...data, granted: false, needsReselect: true };
+  }
+  return { ...data, needsReselect: false };
+}
+
 export function useOrderEntry(open: boolean, date: string) {
   const token = useRef("");
   const active = useRef<Scope | null>(null);
   const selecting = useRef(false);
   const saving = useRef(false);
+  const orderCountAtSelection = useRef(0);
+  const needsReselect = useRef(false);
   const [counts, setCounts] = useState<Record<string, number> | null>(null);
   const [locks, setLocks] = useState<EntryState["locks"]>([]);
   const [ready, setReady] = useState(false);
@@ -78,6 +93,8 @@ export function useOrderEntry(open: boolean, date: string) {
       }
       const previous = active.current;
       active.current = scope;
+      orderCountAtSelection.current = data.orderedCount;
+      needsReselect.current = false;
       setReady(true);
       if (previous && (previous.customerId !== customerId || previous.date !== orderDate)) void request("release", previous).catch(() => {});
       return true;
@@ -103,8 +120,17 @@ export function useOrderEntry(open: boolean, date: string) {
       refreshing = true;
       const scope = active.current;
       try {
-        const data = await request(renew && scope && !saving.current ? "renew" : "state", scope ?? { customerId: "", date });
+        let data = await request(renew && scope && !saving.current ? "renew" : "state", scope ?? { customerId: "", date });
         if (disposed) return;
+        if (scope && active.current === scope && !saving.current && !selecting.current && !needsReselect.current && !data.locks.some(lock => lock.customerId === scope.customerId && lock.owned)) {
+          const recovered = await recoverEntryLease(request, scope, orderCountAtSelection.current);
+          if (disposed || active.current !== scope || selecting.current || saving.current) {
+            if (recovered.granted) void request("release", scope).catch(() => {});
+            return;
+          }
+          needsReselect.current = recovered.needsReselect;
+          data = recovered;
+        }
         if (!channel) {
           channel = admin.channel(data.topic).on("broadcast", { event: "changed" }, () => { void refresh(); }).subscribe(status => {
             if (status === "SUBSCRIBED") void refresh();
@@ -115,9 +141,10 @@ export function useOrderEntry(open: boolean, date: string) {
           setLocks(data.locks);
         }
         if (scope && active.current === scope && !saving.current && !selecting.current) {
-          const owned = data.locks.some(lock => lock.customerId === scope.customerId && lock.owned);
+          const owned = !needsReselect.current && data.locks.some(lock => lock.customerId === scope.customerId && lock.owned);
           setReady(owned);
-          setError(owned ? null : "สิทธิ์กรอกออเดอร์หมดอายุ กรุณาเลือกร้านค้าใหม่ ข้อมูลที่กรอกยังอยู่");
+          const holder = data.locks.find(lock => lock.customerId === scope.customerId && !lock.owned);
+          setError(owned ? null : needsReselect.current ? "มีออเดอร์ใหม่ของร้านนี้ กรุณาเลือกร้านค้าอีกครั้งเพื่อตรวจสอบ ข้อมูลที่กรอกยังอยู่" : `${holder?.displayName || "ผู้ใช้อื่น"} กำลังกรอกออเดอร์ร้านนี้ กรุณารอให้บันทึกเสร็จ ข้อมูลที่กรอกยังอยู่`);
         }
       } catch {
         if (!disposed && active.current && !saving.current) {
@@ -133,7 +160,7 @@ export function useOrderEntry(open: boolean, date: string) {
     const timer = setInterval(() => { void refresh(true); }, 20000);
     const recovery = () => { void refresh(true); };
     const offline = () => { setReady(false); setError("ออฟไลน์ กรุณาเชื่อมต่อก่อนบันทึก ข้อมูลที่กรอกยังอยู่"); };
-    const pagehide = releaseIfNotSaving;
+    const pagehide = (event: PageTransitionEvent) => { if (!event.persisted) releaseIfNotSaving(); };
     window.addEventListener("online", recovery);
     window.addEventListener("focus", recovery);
     window.addEventListener("offline", offline);

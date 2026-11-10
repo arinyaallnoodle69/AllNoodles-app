@@ -1,6 +1,6 @@
 "use client";
 
-import React, { memo, useState, useEffect, useMemo } from "react";
+import React, { memo, useState, useEffect, useMemo, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -316,6 +316,7 @@ export function StockList({ products, warehouses, initialWarehouseId, baseHref =
   const [receiveOpen, setReceiveOpen] = useState(false);
   const [adjustOpen, setAdjustOpen] = useState(false);
   const [adjustProductId, setAdjustProductId] = useState("");
+  const savedScrollYRef = useRef(0);
   const [searchQuery, setSearchQuery] = useState("");
   const fallbackWarehouseId =
     initialWarehouseId && warehouses.some((warehouse) => warehouse.id === initialWarehouseId)
@@ -459,6 +460,7 @@ export function StockList({ products, warehouses, initialWarehouseId, baseHref =
 
   const handleAdjust = (productId: string) => {
     if (!canEditStock) return;
+    savedScrollYRef.current = window.scrollY;
     setAdjustProductId(productId);
     setAdjustOpen(true);
     // Silent URL update for deep linking
@@ -484,6 +486,17 @@ export function StockList({ products, warehouses, initialWarehouseId, baseHref =
       "",
       selectedWarehouseId ? buildUrl(baseHref, { warehouse: selectedWarehouseId }) : baseHref,
     );
+  };
+
+  const closeAdjust = () => {
+    const targetY = savedScrollYRef.current;
+    if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
+    closeModals();
+    if ("scrollRestoration" in window.history) window.history.scrollRestoration = "manual";
+    if (targetY > 0) {
+      window.scrollTo({ top: targetY, behavior: "instant" });
+      requestAnimationFrame(() => window.scrollTo({ top: targetY, behavior: "instant" }));
+    }
   };
 
   return (
@@ -714,7 +727,7 @@ export function StockList({ products, warehouses, initialWarehouseId, baseHref =
           returnHref={baseHref}
           defaultProductId={adjustProductId}
           defaultWarehouseId={selectedFormWarehouseId}
-          onClose={closeModals}
+          onClose={closeAdjust}
         />
       )}
     </>

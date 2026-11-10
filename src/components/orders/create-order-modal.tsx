@@ -2160,11 +2160,12 @@ export function CreateOrderModal({
     setCart((prev) => {
       const nextCart = [...prev];
 
-      for (const row of snapshot.items) {
-        const product = productsById.get(row.productId);
+      for (const sourceRow of snapshot.items) {
+        const product = productsById.get(sourceRow.productId);
         if (!product) {
           continue;
         }
+        const row = { ...sourceRow, isBarcode: sourceRow.isBarcode === true && !sourceRow.isReplacement && BARCODE_PRODUCT_SKUS.includes(product.sku) };
         const productUnits = getUnits(product);
         const matchedUnit =
           productUnits.find((unit) => unit.id === row.saleUnitId) ??
@@ -2214,7 +2215,8 @@ export function CreateOrderModal({
     });
 
     setActiveTab("create");
-    setHistoryNotice(`นำเข้ารายการล่าสุดแล้ว ${snapshot.items.length} รายการ`);
+    const invalidBarcodeNames = snapshot.items.filter(row => row.isBarcode && (row.isReplacement || !BARCODE_PRODUCT_SKUS.includes(productsById.get(row.productId)?.sku ?? ""))).map(row => { const product = productsById.get(row.productId); return product ? `${product.sku} ${product.name}` : "สินค้าที่ไม่พบในระบบ"; });
+    setHistoryNotice(`นำเข้ารายการล่าสุดแล้ว ${snapshot.items.length} รายการ${invalidBarcodeNames.length ? ` · เปลี่ยนเป็นสินค้าปกติอัตโนมัติ: ${invalidBarcodeNames.join(", ")} เนื่องจากไม่ผ่านเงื่อนไขบาร์โค้ดปัจจุบัน จำนวนและราคาเดิมยังอยู่ ไม่ต้องกรอกใหม่` : ""}`);
   }
 
   async function handleCustomerSelect(id: string) {

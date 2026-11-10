@@ -1291,12 +1291,11 @@ export async function fetchCustomerLastOrderItemsAction(
 
   const { data: orderItems } = await admin
     .from("order_items")
-    .select("product_id, product_sale_unit_id, quantity, sale_unit_label, sale_unit_ratio, unit_price, notes, created_at, is_barcode")
+    .select("*")
     .in("order_id", orderIds)
     .order("created_at", { ascending: true });
 
-  // Items saved in one batch share the same created_at, so Postgres returns them in
-  // arbitrary order. Break ties by product display_order then sku for a stable result.
+  // Older items have no saved sequence; keep their existing catalog-order fallback.
   const productIdsForSort = Array.from(new Set((orderItems ?? []).map((row) => row.product_id)));
   const { data: sortProducts } = productIdsForSort.length
     ? await admin
@@ -1310,6 +1309,10 @@ export async function fetchCustomerLastOrderItemsAction(
   const sortedOrderItems = [...(orderItems ?? [])].sort((a, b) => {
     const timeDiff = new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
     if (timeDiff !== 0) return timeDiff;
+    const sequenceA = (a as typeof a & { item_sequence: number | null }).item_sequence;
+    const sequenceB = (b as typeof b & { item_sequence: number | null }).item_sequence;
+    if (sequenceA != null && sequenceB != null) return sequenceA - sequenceB;
+    if (sequenceA != null || sequenceB != null) return sequenceA == null ? -1 : 1;
     const infoA = sortInfo.get(a.product_id);
     const infoB = sortInfo.get(b.product_id);
     const orderDiff = (infoA?.order ?? Number.MAX_SAFE_INTEGER) - (infoB?.order ?? Number.MAX_SAFE_INTEGER);
@@ -1412,11 +1415,15 @@ export async function createManualOrderAction(formData: FormData): Promise<Actio
     const db = getSupabaseAdmin();
     const [customer, products] = await Promise.all([
       db.from("customers").select("customer_code").eq("organization_id", session.organizationId).eq("id", customerId).single(),
-      db.from("products").select("id,sku").eq("organization_id", session.organizationId).in("id", barcodeItems.map(item => item.productId)),
+      db.from("products").select("id,sku,name").eq("organization_id", session.organizationId).in("id", barcodeItems.map(item => item.productId)),
     ]);
     const eligible = new Set((products.data ?? []).filter(product => BARCODE_PRODUCT_SKUS.includes(product.sku)).map(product => product.id));
-    if (customer.error || products.error || customer.data?.customer_code !== BARCODE_CUSTOMER_CODE || barcodeItems.some(item => item.isReplacement || !eligible.has(item.productId))) {
-      return { error: "บาร์โค้ดใช้ได้เฉพาะร้าน ANS109 และสินค้าที่กำหนด" };
+    if (customer.error || products.error) return { error: "ตรวจสอบสิทธิ์บาร์โค้ดไม่สำเร็จ กรุณาลองใหม่" };
+    if (customer.data?.customer_code !== BARCODE_CUSTOMER_CODE) return { error: "บาร์โค้ดใช้ได้เฉพาะร้าน ANS109 กรุณาเลือกร้าน ANS109 หรือลบรายการบาร์โค้ดก่อนบันทึก" };
+    const invalidBarcode = barcodeItems.filter(item => item.isReplacement || !eligible.has(item.productId));
+    if (invalidBarcode.length) {
+      const names = invalidBarcode.map(item => { const product = products.data?.find(p => p.id === item.productId); return product ? `${product.sku} ${product.name}${item.isReplacement ? " (ส่งชดเชย)" : ""}` : "สินค้าที่ไม่พบในระบบ"; });
+      return { error: `รายการบาร์โค้ดไม่ผ่านเงื่อนไข: ${names.join(", ")} · บาร์โค้ดใช้ได้เฉพาะสินค้าที่กำหนด และใช้ร่วมกับส่งชดเชยไม่ได้ กรุณาลบเฉพาะรายการที่ระบุ แล้วเพิ่มกลับจากปุ่มเพิ่มสินค้าปกติ รายการอื่นไม่ต้องกรอกใหม่` };
     }
   }
   if (items.some((item) => item.isReplacement)) {

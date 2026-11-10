@@ -55,3 +55,39 @@ test("tools menu flips above the trigger when the totals footer would cover it",
   cleanup();
   assert.equal(resize, undefined);
 });
+
+test("history warning identifies only barcode rows that no longer qualify", () => {
+  const source = readFileSync(new URL("./create-order-modal.tsx", import.meta.url), "utf8");
+  const ast = ts.createSourceFile("modal.tsx", source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+  let expression;
+  function visit(node) { if (ts.isVariableDeclaration(node) && node.name.getText(ast) === "invalidBarcodeNames") expression = node.initializer.getText(ast); ts.forEachChild(node, visit); }
+  visit(ast);
+  const snapshot = { items: [{ productId: "old", isBarcode: true }, { productId: "valid", isBarcode: true }, { productId: "old", isBarcode: false }] };
+  const productsById = new Map([["old", { sku: "ANP054", name: "ก๋วยจั๊บสามเหลี่ยม" }], ["valid", { sku: "ANP097", name: "ก๋วยจั๊บสี่เหลี่ยม" }]]);
+  const compiled = ts.transpileModule(`const result = ${expression};`, { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText;
+  const result = new Function("snapshot", "productsById", "BARCODE_PRODUCT_SKUS", compiled + ";return result;")(snapshot, productsById, ["ANP097"]);
+  assert.deepEqual(result, ["ANP054 ก๋วยจั๊บสามเหลี่ยม"]);
+});
+
+test("copying history converts retired barcode to normal and merges matching lines without mutating history", () => {
+  const source = readFileSync(new URL("./create-order-modal.tsx", import.meta.url), "utf8");
+  const ast = ts.createSourceFile("modal.tsx", source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+  let declaration;
+  function visit(node) { if (ts.isFunctionDeclaration(node) && node.name?.text === "applyLastOrderItemsToCart") declaration = node.getText(ast); ts.forEachChild(node, visit); }
+  visit(ast);
+  const compiled = ts.transpileModule(declaration, { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText;
+  const productsById = new Map([["old", { sku: "ANP054", name: "สามเหลี่ยม" }], ["valid", { sku: "ANP097", name: "สี่เหลี่ยม" }]]);
+  const item = (productId, quantity, isBarcode) => ({ productId, quantity, isBarcode, saleUnitId: "kg", saleUnitBaseQty: 1, saleUnitLabel: "กก.", unitPrice: 35 });
+  const snapshot = { items: [item("old", 300, true), item("old", 20, false), item("valid", 50, true)] };
+  let cart = [], notice = "";
+  const dependencies = { productsById, BARCODE_PRODUCT_SKUS: ["ANP097"], priceMap: {}, getUnits: () => [{ id: "kg", minOrderQty: 1, stepOrderQty: null }], normalizeToRule: n => n, setCart: update => cart = update(cart), setHistoryNotice: text => notice = text, setActiveTab() {} };
+  const apply = new Function(...Object.keys(dependencies), compiled + ";return applyLastOrderItemsToCart;")(...Object.values(dependencies));
+  apply(snapshot);
+  assert.equal(cart.length, 2);
+  assert.equal(cart.find(i => i.productId === "old").isBarcode, false);
+  assert.equal(cart.find(i => i.productId === "old").quantity, 320);
+  assert.equal(cart.find(i => i.productId === "old").unitPrice, 35);
+  assert.equal(cart.find(i => i.productId === "valid").isBarcode, true);
+  assert.equal(snapshot.items[0].isBarcode, true);
+  assert.match(notice, /เปลี่ยนเป็นสินค้าปกติอัตโนมัติ/);
+});
